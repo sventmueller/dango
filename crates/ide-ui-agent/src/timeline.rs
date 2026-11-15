@@ -26,7 +26,7 @@ use super::cards::{self, Ctx, Inputs, Live, Part};
 use super::row::TimelineRow;
 use super::target::AgentTarget;
 use crate::AgentKey;
-use ide_ui_common::util::{guarded, live, main_soon, ns};
+use ide_ui_common::util::{activate, guarded, live, main_soon, ns};
 
 /// Room on the leading side for the line and its dots.
 const LEADING: f64 = 30.0;
@@ -36,7 +36,7 @@ const TRAILING: f64 = 12.0;
 pub(super) const TOP: f64 = 3.0;
 pub(super) const BOTTOM: f64 = 10.0;
 
-pub struct TableIvars {
+pub(crate) struct TableIvars {
     key: AgentKey,
 }
 
@@ -46,7 +46,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEAgentTimelineTable"]
     #[ivars = TableIvars]
-    pub struct TimelineTable;
+    pub(crate) struct TimelineTable;
 
     unsafe impl NSObjectProtocol for TimelineTable {}
 
@@ -121,7 +121,7 @@ define_class!(
 
 impl TimelineTable {
     /// The view Tab goes to after the timeline and the plan in it.
-    pub fn following_key_view(&self) -> Option<Retained<NSView>> {
+    pub(crate) fn following_key_view(&self) -> Option<Retained<NSView>> {
         // SAFETY: The superclass's implementation, which takes nothing and returns a view or nil.
         unsafe { msg_send![super(self), nextValidKeyView] }
     }
@@ -177,7 +177,7 @@ impl Drop for Timeline {
 }
 
 impl Timeline {
-    pub fn new(
+    pub(crate) fn new(
         mtm: MainThreadMarker,
         key: AgentKey,
         target: &AgentTarget,
@@ -280,7 +280,7 @@ impl Timeline {
         }
     }
 
-    pub fn row_height(&self, row: usize) -> f64 {
+    pub(crate) fn row_height(&self, row: usize) -> f64 {
         let Some(entry) = self.entry(row) else { return 20.0 };
         self.known_height(&entry)
     }
@@ -297,7 +297,7 @@ impl Timeline {
         height
     }
 
-    pub fn row_view(&self, row: usize) -> Retained<NSTableRowView> {
+    pub(crate) fn row_view(&self, row: usize) -> Retained<NSTableRowView> {
         let mark = cards::mark(&self.list.borrow(), row);
         Retained::into_super(TimelineRow::new(self.mtm, mark))
     }
@@ -332,16 +332,14 @@ impl Timeline {
         let cell = NSTableCellView::new(self.mtm);
         cell.addSubview(&card);
         card.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
+        activate([
             card.leadingAnchor()
                 .constraintEqualToAnchor_constant(&cell.leadingAnchor(), leading),
             card.trailingAnchor()
                 .constraintEqualToAnchor_constant(&cell.trailingAnchor(), -TRAILING),
             card.topAnchor()
                 .constraintEqualToAnchor_constant(&cell.topAnchor(), TOP),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         let bottom = card
             .bottomAnchor()
             .constraintEqualToAnchor_constant(&cell.bottomAnchor(), -BOTTOM);
@@ -437,7 +435,7 @@ impl Timeline {
     }
 
     /// Takes in a new state; content-only changes keep the row index and untouched cards.
-    pub fn apply(&self, thread: Rc<Thread>, changes: &[Change]) {
+    pub(crate) fn apply(&self, thread: Rc<Thread>, changes: &[Change]) {
         let following = self.follows() || self.count() == 0;
         let structural = self.structure_changed(&thread, changes);
         let old_len = self.count();
@@ -595,7 +593,7 @@ impl Timeline {
     }
 
     /// A background tab catches up once, when it becomes visible again.
-    pub fn show_pending(&self) {
+    pub(crate) fn show_pending(&self) {
         if self.is_visible() && self.pending.get() {
             self.catch_up();
         }
@@ -673,7 +671,7 @@ impl Timeline {
     }
 
     /// Builds the card of entry `id` anew.
-    pub fn reload_entry(&self, id: u64) {
+    pub(crate) fn reload_entry(&self, id: u64) {
         if let Some(row) = self
             .positions
             .borrow()
@@ -703,7 +701,7 @@ impl Timeline {
     }
 
     /// Opens or closes `part` of entry `id`.
-    pub fn toggle(&self, id: u64, part: Part) {
+    pub(crate) fn toggle(&self, id: u64, part: Part) {
         {
             let mut expanded = self.expanded.borrow_mut();
             if !expanded.remove(&(id, part)) {
@@ -720,7 +718,7 @@ impl Timeline {
     }
 
     /// Opens or closes the main part of the card in `row`, as Space or Return on a selected row do.
-    pub fn toggle_row(&self, row: isize) -> bool {
+    pub(crate) fn toggle_row(&self, row: isize) -> bool {
         let Some(entry) = usize::try_from(row).ok().and_then(|r| self.entry(r)) else {
             return false;
         };
@@ -736,12 +734,12 @@ impl Timeline {
         true
     }
 
-    pub fn focus_view(&self) -> bool {
+    pub(crate) fn focus_view(&self) -> bool {
         self.focus.get()
     }
 
     /// Shows only the conversation, or everything again.
-    pub fn set_focus_view(&self, on: bool) {
+    pub(crate) fn set_focus_view(&self, on: bool) {
         self.focus.set(on);
         self.reindex(&self.thread.borrow());
         self.table.reloadData();
@@ -775,7 +773,7 @@ impl Timeline {
     }
 
     /// Builds the cards anew, as formulas and diagrams they show as code were drawn.
-    pub fn figures_arrived(&self, keys: &[splat_render::js::Key]) {
+    pub(crate) fn figures_arrived(&self, keys: &[splat_render::js::Key]) {
         let rows: Vec<_> = self
             .figures
             .borrow()
@@ -798,7 +796,7 @@ impl Timeline {
     }
 
     /// Lays the cards out anew after the width changed.
-    pub fn width_changed(&self) {
+    pub(crate) fn width_changed(&self) {
         let width = self.table_width();
         // `record_height` drops measurements half a point off the committed width, so a smaller change must commit.
         if (width - self.width.get()).abs() < 0.5 || self.table.inLiveResize() {
@@ -834,7 +832,7 @@ impl Timeline {
     }
 
     /// Advances the running times of the cards in view; whether any runs.
-    pub fn tick(&self, now: SystemTime) -> bool {
+    pub(crate) fn tick(&self, now: SystemTime) -> bool {
         if !self.is_visible() {
             return false;
         }
@@ -850,7 +848,7 @@ impl Timeline {
 }
 
 /// Whether `entry` is a hook that ran fine, which shows only in its turn's count of such hooks.
-pub fn is_quiet_hook(entry: &Entry) -> bool {
+pub(crate) fn is_quiet_hook(entry: &Entry) -> bool {
     matches!(
         &entry.kind,
         EntryKind::Notice(ide_thread::Notice::Hook {

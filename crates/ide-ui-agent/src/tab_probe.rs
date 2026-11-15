@@ -39,13 +39,13 @@ pub struct Inspection {
 
 impl AgentTab {
     /// A tab that plays recordings, with no process behind it.
-    pub fn open_replay(controller: &Window) -> Option<Rc<AgentTab>> {
+    pub(crate) fn open_replay(controller: &Window) -> Option<Rc<AgentTab>> {
         let cwd = controller.project_root().or_else(|| controller.project())?;
         Some(AgentTab::open_replay_in(controller, cwd))
     }
 
     /// A tab that plays recordings in `cwd`, for the self-test.
-    pub fn open_replay_in(controller: &Window, cwd: PathBuf) -> Rc<AgentTab> {
+    pub(crate) fn open_replay_in(controller: &Window, cwd: PathBuf) -> Rc<AgentTab> {
         let thread_id = ThreadId::new();
         let thread = Thread::new(thread_id.clone(), ide_claude::AGENT, &cwd);
         let source = source::replay(thread.clone());

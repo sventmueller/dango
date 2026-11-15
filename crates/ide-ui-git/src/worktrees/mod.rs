@@ -45,7 +45,7 @@ impl From<std::io::Error> for TreeError {
 }
 
 /// The folder of every project's thread worktrees.
-pub fn all_folder() -> PathBuf {
+pub(crate) fn all_folder() -> PathBuf {
     ide_core::paths::data_dir().join("worktrees")
 }
 
@@ -57,7 +57,7 @@ pub fn folder(root: &Path) -> PathBuf {
 
 /// `title` as a branch and folder name: lower case letters, digits and dashes, at most 40, `thread` when nothing is
 /// left.
-pub fn slug(title: &str) -> String {
+pub(crate) fn slug(title: &str) -> String {
     let mut slug = String::new();
     for c in title.to_lowercase().chars() {
         let part = match c {
@@ -101,7 +101,7 @@ pub fn create(repo: &Repository, root: &Path, title: &str, agent: &str) -> Resul
         n += 1;
     };
     let path = folder.join(&name);
-    repo.add_worktree(&path, &branch, Some(&base))?;
+    repo.add_worktree(&path, &branch, Some(base.as_str()))?;
     let tree = ThreadTree {
         path: path.canonicalize().unwrap_or(path),
         branch,
@@ -205,13 +205,13 @@ pub fn take_over(git: &Git, repo: &Repository, tree: &ThreadTree, how: TakeOver)
             let base = repo
                 .merge_base("HEAD", &tree.branch)?
                 .unwrap_or_else(|| tree.base.clone());
-            repo.cherry_pick_branch(&base, &tree.branch)
+            repo.cherry_pick_branch(base.as_str(), &tree.branch)
         }
     }
 }
 
 /// Removes the worktree but keeps its branch, with what the thread left uncommitted committed on it.
-pub fn keep_branch(git: &Git, repo: &Repository, tree: &ThreadTree) -> ide_git::Result<()> {
+pub(crate) fn keep_branch(git: &Git, repo: &Repository, tree: &ThreadTree) -> ide_git::Result<()> {
     commit_pending(git, tree)?;
     repo.remove_worktree(&tree.path)?;
     forget(tree);
@@ -249,7 +249,7 @@ mod tests {
             path: folder(Path::new("/work/shop")).join("fix"),
             branch: "thread/fix".into(),
             title: "Fix".into(),
-            base: "abc".into(),
+            base: ide_git::CommitId::parse(&"a".repeat(40)).unwrap(),
             base_branch: Some("main".into()),
             agent: String::new(),
         };

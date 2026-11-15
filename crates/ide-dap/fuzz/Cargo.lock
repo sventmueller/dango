@@ -237,6 +237,7 @@ version = "0.0.0"
 dependencies = [
  "ide-dap",
  "libfuzzer-sys",
+ "serde_json",
 ]
 
 [[package]]

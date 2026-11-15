@@ -7,6 +7,7 @@ use serde_json::json;
 
 use super::Session;
 use crate::connection::Responder;
+use crate::error::Refusal;
 use crate::types::{Breakpoint, Capabilities, End, Output, Program, Stop, TerminalRequest, ThreadId};
 
 /// Something that happened in a session, delivered on a background thread with the session's id.
@@ -81,8 +82,8 @@ impl TerminalAnswer {
         self.responder.ok(body);
     }
 
-    /// The terminal could not run it, with the reason for the adapter.
-    pub fn failed(self, why: &str) {
+    /// The terminal could not run it, for the reason the adapter is told.
+    pub fn failed(self, why: Refusal) {
         self.responder.fail(why);
     }
 }

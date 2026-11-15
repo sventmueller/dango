@@ -13,22 +13,22 @@ use serde::{Deserialize, Serialize};
 /// to its default instead of making the whole entry unreadable.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
-pub struct Stored {
-    pub mode: String,
-    pub local_model: String,
-    pub online_model: String,
-    pub language: String,
-    pub post_processing: String,
+pub(crate) struct Stored {
+    pub(crate) mode: String,
+    pub(crate) local_model: String,
+    pub(crate) online_model: String,
+    pub(crate) language: String,
+    pub(crate) post_processing: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub microphone: Option<Microphone>,
-    pub vocabulary: Vec<String>,
+    pub(crate) microphone: Option<Microphone>,
+    pub(crate) vocabulary: Vec<String>,
 }
 
 /// A chosen input device: CoreAudio's UID and the name shown while it is not connected.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Microphone {
-    pub id: String,
-    pub name: String,
+pub(crate) struct Microphone {
+    pub(crate) id: String,
+    pub(crate) name: String,
 }
 
 impl Default for Stored {
@@ -38,16 +38,16 @@ impl Default for Stored {
 }
 
 /// The app's dictation choices.
-pub const DICTATION: Key<Stored> = Key::user("dictation", ide_core::settings::Sharing::Shared, Stored::default);
+pub(crate) const DICTATION: Key<Stored> = Key::user("dictation", ide_core::settings::Sharing::Shared, Stored::default);
 
 /// Lowspeak's choices were offered for taking over and the user answered; the offer does not come again.
-pub const LOWSPEAK_OFFERED: Key<bool> =
+pub(crate) const LOWSPEAK_OFFERED: Key<bool> =
     Key::user("dictationLowspeakOffered", ide_core::settings::Sharing::PerMac, || {
         false
     });
 
 /// Lowspeak's defaults, which are the app's until the user chooses.
-pub fn defaults() -> Choices {
+pub(crate) fn defaults() -> Choices {
     Choices {
         settings: Engine {
             mode: TranscriptionMode::Online,

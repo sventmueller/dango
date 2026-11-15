@@ -8,7 +8,7 @@ use super::*;
 
 impl Source {
     /// The context menu of row `row`, as a right click on it fills it, for the self-test.
-    pub fn context_menu(&self, row: isize) -> Option<Retained<NSMenu>> {
+    pub(crate) fn context_menu(&self, row: isize) -> Option<Retained<NSMenu>> {
         let panel = super::super::panel_by_key(self.ivars().panel.get())?;
         let menu = NSMenu::new(self.mtm());
         self.fill_menu_for(&menu, &panel, row);
@@ -16,7 +16,7 @@ impl Source {
     }
 
     /// Opens the session of row `row`, as a click on it does, for the self-test.
-    pub fn open_row(&self, row: usize) {
+    pub(crate) fn open_row(&self, row: usize) {
         let id = self.ivars().model.borrow().order.get(row).cloned();
         if let Some(id) = id {
             self.open_id(&id);
@@ -24,7 +24,7 @@ impl Source {
     }
 
     /// The quiet texts at the end of the session rows, for the self-test.
-    pub fn session_details(&self) -> Vec<String> {
+    pub(crate) fn session_details(&self) -> Vec<String> {
         let model = self.ivars().model.borrow();
         model
             .nodes
@@ -37,7 +37,7 @@ impl Source {
     }
 
     /// The rows top to bottom, for the self-test: "AI" or "CLI", whether open, and the title.
-    pub fn rows(&self) -> Vec<(&'static str, bool, String)> {
+    pub(crate) fn rows(&self) -> Vec<(&'static str, bool, String)> {
         let model = self.ivars().model.borrow();
         model
             .order

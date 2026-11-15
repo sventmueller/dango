@@ -18,7 +18,9 @@ use super::panel::GitPanel;
 use super::rows::GitOutlineView;
 use super::text::Problem;
 use ide_ui_common::panel::{header_button, header_row};
-use ide_ui_common::util::{borderless_button, label, ns, pin_edges, set_action, symbol, symbol_button};
+use ide_ui_common::util::{
+    activate, borderless_button, label, ns, pin_edges, pin_sides, set_action, symbol, symbol_button,
+};
 
 /// How far the panel's content keeps from the sidebar's edges: as far as the panel's title.
 pub(super) const MARGIN: f64 = 8.0;
@@ -26,37 +28,37 @@ const MESSAGE_HEIGHT: f64 = 62.0;
 /// How far the button that asks a model for the message keeps from the message box's corner.
 const AI_INSET: f64 = 4.0;
 
-pub struct Ui {
-    pub page: Retained<NSView>,
+pub(crate) struct Ui {
+    pub(crate) page: Retained<NSView>,
     /// Ahead and behind with the remote buttons, which the panel's title row shows.
-    pub header: Retained<NSStackView>,
+    pub(crate) header: Retained<NSStackView>,
     empty: Retained<NSView>,
     content: Retained<NSStackView>,
-    pub branch: Retained<NSPopUpButton>,
-    pub distance: Retained<NSTextField>,
-    pub fetch: Retained<NSButton>,
-    pub pull: Retained<NSButton>,
-    pub push: Retained<NSButton>,
-    pub progress_row: Retained<NSStackView>,
-    pub progress: Retained<NSProgressIndicator>,
-    pub progress_label: Retained<NSTextField>,
-    pub cancel: Retained<NSButton>,
-    pub banner: Banner,
+    pub(crate) branch: Retained<NSPopUpButton>,
+    pub(crate) distance: Retained<NSTextField>,
+    pub(crate) fetch: Retained<NSButton>,
+    pub(crate) pull: Retained<NSButton>,
+    pub(crate) push: Retained<NSButton>,
+    pub(crate) progress_row: Retained<NSStackView>,
+    pub(crate) progress: Retained<NSProgressIndicator>,
+    pub(crate) progress_label: Retained<NSTextField>,
+    pub(crate) cancel: Retained<NSButton>,
+    pub(crate) banner: Banner,
     problem_row: Retained<NSStackView>,
     problem_label: Retained<NSTextField>,
     problem_output: Retained<NSButton>,
-    pub message: Retained<CommitTextView>,
-    pub placeholder: Retained<NSTextField>,
+    pub(crate) message: Retained<CommitTextView>,
+    pub(crate) placeholder: Retained<NSTextField>,
     /// Asks a model for the commit message (E88).
-    pub ai: Retained<NSButton>,
-    pub ai_box: AiBox,
-    pub amend: Retained<NSButton>,
-    pub commit: Retained<NSButton>,
-    pub outline: Retained<GitOutlineView>,
+    pub(crate) ai: Retained<NSButton>,
+    pub(crate) ai_box: AiBox,
+    pub(crate) amend: Retained<NSButton>,
+    pub(crate) commit: Retained<NSButton>,
+    pub(crate) outline: Retained<GitOutlineView>,
 }
 
 impl Ui {
-    pub fn new(mtm: MainThreadMarker, panel: &GitPanel) -> Ui {
+    pub(crate) fn new(mtm: MainThreadMarker, panel: &GitPanel) -> Ui {
         let page: Retained<NSView> = super::panel::GitPage::new(mtm, panel.id()).into_super();
         let empty = NSView::new(mtm);
         let content = NSStackView::new(mtm);
@@ -88,12 +90,7 @@ impl Ui {
             (&list, 0.0),
         ] {
             content.addArrangedSubview(view);
-            view.leadingAnchor()
-                .constraintEqualToAnchor_constant(&content.leadingAnchor(), inset)
-                .setActive(true);
-            view.trailingAnchor()
-                .constraintEqualToAnchor_constant(&content.trailingAnchor(), -inset)
-                .setActive(true);
+            pin_sides(view, &content, inset);
             view.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Vertical);
         }
         list.setContentHuggingPriority_forOrientation(1.0, NSLayoutConstraintOrientation::Vertical);
@@ -132,7 +129,7 @@ impl Ui {
     }
 
     /// Shows the repository's controls when it is ready, else an explanation of why not and what helps.
-    pub fn show_phase(&self, panel: &GitPanel, phase: &Phase) {
+    pub(crate) fn show_phase(&self, panel: &GitPanel, phase: &Phase) {
         let mtm = panel.mtm();
         self.content.setHidden(*phase != Phase::Ready);
         self.header.setHidden(*phase != Phase::Ready);
@@ -172,7 +169,7 @@ impl Ui {
         let state = empty_state(mtm, panel, symbol_name, title, detail, button);
         self.empty.addSubview(&state);
         state.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
+        activate([
             state
                 .centerXAnchor()
                 .constraintEqualToAnchor(&self.empty.centerXAnchor()),
@@ -185,18 +182,16 @@ impl Ui {
             state
                 .trailingAnchor()
                 .constraintLessThanOrEqualToAnchor_constant(&self.empty.trailingAnchor(), -16.0),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
     }
 
     /// The width a wrapping text in a row of the panel has, inside the margins and the space of `inset`.
-    pub fn text_width(&self, inset: f64) -> f64 {
+    pub(crate) fn text_width(&self, inset: f64) -> f64 {
         (self.page.frame().size.width - 2.0 * MARGIN - inset).max(120.0)
     }
 
     /// Shows `problem` above the commit message, or hides the row.
-    pub fn show_problem(&self, problem: Option<&Problem>) {
+    pub(crate) fn show_problem(&self, problem: Option<&Problem>) {
         let Some(problem) = problem else {
             self.problem_row.setHidden(true);
             return;
@@ -215,11 +210,11 @@ impl Ui {
 
 /// What follows a message a model wrote (E101): the note that it needs checking, writing it again, taking it back, and
 /// the request that went out.
-pub struct AiBox {
-    pub view: Retained<NSStackView>,
+pub(crate) struct AiBox {
+    pub(crate) view: Retained<NSStackView>,
     /// The note and the buttons that stay until the user's first own change.
-    pub written: Retained<NSStackView>,
-    pub sent: Retained<NSButton>,
+    pub(crate) written: Retained<NSStackView>,
+    pub(crate) sent: Retained<NSButton>,
 }
 
 impl AiBox {
@@ -275,12 +270,12 @@ impl AiBox {
 }
 
 /// The note that a merge or rebase stopped at conflicts, with what carries it on or abandons it.
-pub struct Banner {
-    pub view: Retained<NSBox>,
-    pub title: Retained<NSTextField>,
-    pub detail: Retained<NSTextField>,
-    pub resume: Retained<NSButton>,
-    pub abort: Retained<NSButton>,
+pub(crate) struct Banner {
+    pub(crate) view: Retained<NSBox>,
+    pub(crate) title: Retained<NSTextField>,
+    pub(crate) detail: Retained<NSTextField>,
+    pub(crate) resume: Retained<NSButton>,
+    pub(crate) abort: Retained<NSButton>,
 }
 
 impl Banner {
@@ -370,8 +365,7 @@ fn header(mtm: MainThreadMarker, panel: &GitPanel) -> Header {
     let distance = label(mtm, "");
     distance.setFont(Some(&NSFont::monospacedDigitSystemFontOfSize_weight(
         NSFont::smallSystemFontSize(),
-        // SAFETY: AppKit sets its font weight constants when it loads.
-        unsafe { objc2_app_kit::NSFontWeightRegular },
+        ide_ui_common::constant!(objc2_app_kit::NSFontWeightRegular),
     )));
     distance.setTextColor(Some(&NSColor::secondaryLabelColor()));
     let button = |name: &str, title: &str, action: Sel| header_button(mtm, name, title, Some(panel), action);
@@ -506,7 +500,7 @@ fn message_box(
     ide_ui_common::util::hide_from_voiceover(&placeholder);
     container.addSubview(&placeholder);
     placeholder.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
+    activate([
         placeholder
             .leadingAnchor()
             .constraintEqualToAnchor_constant(&container.leadingAnchor(), 9.0),
@@ -516,9 +510,7 @@ fn message_box(
         placeholder
             .topAnchor()
             .constraintEqualToAnchor_constant(&container.topAnchor(), 5.0),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     let ai = symbol_button(
         mtm,
         "sparkles",
@@ -530,14 +522,12 @@ fn message_box(
     ai.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
     container.addSubview(&ai);
     ai.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
+    activate([
         ai.trailingAnchor()
             .constraintEqualToAnchor_constant(&container.trailingAnchor(), -AI_INSET),
         ai.topAnchor()
             .constraintEqualToAnchor_constant(&container.topAnchor(), AI_INSET),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     (container, text, placeholder, ai)
 }
 
@@ -647,8 +637,7 @@ pub fn empty_state(
         view.setSymbolConfiguration(Some(
             &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
                 28.0,
-                // SAFETY: AppKit sets its font weight constants when it loads.
-                unsafe { objc2_app_kit::NSFontWeightLight },
+                ide_ui_common::constant!(objc2_app_kit::NSFontWeightLight),
             ),
         ));
         view.setContentTintColor(Some(&NSColor::tertiaryLabelColor()));

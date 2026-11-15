@@ -7,7 +7,7 @@ use std::time::Duration;
 use objc2::rc::Retained;
 
 use super::helpers::{self, wait_within};
-use super::{check, finish, snapshot};
+use super::{check, finish, give_up_saying, snapshot};
 use crate::window::WindowController;
 
 const SCENARIO: &str = "page-preview";
@@ -22,7 +22,7 @@ fn titles(controller: &WindowController) -> Vec<String> {
     controller.tab_titles()
 }
 
-pub fn run() {
+pub(crate) fn run() {
     helpers::open_project(
         SCENARIO,
         PROJECT,
@@ -62,8 +62,7 @@ fn opened(controller: Retained<WindowController>) {
 fn reloads(controller: Retained<WindowController>) {
     let root = helpers::root(PROJECT);
     if let Err(error) = std::fs::write(root.join("js/word.js"), "export const word = 'second';\n") {
-        check("the module is saved again", false, error.to_string());
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "the module is saved again", error.to_string());
     }
     let wanted = "second rgb(1, 2, 3)";
     let seen = controller.clone();

@@ -24,14 +24,14 @@ use super::style::{code_background, mono, token_color};
 use ide_ui_common::util::ns;
 
 mod stream;
-pub use stream::Streaming;
+pub(crate) use stream::Streaming;
 
 const LIST_INDENT: f64 = 22.0;
 const QUOTE_INDENT: f64 = 12.0;
 
 /// What the whole text is drawn in, before runs change it.
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Tone {
+pub(crate) enum Tone {
     /// The agent's answer.
     Primary,
     /// Thinking and other quiet text.
@@ -40,13 +40,13 @@ pub enum Tone {
 
 /// `markdown` as text at `size` points, its formulas and diagrams as code. A plan keeps this text, as its comments
 /// point into it.
-pub fn render(mtm: MainThreadMarker, markdown: &str, size: f64, tone: Tone) -> Retained<NSAttributedString> {
+pub(crate) fn render(mtm: MainThreadMarker, markdown: &str, size: f64, tone: Tone) -> Retained<NSAttributedString> {
     build(mtm, markdown, size, tone, None)
 }
 
 /// `markdown` as text at `size` points, `width` wide; its formulas and diagrams show as pictures once the shared
 /// renderer drew them, as code until then.
-pub fn render_with_figures(
+pub(crate) fn render_with_figures(
     mtm: MainThreadMarker,
     markdown: &str,
     size: f64,
@@ -129,7 +129,7 @@ fn render_paragraphs(
 
 /// Plain text in one font and colour, for text that is not markdown, such as what the user typed; it runs in the
 /// direction of its first letter, as a paragraph of an answer does.
-pub fn plain(text: &str, font: &NSFont, color: &NSColor) -> Retained<NSAttributedString> {
+pub(crate) fn plain(text: &str, font: &NSFont, color: &NSColor) -> Retained<NSAttributedString> {
     styled_plain(text, font, color, direction_of(text))
 }
 
@@ -149,7 +149,7 @@ fn direction_of(text: &str) -> NSWritingDirection {
 }
 
 /// Code or program output as `plain` sets it, left to right whatever the interface's direction.
-pub fn code(text: &str, font: &NSFont, color: &NSColor) -> Retained<NSAttributedString> {
+pub(crate) fn code(text: &str, font: &NSFont, color: &NSColor) -> Retained<NSAttributedString> {
     styled_plain(text, font, color, NSWritingDirection::LeftToRight)
 }
 

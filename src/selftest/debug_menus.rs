@@ -21,7 +21,7 @@ use splat_i18n::t;
 use super::a11y::keys::press;
 use super::debug::{project, script};
 use super::helpers::{editor, wait_until, window_of};
-use super::{check, finish};
+use super::{check, finish, give_up};
 use crate::debug::probe::{self as debug, Command};
 use crate::window::{Panel, WindowController};
 
@@ -160,8 +160,7 @@ fn choose_in_menu(title: &str) -> bool {
 /// runs on the scripted adapter to its end.
 fn configurations(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        check("the folder opens", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder opens");
     };
     controller.activate_panel(Panel::Debug);
     let items = debug::configuration_items(&controller);
@@ -204,7 +203,7 @@ fn configurations(root: PathBuf) {
 /// then detaches.
 fn attach_picked(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     // The scripted adapter of a launch.json entry runs its default script, which an attached session then walks
     // through; a breakpoint there holds it while it is attached.
@@ -246,7 +245,7 @@ fn attach_picked(root: PathBuf) {
 
 fn detach(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let titled = menu_entries().iter().any(|(title, on)| title == t("Trennen") && *on);
     let chosen = choose_in_menu(t("Trennen"));
@@ -276,7 +275,7 @@ fn detach(root: PathBuf) {
 /// "An Prozess anhängen …" asks for a process too; cancelling the sheet starts nothing.
 fn attach_cancelled(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let before = seen(&root).sessions.len();
     let _ = controller;
@@ -291,7 +290,7 @@ fn attach_cancelled(root: PathBuf) {
                 move || !has_sheet(&probe),
                 move |_| {
                     let Some(controller) = front(&root) else {
-                        return finish(SCENARIO);
+                        return give_up(SCENARIO, "the folder's window is open");
                     };
                     let after = seen(&root).sessions.len();
                     check(
@@ -310,7 +309,7 @@ fn attach_cancelled(root: PathBuf) {
 /// when Node is there, and the sheet is cancelled, as nothing may be downloaded here.
 fn missing_adapter(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     debug::start_configuration(&controller, "Node app");
     let probe = root.clone();
@@ -345,7 +344,7 @@ fn missing_adapter(root: PathBuf) {
 /// without a file in front starts nothing.
 fn current_program(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let notes = root.join("notes.md");
     let _ = std::fs::write(&notes, "# Notes\n");
@@ -371,7 +370,7 @@ fn current_program(root: PathBuf) {
 /// A file of a library without a program or tests of its own starts no session, and the console says why.
 fn library_file(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let package = root.join("shapes");
     let _ = std::fs::create_dir_all(package.join("src"));
@@ -389,7 +388,7 @@ fn library_file(root: PathBuf) {
         move || console(&probe, "shape.rs").is_some_and(|(_, input)| !input),
         move |ok| {
             let Some(controller) = front(&root) else {
-                return finish(SCENARIO);
+                return give_up(SCENARIO, "the folder's window is open");
             };
             let text = console(&root, "shape.rs").map(|(text, _)| text).unwrap_or_default();
             let words = t(
@@ -464,13 +463,12 @@ fn through_sheet(root: &Path, line: usize, title: &str, text: &str, response: NS
 /// its sheets, makes a log point on another line, and removes the breakpoint.
 fn gutter_menu(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let file = root.join("src/main.rs");
     controller.open_file(&file);
     let Some(view) = editor(&controller, "main.rs") else {
-        check("the program opens in an editor", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the program opens in an editor");
     };
     let empty = gutter_entries(&view, 1);
     check(
@@ -522,7 +520,7 @@ fn gutter_menu(root: PathBuf) {
 
 fn sheets_answered(root: PathBuf, asked: [bool; 4]) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let file = root.join("src/main.rs");
     let first = debug::breakpoint_at(&controller, &file, 1);
@@ -552,7 +550,7 @@ fn sheets_answered(root: PathBuf, asked: [bool; 4]) {
 /// A breakpoint's checkbox in the panel switches it, Return on its row shows its line and on the section folds it.
 fn rows(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let file = root.join("src/main.rs");
     debug::toggle_breakpoint(&controller, &file, 3);
@@ -611,7 +609,7 @@ fn rows(root: PathBuf) {
 /// switches all breakpoints off and on again.
 fn row_menus(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let file = root.join("src/main.rs");
     let menu = debug::breakpoint_row(&controller, &file, 3).and_then(|r| debug::context_menu(&controller, false, r));
@@ -674,7 +672,7 @@ fn row_menus(root: PathBuf) {
 /// Paused: an exception filter's checkbox, selecting, double-clicking and activating frames, and the rotor.
 fn paused(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let before = debug::filters(&controller);
     let clicked = debug::filter_row(&controller, "all").is_some_and(|r| debug::click_switch(&controller, r));
@@ -750,7 +748,7 @@ fn paused(root: PathBuf) {
 /// through its row's context menu or Delete.
 fn typed(root: PathBuf, ok: bool) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let watches = seen(&root).watches;
     let text = console(&root, "main.rs").map(|(text, _)| text).unwrap_or_default();
@@ -786,7 +784,7 @@ fn typed(root: PathBuf, ok: bool) {
 /// The title row's Step Into and Step Out, and the Debug menu's Restart on an adapter that can restart.
 fn commands(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let into = debug::click_control(&controller, Command::StepInto);
     let probe = root.clone();
@@ -794,7 +792,7 @@ fn commands(root: PathBuf) {
         move || seen(&probe).paused.is_some_and(|(_, line)| line == 4),
         move |stepped_in| {
             let Some(controller) = front(&root) else {
-                return finish(SCENARIO);
+                return give_up(SCENARIO, "the folder's window is open");
             };
             let out = debug::click_control(&controller, Command::StepOut);
             let probe = root.clone();
@@ -820,7 +818,7 @@ fn commands(root: PathBuf) {
 
 fn restarted(root: PathBuf, ok: bool) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check(
         "the Debug menu's Restart starts the program over to the first breakpoint, as the adapter can restart",
@@ -867,7 +865,7 @@ fn restarted(root: PathBuf, ok: bool) {
 /// An adapter that asks for its program in a terminal gets a terminal tab, which then owns the program.
 fn terminal(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let program = root.join("run.sh");
     let _ = std::fs::write(&program, "#!/bin/sh\necho scripted program in a terminal\n");
@@ -922,8 +920,7 @@ fn untrusted() {
 
 fn restricted(folder: PathBuf, asked: bool) {
     let Some(controller) = front(&folder) else {
-        check("the untrusted folder opens", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the untrusted folder opens");
     };
     controller.activate_panel(Panel::Debug);
     controller.open_file(&folder.join("src/main.rs"));

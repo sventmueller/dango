@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use ide_core::debugging::Breakpoint;
+use crate::kept::Breakpoint;
 use ide_document::Change;
 
 /// How a breakpoint shows in the gutter (E101: never by colour alone).
@@ -24,14 +24,13 @@ pub enum Look {
 /// What a session's adapter made of a breakpoint.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Check {
-    /// The file.
-    pub path: PathBuf,
+    pub(crate) path: PathBuf,
     /// The line, from 0.
-    pub line: usize,
+    pub(crate) line: usize,
     /// The adapter's number for it, which its later changes refer to.
-    pub id: Option<i64>,
+    pub(crate) id: Option<i64>,
     /// Whether the program stops there.
-    pub verified: bool,
+    pub(crate) verified: bool,
     /// Why not, in the adapter's words.
     pub message: Option<String>,
 }
@@ -61,7 +60,7 @@ pub struct Breakpoints {
 
 impl Breakpoints {
     /// Breakpoints from what the project kept.
-    pub fn new(list: Vec<Breakpoint>, active: bool) -> Breakpoints {
+    pub(crate) fn new(list: Vec<Breakpoint>, active: bool) -> Breakpoints {
         let mut breakpoints = Breakpoints {
             list,
             active,
@@ -76,8 +75,7 @@ impl Breakpoints {
         &self.list
     }
 
-    /// Whether there is none.
-    pub fn is_empty(&self) -> bool {
+    pub(crate) fn is_empty(&self) -> bool {
         self.list.is_empty()
     }
 
@@ -128,7 +126,7 @@ impl Breakpoints {
     }
 
     /// Clears every breakpoint of `path`, or of every file with `None`.
-    pub fn clear(&mut self, path: Option<&Path>) {
+    pub(crate) fn clear(&mut self, path: Option<&Path>) {
         self.list.retain(|b| path.is_some_and(|path| b.path != path));
     }
 
@@ -170,7 +168,7 @@ impl Breakpoints {
 
     /// The adapter answered the breakpoints of `path` asked for at `asked`, lines from 1, in that order. One it
     /// verified on another line moves there unless that line has one; whether any moved.
-    pub fn answered(&mut self, path: &Path, asked: &[u32], answers: &[crate::Breakpoint]) -> bool {
+    pub(crate) fn answered(&mut self, path: &Path, asked: &[u32], answers: &[crate::Breakpoint]) -> bool {
         self.checks.retain(|c| c.path != path);
         let mut moved = false;
         for (asked, answer) in asked.iter().zip(answers) {
@@ -220,7 +218,7 @@ impl Breakpoints {
     }
 
     /// No session runs any more, so no adapter says anything about them.
-    pub fn forget_checks(&mut self) {
+    pub(crate) fn forget_checks(&mut self) {
         self.checks.clear();
     }
 

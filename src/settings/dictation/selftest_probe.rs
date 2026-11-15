@@ -3,7 +3,7 @@
 use super::*;
 
 /// The keys the tab shows, for the self-test: one line per provider.
-pub fn key_lines(settings: &DictationSettings) -> Vec<String> {
+pub(crate) fn key_lines(settings: &DictationSettings) -> Vec<String> {
     settings
         .ivars()
         .views
@@ -19,7 +19,7 @@ pub fn key_lines(settings: &DictationSettings) -> Vec<String> {
 }
 
 /// Whether the tab offers Lowspeak's choices and shows a missing model's download, for the self-test.
-pub fn rows_shown(settings: &DictationSettings) -> (bool, bool) {
+pub(crate) fn rows_shown(settings: &DictationSettings) -> (bool, bool) {
     settings
         .ivars()
         .views

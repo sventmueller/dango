@@ -18,17 +18,17 @@ use crate::own_agent::ModelChoice;
 
 /// What the composer's menus offered, so the picked item's tag can be read.
 #[derive(Default)]
-pub struct Offered {
-    pub commands: Vec<String>,
-    pub models: Vec<String>,
-    pub efforts: Vec<String>,
-    pub modes: Vec<String>,
-    pub past: Vec<Resume>,
+pub(crate) struct Offered {
+    pub(crate) commands: Vec<String>,
+    pub(crate) models: Vec<String>,
+    pub(crate) efforts: Vec<String>,
+    pub(crate) modes: Vec<String>,
+    pub(crate) past: Vec<Resume>,
 }
 
 /// What an AI tab holds besides its views: its session, the turn in flight, the user's picks and what the next
 /// message takes along.
-pub struct State {
+pub(crate) struct State {
     run: Run,
     thread: Rc<Thread>,
     problem: Option<Problem>,
@@ -68,7 +68,7 @@ enum Known {
 }
 
 /// The model, effort and mode the user picked, which the session starts with.
-pub struct Picks {
+pub(crate) struct Picks {
     mode: String,
     model: Option<String>,
     effort: Option<String>,
@@ -77,15 +77,15 @@ pub struct Picks {
 }
 
 impl Picks {
-    pub fn mode(&self) -> &str {
+    pub(crate) fn mode(&self) -> &str {
         &self.mode
     }
 
-    pub fn model(&self) -> Option<&str> {
+    pub(crate) fn model(&self) -> Option<&str> {
         self.model.as_deref()
     }
 
-    pub fn effort(&self) -> Option<&str> {
+    pub(crate) fn effort(&self) -> Option<&str> {
         self.effort.as_deref()
     }
 }
@@ -111,16 +111,21 @@ struct Rewind {
 
 /// How the sandbox button looks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SandboxLook {
-    pub symbol: &'static str,
+pub(crate) struct SandboxLook {
+    pub(crate) symbol: &'static str,
     /// Green while the sandbox is on, grey while it is off.
-    pub on: bool,
-    pub tip: &'static str,
+    pub(crate) on: bool,
+    pub(crate) tip: &'static str,
 }
 
 impl State {
     /// The state of a tab running `agent` before its session starts, with the user's last picks for the agent.
-    pub fn new(agent: &Agent, source: Source, thread: Rc<Thread>, choice: ide_core::settings::AgentChoice) -> State {
+    pub(crate) fn new(
+        agent: &Agent,
+        source: Source,
+        thread: Rc<Thread>,
+        choice: ide_core::settings::AgentChoice,
+    ) -> State {
         let known = match agent {
             Agent::Claude => Known::Claude(Capabilities::default()),
             Agent::Acp(_) => Known::Acp(None),
@@ -157,7 +162,7 @@ impl State {
     }
 
     /// The session's title: the user's, else the agent's, else the first line of the first message, else `untitled`.
-    pub fn title(&self, untitled: &str) -> String {
+    pub(crate) fn title(&self, untitled: &str) -> String {
         let first_message = || {
             self.thread.entries(&Lane::Main).iter().find_map(|e| match &e.kind {
                 ide_thread::EntryKind::UserMessage(m) => {
@@ -175,7 +180,7 @@ impl State {
     }
 
     /// Takes the first queued message off the queue, once the session rests and nothing else is on its way.
-    pub fn next_queued(&mut self) -> Option<UserMessage> {
+    pub(crate) fn next_queued(&mut self) -> Option<UserMessage> {
         if self.running() || !self.run.source.is_live() || self.queue.is_empty() {
             return None;
         }
@@ -183,153 +188,153 @@ impl State {
     }
 
     /// Takes in what the tab opens with: the past session `resume`, and whether the user bookmarked the thread.
-    pub fn opened(&mut self, resume: Option<Resume>, bookmarked: bool) {
+    pub(crate) fn opened(&mut self, resume: Option<Resume>, bookmarked: bool) {
         self.custom_title = resume.as_ref().and_then(|r| r.title.clone());
         self.bookmarked = bookmarked;
         self.resume = resume;
     }
 
-    pub fn thread(&self) -> &Rc<Thread> {
+    pub(crate) fn thread(&self) -> &Rc<Thread> {
         &self.thread
     }
 
     /// The past session the tab continues.
-    pub fn resume(&self) -> Option<&Resume> {
+    pub(crate) fn resume(&self) -> Option<&Resume> {
         self.resume.as_ref()
     }
 
-    pub fn custom_title(&self) -> Option<&str> {
+    pub(crate) fn custom_title(&self) -> Option<&str> {
         self.custom_title.as_deref()
     }
 
-    pub fn set_custom_title(&mut self, title: String) {
+    pub(crate) fn set_custom_title(&mut self, title: String) {
         self.custom_title = Some(title);
     }
 
-    pub fn bookmarked(&self) -> bool {
+    pub(crate) fn bookmarked(&self) -> bool {
         self.bookmarked
     }
 
-    pub fn set_bookmarked(&mut self, on: bool) {
+    pub(crate) fn set_bookmarked(&mut self, on: bool) {
         self.bookmarked = on;
     }
 
     /// Bookmarks the thread or takes the bookmark off; whether it is bookmarked now.
-    pub fn toggle_bookmark(&mut self) -> bool {
+    pub(crate) fn toggle_bookmark(&mut self) -> bool {
         self.bookmarked = !self.bookmarked;
         self.bookmarked
     }
 
-    pub fn sandbox(&self) -> bool {
+    pub(crate) fn sandbox(&self) -> bool {
         self.sandbox
     }
 
     /// Switches the sandbox on or off; whether it is on now.
-    pub fn toggle_sandbox(&mut self) -> bool {
+    pub(crate) fn toggle_sandbox(&mut self) -> bool {
         self.sandbox = !self.sandbox;
         self.sandbox
     }
 
-    pub fn remote(&self) -> Option<bool> {
+    pub(crate) fn remote(&self) -> Option<bool> {
         self.remote
     }
 
-    pub fn set_remote(&mut self, on: bool) {
+    pub(crate) fn set_remote(&mut self, on: bool) {
         self.remote = Some(on);
     }
 
-    pub fn problem(&self) -> Option<&Problem> {
+    pub(crate) fn problem(&self) -> Option<&Problem> {
         self.problem.as_ref()
     }
 
-    pub fn set_problem(&mut self, problem: Option<Problem>) {
+    pub(crate) fn set_problem(&mut self, problem: Option<Problem>) {
         self.problem = problem;
     }
 
-    pub fn queue(&self) -> &[UserMessage] {
+    pub(crate) fn queue(&self) -> &[UserMessage] {
         &self.queue
     }
 
-    pub fn enqueue(&mut self, message: UserMessage) {
+    pub(crate) fn enqueue(&mut self, message: UserMessage) {
         self.queue.push(message);
     }
 
     /// What the next message takes along.
-    pub fn attachments(&self) -> &[Attachment] {
+    pub(crate) fn attachments(&self) -> &[Attachment] {
         &self.attachments
     }
 
-    pub fn attach(&mut self, attachments: impl IntoIterator<Item = Attachment>) {
+    pub(crate) fn attach(&mut self, attachments: impl IntoIterator<Item = Attachment>) {
         self.attachments.extend(attachments);
     }
 
     /// Takes the attachments off for the message that goes out.
-    pub fn take_attachments(&mut self) -> Vec<Attachment> {
+    pub(crate) fn take_attachments(&mut self) -> Vec<Attachment> {
         std::mem::take(&mut self.attachments)
     }
 
     /// The editor's selection, offered as context.
-    pub fn offer(&self) -> Option<&Attachment> {
+    pub(crate) fn offer(&self) -> Option<&Attachment> {
         self.offer.as_ref()
     }
 
     /// Offers the editor's selection `offer`, unless the next message takes it along already; whether the offer
     /// changed.
-    pub fn offer_selection(&mut self, offer: Option<Attachment>) -> bool {
+    pub(crate) fn offer_selection(&mut self, offer: Option<Attachment>) -> bool {
         let offer = offer.filter(|o| !self.attachments.contains(o));
         let changed = self.offer != offer;
         self.offer = offer;
         changed
     }
 
-    pub fn take_offer(&mut self) -> Option<Attachment> {
+    pub(crate) fn take_offer(&mut self) -> Option<Attachment> {
         self.offer.take()
     }
 
     /// The checkpoint taken before each user message, by the CLI's id for the message.
-    pub fn checkpoints(&self) -> &HashMap<String, Checkpoint> {
+    pub(crate) fn checkpoints(&self) -> &HashMap<String, Checkpoint> {
         &self.checkpoints
     }
 
-    pub fn offered(&self) -> &Offered {
+    pub(crate) fn offered(&self) -> &Offered {
         &self.offered
     }
 
     /// What the composer's menus offer, to be set as one of them is built.
-    pub fn offered_mut(&mut self) -> &mut Offered {
+    pub(crate) fn offered_mut(&mut self) -> &mut Offered {
         &mut self.offered
     }
 
-    pub fn source(&self) -> &Source {
+    pub(crate) fn source(&self) -> &Source {
         &self.run.source
     }
 
     /// Notes that the session is being started.
-    pub fn start(&mut self) {
+    pub(crate) fn start(&mut self) {
         self.run.source = Source::Starting;
         self.problem = None;
         self.picks.applied = false;
     }
 
     /// Notes that `source` runs the session now.
-    pub fn started(&mut self, source: Source) {
+    pub(crate) fn started(&mut self, source: Source) {
         self.run.source = source;
         self.problem = None;
     }
 
     /// Notes that the session did not start, for `problem`.
-    pub fn failed(&mut self, problem: Problem) {
+    pub(crate) fn failed(&mut self, problem: Problem) {
         self.run.source = Source::Idle;
         self.problem = Some(problem);
     }
 
     /// Takes the session off the tab, for the caller to end it.
-    pub fn end(&mut self) -> Source {
+    pub(crate) fn end(&mut self) -> Source {
         std::mem::replace(&mut self.run.source, Source::Idle)
     }
 
     /// Takes in what the session says it offers.
-    pub fn learn(&mut self) {
+    pub(crate) fn learn(&mut self) {
         match &mut self.run.known {
             Known::Claude(caps) => {
                 if let Some(learned) = self.run.source.capabilities() {
@@ -346,7 +351,7 @@ impl State {
     }
 
     /// What the CLI offers, in a Claude tab.
-    pub fn claude_caps(&self) -> Option<&Capabilities> {
+    pub(crate) fn claude_caps(&self) -> Option<&Capabilities> {
         match &self.run.known {
             Known::Claude(caps) => Some(caps),
             _ => None,
@@ -354,7 +359,7 @@ impl State {
     }
 
     /// What the ACP agent offers, in an ACP tab once it said.
-    pub fn acp_caps(&self) -> Option<&ide_acp::Capabilities> {
+    pub(crate) fn acp_caps(&self) -> Option<&ide_acp::Capabilities> {
         match &self.run.known {
             Known::Acp(caps) => caps.as_ref(),
             _ => None,
@@ -362,7 +367,7 @@ impl State {
     }
 
     /// The endpoint and model of the own agent's session.
-    pub fn own_choice(&self) -> Option<&ModelChoice> {
+    pub(crate) fn own_choice(&self) -> Option<&ModelChoice> {
         match &self.run.known {
             Known::Own(choice) => choice.as_ref(),
             _ => None,
@@ -370,36 +375,36 @@ impl State {
     }
 
     /// Picks the endpoint and model the own agent's session runs with; other agents have none.
-    pub fn pick_own(&mut self, picked: Option<ModelChoice>) {
+    pub(crate) fn pick_own(&mut self, picked: Option<ModelChoice>) {
         if let Known::Own(choice) = &mut self.run.known {
             *choice = picked;
         }
     }
 
     /// Answers a plan; what a recording played for the self-test changed.
-    pub fn answer_plan(&mut self, request: &str, answer: PlanAnswer) -> Result<Vec<Change>, SessionError> {
+    pub(crate) fn answer_plan(&mut self, request: &str, answer: PlanAnswer) -> Result<Vec<Change>, SessionError> {
         self.run.source.answer_plan(request, answer)
     }
 
-    pub fn picks(&self) -> &Picks {
+    pub(crate) fn picks(&self) -> &Picks {
         &self.picks
     }
 
-    pub fn pick_model(&mut self, model: String) {
+    pub(crate) fn pick_model(&mut self, model: String) {
         self.picks.model = Some(model);
     }
 
-    pub fn pick_effort(&mut self, level: String) {
+    pub(crate) fn pick_effort(&mut self, level: String) {
         self.picks.effort = Some(level);
     }
 
-    pub fn pick_mode(&mut self, mode: String) {
+    pub(crate) fn pick_mode(&mut self, mode: String) {
         self.picks.mode = mode;
     }
 
     /// What the ACP agent offers, for the picks the user made last for it to be put on its session; once per
     /// session, as soon as it offers modes or options.
-    pub fn apply_picks(&mut self) -> Option<ide_acp::Capabilities> {
+    pub(crate) fn apply_picks(&mut self) -> Option<ide_acp::Capabilities> {
         let caps = self
             .acp_caps()
             .filter(|caps| !self.picks.applied && (!caps.modes.is_empty() || !caps.options.is_empty()))
@@ -408,38 +413,38 @@ impl State {
         Some(caps)
     }
 
-    pub fn status(&self) -> Status {
+    pub(crate) fn status(&self) -> Status {
         self.turn.status
     }
 
     /// Whether a checkpoint is being taken before a prompt goes out.
-    pub fn is_sending(&self) -> bool {
+    pub(crate) fn is_sending(&self) -> bool {
         self.turn.sending
     }
 
     /// When the last message went out.
-    pub fn sent_at(&self) -> Option<Instant> {
+    pub(crate) fn sent_at(&self) -> Option<Instant> {
         self.turn.sent_at
     }
 
     /// The rewind the session starts with, until the agent accepted it.
-    pub fn fork(&self) -> Option<&Fork> {
+    pub(crate) fn fork(&self) -> Option<&Fork> {
         self.rewind.fork.as_ref()
     }
 
     /// Takes in the thread as the session reports it, with its status.
-    pub fn absorbed(&mut self, thread: Rc<Thread>) {
+    pub(crate) fn absorbed(&mut self, thread: Rc<Thread>) {
         self.turn.status = thread.status();
         self.thread = thread;
     }
 
     /// Notes that a checkpoint is being taken before a prompt goes out.
-    pub fn begin_send(&mut self) {
+    pub(crate) fn begin_send(&mut self) {
         self.turn.sending = true;
     }
 
     /// Notes that `message` goes out now that its checkpoint is taken.
-    pub fn delivering(&mut self, message: &UserMessage) {
+    pub(crate) fn delivering(&mut self, message: &UserMessage) {
         self.turn.sending = false;
         // A refusal comes with the result of the first prompt on the rewound session, so by the second the rewind
         // holds.
@@ -453,7 +458,7 @@ impl State {
 
     /// Notes that the message went out now with `checkpoint` taken before it; `id` is the message's id, the agent's
     /// or the app's own.
-    pub fn sent(&mut self, id: Option<String>, checkpoint: Option<Checkpoint>) {
+    pub(crate) fn sent(&mut self, id: Option<String>, checkpoint: Option<Checkpoint>) {
         if let Some(checkpoint) = checkpoint {
             if let Some(id) = id {
                 self.checkpoints.insert(id, checkpoint.clone());
@@ -464,14 +469,14 @@ impl State {
     }
 
     /// Takes the checkpoint of the turn that just ended.
-    pub fn turn_ended(&mut self) -> Option<Checkpoint> {
+    pub(crate) fn turn_ended(&mut self) -> Option<Checkpoint> {
         self.turn.checkpoint.take()
     }
 
     /// Puts `finished` in place of the kept checkpoints whose commit is `started`.
-    pub fn checkpoint_finished(&mut self, started: &str, finished: &Checkpoint) {
+    pub(crate) fn checkpoint_finished(&mut self, started: &ide_git::CommitId, finished: &Checkpoint) {
         for kept in self.checkpoints.values_mut() {
-            if kept.commit == started {
+            if kept.commit == *started {
                 *kept = finished.clone();
             }
         }
@@ -479,7 +484,7 @@ impl State {
 
     /// Goes on with `kept`, the thread before a prompt, and that prompt's `attachments`, until the agent accepts
     /// `fork`.
-    pub fn rewound(&mut self, kept: Thread, attachments: &[Attachment], fork: Fork) {
+    pub(crate) fn rewound(&mut self, kept: Thread, attachments: &[Attachment], fork: Fork) {
         self.restart_with(kept);
         self.resume = None;
         self.attachments = attachments.to_vec();
@@ -487,12 +492,12 @@ impl State {
     }
 
     /// Takes the rewind the agent refused, with the prompt that met the refusal.
-    pub fn take_refused_rewind(&mut self) -> (Option<Fork>, Option<UserMessage>) {
+    pub(crate) fn take_refused_rewind(&mut self) -> (Option<Fork>, Option<UserMessage>) {
         (self.rewind.fork.take(), self.rewind.last_sent.take())
     }
 
     /// Goes back to `before`, the thread of a refused rewind, with `message` first in the queue.
-    pub fn rewind_undone(&mut self, before: Thread, message: Option<UserMessage>) {
+    pub(crate) fn rewind_undone(&mut self, before: Thread, message: Option<UserMessage>) {
         self.restart_with(before);
         if let Some(message) = message {
             self.queue.insert(0, message);
@@ -505,30 +510,30 @@ impl State {
         self.turn.checkpoint = None;
     }
 
-    pub fn remove_queued(&mut self, index: usize) {
+    pub(crate) fn remove_queued(&mut self, index: usize) {
         if index < self.queue.len() {
             self.queue.remove(index);
         }
     }
 
-    pub fn remove_attachment(&mut self, index: usize) {
+    pub(crate) fn remove_attachment(&mut self, index: usize) {
         if index < self.attachments.len() {
             self.attachments.remove(index);
         }
     }
 
     /// Whether a turn runs or a prompt is on its way, so the send button stops instead.
-    pub fn running(&self) -> bool {
+    pub(crate) fn running(&self) -> bool {
         self.turn.status != Status::Idle || self.turn.sending
     }
 
     /// Whether there is something to send with `text` in the composer.
-    pub fn can_send(&self, text: &str) -> bool {
+    pub(crate) fn can_send(&self, text: &str) -> bool {
         !text.trim().is_empty() || !self.attachments.is_empty()
     }
 
     /// What the empty composer says.
-    pub fn placeholder(&self) -> &'static str {
+    pub(crate) fn placeholder(&self) -> &'static str {
         if self.turn.sending {
             t("Sicherungspunkt wird angelegt …")
         } else {
@@ -537,7 +542,7 @@ impl State {
     }
 
     /// The model pill of a Claude session: the model as people say it, with the effort if one is set.
-    pub fn model_pill(&self) -> String {
+    pub(crate) fn model_pill(&self) -> String {
         let model_id = self
             .thread
             .model()
@@ -563,7 +568,7 @@ impl State {
     }
 
     /// The mode pill of a Claude session: its title and symbol.
-    pub fn mode_pill(&self) -> (String, &'static str) {
+    pub(crate) fn mode_pill(&self) -> (String, &'static str) {
         let mode_id = self
             .thread
             .mode()
@@ -581,7 +586,7 @@ impl State {
             })
     }
 
-    pub fn sandbox_look(&self) -> SandboxLook {
+    pub(crate) fn sandbox_look(&self) -> SandboxLook {
         if self.sandbox {
             SandboxLook {
                 symbol: "checkmark.shield.fill",
@@ -599,7 +604,7 @@ impl State {
 }
 
 /// The modes of the CLI's permission prompt, with how the composer names them.
-pub fn modes() -> [(&'static str, &'static str, &'static str); 5] {
+pub(crate) fn modes() -> [(&'static str, &'static str, &'static str); 5] {
     [
         ("default", t("Manuell"), "hand.raised"),
         ("acceptEdits", t("Änderungen annehmen"), "pencil.and.outline"),
@@ -610,7 +615,7 @@ pub fn modes() -> [(&'static str, &'static str, &'static str); 5] {
 }
 
 /// The name of an effort level as the composer shows it.
-pub fn effort_name(level: &str) -> String {
+pub(crate) fn effort_name(level: &str) -> String {
     match level {
         "minimal" => t("Minimal").to_string(),
         "low" => t("Niedrig").to_string(),
@@ -623,7 +628,7 @@ pub fn effort_name(level: &str) -> String {
 }
 
 /// A model's id as people say it: `claude-opus-5-5` as `Opus 5.5`.
-pub fn model_name(id: &str) -> String {
+pub(crate) fn model_name(id: &str) -> String {
     let id = id.split('[').next().unwrap_or(id);
     let rest = id.strip_prefix("claude-").unwrap_or(id);
     let mut parts = rest.split('-').filter(|p| p.len() < 8);
@@ -644,7 +649,7 @@ pub fn model_name(id: &str) -> String {
 }
 
 /// The entry numbered `id` in any lane of `thread`.
-pub fn find_entry(thread: &Thread, id: u64) -> Option<Arc<Entry>> {
+pub(crate) fn find_entry(thread: &Thread, id: u64) -> Option<Arc<Entry>> {
     let lanes = std::iter::once(Lane::Main).chain(thread.subagents().iter().map(|s| Lane::Subagent(s.key.clone())));
     for lane in lanes {
         if let Some(entry) = thread.entries(&lane).iter().find(|e| e.id.get() == id) {

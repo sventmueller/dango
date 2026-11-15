@@ -13,7 +13,7 @@ use objc2_foundation::{NSData, NSRange};
 use splat_i18n::{t, tf};
 
 use super::helpers::{self, editor, text_of, utf16_len, wait_until, window_of};
-use super::{check, finish, snapshot};
+use super::{check, finish, give_up, give_up_saying, snapshot};
 use crate::editor::EditorTextView;
 use crate::markdown::selftest::{
     Command, Kind, Outcome, Source, export_seen, export_to, link_with, paste_from, source_of,
@@ -53,8 +53,7 @@ fn editor_of(root: &Path, name: &str) -> Option<objc2::rc::Retained<EditorTextVi
 
 fn preview_beside(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        check("the folder gets its window", false, root.display().to_string());
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "the folder gets its window", root.display().to_string());
     };
     controller.open_file(&root.join("notiz.md"));
     let preview = tf("Vorschau: {}", &["notiz.md"]);
@@ -68,7 +67,7 @@ fn preview_beside(root: PathBuf) {
         format!("{:?}", controller.window_tabs()),
     );
     let Some(view) = editor(&controller, "notiz.md") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "notiz.md opens in an editor");
     };
     crate::preview::toggle_beside(&view);
     let closed = !has_preview(&controller);
@@ -224,7 +223,7 @@ fn menus(root: &Path) {
 
 fn exports(root: PathBuf) {
     let Some(view) = editor_of(&root, "notiz.md") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "notiz.md opens in an editor");
     };
     let out = ide_core::paths::home().join("exports");
     let exports = Rc::new(Exports::default());
@@ -394,10 +393,10 @@ fn cancelling(root: PathBuf, out: PathBuf, exports: Rc<Exports>) {
 
 fn failing(root: PathBuf, out: PathBuf, exports: Rc<Exports>) {
     let Some(view) = editor_of(&root, "notiz.md") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "notiz.md opens in an editor");
     };
     let Some(source) = source_of(&view) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "notiz.md is a Markdown source to export");
     };
     let window = window_of(&root).and_then(|c| c.window());
     let target = out.join("fehlt").join("notiz.html");

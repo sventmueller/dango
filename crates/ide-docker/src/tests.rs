@@ -48,12 +48,12 @@ fn images_volumes_contexts_and_events_read_as_docker_writes_them() {
     assert_eq!(
         events[0],
         Event {
-            kind: "container".into(),
-            action: "start".into(),
+            kind: ObjectKind::Container,
+            action: EventAction::Listed("start".into()),
             id: "3f2a1c".into()
         }
     );
-    assert_eq!(events[1].kind, "volume");
+    assert_eq!(events[1].kind, ObjectKind::Volume);
 }
 
 /// The same Compose project, a container alone, a stop and start, recorded by the oldest and the newest Docker.
@@ -87,9 +87,9 @@ fn reads_recording(version: &str) {
     assert!(
         events
             .iter()
-            .any(|e| e.kind == "container" && e.action == "start" && e.id == proxy.id)
+            .any(|e| e.kind == ObjectKind::Container && e.action.word() == "start" && e.id == proxy.id)
     );
-    assert!(events.iter().any(|e| e.action == "die" && e.id == web.id));
+    assert!(events.iter().any(|e| e.action.word() == "die" && e.id == web.id));
     assert!(events.iter().all(Event::changes_listing));
     assert!(contexts(&recorded("contexts")).iter().any(|c| c.current));
 }
@@ -112,6 +112,34 @@ fn a_health_check_changes_nothing_listed() {
         .collect();
     assert_eq!(checks.len(), 4);
     assert!(checks.iter().all(|e| !e.changes_listing()), "{checks:?}");
+}
+
+#[test]
+fn states_protocols_kinds_and_actions_read_from_dockers_words() {
+    let states = [
+        ("created", ContainerState::Created),
+        ("running", ContainerState::Running),
+        ("paused", ContainerState::Paused),
+        ("restarting", ContainerState::Restarting),
+        ("removing", ContainerState::Removing),
+        ("exited", ContainerState::Exited),
+        ("dead", ContainerState::Dead),
+        ("frozen", ContainerState::Other("frozen".into())),
+    ];
+    for (word, state) in states {
+        assert_eq!(ContainerState::read(word), state);
+    }
+    assert_eq!(ports("0.0.0.0:53->53/udp")[0].protocol, Protocol::Udp);
+    assert_eq!(ports("0.0.0.0:9->9/sctp")[0].protocol, Protocol::Sctp);
+    assert_eq!(ports("0.0.0.0:9->9/quic")[0].protocol, Protocol::Other("quic".into()));
+    assert_eq!(ObjectKind::read("network"), ObjectKind::Network);
+    assert_eq!(ObjectKind::read("daemon"), ObjectKind::Other("daemon".into()));
+    assert_eq!(
+        EventAction::read("health_status: healthy"),
+        EventAction::Quiet("health_status: healthy".into())
+    );
+    assert_eq!(EventAction::read("destroy").word(), "destroy");
+    assert!(matches!(EventAction::read("exec_start: sh"), EventAction::Quiet(_)));
 }
 
 #[test]

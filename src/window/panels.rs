@@ -10,10 +10,11 @@ use objc2_app_kit::{
     NSColor, NSFont, NSImageView, NSLayoutAttribute, NSLineBreakMode, NSStackView, NSTextAlignment, NSTextField,
     NSUserInterfaceLayoutOrientation, NSView,
 };
+use objc2_foundation::NSEdgeInsets;
 use splat_i18n::{t, tf};
 
 use super::{Panel, WindowController};
-use crate::util::{borderless_button, label, ns, symbol};
+use crate::util::{activate, auto_layout, borderless_button, label, ns, pin_inset, pin_sides, symbol};
 
 /// How far the panel's title keeps from the sidebar's leading edge.
 const HEADER_INSET: f64 = 8.0;
@@ -25,9 +26,9 @@ const TREE_OUTDENT: f64 = 4.0;
 /// How far a title's buttons sit below its centre: symbols are taller than the title's capitals, and this lets
 /// both start at the same height.
 const ACCESSORY_DROP: f64 = 2.0;
-pub use ide_ui_common::panel::ACCESSORY_INSET;
+pub(crate) use ide_ui_common::panel::ACCESSORY_INSET;
 
-pub struct Panels {
+pub(crate) struct Panels {
     mtm: MainThreadMarker,
     shown: std::cell::Cell<Panel>,
     view: Retained<NSView>,
@@ -39,7 +40,7 @@ pub struct Panels {
 }
 
 impl Panels {
-    pub fn new(mtm: MainThreadMarker, _target: &WindowController, project: Option<&Path>) -> Panels {
+    pub(crate) fn new(mtm: MainThreadMarker, _target: &WindowController, project: Option<&Path>) -> Panels {
         let view = NSView::new(mtm);
         let header = ide_ui_common::panel::heading(mtm, "");
         header.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
@@ -47,9 +48,8 @@ impl Panels {
         accessory.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
         view.addSubview(&header);
         view.addSubview(&accessory);
-        header.setTranslatesAutoresizingMaskIntoConstraints(false);
-        accessory.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
+        auto_layout(&[&header, &accessory]);
+        activate([
             header
                 .leadingAnchor()
                 .constraintEqualToAnchor_constant(&view.leadingAnchor(), HEADER_INSET),
@@ -65,9 +65,7 @@ impl Panels {
             header
                 .trailingAnchor()
                 .constraintLessThanOrEqualToAnchor_constant(&accessory.leadingAnchor(), -4.0),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         let panels = Panels {
             mtm,
             view,
@@ -82,12 +80,12 @@ impl Panels {
         panels
     }
 
-    pub fn view(&self) -> &NSView {
+    pub(crate) fn view(&self) -> &NSView {
         &self.view
     }
 
     /// Rebuilds the pages for `project`.
-    pub fn set_project(&self, project: Option<&Path>) {
+    pub(crate) fn set_project(&self, project: Option<&Path>) {
         *self.folder.borrow_mut() = project
             .and_then(Path::file_name)
             .map(|name| name.to_string_lossy().into_owned());
@@ -112,21 +110,17 @@ impl Panels {
             return;
         }
         self.view.addSubview(page);
-        for constraint in [
-            page.leadingAnchor().constraintEqualToAnchor(&self.view.leadingAnchor()),
-            page.trailingAnchor()
-                .constraintEqualToAnchor(&self.view.trailingAnchor()),
+        pin_sides(page, &self.view, 0.0);
+        activate([
             page.topAnchor()
                 .constraintEqualToAnchor_constant(&self.header.bottomAnchor(), 8.0),
             page.bottomAnchor().constraintEqualToAnchor(&self.view.bottomAnchor()),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
     }
 
     /// Takes the pages of the panels that do not show out of the panel, so a move of the sidebar into another window
     /// tab moves only the page that shows; each comes in when its panel shows.
-    pub fn leave_out_hidden(&self) {
+    pub(crate) fn leave_out_hidden(&self) {
         let shown = self.shown.get();
         for (panel, page) in self.pages.borrow().iter() {
             if *panel != shown && placed(page) {
@@ -136,13 +130,13 @@ impl Panels {
     }
 
     /// Shows `view`, the folder tree, on the files page, and `buttons` at the end of its title row.
-    pub fn set_files(&self, view: &NSView, buttons: &NSView) {
+    pub(crate) fn set_files(&self, view: &NSView, buttons: &NSView) {
         self.place(Panel::Files, view, -TREE_OUTDENT);
         self.set_accessory(Panel::Files, buttons);
     }
 
     /// Shows `view` at the end of the title row of `panel`.
-    pub fn set_accessory(&self, panel: Panel, view: &NSView) {
+    pub(crate) fn set_accessory(&self, panel: Panel, view: &NSView) {
         let mut accessories = self.accessories.borrow_mut();
         accessories.retain(|(owner, _)| *owner != panel);
         accessories.push((panel, objc2::Message::retain(view)));
@@ -151,7 +145,7 @@ impl Panels {
     }
 
     /// Shows `view` on the page of `panel`, in place of what it showed.
-    pub fn set_page(&self, panel: Panel, view: &NSView) {
+    pub(crate) fn set_page(&self, panel: Panel, view: &NSView) {
         self.place(panel, view, 0.0);
     }
 
@@ -165,19 +159,16 @@ impl Panels {
             subview.removeFromSuperview();
         }
         page.addSubview(view);
-        view.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
-            view.leadingAnchor()
-                .constraintEqualToAnchor_constant(&page.leadingAnchor(), leading),
-            view.trailingAnchor().constraintEqualToAnchor(&page.trailingAnchor()),
-            view.topAnchor().constraintEqualToAnchor(&page.topAnchor()),
-            view.bottomAnchor().constraintEqualToAnchor(&page.bottomAnchor()),
-        ] {
-            constraint.setActive(true);
-        }
+        let insets = NSEdgeInsets {
+            top: 0.0,
+            left: leading,
+            bottom: 0.0,
+            right: 0.0,
+        };
+        pin_inset(view, page, insets);
     }
 
-    pub fn show(&self, panel: Panel) {
+    pub(crate) fn show(&self, panel: Panel) {
         self.shown.set(panel);
         let folder = self.folder.borrow().is_some();
         self.header.setHidden(!folder);
@@ -198,7 +189,7 @@ impl Panels {
     }
 
     /// The page of the panel that shows.
-    pub fn shown_page(&self) -> Option<Retained<NSView>> {
+    pub(crate) fn shown_page(&self) -> Option<Retained<NSView>> {
         let shown = self.shown.get();
         self.pages
             .borrow()
@@ -208,7 +199,7 @@ impl Panels {
     }
 
     /// The title of `panel`; the files panel names the folder it shows.
-    pub fn heading(&self, panel: Panel) -> String {
+    pub(crate) fn heading(&self, panel: Panel) -> String {
         match (panel, self.folder.borrow().as_deref()) {
             (Panel::Files, Some(folder)) => tf("Dateien: {}", &[folder]),
             _ => panel.title().to_owned(),
@@ -240,7 +231,7 @@ impl Panels {
         let page = NSView::new(mtm);
         page.addSubview(&state);
         state.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
+        activate([
             state.centerXAnchor().constraintEqualToAnchor(&page.centerXAnchor()),
             state
                 .centerYAnchor()
@@ -251,21 +242,19 @@ impl Panels {
             state
                 .trailingAnchor()
                 .constraintLessThanOrEqualToAnchor_constant(&page.trailingAnchor(), -16.0),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         page
     }
 }
 
-pub use ide_ui_common::panel::{header_button, header_row};
+pub(crate) use ide_ui_common::panel::{header_button, header_row};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;
 
 /// A symbol, a title, a line of explanation and maybe a button, centred, as macOS shows a place without content.
-pub fn empty_state(
+pub(crate) fn empty_state(
     mtm: MainThreadMarker,
     symbol_name: &str,
     title: &str,
@@ -281,8 +270,7 @@ pub fn empty_state(
         view.setSymbolConfiguration(Some(
             &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
                 28.0,
-                // SAFETY: AppKit sets its font weight constants when it loads.
-                unsafe { objc2_app_kit::NSFontWeightLight },
+                crate::util::constant!(objc2_app_kit::NSFontWeightLight),
             ),
         ));
         view.setContentTintColor(Some(&NSColor::tertiaryLabelColor()));

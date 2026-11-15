@@ -4,10 +4,11 @@
 use std::cell::{OnceCell, RefCell};
 
 use block2::{DynBlock, RcBlock};
+use ide_ui_common::alert::Alert;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
-use objc2_app_kit::{NSAlert, NSModalResponse, NSModalResponseOK, NSSavePanel};
+use objc2_app_kit::{NSModalResponse, NSModalResponseOK, NSSavePanel};
 use objc2_foundation::{
     NSData, NSDictionary, NSError, NSFileManager, NSObjectProtocol, NSSearchPathDirectory, NSSearchPathDomainMask,
     NSString, NSURL, NSURLResponse,
@@ -19,7 +20,7 @@ use ide_ui_common::constant;
 use ide_ui_common::util::{guarded, ns};
 
 #[derive(Default)]
-pub struct Ivars {
+pub(crate) struct Ivars {
     /// The downloads under way, with the file each writes to.
     running: RefCell<Vec<(Retained<WKDownload>, Retained<NSURL>)>>,
 }
@@ -30,7 +31,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEBrowserDownloads"]
     #[ivars = Ivars]
-    pub struct Downloads;
+    pub(crate) struct Downloads;
 
     unsafe impl NSObjectProtocol for Downloads {}
 
@@ -83,7 +84,7 @@ define_class!(
 
 /// The delegate of every download with the downloads that run.
 #[derive(Default)]
-pub struct Downloading {
+pub(crate) struct Downloading {
     downloads: OnceCell<Retained<Downloads>>,
 }
 
@@ -92,7 +93,7 @@ fn with_downloads<R>(f: impl FnOnce(&OnceCell<Retained<Downloads>>) -> R) -> R {
 }
 
 /// The delegate of every download, which lives as long as the app, so a download outlives the tab it started in.
-pub fn delegate(mtm: MainThreadMarker) -> Retained<ProtocolObject<dyn WKDownloadDelegate>> {
+pub(crate) fn delegate(mtm: MainThreadMarker) -> Retained<ProtocolObject<dyn WKDownloadDelegate>> {
     let downloads = with_downloads(|cell| {
         cell.get_or_init(|| {
             let this = Downloads::alloc(mtm).set_ivars(Ivars::default());
@@ -128,23 +129,26 @@ impl Downloads {
         let download = objc2::Message::retain(download);
         let chosen = panel.clone();
         let done = RcBlock::new(move |response: NSModalResponse| {
-            let destination = guarded(None, || {
-                let file = (response == NSModalResponseOK).then(|| chosen.URL()).flatten()?;
-                if file.checkResourceIsReachableAndReturnError().is_ok() {
-                    // The panel asked before replacing; WebKit writes only to a file that does not exist yet.
-                    NSFileManager::defaultManager()
-                        .trashItemAtURL_resultingItemURL_error(&file, None)
-                        .ok()?;
-                }
-                if let Some(this) = this.load() {
-                    this.ivars().running.borrow_mut().push((download.clone(), file.clone()));
-                }
-                Some(file)
+            guarded((), || {
+                // WebKit waits for its completion handler, so it is called even when choosing the file panics.
+                let destination = guarded(None, || {
+                    let file = (response == NSModalResponseOK).then(|| chosen.URL()).flatten()?;
+                    if file.checkResourceIsReachableAndReturnError().is_ok() {
+                        // The panel asked before replacing; WebKit writes only to a file that does not exist yet.
+                        NSFileManager::defaultManager()
+                            .trashItemAtURL_resultingItemURL_error(&file, None)
+                            .ok()?;
+                    }
+                    if let Some(this) = this.load() {
+                        this.ivars().running.borrow_mut().push((download.clone(), file.clone()));
+                    }
+                    Some(file)
+                });
+                let pointer = destination
+                    .as_ref()
+                    .map_or(std::ptr::null_mut(), |file| Retained::as_ptr(file).cast_mut());
+                handler.call((pointer,));
             });
-            let pointer = destination
-                .as_ref()
-                .map_or(std::ptr::null_mut(), |file| Retained::as_ptr(file).cast_mut());
-            handler.call((pointer,));
         });
         match window {
             Some(window) => panel.beginSheetModalForWindow_completionHandler(&window, &done),
@@ -204,10 +208,9 @@ fn report_failure(download: &WKDownload, error: &NSError) {
         ide_ui_common::diag::report("a download failed", error.code());
         return;
     };
-    let alert = NSAlert::new(window.mtm());
-    alert.setMessageText(&ns(t("Download fehlgeschlagen")));
-    alert.setInformativeText(&error.localizedDescription());
-    alert.beginSheetModalForWindow_completionHandler(&window, None);
+    Alert::new(window.mtm(), t("Download fehlgeschlagen"))
+        .informative(&error.localizedDescription().to_string())
+        .sheet(&window, |_| {});
 }
 
 #[cfg(feature = "selftest")]

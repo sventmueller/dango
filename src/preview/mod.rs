@@ -25,7 +25,7 @@ use crate::window::{TabId, TabKind, WindowController};
 use markdown::Preview;
 
 /// The open Markdown previews of all windows.
-pub struct Previews {
+pub(crate) struct Previews {
     open: RefCell<Vec<Rc<Preview>>>,
     next_key: Cell<u64>,
     looking: Cell<bool>,
@@ -45,33 +45,33 @@ impl Default for Previews {
 const LOOK_AT_IMAGES: Duration = Duration::from_secs(2);
 
 /// Tells the render path where its page lies and where failures go, before any window opens.
-pub fn start(mtm: MainThreadMarker) {
+pub(crate) fn start(mtm: MainThreadMarker) {
     splat_render::start(splat_render::Host::of_main_bundle(|what, detail| {
         crate::diag::report(what, detail);
     }));
     splat_render::images::watch_memory(mtm);
 }
 
-pub fn is_markdown(path: &Path) -> bool {
+pub(crate) fn is_markdown(path: &Path) -> bool {
     path.extension()
         .and_then(|e| e.to_str())
         .is_some_and(|e| ["md", "markdown", "mdown", "mkd", "mkdn"].contains(&e.to_ascii_lowercase().as_str()))
 }
 
-pub fn is_html(path: &Path) -> bool {
+pub(crate) fn is_html(path: &Path) -> bool {
     path.extension()
         .and_then(|e| e.to_str())
         .is_some_and(|e| ["html", "htm", "xhtml"].contains(&e.to_ascii_lowercase().as_str()))
 }
 
 /// Whether `path` opens in a tab that shows it rather than in an editor.
-pub fn is_document(path: &Path) -> bool {
+pub(crate) fn is_document(path: &Path) -> bool {
     pdf::is_pdf(path) || quick_look::is_quick_look(path)
 }
 
 /// Opens `path` in a tab that shows it, or in the preview tab, or selects the tab that shows it; `false` when Quick
 /// Look is missing and an editor should take the file.
-pub fn open_document(controller: &WindowController, path: &Path, preview: bool) -> bool {
+pub(crate) fn open_document(controller: &WindowController, path: &Path, preview: bool) -> bool {
     let key = path.to_string_lossy().into_owned();
     if select_shown(controller, &key, preview) {
         return true;
@@ -79,7 +79,7 @@ pub fn open_document(controller: &WindowController, path: &Path, preview: bool) 
     let name = crate::editor::display_name(path);
     let view = if pdf::is_pdf(path) {
         let Some(view) = pdf::view(controller.mtm(), path, &name) else {
-            crate::editor::show_alert(
+            ide_ui_common::alert::warn(
                 controller.mtm(),
                 &splat_i18n::tf("„{}“ lässt sich nicht öffnen.", &[&name]),
                 splat_i18n::t("Die Datei ist kein lesbares PDF."),
@@ -102,7 +102,7 @@ pub fn open_document(controller: &WindowController, path: &Path, preview: bool) 
 }
 
 /// Opens the drawing of the SVG file `path` in a tab of its own, apart from an editor of its source, or selects it.
-pub fn open_drawing(controller: &WindowController, path: &Path) {
+pub(crate) fn open_drawing(controller: &WindowController, path: &Path) {
     let key = format!("preview:{}", path.display());
     if select_shown(controller, &key, false) {
         return;
@@ -127,7 +127,7 @@ fn select_shown(controller: &WindowController, key: &str, preview: bool) -> bool
 }
 
 /// Whether the menu offers a preview of the document `view` shows.
-pub fn validate(view: &EditorTextView, action: Option<Sel>) -> Option<bool> {
+pub(crate) fn validate(view: &EditorTextView, action: Option<Sel>) -> Option<bool> {
     (action == Some(sel!(ideShowPreview:))).then(|| {
         view.document()
             .path()
@@ -137,7 +137,7 @@ pub fn validate(view: &EditorTextView, action: Option<Sel>) -> Option<bool> {
 
 /// Opens the preview of the document `view` shows beside it in its tab, or closes the Markdown preview it has:
 /// Markdown rendered, an HTML file in a browser. The keyboard focus stays in the editor.
-pub fn toggle_beside(view: &EditorTextView) {
+pub(crate) fn toggle_beside(view: &EditorTextView) {
     if !close_beside(view, false) {
         open_beside(view, false);
     }
@@ -148,7 +148,7 @@ pub fn toggle_beside(view: &EditorTextView) {
 
 /// Opens the preview of the document `view` shows beside it unless one is open; `automatic` for one that opened with
 /// the document and closes with its editor.
-pub fn open_beside(view: &EditorTextView, automatic: bool) {
+pub(crate) fn open_beside(view: &EditorTextView, automatic: bool) {
     let Some(controller) = view.controller() else { return };
     let Some(path) = view.document().path().map(Path::to_path_buf) else {
         return;
@@ -163,7 +163,7 @@ pub fn open_beside(view: &EditorTextView, automatic: bool) {
 
 /// Closes the Markdown preview that follows `view`, or with `automatic` only one that opened by itself; whether one
 /// closed.
-pub fn close_beside(view: &EditorTextView, automatic: bool) -> bool {
+pub(crate) fn close_beside(view: &EditorTextView, automatic: bool) -> bool {
     let Some(controller) = view.controller() else {
         return false;
     };
@@ -225,7 +225,7 @@ fn beside(controller: &WindowController, editor_tab: Option<TabId>, open: impl F
 }
 
 /// The text of `view` changed: the previews that follow it lay it out again.
-pub fn edited(view: &EditorTextView) {
+pub(crate) fn edited(view: &EditorTextView) {
     for preview in all() {
         if preview.follows(view) {
             preview.follow(view);
@@ -236,7 +236,7 @@ pub fn edited(view: &EditorTextView) {
 }
 
 /// The tab `id` of `controller` is about to close.
-pub fn closing(controller: &WindowController, id: TabId) {
+pub(crate) fn closing(controller: &WindowController, id: TabId) {
     let closed: Vec<Rc<Preview>> = {
         let mut open = controller.context().previews().open.borrow_mut();
         let (closed, kept) = open
@@ -317,11 +317,11 @@ fn look_at_images_later() {
 
 /// What the self-test reads of the previews.
 #[cfg(feature = "selftest")]
-pub mod seen {
+pub(crate) mod seen {
     use super::*;
 
     /// The text the Markdown preview of `path` shows, its attachments as U+FFFC, and how many attachments it has.
-    pub fn text(path: &Path) -> Option<(String, usize)> {
+    pub(crate) fn text(path: &Path) -> Option<(String, usize)> {
         let preview = find(|p| p.path() == path)?;
         let storage = &preview.views.storage;
         let text = storage.string().to_string();
@@ -337,31 +337,31 @@ pub mod seen {
     }
 
     /// Whether the Markdown preview of `path` shows `needle`, asked without copying its text.
-    pub fn shows(path: &Path, needle: &str) -> bool {
+    pub(crate) fn shows(path: &Path, needle: &str) -> bool {
         find(|p| p.path() == path)
             .is_some_and(|preview| preview.views.storage.string().containsString(&crate::util::ns(needle)))
     }
 
     /// Whether the preview of `path` offers to load the pictures from the web.
-    pub fn offers_web_pictures(path: &Path) -> Option<bool> {
+    pub(crate) fn offers_web_pictures(path: &Path) -> Option<bool> {
         Some(find(|p| p.path() == path)?.views.offers_web_pictures())
     }
 
     /// Presses the button of the offer.
-    pub fn load_web_pictures(path: &Path) {
+    pub(crate) fn load_web_pictures(path: &Path) {
         if let Some(preview) = find(|p| p.path() == path) {
             allow_web_pictures(preview.key);
         }
     }
 
     /// The addresses from the web the preview of `path` reports to the render path as shown.
-    pub fn web_pictures_shown(path: &Path) -> Option<Vec<String>> {
+    pub(crate) fn web_pictures_shown(path: &Path) -> Option<Vec<String>> {
         let preview = find(|p| p.path() == path)?;
         Some(splat_render::Viewer::web_images_shown(&*preview.viewer()))
     }
 
     /// The line of text at the top of what the preview of `path` shows.
-    pub fn top_line(path: &Path) -> Option<String> {
+    pub(crate) fn top_line(path: &Path) -> Option<String> {
         let preview = find(|p| p.path() == path)?;
         let at = sync::char_at_top(&preview.views)?;
         let units: Vec<u16> = preview.views.storage.string().to_string().encode_utf16().collect();
@@ -377,7 +377,7 @@ pub mod seen {
     }
 
     /// Scrolls the preview of `path` so that `y` of its view is at the top.
-    pub fn scroll_to(path: &Path, y: f64) {
+    pub(crate) fn scroll_to(path: &Path, y: f64) {
         if let Some(preview) = find(|p| p.path() == path) {
             preview.views.text.scrollPoint(objc2_foundation::NSPoint::new(0.0, y));
         }
@@ -385,22 +385,22 @@ pub mod seen {
 
     /// Lets the preview of `path` and its editor follow each other's scrolling now instead of on the run loop's next
     /// round.
-    pub fn settle(path: &Path) {
+    pub(crate) fn settle(path: &Path) {
         if let Some(preview) = find(|p| p.path() == path) {
             sync::follow_due(&preview);
         }
     }
 
     /// The visible top of the preview of `path`, in its view's coordinates.
-    pub fn scrolled(path: &Path) -> Option<f64> {
+    pub(crate) fn scrolled(path: &Path) -> Option<f64> {
         Some(find(|p| p.path() == path)?.views.text.visibleRect().origin.y)
     }
 
-    pub fn page_count(view: &objc2_app_kit::NSView) -> usize {
+    pub(crate) fn page_count(view: &objc2_app_kit::NSView) -> usize {
         super::pdf::page_count(view)
     }
 
-    pub fn is_quick_look(view: &objc2_app_kit::NSView) -> bool {
+    pub(crate) fn is_quick_look(view: &objc2_app_kit::NSView) -> bool {
         super::quick_look::shows(view)
     }
 }

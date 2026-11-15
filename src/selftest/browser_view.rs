@@ -18,7 +18,7 @@ use objc2_app_kit::{
 use objc2_foundation::NSString;
 use splat_i18n::t;
 
-use super::{check, finish, first_window, helpers};
+use super::{check, finish, first_window, give_up, give_up_saying, helpers};
 
 const NAME: &str = "browser-view";
 static PORT: AtomicU16 = AtomicU16::new(0);
@@ -210,16 +210,14 @@ fn enter(text: &str) {
     unsafe { editor.doCommandBySelector(sel!(insertNewline:)) };
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let Some(controller) = first_window() else {
-        check("a window opens", false, "");
-        return finish(NAME);
+        return give_up(NAME, "a window opens");
     };
     match serve() {
         Ok(port) => PORT.store(port, Ordering::SeqCst),
         Err(error) => {
-            check("the page server starts", false, error.to_string());
-            return finish(NAME);
+            return give_up_saying(NAME, "the page server starts", error.to_string());
         }
     }
     ide_ui_browser::open_popups_unasked();

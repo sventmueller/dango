@@ -4,7 +4,7 @@
 use ide_core::settings::{AgentChoice, State, remembered};
 
 /// What the user picked last for the agent with the id `agent`.
-pub fn of(agent: &str) -> AgentChoice {
+pub(crate) fn of(agent: &str) -> AgentChoice {
     State::load_user()
         .get(&remembered::AGENT_CHOICES)
         .remove(agent)
@@ -12,7 +12,7 @@ pub fn of(agent: &str) -> AgentChoice {
 }
 
 /// Keeps what `change` sets for the agent with the id `agent`.
-pub fn remember(agent: &str, change: impl FnOnce(&mut AgentChoice)) {
+pub(crate) fn remember(agent: &str, change: impl FnOnce(&mut AgentChoice)) {
     let mut state = State::load_user();
     let mut choices = state.get(&remembered::AGENT_CHOICES);
     change(choices.entry(agent.to_string()).or_default());

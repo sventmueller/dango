@@ -123,7 +123,7 @@ impl<T: WindowPart + Message> Registry<Retained<T>> {
 
 impl<T: Message> Registry<Weak<T>> {
     /// The object `id`, unless it was closed and let go.
-    pub fn load(&self, id: u64) -> Option<Retained<T>> {
+    pub(crate) fn load(&self, id: u64) -> Option<Retained<T>> {
         self.get(id)?.load()
     }
 

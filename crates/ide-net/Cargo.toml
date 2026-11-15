@@ -13,6 +13,8 @@ workspace = true
 ide-core.workspace = true
 ide-process.workspace = true
 ide-product.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 splat-i18n.workspace = true
 sha2 = "0.11.1"
 ureq = { version = "3.5.1", default-features = false, features = ["rustls", "platform-verifier"] }

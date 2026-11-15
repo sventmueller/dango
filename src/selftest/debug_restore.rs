@@ -9,7 +9,7 @@ use objc2::MainThreadMarker;
 
 use super::debug::{project, script};
 use super::helpers::{wait_until, window_of};
-use super::{check, finish};
+use super::{check, finish, give_up};
 use crate::debug::probe::{self as debug, Command};
 use crate::window::Panel;
 
@@ -42,8 +42,7 @@ pub(super) fn run() {
 
 fn arrange(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        check("the folder opens", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder opens");
     };
     let file = root.join("src/main.rs");
     debug::toggle_breakpoint(&controller, &file, 3);
@@ -62,7 +61,7 @@ fn arrange(root: PathBuf) {
         move |ok| {
             check("the session stops before the quit", ok, "");
             let Some(controller) = window_of(&root) else {
-                return finish(SCENARIO);
+                return give_up(SCENARIO, "the folder's window is open");
             };
             debug::evaluate(&controller, "hits");
             debug::run(&controller, Command::Stop);
@@ -84,8 +83,7 @@ fn arrange(root: PathBuf) {
 
 fn came_back(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        check("the folder's window comes back", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window comes back");
     };
     let seen = debug::seen(&controller).unwrap_or_default();
     let file = root.join("src/main.rs");

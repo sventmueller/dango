@@ -15,7 +15,7 @@ use crate::util::main_soon;
 
 /// Runs `f` with the controller of the window with `id` once the main queue gets to it, unless the window closed
 /// in the meantime; the way back for answers from other threads (Review C11).
-pub fn deliver(id: WindowId, f: impl FnOnce(&WindowController) + Send + 'static) {
+pub(crate) fn deliver(id: WindowId, f: impl FnOnce(&WindowController) + Send + 'static) {
     main_soon(move || {
         if let Some(controller) = crate::context::app().windows().get(id.get()) {
             f(&controller);
@@ -25,26 +25,22 @@ pub fn deliver(id: WindowId, f: impl FnOnce(&WindowController) + Send + 'static)
 
 /// Shows the folders that changed on disk in the tree of the windows that have `root` open, and lets editors of files
 /// there take what changed.
-pub fn tree_changed(root: &Path, listings: &[Listing]) {
+pub(crate) fn tree_changed(root: &Path, listings: &[Listing]) {
     let dirs: Vec<PathBuf> = listings.iter().map(|(dir, _)| dir.clone()).collect();
     crate::editor::files_changed(&dirs);
     tree_listed(root, listings);
 }
 
 /// Shows the folders the tree of `root` read in the windows that have it open.
-pub fn tree_listed(root: &Path, listings: &[Listing]) {
+pub(crate) fn tree_listed(root: &Path, listings: &[Listing]) {
     for window in windows() {
-        let ivars = window.ivars();
-        let same = ivars.workspace.borrow().as_ref().is_some_and(|p| p.root() == root);
-        if same && let Some(files) = ivars.files.borrow().as_ref() {
-            files.listed(listings);
-        }
+        window.tree_listed(root, listings);
     }
 }
 
 /// Hides the symbol of `panel` in every window's activity bar, or shows it again, and remembers that; the last symbol
 /// that shows stays.
-pub fn toggle_activity_symbol(panel: Panel) {
+pub(crate) fn toggle_activity_symbol(panel: Panel) {
     let mut hidden = activity_bar::hidden();
     if hidden.contains(&panel) {
         hidden.retain(|p| *p != panel);
@@ -60,19 +56,16 @@ pub fn toggle_activity_symbol(panel: Panel) {
 }
 
 /// Lets the tree of every window list what Git ignores and the system hides, or leave it out again.
-pub fn show_ignored_files(on: bool) {
+pub(crate) fn show_ignored_files(on: bool) {
     for window in windows() {
-        let ivars = window.ivars();
-        if let Some(project) = ivars.workspace.borrow().as_ref() {
-            project.set_options(ide_project::TreeOptions { show_ignored: on });
-        }
+        window.show_ignored_files(on);
     }
 }
 
 /// Hands quick-open hits to the window whose folder is `root`.
 pub(super) fn quick_open_answered(root: &Path, asked: u64, hits: Vec<ide_project::Hit>) {
     for window in windows() {
-        if let Some(panel) = window.ivars().quick_open.borrow().as_ref()
+        if let Some(panel) = window.quick_open_panel()
             && panel.root() == root
         {
             panel.answered(asked, hits);
@@ -82,7 +75,7 @@ pub(super) fn quick_open_answered(root: &Path, asked: u64, hits: Vec<ide_project
 }
 
 /// Saves the window tabs of every window for its folder, and where the window is, as the app quits.
-pub fn save_layouts() {
+pub(crate) fn save_layouts() {
     for window in windows() {
         if !window.ivars().closed.get() {
             layout::save(&window);
@@ -92,12 +85,12 @@ pub fn save_layouts() {
 }
 
 /// The folders open in windows, front to back.
-pub fn open_projects() -> Vec<PathBuf> {
+pub(crate) fn open_projects() -> Vec<PathBuf> {
     windows().iter().filter_map(|w| w.project()).collect()
 }
 
 /// The project window in front: the main window, else the first on screen.
-pub fn frontmost(mtm: MainThreadMarker) -> Option<Retained<WindowController>> {
+pub(crate) fn frontmost(mtm: MainThreadMarker) -> Option<Retained<WindowController>> {
     let app = objc2_app_kit::NSApplication::sharedApplication(mtm);
     let mut controllers = AppContext::get(mtm).windows().all();
     controllers.retain(|w| !w.ivars().closed.get());
@@ -109,14 +102,14 @@ pub fn frontmost(mtm: MainThreadMarker) -> Option<Retained<WindowController>> {
 }
 
 /// The window that shows `root`.
-pub fn for_project(root: &Path) -> Option<Retained<WindowController>> {
+pub(crate) fn for_project(root: &Path) -> Option<Retained<WindowController>> {
     crate::context::app()
         .windows()
         .find(|w| w.project_root().as_deref() == Some(root))
 }
 
 /// What each open window shows, in the order they opened, for the next launch.
-pub fn records() -> Vec<crate::session::WindowRecord> {
+pub(crate) fn records() -> Vec<crate::session::WindowRecord> {
     windows()
         .iter()
         .filter(|w| !w.ivars().closed.get())
@@ -127,4 +120,4 @@ pub fn records() -> Vec<crate::session::WindowRecord> {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

@@ -20,25 +20,25 @@ const LONGEST: usize = 160;
 
 /// Whether diagnostics show at the line's end, as the user last chose; read from the settings once.
 #[derive(Default)]
-pub struct Shown(Cell<Option<bool>>);
+pub(crate) struct Shown(Cell<Option<bool>>);
 
 impl Shown {
     /// Reads the setting again on next use.
-    pub fn forget(&self) {
+    pub(crate) fn forget(&self) {
         self.0.set(None);
     }
 }
 
 /// The lines of an editor edited lately, with when.
 #[derive(Default)]
-pub struct Edits(Vec<(usize, Instant)>);
+pub(crate) struct Edits(Vec<(usize, Instant)>);
 
 fn context() -> Option<std::rc::Rc<crate::context::AppContext>> {
     MainThreadMarker::new().map(crate::context::AppContext::get)
 }
 
 /// Whether editors show diagnostics at the end of their lines.
-pub fn shown() -> bool {
+pub(crate) fn shown() -> bool {
     let Some(cx) = context() else { return false };
     let cell = &cx.editor().line_diagnostics.0;
     cell.get().unwrap_or_else(|| {
@@ -49,7 +49,7 @@ pub fn shown() -> bool {
 }
 
 /// Turns diagnostics at the line's end on or off in every editor and remembers the choice.
-pub fn toggle() {
+pub(crate) fn toggle() {
     let value = !shown();
     if let Some(cx) = context() {
         cx.editor().line_diagnostics.0.set(Some(value));
@@ -64,7 +64,7 @@ pub fn toggle() {
 }
 
 /// Whether `item` is the menu item of diagnostics at the line's end, which then gets its check mark.
-pub fn validate(item: &NSMenuItem) -> Option<bool> {
+pub(crate) fn validate(item: &NSMenuItem) -> Option<bool> {
     if item.action() != Some(objc2::sel!(ideToggleDiagnosticsAtLineEnd:)) {
         return None;
     }
@@ -77,7 +77,7 @@ pub fn validate(item: &NSMenuItem) -> Option<bool> {
 }
 
 /// Edits of `view`: their lines wait before they show a diagnostic again.
-pub fn edited(view: &EditorTextView, changes: &[Change]) {
+pub(crate) fn edited(view: &EditorTextView, changes: &[Change]) {
     if !shown() {
         return;
     }
@@ -95,7 +95,7 @@ pub fn edited(view: &EditorTextView, changes: &[Change]) {
 }
 
 /// Shows the diagnostics of `view` at the end of their lines, or none while the setting is off.
-pub fn refresh(view: &EditorTextView) {
+pub(crate) fn refresh(view: &EditorTextView) {
     if !shown() {
         insets::clear(view, Layer::Diagnostics);
         return;
@@ -163,4 +163,4 @@ fn inset(at: usize, messages: &[(ide_ui_lsp::Severity, String)]) -> Option<Inset
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

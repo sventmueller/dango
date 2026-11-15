@@ -14,13 +14,13 @@ use objc2_app_kit::{NSAlertFirstButtonReturn, NSButton, NSEventModifierFlags, NS
 use super::super::git::{answer_sheet, sheet_ready};
 use super::super::helpers::{after, wait_until};
 use super::{flows, keys, name, picture, walk, window_of};
-use crate::selftest::{check, finish};
+use crate::selftest::{check, give_up};
 use crate::window::{Panel, search_selftest};
 use ide_ui_agent::AgentKey;
 use ide_ui_git::selftest as git;
 
 /// The file of the editor state, in a language whose server is not installed, so its status bar offers it.
-pub const SCRIPT: &str = "src/app.ts";
+pub(crate) const SCRIPT: &str = "src/app.ts";
 /// How long a view takes to lay out and draw what it just got.
 const SETTLE: Duration = Duration::from_millis(600);
 pub(super) const SUBAGENT: &str =
@@ -47,7 +47,7 @@ fn settled(root: PathBuf, then: impl FnOnce(PathBuf) + 'static) {
     after(SETTLE, move || then(root));
 }
 
-pub fn start(root: PathBuf) {
+pub(crate) fn start(root: PathBuf) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::app::open_project(mtm, root.clone());
     when(root, sheet_ready, trust_sheet);
@@ -204,8 +204,7 @@ fn ci_log(root: PathBuf, ok: bool) {
 fn ai(root: PathBuf) {
     let Some(controller) = window_of(&root) else { return };
     let Some(tab) = ide_ui_agent::open_replay(&controller) else {
-        check("an AI tab opens", false, "");
-        return finish(name());
+        return give_up(name(), "an AI tab opens");
     };
     let key = tab.key;
     tab.feed(EDIT);

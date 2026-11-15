@@ -8,13 +8,13 @@ use objc2_app_kit::NSAlertFirstButtonReturn;
 use std::path::Path;
 
 use super::helpers::wait_until;
-use super::{check, finish, snapshot};
+use super::{check, finish, give_up, snapshot};
 use crate::settings::servers_selftest as tab;
 use ide_ui_lsp::{LANGUAGE_SERVERS, language_name};
 
 const NAME: &str = "language-servers";
 
-pub fn run() {
+pub(crate) fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::settings::show_servers(mtm);
     let count = isize::try_from(ide_lsp::BUILT_IN.len()).unwrap_or(0);
@@ -26,8 +26,7 @@ pub fn run() {
 
 fn listed(ok: bool) {
     let Some(owner) = crate::settings::servers_tab() else {
-        check("the settings show a language servers tab", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the settings show a language servers tab");
     };
     let (rows, _) = tab::rows(&owner, false);
     check(
@@ -46,7 +45,7 @@ fn listed(ok: bool) {
 
 fn refuse() {
     let Some(owner) = crate::settings::servers_tab() else {
-        return finish(NAME);
+        return give_up(NAME, "the settings show the servers page");
     };
     let answered = tab::answer_add(&owner, ["Elixir", "ex", "  "], NSAlertFirstButtonReturn);
     let problem = tab::problem(&owner);
@@ -61,7 +60,7 @@ fn refuse() {
 
 fn add() {
     let Some(owner) = crate::settings::servers_tab() else {
-        return finish(NAME);
+        return give_up(NAME, "the settings show the servers page");
     };
     let answered = tab::answer_add(
         &owner,

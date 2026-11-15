@@ -8,13 +8,13 @@ use super::*;
 
 impl ActivityBar {
     /// The tooltip of `panel`'s symbol.
-    pub fn tip(&self, panel: Panel) -> Option<String> {
+    pub(crate) fn tip(&self, panel: Panel) -> Option<String> {
         let (_, button) = self.buttons.iter().find(|(p, _)| *p == panel)?;
         button.toolTip().map(|tip| tip.to_string())
     }
 
     /// How many marks show on the symbols.
-    pub fn marks(&self) -> usize {
+    pub(crate) fn marks(&self) -> usize {
         self.buttons
             .iter()
             .flat_map(|(_, button)| button.subviews().to_vec())
@@ -23,13 +23,13 @@ impl ActivityBar {
     }
 
     /// The context menu of `panel`'s symbol.
-    pub fn menu_of(&self, panel: Panel) -> Option<Retained<NSMenu>> {
+    pub(crate) fn menu_of(&self, panel: Panel) -> Option<Retained<NSMenu>> {
         let (_, button) = self.buttons.iter().find(|(p, _)| *p == panel)?;
         button.menu()
     }
 
     /// The panels whose symbol shows.
-    pub fn shown(&self) -> Vec<Panel> {
+    pub(crate) fn shown(&self) -> Vec<Panel> {
         self.buttons
             .iter()
             .filter(|(_, button)| !button.isHidden())
@@ -37,7 +37,7 @@ impl ActivityBar {
             .collect()
     }
 
-    pub fn button_count(&self) -> usize {
+    pub(crate) fn button_count(&self) -> usize {
         self.buttons.len() + 1
     }
 }

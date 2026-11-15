@@ -22,20 +22,20 @@ use ide_ui_common::constant;
 use ide_ui_common::util::ns;
 
 /// Puts `text` on the general pasteboard.
-pub fn store(text: &str) {
+pub(crate) fn store(text: &str) {
     let pasteboard = NSPasteboard::generalPasteboard();
     pasteboard.clearContents();
     pasteboard.setString_forType(&ns(text), constant!(NSPasteboardTypeString));
 }
 
-pub fn text(pasteboard: &NSPasteboard) -> Option<String> {
+pub(crate) fn text(pasteboard: &NSPasteboard) -> Option<String> {
     pasteboard
         .stringForType(constant!(NSPasteboardTypeString))
         .map(|text| text.to_string())
 }
 
 /// The files on `pasteboard`, as Finder copies or drags them.
-pub fn files(pasteboard: &NSPasteboard) -> Vec<PathBuf> {
+pub(crate) fn files(pasteboard: &NSPasteboard) -> Vec<PathBuf> {
     let classes = NSArray::from_slice(&[NSURL::class()]);
     let yes = NSNumber::numberWithBool(true);
     let value: &AnyObject = &yes;
@@ -51,7 +51,7 @@ pub fn files(pasteboard: &NSPasteboard) -> Vec<PathBuf> {
 }
 
 /// The image on `pasteboard` as PNG data.
-pub fn png(pasteboard: &NSPasteboard) -> Option<Vec<u8>> {
+pub(crate) fn png(pasteboard: &NSPasteboard) -> Option<Vec<u8>> {
     if let Some(data) = pasteboard.dataForType(constant!(NSPasteboardTypePNG)) {
         return Some(data.to_vec());
     }
@@ -69,7 +69,7 @@ pub fn png(pasteboard: &NSPasteboard) -> Option<Vec<u8>> {
 }
 
 /// Whether `pasteboard` holds something the terminal takes.
-pub fn accepts(pasteboard: &NSPasteboard) -> bool {
+pub(crate) fn accepts(pasteboard: &NSPasteboard) -> bool {
     text(pasteboard).is_some()
         || !files(pasteboard).is_empty()
         || pasteboard.dataForType(constant!(NSPasteboardTypePNG)).is_some()

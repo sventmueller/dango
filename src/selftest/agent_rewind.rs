@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use super::agent::{NAME, QUESTION, controller_of, picture};
 use super::agent_rows::squeezed;
-use super::{check, finish, helpers};
+use super::{check, give_up, give_up_saying, helpers};
 
 /// A moment for the timeline to draw the rewound rows before their picture, which shows no state to wait for.
 const PICTURE_SETTLE: Duration = Duration::from_millis(400);
@@ -13,10 +13,10 @@ const PICTURE_SETTLE: Duration = Duration::from_millis(400);
 /// Rewinding the conversation to just before the second prompt of a recorded session.
 pub(super) fn rewind(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let Some(tab) = ide_ui_agent::open_replay(&controller) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab opens");
     };
     tab.feed(QUESTION);
     let thread = tab.snapshot();
@@ -30,8 +30,7 @@ pub(super) fn rewind(root: PathBuf) {
         })
         .collect();
     let Some((cut, id, text)) = prompts.get(1).cloned() else {
-        check("the recording has two prompts", false, format!("{}", prompts.len()));
-        return finish(NAME);
+        return give_up_saying(NAME, "the recording has two prompts", format!("{}", prompts.len()));
     };
     tab.rewind(id, 1);
     let rows = tab.inspect().rows;

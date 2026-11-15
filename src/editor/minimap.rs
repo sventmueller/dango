@@ -19,7 +19,7 @@ use super::view::EditorTextView;
 use crate::util::{constant, guarded};
 
 /// The column's width while it shows.
-pub const WIDTH: f64 = 90.0;
+pub(crate) const WIDTH: f64 = 90.0;
 /// Below this width of the editor, as with split tabs, the column hides.
 const NARROWEST_EDITOR: f64 = 400.0;
 const ROW: f64 = 2.0;
@@ -29,17 +29,17 @@ const MARK: f64 = 3.0;
 
 /// Whether the minimap shows, as the user last chose; read from the settings once.
 #[derive(Default)]
-pub struct Shown(Cell<Option<bool>>);
+pub(crate) struct Shown(Cell<Option<bool>>);
 
 impl Shown {
     /// Reads the setting again on next use.
-    pub fn forget(&self) {
+    pub(crate) fn forget(&self) {
         self.0.set(None);
     }
 }
 
 /// Whether editors show the minimap.
-pub fn shown() -> bool {
+pub(crate) fn shown() -> bool {
     let Some(mtm) = MainThreadMarker::new() else {
         return false;
     };
@@ -53,7 +53,7 @@ pub fn shown() -> bool {
 }
 
 /// Shows the minimap in every editor, or hides it, and remembers the choice.
-pub fn toggle() {
+pub(crate) fn toggle() {
     let value = !shown();
     if let Some(mtm) = MainThreadMarker::new() {
         crate::context::AppContext::get(mtm).editor().minimap.0.set(Some(value));
@@ -70,7 +70,7 @@ pub fn toggle() {
 }
 
 /// Whether `item` is the menu item of the minimap, which then gets its check mark.
-pub fn validate(item: &NSMenuItem) -> Option<bool> {
+pub(crate) fn validate(item: &NSMenuItem) -> Option<bool> {
     if item.action() != Some(objc2::sel!(ideToggleMinimap:)) {
         return None;
     }
@@ -83,11 +83,11 @@ pub fn validate(item: &NSMenuItem) -> Option<bool> {
 }
 
 fn of(view: &EditorTextView) -> Option<Retained<Minimap>> {
-    view.ivars().minimap.borrow().as_ref().and_then(Weak::load)
+    view.ivars().around.minimap.borrow().as_ref().and_then(Weak::load)
 }
 
 /// Draws the minimap of `view` again, if it shows.
-pub fn redraw(view: &EditorTextView) {
+pub(crate) fn redraw(view: &EditorTextView) {
     if let Some(map) = of(view).filter(|map| map.frame().size.width > 0.0) {
         map.setNeedsDisplay(true);
     }
@@ -96,7 +96,7 @@ pub fn redraw(view: &EditorTextView) {
 /// The lines no fold hides, with the revision and the folded ranges they belong to.
 type Unfolded = (ide_document::Revision, Vec<Range<usize>>, Rc<[usize]>);
 
-pub struct MinimapIvars {
+pub(crate) struct MinimapIvars {
     editor: Weak<EditorTextView>,
     scroll: Weak<NSScrollView>,
     width: RefCell<Option<Retained<NSLayoutConstraint>>>,
@@ -112,7 +112,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEMinimap"]
     #[ivars = MinimapIvars]
-    pub struct Minimap;
+    pub(crate) struct Minimap;
 
     unsafe impl NSObjectProtocol for Minimap {}
 
@@ -181,7 +181,7 @@ struct Rows {
 
 impl Minimap {
     /// The column for `editor` beside `scroll`, zero wide until `fit` finds it should show.
-    pub fn new(mtm: MainThreadMarker, scroll: &NSScrollView, editor: &EditorTextView) -> Retained<Minimap> {
+    pub(crate) fn new(mtm: MainThreadMarker, scroll: &NSScrollView, editor: &EditorTextView) -> Retained<Minimap> {
         let this = Self::alloc(mtm).set_ivars(MinimapIvars {
             editor: Weak::from(editor),
             scroll: Weak::from(scroll),
@@ -220,18 +220,18 @@ impl Minimap {
             },
         );
         let _ = this.ivars().watching.set([scrolled, resized]);
-        *editor.ivars().minimap.borrow_mut() = Some(Weak::from(&*this));
+        *editor.ivars().around.minimap.borrow_mut() = Some(Weak::from(&*this));
         this
     }
 
     /// Holds the column at `constraint`'s width, zero while hidden.
-    pub fn set_width_constraint(&self, constraint: Retained<NSLayoutConstraint>) {
+    pub(crate) fn set_width_constraint(&self, constraint: Retained<NSLayoutConstraint>) {
         *self.ivars().width.borrow_mut() = Some(constraint);
         self.fit();
     }
 
     /// Shows the column when the user wants it and the editor is wide enough, else makes it zero wide.
-    pub fn fit(&self) {
+    pub(crate) fn fit(&self) {
         let Some(constraint) = self.ivars().width.borrow().clone() else {
             return;
         };
@@ -484,7 +484,7 @@ fn center_line(editor: &EditorTextView, line: usize) {
 }
 
 /// Fits the minimap of `view` to the editor's width.
-pub fn fit(view: &EditorTextView) {
+pub(crate) fn fit(view: &EditorTextView) {
     if let Some(map) = of(view) {
         map.fit();
     }
@@ -516,4 +516,4 @@ mod tests {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

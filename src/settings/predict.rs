@@ -24,9 +24,9 @@ use crate::util::{guarded, ns, set_action};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;
 
-pub struct Ivars {
+pub(crate) struct Ivars {
     views: OnceCell<Views>,
     /// The models the local server listed last.
     models: RefCell<Vec<String>>,
@@ -52,7 +52,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEPredictionSettings"]
     #[ivars = Ivars]
-    pub struct PredictionSettings;
+    pub(crate) struct PredictionSettings;
 
     unsafe impl NSObjectProtocol for PredictionSettings {}
 
@@ -99,7 +99,7 @@ define_class!(
 
 /// The tab while the settings window exists, which its controls send their actions to.
 #[derive(Default)]
-pub struct PredictionShown {
+pub(crate) struct PredictionShown {
     shown: RefCell<Option<Retained<PredictionSettings>>>,
 }
 
@@ -124,7 +124,7 @@ fn button(
 }
 
 /// The tab's view.
-pub fn view(mtm: MainThreadMarker) -> Retained<NSView> {
+pub(crate) fn view(mtm: MainThreadMarker) -> Retained<NSView> {
     let this = PredictionSettings::alloc(mtm).set_ivars(Ivars {
         views: OnceCell::new(),
         models: RefCell::new(Vec::new()),
@@ -431,7 +431,7 @@ fn set_choice(choice: Choice) {
 }
 
 /// Shows the tab as the settings and the providers are now.
-pub fn prediction_changed() {
+pub(crate) fn prediction_changed() {
     if let Some(this) = with_shown(|shown| shown.borrow().clone()) {
         this.fill();
     }

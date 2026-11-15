@@ -14,7 +14,7 @@ use objc2_app_kit::NSApplication;
 use objc2_foundation::NSRange;
 
 use super::helpers::{self, wait_until, wait_within};
-use super::{check, finish, snapshot};
+use super::{check, finish, give_up, give_up_saying, snapshot};
 use crate::editor::insets::{self, Inset, Layer, Place};
 use crate::editor::{self, EditorTextView};
 use crate::window;
@@ -82,10 +82,9 @@ fn shown_text(view: &EditorTextView) -> Vec<(usize, String)> {
         .collect()
 }
 
-pub fn run() {
+pub(crate) fn run() {
     if let Err(error) = helpers::make_project(PROJECT, &[(FILE, TEXT)]) {
-        check("the scenario's folder is made", false, error.to_string());
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "the scenario's folder is made", error.to_string());
     }
     let Some(mtm) = objc2::MainThreadMarker::new() else {
         return;
@@ -93,8 +92,7 @@ pub fn run() {
     crate::app::open_project(mtm, root());
     helpers::wait_for_window(&root(), |controller| {
         let Some(controller) = controller else {
-            check("the project's window opens", false, "");
-            return finish(SCENARIO);
+            return give_up(SCENARIO, "the project's window opens");
         };
         controller.open_file(&root().join(FILE));
         wait_until(
@@ -106,8 +104,7 @@ pub fn run() {
 
 fn at_line_ends() {
     let Some(view) = view() else {
-        check("the file opens in an editor", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the file opens in an editor");
     };
     ide_ui_lsp::show_diagnostics(&*view, &diagnostics());
     let off = insets::of(&view, Layer::Diagnostics).len();
@@ -224,11 +221,10 @@ fn budget() {
         .collect();
     let path = root().join("big.rs");
     if let Err(error) = std::fs::write(&path, &big) {
-        check("the big file is written", false, error.to_string());
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "the big file is written", error.to_string());
     }
     let Some(controller) = window::for_project(&root()) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     controller.open_file(&path);
     let opened = path.clone();
@@ -238,8 +234,7 @@ fn budget() {
         move || ready().is_some_and(|v| v.line_start(9_999).is_some()),
         move |_| {
             let Some(view) = big_view() else {
-                check("the big file opens", false, "");
-                return finish(SCENARIO);
+                return give_up(SCENARIO, "the big file opens");
             };
             let many: Vec<Diagnostic> = (0..500)
                 .map(|n| diagnostic(n * 20, DiagnosticSeverity::WARNING, "unused variable"))

@@ -4,7 +4,7 @@
 use serde_json::{Value, json};
 
 /// The id of the app's own `PreToolUse` hook, which makes destructive git commands ask (E27).
-pub const DESTRUCTIVE_GIT_HOOK: &str = "ide-destructive-git";
+pub(crate) const DESTRUCTIVE_GIT_HOOK: &str = "ide-destructive-git";
 
 /// The reason that goes with the `ask`; the permission card shows the app's own words instead.
 const DESTRUCTIVE_GIT_REASON: &str = "Destructive git command: it needs the user's approval every time.";
@@ -23,7 +23,7 @@ pub(crate) fn registered() -> Value {
 
 /// The answer to a `hook_callback` for the app's hook `callback_id` with the hook's `input`: `ask` for a Bash call
 /// that runs a destructive git command, else nothing to add. `None` for a hook the app did not register.
-pub fn hook_answer(callback_id: &str, input: &Value) -> Option<Value> {
+pub(crate) fn hook_answer(callback_id: &str, input: &Value) -> Option<Value> {
     if callback_id != DESTRUCTIVE_GIT_HOOK {
         return None;
     }

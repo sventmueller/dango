@@ -9,7 +9,7 @@ use ide_core::settings::{Settings, keys};
 use objc2::rc::Retained;
 use splat_i18n::t;
 
-use super::{check, finish, helpers, snapshot, type_into};
+use super::{check, finish, give_up, give_up_saying, helpers, snapshot, type_into};
 use crate::window::{self, WindowController};
 
 const SCENARIO: &str = "tabs";
@@ -56,8 +56,7 @@ fn window_of(root: &Path) -> Option<Retained<WindowController>> {
         .into_iter()
         .find(|w| w.project().as_deref() == Some(root));
     if controller.is_none() {
-        check("the folder gets its window", false, root.display().to_string());
-        finish(SCENARIO);
+        give_up_saying(SCENARIO, "the folder gets its window", root.display().to_string());
     }
     controller
 }
@@ -204,7 +203,7 @@ fn front_place(controller: &WindowController) -> Option<(String, usize)> {
 /// Back and forward go through the places left for another file or a far jump, from the toolbar and the Go menu.
 fn navigation(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let long = root.join("long.txt");
     let other = root.join("other.txt");

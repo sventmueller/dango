@@ -1,7 +1,7 @@
 //! Shell integration: small scripts that make zsh, bash and fish mark prompts and commands (OSC 133) and report
 //! their working directory (OSC 7), loaded around the user's own startup files without changing them.
 
-use std::io::{self, Write};
+use std::io;
 use std::path::{Path, PathBuf};
 
 const ZSHENV: &str = include_str!("shell/zshenv.zsh");
@@ -18,37 +18,21 @@ const FILES: &[(&str, &str)] = &[
 ];
 
 /// Where the app keeps the scripts: `shell-integration` in its cache folder.
-pub fn default_dir() -> PathBuf {
+pub(crate) fn default_dir() -> PathBuf {
     ide_core::paths::cache_dir().join("shell-integration")
 }
 
 /// Writes the scripts into `dir`, leaving files alone that are already current so running shells never read a
 /// half-written one.
-pub fn install(dir: &Path) -> io::Result<()> {
+pub(crate) fn install(dir: &Path) -> io::Result<()> {
     for (name, content) in FILES {
         let path = dir.join(name);
         if std::fs::read(&path).is_ok_and(|current| current == content.as_bytes()) {
             continue;
         }
-        let parent = path.parent().unwrap_or(dir);
-        std::fs::create_dir_all(parent)?;
-        let temporary = parent.join(format!(".{}.{}", std::process::id(), unique()));
-        let written = std::fs::File::create(&temporary).and_then(|mut file| file.write_all(content.as_bytes()));
-        match written.and_then(|()| std::fs::rename(&temporary, &path)) {
-            Ok(()) => {}
-            Err(error) => {
-                let _ = std::fs::remove_file(&temporary);
-                return Err(error);
-            }
-        }
+        ide_core::atomic_write::write(&path, content.as_bytes())?;
     }
     Ok(())
-}
-
-fn unique() -> u64 {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static NEXT: AtomicU64 = AtomicU64::new(0);
-    NEXT.fetch_add(1, Ordering::Relaxed)
 }
 
 /// How to start a login shell: its arguments and the variables to set on top of the user's environment.

@@ -45,20 +45,20 @@ fn work_button(mtm: MainThreadMarker, target: &AgentTarget, part: Part) -> Retai
 /// Puts the title's text on the left edge of the window's tab bar, which AppKit insets 8 points from the content.
 const TITLE_INSET: f64 = 8.0;
 
-pub struct Header {
-    pub view: Retained<NSStackView>,
+pub(crate) struct Header {
+    pub(crate) view: Retained<NSStackView>,
     title: Retained<NSTextField>,
     bookmark: Retained<NSButton>,
     focus: Retained<NSButton>,
     /// Opens the list of the session's subagents.
-    pub subagents: Retained<NSButton>,
+    pub(crate) subagents: Retained<NSButton>,
     /// Opens the list of the session's background processes.
-    pub background: Retained<NSButton>,
+    pub(crate) background: Retained<NSButton>,
     remote: Retained<NSButton>,
 }
 
 impl Header {
-    pub fn new(mtm: MainThreadMarker, target: &AgentTarget) -> Header {
+    pub(crate) fn new(mtm: MainThreadMarker, target: &AgentTarget) -> Header {
         let title = ui::label(
             mtm,
             t("Neue Sitzung"),
@@ -160,7 +160,7 @@ impl Header {
     }
 
     /// Shows where the session stands with Remote Control; hidden where the CLI does not offer it.
-    pub fn set_remote(&self, remote: &RemoteControl) {
+    pub(crate) fn set_remote(&self, remote: &RemoteControl) {
         let interrupted;
         let (name, color, tip) = match remote {
             RemoteControl::Unavailable => {
@@ -195,7 +195,7 @@ impl Header {
 
     /// Shows what the list of `part` holds: in the accent colour while something runs, the numbers in the tooltip and
     /// for VoiceOver, unavailable while it is empty; `silent` names an agent that reports no such work.
-    pub fn set_work(&self, part: Part, tally: Tally, silent: Option<&str>) {
+    pub(crate) fn set_work(&self, part: Part, tally: Tally, silent: Option<&str>) {
         let button = self.work_button(part);
         let (running, ended) = (tally.running.to_string(), tally.ended.to_string());
         let subagents = part == Part::Subagents;
@@ -221,19 +221,19 @@ impl Header {
     }
 
     /// The button that opens the list of `part`; the subagents' for the whole overview.
-    pub fn work_button(&self, part: Part) -> &NSButton {
+    pub(crate) fn work_button(&self, part: Part) -> &NSButton {
         match part {
             Part::Subagents | Part::All => &self.subagents,
             Part::Background => &self.background,
         }
     }
 
-    pub fn set_title(&self, title: &str) {
+    pub(crate) fn set_title(&self, title: &str) {
         self.title.setStringValue(&ns(title));
     }
 
     /// Marks the focus view as on or off.
-    pub fn set_focus_view(&self, on: bool) {
+    pub(crate) fn set_focus_view(&self, on: bool) {
         let (name, color) = if on {
             ("text.bubble.fill", NSColor::controlAccentColor())
         } else {
@@ -249,7 +249,7 @@ impl Header {
         });
     }
 
-    pub fn set_bookmarked(&self, on: bool) {
+    pub(crate) fn set_bookmarked(&self, on: bool) {
         let (name, color) = if on {
             ("bookmark.fill", NSColor::controlAccentColor())
         } else {

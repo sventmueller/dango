@@ -8,7 +8,7 @@ use serde_json::Value;
 use crate::install::Installs;
 use crate::register::Preset;
 use crate::sandbox::Sandbox;
-use crate::tool;
+use ide_process::tool;
 
 /// Where the program of an agent was found.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,21 +28,20 @@ pub enum Origin {
 
 /// Everything needed to start an agent.
 #[derive(Debug, Clone, PartialEq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Launch {
     /// The register's id, which threads name as their agent.
     pub agent: String,
     /// The name shown.
     pub name: String,
-    /// The program.
     pub program: PathBuf,
-    /// Its arguments.
     pub args: Vec<String>,
     /// Its whole environment: the login shell's and the agent's own variables.
     pub env: Vec<(String, String)>,
     /// The project folder the session works in.
     pub cwd: PathBuf,
     /// The `_meta` of `session/new`.
-    pub session_meta: Option<Value>,
+    pub(crate) session_meta: Option<Value>,
     /// The agent's id of a session to load instead of starting a new one.
     pub resume: Option<String>,
     /// Where the program came from.
@@ -128,7 +127,7 @@ impl Launch {
     }
 
     /// The command that starts the agent with its pipes open.
-    pub fn command(&self) -> Command {
+    pub(crate) fn command(&self) -> Command {
         let mut command = Command::new(&self.program);
         command
             .args(&self.args)

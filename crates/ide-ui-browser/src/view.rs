@@ -30,7 +30,7 @@ use super::failure::{Failure, FailurePage};
 use super::notice::Notice;
 use super::{autofill, dialogs, downloads, tabs, trust, web};
 use ide_ui_common::constant;
-use ide_ui_common::util::{guarded, item, ns, set_target};
+use ide_ui_common::util::{activate, guarded, item, ns, pin_sides, set_target};
 use ide_ui_common::window::{TabId, Tabs, Window, WindowId};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
@@ -57,7 +57,7 @@ struct Parts {
     shortcuts: Retained<NSMenu>,
 }
 
-pub struct Ivars {
+pub(crate) struct Ivars {
     /// The id of the window the tab lives in.
     window: WindowId,
     key: String,
@@ -76,7 +76,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEBrowserView"]
     #[ivars = Ivars]
-    pub struct BrowserView;
+    pub(crate) struct BrowserView;
 
     unsafe impl NSObjectProtocol for BrowserView {}
 
@@ -391,7 +391,7 @@ impl Drop for BrowserView {
 impl BrowserView {
     /// A tab's view in `window`, named `key` in the tab bar. A pop-up must use the configuration
     /// WebKit hands over; other tabs get a new one.
-    pub fn new(
+    pub(crate) fn new(
         mtm: MainThreadMarker,
         window: WindowId,
         configuration: Option<&WKWebViewConfiguration>,
@@ -466,25 +466,18 @@ impl BrowserView {
                 None => view.topAnchor().constraintEqualToAnchor(&self.topAnchor()),
             };
             top.setActive(true);
-            view.leadingAnchor()
-                .constraintEqualToAnchor(&self.leadingAnchor())
-                .setActive(true);
-            view.trailingAnchor()
-                .constraintEqualToAnchor(&self.trailingAnchor())
-                .setActive(true);
+            pin_sides(view, self, 0.0);
             above = Some(view);
         }
         for page in pages {
             self.addSubview(page);
             page.setTranslatesAutoresizingMaskIntoConstraints(false);
-            for constraint in [
+            activate([
                 page.topAnchor().constraintEqualToAnchor(&notice.bottomAnchor()),
                 page.leadingAnchor().constraintEqualToAnchor(&self.leadingAnchor()),
                 page.trailingAnchor().constraintEqualToAnchor(&self.trailingAnchor()),
                 page.bottomAnchor().constraintEqualToAnchor(&self.bottomAnchor()),
-            ] {
-                constraint.setActive(true);
-            }
+            ]);
         }
     }
 
@@ -511,23 +504,23 @@ impl BrowserView {
         self.ivars().parts.get().expect("`new` builds the parts")
     }
 
-    pub fn key(&self) -> &str {
+    pub(crate) fn key(&self) -> &str {
         &self.ivars().key
     }
 
-    pub fn tab(&self) -> Option<TabId> {
+    pub(crate) fn tab(&self) -> Option<TabId> {
         self.ivars().tab.get()
     }
 
-    pub fn set_tab(&self, id: TabId) {
+    pub(crate) fn set_tab(&self, id: TabId) {
         self.ivars().tab.set(Some(id));
     }
 
-    pub fn window_id(&self) -> WindowId {
+    pub(crate) fn window_id(&self) -> WindowId {
         self.ivars().window
     }
 
-    pub fn web_view(&self) -> Retained<WKWebView> {
+    pub(crate) fn web_view(&self) -> Retained<WKWebView> {
         self.parts().web.clone()
     }
 
@@ -536,7 +529,7 @@ impl BrowserView {
     }
 
     /// The address of the page, or of what was asked for while there is none or it failed.
-    pub fn current_url(&self) -> Option<String> {
+    pub(crate) fn current_url(&self) -> Option<String> {
         if self.ivars().failure.borrow().is_none()
             && let Some(url) = web::state(&self.parts().web).url
         {
@@ -555,7 +548,7 @@ impl BrowserView {
     }
 
     /// Shows `address`: a web page, a file of the window's folder, or the reason it does not.
-    pub fn go(&self, address: Address) {
+    pub(crate) fn go(&self, address: Address) {
         let parts = self.parts();
         *self.ivars().asked.borrow_mut() = Some(address.clone());
         match &address {
@@ -575,7 +568,7 @@ impl BrowserView {
 
     /// Takes the tab to `address` again. On the same local server the page it shows reloads when `address` names
     /// the server or that page, and another page of it loads; another site's page that already shows stays.
-    pub fn revisit(&self, address: Address) {
+    pub(crate) fn revisit(&self, address: Address) {
         let current = self.current_url();
         let same = current
             .as_ref()
@@ -594,7 +587,7 @@ impl BrowserView {
     }
 
     /// Reloads the page, or asks again for what failed.
-    pub fn reload_page(&self) {
+    pub(crate) fn reload_page(&self) {
         if self.ivars().failure.borrow().is_none() {
             web::reload(&self.parts().web);
             return;
@@ -606,12 +599,12 @@ impl BrowserView {
     }
 
     /// Shows the page that invites an address, with the field focused.
-    pub fn start_empty(&self) {
+    pub(crate) fn start_empty(&self) {
         self.show_failure(Failure::Start, None);
         self.focus_address();
     }
 
-    pub fn focus_address(&self) {
+    pub(crate) fn focus_address(&self) {
         let field = &self.parts().controls.field;
         if let Some(window) = self.window() {
             window.makeFirstResponder(Some(field));

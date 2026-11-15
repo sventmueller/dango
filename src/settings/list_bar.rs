@@ -9,7 +9,7 @@ use objc2_app_kit::{
     NSTableView, NSUserInterfaceLayoutOrientation, NSView,
 };
 
-use crate::util::{constant, ns, set_action};
+use crate::util::{constant, fixed_size, ns, set_action};
 
 const WIDTH: f64 = 24.0;
 const HEIGHT: f64 = 22.0;
@@ -19,7 +19,7 @@ const OVERLAP: f64 = -1.0;
 const APART: f64 = 8.0;
 
 /// The button that adds to a list, or removes its selected row.
-pub fn button(
+pub(crate) fn button(
     mtm: MainThreadMarker,
     add: bool,
     description: &str,
@@ -40,13 +40,12 @@ pub fn button(
     button.setToolTip(Some(&ns(description)));
     crate::util::set_label(&button, Some(description));
     button.setTranslatesAutoresizingMaskIntoConstraints(false);
-    button.widthAnchor().constraintEqualToConstant(WIDTH).setActive(true);
-    button.heightAnchor().constraintEqualToConstant(HEIGHT).setActive(true);
+    fixed_size(&button, WIDTH, HEIGHT);
     button
 }
 
 /// The row under a list: `joined` side by side as one control, then `rest` a little apart.
-pub fn bar(mtm: MainThreadMarker, joined: &[&NSButton], rest: &[&NSView]) -> Retained<NSView> {
+pub(crate) fn bar(mtm: MainThreadMarker, joined: &[&NSButton], rest: &[&NSView]) -> Retained<NSView> {
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
     row.setSpacing(OVERLAP);
@@ -64,7 +63,7 @@ pub fn bar(mtm: MainThreadMarker, joined: &[&NSButton], rest: &[&NSView]) -> Ret
 }
 
 /// Lets every list in `stack` touch the row that follows it, its bar.
-pub fn attach(stack: &NSStackView) {
+pub(crate) fn attach(stack: &NSStackView) {
     let views = stack.arrangedSubviews();
     for (list, next) in views.iter().zip(views.iter().skip(1)) {
         let is_list = list.downcast_ref::<NSScrollView>().is_some_and(|scroll| {

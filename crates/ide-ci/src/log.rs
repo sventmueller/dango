@@ -16,10 +16,10 @@ pub enum LineKind {
 
 /// One line of a readable log.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct LogLine {
     /// The text, without escape sequences.
     pub text: String,
-    /// What it is.
     pub kind: LineKind,
 }
 

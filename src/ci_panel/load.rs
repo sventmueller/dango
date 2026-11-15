@@ -13,7 +13,7 @@ use ide_ci::panel::{Head, Loaded, RunRow, Snapshot, Tab};
 const RUNS_WITH_JOBS: usize = 10;
 
 /// HEAD's commit and branch, or why there is none.
-pub fn head(root: &Path) -> Result<(ide_git::Repository, Head), Box<Loaded>> {
+pub(crate) fn head(root: &Path) -> Result<(ide_git::Repository, Head), Box<Loaded>> {
     let Some(git) = ide_ui_git::git() else {
         return Err(Box::new(Loaded::NoGit));
     };
@@ -27,12 +27,18 @@ pub fn head(root: &Path) -> Result<(ide_git::Repository, Head), Box<Loaded>> {
         return Err(Box::new(Loaded::NoCommit));
     };
     let branch = repo.current_branch().ok().flatten();
-    Ok((repo, Head { sha, branch }))
+    Ok((
+        repo,
+        Head {
+            sha: sha.to_string(),
+            branch,
+        },
+    ))
 }
 
 /// Everything the panel shows for `root` with `tab` open; `known` is the account name known for the token found last
 /// time.
-pub fn load(root: &Path, known: Option<(String, Source, String)>, tab: Tab) -> Loaded {
+pub(crate) fn load(root: &Path, known: Option<(String, Source, String)>, tab: Tab) -> Loaded {
     let (repo, head) = match head(root) {
         Ok(found) => found,
         Err(loaded) => return *loaded,

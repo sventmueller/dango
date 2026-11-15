@@ -14,7 +14,7 @@ use objc2_app_kit::{
 };
 
 use super::helpers::wait_until;
-use super::{check, finish};
+use super::{check, finish, give_up};
 
 const NAME: &str = "settings-general";
 
@@ -24,7 +24,7 @@ fn settings_file() -> std::path::PathBuf {
     ide_core::paths::data_dir().join("settings.json")
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let file = settings_file();
     let before = std::fs::read(&file).ok();
@@ -115,8 +115,7 @@ fn act(control: &NSControl) {
 
 fn general() {
     let Some(view) = general_view() else {
-        check("the settings window has its General tab", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the settings window has its General tab");
     };
     let switches: [(Sel, Key<bool>, &str); 6] = [
         (sel!(ideToggleReopen:), keys::REOPEN_PROJECTS, "reopen"),

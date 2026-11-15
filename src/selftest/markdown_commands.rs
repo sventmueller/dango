@@ -6,7 +6,6 @@
 
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly, Message, sel};
@@ -17,7 +16,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSData, NSRange};
 
 use super::helpers::{self, editor, text_of, utf16_len, window_of};
-use super::{check, finish};
+use super::{check, finish, give_up};
 use crate::editor::EditorTextView;
 use crate::markdown::selftest::{Command, paste_from, saved_for_splat};
 use crate::util::{constant, ns};
@@ -26,7 +25,7 @@ const NAME: &str = "markdown-commands";
 /// A picture of one pixel.
 const PNG: &str = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
-pub fn run() {
+pub(crate) fn run() {
     helpers::open_project(NAME, "markdown-commands", &[("doc/note.md", "word\n")], |_| {
         let root = helpers::root("markdown-commands");
         helpers::wait_for_editor(&root.clone(), &root.join("doc/note.md"), move |view| {
@@ -37,8 +36,7 @@ pub fn run() {
 
 fn on_editor(view: Option<Retained<EditorTextView>>, root: PathBuf) {
     let Some(view) = view else {
-        check("the Markdown file opens in an editor", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the Markdown file opens in an editor");
     };
     format(&view);
     link(&view);
@@ -112,7 +110,7 @@ fn find_editable(view: &NSView, found: &mut Option<Retained<NSTextField>>) {
 
 fn link(view: &EditorTextView) {
     set(view, "see word", "word");
-    helpers::in_any_mode_after(Duration::from_millis(400), || {
+    helpers::when_alert_shows(None, |_| {
         if let Some(field) = address_field() {
             field.setStringValue(&ns("  https://example.org/docs  "));
         }
@@ -125,7 +123,7 @@ fn link(view: &EditorTextView) {
         linked,
     );
     set(view, "see word", "word");
-    helpers::answer_alert_after(Duration::from_millis(400), NSAlertSecondButtonReturn);
+    helpers::answer_alert_when_shown(None, NSAlertSecondButtonReturn);
     let cancelled = perform(view, Command::Link);
     check(
         "a cancelled Link changes nothing",
@@ -187,11 +185,8 @@ fn paste(view: &EditorTextView, root: &Path) {
 fn export(view: &EditorTextView, root: PathBuf) {
     let offered = std::rc::Rc::new(std::cell::RefCell::new(None));
     let seen = std::rc::Rc::clone(&offered);
-    helpers::in_any_mode_after(Duration::from_millis(400), move || {
-        let panel = MainThreadMarker::new()
-            .and_then(|mtm| NSApplication::sharedApplication(mtm).modalWindow())
-            .and_then(|window| window.downcast::<NSSavePanel>().ok());
-        if let Some(panel) = panel {
+    helpers::when_alert_shows(None, move |window| {
+        if let Some(panel) = window.downcast_ref::<NSSavePanel>() {
             let folder = panel.directoryURL().and_then(|url| url.path()).map(|p| p.to_string());
             *seen.borrow_mut() = Some((panel.nameFieldStringValue().to_string(), folder));
             helpers::answer_alert(NSModalResponseOK);
@@ -232,10 +227,10 @@ fn running_splats() -> usize {
 
 fn splat(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let Some(view) = editor(&controller, "note.md") else {
-        return finish(NAME);
+        return give_up(NAME, "note.md opens in an editor");
     };
     let path = view.document().path().map(Path::to_path_buf).unwrap_or_default();
     set(&view, "saved for Splat\n", "");
@@ -253,14 +248,14 @@ fn splat(root: PathBuf) {
     };
     locked(0o555);
     let failed = splat_i18n::t("Sichern fehlgeschlagen").to_string();
-    let asked = helpers::answer_alert_saying(Duration::from_millis(400), failed.clone(), NSAlertFirstButtonReturn);
+    let asked = helpers::answer_alert_saying(failed.clone(), NSAlertFirstButtonReturn);
     let refused = !saved_for_splat(&path);
     let splats = running_splats();
     let mut opened_here = false;
     if refused && asked.get() {
         let item = MainThreadMarker::new().and_then(|mtm| crate::markdown::open_in_splat_item(mtm, &path));
         if let Some(item) = item {
-            let again = helpers::answer_alert_saying(Duration::from_millis(400), failed, NSAlertFirstButtonReturn);
+            let again = helpers::answer_alert_saying(failed, NSAlertFirstButtonReturn);
             let app = NSApplication::sharedApplication(controller.mtm());
             let target = item.target();
             if let Some(action) = item.action() {
@@ -277,8 +272,8 @@ fn splat(root: PathBuf) {
         format!("refused {refused}, asked {}, tried again {opened_here}", asked.get()),
     );
     // After the refused saves the editor may ask before it overwrites; without an alert an answer does nothing.
-    helpers::answer_alert_after(Duration::from_millis(400), NSAlertFirstButtonReturn);
-    helpers::answer_alert_after(Duration::from_millis(900), NSAlertFirstButtonReturn);
+    helpers::answer_alert_when_shown(None, NSAlertFirstButtonReturn);
+    helpers::answer_alert_when_shown(None, NSAlertFirstButtonReturn);
     crate::editor::save(&view, false);
     finish(NAME);
 }

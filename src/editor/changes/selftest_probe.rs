@@ -8,16 +8,16 @@ use super::*;
 
 /// The hunks of `view` as kinds and line ranges, and the text of the popover's hunk, for the self-test.
 /// What the self-test reads of an editor's change marks.
-pub struct Seen {
+pub(crate) struct Seen {
     /// The file's last commit is known.
-    pub head: bool,
+    pub(crate) head: bool,
     /// Each hunk's mark, with removals as `RemovedAbove`, and its lines.
-    pub hunks: Vec<(Mark, Range<usize>)>,
+    pub(crate) hunks: Vec<(Mark, Range<usize>)>,
     /// The committed lines the popover shows, while it is shown.
-    pub popover: Option<String>,
+    pub(crate) popover: Option<String>,
 }
 
-pub fn seen(view: &EditorTextView) -> Seen {
+pub(crate) fn seen(view: &EditorTextView) -> Seen {
     let marks = view.ivars().marks.borrow();
     let hunks = marks
         .hunks
@@ -46,7 +46,7 @@ pub fn seen(view: &EditorTextView) -> Seen {
 }
 
 /// The popover's window, for a picture, and its button, for a click.
-pub fn popover_parts(
+pub(crate) fn popover_parts(
     view: &EditorTextView,
 ) -> Option<(Retained<objc2_app_kit::NSWindow>, Retained<objc2_app_kit::NSButton>)> {
     let marks = view.ivars().marks.borrow();

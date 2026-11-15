@@ -14,17 +14,17 @@ use super::view::EditorTextView;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;
 
 /// The width of a fold's placeholder after its first line.
-pub const PLACEHOLDER_WIDTH: f64 = 26.0;
+pub(crate) const PLACEHOLDER_WIDTH: f64 = 26.0;
 
 /// Blocks of lines as their first line and their last line, ordered by first line.
-pub type Lines = Rc<[(usize, usize)]>;
+pub(crate) type Lines = Rc<[(usize, usize)]>;
 
 /// What a view knows about folds.
 #[derive(Debug, Default)]
-pub struct Folds {
+pub(crate) struct Folds {
     /// The ranges the language server offers, as the first line and the last hidden line.
     server: Option<Lines>,
     /// The indentation's ranges for a revision of the document.
@@ -35,7 +35,7 @@ pub struct Folds {
 }
 
 /// The ranges that can fold, from the server or the indentation, as first line and last hidden line.
-pub fn indent_ranges(view: &EditorTextView) -> Lines {
+pub(crate) fn indent_ranges(view: &EditorTextView) -> Lines {
     available(view)
 }
 
@@ -76,7 +76,7 @@ fn usable(mut ranges: Vec<(usize, usize)>) -> Vec<(usize, usize)> {
 }
 
 /// Takes the language server's folding ranges, or `None` to go back to the indentation.
-pub fn set_server_ranges(view: &EditorTextView, ranges: Option<Vec<(usize, usize)>>) {
+pub(crate) fn set_server_ranges(view: &EditorTextView, ranges: Option<Vec<(usize, usize)>>) {
     view.ivars().folds.borrow_mut().server = ranges.map(|ranges| usable(ranges).into());
     super::redraw_gutter(view);
 }
@@ -150,7 +150,7 @@ fn unfold_where(view: &EditorTextView, remove: impl Fn(&Range<usize>) -> bool) -
 }
 
 /// Lays out the text again, so folded lines go or come back.
-pub fn relayout(view: &EditorTextView) {
+pub(crate) fn relayout(view: &EditorTextView) {
     if let (Some(layout), Some(content)) = (view.textLayoutManager(), view.textContentStorage()) {
         layout.invalidateLayoutForRange(&content.documentRange());
         layout.textViewportLayoutController().layoutViewport();
@@ -173,7 +173,7 @@ fn redraw_fragments(view: &NSView) {
 }
 
 /// Folds the innermost range around the cursor's line, or the one starting on it.
-pub fn fold_at_cursor(view: &EditorTextView) {
+pub(crate) fn fold_at_cursor(view: &EditorTextView) {
     let line = line_of(view, view.selectedRange().location);
     let ranges = available(view);
     let found = ranges
@@ -186,25 +186,25 @@ pub fn fold_at_cursor(view: &EditorTextView) {
 }
 
 /// Unfolds what hides the cursor's line or starts on it.
-pub fn unfold_at_cursor(view: &EditorTextView) {
+pub(crate) fn unfold_at_cursor(view: &EditorTextView) {
     let at = view.selectedRange().location;
     let line = line_of(view, at);
     let next = line_offset(view, line + 1);
     unfold_where(view, |r| r.start == next || r.contains(&at));
 }
 
-pub fn fold_all(view: &EditorTextView) {
+pub(crate) fn fold_all(view: &EditorTextView) {
     for &(start, end) in available(view).iter() {
         fold(view, start, end);
     }
 }
 
-pub fn unfold_all(view: &EditorTextView) {
+pub(crate) fn unfold_all(view: &EditorTextView) {
     unfold_where(view, |_| true);
 }
 
 /// Folds or unfolds the range that starts on `line`, as a click on its triangle does.
-pub fn toggle(view: &EditorTextView, line: usize) {
+pub(crate) fn toggle(view: &EditorTextView, line: usize) {
     let next = line_offset(view, line + 1);
     if unfold_where(view, |r| r.start == next) {
         return;
@@ -215,7 +215,7 @@ pub fn toggle(view: &EditorTextView, line: usize) {
 }
 
 /// Keeps folds on their lines while the text changes, and unfolds one that an edit reaches into.
-pub fn shift(view: &EditorTextView, change: &Change) {
+pub(crate) fn shift(view: &EditorTextView, change: &Change) {
     let touched = {
         let mut folds = view.ivars().folds.borrow_mut();
         let before = folds.hidden.len();
@@ -236,7 +236,7 @@ fn reaches_into(edited: &Range<usize>, hidden: &Range<usize>) -> bool {
 }
 
 /// Whether TextKit should lay out `element`: not when a fold hides it. A view that is busy shows everything.
-pub fn shows(view: &EditorTextView, manager: &NSTextContentManager, element: &NSTextElement) -> bool {
+pub(crate) fn shows(view: &EditorTextView, manager: &NSTextContentManager, element: &NSTextElement) -> bool {
     let Ok(folds) = view.ivars().folds.try_borrow() else {
         return true;
     };
@@ -254,12 +254,12 @@ pub fn shows(view: &EditorTextView, manager: &NSTextContentManager, element: &NS
 }
 
 /// The UTF-16 ranges the folds hide, sorted by start.
-pub fn hidden_ranges(view: &EditorTextView) -> Vec<Range<usize>> {
+pub(crate) fn hidden_ranges(view: &EditorTextView) -> Vec<Range<usize>> {
     view.ivars().folds.borrow().hidden.clone()
 }
 
 /// Whether a fold hides UTF-16 offset `offset`.
-pub fn hidden_by_fold(view: &EditorTextView, offset: usize) -> bool {
+pub(crate) fn hidden_by_fold(view: &EditorTextView, offset: usize) -> bool {
     view.ivars()
         .folds
         .try_borrow()
@@ -283,7 +283,7 @@ fn outermost_of(hidden: &[Range<usize>]) -> Vec<Range<usize>> {
 }
 
 /// The placeholders of the folds on screen: where each is drawn, in the view's coordinates, with its hidden range.
-pub fn placeholders(view: &EditorTextView) -> Vec<(NSRect, Range<usize>)> {
+pub(crate) fn placeholders(view: &EditorTextView) -> Vec<(NSRect, Range<usize>)> {
     let visible = super::visible_utf16(view);
     outermost(view)
         .into_iter()
@@ -301,7 +301,7 @@ pub fn placeholders(view: &EditorTextView) -> Vec<(NSRect, Range<usize>)> {
 }
 
 /// Unfolds the fold whose placeholder lies under `point` of the view; whether there was one.
-pub fn click(view: &EditorTextView, point: NSPoint) -> bool {
+pub(crate) fn click(view: &EditorTextView, point: NSPoint) -> bool {
     let hit = placeholders(view).into_iter().find(|(rect, _)| {
         point.x >= rect.origin.x
             && point.x <= rect.origin.x + rect.size.width
@@ -316,14 +316,14 @@ pub fn click(view: &EditorTextView, point: NSPoint) -> bool {
 
 /// The lines that can fold and those folded, for the line number column.
 #[derive(Debug)]
-pub struct Gutter {
+pub(crate) struct Gutter {
     ranges: Lines,
     folded: Vec<usize>,
 }
 
 impl Gutter {
     /// Whether `line` is folded, if it can fold.
-    pub fn get(&self, line: usize) -> Option<bool> {
+    pub(crate) fn get(&self, line: usize) -> Option<bool> {
         if self.folded.contains(&line) {
             return Some(true);
         }
@@ -336,7 +336,7 @@ impl Gutter {
 }
 
 /// The lines that can fold, with whether they are folded, for the line number column.
-pub fn gutter(view: &EditorTextView) -> Gutter {
+pub(crate) fn gutter(view: &EditorTextView) -> Gutter {
     let ranges = available(view);
     let hidden: Vec<Range<usize>> = view.ivars().folds.borrow().hidden.clone();
     let folded = hidden

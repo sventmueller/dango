@@ -20,7 +20,7 @@ pub use selftest_probe::*;
 
 /// The browser tabs of every window.
 #[derive(Default)]
-pub struct BrowserTabs {
+pub(crate) struct BrowserTabs {
     /// The open browser tabs of all windows.
     tabs: RefCell<Vec<Weak<BrowserView>>>,
     /// Numbers the keys of tabs that show no particular address.

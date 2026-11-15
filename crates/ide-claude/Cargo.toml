@@ -13,6 +13,7 @@ workspace = true
 splat-i18n.workspace = true
 base64 = "0.23.1"
 ide-core = { path = "../ide-core" }
+ide-net = { path = "../ide-net" }
 ide-process = { path = "../ide-process" }
 ide-thread = { path = "../ide-thread" }
 serde = { version = "1.0.229", features = ["derive"] }

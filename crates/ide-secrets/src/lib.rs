@@ -13,7 +13,7 @@
 //! ```
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs, unreachable_pub)]
+#![warn(missing_docs)]
 
 use std::collections::HashMap;
 use std::fmt;
@@ -28,9 +28,9 @@ const NOT_FOUND: i32 = -25300;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SecretError {
     /// The keychain's status code.
-    pub status: i32,
+    pub(crate) status: i32,
     /// What the system says about it.
-    pub message: String,
+    pub(crate) message: String,
 }
 
 impl fmt::Display for SecretError {

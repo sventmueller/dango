@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};
 
+use ide_claude::control::{Backgrounded, ContextCount};
 use ide_claude::{
     ControlError, Effort, Event, Launch, PermissionAnswer, PermissionMode, RemoteControl, Session, SessionError,
 };
@@ -445,7 +446,7 @@ fn the_real_cli_answers_a_prompt() {
     let caps = session.capabilities();
     assert!(caps.version.is_some());
     assert!(!caps.models.is_empty(), "initialize was answered");
-    assert!(session.context_usage(false).wait().is_ok());
+    assert!(session.context_usage(ContextCount::Estimated).wait().is_ok());
     session.close_input();
     wait_for(&rx, |e| matches!(e, Event::Ended { .. }));
 }
@@ -703,7 +704,10 @@ fn the_settings_of_a_running_session_reach_the_cli_and_its_answers_land_on_the_t
         assert_eq!(t.model(), Some("claude-opus-5-5"));
         assert_eq!(t.effort(), Some("high"));
     });
-    assert_eq!(session.background(Some("toolu_b")).wait(), Ok(false));
+    assert_eq!(
+        session.background(Some("toolu_b")).wait(),
+        Ok(Backgrounded { moved: false })
+    );
     assert!(matches!(
         session.stop_task("bash1").wait(),
         Err(ControlError::Refused(why)) if why == "no stop_task here"
@@ -722,10 +726,13 @@ fn the_settings_of_a_running_session_reach_the_cli_and_its_answers_land_on_the_t
     assert_eq!(usage.session_cost_usd, Some(0.25));
     assert_eq!(usage.subscription.as_deref(), Some("max"));
     assert_eq!(usage.windows[0].utilization, Some(0.4));
-    let rewind = session.rewind_files("u-1", true).wait().unwrap();
+    let rewind = session.preview_rewind("u-1").wait().unwrap();
     assert!(rewind.can_rewind);
     assert_eq!(rewind.files_changed, ["src/a.rs"]);
-    assert_eq!(session.context_usage(true).wait().unwrap().total_tokens, 900);
+    assert_eq!(
+        session.context_usage(ContextCount::Exact).wait().unwrap().total_tokens,
+        900
+    );
     let breakdown = session.with_thread(|t| t.usage().breakdown.clone()).unwrap();
     assert!(breakdown.exact, "a full count is kept as exact");
 

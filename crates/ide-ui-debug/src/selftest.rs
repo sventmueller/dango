@@ -39,7 +39,7 @@ pub struct Seen {
     pub configurations: Vec<String>,
 }
 
-pub fn of(controller: &(impl AsWindow + ?Sized)) -> Option<Retained<DebugPanel>> {
+pub(crate) fn of(controller: &(impl AsWindow + ?Sized)) -> Option<Retained<DebugPanel>> {
     panel::of(&controller.as_window())
 }
 
@@ -475,7 +475,7 @@ pub fn console_arrow(controller: &(impl AsWindow + ?Sized), older: bool) -> Opti
 }
 
 /// A breakpoint's condition, hit count, log message and whether it is on.
-pub type Settings = (Option<String>, Option<String>, Option<String>, bool);
+pub(crate) type Settings = (Option<String>, Option<String>, Option<String>, bool);
 
 /// The breakpoint at `line` of `path`.
 pub fn breakpoint_at(controller: &(impl AsWindow + ?Sized), path: &Path, line: usize) -> Option<Settings> {

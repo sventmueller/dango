@@ -18,7 +18,7 @@ use splat_i18n::{t, tf};
 
 use super::model::{FileRow, Mark, RowKey, Section};
 use super::panel::{GitPanel, with_panel};
-use ide_ui_common::util::{label, ns, symbol_button};
+use ide_ui_common::util::{activate, center_y, label, ns, symbol_button};
 
 const SECTION_HEIGHT: f64 = 26.0;
 /// The height of a file's or a commit's row, the same as in the folder tree.
@@ -31,7 +31,7 @@ const SPACE_KEY: u16 = 49;
 const DELETE_KEY: u16 = 51;
 
 /// The height of the row for `key`.
-pub fn height(key: Option<&RowKey>) -> f64 {
+pub(crate) fn height(key: Option<&RowKey>) -> f64 {
     match key {
         Some(RowKey::Section(_)) => SECTION_HEIGHT,
         Some(RowKey::Worktree(_)) => TREE_HEIGHT,
@@ -48,7 +48,7 @@ define_class!(
     #[unsafe(super(NSOutlineView))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEGitOutlineView"]
-    pub struct GitOutlineView;
+    pub(crate) struct GitOutlineView;
 
     unsafe impl NSObjectProtocol for GitOutlineView {}
 
@@ -119,7 +119,7 @@ fn guarded_key(view: &GitOutlineView, event: &NSEvent) -> bool {
 }
 
 impl GitOutlineView {
-    pub fn new(mtm: MainThreadMarker, frame: NSRect) -> Retained<GitOutlineView> {
+    pub(crate) fn new(mtm: MainThreadMarker, frame: NSRect) -> Retained<GitOutlineView> {
         // SAFETY: NSOutlineView's designated initializer, called once on the newly allocated object.
         unsafe { msg_send![GitOutlineView::alloc(mtm), initWithFrame: frame] }
     }
@@ -215,7 +215,7 @@ impl GitOutlineView {
 }
 
 #[derive(Default)]
-pub struct HoverIvars {
+pub(crate) struct HoverIvars {
     /// What runs when the mouse comes over the row.
     entered: OnceCell<Box<dyn Fn()>>,
     actions: OnceCell<Retained<NSView>>,
@@ -231,7 +231,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEGitHoverCell"]
     #[ivars = HoverIvars]
-    pub struct HoverCell;
+    pub(crate) struct HoverCell;
 
     unsafe impl NSObjectProtocol for HoverCell {}
 
@@ -255,11 +255,11 @@ define_class!(
 
 impl HoverCell {
     /// Runs `entered` whenever the mouse comes over the row.
-    pub fn on_enter(&self, entered: impl Fn() + 'static) {
+    pub(crate) fn on_enter(&self, entered: impl Fn() + 'static) {
         let _ = self.ivars().entered.set(Box::new(entered));
     }
 
-    pub fn new(mtm: MainThreadMarker) -> Retained<HoverCell> {
+    pub(crate) fn new(mtm: MainThreadMarker) -> Retained<HoverCell> {
         let this = HoverCell::alloc(mtm).set_ivars(HoverIvars::default());
         let frame = NSRect::new(
             NSPoint::new(0.0, 0.0),
@@ -287,7 +287,7 @@ impl HoverCell {
 
     /// The buttons that show on hover, with the constraints that keep the text clear of them and, without them, of the
     /// row's far end.
-    pub fn set_actions(
+    pub(crate) fn set_actions(
         &self,
         actions: Retained<NSView>,
         beside: Retained<NSLayoutConstraint>,
@@ -312,7 +312,7 @@ impl HoverCell {
 }
 
 impl GitPanel {
-    pub fn row_view(&self, key: &RowKey) -> Option<Retained<NSView>> {
+    pub(crate) fn row_view(&self, key: &RowKey) -> Option<Retained<NSView>> {
         let state = self.read();
         let mtm = self.mtm();
         match key {
@@ -364,24 +364,17 @@ impl GitPanel {
         actions.setHidden(true);
         for view in [&*text as &NSView, &letter, &actions] {
             cell.addSubview(view);
-            view.setTranslatesAutoresizingMaskIntoConstraints(false);
-            view.centerYAnchor()
-                .constraintEqualToAnchor(&cell.centerYAnchor())
-                .setActive(true);
+            center_y(view, &cell);
         }
         // SAFETY: The label is a subview of the cell, which keeps it.
         unsafe { cell.setTextField(Some(&name)) };
-        text.leadingAnchor()
-            .constraintEqualToAnchor(&cell.leadingAnchor())
-            .setActive(true);
-        letter
-            .trailingAnchor()
-            .constraintEqualToAnchor(&cell.trailingAnchor())
-            .setActive(true);
-        actions
-            .trailingAnchor()
-            .constraintEqualToAnchor_constant(&letter.leadingAnchor(), -4.0)
-            .setActive(true);
+        activate([
+            text.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
+            letter.trailingAnchor().constraintEqualToAnchor(&cell.trailingAnchor()),
+            actions
+                .trailingAnchor()
+                .constraintEqualToAnchor_constant(&letter.leadingAnchor(), -4.0),
+        ]);
         let to_edge = text
             .trailingAnchor()
             .constraintLessThanOrEqualToAnchor_constant(&letter.leadingAnchor(), -4.0);
@@ -389,10 +382,7 @@ impl GitPanel {
             .trailingAnchor()
             .constraintLessThanOrEqualToAnchor_constant(&actions.leadingAnchor(), -4.0);
         to_edge.setActive(true);
-        let ivars = cell.ivars();
-        let _ = ivars.actions.set(actions.into_super());
-        let _ = ivars.beside_actions.set(beside);
-        let _ = ivars.to_edge.set(to_edge);
+        cell.set_actions(actions.into_super(), beside, to_edge);
         let described = describe(section, row);
         cell.setToolTip(Some(&ns(&described)));
         cell.setAccessibilityLabel(Some(&ns(&described)));
@@ -447,7 +437,7 @@ impl GitPanel {
     }
 
     /// Runs the row action `action` on `keys`, as its button or menu item would.
-    pub fn run_row_action(&self, action: Sel, keys: Vec<RowKey>) {
+    pub(crate) fn run_row_action(&self, action: Sel, keys: Vec<RowKey>) {
         if action == sel!(ideGitStage:) {
             self.stage(keys);
         } else if action == sel!(ideGitUnstage:) {
@@ -471,9 +461,9 @@ impl GitPanel {
         } else if action == sel!(ideGitRemoveTree:) {
             self.remove_tree(&keys);
         } else if action == sel!(ideGitApplyStash:) {
-            self.apply_stash(&keys, false);
+            self.apply_stash(&keys, ide_git::Unstash::Apply);
         } else if action == sel!(ideGitPopStash:) {
-            self.apply_stash(&keys, true);
+            self.apply_stash(&keys, ide_git::Unstash::Pop);
         } else if action == sel!(ideGitDropStash:) {
             self.drop_stash(&keys);
         } else {
@@ -531,14 +521,10 @@ fn section_cell(mtm: MainThreadMarker, panel: &GitPanel, section: Section, count
     );
     cell.addSubview(&title);
     title.setTranslatesAutoresizingMaskIntoConstraints(false);
-    title
-        .leadingAnchor()
-        .constraintEqualToAnchor(&cell.leadingAnchor())
-        .setActive(true);
-    title
-        .centerYAnchor()
-        .constraintEqualToAnchor(&cell.centerYAnchor())
-        .setActive(true);
+    activate([
+        title.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
+        title.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
+    ]);
     let number = pill(
         mtm,
         &count.to_string(),
@@ -548,18 +534,13 @@ fn section_cell(mtm: MainThreadMarker, panel: &GitPanel, section: Section, count
     number.setHidden(section == Section::Commits);
     cell.addSubview(&number);
     number.setTranslatesAutoresizingMaskIntoConstraints(false);
-    number
-        .trailingAnchor()
-        .constraintEqualToAnchor(&cell.trailingAnchor())
-        .setActive(true);
-    number
-        .centerYAnchor()
-        .constraintEqualToAnchor(&cell.centerYAnchor())
-        .setActive(true);
-    title
-        .trailingAnchor()
-        .constraintLessThanOrEqualToAnchor_constant(&number.leadingAnchor(), -30.0)
-        .setActive(true);
+    activate([
+        number.trailingAnchor().constraintEqualToAnchor(&cell.trailingAnchor()),
+        number.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
+        title
+            .trailingAnchor()
+            .constraintLessThanOrEqualToAnchor_constant(&number.leadingAnchor(), -30.0),
+    ]);
     let all = match section {
         Section::Staged => Some(("minus", t("Alle zurücknehmen"), sel!(ideGitUnstageAll:))),
         Section::Changes if count > 0 => Some(("plus", t("Alle vormerken"), sel!(ideGitStageAll:))),
@@ -570,14 +551,12 @@ fn section_cell(mtm: MainThreadMarker, panel: &GitPanel, section: Section, count
         button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
         cell.addSubview(&button);
         button.setTranslatesAutoresizingMaskIntoConstraints(false);
-        button
-            .trailingAnchor()
-            .constraintEqualToAnchor_constant(&number.leadingAnchor(), -4.0)
-            .setActive(true);
-        button
-            .centerYAnchor()
-            .constraintEqualToAnchor(&cell.centerYAnchor())
-            .setActive(true);
+        activate([
+            button
+                .trailingAnchor()
+                .constraintEqualToAnchor_constant(&number.leadingAnchor(), -4.0),
+            button.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
+        ]);
     }
     let files = match (section, count) {
         (Section::Commits, _) => tf("{}, {} Commits", &[section.title(), &count.to_string()]),
@@ -593,7 +572,7 @@ fn section_cell(mtm: MainThreadMarker, panel: &GitPanel, section: Section, count
 
 impl GitPanel {
     /// What a click, the context menu or a key acts on: the clicked row, and the whole selection when it includes it.
-    pub fn keys_for(&self, sender: Option<&AnyObject>) -> Vec<RowKey> {
+    pub(crate) fn keys_for(&self, sender: Option<&AnyObject>) -> Vec<RowKey> {
         if sender.is_some_and(|s| s.downcast_ref::<objc2_app_kit::NSMenuItem>().is_some()) {
             return self.read().menu_keys.clone();
         }
@@ -617,7 +596,7 @@ impl GitPanel {
         self.selected_keys()
     }
 
-    pub fn selected_keys(&self) -> Vec<RowKey> {
+    pub(crate) fn selected_keys(&self) -> Vec<RowKey> {
         let outline = &self.ui().outline;
         (0..outline.numberOfRows())
             .filter(|row| outline.isRowSelected(*row))
@@ -627,7 +606,7 @@ impl GitPanel {
     }
 
     /// A single click: a file shows its diff in the preview tab, unless the click adds to the selection.
-    pub fn preview_row(&self, row: isize) {
+    pub(crate) fn preview_row(&self, row: isize) {
         let outline = &self.ui().outline;
         let Some(item) = (row >= 0).then(|| outline.itemAtRow(row)).flatten() else {
             return;
@@ -667,7 +646,7 @@ impl GitPanel {
     }
 
     /// Return or a double click: a file shows its diff, a section opens or closes.
-    pub fn activate_row(&self, row: isize) {
+    pub(crate) fn activate_row(&self, row: isize) {
         let outline = &self.ui().outline;
         let Some(item) = (row >= 0).then(|| outline.itemAtRow(row)).flatten() else {
             return;
@@ -686,7 +665,7 @@ impl GitPanel {
 
     /// Space: stages what is unstaged and unstages what is staged; on a section's row, all of its files, as the
     /// section's button does.
-    pub fn toggle_stage(&self, keys: Vec<RowKey>) {
+    pub(crate) fn toggle_stage(&self, keys: Vec<RowKey>) {
         match keys.as_slice() {
             [RowKey::Section(Section::Changes)] => return self.stage_all(),
             [RowKey::Section(Section::Staged)] => return self.unstage_all(),
@@ -704,7 +683,7 @@ impl GitPanel {
     }
 
     /// Reloads the list, keeping which sections are closed and which rows are selected.
-    pub fn reload_outline(&self) {
+    pub(crate) fn reload_outline(&self) {
         let away = self.out_of_view();
         self.set_stale(away);
         if away {
@@ -724,8 +703,8 @@ impl GitPanel {
         }
         let (open, commits, stashes): (Vec<_>, Vec<_>, Vec<_>) = {
             let state = self.read();
-            let shown = |hash: &&String| state.model.commit(hash).is_some();
-            let stashed = |hash: &&String| state.model.stash(hash).is_some();
+            let shown = |hash: &&ide_git::CommitId| state.model.commit(hash).is_some();
+            let stashed = |hash: &&ide_git::CommitId| state.model.stash(hash).is_some();
             (
                 state.open_trees.iter().cloned().collect(),
                 state.open_commits.iter().filter(shown).cloned().collect(),
@@ -755,7 +734,7 @@ impl GitPanel {
     }
 
     /// The context menu for the clicked row, or the selection it belongs to.
-    pub fn fill_menu(&self, menu: &objc2_app_kit::NSMenu) {
+    pub(crate) fn fill_menu(&self, menu: &objc2_app_kit::NSMenu) {
         menu.removeAllItems();
         menu.setAutoenablesItems(false);
         let keys = self.keys_around(self.ui().outline.clickedRow());
@@ -873,8 +852,7 @@ pub(super) fn letter_label(mtm: MainThreadMarker, mark: Mark) -> Retained<objc2_
     let letter = label(mtm, mark.letter());
     letter.setFont(Some(&NSFont::monospacedSystemFontOfSize_weight(
         ide_ui_common::style::SMALL,
-        // SAFETY: AppKit sets its font weight constants when it loads.
-        unsafe { objc2_app_kit::NSFontWeightBold },
+        ide_ui_common::constant!(objc2_app_kit::NSFontWeightBold),
     )));
     letter.setTextColor(Some(&mark_color(mark)));
     letter.setAlignment(objc2_app_kit::NSTextAlignment::Center);
@@ -911,8 +889,7 @@ pub(super) fn pill_with(
         icon.setSymbolConfiguration(Some(
             &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
                 8.0,
-                // SAFETY: AppKit sets its font weight constants when it loads.
-                unsafe { objc2_app_kit::NSFontWeightSemibold },
+                ide_ui_common::constant!(objc2_app_kit::NSFontWeightSemibold),
             ),
         ));
         icon.setContentTintColor(Some(color));
@@ -923,8 +900,7 @@ pub(super) fn pill_with(
         let words = label(mtm, text);
         words.setFont(Some(&NSFont::monospacedDigitSystemFontOfSize_weight(
             NSFont::smallSystemFontSize(),
-            // SAFETY: AppKit sets its font weight constants when it loads.
-            unsafe { objc2_app_kit::NSFontWeightMedium },
+            ide_ui_common::constant!(objc2_app_kit::NSFontWeightMedium),
         )));
         words.setTextColor(Some(color));
         words.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);

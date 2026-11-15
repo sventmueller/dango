@@ -37,7 +37,7 @@ pub fn default_image_dir() -> PathBuf {
 }
 
 /// Decides what pasting the PNG `png` does with `foreground` in front, storing it in `dir` when its path is pasted.
-pub fn paste_image(foreground: &Foreground, png: &[u8], dir: &Path) -> io::Result<PasteAction> {
+pub(crate) fn paste_image(foreground: &Foreground, png: &[u8], dir: &Path) -> io::Result<PasteAction> {
     Ok(match foreground {
         Foreground::Agent(_) => PasteAction::SendCtrlV,
         Foreground::Remote(program) => PasteAction::Refuse(Refusal::Remote(program.clone())),
@@ -48,7 +48,7 @@ pub fn paste_image(foreground: &Foreground, png: &[u8], dir: &Path) -> io::Resul
 }
 
 /// Stores `png` in `dir` under a new name and removes images pasted there more than a day ago.
-pub fn store_png(png: &[u8], dir: &Path) -> io::Result<PathBuf> {
+pub(crate) fn store_png(png: &[u8], dir: &Path) -> io::Result<PathBuf> {
     std::fs::create_dir_all(dir)?;
     remove_old_images(dir, SystemTime::now());
     let millis = SystemTime::now()
@@ -92,7 +92,7 @@ fn remove_old_images(dir: &Path, now: SystemTime) {
 
 /// Which shell's quoting rules apply.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum QuoteStyle {
+pub(crate) enum QuoteStyle {
     /// sh, bash, zsh and most programs that split like them.
     #[default]
     Posix,
@@ -102,7 +102,7 @@ pub enum QuoteStyle {
 
 impl QuoteStyle {
     /// The rules for the program in front.
-    pub fn for_foreground(foreground: &Foreground) -> QuoteStyle {
+    pub(crate) fn for_foreground(foreground: &Foreground) -> QuoteStyle {
         match foreground {
             Foreground::Shell(name) if name == "fish" => QuoteStyle::Fish,
             _ => QuoteStyle::Posix,
@@ -111,7 +111,7 @@ impl QuoteStyle {
 }
 
 /// `path` as one shell word.
-pub fn quote_path(path: &Path, style: QuoteStyle) -> String {
+pub(crate) fn quote_path(path: &Path, style: QuoteStyle) -> String {
     let text = path.to_string_lossy();
     let plain = !text.is_empty()
         && text
@@ -130,7 +130,7 @@ pub fn quote_path(path: &Path, style: QuoteStyle) -> String {
 }
 
 /// Several paths as words separated by spaces, as for files dropped onto a terminal.
-pub fn quote_paths(paths: &[PathBuf], style: QuoteStyle) -> String {
+pub(crate) fn quote_paths(paths: &[PathBuf], style: QuoteStyle) -> String {
     paths
         .iter()
         .map(|path| quote_path(path, style))

@@ -45,7 +45,7 @@ pub struct Changes {
     /// Folders that appeared as a whole, created or moved in, whose content may have come without events of its own.
     pub subtrees: BTreeSet<PathBuf>,
     /// An ignore file changed, so any folder may now show or hide other entries.
-    pub rules_changed: bool,
+    pub(crate) rules_changed: bool,
     /// Something in a `.git` folder changed, such as the branch, the index or a ref.
     pub git_changed: bool,
     /// The files that changed, outside `.git`, up to `MAX_FILES` of them; folders are not listed here.
@@ -74,6 +74,7 @@ pub enum WatchEvent {
 
 /// Watches a project folder and everything below it until dropped.
 pub struct Watcher {
+    #[cfg(test)]
     root: PathBuf,
     open: Arc<AtomicBool>,
     _stream: RecommendedWatcher,
@@ -108,6 +109,7 @@ impl Watcher {
             gather.run(&received, on_event);
         })?;
         Ok(Watcher {
+            #[cfg(test)]
             root,
             open,
             _stream: stream,
@@ -115,7 +117,8 @@ impl Watcher {
     }
 
     /// The watched folder with links resolved, as the paths in reports start.
-    pub fn root(&self) -> &Path {
+    #[cfg(test)]
+    pub(crate) fn root(&self) -> &Path {
         &self.root
     }
 }

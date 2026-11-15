@@ -13,7 +13,7 @@ use splat_i18n::t;
 use super::{
     README, SCENARIO, answer_sheet, fixture_git, has, in_background, names, pictures, wait_for, window_of, write,
 };
-use crate::selftest::{check, finish};
+use crate::selftest::{check, give_up};
 use crate::window::WindowController;
 use ide_ui_git::selftest::{self as panel, Control, Seen};
 
@@ -21,9 +21,9 @@ const BRANCH: &str = "feature/selftest";
 /// The most a cancelled fetch may take to end.
 const CANCEL_LIMIT: Duration = Duration::from_secs(10);
 
-pub fn start(root: PathBuf) {
+pub(crate) fn start(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let offered = panel::choose_branch(&controller, t("Neuer Branch …"));
     check("the branch popup offers a new branch", offered, "");
@@ -54,15 +54,18 @@ fn on_branch(controller: &WindowController, name: &str) -> bool {
 
 fn name_branch(root: PathBuf, ok: bool) {
     check("a new branch asks for its name", ok, "");
-    if !ok || !answer_sheet(&root, NSAlertFirstButtonReturn, Some(BRANCH)) {
-        return finish(SCENARIO);
+    if !ok {
+        return give_up(SCENARIO, "a new branch asks for its name");
+    }
+    if !answer_sheet(&root, NSAlertFirstButtonReturn, Some(BRANCH)) {
+        return give_up(SCENARIO, "the sheet is there to answer");
     }
     wait_for(root, |c| on_branch(c, BRANCH), branch_made);
 }
 
 fn branch_made(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check("the new branch is checked out", ok, describe(&controller));
     let shown = ide_ui_git::toolbar_seen(&controller);
@@ -85,7 +88,7 @@ fn branch_made(root: PathBuf, ok: bool) {
 
 fn switched_back(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check(
         "the toolbar's branch switches back to master",
@@ -130,7 +133,7 @@ fn diverge(root: &Path, theirs: (&str, &str), mine: (&str, &str), message: &str)
 
 fn push_behind(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     panel::click(&controller, Control::Push);
     wait_for(
@@ -142,7 +145,7 @@ fn push_behind(root: PathBuf) {
 
 fn push_refused(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let problem = seen(&controller).and_then(|s| s.problem);
     check(
@@ -159,7 +162,7 @@ fn push_refused(root: PathBuf, ok: bool) {
 /// Pulls; a diverged branch then asks how to join, which `then` answers.
 fn pull_and_answer(root: PathBuf, then: fn(PathBuf, bool)) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     panel::click(&controller, Control::Pull);
     wait_for(root, WindowController::has_sheet, then);
@@ -167,8 +170,11 @@ fn pull_and_answer(root: PathBuf, then: fn(PathBuf, bool)) {
 
 fn asked_merge(root: PathBuf, ok: bool) {
     check("a diverged pull asks whether to merge or rebase", ok, "");
-    if !ok || !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
-        return finish(SCENARIO);
+    if !ok {
+        return give_up(SCENARIO, "a diverged pull asks whether to merge or rebase");
+    }
+    if !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
+        return give_up(SCENARIO, "the sheet is there to answer");
     }
     wait_for(root, |c| joined(c, 2), merged);
 }
@@ -185,7 +191,7 @@ fn joined(controller: &WindowController, parents: usize) -> bool {
 
 fn merged(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check(
         "Zusammenführen joins the branches in a merge commit",
@@ -198,7 +204,7 @@ fn merged(root: PathBuf, ok: bool) {
 /// Pushes and waits until nothing is ahead.
 fn push_in_sync(root: PathBuf, then: fn(PathBuf, bool)) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     panel::click(&controller, Control::Push);
     wait_for(
@@ -230,15 +236,14 @@ fn merged_pushed(root: PathBuf, ok: bool) {
 
 fn asked_rebase(root: PathBuf, ok: bool) {
     if !ok || !answer_sheet(&root, NSAlertSecondButtonReturn, None) {
-        check("a diverged pull asks again", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "a diverged pull asks again");
     }
     wait_for(root, |c| joined(c, 1), rebased);
 }
 
 fn rebased(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let top = seen(&controller).and_then(|s| s.top).map(|(subject, _)| subject);
     check(
@@ -264,8 +269,7 @@ fn rebased(root: PathBuf, ok: bool) {
 
 fn asked_conflicting_merge(root: PathBuf, ok: bool) {
     if !ok || !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
-        check("a conflicting pull asks how to join", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "a conflicting pull asks how to join");
     }
     wait_for(root, |c| stopped_at_conflict(c, "Merge"), merge_conflicted);
 }
@@ -277,7 +281,7 @@ fn stopped_at_conflict(controller: &WindowController, operation: &str) -> bool {
 
 fn merge_conflicted(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let can_resume = seen(&controller).is_some_and(|s| s.can_resume);
     check(
@@ -300,7 +304,7 @@ fn merge_conflicted(root: PathBuf, ok: bool) {
 
 fn resolved(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check(
         "marking a file resolved stages it and allows going on",
@@ -326,7 +330,7 @@ fn resolved(root: PathBuf, ok: bool) {
 
 fn continued(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let s = seen(&controller);
     check(
@@ -354,15 +358,14 @@ fn continued(root: PathBuf, ok: bool) {
 
 fn asked_conflicting_rebase(root: PathBuf, ok: bool) {
     if !ok || !answer_sheet(&root, NSAlertSecondButtonReturn, None) {
-        check("a conflicting pull asks again", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "a conflicting pull asks again");
     }
     wait_for(root, |c| stopped_at_conflict(c, "Rebase"), rebase_conflicted);
 }
 
 fn rebase_conflicted(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check("a conflicting rebase stops with the banner", ok, describe(&controller));
     panel::click(&controller, Control::Abort);
@@ -371,8 +374,11 @@ fn rebase_conflicted(root: PathBuf, ok: bool) {
 
 fn asked_abort(root: PathBuf, ok: bool) {
     check("abandoning a rebase asks first", ok, "");
-    if !ok || !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
-        return finish(SCENARIO);
+    if !ok {
+        return give_up(SCENARIO, "abandoning a rebase asks first");
+    }
+    if !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
+        return give_up(SCENARIO, "the sheet is there to answer");
     }
     wait_for(
         root,
@@ -383,7 +389,7 @@ fn asked_abort(root: PathBuf, ok: bool) {
 
 fn aborted(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let s = seen(&controller);
     let kept = s.as_ref().is_some_and(|s| {
@@ -416,7 +422,7 @@ fn make_origin_hang(root: &Path) -> Result<(), String> {
 
 fn fetch_hanging(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     panel::click(&controller, Control::Fetch);
     let started = Instant::now();
@@ -429,7 +435,7 @@ fn fetch_hanging(root: PathBuf) {
 
 fn fetching(root: PathBuf, ok: bool, started: Instant) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check("a fetch runs until it is cancelled", ok, "");
     panel::click(&controller, Control::Cancel);
@@ -442,7 +448,7 @@ fn fetching(root: PathBuf, ok: bool, started: Instant) {
 
 fn cancelled(root: PathBuf, ok: bool, started: Instant) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let took = Some(started.elapsed());
     let problem = seen(&controller).and_then(|s| s.problem);

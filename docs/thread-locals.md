@@ -75,7 +75,6 @@ needs a row here first, and a reason from the list above.
 | `src/editor/recovery.rs` | `DUE` | which copies of unsaved text are due | until they are written | AppContext: `editor.recovery_copies` |
 | `src/editor/recovery.rs` | `TIMER` | when the timer for the due copies fires | until it fires | AppContext: `editor.recovery_copies` |
 | `src/editor/style.rs` | `STYLED_FONTS` | fonts by size and style | app | stays: cache |
-| `src/editor/style.rs` | `TOKEN_COLORS` | colours by token kind | app | stays: cache |
 | `src/editor/whitespace.rs` | `SHOWN` | the setting "show whitespace" as last chosen | app | stays: cache (of the setting) |
 | `crates/ide-ui-git/src/commands.rs` | `COMMANDS` | action target of the Git menu, without state; acts on the window in front | app (menu items hold their target weakly) | stays: cache (stateless object that aims at no particular window) |
 | `crates/ide-ui-git/src/diff.rs` | `TABS` | the diff tabs of every window by id | from opening to closing | AppContext: `git.diff_tabs` |
@@ -138,8 +137,10 @@ decides on lives in `AppContext`; a static may stay only for one of these reason
 - **cache**: as above, only what could be made again.
 - **serial**: a counter that hands out unique numbers off the main thread and holds nothing else.
 
-Code built only for tests or the self-test (`#[cfg(test)]`, `#[cfg(feature = "selftest")]`, `src/selftest/`, a file's
-`selftest_probe.rs`) is not listed. `make lint` runs `cargo xtask rules`, which fails for a stateful static this table does not list and for a row
+Code built only for tests or the self-test is not listed: what `#[cfg(test)]` or `#[cfg(feature = "selftest")]` marks,
+on the item or on a `mod` declaration on the way to its file (`src/selftest/`, a file's `selftest_probe.rs`, a test file
+split off with `#[path]`). `make lint` runs `cargo xtask rules`, which reads the sources as syntax trees and fails for a
+static whose type keeps state (also behind a `type` alias, or `static mut`) that this table does not list, and for a row
 whose static is gone.
 
 | File | Static | Holds | Reason |

@@ -3,7 +3,7 @@
 use super::*;
 
 impl Notice {
-    pub fn text(&self) -> Option<String> {
+    pub(crate) fn text(&self) -> Option<String> {
         (!self.view.isHidden()).then(|| self.text.stringValue().to_string())
     }
 }

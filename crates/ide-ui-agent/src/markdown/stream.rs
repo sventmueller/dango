@@ -16,7 +16,7 @@ struct Block {
 }
 
 /// The parsed answer and its rendered blocks; owned only by its visible text view.
-pub struct Streaming {
+pub(crate) struct Streaming {
     doc: Doc,
     laid: Layout,
     blocks: Vec<Block>,
@@ -27,7 +27,11 @@ pub struct Streaming {
 
 impl Streaming {
     /// The answer `markdown` so far, parsed and rendered `width` wide, with its text.
-    pub fn start(mtm: MainThreadMarker, markdown: &str, width: f64) -> (Streaming, Retained<NSAttributedString>) {
+    pub(crate) fn start(
+        mtm: MainThreadMarker,
+        markdown: &str,
+        width: f64,
+    ) -> (Streaming, Retained<NSAttributedString>) {
         let mut streaming = Streaming {
             doc: splat_markdown::reader::parse(markdown),
             laid: Layout::default(),
@@ -41,7 +45,7 @@ impl Streaming {
     }
 
     /// Updates only affected Markdown blocks; definitions and other global changes fall back to a full parse.
-    pub fn render(
+    pub(crate) fn render(
         &mut self,
         mtm: MainThreadMarker,
         markdown: &str,

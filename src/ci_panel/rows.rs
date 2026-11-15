@@ -10,13 +10,13 @@ use objc2_app_kit::{
     NSLayoutConstraintOrientation, NSLineBreakMode, NSMenu, NSMenuItem, NSOutlineView, NSStackView, NSTableCellView,
     NSUserInterfaceLayoutOrientation, NSView,
 };
-use objc2_foundation::{NSNotification, NSObjectProtocol, NSRect, NSString};
+use objc2_foundation::{NSNotification, NSObjectProtocol, NSRect};
 use splat_i18n::{t, tf};
 
 use super::model::{Key, Tab};
 use super::panel::CiPanel;
 use super::text;
-use crate::util::{FlagGuard, item, label, ns, separator, set_target, symbol};
+use crate::util::{FlagGuard, activate, item, label, ns, separator, set_target, symbol};
 
 /// Return and the keypad's Enter.
 const RETURN_KEYS: [u16; 2] = [36, 76];
@@ -34,7 +34,7 @@ define_class!(
     #[unsafe(super(NSOutlineView))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDECiOutlineView"]
-    pub struct CiOutlineView;
+    pub(crate) struct CiOutlineView;
 
     unsafe impl NSObjectProtocol for CiOutlineView {}
 
@@ -76,7 +76,7 @@ define_class!(
 );
 
 impl CiOutlineView {
-    pub fn new(mtm: MainThreadMarker, frame: NSRect) -> Retained<CiOutlineView> {
+    pub(crate) fn new(mtm: MainThreadMarker, frame: NSRect) -> Retained<CiOutlineView> {
         // SAFETY: NSOutlineView's designated initializer, called once on the newly allocated object.
         unsafe { msg_send![CiOutlineView::alloc(mtm), initWithFrame: frame] }
     }
@@ -90,12 +90,11 @@ impl CiOutlineView {
 }
 
 /// The key `item` of the outline view stands for.
-pub fn key_of(item: &AnyObject) -> Option<Key> {
-    item.downcast_ref::<NSString>()
-        .and_then(|text| Key::decode(&text.to_string()))
+pub(crate) fn key_of(item: &AnyObject) -> Option<Key> {
+    ide_ui_common::panel::RowItems::<Key>::key_of(item)
 }
 
-pub fn height(key: Option<&Key>) -> f64 {
+pub(crate) fn height(key: Option<&Key>) -> f64 {
     match key {
         Some(Key::Run(_) | Key::Item(_)) => RUN_HEIGHT,
         Some(Key::Step(..)) => STEP_HEIGHT,
@@ -104,27 +103,27 @@ pub fn height(key: Option<&Key>) -> f64 {
 }
 
 impl CiPanel {
-    pub fn find_run(&self, id: u64) -> Option<Run> {
+    pub(crate) fn find_run(&self, id: u64) -> Option<Run> {
         self.read().runs.iter().find(|r| r.run.id == id).map(|r| r.run.clone())
     }
 
-    pub fn find_job(&self, run: u64, job: u64) -> Option<Job> {
+    pub(crate) fn find_job(&self, run: u64, job: u64) -> Option<Job> {
         let state = self.read();
         let row = state.runs.iter().find(|r| r.run.id == run)?;
         row.jobs.iter().find(|j| j.id == job).cloned()
     }
 
-    pub fn find_item(&self, number: u64) -> Option<Item> {
+    pub(crate) fn find_item(&self, number: u64) -> Option<Item> {
         self.read().items.iter().find(|i| i.number == number).cloned()
     }
 
     /// Whether the panel talks to GitHub.
-    pub fn is_github(&self) -> bool {
+    pub(crate) fn is_github(&self) -> bool {
         self.read().forge.as_ref().is_some_and(|f| f.kind == Kind::GitHub)
     }
 
     /// The name of the run's stage `index` and how far its jobs got.
-    pub fn find_stage(&self, run: u64, index: u32) -> Option<(String, State)> {
+    pub(crate) fn find_stage(&self, run: u64, index: u32) -> Option<(String, State)> {
         let state = self.read();
         let row = state.runs.iter().find(|r| r.run.id == run)?;
         let stages = ide_ci::stages(&row.jobs);
@@ -132,7 +131,7 @@ impl CiPanel {
         Some((stage.name.to_string(), stage.state()))
     }
 
-    pub fn row_view(&self, key: &Key) -> Option<Retained<NSView>> {
+    pub(crate) fn row_view(&self, key: &Key) -> Option<Retained<NSView>> {
         let mtm = self.mtm();
         match *key {
             Key::Run(id) => {
@@ -177,7 +176,7 @@ impl CiPanel {
     }
 
     /// The keys of the selected rows.
-    pub fn selected_keys(&self) -> Vec<Key> {
+    pub(crate) fn selected_keys(&self) -> Vec<Key> {
         let outline = &self.ui().outline;
         (0..outline.numberOfRows())
             .filter(|row| outline.isRowSelected(*row))
@@ -195,7 +194,7 @@ impl CiPanel {
     }
 
     /// The run an action means: the one of the row it came from, else the first run in `state` or still running.
-    pub fn run_for(&self, sender: Option<&AnyObject>, state: State) -> Option<Run> {
+    pub(crate) fn run_for(&self, sender: Option<&AnyObject>, state: State) -> Option<Run> {
         let picked = self.keys_for(sender).into_iter().find_map(|key| match key {
             Key::Run(run) | Key::Stage(run, _) | Key::Job(run, _) | Key::Step(run, _, _) => self.find_run(run),
             Key::Item(_) => None,
@@ -215,7 +214,7 @@ impl CiPanel {
     }
 
     /// The job an action means: the one of the row it came from.
-    pub fn job_for(&self, sender: Option<&AnyObject>) -> Option<Job> {
+    pub(crate) fn job_for(&self, sender: Option<&AnyObject>) -> Option<Job> {
         self.keys_for(sender).into_iter().find_map(|key| match key {
             Key::Job(run, job) | Key::Step(run, job, _) => self.find_job(run, job),
             Key::Run(_) | Key::Stage(..) | Key::Item(_) => None,
@@ -223,7 +222,7 @@ impl CiPanel {
     }
 
     /// The merge request or issue an action means: the one of the row it came from.
-    pub fn item_for_action(&self, sender: Option<&AnyObject>) -> Option<Item> {
+    pub(crate) fn item_for_action(&self, sender: Option<&AnyObject>) -> Option<Item> {
         self.keys_for(sender).into_iter().find_map(|key| match key {
             Key::Item(number) => self.find_item(number),
             _ => None,
@@ -231,7 +230,7 @@ impl CiPanel {
     }
 
     /// Return or a double click: a job or step opens its log, a run or stage opens or closes.
-    pub fn activate_row(&self, row: isize) {
+    pub(crate) fn activate_row(&self, row: isize) {
         let outline = &self.ui().outline;
         let Some(item) = (row >= 0).then(|| outline.itemAtRow(row)).flatten() else {
             return;
@@ -258,7 +257,7 @@ impl CiPanel {
     }
 
     /// Reloads the list, keeping the selection and what the user opened or closed.
-    pub fn reload_outline(&self) {
+    pub(crate) fn reload_outline(&self) {
         let outline = &self.ui().outline;
         let selected = self.selected_keys();
         outline.reloadData();
@@ -322,7 +321,7 @@ impl CiPanel {
     }
 
     /// The user opened or closed a row, which it stays from now on; what it shows opens as its states ask for.
-    pub fn note_expansion(&self, notification: &NSNotification, open: bool) {
+    pub(crate) fn note_expansion(&self, notification: &NSNotification, open: bool) {
         if self.ivars().unfolding.get() {
             return;
         }
@@ -340,7 +339,7 @@ impl CiPanel {
     }
 
     /// The context menu of the clicked row.
-    pub fn fill_menu(&self, menu: &NSMenu) {
+    pub(crate) fn fill_menu(&self, menu: &NSMenu) {
         menu.removeAllItems();
         menu.setAutoenablesItems(false);
         let outline = &self.ui().outline;
@@ -490,8 +489,7 @@ fn styled_cell(
     }
     icon.setSymbolConfiguration(Some(&NSImageSymbolConfiguration::configurationWithPointSize_weight(
         12.0,
-        // SAFETY: AppKit sets its font weight constants when it loads.
-        unsafe { objc2_app_kit::NSFontWeightMedium },
+        crate::util::constant!(objc2_app_kit::NSFontWeightMedium),
     )));
     icon.setContentTintColor(Some(color));
     icon.setContentCompressionResistancePriority_forOrientation(1000.0, NSLayoutConstraintOrientation::Horizontal);
@@ -518,33 +516,28 @@ fn styled_cell(
     row.addArrangedSubview(&lines);
     cell.addSubview(&row);
     row.setTranslatesAutoresizingMaskIntoConstraints(false);
-    row.leadingAnchor()
-        .constraintEqualToAnchor(&cell.leadingAnchor())
-        .setActive(true);
-    row.centerYAnchor()
-        .constraintEqualToAnchor(&cell.centerYAnchor())
-        .setActive(true);
+    activate([
+        row.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
+        row.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
+    ]);
     let mut spoken = tf("{}: {}", &[title, word]);
     if let Some(value) = value {
         let end = label(mtm, value);
         end.setFont(Some(&NSFont::monospacedDigitSystemFontOfSize_weight(
             NSFont::smallSystemFontSize(),
-            // SAFETY: AppKit sets its font weight constants when it loads.
-            unsafe { objc2_app_kit::NSFontWeightRegular },
+            crate::util::constant!(objc2_app_kit::NSFontWeightRegular),
         )));
         end.setTextColor(Some(&NSColor::secondaryLabelColor()));
         end.setContentCompressionResistancePriority_forOrientation(1000.0, NSLayoutConstraintOrientation::Horizontal);
         cell.addSubview(&end);
         end.setTranslatesAutoresizingMaskIntoConstraints(false);
-        end.trailingAnchor()
-            .constraintEqualToAnchor_constant(&cell.trailingAnchor(), -6.0)
-            .setActive(true);
-        end.centerYAnchor()
-            .constraintEqualToAnchor(&cell.centerYAnchor())
-            .setActive(true);
-        row.trailingAnchor()
-            .constraintLessThanOrEqualToAnchor_constant(&end.leadingAnchor(), -6.0)
-            .setActive(true);
+        activate([
+            end.trailingAnchor()
+                .constraintEqualToAnchor_constant(&cell.trailingAnchor(), -6.0),
+            end.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
+            row.trailingAnchor()
+                .constraintLessThanOrEqualToAnchor_constant(&end.leadingAnchor(), -6.0),
+        ]);
         spoken = tf("{}, {}", &[&spoken, value]);
     } else {
         row.trailingAnchor()

@@ -11,7 +11,7 @@ use objc2_app_kit::NSApplication;
 use objc2_foundation::{NSRect, NSSize};
 
 use super::helpers::{self, wait_until};
-use super::{check, finish, snapshot};
+use super::{check, finish, give_up, give_up_saying, snapshot};
 use crate::editor::{self, EditorTextView};
 use crate::window;
 
@@ -54,11 +54,10 @@ fn toggle(view: &EditorTextView) {
     }
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let source = source();
     if let Err(error) = helpers::make_project(PROJECT, &[(FILE, &source)]) {
-        check("the scenario's folder is made", false, error.to_string());
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "the scenario's folder is made", error.to_string());
     }
     let Some(mtm) = objc2::MainThreadMarker::new() else {
         return;
@@ -66,8 +65,7 @@ pub fn run() {
     crate::app::open_project(mtm, root());
     helpers::wait_for_window(&root(), |controller| {
         let Some(controller) = controller else {
-            check("the project's window opens", false, "");
-            return finish(SCENARIO);
+            return give_up(SCENARIO, "the project's window opens");
         };
         controller.open_file(&root().join(FILE));
         wait_until(
@@ -79,8 +77,7 @@ pub fn run() {
 
 fn shown_from_menu() {
     let Some(view) = view() else {
-        check("the file opens in an editor", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the file opens in an editor");
     };
     let before = editor::minimap(&view).map(|m| m.0);
     toggle(&view);
@@ -148,7 +145,7 @@ fn appearances(view: &EditorTextView) {
         NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
     };
     let Some(controller) = window::for_project(&root()) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let names = [
         (crate::util::constant!(NSAppearanceNameAqua), "light"),
@@ -174,7 +171,7 @@ fn appearances(view: &EditorTextView) {
 
 fn narrow(editor: &EditorTextView) {
     let Some(window) = editor.window() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the window shows");
     };
     let frame = window.frame();
     window.setFrame_display(
@@ -198,7 +195,9 @@ fn narrow(editor: &EditorTextView) {
                         narrow && wide,
                         format!("{narrow} / {wide}"),
                     );
-                    let Some(view) = view() else { return finish(SCENARIO) };
+                    let Some(view) = view() else {
+                        return give_up(SCENARIO, "the editor is open");
+                    };
                     toggle(&view);
                     let off = editor::minimap(&view).map(|m| m.0);
                     check(
@@ -221,11 +220,10 @@ fn budget() {
         .collect();
     let path = root().join("big.rs");
     if let Err(error) = std::fs::write(&path, &big) {
-        check("the big file is written", false, error.to_string());
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "the big file is written", error.to_string());
     }
     let Some(controller) = window::for_project(&root()) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     controller.open_file(&path);
     let opened = path.clone();
@@ -235,8 +233,7 @@ fn budget() {
         move || ready().is_some_and(|v| v.line_start(9_999).is_some()),
         move |_| {
             let Some(view) = big_view() else {
-                check("the big file opens", false, "");
-                return finish(SCENARIO);
+                return give_up(SCENARIO, "the big file opens");
             };
             toggle(&view);
             let at = view.line_start(5_000).unwrap_or(0) + 20;

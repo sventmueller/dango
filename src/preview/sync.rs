@@ -20,7 +20,7 @@ use crate::editor::EditorTextView;
 use crate::util::{constant, guarded, main_soon};
 
 #[derive(Default)]
-pub struct State {
+pub(crate) struct State {
     /// The source offset at the top of the preview, which a new text keeps in place when the editor is not on screen.
     top: Cell<Option<usize>>,
     /// Set while one side scrolls the other, so the other's answer does not scroll back.
@@ -33,7 +33,7 @@ pub struct State {
 }
 
 /// Lets the preview and `editor` follow each other's scrolling.
-pub fn attach(preview: &Rc<Preview>, editor: &EditorTextView) {
+pub(crate) fn attach(preview: &Rc<Preview>, editor: &EditorTextView) {
     let state = &preview.sync;
     if state
         .follows
@@ -100,7 +100,7 @@ fn observe(preview: &Preview, scroll: &NSScrollView, scrolled: impl Fn() + 'stat
 }
 
 /// Ends the following, as the preview closes or follows another editor.
-pub fn stop(preview: &Preview) {
+pub(crate) fn stop(preview: &Preview) {
     let center = NSNotificationCenter::defaultCenter();
     for observer in preview.sync.observers.borrow_mut().drain(..) {
         // SAFETY: An observer this center handed out.
@@ -110,7 +110,7 @@ pub fn stop(preview: &Preview) {
 }
 
 /// Runs `change` of the preview's text or place without the preview moving the editor.
-pub fn while_moving(preview: &Preview, change: impl FnOnce()) {
+pub(crate) fn while_moving(preview: &Preview, change: impl FnOnce()) {
     let was = preview.sync.moving.replace(true);
     change();
     preview.sync.moving.set(was);
@@ -118,7 +118,7 @@ pub fn while_moving(preview: &Preview, change: impl FnOnce()) {
 
 /// Runs `change`, which replaces each range of the preview's text by text of the length beside it, keeping the line
 /// at the top of the preview where it stands, as the editor did not move.
-pub fn keeping_top(preview: &Preview, changes: &[(NSRange, usize)], change: impl FnOnce()) {
+pub(crate) fn keeping_top(preview: &Preview, changes: &[(NSRange, usize)], change: impl FnOnce()) {
     let views = &preview.views;
     let visible = views.text.visibleRect().origin.y;
     let top = char_at_top(views)
@@ -148,7 +148,7 @@ pub fn keeping_top(preview: &Preview, changes: &[(NSRange, usize)], change: impl
 }
 
 /// After a new text: the preview stands where the editor stands, or where it stood itself.
-pub fn keep_place(preview: &Preview) {
+pub(crate) fn keep_place(preview: &Preview) {
     match visible_editor(preview) {
         Some(_) => editor_scrolled(preview),
         None => {

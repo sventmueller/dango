@@ -166,7 +166,7 @@ impl Mapper {
     }
 
     /// A mapper for a saved transcript, which takes the user's messages from the frames.
-    pub fn for_history() -> Mapper {
+    pub(crate) fn for_history() -> Mapper {
         Mapper {
             history: true,
             ..Mapper::default()
@@ -246,7 +246,7 @@ impl Mapper {
     }
 
     /// The updates for a message the user sends, with `uuid` as the CLI's id for it.
-    pub fn user_message(&mut self, message: UserMessage, uuid: &str, now: SystemTime) -> Vec<Update> {
+    pub(crate) fn user_message(&mut self, message: UserMessage, uuid: &str, now: SystemTime) -> Vec<Update> {
         self.auth_reported = false;
         self.prompts += 1;
         self.sent.insert(uuid.to_string());
@@ -280,18 +280,18 @@ impl Mapper {
 
     /// Forgets the session's totals: a resumed CLI may count on from an earlier process, so the next turn's cost
     /// stays unknown unless `baseline` learns the totals first.
-    pub fn resumed(&mut self) {
+    pub(crate) fn resumed(&mut self) {
         self.totals_unknown = true;
     }
 
     /// The prompts sent so far.
-    pub fn prompts(&self) -> u64 {
+    pub(crate) fn prompts(&self) -> u64 {
         self.prompts
     }
 
     /// Takes the session's totals from a `get_usage` answer that was asked for after `prompts` prompts, unless they
     /// are known already or a prompt was sent since, whose turn the answer may count in part.
-    pub fn baseline(&mut self, report: &UsageReport, prompts: u64) {
+    pub(crate) fn baseline(&mut self, report: &UsageReport, prompts: u64) {
         if !self.totals_unknown || self.prompts != prompts {
             return;
         }

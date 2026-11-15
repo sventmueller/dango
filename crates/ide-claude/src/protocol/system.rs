@@ -141,46 +141,36 @@ impl System {
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(default)]
 pub struct Init {
-    /// The session's id.
-    pub session_id: String,
-    /// The working folder.
-    pub cwd: String,
-    /// The model.
-    pub model: String,
-    /// The permission mode.
+    pub(crate) session_id: String,
+    pub(crate) cwd: String,
+    pub(crate) model: String,
     #[serde(rename = "permissionMode")]
-    pub permission_mode: String,
+    pub(crate) permission_mode: String,
     /// The tools the model can call.
-    pub tools: Vec<String>,
+    pub(crate) tools: Vec<String>,
     /// The MCP servers and their state.
-    pub mcp_servers: Vec<McpServer>,
-    /// The slash commands.
-    pub slash_commands: Vec<String>,
+    pub(crate) mcp_servers: Vec<McpServer>,
+    pub(crate) slash_commands: Vec<String>,
     /// The subagent types.
-    pub agents: Vec<String>,
-    /// The skills.
-    pub skills: Vec<String>,
-    /// The CLI's version.
-    pub claude_code_version: String,
-    /// The output style.
-    pub output_style: String,
+    pub(crate) agents: Vec<String>,
+    pub(crate) skills: Vec<String>,
+    pub(crate) claude_code_version: String,
+    pub(crate) output_style: String,
     /// Protocol capabilities, such as `interrupt_receipt_v1`.
-    pub capabilities: Vec<String>,
+    pub(crate) capabilities: Vec<String>,
     /// The effort for the next message.
-    pub effort: Option<String>,
+    pub(crate) effort: Option<String>,
     /// Where an API key came from, `none` with a subscription sign-in.
     #[serde(rename = "apiKeySource")]
-    pub api_key_source: Option<String>,
+    pub(crate) api_key_source: Option<String>,
 }
 
-/// An MCP server.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
 #[serde(default)]
-pub struct McpServer {
-    /// Its name.
-    pub name: String,
+pub(crate) struct McpServer {
+    pub(crate) name: String,
     /// `connected`, `pending`, `failed` or another state.
-    pub status: String,
+    pub(crate) status: String,
 }
 
 /// A request failed and is retried.
@@ -188,19 +178,19 @@ pub struct McpServer {
 pub struct ApiRetry {
     /// The attempt that failed.
     #[serde(default)]
-    pub attempt: u32,
+    pub(crate) attempt: u32,
     /// How many attempts are made at most.
     #[serde(default)]
-    pub max_retries: u32,
+    pub(crate) max_retries: u32,
     /// How long the CLI waits.
     #[serde(default)]
-    pub retry_delay_ms: u64,
+    pub(crate) retry_delay_ms: u64,
     /// The HTTP status, when there was a response.
     #[serde(default)]
-    pub error_status: Option<u16>,
+    pub(crate) error_status: Option<u16>,
     /// The CLI's name for the error.
     #[serde(default)]
-    pub error: String,
+    pub(crate) error: String,
 }
 
 /// What a compaction did.
@@ -208,188 +198,165 @@ pub struct ApiRetry {
 pub struct CompactBoundary {
     /// `manual` or `auto`.
     #[serde(default)]
-    pub trigger: String,
-    /// Tokens before.
+    pub(crate) trigger: String,
     #[serde(default)]
-    pub pre_tokens: u64,
-    /// Tokens after.
+    pub(crate) pre_tokens: u64,
     #[serde(default)]
-    pub post_tokens: Option<u64>,
+    pub(crate) post_tokens: Option<u64>,
 }
 
 /// A task started: a subagent, a shell, a monitor or a workflow.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct TaskStarted {
-    /// The task's id.
-    pub task_id: String,
-    /// The id of this run of it.
+    pub(crate) task_id: String,
     #[serde(default)]
-    pub run_id: Option<String>,
+    pub(crate) run_id: Option<String>,
     /// The tool call that started it.
     #[serde(default)]
-    pub tool_use_id: Option<String>,
-    /// What it does.
+    pub(crate) tool_use_id: Option<String>,
     #[serde(default)]
-    pub description: String,
-    /// The sort of subagent.
+    pub(crate) description: String,
     #[serde(default)]
-    pub subagent_type: Option<String>,
+    pub(crate) subagent_type: Option<String>,
     /// Whether it started in the background.
     #[serde(default)]
-    pub is_backgrounded: Option<bool>,
+    pub(crate) is_backgrounded: Option<bool>,
     /// The subagent task that started it.
     #[serde(default)]
-    pub parent_task_id: Option<String>,
+    pub(crate) parent_task_id: Option<String>,
     /// `local_agent`, `local_bash`, `monitor`, `local_workflow` or another.
     #[serde(default)]
-    pub task_type: Option<String>,
+    pub(crate) task_type: Option<String>,
     /// Whether it stays out of the transcript.
     #[serde(default)]
-    pub skip_transcript: Option<bool>,
+    pub(crate) skip_transcript: Option<bool>,
     /// Whether it is housekeeping.
     #[serde(default)]
-    pub ambient: Option<bool>,
+    pub(crate) ambient: Option<bool>,
 }
 
 /// Token, tool and time counts of a task.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
 #[serde(default)]
-pub struct TaskUsage {
-    /// Tokens used.
-    pub total_tokens: u64,
+pub(crate) struct TaskUsage {
+    pub(crate) total_tokens: u64,
     /// Tools called.
-    pub tool_uses: u64,
-    /// Time taken.
-    pub duration_ms: u64,
+    pub(crate) tool_uses: u64,
+    pub(crate) duration_ms: u64,
 }
 
 /// A task's progress.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct TaskProgress {
-    /// The task.
-    pub task_id: String,
-    /// The run.
+    pub(crate) task_id: String,
     #[serde(default)]
-    pub run_id: Option<String>,
+    pub(crate) run_id: Option<String>,
     /// The tool call that started it.
     #[serde(default)]
-    pub tool_use_id: Option<String>,
+    pub(crate) tool_use_id: Option<String>,
     /// What it does now.
     #[serde(default)]
-    pub description: Option<String>,
+    pub(crate) description: Option<String>,
     /// Counts so far.
     #[serde(default)]
-    pub usage: TaskUsage,
+    pub(crate) usage: TaskUsage,
     /// The tool it called last.
     #[serde(default)]
-    pub last_tool_name: Option<String>,
+    pub(crate) last_tool_name: Option<String>,
     /// A one-line status.
     #[serde(default)]
-    pub summary: Option<String>,
+    pub(crate) summary: Option<String>,
 }
 
 /// Fields of a task that changed.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct TaskUpdated {
-    /// The task.
-    pub task_id: String,
-    /// The run.
+    pub(crate) task_id: String,
     #[serde(default)]
-    pub run_id: Option<String>,
+    pub(crate) run_id: Option<String>,
     /// What changed.
     #[serde(default)]
-    pub patch: TaskPatch,
+    pub(crate) patch: TaskPatch,
 }
 
 /// The changed fields of a task.
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(default)]
-pub struct TaskPatch {
+pub(crate) struct TaskPatch {
     /// `pending`, `running`, `completed`, `failed`, `killed` or `paused`.
-    pub status: Option<String>,
-    /// What it does.
-    pub description: Option<String>,
+    pub(crate) status: Option<String>,
+    pub(crate) description: Option<String>,
     /// When it ended, in milliseconds since 1970.
-    pub end_time: Option<f64>,
-    /// Why it failed.
-    pub error: Option<String>,
+    pub(crate) end_time: Option<f64>,
+    pub(crate) error: Option<String>,
     /// Whether it runs in the background.
-    pub is_backgrounded: Option<bool>,
+    pub(crate) is_backgrounded: Option<bool>,
 }
 
 /// A task ended.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct TaskNotification {
-    /// The task.
-    pub task_id: String,
-    /// The run.
+    pub(crate) task_id: String,
     #[serde(default)]
-    pub run_id: Option<String>,
+    pub(crate) run_id: Option<String>,
     /// The tool call that started it.
     #[serde(default)]
-    pub tool_use_id: Option<String>,
+    pub(crate) tool_use_id: Option<String>,
     /// `completed`, `failed` or `stopped`.
     #[serde(default)]
-    pub status: String,
+    pub(crate) status: String,
     /// The file its output went to.
     #[serde(default)]
-    pub output_file: Option<String>,
+    pub(crate) output_file: Option<String>,
     /// A summary of what it did.
     #[serde(default)]
-    pub summary: Option<String>,
+    pub(crate) summary: Option<String>,
     /// Its final counts.
     #[serde(default)]
-    pub usage: Option<TaskUsage>,
+    pub(crate) usage: Option<TaskUsage>,
 }
 
 /// A live background task.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct BackgroundTask {
-    /// The task.
-    pub task_id: String,
-    /// The run.
+    pub(crate) task_id: String,
     #[serde(default)]
-    pub run_id: Option<String>,
-    /// The sort of task.
+    pub(crate) run_id: Option<String>,
     #[serde(default)]
-    pub task_type: String,
-    /// What it does.
+    pub(crate) task_type: String,
     #[serde(default)]
-    pub description: String,
+    pub(crate) description: String,
     /// The subagent task that started it.
     #[serde(default)]
-    pub parent_task_id: Option<String>,
+    pub(crate) parent_task_id: Option<String>,
     /// Whether it is housekeeping.
     #[serde(default)]
-    pub ambient: Option<bool>,
+    pub(crate) ambient: Option<bool>,
 }
 
 /// A hook run, from any of its three frames.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct Hook {
     /// The run's id.
-    pub hook_id: String,
-    /// The hook.
+    pub(crate) hook_id: String,
     #[serde(default)]
-    pub hook_name: String,
+    pub(crate) hook_name: String,
     /// The event it runs for.
     #[serde(default)]
-    pub hook_event: String,
+    pub(crate) hook_event: String,
     /// Its combined output.
     #[serde(default)]
-    pub output: String,
-    /// Its standard error.
+    pub(crate) output: String,
     #[serde(default)]
-    pub stderr: String,
-    /// Its exit code.
+    pub(crate) stderr: String,
     #[serde(default)]
-    pub exit_code: Option<i32>,
+    pub(crate) exit_code: Option<i32>,
     /// `success`, `error` or `cancelled` once it ended.
     #[serde(default)]
-    pub outcome: Option<String>,
+    pub(crate) outcome: Option<String>,
     /// Whether this frame reports output of a hook still running.
     #[serde(skip)]
-    pub running: bool,
+    pub(crate) running: bool,
 }
 
 #[cfg(test)]

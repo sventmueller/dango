@@ -8,7 +8,7 @@ use crate::adapter::AdapterKind;
 use crate::types::{Capabilities, ExceptionFilter};
 
 /// The filter that stops where a Rust program panics; CodeLLDB offers it under this id.
-pub const RUST_PANIC: &str = "rust_panic";
+pub(crate) const RUST_PANIC: &str = "rust_panic";
 
 /// The function of the Rust standard library every panic passes once its message is written.
 const PANIC_FUNCTION: &str = "rust_panic";
@@ -82,7 +82,7 @@ pub fn offered(kind: AdapterKind, caps: &Capabilities, languages: Languages) -> 
 
 /// The filter a Rust project shows before its first session: lldb-dap is the only debugger for Rust and takes
 /// function breakpoints.
-pub fn rust_panic() -> ExceptionFilter {
+pub(crate) fn rust_panic() -> ExceptionFilter {
     ExceptionFilter {
         filter: RUST_PANIC.into(),
         label: "Rust Panic".into(),

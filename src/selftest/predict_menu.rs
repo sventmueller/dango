@@ -16,7 +16,7 @@ use objc2_app_kit::{
 };
 use splat_i18n::t;
 
-use super::{check, finish, helpers};
+use super::{check, finish, give_up, helpers};
 use crate::editor::predict::{self, model};
 use crate::editor::{self, EditorTextView};
 
@@ -69,7 +69,7 @@ fn text(view: &EditorTextView) -> String {
 }
 
 /// Goes on from `view`, the scenario's editor of Rust, with the stub forced.
-pub fn run(view: Retained<EditorTextView>) {
+pub(crate) fn run(view: Retained<EditorTextView>) {
     let stub: Arc<dyn Provider> = Arc::new(Stub::new(Vec::new(), Duration::from_secs(5)));
     predict::provider::force(Some(stub.clone()));
     let end = view.document().text().len_utf16();
@@ -126,7 +126,9 @@ fn view_again() -> Option<Retained<EditorTextView>> {
 
 /// Without a provider the button opens the settings; with one outside the Mac it asks for consent in a sheet.
 fn settings_button(view: Option<Retained<EditorTextView>>) {
-    let Some(view) = view else { return finish(SCENARIO) };
+    let Some(view) = view else {
+        return give_up(SCENARIO, "the editor is open");
+    };
     predict::provider::force(None);
     predict::settings_changed();
     press_status(&view);
@@ -175,10 +177,14 @@ fn settings_button(view: Option<Retained<EditorTextView>>) {
 /// install it.
 fn copilot_missing() {
     let environment = crate::environment::get().map(<[_]>::to_vec).unwrap_or_default();
-    if ide_predict::copilot::find(&ide_lsp::default_tools(), &environment).is_some() {
-        check("skipped: Copilot's server is installed on this Mac", true, "");
-        return end();
+    if ide_predict::copilot::find(&ide_lsp::default_tools(), &environment).is_none() {
+        return look_for_copilot();
     }
+    check("skipped: Copilot's server is installed on this Mac", true, "");
+    end();
+}
+
+fn look_for_copilot() {
     let mut settings = ide_core::settings::Settings::load_user();
     let chosen = settings.set(&model::PROVIDER, &model::Choice::Copilot);
     predict::settings_changed();

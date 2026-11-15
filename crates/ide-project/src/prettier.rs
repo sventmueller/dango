@@ -4,6 +4,8 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+use ide_core::settings::FormatterChoice;
+
 /// Who formats a file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Formatter {
@@ -12,11 +14,6 @@ pub enum Formatter {
     /// Prettier.
     Prettier,
 }
-
-/// The value of the setting `formatter` that picks Prettier, and the one that picks the language server.
-pub const PRETTIER: &str = "prettier";
-/// See [`PRETTIER`].
-pub const SERVER: &str = "server";
 
 const CONFIG_FILES: &[&str] = &[
     ".prettierrc",
@@ -51,7 +48,7 @@ fn configures(dir: &Path) -> bool {
 }
 
 /// Whether `file` of the project at `root` has a Prettier configuration in its folder or one above it up to `root`.
-pub fn has_config(file: &Path, root: &Path) -> bool {
+pub(crate) fn has_config(file: &Path, root: &Path) -> bool {
     file.ancestors()
         .skip(1)
         .take_while(|dir| dir.starts_with(root))
@@ -59,7 +56,7 @@ pub fn has_config(file: &Path, root: &Path) -> bool {
 }
 
 /// Whether Prettier formats files like `file` by itself, without plugins.
-pub fn knows(file: &Path) -> bool {
+pub(crate) fn knows(file: &Path) -> bool {
     let extension = file.extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase);
     matches!(
         extension.as_deref(),
@@ -95,10 +92,10 @@ pub fn knows(file: &Path) -> bool {
 
 /// Who formats `file` of the project at `root` in `language`: the setting `formatter` for the language decides,
 /// else Prettier where the project configures it and knows the file, else the language server.
-pub fn choose(file: &Path, root: &Path, language: &str, setting: &BTreeMap<String, String>) -> Formatter {
-    match setting.get(language).map(String::as_str) {
-        Some(PRETTIER) if knows(file) => Formatter::Prettier,
-        Some(SERVER) => Formatter::Server,
+pub fn choose(file: &Path, root: &Path, language: &str, setting: &BTreeMap<String, FormatterChoice>) -> Formatter {
+    match setting.get(language) {
+        Some(FormatterChoice::Prettier) if knows(file) => Formatter::Prettier,
+        Some(FormatterChoice::Server) => Formatter::Server,
         _ if knows(file) && has_config(file, root) => Formatter::Prettier,
         _ => Formatter::Server,
     }
@@ -171,7 +168,7 @@ mod tests {
             Formatter::Prettier
         );
         assert_eq!(choose(&root.join("src/b.rs"), &root, "rust", &none), Formatter::Server);
-        let server = BTreeMap::from([("typescript".to_string(), SERVER.to_string())]);
+        let server = BTreeMap::from([("typescript".to_string(), FormatterChoice::Server)]);
         assert_eq!(
             choose(&root.join("src/a.ts"), &root, "typescript", &server),
             Formatter::Server
@@ -183,7 +180,7 @@ mod tests {
         let root = project(&[("package.json", r#"{"name":"x"}"#), ("a.css", "")]);
         let none = BTreeMap::new();
         assert_eq!(choose(&root.join("a.css"), &root, "css", &none), Formatter::Server);
-        let prettier = BTreeMap::from([("css".to_string(), PRETTIER.to_string())]);
+        let prettier = BTreeMap::from([("css".to_string(), FormatterChoice::Prettier)]);
         assert_eq!(
             choose(&root.join("a.css"), &root, "css", &prettier),
             Formatter::Prettier

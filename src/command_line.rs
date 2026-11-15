@@ -2,12 +2,10 @@
 
 use std::path::{Path, PathBuf};
 
+use ide_ui_common::alert::Alert;
 use objc2::MainThreadMarker;
-use objc2_app_kit::{NSAlert, NSAlertStyle};
 use objc2_foundation::NSBundle;
 use splat_i18n::tf;
-
-use crate::util::ns;
 
 /// Marks a command file as written by the app, so it never replaces one the user wrote.
 const MARK: &str = "# Installed by";
@@ -53,16 +51,14 @@ fn on_path(dir: &Path) -> bool {
 }
 
 /// Installs the command and tells the user how it went.
-pub fn install(mtm: MainThreadMarker) {
+pub(crate) fn install(mtm: MainThreadMarker) {
     let bundle_id = NSBundle::mainBundle()
         .bundleIdentifier()
         .map_or_else(|| ide_product::BUNDLE_ID.to_string(), |id| id.to_string());
     let path = target();
     let command = ide_product::COMMAND;
-    let alert = NSAlert::new(mtm);
-    match write_command(&path, &bundle_id) {
+    let alert = match write_command(&path, &bundle_id) {
         Ok(()) => {
-            alert.setMessageText(&ns(&tf("Der Befehl „{}“ ist installiert.", &[command])));
             let dir = path.parent().unwrap_or(Path::new("/"));
             let detail = if on_path(dir) {
                 tf("„{} .“ öffnet den aktuellen Ordner im Terminal.", &[command])
@@ -72,23 +68,19 @@ pub fn install(mtm: MainThreadMarker) {
                     &[&crate::app::display_path(dir)],
                 )
             };
-            alert.setInformativeText(&ns(&detail));
+            Alert::new(mtm, &tf("Der Befehl „{}“ ist installiert.", &[command])).informative(&detail)
         }
-        Err(Refusal::Foreign(path)) => {
-            alert.setAlertStyle(NSAlertStyle::Warning);
-            alert.setMessageText(&ns(&tf("Der Befehl „{}“ wurde nicht installiert.", &[command])));
-            alert.setInformativeText(&ns(&tf(
+        Err(Refusal::Foreign(path)) => Alert::new(mtm, &tf("Der Befehl „{}“ wurde nicht installiert.", &[command]))
+            .warning()
+            .informative(&tf(
                 "{} gibt es schon und stammt nicht von hier; es bleibt unverändert.",
                 &[&crate::app::display_path(&path)],
-            )));
-        }
-        Err(Refusal::Io(error)) => {
-            alert.setAlertStyle(NSAlertStyle::Warning);
-            alert.setMessageText(&ns(&tf("Der Befehl „{}“ wurde nicht installiert.", &[command])));
-            alert.setInformativeText(&ns(&error.to_string()));
-        }
-    }
-    alert.runModal();
+            )),
+        Err(Refusal::Io(error)) => Alert::new(mtm, &tf("Der Befehl „{}“ wurde nicht installiert.", &[command]))
+            .warning()
+            .informative(&error.to_string()),
+    };
+    alert.run_modal();
 }
 
 #[cfg(test)]

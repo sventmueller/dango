@@ -23,13 +23,13 @@ use ide_ui_dictation::{self as dictation, FnState, PROVIDERS, choices};
 
 /// Tags of the transcription menu: an online model's index in `OnlineModel::ALL` above the first, a local one's in
 /// `LocalModel::ALL` above the second.
-pub const ONLINE: isize = 100;
-pub const LOCAL: isize = 200;
+pub(crate) const ONLINE: isize = 100;
+pub(crate) const LOCAL: isize = 200;
 /// The grid's rows that come and go: Lowspeak's offer and the missing model's download.
 const OFFER_ROWS: [usize; 2] = [0, 1];
 const MODEL_ROW: usize = 3;
 
-pub struct DictationIvars {
+pub(crate) struct DictationIvars {
     views: OnceCell<Views>,
     /// The id and name of each microphone the menu lists after the system default, in its order.
     microphones: RefCell<Vec<(String, String)>>,
@@ -64,7 +64,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEDictationSettings"]
     #[ivars = DictationIvars]
-    pub struct DictationSettings;
+    pub(crate) struct DictationSettings;
 
     unsafe impl NSObjectProtocol for DictationSettings {}
 
@@ -245,7 +245,7 @@ fn tokens(field: &NSTokenField) -> Vec<String> {
 }
 
 impl DictationSettings {
-    pub fn new(mtm: MainThreadMarker) -> Retained<DictationSettings> {
+    pub(crate) fn new(mtm: MainThreadMarker) -> Retained<DictationSettings> {
         let this = Self::alloc(mtm).set_ivars(DictationIvars {
             views: OnceCell::new(),
             microphones: RefCell::new(Vec::new()),
@@ -263,7 +263,7 @@ impl DictationSettings {
     }
 
     /// The tab's view, built once.
-    pub fn view(&self) -> Retained<NSView> {
+    pub(crate) fn view(&self) -> Retained<NSView> {
         let mtm = self.mtm();
         let texts = dictation::lowspeak_texts();
         let value = || form::value(mtm, "");
@@ -353,7 +353,7 @@ impl DictationSettings {
     }
 
     /// Shows the state of now: the offer, the choices, the download, the keys, fn.
-    pub fn reload(&self) {
+    pub(crate) fn reload(&self) {
         let Some(views) = self.ivars().views.get() else { return };
         let texts = dictation::lowspeak_texts();
         let settings = ide_core::settings::Settings::load_user();
@@ -633,4 +633,4 @@ fn layout(mtm: MainThreadMarker, views: &Views, offer: &[&NSButton], texts: &Tex
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

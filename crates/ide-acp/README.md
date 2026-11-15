@@ -21,7 +21,7 @@ flowchart TB
     app -->|"Register::cached, Register::fetch"| net["ide-net: Net, HTTPS"]
     net --> registry[("ACP registry")]
     app -->|"Installer: Plan of a preset or entry"| installer["download with checksum, npm, uv"]
-    installer -->|"helpers through the supervisor"| helpers(["npm, uv"])
+    installer -->|"ide_process::tool: which, Helper::run"| helpers(["npm, uv"])
     installer --> installs[("agents folder in the data folder")]
 ```
 

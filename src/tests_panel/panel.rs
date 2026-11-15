@@ -9,6 +9,7 @@ use std::time::Duration;
 use ide_process::Ending;
 use ide_test::board::{Board, Node, Row};
 use ide_test::{Scope, State, Tool};
+use ide_ui_common::panel::{Nesting, PanelOutline, RowItem, RowItems};
 use ide_ui_common::registry::WindowPart;
 use ide_ui_common::window::{Window, WindowId};
 use objc2::rc::Retained;
@@ -19,7 +20,7 @@ use objc2_app_kit::{
     NSOutlineViewDataSource, NSOutlineViewDelegate, NSProgressIndicator, NSProgressIndicatorStyle, NSStackView,
     NSStackViewGravity, NSTableColumn, NSTextField, NSView,
 };
-use objc2_foundation::{NSNotification, NSObjectProtocol, NSRect};
+use objc2_foundation::{NSNotification, NSObjectProtocol};
 use splat_i18n::{t, tf};
 
 use super::outline::{self, Outline};
@@ -33,7 +34,7 @@ const POLL: Duration = Duration::from_millis(300);
 /// The most changed rows redrawn one by one; past it the whole outline loads again.
 const RELOADED_ROWS: usize = 100;
 
-pub struct PanelIvars {
+pub(crate) struct PanelIvars {
     id: u64,
     window: WindowId,
     root: PathBuf,
@@ -43,6 +44,8 @@ pub struct PanelIvars {
     /// Every row of the tree, packages before their files and tests.
     rows: RefCell<Vec<Row>>,
     outline: RefCell<Outline>,
+    /// The object that stands for each node in the outline, the same one for as long as the node shows.
+    items: RowItems<Node>,
     /// The key the next run gets.
     next_run: Cell<u64>,
     /// The runs handed to the disk lane to start.
@@ -68,42 +71,12 @@ pub struct PanelIvars {
 }
 
 define_class!(
-    // SAFETY: NSOutlineView has no subclassing requirements and `TestsOutlineView` does not implement Drop.
-    /// The tests' outline, its disclosure triangles where the panel's title begins as in the other panels.
-    #[unsafe(super(NSOutlineView))]
-    #[thread_kind = MainThreadOnly]
-    #[name = "IDETestsOutlineView"]
-    struct TestsOutlineView;
-
-    unsafe impl NSObjectProtocol for TestsOutlineView {}
-
-    impl TestsOutlineView {
-        #[unsafe(method(frameOfOutlineCellAtRow:))]
-        fn outline_cell_frame(&self, row: isize) -> NSRect {
-            // SAFETY: The superclass's implementation, with this method's signature.
-            let frame: NSRect = unsafe { msg_send![super(self), frameOfOutlineCellAtRow: row] };
-            ide_ui_common::panel::outdent(self, frame, ide_ui_common::panel::OUTDENT, false)
-        }
-
-        #[unsafe(method(frameOfCellAtColumn:row:))]
-        fn cell_frame(&self, column: isize, row: isize) -> NSRect {
-            // SAFETY: The superclass's implementation, with this method's signature.
-            let frame: NSRect = unsafe { msg_send![super(self), frameOfCellAtColumn: column, row: row] };
-            if column != 0 {
-                return frame;
-            }
-            ide_ui_common::panel::outdent(self, frame, ide_ui_common::panel::OUTDENT, true)
-        }
-    }
-);
-
-define_class!(
     // SAFETY: NSObject has no subclassing requirements and `TestsPanel` does not implement Drop.
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDETestsPanel"]
     #[ivars = PanelIvars]
-    pub struct TestsPanel;
+    pub(crate) struct TestsPanel;
 
     unsafe impl NSObjectProtocol for TestsPanel {}
 
@@ -113,9 +86,7 @@ define_class!(
         #[unsafe(method(outlineView:numberOfChildrenOfItem:))]
         fn children_count(&self, _view: &NSOutlineView, item: Option<&AnyObject>) -> isize {
             guarded(0, || {
-                let outline = self.ivars().outline.borrow();
-                outline
-                    .children_of(item)
+                self.children_of(item)
                     .map_or(0, |rows| isize::try_from(rows.len()).unwrap_or(0))
             })
         }
@@ -123,19 +94,15 @@ define_class!(
         #[unsafe(method_id(outlineView:child:ofItem:))]
         fn child(&self, _view: &NSOutlineView, index: isize, item: Option<&AnyObject>) -> Retained<AnyObject> {
             let found = guarded(None, || {
-                let outline = self.ivars().outline.borrow();
-                let at = *outline.children_of(item)?.get(usize::try_from(index).ok()?)?;
-                outline.item(at)
+                let at = *self.children_of(item)?.get(usize::try_from(index).ok()?)?;
+                self.item(at)
             });
             found.map_or_else(|| ns("").into(), Into::into)
         }
 
         #[unsafe(method(outlineView:isItemExpandable:))]
         fn expandable(&self, _view: &NSOutlineView, item: &AnyObject) -> bool {
-            guarded(false, || {
-                let outline = self.ivars().outline.borrow();
-                outline.children_of(Some(item)).is_some_and(|rows| !rows.is_empty())
-            })
+            guarded(false, || self.children_of(Some(item)).is_some_and(|rows| !rows.is_empty()))
         }
     }
 
@@ -222,7 +189,7 @@ define_class!(
 
 impl TestsPanel {
     /// The panel `id` of the window `window` for the folder `root`.
-    pub fn new(mtm: MainThreadMarker, id: u64, window: WindowId, root: PathBuf) -> Retained<TestsPanel> {
+    pub(crate) fn new(mtm: MainThreadMarker, id: u64, window: WindowId, root: PathBuf) -> Retained<TestsPanel> {
         let this = Self::alloc(mtm).set_ivars(PanelIvars {
             id,
             window,
@@ -232,6 +199,7 @@ impl TestsPanel {
             runs: RefCell::new(Vec::new()),
             rows: RefCell::new(Vec::new()),
             outline: RefCell::new(Outline::default()),
+            items: RowItems::default(),
             next_run: Cell::new(0),
             starting: Cell::new(0),
             marked: Cell::new(None),
@@ -251,20 +219,20 @@ impl TestsPanel {
         unsafe { msg_send![super(this), init] }
     }
 
-    pub fn id(&self) -> u64 {
+    pub(crate) fn id(&self) -> u64 {
         self.ivars().id
     }
 
-    pub fn window(&self) -> WindowId {
+    pub(crate) fn window(&self) -> WindowId {
         self.ivars().window
     }
 
-    pub fn root(&self) -> &std::path::Path {
+    pub(crate) fn root(&self) -> &std::path::Path {
         &self.ivars().root
     }
 
     /// The page and its header, for the window's sidebar.
-    pub fn build(&self) -> (Retained<NSView>, Retained<NSStackView>) {
+    pub(crate) fn build(&self) -> (Retained<NSView>, Retained<NSStackView>) {
         let mtm = self.mtm();
         let me: &AnyObject = self.as_ref();
         let button =
@@ -282,10 +250,7 @@ impl TestsPanel {
         for button in [&run, &find, &failed, &stop] {
             header.addArrangedSubview(button);
         }
-        // SAFETY: NSOutlineView's designated initializer, called once on the newly allocated object.
-        let table: Retained<TestsOutlineView> =
-            unsafe { msg_send![TestsOutlineView::alloc(mtm), initWithFrame: ide_ui_common::panel::LIST_FRAME] };
-        let table: Retained<NSOutlineView> = table.into_super();
+        let table: Retained<NSOutlineView> = PanelOutline::new(mtm, Nesting::Indented).into_super();
         let scroll = ide_ui_common::panel::source_list_outline(mtm, &table, "tests", t("Tests"));
         // SAFETY: The table holds its data source and delegate weakly; the panel registry keeps the panel alive.
         unsafe {
@@ -334,7 +299,7 @@ impl TestsPanel {
     }
 
     /// Finds the folder's tools and lists their tests; with `all`, also those that list by building.
-    pub fn list(&self, all: bool) {
+    pub(crate) fn list(&self, all: bool) {
         self.find_tools(move |panel| panel.list_found(all));
     }
 
@@ -385,7 +350,7 @@ impl TestsPanel {
     }
 
     /// Runs `scope` with `tool`.
-    pub fn run(&self, tool: Tool, scope: Scope) {
+    pub(crate) fn run(&self, tool: Tool, scope: Scope) {
         if !crate::project::is_trusted(self.root()) {
             self.say(t("Tests nur in vertrauten Ordnern"));
             return;
@@ -397,7 +362,7 @@ impl TestsPanel {
     }
 
     /// Runs every test of every tool.
-    pub fn run_everything(&self) {
+    pub(crate) fn run_everything(&self) {
         if self.ivars().tools.borrow().is_empty() {
             self.find_tools(|panel| {
                 panel.list_found(false);
@@ -416,7 +381,7 @@ impl TestsPanel {
     }
 
     /// Runs the last run again.
-    pub fn rerun(&self) {
+    pub(crate) fn rerun(&self) {
         let last = self.ivars().board.borrow().last_run.clone();
         match last {
             Some((tool, scope)) => self.run(tool, scope),
@@ -425,7 +390,7 @@ impl TestsPanel {
     }
 
     /// Draws the tree as the board is now: only the rows that changed where the tree kept its shape.
-    pub fn show(&self) {
+    pub(crate) fn show(&self) {
         let rows = self.ivars().board.borrow().rows();
         let redrawn = {
             let old = self.ivars().rows.borrow();
@@ -443,15 +408,18 @@ impl TestsPanel {
         let Some(table) = self.ivars().table.borrow().clone() else {
             return;
         };
-        let item = |row: usize| self.ivars().outline.borrow().item(row);
         match &redrawn {
             Some(redrawn) if redrawn.len() <= RELOADED_ROWS => {
-                for item in redrawn.iter().filter_map(|row| item(*row)) {
+                for item in redrawn.iter().filter_map(|row| self.item(*row)) {
                     // SAFETY: The item is one the data source handed the outline for this row.
                     unsafe { table.reloadItem(Some(&item)) };
                 }
             }
             _ => table.reloadData(),
+        }
+        if redrawn.is_none() {
+            let outline = self.ivars().outline.borrow();
+            self.ivars().items.keep(|node| outline.row_of(node).is_some());
         }
         let open: Vec<_> = {
             let board = self.ivars().board.borrow();
@@ -459,7 +427,7 @@ impl TestsPanel {
             let outline = self.ivars().outline.borrow();
             (0..rows.len())
                 .filter(|&row| !outline.children(Some(row)).is_empty() && board.is_open(&rows[row].node))
-                .filter_map(|row| outline.item(row))
+                .filter_map(|row| self.item(row))
                 .collect()
         };
         let _unfolding = FlagGuard::raise(&self.ivars().unfolding);
@@ -503,7 +471,27 @@ impl TestsPanel {
 
     /// The index in `rows` of the row `item` stands for.
     fn index_of(&self, item: &AnyObject) -> Option<usize> {
-        self.ivars().outline.borrow().row_of(item)
+        self.ivars().outline.borrow().row_of(&RowItems::<Node>::key_of(item)?)
+    }
+
+    /// The rows one level under the row `item` stands for, or the packages for none; `None` where `item` stands for
+    /// no row.
+    fn children_of(&self, item: Option<&AnyObject>) -> Option<Vec<usize>> {
+        let node = match item {
+            Some(item) => Some(RowItems::<Node>::key_of(item)?),
+            None => None,
+        };
+        self.ivars()
+            .outline
+            .borrow()
+            .children_of(node.as_ref())
+            .map(<[usize]>::to_vec)
+    }
+
+    /// The object that stands for `row` in the outline.
+    fn item(&self, row: usize) -> Option<Retained<RowItem>> {
+        let node = self.ivars().outline.borrow().node(row)?.clone();
+        Some(self.ivars().items.item(self.mtm(), &node))
     }
 
     /// Notes that the user opened or closed a package or file, which stays so when the tree is built again.
@@ -683,7 +671,7 @@ fn summary(board: &Board) -> String {
 }
 
 /// The symbol and its description for `state`; the shapes differ, so the state reads without colour (E101).
-pub fn state_symbol(state: State) -> (&'static str, &'static str, Retained<NSColor>) {
+pub(crate) fn state_symbol(state: State) -> (&'static str, &'static str, Retained<NSColor>) {
     match state {
         State::NotRun => ("circle", t("Nicht gelaufen"), NSColor::tertiaryLabelColor()),
         State::Running => ("clock", t("Läuft"), NSColor::systemBlueColor()),

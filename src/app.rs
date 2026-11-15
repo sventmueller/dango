@@ -25,7 +25,7 @@ const QUIT_GRACE: Duration = Duration::from_millis(700);
 const RECOVERY_GRACE: Duration = Duration::from_secs(2);
 
 /// The interface texts in the language macOS picks for the app, as a `.strings` file; empty outside a bundle.
-pub fn localized_strings() -> String {
+pub(crate) fn localized_strings() -> String {
     NSBundle::mainBundle()
         .pathForResource_ofType(Some(&ns("Localizable")), Some(&ns("strings")))
         .and_then(|p| std::fs::read_to_string(p.to_string()).ok())
@@ -38,7 +38,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEAppDelegate"]
     #[ivars = Rc<AppContext>]
-    pub struct AppDelegate;
+    pub(crate) struct AppDelegate;
 
     unsafe impl NSObjectProtocol for AppDelegate {}
 
@@ -185,7 +185,7 @@ define_class!(
 );
 
 impl AppDelegate {
-    pub fn new(mtm: MainThreadMarker) -> Retained<Self> {
+    pub(crate) fn new(mtm: MainThreadMarker) -> Retained<Self> {
         let context = Rc::new(AppContext::default());
         ide_ui_agent::own_agent::use_secrets(context.secrets().store());
         crate::ci_panel::use_secrets(context.secrets().store());
@@ -194,7 +194,7 @@ impl AppDelegate {
         unsafe { msg_send![super(this), init] }
     }
 
-    pub fn context(&self) -> Rc<AppContext> {
+    pub(crate) fn context(&self) -> Rc<AppContext> {
         self.ivars().clone()
     }
 }
@@ -218,12 +218,12 @@ fn remember_open_projects(cx: &crate::context::AppContext) {
 
 /// Shows `folder` in its window if one has it open, else in place of the folder of the window in front (E56), else in
 /// an empty window or a new one.
-pub fn open_project(mtm: MainThreadMarker, folder: PathBuf) {
+pub(crate) fn open_project(mtm: MainThreadMarker, folder: PathBuf) {
     open_project_from(mtm, folder, window::frontmost(mtm));
 }
 
 /// `open_project` with `target` in place of the window in front, such as the window whose welcome tab was clicked.
-pub fn open_project_from(mtm: MainThreadMarker, folder: PathBuf, target: Option<Retained<WindowController>>) {
+pub(crate) fn open_project_from(mtm: MainThreadMarker, folder: PathBuf, target: Option<Retained<WindowController>>) {
     if !folder.is_dir() {
         return;
     }
@@ -273,4 +273,4 @@ fn fill_recent_menu(delegate: &AppDelegate, menu: &NSMenu) {
     menu.addItem(&clear);
 }
 
-pub use ide_ui_common::panel::display_path;
+pub(crate) use ide_ui_common::panel::display_path;

@@ -7,27 +7,27 @@
 use super::*;
 
 /// Where the parts of a panel's title row sit, in the panel's coordinates.
-pub struct TitleRow {
-    pub title_start: f64,
-    pub title_middle: f64,
-    pub buttons_middle: f64,
-    pub page_top: f64,
-    pub buttons_start: f64,
-    pub buttons_end: f64,
-    pub text_end: f64,
-    pub width: f64,
+pub(crate) struct TitleRow {
+    pub(crate) title_start: f64,
+    pub(crate) title_middle: f64,
+    pub(crate) buttons_middle: f64,
+    pub(crate) page_top: f64,
+    pub(crate) buttons_start: f64,
+    pub(crate) buttons_end: f64,
+    pub(crate) text_end: f64,
+    pub(crate) width: f64,
     /// The symbol configuration of each button in a title row's stack of buttons, and the stack's spacing.
-    pub button_symbols: Vec<Option<Retained<objc2_app_kit::NSImageSymbolConfiguration>>>,
-    pub button_spacing: f64,
+    pub(crate) button_symbols: Vec<Option<Retained<objc2_app_kit::NSImageSymbolConfiguration>>>,
+    pub(crate) button_spacing: f64,
 }
 
 impl Panels {
-    pub fn title(&self) -> String {
+    pub(crate) fn title(&self) -> String {
         self.header.stringValue().to_string()
     }
 
     /// Whether the title row shows, and the texts and buttons of the shown page.
-    pub fn seen(&self) -> (bool, Vec<String>) {
+    pub(crate) fn seen(&self) -> (bool, Vec<String>) {
         fn texts(view: &NSView, out: &mut Vec<String>) {
             if view.isHidden() {
                 return;
@@ -49,7 +49,7 @@ impl Panels {
     }
 
     /// The geometry of the title row, in the panel's coordinates.
-    pub fn title_row(&self) -> TitleRow {
+    pub(crate) fn title_row(&self) -> TitleRow {
         use objc2_foundation::NSRect;
         self.view.layoutSubtreeIfNeeded();
         let in_panel = |view: &NSView| -> NSRect { view.convertRect_toView(view.bounds(), Some(&self.view)) };

@@ -75,34 +75,6 @@ pub enum Key {
     Item(u64),
 }
 
-impl Key {
-    /// The key as text, for the outline view.
-    pub fn encode(&self) -> String {
-        match self {
-            Key::Run(run) => format!("run:{run}"),
-            Key::Stage(run, stage) => format!("stage:{run}:{stage}"),
-            Key::Job(run, job) => format!("job:{run}:{job}"),
-            Key::Step(run, job, step) => format!("step:{run}:{job}:{step}"),
-            Key::Item(number) => format!("item:{number}"),
-        }
-    }
-
-    /// The key from its text.
-    pub fn decode(text: &str) -> Option<Key> {
-        let mut parts = text.split(':');
-        let kind = parts.next()?;
-        let numbers: Vec<u64> = parts.map(|p| p.parse().ok()).collect::<Option<_>>()?;
-        match (kind, numbers.as_slice()) {
-            ("run", [run]) => Some(Key::Run(*run)),
-            ("stage", [run, stage]) => Some(Key::Stage(*run, u32::try_from(*stage).ok()?)),
-            ("job", [run, job]) => Some(Key::Job(*run, *job)),
-            ("step", [run, job, step]) => Some(Key::Step(*run, *job, u32::try_from(*step).ok()?)),
-            ("item", [number]) => Some(Key::Item(*number)),
-            _ => None,
-        }
-    }
-}
-
 /// The panel's state; `L` is a sign-in through the browser while it waits.
 #[derive(Debug)]
 pub struct State<L> {
@@ -150,8 +122,8 @@ pub struct State<L> {
 
 /// A run with its jobs.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct RunRow {
-    /// The run.
     pub run: Run,
     /// Its jobs, if they were read.
     pub jobs: Vec<Job>,
@@ -196,6 +168,7 @@ pub enum Loaded {
 
 /// The runs of HEAD on its service.
 #[derive(Debug)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Snapshot {
     /// The commit the runs belong to.
     pub head: Head,
@@ -205,7 +178,6 @@ pub struct Snapshot {
     pub source: Option<Source>,
     /// The account the token belongs to.
     pub account: Option<String>,
-    /// The runs.
     pub runs: Vec<RunRow>,
     /// The tab the open merge requests or issues were read for.
     pub tab: Tab,
@@ -487,21 +459,6 @@ impl<L> State<L> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn keys_survive_their_text_form() {
-        for key in [
-            Key::Run(1),
-            Key::Stage(1, 2),
-            Key::Job(1, 3),
-            Key::Step(1, 3, 4),
-            Key::Item(9),
-        ] {
-            assert_eq!(Key::decode(&key.encode()), Some(key));
-        }
-        assert_eq!(Key::decode("run:x"), None);
-        assert_eq!(Key::decode("job:1"), None);
-    }
 
     #[test]
     fn a_read_asked_for_while_one_runs_follows_it() {

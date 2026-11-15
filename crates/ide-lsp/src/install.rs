@@ -11,9 +11,9 @@ use ide_process::Supervisor;
 use serde::Deserialize;
 
 use crate::registry::{Install, node_bin, tools_bin};
-use crate::tool::{self, Exits, Job, RunError};
 pub use ide_net::install::{InstallError, Progress, Step};
 use ide_net::{Cancel, Net};
+use ide_process::tool::{self, Helper, RunError};
 
 /// The latest rust-analyzer release, as GitHub's API describes it.
 const RUST_ANALYZER_RELEASE: &str = "https://api.github.com/repos/rust-lang/rust-analyzer/releases/latest";
@@ -24,7 +24,6 @@ const COMMAND_TIMEOUT: Duration = Duration::from_secs(15 * 60);
 /// Installs servers into the tools folder with the login shell's environment.
 pub struct Installer {
     supervisor: Supervisor,
-    exits: Exits,
     env: Vec<(String, String)>,
     tools: PathBuf,
     net: Arc<dyn Net>,
@@ -35,7 +34,6 @@ impl Installer {
     pub fn new(supervisor: &Supervisor, env: Vec<(String, String)>, tools: PathBuf, net: Arc<dyn Net>) -> Installer {
         Installer {
             supervisor: supervisor.clone(),
-            exits: Exits::watch(supervisor),
             env,
             tools,
             net,
@@ -179,9 +177,8 @@ impl Installer {
         cancel: &Cancel,
         progress: &mut dyn FnMut(Progress),
     ) -> Result<(), InstallError> {
-        let job = Job {
+        let job = Helper {
             supervisor: &self.supervisor,
-            exits: &self.exits,
             env,
             timeout: COMMAND_TIMEOUT,
             cancel: Some(cancel),
@@ -205,7 +202,7 @@ impl Installer {
         } else {
             Err(InstallError::Failed {
                 program: name,
-                ending: output.ending,
+                ending: Some(output.ending),
                 output: output.stderr,
             })
         }
@@ -280,9 +277,8 @@ impl Installer {
     }
 
     fn check_runs(&self, program: &Path) -> Result<(), InstallError> {
-        let job = Job {
+        let job = Helper {
             supervisor: &self.supervisor,
-            exits: &self.exits,
             env: &self.env,
             timeout: Duration::from_secs(30),
             cancel: None,

@@ -13,7 +13,7 @@ use super::{
     SCENARIO, answer_sheet, fixture_git, has, in_background, sheet_default_button, sheet_ready, sheet_text, wait_for,
     window_of, write,
 };
-use crate::selftest::{check, finish};
+use crate::selftest::{check, give_up, give_up_saying};
 use crate::window::WindowController;
 use ide_ui_git::selftest as panel;
 
@@ -26,12 +26,11 @@ const SECRET_SUBJECT: &str = "Add credentials";
 /// How long a sheet takes to slide in and draw.
 const SHEET_SETTLE: Duration = Duration::from_millis(800);
 
-pub fn start(root: PathBuf) {
+pub(crate) fn start(root: PathBuf) {
     let made =
         write_hook(&root, &format!("echo '{HOOK_SAYS}' >&2\nexit 1")).and_then(|()| write(&root, HOOKED, "hook\n"));
     if let Err(error) = made {
-        check("a refusing pre-commit hook is set up", false, error);
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "a refusing pre-commit hook is set up", error);
     }
     in_background(
         root,
@@ -63,7 +62,7 @@ fn top(controller: &WindowController) -> Option<String> {
 fn commit_into_hook(root: PathBuf, ok: bool) {
     check("the panel lists a file staged behind its back", ok, HOOKED);
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let before = top(&controller);
     panel::commit(&controller, "Hooked change");
@@ -113,11 +112,14 @@ fn hook_sheet(root: PathBuf, ok: bool, before: Option<String>) {
         ok && text.contains(HOOK_SAYS),
         text.lines().next().unwrap_or("").to_string(),
     );
-    if !ok || !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
-        return finish(SCENARIO);
+    if !ok {
+        return give_up(SCENARIO, "a refusing pre-commit hook shows its output in a sheet");
+    }
+    if !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
+        return give_up(SCENARIO, "the sheet is there to answer");
     }
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let seen = panel::seen(&controller);
     let unchanged = before == top(&controller);
@@ -129,8 +131,7 @@ fn hook_sheet(root: PathBuf, ok: bool, before: Option<String>) {
         format!("problem {:?}", seen.and_then(|s| s.problem)),
     );
     if let Err(error) = write_hook(&root, "exit 0") {
-        check("the pre-commit hook lets commits through again", false, error);
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "the pre-commit hook lets commits through again", error);
     }
     if !gitleaks_installed() {
         check(
@@ -141,8 +142,7 @@ fn hook_sheet(root: PathBuf, ok: bool, before: Option<String>) {
         return super::history::start(root);
     }
     if let Err(error) = write(&root, CREDENTIALS, FAKE_KEY) {
-        check("a file with an access key is written", false, error);
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "a file with an access key is written", error);
     }
     in_background(
         root,
@@ -169,15 +169,14 @@ fn gitleaks_installed() -> bool {
 
 fn commit_secret(root: PathBuf, ok: bool, before: Option<String>) {
     if !ok {
-        check(
+        return give_up_saying(
+            SCENARIO,
             "the panel lists the file with the access key staged",
-            false,
             CREDENTIALS,
         );
-        return finish(SCENARIO);
     }
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     panel::commit(&controller, SECRET_SUBJECT);
     wait_for(root, sheet_ready, move |root, ok| {
@@ -199,8 +198,11 @@ fn secrets_sheet(root: PathBuf, ok: bool, before: Option<String>) {
         default.as_deref() == Some(t("Abbrechen")),
         format!("{default:?}"),
     );
-    if !ok || !answer_sheet(&root, NSAlertSecondButtonReturn, None) {
-        return finish(SCENARIO);
+    if !ok {
+        return give_up(SCENARIO, "the secrets check lists rule and place before a commit");
+    }
+    if !answer_sheet(&root, NSAlertSecondButtonReturn, None) {
+        return give_up(SCENARIO, "the sheet is there to answer");
     }
     wait_for(
         root,
@@ -213,7 +215,7 @@ fn secrets_sheet(root: PathBuf, ok: bool, before: Option<String>) {
 
 fn secrets_cancelled(root: PathBuf, ok: bool, before: Option<String>) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let unchanged = before == top(&controller);
     let staged = panel::seen(&controller).is_some_and(|s| has(&s.staged, CREDENTIALS));
@@ -228,8 +230,7 @@ fn secrets_cancelled(root: PathBuf, ok: bool, before: Option<String>) {
 
 fn secrets_again(root: PathBuf, ok: bool) {
     if !ok || !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
-        check("the secrets sheet asks again", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the secrets sheet asks again");
     }
     wait_for(
         root,
@@ -240,7 +241,7 @@ fn secrets_again(root: PathBuf, ok: bool) {
 
 fn committed_anyway(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check(
         "Trotzdem committen commits despite the finding",

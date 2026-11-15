@@ -13,7 +13,7 @@ impl TestsPanel {
             return;
         }
         let env = ide_ui_common::window::try_environment(Duration::ZERO).unwrap_or_default();
-        let path = env.into_iter().find(|(k, _)| k == "PATH").map(|(_, v)| v);
+        let path = ide_process::tool::var(&env, "PATH").map(str::to_string);
         let root = self.root().to_path_buf();
         let id = self.id();
         let then = std::sync::Arc::new(std::sync::Mutex::new(Some(then)));

@@ -12,7 +12,7 @@ use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_foundation::NSRange;
 
-use super::{check, finish, helpers, snapshot};
+use super::{check, finish, give_up, give_up_saying, helpers, skip, snapshot};
 use crate::editor::{self, EditorTextView};
 use crate::window::{self, WindowController, search_selftest as search};
 
@@ -76,10 +76,6 @@ fn poll(
     END.poll(within, ready, then);
 }
 
-fn done() {
-    finish(SCENARIO);
-}
-
 /// What VoiceOver would miss in the visible windows titled `title`, or in the project's window for `None`.
 fn audit(name: &'static str, title: Option<&str>) {
     let Some(mtm) = MainThreadMarker::new() else { return };
@@ -106,18 +102,16 @@ fn audit(name: &'static str, title: Option<&str>) {
     );
 }
 
-pub fn run() {
+pub(crate) fn run() {
     END.start(BUDGET);
     let Some(mtm) = MainThreadMarker::new() else { return };
     helpers::open_trusted(&root());
     let Some(controller) = controller() else {
-        check(
+        return give_up_saying(
+            SCENARIO,
             "the repository opens in a window",
-            false,
             format!("{:?}", window::open_projects()),
         );
-        done();
-        return;
     };
     menus(mtm);
     controller.quick_open_with(QUERY);
@@ -185,13 +179,11 @@ fn symbol_found(ok: bool, took: Duration) {
     let said = SAID.lock_ignoring_poison().clone();
     let held = ide_ui_lsp::symbol_servers(&root());
     if !ok && held.iter().any(|(language, running, _)| language == "Rust" && !running) {
-        check(
-            "skipped: rust-analyzer missing",
-            true,
-            format!("{held:?}, said {said:?}"),
+        return skip(
+            SCENARIO,
+            "rust-analyzer is there to search",
+            format!("rust-analyzer missing; {held:?}, said {said:?}"),
         );
-        done();
-        return;
     }
     check(
         "`#ViewState` in Open Quickly finds the struct in crates/ide-ui-lsp/src/lib.rs",
@@ -216,8 +208,7 @@ fn symbol_found(ok: bool, took: Duration) {
         format!("{held:?}, {editors} tabs"),
     );
     if !ok {
-        done();
-        return;
+        return give_up(SCENARIO, "Open Quickly finds the struct");
     }
     audit(
         "VoiceOver reaches every symbol Open Quickly lists",
@@ -253,7 +244,9 @@ fn opened_symbol() {
         shown.as_deref() == Some("ViewState"),
         format!("{shown:?}"),
     );
-    let Some(controller) = controller() else { return done() };
+    let Some(controller) = controller() else {
+        return give_up(SCENARIO, "the repository's window is open");
+    };
     controller.open_file(&root().join(TRAIT_FILE));
     poll(ANSWER, implementations_listed, ask_implementations, implementations);
 }
@@ -293,7 +286,9 @@ fn implementations(ok: bool, took: Duration) {
     );
     picture("lsp-navigation-implementations");
     ide_ui_lsp::close_list();
-    let Some(controller) = controller() else { return done() };
+    let Some(controller) = controller() else {
+        return give_up(SCENARIO, "the repository's window is open");
+    };
     controller.open_file(&root().join(CALLS_FILE));
     poll(
         ANSWER,
@@ -342,7 +337,7 @@ fn first_level(ok: bool, took: Duration) {
         format!("after {:.1} s: {:?}", took.as_secs_f64(), rows()),
     );
     if !ok {
-        return done();
+        return give_up(SCENARIO, "the call hierarchy shows");
     }
     expand(1, "call");
     poll(ANSWER, || level(2, "ask"), || {}, second_level);
@@ -355,7 +350,7 @@ fn second_level(ok: bool, took: Duration) {
         format!("after {:.1} s: {:?}", took.as_secs_f64(), rows()),
     );
     if !ok {
-        return done();
+        return give_up(SCENARIO, "a caller's callers show");
     }
     expand(2, "ask");
     poll(ANSWER, || level(3, "hover"), || {}, third_level);
@@ -371,7 +366,7 @@ fn third_level(ok: bool, took: Duration) {
     picture("lsp-navigation-calls");
     audit("VoiceOver reaches every control and row of the hierarchy", None);
     let Some(panel) = controller().and_then(|c| c.search_panel()) else {
-        return done();
+        return give_up(SCENARIO, "the search panel shows");
     };
     let row = rows().iter().position(|(l, n)| *l == 2 && n == "ask");
     if let Some(row) = row {
@@ -423,7 +418,7 @@ fn history(panel: &crate::window::SearchPanel) {
                 ),
             );
             if !ok {
-                return done();
+                return give_up(SCENARIO, "a second hierarchy shows");
             }
             if let Some(panel) = controller().and_then(|c| c.search_panel()) {
                 search::hierarchy_direction(&panel, 1);
@@ -470,5 +465,5 @@ fn callees(ok: bool, took: Duration) {
             format!("type hierarchy {types:?}, declaration {declaration:?}"),
         );
     }
-    done();
+    finish(SCENARIO);
 }

@@ -26,7 +26,7 @@ use objc2_app_kit::{NSApplication, NSUserInterfaceLayoutDirection, NSWindow};
 
 use super::ci::stub::{Service, Stub};
 use super::git::{append, fixture_git, write};
-use super::{check, finish};
+use super::{check, finish, give_up_saying};
 use audit::Finding;
 
 /// The scenario the run is: `a11y` in the Mac's language, `a11y-rtl` in Arabic, right to left.
@@ -72,8 +72,7 @@ pub(super) fn run() {
         crate::util::main_soon(move || match made {
             Ok(root) => states::start(root),
             Err(error) => {
-                check("the test project is made", false, error);
-                finish(name());
+                give_up_saying(name(), "the test project is made", error);
             }
         });
     });
@@ -112,7 +111,11 @@ fn make_project() -> Result<PathBuf, String> {
     repo.stage_all().map_err(|e| e.to_string())?;
     repo.commit("First state", ide_git::CommitOptions::default())
         .map_err(|e| e.to_string())?;
-    let sha = repo.head().map_err(|e| e.to_string())?.unwrap_or_default();
+    let sha = repo
+        .head()
+        .map_err(|e| e.to_string())?
+        .map(|h| h.to_string())
+        .unwrap_or_default();
     let branch = repo.current_branch().map_err(|e| e.to_string())?.unwrap_or_default();
     stub.set_head(&sha, &branch);
     write(
@@ -238,8 +241,7 @@ fn picture(root: &Path, name: &str) {
 fn window_of(root: &Path) -> Option<objc2::rc::Retained<crate::window::WindowController>> {
     let controller = super::helpers::window_of(root);
     if controller.is_none() {
-        check("the folder keeps its window", false, root.display().to_string());
-        finish(name());
+        give_up_saying(name(), "the folder keeps its window", root.display().to_string());
     }
     controller
 }

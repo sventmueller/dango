@@ -186,7 +186,7 @@ impl AgentTab {
     }
 
     /// Follows a keystroke in the composer; the pills follow the session's state, not the text.
-    pub fn composer_changed(&self) {
+    pub(crate) fn composer_changed(&self) {
         self.composer.fit();
         let text = self.composer.text();
         self.refresh_send(&text);
@@ -195,7 +195,7 @@ impl AgentTab {
 
     /// Commands of the composer's text view: arrows and Tab steer an open completion list, Esc closes it or, with
     /// nothing typed, stops the turn.
-    pub fn composer_command(&self, command: Sel) -> bool {
+    pub(crate) fn composer_command(&self, command: Sel) -> bool {
         let open = self.suggestions.is_shown();
         if open && command == sel!(moveUp:) {
             self.suggestions.step(-1);
@@ -315,7 +315,7 @@ impl AgentTab {
     }
 
     /// The completion clicked in the list.
-    pub fn pick_suggestion(&self, index: usize) {
+    pub(crate) fn pick_suggestion(&self, index: usize) {
         self.suggestions.choose(index);
         self.accept_suggestion();
         self.focus_composer();

@@ -7,7 +7,7 @@
 //! [`search_panel`] and [`files_panel`] are what the app's search and files panels decide without AppKit.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs, unreachable_pub)]
+#![warn(missing_docs)]
 
 pub mod editorconfig;
 pub mod files_panel;
@@ -29,7 +29,7 @@ mod text;
 pub use index::{FileIndex, Hit, Indexed, QuickOpen};
 pub use replace::{Replacement, replacements};
 pub use search::{FileResult, LineResult, Preview, SearchError, SearchOptions, Summary, search, search_with};
-pub use tree::{Entry, Kind, Link, Tree, TreeOptions};
+pub use tree::{Entry, Kind, Tree, TreeOptions};
 pub use trust::TrustStore;
 pub use watch::{Changes, FileChange, RescanReason, WatchEvent, Watcher};
 

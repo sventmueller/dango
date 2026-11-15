@@ -16,10 +16,10 @@ use super::choices;
 use super::keys::{Keys, Shared};
 
 /// Lowspeak's bundle identifier, which also names the defaults suite its choices are in.
-pub const LOWSPEAK_APP: &str = LOWSPEAK_SUITE;
+pub(crate) const LOWSPEAK_APP: &str = LOWSPEAK_SUITE;
 
 /// A dictation whose events go to `events`, on threads of lowspeak's.
-pub fn dictation(keys: Arc<Keys>, events: impl Fn(Event) + Send + Sync + 'static) -> Dictation {
+pub(super) fn dictation(keys: Arc<Keys>, events: impl Fn(Event) + Send + Sync + 'static) -> Dictation {
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
         return fake::dictation(keys, events);
@@ -41,7 +41,7 @@ pub fn dictation(keys: Arc<Keys>, events: impl Fn(Event) + Send + Sync + 'static
 }
 
 /// Lowspeak's choices as its menu left them, to take over.
-pub fn lowspeak_choices() -> Choices {
+pub(super) fn lowspeak_choices() -> Choices {
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
         return fake::lowspeak_choices();
@@ -50,7 +50,7 @@ pub fn lowspeak_choices() -> Choices {
 }
 
 /// The input devices connected now.
-pub fn microphones() -> Vec<Device> {
+pub(super) fn microphones() -> Vec<Device> {
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
         return fake::microphones();
@@ -86,7 +86,7 @@ impl ide_core::explain::Explain for EngineError {
 }
 
 /// The local models on this Mac.
-pub fn installed_models() -> HashSet<LocalModel> {
+pub(super) fn installed_models() -> HashSet<LocalModel> {
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
         return fake::installed_models();
@@ -95,7 +95,11 @@ pub fn installed_models() -> HashSet<LocalModel> {
 }
 
 /// Downloads `model` into the folders Lowspeak uses, reporting the fraction done; ends early once `cancel` is set.
-pub fn download(model: LocalModel, cancel: &AtomicBool, progress: &mut dyn FnMut(f64)) -> Result<(), EngineError> {
+pub(super) fn download(
+    model: LocalModel,
+    cancel: &AtomicBool,
+    progress: &mut dyn FnMut(f64),
+) -> Result<(), EngineError> {
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
         return fake::download(model, cancel, progress);
@@ -104,7 +108,7 @@ pub fn download(model: LocalModel, cancel: &AtomicBool, progress: &mut dyn FnMut
 }
 
 /// Whether Lowspeak keeps a key for `provider`, found without reading it.
-pub fn lowspeak_has_key(provider: ApiProvider) -> bool {
+pub(super) fn lowspeak_has_key(provider: ApiProvider) -> bool {
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
         return true;
@@ -113,7 +117,7 @@ pub fn lowspeak_has_key(provider: ApiProvider) -> bool {
 }
 
 /// Lowspeak's key for `provider`; macOS asks the user first.
-pub fn read_lowspeak_key(provider: ApiProvider) -> Result<Option<String>, EngineError> {
+pub(super) fn read_lowspeak_key(provider: ApiProvider) -> Result<Option<String>, EngineError> {
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
         return fake::lowspeak_key(provider);
@@ -124,7 +128,7 @@ pub fn read_lowspeak_key(provider: ApiProvider) -> Result<Option<String>, Engine
 /// The microphone and the engine of the self-test: the microphone opens at once and hears sound unless the scenario
 /// queued a slow or refused opening, the engine waits and answers with what the scenario queued.
 #[cfg(feature = "selftest")]
-pub mod fake {
+pub(super) mod fake {
     use std::collections::{HashSet, VecDeque};
 
     use ide_core::LockIgnoringPoison;
@@ -182,11 +186,11 @@ pub mod fake {
     }
 
     /// The longest recording of the dictations made from now on.
-    pub fn limit(limit: Duration) {
+    pub(crate) fn limit(limit: Duration) {
         LIMIT_SECONDS.store(limit.as_secs(), Ordering::SeqCst);
     }
 
-    pub fn lowspeak_key(provider: ApiProvider) -> Result<Option<String>, super::EngineError> {
+    pub(crate) fn lowspeak_key(provider: ApiProvider) -> Result<Option<String>, super::EngineError> {
         if KEY_UNREADABLE.load(Ordering::SeqCst) {
             return Err(super::EngineError::Lowspeak("the user did not allow it".to_string()));
         }
@@ -198,7 +202,7 @@ pub mod fake {
     }
 
     /// What Lowspeak's menu left in the self-test.
-    pub fn lowspeak_choices() -> Choices {
+    pub(crate) fn lowspeak_choices() -> Choices {
         Choices {
             settings: Settings {
                 mode: TranscriptionMode::Online,
@@ -217,14 +221,14 @@ pub mod fake {
         }
     }
 
-    pub fn microphones() -> Vec<Device> {
+    pub(crate) fn microphones() -> Vec<Device> {
         vec![Device {
             id: "selftest:usb".into(),
             name: "USB Microphone".into(),
         }]
     }
 
-    pub fn installed_models() -> HashSet<LocalModel> {
+    pub(crate) fn installed_models() -> HashSet<LocalModel> {
         INSTALLED
             .lock_ignoring_poison()
             .get_or_insert_with(|| HashSet::from([LocalModel::ParakeetUltra]))
@@ -232,7 +236,7 @@ pub mod fake {
     }
 
     /// Five steps a tenth of a second apart, then the model counts as installed.
-    pub fn download(
+    pub(crate) fn download(
         model: LocalModel,
         cancel: &AtomicBool,
         progress: &mut dyn FnMut(f64),
@@ -251,7 +255,7 @@ pub mod fake {
         Ok(())
     }
 
-    pub fn dictation(keys: Arc<Keys>, events: impl Fn(Event) + Send + Sync + 'static) -> Dictation {
+    pub(crate) fn dictation(keys: Arc<Keys>, events: impl Fn(Event) + Send + Sync + 'static) -> Dictation {
         let parts = Parts {
             recorder: Box::new(Microphone),
             transcriber: Box::new(Engine),

@@ -5,13 +5,13 @@ use std::cell::{OnceCell, RefCell};
 
 use ide_ci::{HostRule, Kind};
 use ide_core::settings::Settings;
+use ide_ui_common::alert::{Alert, Role, first};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAlert, NSAlertFirstButtonReturn, NSButton, NSControlTextEditingDelegate, NSLayoutAttribute, NSPopUpButton,
-    NSStackView, NSTableColumn, NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTextField,
-    NSUserInterfaceLayoutOrientation, NSView,
+    NSButton, NSControlTextEditingDelegate, NSLayoutAttribute, NSPopUpButton, NSStackView, NSTableColumn, NSTableView,
+    NSTableViewDataSource, NSTableViewDelegate, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::{NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
@@ -24,12 +24,12 @@ const TABLE_HEIGHT: f64 = 110.0;
 
 /// The two lists of the tab.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum List {
+pub(crate) enum List {
     Hosts,
     Apps,
 }
 
-pub struct CiIvars {
+pub(crate) struct CiIvars {
     hosts: RefCell<Vec<String>>,
     apps: RefCell<Vec<String>>,
     views: OnceCell<Views>,
@@ -49,7 +49,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDECiSettings"]
     #[ivars = CiIvars]
-    pub struct CiSettings;
+    pub(crate) struct CiSettings;
 
     unsafe impl NSObjectProtocol for CiSettings {}
 
@@ -97,7 +97,7 @@ define_class!(
 );
 
 impl CiSettings {
-    pub fn new(mtm: MainThreadMarker) -> Retained<CiSettings> {
+    pub(crate) fn new(mtm: MainThreadMarker) -> Retained<CiSettings> {
         let this = Self::alloc(mtm).set_ivars(CiIvars {
             hosts: RefCell::new(Vec::new()),
             apps: RefCell::new(Vec::new()),
@@ -110,7 +110,7 @@ impl CiSettings {
     }
 
     /// Reads both lists from the user's settings again and shows them.
-    pub fn reload(&self) {
+    pub(crate) fn reload(&self) {
         self.read();
         if let Some(views) = self.ivars().views.get() {
             views.hosts.reloadData();
@@ -133,7 +133,7 @@ impl CiSettings {
     }
 
     /// The rows of `list` as the table shows them: the place, then the service or the app id.
-    pub fn rows(&self, list: List) -> Vec<[String; 2]> {
+    pub(crate) fn rows(&self, list: List) -> Vec<[String; 2]> {
         match list {
             List::Hosts => self
                 .ivars()
@@ -235,13 +235,6 @@ impl CiSettings {
             return;
         };
         let mtm = self.mtm();
-        let alert = NSAlert::new(mtm);
-        alert.setMessageText(&ns(t("CI-Host hinzufügen")));
-        alert.setInformativeText(&ns(t(
-            "Der Host, mit Port und Pfad, wo der Dienst sie braucht, etwa „code.example.com:8443/gitlab“.",
-        )));
-        alert.addButtonWithTitle(&ns(t("Hinzufügen")));
-        alert.addButtonWithTitle(&ns(t("Abbrechen")));
         let field = NSTextField::textFieldWithString(&ns(""), mtm);
         field.setPlaceholderString(Some(&ns("git.example.com")));
         let service = NSPopUpButton::new(mtm);
@@ -257,24 +250,30 @@ impl CiSettings {
         accessory.addArrangedSubview(&service);
         field.widthAnchor().constraintEqualToConstant(300.0).setActive(true);
         accessory.setFrame(NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(300.0, 56.0)));
-        alert.setAccessoryView(Some(&accessory));
-        alert.window().setInitialFirstResponder(Some(&field));
         let this = self.retain();
-        crate::ci_panel::sheet(&alert, &window, move |response| {
-            if response != NSAlertFirstButtonReturn {
-                return;
-            }
-            let kind = if service.indexOfSelectedItem() == 0 {
-                Kind::GitHub
-            } else {
-                Kind::GitLab
-            };
-            this.add_rule(&field.stringValue().to_string(), kind);
-        });
+        Alert::new(mtm, t("CI-Host hinzufügen"))
+            .informative(t(
+                "Der Host, mit Port und Pfad, wo der Dienst sie braucht, etwa „code.example.com:8443/gitlab“.",
+            ))
+            .button(t("Hinzufügen"), Role::Plain)
+            .button(t("Abbrechen"), Role::Plain)
+            .accessory(&accessory)
+            .focus(&field)
+            .sheet(&window, move |response| {
+                if !first(response) {
+                    return;
+                }
+                let kind = if service.indexOfSelectedItem() == 0 {
+                    Kind::GitHub
+                } else {
+                    Kind::GitLab
+                };
+                this.add_rule(&field.stringValue().to_string(), kind);
+            });
     }
 
     /// The tab's view.
-    pub fn view(&self) -> Retained<NSView> {
+    pub(crate) fn view(&self) -> Retained<NSView> {
         let mtm = self.mtm();
         let (hosts, hosts_scroll) = form::table(mtm, self, &[(t("Host"), 320.0), (t("Dienst"), 0.0)], TABLE_HEIGHT);
         let (apps, apps_scroll) = form::table(mtm, self, &[(t("Host"), 320.0), (t("App-ID"), 0.0)], TABLE_HEIGHT);
@@ -325,7 +324,7 @@ fn service_name(kind: Kind) -> &'static str {
 
 /// What the self-test reads from and does with the CI tab, through the code its controls run.
 #[cfg(feature = "selftest")]
-pub mod selftest {
+pub(crate) mod selftest {
     use objc2::DefinedClass;
     use objc2_app_kit::NSModalResponse;
 
@@ -333,7 +332,7 @@ pub mod selftest {
     use crate::util::ns;
 
     /// The rows the table of `list` shows, and how many it counts.
-    pub fn rows(owner: &CiSettings, list: List) -> (Vec<[String; 2]>, isize) {
+    pub(crate) fn rows(owner: &CiSettings, list: List) -> (Vec<[String; 2]>, isize) {
         let shown = owner.ivars().views.get().map_or(0, |views| match list {
             List::Hosts => views.hosts.numberOfRows(),
             List::Apps => views.apps.numberOfRows(),
@@ -342,7 +341,7 @@ pub mod selftest {
     }
 
     /// Selects `row` of `list` and clicks its remove button.
-    pub fn remove(owner: &CiSettings, list: List, row: usize) {
+    pub(crate) fn remove(owner: &CiSettings, list: List, row: usize) {
         let Some(views) = owner.ivars().views.get() else { return };
         let (table, button) = match list {
             List::Hosts => (&views.hosts, &views.remove_host),
@@ -354,12 +353,12 @@ pub mod selftest {
     }
 
     /// Asks for a host to add, as the add button does.
-    pub fn click_add(owner: &CiSettings) {
+    pub(crate) fn click_add(owner: &CiSettings) {
         owner.ask_host();
     }
 
     /// Types `place` into the add sheet, picks the service at `service`, and ends it with `response`.
-    pub fn answer_add(owner: &CiSettings, place: &str, service: isize, response: NSModalResponse) -> bool {
+    pub(crate) fn answer_add(owner: &CiSettings, place: &str, service: isize, response: NSModalResponse) -> bool {
         let Some(window) = owner.ivars().views.get().and_then(|v| v.hosts.window()) else {
             return false;
         };
@@ -391,7 +390,7 @@ pub mod selftest {
     }
 
     /// The problem the tab shows, if any.
-    pub fn problem(owner: &CiSettings) -> Option<String> {
+    pub(crate) fn problem(owner: &CiSettings) -> Option<String> {
         let views = owner.ivars().views.get()?;
         (!views.problem.isHidden()).then(|| views.problem.stringValue().to_string())
     }

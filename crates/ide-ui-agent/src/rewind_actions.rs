@@ -3,8 +3,9 @@
 
 use ide_git::{Restore, RestoreOptions};
 use ide_thread::{Entry, EntryKind, Status};
+use ide_ui_common::alert::{Alert, Role};
 use objc2::{MainThreadMarker, sel};
-use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSMenu, NSView};
+use objc2_app_kit::{NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSMenu, NSView};
 use splat_i18n::{t, tf};
 
 use super::acp::Agent;
@@ -19,7 +20,7 @@ pub use selftest_probe::*;
 
 impl AgentTab {
     /// The rewind menu of user message `id`: the conversation, the code, or both; only while the session rests.
-    pub fn rewind_menu(&self, id: u64, view: Option<&NSView>) {
+    pub(crate) fn rewind_menu(&self, id: u64, view: Option<&NSView>) {
         let Some(entry) = self.entry(id) else { return };
         let EntryKind::UserMessage(message) = &entry.kind else {
             return;
@@ -106,19 +107,21 @@ impl AgentTab {
     }
 
     fn restored(&self, checkpoint: ide_git::Checkpoint, outcome: Result<Restore, super::checkpoint::RestoreError>) {
-        let alert = NSAlert::new(self.mtm);
-        match outcome {
+        let alert = match outcome {
             Ok(Restore::UserChanges(files)) => {
-                alert.setMessageText(&ns(&tf(
-                    "Du hast seitdem {} Dateien selbst geändert.",
-                    &[&files.len().to_string()],
-                )));
                 let names: Vec<String> = files.iter().take(12).map(|f| f.display().to_string()).collect();
-                alert.setInformativeText(&ns(&names.join("\n")));
-                alert.addButtonWithTitle(&ns(t("Deine Änderungen behalten")));
-                alert.addButtonWithTitle(&ns(t("Trotzdem überschreiben")));
-                alert.addButtonWithTitle(&ns(t("Abbrechen")));
-                let response = run_alert(&alert);
+                let alert = Alert::new(
+                    self.mtm,
+                    &tf(
+                        "Du hast seitdem {} Dateien selbst geändert.",
+                        &[&files.len().to_string()],
+                    ),
+                )
+                .informative(&names.join("\n"))
+                .button(t("Deine Änderungen behalten"), Role::Plain)
+                .button(t("Trotzdem überschreiben"), Role::Plain)
+                .button(t("Abbrechen"), Role::Plain);
+                let response = run_alert(alert);
                 if response == NSAlertFirstButtonReturn {
                     let options = RestoreOptions {
                         keep: files,
@@ -138,18 +141,15 @@ impl AgentTab {
                 if let Some(controller) = self.controller() {
                     crate::host::host().take_back_buffers(controller.id(), done.buffers.clone());
                 }
-                alert.setMessageText(&ns(t("Code zurückgespult")));
-                alert.setInformativeText(&ns(&tf(
+                Alert::new(self.mtm, t("Code zurückgespult")).informative(&tf(
                     "{} Dateien wiederhergestellt, {} entfernt.",
                     &[&done.written.len().to_string(), &done.removed.len().to_string()],
-                )));
+                ))
             }
-            Err(error) => {
-                alert.setMessageText(&ns(t("Zurückspulen fehlgeschlagen")));
-                alert.setInformativeText(&ns(&ide_core::explain::Explain::explain(&error)));
-            }
-        }
-        run_alert(&alert);
+            Err(error) => Alert::new(self.mtm, t("Zurückspulen fehlgeschlagen"))
+                .informative(&ide_core::explain::Explain::explain(&error)),
+        };
+        run_alert(alert);
     }
 
     /// Without a checkpoint of the app, as for a resumed session: the CLI's own file history (experimental).
@@ -158,45 +158,36 @@ impl AgentTab {
             return;
         };
         let key = self.key;
-        session.rewind_files(uuid, false).then(move |result| {
+        session.rewind_files(uuid).then(move |result| {
             main_soon(move || {
                 let Some(mtm) = MainThreadMarker::new() else { return };
                 if super::get(key).is_none() {
                     return;
                 }
-                let alert = NSAlert::new(mtm);
-                match result {
-                    Ok(done) if done.can_rewind => {
-                        alert.setMessageText(&ns(t("Code zurückgespult")));
-                        alert.setInformativeText(&ns(&tf(
-                            "{} Dateien geändert.",
-                            &[&done.files_changed.len().to_string()],
-                        )));
-                    }
+                let alert = match result {
+                    Ok(done) if done.can_rewind => Alert::new(mtm, t("Code zurückgespult"))
+                        .informative(&tf("{} Dateien geändert.", &[&done.files_changed.len().to_string()])),
                     Ok(done) => {
-                        alert.setMessageText(&ns(t("Zurückspulen fehlgeschlagen")));
-                        alert.setInformativeText(&ns(&done.error.unwrap_or_default()));
+                        Alert::new(mtm, t("Zurückspulen fehlgeschlagen")).informative(&done.error.unwrap_or_default())
                     }
-                    Err(error) => {
-                        alert.setMessageText(&ns(t("Zurückspulen fehlgeschlagen")));
-                        alert.setInformativeText(&ns(&ide_core::explain::Explain::explain(&error)));
-                    }
-                }
-                alert.runModal();
+                    Err(error) => Alert::new(mtm, t("Zurückspulen fehlgeschlagen"))
+                        .informative(&ide_core::explain::Explain::explain(&error)),
+                };
+                alert.run_modal();
             });
         });
     }
 }
 
 /// Shows `alert` and waits for the answer; in the self-test, the answer it set up, if any.
-fn run_alert(alert: &NSAlert) -> objc2_app_kit::NSModalResponse {
+fn run_alert(alert: Alert) -> objc2_app_kit::NSModalResponse {
     #[cfg(feature = "selftest")]
     {
         let answer = with_alerts(|a| {
             let mut alerts = a.borrow_mut();
             let answer = alerts.0.pop_front();
             if answer.is_some() {
-                alerts.1.push(alert.messageText().to_string());
+                alerts.1.push(alert.ns().messageText().to_string());
             }
             answer
         });
@@ -204,5 +195,5 @@ fn run_alert(alert: &NSAlert) -> objc2_app_kit::NSModalResponse {
             return answer;
         }
     }
-    alert.runModal()
+    alert.run_modal()
 }

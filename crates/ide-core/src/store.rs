@@ -2,23 +2,21 @@
 
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use serde_json::{Map, Value};
 
-use std::collections::HashMap;
-
-use crate::stamp::Stamp;
+use crate::stamp::ByStamp;
 use crate::sync::LockIgnoringPoison;
-use std::sync::Mutex;
 
-const VERSION_FIELD: &str = "version";
+pub(crate) const VERSION_FIELD: &str = "version";
 
 /// Held while a store reads, changes and writes its file, so two writers of one file never interleave.
 static WRITING: Mutex<()> = Mutex::new(());
 
-/// The files read last, as they were loaded, by path and stamp: the main thread asks for the settings on every caret
-/// rest and every language server event, and one `stat` answers instead of a read and a parse.
-static READ: Mutex<Option<HashMap<PathBuf, (Stamp, Store)>>> = Mutex::new(None);
+/// The files read last, as they were loaded: the main thread asks for the settings on every caret rest and every
+/// language server event, and one `stat` answers instead of a read and a parse.
+static READ: ByStamp<(), Store> = ByStamp::new();
 
 /// Turns an object of one version into the next.
 pub(crate) type Migration = fn(&mut Map<String, Value>);
@@ -47,28 +45,15 @@ pub enum Locked {
 impl Store {
     /// The object in `path` brought to the version `migrations` lead to; empty if the file is missing or unreadable.
     pub(crate) fn load(path: PathBuf, migrations: &[Migration]) -> Store {
-        let Some(stamp) = Stamp::of(&path) else {
-            return Store::read(path, migrations);
-        };
-        if let Some((seen, store)) = READ.lock_ignoring_poison().get_or_insert_default().get(&path)
-            && *seen == stamp
-        {
-            return store.clone();
-        }
-        let store = Store::read(path.clone(), migrations);
-        // A file that changed while it was read keeps no entry, so the next load reads it again.
-        if Stamp::of(&path) == Some(stamp) {
-            READ.lock_ignoring_poison()
-                .get_or_insert_default()
-                .insert(path, (stamp, store.clone()));
-        }
-        store
+        let file = path.clone();
+        READ.get(&file, (), || Store::read(path, migrations))
     }
 
     fn read(path: PathBuf, migrations: &[Migration]) -> Store {
         let (values, problem) = match std::fs::read(&path) {
             Err(error) if error.kind() == io::ErrorKind::NotFound => (Map::new(), None),
             Err(_) => (Map::new(), Some(Locked::Unreadable)),
+            Ok(bytes) if crate::atomic_write::is_torn(&bytes) => (Map::new(), None),
             Ok(bytes) => match serde_json::from_slice::<Value>(&bytes) {
                 Ok(Value::Object(map)) => (map, None),
                 _ => (Map::new(), Some(Locked::Damaged)),
@@ -137,7 +122,7 @@ impl Store {
         change(&mut values);
         values.insert(VERSION_FIELD.to_string(), Value::from(current_version(migrations)));
         let value = Value::Object(values);
-        write_atomically(&self.path, &value)?;
+        crate::atomic_write::write_json(&self.path, &value)?;
         let Value::Object(values) = value else {
             unreachable!("built as an object above")
         };
@@ -161,23 +146,6 @@ fn migrate(values: &mut Map<String, Value>, found: u64, migrations: &[Migration]
     for migration in migrations.iter().skip(from) {
         migration(values);
     }
-}
-
-/// Writes `value` beside `path` and moves it over the old file.
-pub(crate) fn write_atomically(path: &Path, value: &Value) -> io::Result<()> {
-    let dir = path.parent().unwrap_or(Path::new("."));
-    std::fs::create_dir_all(dir)?;
-    let mut bytes = serde_json::to_vec_pretty(value).map_err(io::Error::other)?;
-    bytes.push(b'\n');
-    let temporary = dir.join(format!(
-        ".{}.{}.tmp",
-        path.file_name().and_then(|n| n.to_str()).unwrap_or("store"),
-        std::process::id()
-    ));
-    std::fs::write(&temporary, &bytes)?;
-    std::fs::rename(&temporary, path).inspect_err(|_| {
-        let _ = std::fs::remove_file(&temporary);
-    })
 }
 
 #[cfg(test)]
@@ -284,6 +252,19 @@ pub(crate) mod tests {
         assert_eq!(store.locked(), Some(Locked::Damaged));
         assert!(store.set("a", Value::from("b"), &[]).is_err());
         assert_eq!(std::fs::read_to_string(&path).unwrap(), "{ not json");
+    }
+
+    #[test]
+    fn an_empty_file_left_by_a_power_loss_reads_as_empty_and_is_written_again() {
+        let scratch_dir = scratch("empty");
+        let path = scratch_dir.join("settings.json");
+        for torn in ["", "\n  \n", "\0\0\0\0"] {
+            std::fs::write(&path, torn).unwrap();
+            let mut store = Store::load(path.clone(), &[]);
+            assert_eq!(store.locked(), None);
+            store.set("a", Value::from(1), &[]).unwrap();
+            assert_eq!(Store::load(path.clone(), &[]).get("a"), Some(&Value::from(1)));
+        }
     }
 
     #[test]

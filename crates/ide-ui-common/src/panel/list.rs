@@ -11,37 +11,26 @@ use objc2_app_kit::{
 use objc2_foundation::{NSEdgeInsets, NSPoint, NSRect, NSSize};
 
 use crate::style::space;
-use crate::util::{label, ns, symbol};
+use crate::util::{activate, label, ns, symbol};
 
 /// The frame a panel's list starts with, before the sidebar lays it out.
 pub const LIST_FRAME: NSRect = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(240.0, 400.0));
 /// How much further in a row sits than its parent, in every panel's list.
-pub const INDENT: f64 = 12.0;
+pub(crate) const INDENT: f64 = 12.0;
 /// How far a top-level row built as a stack keeps from the list's edges.
-pub const ROW_INSET: f64 = 4.0;
+pub(crate) const ROW_INSET: f64 = 4.0;
 /// How far text and controls of a panel keep from the sidebar's edges: as far as the panel's title.
-pub const MARGIN: f64 = 8.0;
+pub(crate) const MARGIN: f64 = 8.0;
 /// How far AppKit's source list sets its disclosure triangles in past the panel's title, for a list that spans the
 /// panel's width.
-pub const OUTDENT: f64 = 5.5;
+pub(crate) const OUTDENT: f64 = 5.5;
 /// The margins of a panel's page; its list spans the width, so its triangles line up with the panel's title.
-pub const PAGE_INSETS: NSEdgeInsets = NSEdgeInsets {
+pub(crate) const PAGE_INSETS: NSEdgeInsets = NSEdgeInsets {
     top: 4.0,
     left: 0.0,
     bottom: 6.0,
     right: 0.0,
 };
-
-/// A source-list table of one column `id` without a header, named `name` for VoiceOver, in a scroll view.
-pub fn source_list_table(
-    mtm: MainThreadMarker,
-    id: &str,
-    name: &str,
-) -> (Retained<NSScrollView>, Retained<NSTableView>) {
-    let table = NSTableView::initWithFrame(NSTableView::alloc(mtm), LIST_FRAME);
-    one_column(mtm, &table, id, name);
-    (scroll(mtm, &table), table)
-}
 
 /// Makes `view`, an outline view made with [`LIST_FRAME`] or another frame, a source list of one column `id`
 /// without a header, named `name` for VoiceOver, whose one column takes the width; the scroll view that shows it.
@@ -116,15 +105,13 @@ pub fn section_cell(mtm: MainThreadMarker, title: &str) -> Retained<NSTableCellV
     let text = heading(mtm, title);
     cell.addSubview(&text);
     text.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
+    activate([
         text.leadingAnchor()
             .constraintEqualToAnchor_constant(&cell.leadingAnchor(), 2.0),
         text.trailingAnchor()
             .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
         text.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     // Not the cell's text field: the source list would draw it dimmer than the panel's title.
     cell
 }

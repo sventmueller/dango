@@ -14,13 +14,13 @@ pub struct ServerConfig {
     /// What the activity view shows, such as `gopls`.
     pub label: String,
     /// The server's executable.
-    pub program: PathBuf,
+    pub(crate) program: PathBuf,
     /// Its arguments, such as `--stdio`.
     pub args: Vec<String>,
     /// The whole environment, normally the login shell's; the app's own is not passed on.
-    pub env: Vec<(String, String)>,
+    pub(crate) env: Vec<(String, String)>,
     /// The project root: the working directory and the one workspace folder.
-    pub root: PathBuf,
+    pub(crate) root: PathBuf,
     /// Sent with `initialize`.
     pub initialization_options: Option<Value>,
     /// The answer to `workspace/configuration`, looked up by section, such as `{"gopls": {...}}`.
@@ -35,7 +35,7 @@ pub struct ServerConfig {
     /// How long a request may take.
     pub request_timeout: Duration,
     /// How long `initialize` may take.
-    pub start_timeout: Duration,
+    pub(crate) start_timeout: Duration,
     /// How long each step of stopping may take: `shutdown`, then SIGTERM, then SIGKILL.
     pub stop_grace: Duration,
 }
@@ -104,7 +104,7 @@ impl Default for RestartPolicy {
 
 impl RestartPolicy {
     /// The wait before restart number `attempt`, counted from 1.
-    pub fn delay(&self, attempt: u32) -> Duration {
+    pub(crate) fn delay(&self, attempt: u32) -> Duration {
         let factor = 2u32.saturating_pow(attempt.saturating_sub(1));
         self.first_delay.saturating_mul(factor).min(self.max_delay)
     }

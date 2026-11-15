@@ -4,8 +4,12 @@ mod notice;
 
 #[cfg(feature = "selftest")]
 pub use notice::text as notice_text;
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unreachable_pub, reason = "the self-test re-exports it")
+)]
 pub use notice::window_name;
-pub mod request;
+pub(crate) mod request;
 mod subagent;
 mod tool;
 mod turn;
@@ -34,6 +38,10 @@ use super::ui;
 
 /// The parts of a card that open and close.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unreachable_pub, reason = "the self-test re-exports it")
+)]
 pub enum Part {
     Thought = 1,
     Input = 2,
@@ -44,7 +52,7 @@ pub enum Part {
 }
 
 impl Part {
-    pub fn from_tag(tag: u8) -> Option<Part> {
+    pub(crate) fn from_tag(tag: u8) -> Option<Part> {
         [
             Part::Thought,
             Part::Input,
@@ -59,12 +67,12 @@ impl Part {
 }
 
 /// The tag of a control that acts on entry `id`, with a number for what it does.
-pub fn pack(id: EntryId, what: u8) -> isize {
+pub(crate) fn pack(id: EntryId, what: u8) -> isize {
     isize::try_from(id.get() << 8 | u64::from(what)).unwrap_or(-1)
 }
 
 /// The entry number and the extra number of a control's tag.
-pub fn unpack(tag: isize) -> Option<(u64, u8)> {
+pub(crate) fn unpack(tag: isize) -> Option<(u64, u8)> {
     let tag = u64::try_from(tag).ok()?;
     Some((tag >> 8, (tag & 0xff) as u8))
 }
@@ -73,13 +81,13 @@ pub fn unpack(tag: isize) -> Option<(u64, u8)> {
 #[derive(Default)]
 pub struct Inputs {
     /// The editable input of a permission request, in its scroll view.
-    pub editors: HashMap<u64, Retained<NSScrollView>>,
+    pub(crate) editors: HashMap<u64, Retained<NSScrollView>>,
     /// Free text: a question's own answer, a plan's comment.
-    pub fields: HashMap<(u64, u8), Retained<NSTextField>>,
+    pub(crate) fields: HashMap<(u64, u8), Retained<NSTextField>>,
     /// The options checked in a question with several answers.
-    pub checks: HashMap<(u64, u8), Vec<Retained<NSButton>>>,
+    pub(crate) checks: HashMap<(u64, u8), Vec<Retained<NSButton>>>,
     /// The option chosen for each question of a request that asks several.
-    pub chosen: HashMap<(u64, u8), String>,
+    pub(crate) chosen: HashMap<(u64, u8), String>,
     /// The comments on a plan, kept after it is answered so its document still shows them.
     pub plan_notes: HashMap<u64, Vec<super::plan::PlanNote>>,
     /// The text of a waiting plan's card, where the user marks the passage to comment on.
@@ -88,14 +96,14 @@ pub struct Inputs {
 
 impl Inputs {
     /// The text of the editor of request `id`.
-    pub fn editor_text(&self, id: u64) -> Option<String> {
+    pub(crate) fn editor_text(&self, id: u64) -> Option<String> {
         let scroll = self.editors.get(&id)?;
         let view = scroll.documentView()?.downcast::<NSTextView>().ok()?;
         Some(view.string().to_string())
     }
 
     /// The text typed into field `what` of entry `id`.
-    pub fn field_text(&self, id: u64, what: u8) -> Option<String> {
+    pub(crate) fn field_text(&self, id: u64, what: u8) -> Option<String> {
         self.fields
             .get(&(id, what))
             .map(|f| f.stringValue().to_string())
@@ -103,7 +111,7 @@ impl Inputs {
     }
 
     /// Forgets what belongs to entries that no longer wait.
-    pub fn forget(&mut self, id: u64) {
+    pub(crate) fn forget(&mut self, id: u64) {
         self.editors.remove(&id);
         self.fields.retain(|(entry, _), _| *entry != id);
         self.checks.retain(|(entry, _), _| *entry != id);
@@ -113,35 +121,35 @@ impl Inputs {
 }
 
 /// A label whose running time the tab advances every second.
-pub struct Live {
-    pub label: Retained<NSTextField>,
-    pub since: SystemTime,
+pub(crate) struct Live {
+    pub(crate) label: Retained<NSTextField>,
+    pub(crate) since: SystemTime,
 }
 
 /// What a card is built with.
 #[derive(Clone, Copy)]
-pub struct Ctx<'a> {
-    pub mtm: MainThreadMarker,
+pub(crate) struct Ctx<'a> {
+    pub(crate) mtm: MainThreadMarker,
     /// The width the card has.
-    pub width: f64,
-    pub thread: &'a Thread,
-    pub expanded: &'a HashSet<(u64, Part)>,
-    pub target: &'a AnyObject,
-    pub cwd: &'a Path,
-    pub inputs: &'a RefCell<Inputs>,
-    pub live: &'a RefCell<Vec<Live>>,
+    pub(crate) width: f64,
+    pub(crate) thread: &'a Thread,
+    pub(crate) expanded: &'a HashSet<(u64, Part)>,
+    pub(crate) target: &'a AnyObject,
+    pub(crate) cwd: &'a Path,
+    pub(crate) inputs: &'a RefCell<Inputs>,
+    pub(crate) live: &'a RefCell<Vec<Live>>,
     /// Inside a subagent's card, where cards are smaller.
-    pub nested: bool,
-    pub now: SystemTime,
+    pub(crate) nested: bool,
+    pub(crate) now: SystemTime,
 }
 
 impl Ctx<'_> {
-    pub fn is_open(&self, id: EntryId, part: Part) -> bool {
+    pub(crate) fn is_open(&self, id: EntryId, part: Part) -> bool {
         self.expanded.contains(&(id.get(), part))
     }
 
     /// The same context for a card `inset` points narrower.
-    pub fn narrower(&self, inset: f64) -> Ctx<'_> {
+    pub(crate) fn narrower(&self, inset: f64) -> Ctx<'_> {
         Ctx {
             width: (self.width - inset).max(60.0),
             ..*self
@@ -149,7 +157,7 @@ impl Ctx<'_> {
     }
 
     /// A label counting up from `since`.
-    pub fn running_label(&self, since: SystemTime) -> Retained<NSTextField> {
+    pub(crate) fn running_label(&self, since: SystemTime) -> Retained<NSTextField> {
         let label = ui::label(
             self.mtm,
             &format::elapsed(self.now.duration_since(since).unwrap_or_default()),
@@ -166,7 +174,7 @@ impl Ctx<'_> {
 }
 
 /// The card of `entry`.
-pub fn build(ctx: &Ctx<'_>, entry: &Entry) -> Retained<NSView> {
+pub(crate) fn build(ctx: &Ctx<'_>, entry: &Entry) -> Retained<NSView> {
     let view = match &entry.kind {
         EntryKind::UserMessage(message) => turn::user(ctx, entry, message),
         EntryKind::AgentMessage(message) => turn::answer(ctx, entry.id, &message.markdown, message.streaming),
@@ -187,13 +195,13 @@ pub fn build(ctx: &Ctx<'_>, entry: &Entry) -> Retained<NSView> {
 }
 
 /// Markdown in a text view as wide as the context.
-pub fn markdown_text(ctx: &Ctx<'_>, markdown: &str, tone: Tone) -> Retained<CardText> {
+pub(crate) fn markdown_text(ctx: &Ctx<'_>, markdown: &str, tone: Tone) -> Retained<CardText> {
     let text = markdown::render_with_figures(ctx.mtm, markdown, style::BODY, tone, ctx.width);
     CardText::new(ctx.mtm, &text, ctx.width, true)
 }
 
 /// Monospaced text in a text view `width` points wide, left to right in any interface.
-pub fn mono_text(ctx: &Ctx<'_>, text: &str, width: f64, color: &NSColor) -> Retained<CardText> {
+pub(crate) fn mono_text(ctx: &Ctx<'_>, text: &str, width: f64, color: &NSColor) -> Retained<CardText> {
     let shown = markdown::code(text, &style::mono(style::CODE), color);
     let view = CardText::new(ctx.mtm, &shown, width, true);
     view.left_to_right();
@@ -201,7 +209,7 @@ pub fn mono_text(ctx: &Ctx<'_>, text: &str, width: f64, color: &NSColor) -> Reta
 }
 
 /// A chevron that opens or closes `part` of entry `id`.
-pub fn disclosure(ctx: &Ctx<'_>, id: EntryId, part: Part) -> Retained<NSButton> {
+pub(crate) fn disclosure(ctx: &Ctx<'_>, id: EntryId, part: Part) -> Retained<NSButton> {
     let open = ctx.is_open(id, part);
     let (name, description) = if open {
         ("chevron.down", t("Einklappen"))
@@ -222,7 +230,7 @@ pub fn disclosure(ctx: &Ctx<'_>, id: EntryId, part: Part) -> Retained<NSButton> 
 }
 
 /// The head line of a card: a bold name, a quieter detail, then whatever goes on the trailing side.
-pub fn head(ctx: &Ctx<'_>, name: &str, detail: &str, trailing: &[&NSView]) -> Retained<NSStackView> {
+pub(crate) fn head(ctx: &Ctx<'_>, name: &str, detail: &str, trailing: &[&NSView]) -> Retained<NSStackView> {
     let size = if ctx.nested { style::BODY - 1.0 } else { style::BODY };
     let name = ui::label(ctx.mtm, name, &style::bold(size), &NSColor::labelColor());
     ui::hug(&name);
@@ -275,7 +283,7 @@ fn dot(entry: &Entry) -> Option<Retained<NSColor>> {
 
 /// How the row at `index` of `entries` is marked: its dot, and whether the line joins it to its neighbours. A user
 /// message stands apart and breaks the line.
-pub fn mark(entries: &[std::sync::Arc<Entry>], index: usize) -> Mark {
+pub(crate) fn mark(entries: &[std::sync::Arc<Entry>], index: usize) -> Mark {
     let is_user = |i: usize| {
         entries
             .get(i)
@@ -295,7 +303,7 @@ pub fn mark(entries: &[std::sync::Arc<Entry>], index: usize) -> Mark {
 }
 
 /// A guess at a card's height before it is built, so the timeline's length is right without building every card.
-pub fn estimate(entry: &Entry, width: f64) -> f64 {
+pub(crate) fn estimate(entry: &Entry, width: f64) -> f64 {
     let per_line = (width / 7.0).max(20.0);
     let lines = |text: &str| -> f64 {
         text.lines()
@@ -321,7 +329,7 @@ pub fn estimate(entry: &Entry, width: f64) -> f64 {
 }
 
 /// What VoiceOver reads for a card.
-pub fn summary(thread: &Thread, entry: &Entry) -> String {
+pub(crate) fn summary(thread: &Thread, entry: &Entry) -> String {
     match &entry.kind {
         EntryKind::UserMessage(m) => tf("Deine Nachricht: {}", &[&format::first_line(&m.text, 200)]),
         EntryKind::AgentMessage(m) => tf("Antwort: {}", &[&format::first_line(&m.markdown, 200)]),
@@ -363,7 +371,7 @@ pub fn summary(thread: &Thread, entry: &Entry) -> String {
 }
 
 /// The colour a notice is written in.
-pub fn notice_color(notice: &Notice) -> Retained<NSColor> {
+pub(crate) fn notice_color(notice: &Notice) -> Retained<NSColor> {
     match notice {
         Notice::Error { .. } => NSColor::systemRedColor(),
         Notice::Retrying { .. } | Notice::RewindRejected { .. } => NSColor::systemOrangeColor(),
@@ -378,7 +386,7 @@ pub fn notice_color(notice: &Notice) -> Retained<NSColor> {
 }
 
 /// Whether the error notice asks the user to sign in.
-pub fn is_auth(notice: &Notice) -> bool {
+pub(crate) fn is_auth(notice: &Notice) -> bool {
     matches!(
         notice,
         Notice::Error {
@@ -389,7 +397,7 @@ pub fn is_auth(notice: &Notice) -> bool {
 }
 
 /// The lines of a tool's output, as text.
-pub fn output_text(output: &ToolOutput) -> String {
+pub(crate) fn output_text(output: &ToolOutput) -> String {
     match output {
         ToolOutput::Text(text) => text.clone(),
         ToolOutput::Terminal { stdout, stderr, .. } => match (stdout.trim_end(), stderr.trim_end()) {
@@ -407,7 +415,7 @@ pub fn output_text(output: &ToolOutput) -> String {
 }
 
 /// How long ago `since` was, as a duration.
-pub fn since(ctx: &Ctx<'_>, since: SystemTime) -> Duration {
+pub(crate) fn since(ctx: &Ctx<'_>, since: SystemTime) -> Duration {
     ctx.now.duration_since(since).unwrap_or_default()
 }
 

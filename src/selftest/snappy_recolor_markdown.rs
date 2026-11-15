@@ -13,7 +13,7 @@ use objc2_foundation::NSRange;
 
 use super::snappy::measure;
 use super::snappy_recolor::{delete, no_longer};
-use super::{check, finish, helpers};
+use super::{check, finish, give_up, helpers};
 use crate::editor::{self, EditorTextView};
 
 const SCENARIO: &str = "snappy-recolor-markdown";
@@ -103,13 +103,12 @@ fn insert(view: &EditorTextView, at: usize, text: &str) {
     helpers::post_event();
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let text = markdown();
     helpers::open_project(SCENARIO, PROJECT, &[(FILE, &text)], |_| {
         helpers::wait_for_editor(&root(), &root().join(FILE), |view| {
             let Some(view) = view else {
-                check("the Markdown file of 10 000 lines opens", false, "");
-                return finish(SCENARIO);
+                return give_up(SCENARIO, "the Markdown file of 10 000 lines opens");
             };
             check(
                 "the preview that opened with the Markdown file closes",
@@ -127,9 +126,11 @@ pub fn run() {
 
 /// As many characters as the fence, typed inside a paragraph's word, which change the style of no other line.
 fn plain_keystroke() {
-    let Some(view) = big() else { return finish(SCENARIO) };
+    let Some(view) = big() else {
+        return give_up(SCENARIO, "the big file opens in an editor");
+    };
     let Some(word) = at(&view, BOLD_LINE, 2) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the big file has the bold line");
     };
     measure();
     insert(&view, word, "xyzw");
@@ -143,7 +144,9 @@ fn plain_keystroke() {
 }
 
 fn open_fence(plain: Duration) {
-    let Some(view) = big() else { return finish(SCENARIO) };
+    let Some(view) = big() else {
+        return give_up(SCENARIO, "the big file opens in an editor");
+    };
     check(
         "the sections on screen show bold text and coloured headings before the fence",
         screen_styled(&view, false),
@@ -167,7 +170,9 @@ fn open_fence(plain: Duration) {
 }
 
 fn scroll_to_end(plain: Duration) {
-    let Some(view) = big() else { return finish(SCENARIO) };
+    let Some(view) = big() else {
+        return give_up(SCENARIO, "the big file opens in an editor");
+    };
     measure();
     let near_end = view.line_start(SECTIONS * LINES_PER_SECTION - 40).unwrap_or(0);
     view.scrollRangeToVisible(NSRange::new(near_end, 0));
@@ -200,7 +205,9 @@ fn scroll_to_end(plain: Duration) {
 }
 
 fn close_fence(plain: Duration) {
-    let Some(view) = big() else { return finish(SCENARIO) };
+    let Some(view) = big() else {
+        return give_up(SCENARIO, "the big file opens in an editor");
+    };
     measure();
     delete(&view, NSRange::new(0, FENCE.len()));
     helpers::wait_within(

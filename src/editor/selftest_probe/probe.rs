@@ -12,13 +12,13 @@ use super::super::{EditorTextView, changes, compare, conflict, editing, editor_f
 use crate::util::{constant, ns};
 use crate::window::{TabId, WindowController};
 
-pub use super::super::line_diagnostics::busy_lines;
-pub use super::super::minimap::{click as click_minimap, probe as minimap};
-pub use super::super::sticky::{click as click_sticky, height as sticky_height, shown as sticky_shown};
-pub use super::super::vim::{mode as vim_mode, shown as vim_shown, toggle as toggle_vim};
+pub(crate) use super::super::line_diagnostics::busy_lines;
+pub(crate) use super::super::minimap::{click as click_minimap, probe as minimap};
+pub(crate) use super::super::sticky::{click as click_sticky, height as sticky_height, shown as sticky_shown};
+pub(crate) use super::super::vim::{mode as vim_mode, shown as vim_shown, toggle as toggle_vim};
 
 /// The logical lines `view` shows, the first to the last on screen, for the self-test.
-pub fn visible_line_range(view: &EditorTextView) -> std::ops::Range<usize> {
+pub(crate) fn visible_line_range(view: &EditorTextView) -> std::ops::Range<usize> {
     let rect = view.visibleRect();
     let top = super::super::highlight::line_at(view, rect.origin).unwrap_or(0);
     let bottom = super::super::highlight::line_at(view, NSPoint::new(0.0, rect.origin.y + rect.size.height - 1.0))
@@ -27,7 +27,7 @@ pub fn visible_line_range(view: &EditorTextView) -> std::ops::Range<usize> {
 }
 
 /// The editors of `controller` with their tab ids, for the self-test.
-pub fn editors_of(controller: &WindowController) -> Vec<(TabId, Retained<EditorTextView>)> {
+pub(crate) fn editors_of(controller: &WindowController) -> Vec<(TabId, Retained<EditorTextView>)> {
     open_editors()
         .into_iter()
         .filter(|v| v.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
@@ -36,55 +36,55 @@ pub fn editors_of(controller: &WindowController) -> Vec<(TabId, Retained<EditorT
 }
 
 /// What the bar above `view` says and offers while it shows, for the self-test.
-pub fn conflict_bar(view: &EditorTextView) -> Option<(String, Vec<String>)> {
+pub(crate) fn conflict_bar(view: &EditorTextView) -> Option<(String, Vec<String>)> {
     conflict::inspect(view)
 }
 
 /// The message, informative text and buttons with their keys of the question before the text of a gone file's editor
 /// goes, for the self-test.
-pub fn discard_question(view: &EditorTextView) -> (String, String, Vec<(String, String)>) {
+pub(crate) fn discard_question(view: &EditorTextView) -> (String, String, Vec<(String, String)>) {
     conflict::inspect_question(view)
 }
 
 /// Clicks the button titled `title` of the bar above `view`, for the self-test; whether there was one.
-pub fn press_conflict_button(view: &EditorTextView, title: &str) -> bool {
+pub(crate) fn press_conflict_button(view: &EditorTextView, title: &str) -> bool {
     conflict::press(view, title)
 }
 
 /// The text of the tab with the differences for `path`, for the self-test.
-pub fn compared(path: &Path) -> Option<String> {
+pub(crate) fn compared(path: &Path) -> Option<String> {
     compare::shown(path)
 }
 
 /// The copy against a crash of `view`, for the self-test.
-pub fn recovery_of(view: &EditorTextView) -> RecoveryId {
-    view.ivars().recovery.clone()
+pub(crate) fn recovery_of(view: &EditorTextView) -> RecoveryId {
+    view.ivars().file.recovery.clone()
 }
 
 /// The text view of the front editor of `controller`, for the self-test.
-pub fn editor_of(controller: &WindowController, path: &Path) -> Option<Retained<EditorTextView>> {
+pub(crate) fn editor_of(controller: &WindowController, path: &Path) -> Option<Retained<EditorTextView>> {
     editor_for(controller, path)
 }
 
 /// What the self-test does with folds and carets, through the code the commands run.
-pub mod selftest {
-    pub use super::super::super::fold::{
+pub(crate) mod selftest {
+    pub(crate) use super::super::super::fold::{
         click as click_fold, fold_all, fold_at_cursor, folded, from_server, gutter, laid_out_lines, placeholders,
         toggle as toggle_fold, unfold_all,
     };
-    pub use super::super::super::multi::{
+    pub(crate) use super::super::super::multi::{
         add_next_occurrence, add_vertical, carets, column, copied, paste_text, set as set_carets,
     };
 }
 
 /// What the self-test does with blame, through the code the commands run.
-pub mod blame_probe {
-    pub use super::super::super::blame::{dismiss, line, popover_texts, show_for_cursor};
-    pub use super::super::super::blame_column::of as column;
+pub(crate) mod blame_probe {
+    pub(crate) use super::super::super::blame::{dismiss, line, popover_texts, show_for_cursor};
+    pub(crate) use super::super::super::blame_column::of as column;
 }
 
 /// Types `text` as the keyboard would, through the view's input path.
-pub fn type_text(view: &EditorTextView, text: &str) {
+pub(crate) fn type_text(view: &EditorTextView, text: &str) {
     use objc2_app_kit::NSTextInputClient;
     // SAFETY: The inserted object is an NSString, one of the two types this method accepts.
     unsafe {
@@ -96,29 +96,29 @@ pub fn type_text(view: &EditorTextView, text: &str) {
 }
 
 /// Presses Return in `view`.
-pub fn type_newline(view: &EditorTextView) {
+pub(crate) fn type_newline(view: &EditorTextView) {
     editing::newline(view);
 }
 
 /// Saves `view` and waits for the file to be written.
-pub fn save_view(view: &EditorTextView) {
+pub(crate) fn save_view(view: &EditorTextView) {
     save(view, false);
 }
 
 /// Whether a save of `view` still writes its file on the disk lane.
-pub fn writing(view: &EditorTextView) -> bool {
-    view.ivars().writing.get() != super::super::saving::Writing::Idle
+pub(crate) fn writing(view: &EditorTextView) -> bool {
+    view.ivars().file.writing.get() != super::super::saving::Writing::Idle
 }
 
-pub use super::super::changes::{
+pub(crate) use super::super::changes::{
     Mark as ChangeMark, Seen as ChangesSeen, popover_parts as change_popover, seen as changes_seen,
 };
-pub use super::super::indent::{menu as indent_menu, shown as indent_shown};
-pub use super::super::whitespace::visible as whitespace_visible;
+pub(crate) use super::super::indent::{menu as indent_menu, shown as indent_shown};
+pub(crate) use super::super::whitespace::visible as whitespace_visible;
 
 /// Clicks the change mark of `line`, counted from 0, in `view`'s line number column, as the mouse would.
-pub fn click_change(view: &EditorTextView, line: usize) -> bool {
-    let Some(gutter) = view.ivars().gutter.borrow().as_ref().and_then(Weak::load) else {
+pub(crate) fn click_change(view: &EditorTextView, line: usize) -> bool {
+    let Some(gutter) = view.ivars().around.gutter.borrow().as_ref().and_then(Weak::load) else {
         return false;
     };
     let Some(start) = view.line_start(line) else {
@@ -137,7 +137,7 @@ pub fn click_change(view: &EditorTextView, line: usize) -> bool {
 }
 
 /// Whether the first `fn` of `text` is shown in a keyword colour.
-pub fn keyword_coloured(view: &EditorTextView, text: &str) -> bool {
+pub(crate) fn keyword_coloured(view: &EditorTextView, text: &str) -> bool {
     let Some(at) = text.find("fn ") else { return false };
     coloured_as(
         view,
@@ -147,7 +147,7 @@ pub fn keyword_coloured(view: &EditorTextView, text: &str) -> bool {
 }
 
 /// Whether the character at UTF-16 offset `at` is shown in the colour of `token`.
-pub fn coloured_as(view: &EditorTextView, at: usize, token: splat_markdown::code::CodeToken) -> bool {
+pub(crate) fn coloured_as(view: &EditorTextView, at: usize, token: splat_markdown::code::CodeToken) -> bool {
     if view.storage().is_none_or(|storage| at >= storage.length()) {
         return false;
     }
@@ -156,7 +156,7 @@ pub fn coloured_as(view: &EditorTextView, at: usize, token: splat_markdown::code
 }
 
 /// The colour at UTF-16 offset `at` in sRGB as the view's appearance shows it, and whether the font there is bold.
-pub fn styled_at(view: &EditorTextView, at: usize) -> Option<([f64; 3], bool)> {
+pub(crate) fn styled_at(view: &EditorTextView, at: usize) -> Option<([f64; 3], bool)> {
     use objc2_app_kit::{NSAppearanceCustomization, NSColorSpace, NSFont, NSFontDescriptorSymbolicTraits};
     let storage = view.storage()?;
     let color = super::super::highlight::shown_color(view, at)?;
@@ -187,14 +187,14 @@ pub fn styled_at(view: &EditorTextView, at: usize) -> Option<([f64; 3], bool)> {
 /// Sends a mouse event of `kind` to the line number column of `view` beside `line`, counted from 0, `from_right`
 /// points left of the column's right edge, as the mouse would; for the self-test. Gives the titles of the menu a right
 /// click gets, and whether the mouse is over the column then.
-pub fn gutter_mouse(
+pub(crate) fn gutter_mouse(
     view: &EditorTextView,
     line: usize,
     from_right: f64,
     kind: objc2_app_kit::NSEventType,
 ) -> Option<(Vec<String>, bool)> {
     use objc2_app_kit::{NSEvent, NSEventModifierFlags, NSEventType};
-    let gutter = view.ivars().gutter.borrow().as_ref().and_then(Weak::load)?;
+    let gutter = view.ivars().around.gutter.borrow().as_ref().and_then(Weak::load)?;
     let start = view.line_start(line)?;
     let row = gutter.convertRect_fromView(ide_ui_lsp::rect_of(view, start..start + 1)?, Some(view));
     let at = NSPoint::new(

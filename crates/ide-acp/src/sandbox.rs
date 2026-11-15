@@ -31,7 +31,7 @@ pub enum Effect {
 
 impl Sandbox {
     /// The arguments to add when the sandbox is on.
-    pub fn args(&self) -> Vec<String> {
+    pub(crate) fn args(&self) -> Vec<String> {
         match self {
             Sandbox::Args(args) => args.iter().map(|a| (*a).to_string()).collect(),
             _ => Vec::new(),
@@ -39,7 +39,7 @@ impl Sandbox {
     }
 
     /// The environment to add when the sandbox is on.
-    pub fn env(&self) -> Vec<(String, String)> {
+    pub(crate) fn env(&self) -> Vec<(String, String)> {
         match self {
             Sandbox::Env(env) => env.iter().map(|(k, v)| ((*k).to_string(), (*v).to_string())).collect(),
             _ => Vec::new(),
@@ -47,7 +47,7 @@ impl Sandbox {
     }
 
     /// The `_meta` of `session/new` when the sandbox is on.
-    pub fn session_meta(&self) -> Option<Value> {
+    pub(crate) fn session_meta(&self) -> Option<Value> {
         match self {
             Sandbox::SessionMeta(json) => serde_json::from_str(json).ok(),
             _ => None,

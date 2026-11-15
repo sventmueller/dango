@@ -28,7 +28,7 @@ const SHADER: &str = include_str!("terminal.metal");
 const CPU_ONLY: &str = "IDE_TERMINAL_CPU";
 
 /// The Metal device, queue and pipeline all terminal views share.
-pub struct Gpu {
+pub(crate) struct Gpu {
     device: Retained<ProtocolObject<dyn MTLDevice>>,
     queue: Retained<ProtocolObject<dyn MTLCommandQueue>>,
     pipeline: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
@@ -40,7 +40,7 @@ thread_local! {
 
 /// The GPU the terminal views draw with, set up on first use; none without Metal, when the shader does not build, or
 /// with `IDE_TERMINAL_CPU` set.
-pub fn shared() -> Option<Rc<Gpu>> {
+pub(crate) fn shared() -> Option<Rc<Gpu>> {
     SHARED.with(|cell| {
         cell.get_or_init(|| {
             if std::env::var_os(CPU_ONLY).is_some() {
@@ -186,7 +186,7 @@ fn metal_layer(device: &ProtocolObject<dyn MTLDevice>) -> Retained<CAMetalLayer>
 }
 
 /// A view's drawing on the GPU: its sprites, and the frames it presents to the view's layer.
-pub struct Surface {
+pub(crate) struct Surface {
     gpu: Rc<Gpu>,
     sprites: Sprites,
     layer: Retained<CAMetalLayer>,
@@ -194,7 +194,7 @@ pub struct Surface {
 
 impl Surface {
     /// A surface on the shared GPU; none where terminals draw with Core Graphics.
-    pub fn new() -> Option<Surface> {
+    pub(crate) fn new() -> Option<Surface> {
         let gpu = shared()?;
         let sprites = Sprites::new(&gpu.device)?;
         let layer = metal_layer(&gpu.device);
@@ -202,7 +202,7 @@ impl Surface {
     }
 
     /// The layer `present` draws into, for the view to hold.
-    pub fn layer(&self) -> &CAMetalLayer {
+    pub(crate) fn layer(&self) -> &CAMetalLayer {
         &self.layer
     }
 
@@ -223,7 +223,7 @@ impl Surface {
     /// Draws the frame `paint` makes into the layer, laid over `frame` of the view, and presents it: when `frame`
     /// moved or resized the layer, with the current transaction, so the grid and the view keep step, which waits
     /// until the GPU has the frame; otherwise on its own, without waiting.
-    pub fn present(&mut self, fonts: &Fonts, frame: CGRect, clear: Rgb, paint: &dyn Fn(&mut QuadCanvas)) {
+    pub(crate) fn present(&mut self, fonts: &Fonts, frame: CGRect, clear: Rgb, paint: &dyn Fn(&mut QuadCanvas)) {
         let scale = fonts.metrics.scale;
         let pixels = CGSize::new((frame.size.width * scale).round(), (frame.size.height * scale).round());
         if pixels.width < 1.0 || pixels.height < 1.0 {
@@ -265,7 +265,7 @@ impl Surface {
     /// The BGRA pixels of the frame `paint` makes, `width` × `height` pixels large; none on a GPU whose memory the
     /// processor cannot read directly.
     #[cfg(test)]
-    pub fn picture(
+    pub(crate) fn picture(
         &mut self,
         fonts: &Fonts,
         (width, height): (usize, usize),

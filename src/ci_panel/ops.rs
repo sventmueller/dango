@@ -1,16 +1,15 @@
 //! What the CI panel does: re-running, starting and cancelling runs and jobs, opening logs and pages, handing a failure
 //! to an agent (I8), starting merge requests and issues in the browser, and taking or forgetting a token.
 
-use std::cell::Cell;
 use std::rc::Rc;
 
-use block2::RcBlock;
 use ide_ci::{Client, Job, Run};
+use ide_ui_common::alert::{Alert, Role, first};
 use objc2::MainThreadOnly;
 use objc2::runtime::AnyObject;
 use objc2_app_kit::{
-    NSAlert, NSAlertFirstButtonReturn, NSAlertThirdButtonReturn, NSModalResponse, NSPasteboard, NSPasteboardTypeString,
-    NSPopUpButton, NSSecureTextField, NSStackView, NSTextField, NSUserInterfaceLayoutOrientation, NSWorkspace,
+    NSAlertThirdButtonReturn, NSPasteboard, NSPasteboardTypeString, NSPopUpButton, NSSecureTextField, NSStackView,
+    NSTextField, NSUserInterfaceLayoutOrientation, NSWorkspace,
 };
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSURL};
 use splat_i18n::{t, tf};
@@ -18,7 +17,7 @@ use splat_i18n::{t, tf};
 use super::model::Tab;
 use super::panel::{CiPanel, with_panel};
 use super::{log_tab, text, work};
-use crate::util::{constant, guarded, ns};
+use crate::util::{constant, ns};
 
 /// How many lines of a failed job's log an agent gets.
 const EXCERPT_LINES: usize = 120;
@@ -29,7 +28,7 @@ impl CiPanel {
     }
 
     /// Starts the failed jobs of `run` again.
-    pub fn rerun(&self, run: Option<Run>) {
+    pub(crate) fn rerun(&self, run: Option<Run>) {
         let (Some(run), Some(client)) = (run, self.client()) else {
             return;
         };
@@ -37,7 +36,7 @@ impl CiPanel {
     }
 
     /// Starts every job of `run` again, on GitHub.
-    pub fn rerun_all(&self, run: Option<Run>) {
+    pub(crate) fn rerun_all(&self, run: Option<Run>) {
         let (Some(run), Some(client)) = (run, self.client()) else {
             return;
         };
@@ -45,7 +44,7 @@ impl CiPanel {
     }
 
     /// Starts the finished `job` again.
-    pub fn retry_job(&self, job: Option<Job>) {
+    pub(crate) fn retry_job(&self, job: Option<Job>) {
         let (Some(job), Some(client)) = (job, self.client()) else {
             return;
         };
@@ -53,7 +52,7 @@ impl CiPanel {
     }
 
     /// Starts `job`, which waits for someone: plays it on GitLab, approves its deployments on GitHub.
-    pub fn start_job(&self, job: Option<Job>) {
+    pub(crate) fn start_job(&self, job: Option<Job>) {
         let (Some(job), Some(client)) = (job, self.client()) else {
             return;
         };
@@ -62,7 +61,7 @@ impl CiPanel {
 
     /// Asks which run to start for the current branch, then starts it: a new pipeline on GitLab, a workflow that may
     /// be started by hand on GitHub.
-    pub fn start_run(&self) {
+    pub(crate) fn start_run(&self) {
         let (Some(client), Some(window)) = (self.client(), self.controller().and_then(|c| c.window())) else {
             return;
         };
@@ -75,9 +74,7 @@ impl CiPanel {
             return;
         }
         let mtm = self.mtm();
-        let alert = NSAlert::new(mtm);
-        alert.setMessageText(&ns(&tf("Lauf für „{}“ starten", &[&branch])));
-        alert.setInformativeText(&ns(&if github {
+        let informative = if github {
             tf(
                 "GitHub startet den gewählten Workflow mit dem Stand von {} auf {}; was nur lokal liegt, läuft nicht mit.",
                 &[&branch, &client.forge().host],
@@ -87,9 +84,11 @@ impl CiPanel {
                 "GitLab legt eine neue Pipeline für den Stand von {} auf {} an; was nur lokal liegt, läuft nicht mit.",
                 &[&branch, &client.forge().host],
             )
-        }));
-        alert.addButtonWithTitle(&ns(t("Starten")));
-        alert.addButtonWithTitle(&ns(t("Abbrechen")));
+        };
+        let mut alert = Alert::new(mtm, &tf("Lauf für „{}“ starten", &[&branch]))
+            .informative(&informative)
+            .button(t("Starten"), Role::Plain)
+            .button(t("Abbrechen"), Role::Plain);
         let popup = github.then(|| {
             let popup = NSPopUpButton::initWithFrame_pullsDown(
                 NSPopUpButton::alloc(mtm),
@@ -99,12 +98,14 @@ impl CiPanel {
             for workflow in &workflows {
                 popup.addItemWithTitle(&ns(&workflow.name));
             }
-            alert.setAccessoryView(Some(&popup));
             popup
         });
+        if let Some(popup) = &popup {
+            alert = alert.accessory(popup);
+        }
         let id = self.id();
-        sheet(&alert, &window, move |response| {
-            if response != NSAlertFirstButtonReturn {
+        alert.sheet(&window, move |response| {
+            if !first(response) {
                 return;
             }
             let chosen = popup
@@ -118,7 +119,7 @@ impl CiPanel {
     }
 
     /// Opens the page for a new merge request of the current branch, or a new issue, by the list's tab.
-    pub fn new_item(&self) {
+    pub(crate) fn new_item(&self) {
         let Some(client) = self.client() else { return };
         let (tab, branch) = {
             let state = self.read();
@@ -132,7 +133,7 @@ impl CiPanel {
     }
 
     /// Puts the link of the merge request or issue the action came from on the clipboard.
-    pub fn copy_link(&self, sender: Option<&AnyObject>) {
+    pub(crate) fn copy_link(&self, sender: Option<&AnyObject>) {
         let Some(item) = self.item_for_action(sender) else {
             return;
         };
@@ -142,25 +143,24 @@ impl CiPanel {
     }
 
     /// Asks, then cancels `run`.
-    pub fn cancel(&self, run: Option<Run>) {
+    pub(crate) fn cancel(&self, run: Option<Run>) {
         let (Some(run), Some(client), Some(window)) = (run, self.client(), self.controller().and_then(|c| c.window()))
         else {
             return;
         };
         let id = self.id();
         let message = tf("„{} #{}“ abbrechen?", &[&run.name, &run.number.to_string()]);
-        let alert = NSAlert::new(self.mtm());
-        alert.setMessageText(&ns(&message));
-        alert.setInformativeText(&ns(t(
-            "Laufende Jobs werden gestoppt; neu starten lässt sich der Lauf danach.",
-        )));
-        alert.addButtonWithTitle(&ns(t("Lauf abbrechen")));
-        alert.addButtonWithTitle(&ns(t("Weiterlaufen lassen")));
-        sheet(&alert, &window, move |response| {
-            if response == NSAlertFirstButtonReturn {
-                with_panel(id, |panel| panel.act(move || client.cancel(&run)));
-            }
-        });
+        Alert::new(self.mtm(), &message)
+            .informative(t(
+                "Laufende Jobs werden gestoppt; neu starten lässt sich der Lauf danach.",
+            ))
+            .button(t("Lauf abbrechen"), Role::Plain)
+            .button(t("Weiterlaufen lassen"), Role::Plain)
+            .sheet(&window, move |response| {
+                if first(response) {
+                    with_panel(id, |panel| panel.act(move || client.cancel(&run)));
+                }
+            });
     }
 
     /// Runs `call` against the service, then reads again.
@@ -189,7 +189,7 @@ impl CiPanel {
     }
 
     /// Opens the log of `job` in a tab.
-    pub fn open_log(&self, job: Option<Job>) {
+    pub(crate) fn open_log(&self, job: Option<Job>) {
         let (Some(job), Some(client), Some(controller)) = (job, self.client(), self.controller()) else {
             return;
         };
@@ -201,7 +201,7 @@ impl CiPanel {
     }
 
     /// Reads the log of the failed `job` and puts its failing part into a new AI tab's composer (I8).
-    pub fn send_to_agent(&self, job: Option<Job>) {
+    pub(crate) fn send_to_agent(&self, job: Option<Job>) {
         let (Some(job), Some(client)) = (job, self.client()) else {
             return;
         };
@@ -232,7 +232,7 @@ impl CiPanel {
     }
 
     /// Opens the page of the row the action came from, else the repository's.
-    pub fn open_web(&self, sender: Option<&AnyObject>) {
+    pub(crate) fn open_web(&self, sender: Option<&AnyObject>) {
         if let Some(item) = self.item_for_action(sender) {
             return self.open_url(&item.url);
         }
@@ -250,15 +250,13 @@ impl CiPanel {
     }
 
     /// Asks for a token of the host, checks it with the service and keeps it in the keychain.
-    pub fn sign_in(&self) {
+    pub(crate) fn sign_in(&self) {
         let (Some(forge), Some(window)) = (self.read().forge.clone(), self.controller().and_then(|c| c.window()))
         else {
             return;
         };
         let mtm = self.mtm();
-        let alert = NSAlert::new(mtm);
-        alert.setMessageText(&ns(&tf("Token für {}", &[&forge.host])));
-        alert.setInformativeText(&ns(&match forge.kind {
+        let informative = match forge.kind {
             ide_ci::Kind::GitHub => tf(
                 "Ein Personal Access Token mit Lesezugriff auf Actions, zum Neustarten und Abbrechen mit Schreibzugriff. Die App schickt ihn nur an {} und behält ihn im Schlüsselbund.",
                 &[&forge.host],
@@ -267,11 +265,13 @@ impl CiPanel {
                 "Ein Personal Access Token mit dem Bereich read_api, zum Neustarten und Abbrechen api. Die App schickt ihn nur an {} und behält ihn im Schlüsselbund.",
                 &[&forge.host],
             ),
-        }));
-        alert.addButtonWithTitle(&ns(t("Speichern")));
-        alert.addButtonWithTitle(&ns(t("Abbrechen")));
+        };
+        let mut alert = Alert::new(mtm, &tf("Token für {}", &[&forge.host]))
+            .informative(&informative)
+            .button(t("Speichern"), Role::Plain)
+            .button(t("Abbrechen"), Role::Plain);
         if super::login::availability(&forge).is_ok() {
-            alert.addButtonWithTitle(&ns(t("Im Browser anmelden")));
+            alert = alert.button(t("Im Browser anmelden"), Role::Plain);
         }
         let field = NSSecureTextField::initWithFrame(
             NSSecureTextField::alloc(mtm),
@@ -282,13 +282,12 @@ impl CiPanel {
         accessory.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         accessory.addArrangedSubview(&field);
         accessory.setFrame(NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(300.0, 24.0)));
-        alert.setAccessoryView(Some(&accessory));
-        alert.window().setInitialFirstResponder(Some(&field));
+        let alert = alert.accessory(&accessory).focus(&field);
         let id = self.id();
         let typed: objc2::rc::Retained<NSTextField> = field.into_super();
-        sheet(&alert, &window, move |response| {
+        alert.sheet(&window, move |response| {
             let token = typed.stringValue().to_string().trim().to_string();
-            if response == NSAlertFirstButtonReturn && !token.is_empty() {
+            if first(response) && !token.is_empty() {
                 with_panel(id, |panel| panel.check_and_save(forge, token));
             } else if response == NSAlertThirdButtonReturn {
                 with_panel(id, CiPanel::browser_login);
@@ -325,7 +324,7 @@ impl CiPanel {
     }
 
     /// Forgets the app's own token of the host; those of `gh`, `glab` and the environment stay.
-    pub fn sign_out(&self) {
+    pub(crate) fn sign_out(&self) {
         let Some(forge) = self.read().forge.clone() else { return };
         let id = self.id();
         work::run(
@@ -336,7 +335,7 @@ impl CiPanel {
 }
 
 /// Opens a web page in a browser tab of `controller`'s window; other addresses, or no window, go to macOS.
-pub fn open_url(controller: Option<&crate::window::WindowController>, url: &str) {
+pub(crate) fn open_url(controller: Option<&crate::window::WindowController>, url: &str) {
     let lower = url.to_ascii_lowercase();
     if let Some(controller) = controller.filter(|_| lower.starts_with("https://") || lower.starts_with("http://")) {
         return crate::browser::open_tab(controller, Some(url));
@@ -347,7 +346,7 @@ pub fn open_url(controller: Option<&crate::window::WindowController>, url: &str)
 }
 
 /// The composer text for an agent: what failed; the log excerpt goes along as outside text (E22).
-pub fn draft(job: &str, run: &str, place: &str) -> String {
+pub(crate) fn draft(job: &str, run: &str, place: &str) -> String {
     tf(
         "Der CI-Job „{}“ von „{}“ ({}) ist fehlgeschlagen. Finde die Ursache und schlag eine Korrektur vor; der Log-Ausschnitt hängt an.",
         &[job, run, place],
@@ -361,17 +360,4 @@ fn open_agent(controller: &crate::window::WindowController) -> Option<Rc<ide_ui_
         return ide_ui_agent::open_replay(controller);
     }
     ide_ui_agent::open_tab(controller, None)
-}
-
-/// Shows `alert` as a sheet on `window`; `then` gets the button that ended it.
-pub fn sheet(alert: &NSAlert, window: &objc2_app_kit::NSWindow, then: impl FnOnce(NSModalResponse) + 'static) {
-    let then = Cell::new(Some(then));
-    let handler = RcBlock::new(move |response: NSModalResponse| {
-        guarded((), || {
-            if let Some(then) = then.take() {
-                then(response);
-            }
-        });
-    });
-    alert.beginSheetModalForWindow_completionHandler(window, Some(&handler));
 }

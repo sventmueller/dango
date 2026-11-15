@@ -48,7 +48,7 @@ impl Change {
 
 /// What the main thread keeps of the index and the bookmarks.
 #[derive(Default)]
-pub struct Store {
+pub(super) struct Store {
     /// Changes made while the ones before are still being written.
     waiting: RefCell<Vec<Change>>,
     writing: Cell<bool>,
@@ -67,7 +67,7 @@ fn store<R>(f: impl FnOnce(&Store) -> R) -> R {
 }
 
 /// Records `entry` of a thread, on a subscription or not, with the title the user gave it.
-pub fn record(entry: IndexEntry, subscription: bool, title: Option<String>) {
+pub(crate) fn record(entry: IndexEntry, subscription: bool, title: Option<String>) {
     change(Change::Record {
         entry,
         subscription,
@@ -76,22 +76,22 @@ pub fn record(entry: IndexEntry, subscription: bool, title: Option<String>) {
 }
 
 /// Renames the thread `id` in the index.
-pub fn rename(id: &ThreadId, title: &str) {
+pub(crate) fn rename(id: &ThreadId, title: &str) {
     change(Change::Rename(id.clone(), title.to_string()));
 }
 
 /// Archives the thread `id` or brings it back.
-pub fn set_archived(id: &ThreadId, archived: bool) {
+pub(crate) fn set_archived(id: &ThreadId, archived: bool) {
     change(Change::Archive(id.clone(), archived));
 }
 
 /// Lists `entry` in the index of its own.
-pub fn upsert(entry: IndexEntry) {
+pub(crate) fn upsert(entry: IndexEntry) {
     change(Change::Upsert(entry));
 }
 
 /// Takes the thread `id` out of the index.
-pub fn remove(id: &ThreadId) {
+pub(crate) fn remove(id: &ThreadId) {
     change(Change::Remove(id.clone()));
 }
 
@@ -105,7 +105,7 @@ pub fn is_bookmarked(id: &ThreadId) -> bool {
 }
 
 /// Reads the bookmarks on the disk lane unless they were read.
-pub fn read_bookmarks() {
+pub(super) fn read_bookmarks() {
     let unread = store(|s| {
         s.bookmarks.borrow().is_none() && !s.waiting.borrow().iter().any(|c| matches!(c, Change::ReadBookmarks))
     });
@@ -115,7 +115,7 @@ pub fn read_bookmarks() {
 }
 
 /// Bookmarks the thread `id` or takes the bookmark away.
-pub fn set_bookmarked(id: &ThreadId, on: bool) {
+pub(crate) fn set_bookmarked(id: &ThreadId, on: bool) {
     store(|s| {
         if let Some(marks) = s.bookmarks.borrow_mut().as_mut() {
             if on {
@@ -129,7 +129,7 @@ pub fn set_bookmarked(id: &ThreadId, on: bool) {
 }
 
 /// The sessions of `cwd` that can be resumed, newest first, as read last; reads them again in the background.
-pub fn past_sessions_cached(cwd: &Path, limit: usize) -> Vec<(Resume, SystemTime)> {
+pub(crate) fn past_sessions_cached(cwd: &Path, limit: usize) -> Vec<(Resume, SystemTime)> {
     read_past(cwd);
     store(|s| {
         s.past
@@ -138,17 +138,6 @@ pub fn past_sessions_cached(cwd: &Path, limit: usize) -> Vec<(Resume, SystemTime
             .map(|past| past.iter().take(limit).cloned().collect())
             .unwrap_or_default()
     })
-}
-
-/// Hands `f` the session `session` of the folder `root` and the agent that ran it, read on the disk lane, as the
-/// restore of a window's tabs needs it.
-pub fn past_session_soon(root: &Path, session: &str, f: impl FnOnce(Option<(Agent, Resume)>) + Send + 'static) {
-    let (root, session) = (root.to_path_buf(), session.to_string());
-    let read = move || past_session(&root, &session);
-    let queued = ide_core::lane::DISK.ask(read, move |found| main_soon(move || f(found.flatten())));
-    if queued.is_err() {
-        ide_ui_common::diag::report("reading the past sessions", "the disk lane is full");
-    }
 }
 
 /// The session `session` of the folder `root` and the agent that ran it: the agent its thread names, else Claude, whose
@@ -167,7 +156,7 @@ pub fn past_session(root: &Path, session: &str) -> Option<(Agent, Resume)> {
 }
 
 /// Reads the past sessions of `cwd` in the background, or once more after the reading under way.
-pub fn read_past(cwd: &Path) {
+pub(crate) fn read_past(cwd: &Path) {
     let busy = store(|s| {
         if s.reading.borrow().contains(cwd) {
             s.again.borrow_mut().insert(cwd.to_path_buf());

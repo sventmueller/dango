@@ -2,7 +2,7 @@
 //! it started and for short notices.
 
 use crate::window::TabId;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use ide_ui_terminal::{all_views, find};
@@ -13,21 +13,46 @@ use splat_i18n::{t, tf};
 use crate::util::main_soon;
 use crate::window::{TabKind, WindowController};
 #[cfg(feature = "selftest")]
-pub use ide_ui_terminal::inspect;
-pub use ide_ui_terminal::{TerminalView, set_option_as_meta};
+pub(crate) use ide_ui_terminal::inspect;
+pub(crate) use ide_ui_terminal::{TerminalView, set_option_as_meta};
 
 /// How long a new terminal waits for the login shell's environment, which the app reads once at launch.
 const ENVIRONMENT_WAIT: Duration = Duration::from_secs(30);
 
+/// A terminal as the layout keeps it, opened again as a new shell in the folder it was in.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub(crate) struct KeptTerminal {
+    /// The shell's working folder.
+    pub(crate) folder: PathBuf,
+}
+
+impl ide_core::layout::Kind for KeptTerminal {
+    const NAME: &'static str = "terminal";
+}
+
+/// A CLI thread of an older version, which the app no longer has; it opens again as a terminal.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub(crate) struct KeptCli {
+    /// The CLI's name, such as `claude`.
+    pub(crate) name: String,
+    /// The CLI's id for the session, where the app could tell it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) session: Option<String>,
+}
+
+impl ide_core::layout::Kind for KeptCli {
+    const NAME: &'static str = "cli";
+}
+
 /// Gives every open terminal fonts of `size` points.
-pub fn set_font_size(size: f64) {
+pub(crate) fn set_font_size(size: f64) {
     for view in all_views() {
         view.set_font_size(size);
     }
 }
 
 /// The folder the shell of the terminal in tab `tab` of `controller`'s window last reported, for opening it again.
-pub fn folder_of_tab(controller: &WindowController, tab: TabId) -> Option<std::path::PathBuf> {
+pub(crate) fn folder_of_tab(controller: &WindowController, tab: TabId) -> Option<PathBuf> {
     all_views()
         .into_iter()
         .find(|view| view.window_id() == controller.id() && view.tab() == Some(tab))
@@ -36,7 +61,7 @@ pub fn folder_of_tab(controller: &WindowController, tab: TabId) -> Option<std::p
 }
 
 /// Opens a terminal tab in `cwd`, else in the window's folder or the home folder.
-pub fn open_tab(controller: &WindowController, cwd: Option<&Path>) {
+pub(crate) fn open_tab(controller: &WindowController, cwd: Option<&Path>) {
     let cwd = cwd
         .map(Path::to_path_buf)
         .or_else(|| controller.project_root())
@@ -55,7 +80,7 @@ pub fn open_tab(controller: &WindowController, cwd: Option<&Path>) {
 /// Opens a terminal tab in `cwd` and types `line` into its shell once the shell runs, as a debug adapter's
 /// `runInTerminal` asks; the program then belongs to the terminal like any other (Review C7). `then` gets the shell's
 /// process number, or `None` if it did not start.
-pub fn open_running(
+pub(crate) fn open_running(
     controller: &WindowController,
     cwd: &Path,
     line: String,
@@ -70,7 +95,7 @@ pub fn open_running(
 
 /// Opens a terminal tab in `cwd` that runs the shell command `line` and does not open again after a restart, as the
 /// Containers panel's logs and shells (G30); its title is `title`.
-pub fn open_passing(controller: &WindowController, cwd: &Path, title: &str, line: String) {
+pub(crate) fn open_passing(controller: &WindowController, cwd: &Path, title: &str, line: String) {
     open_tab(controller, Some(cwd));
     let Some(view) = of_window(controller).into_iter().next() else {
         return;
@@ -100,7 +125,7 @@ fn type_when_started(id: u64, line: String, then: Box<dyn FnOnce(Option<u32>) + 
 }
 
 /// The programs that run in the terminals of `controller`'s window in place of a shell that waits.
-pub fn running_in(controller: &WindowController) -> Vec<String> {
+pub(crate) fn running_in(controller: &WindowController) -> Vec<String> {
     all_views()
         .into_iter()
         .filter(|view| view.window_id() == controller.id())
@@ -116,7 +141,7 @@ pub fn running_in(controller: &WindowController) -> Vec<String> {
 }
 
 /// The coding agents that run in a terminal of any window, by name, for the question before quitting (E23).
-pub fn agents_running() -> Vec<String> {
+pub(crate) fn agents_running() -> Vec<String> {
     all_views()
         .into_iter()
         .filter_map(|view| {
@@ -169,7 +194,7 @@ fn in_view(view: &TerminalView) -> bool {
 
 /// The tab of the terminal in `controller`'s window whose shell is `pid` or started it, such as a dev server run
 /// there.
-pub fn tab_of_process(controller: &WindowController, pid: u32) -> Option<TabId> {
+pub(crate) fn tab_of_process(controller: &WindowController, pid: u32) -> Option<TabId> {
     let shells: Vec<(u32, TabId)> = of_window(controller)
         .iter()
         .filter_map(|view| Some((view.with_session(ide_terminal::Session::pid)?, view.tab()?)))
@@ -208,7 +233,7 @@ fn unsafe_zeroed() -> libc::proc_bsdinfo {
 }
 
 /// The terminal in view in `controller`'s window, else the one opened last: its title and the text on its screen.
-pub fn recent_output(controller: &WindowController) -> Option<(String, String)> {
+pub(crate) fn recent_output(controller: &WindowController) -> Option<(String, String)> {
     let view = of_window(controller).into_iter().next()?;
     let lines = view.with_session(ide_terminal::Session::visible_text)?;
     let end = lines

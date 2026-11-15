@@ -12,10 +12,10 @@ use crate::types::Request;
 
 /// How one program is debugged: which adapter, launch or attach, and the arguments the adapter gets.
 #[derive(Debug, Clone, PartialEq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct LaunchConfig {
     /// What the user reads, such as in the menu of configurations.
     pub name: String,
-    /// The adapter.
     pub kind: AdapterKind,
     /// Launch or attach, which decides who owns the program (Review C7).
     pub request: Request,
@@ -182,7 +182,7 @@ pub fn launch_configs(root: &Path, trusted: bool, variables: &Variables) -> Resu
 }
 
 /// The configurations in `text`, the content of a `launch.json`.
-pub fn parse_launch_json(text: &str, variables: &Variables) -> Result<Vec<Entry>, LaunchError> {
+pub(crate) fn parse_launch_json(text: &str, variables: &Variables) -> Result<Vec<Entry>, LaunchError> {
     let value: Value = serde_json::from_str(&jsonc::strip(text)).map_err(|e| LaunchError::Syntax(e.to_string()))?;
     let list = value
         .get("configurations")

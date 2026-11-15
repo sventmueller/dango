@@ -8,7 +8,7 @@ use objc2::rc::Retained;
 use objc2_app_kit::NSTextView;
 use objc2_foundation::NSRange;
 
-use super::{check, finish, helpers};
+use super::{check, finish, give_up, helpers};
 use crate::editor::{self, EditorTextView};
 use crate::window;
 
@@ -62,13 +62,12 @@ fn held(view: &EditorTextView) -> String {
     view.document().text().to_string()
 }
 
-pub fn run() {
+pub(crate) fn run() {
     helpers::open_project(SCENARIO, PROJECT, &[(FILE, START)], |_| {
         let root = helpers::root(PROJECT);
         helpers::wait_for_editor(&root, &root.join(FILE), |view| {
             let Some(view) = view else {
-                check("the file opens", false, "");
-                return finish(SCENARIO);
+                return give_up(SCENARIO, "the file opens");
             };
             let texts = vec![held(&view)];
             // Opening and the first edit in one turn of the event loop would share an undo group.
@@ -79,27 +78,30 @@ pub fn run() {
 
 /// One replacement, then the next once an event has passed: AppKit closes an undo group only after the event loop
 /// handled an event, so edits without one between them would undo as one.
-fn step(mut random: Random, mut texts: Vec<String>, done: usize) {
+fn step(random: Random, texts: Vec<String>, done: usize) {
     let Some(view) = open() else {
-        check("the file stays open", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the file stays open");
     };
-    if done == STEPS {
-        return walk(&view, &texts);
+    if done < STEPS {
+        return replace(&view, random, texts, done);
     }
-    let before = shown(&view);
+    walk(&view, &texts);
+}
+
+fn replace(view: &EditorTextView, mut random: Random, mut texts: Vec<String>, done: usize) {
+    let before = shown(view);
     let places = boundaries(&before);
     let (a, b) = (places[random.next(places.len())], places[random.next(places.len())]);
     let range = a.min(b)..a.max(b);
     let new: String = (0..random.next(4)).map(|_| PIECES[random.next(PIECES.len())]).collect();
     if !(range.is_empty() && new.is_empty()) {
         view.setSelectedRange(NSRange::new(range.start, range.len()));
-        editor::type_text(&view, &new);
+        editor::type_text(view, &new);
         // Typing on where the last edit ended would continue its undo step, as AppKit means it to.
-        let text_view: &NSTextView = &view;
+        let text_view: &NSTextView = view;
         text_view.breakUndoCoalescing();
         super::helpers::post_event();
-        texts.push(shown(&view));
+        texts.push(shown(view));
     }
     helpers::after(EVENT_TURN, move || step(random, texts, done + 1));
 }
@@ -111,8 +113,7 @@ fn walk(view: &EditorTextView, texts: &[String]) {
         format!("{} edits", texts.len() - 1),
     );
     let Some(undo) = view.undoManager() else {
-        check("the editor has an undo manager", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the editor has an undo manager");
     };
     let mut back = Vec::new();
     for _ in 1..texts.len() {

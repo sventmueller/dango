@@ -28,6 +28,10 @@ mod ui;
 mod work;
 pub mod worktrees;
 
+/// The settings this crate declares, for the app's registry of every setting.
+pub const SETTINGS: &[ide_core::settings::Declared] =
+    &[message::source::MODEL.declared(), message::source::CONSENT.declared()];
+
 use std::path::Path;
 
 use ide_ui_common::window::AsWindow;

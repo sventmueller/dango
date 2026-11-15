@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use ide_core::debugging::{Breakpoint, Debugging};
+use crate::kept::{Breakpoint, Debugging};
 
 use super::session::{Caps, Frame, Origin, Phase, Session};
 use super::variables::{Node, Path};

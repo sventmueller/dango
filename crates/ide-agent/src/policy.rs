@@ -48,7 +48,7 @@ pub enum Rule {
 
 /// What a call does, as far as the decision needs it.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Action {
+pub(crate) enum Action {
     /// Reads at a path; `inside` when it lies in the project or an allowed folder.
     Read {
         /// The path as the user reads it.
@@ -76,7 +76,7 @@ pub enum Action {
 
 /// What happens to a call.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Verdict {
+pub(crate) enum Verdict {
     /// It runs.
     Allow,
     /// The user decides first.
@@ -143,7 +143,7 @@ pub struct Policy {
 
 impl Policy {
     /// What happens to a call that does `action`.
-    pub fn decide(&self, action: &Action) -> Verdict {
+    pub(crate) fn decide(&self, action: &Action) -> Verdict {
         match action {
             Action::Internal => Verdict::Allow,
             Action::Read { inside: true, .. } => Verdict::Allow,

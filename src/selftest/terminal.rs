@@ -17,7 +17,7 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSData, NSPoint, NSString};
 
-use super::{check, finish, helpers, snapshot};
+use super::{check, finish, give_up, helpers, snapshot};
 use crate::terminal::{TerminalView, inspect};
 use crate::util::constant;
 use crate::window::WindowController;
@@ -48,7 +48,7 @@ const STYLES: &str = "printf '\\033[1mbold\\033[0m \\033[3mitalic\\033[0m \\033[
                       \\033[35mmagenta \\033[36mcyan\\033[0m \\033[38;2;255;136;0mtrue\\033[48;2;40;90;160mcolour\\033[0m\
                       \\n漢字 ✓ é ü ╭──┬──╮ ╔═╦═╗ ╟─╫─╢ ┄┆╍┉ ▌▐█ ░▒▓\\n  ➜  Local:   http://localhost:5173/\\n'\r";
 
-pub fn run() {
+pub(crate) fn run() {
     helpers::open_project(NAME, PROJECT, &[("README.md", "# Terminal\n")], opened);
 }
 
@@ -63,7 +63,7 @@ fn opened(controller: Retained<WindowController>) {
         format!("{tabs} then {} tabs", controller.tab_count()),
     );
     let Some((id, _)) = opened else {
-        finish(NAME);
+        give_up(NAME, "the terminal tab opens");
         return;
     };
     wait(
@@ -99,7 +99,7 @@ fn wait(id: u64, limit: Duration, done: impl Fn(&TerminalView) -> bool + 'static
 
 fn type_command(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     view.type_text("echo hello-terminal\r");
     let echoed = |view: &TerminalView| view.visible_lines().iter().any(|line| line == "hello-terminal");
@@ -121,7 +121,7 @@ fn type_command(id: u64, root: PathBuf) {
 /// ⌥⌫ is Meta-Backspace, which deletes the word before the cursor in a shell.
 fn option_as_meta(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     view.type_text("echo kept gone");
     view.press(0x33, "\u{7f}", "\u{7f}", NSEventModifierFlags::Option);
@@ -137,7 +137,7 @@ fn option_as_meta(id: u64, root: PathBuf) {
 /// committed.
 fn input_method(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     let blank = view.ink_after_cursor(4);
     view.compose("にほん", 3);
@@ -174,13 +174,13 @@ fn input_method(id: u64, root: PathBuf) {
 /// terminal again.
 fn open_file_link(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     view.type_text("echo README.md:1:3\r");
     let printed = |view: &TerminalView| view.visible_lines().iter().any(|line| line == "README.md:1:3");
     wait(id, Duration::from_secs(5), printed, move |_| {
         let (Some(view), Some(controller)) = (inspect::view(id), controller_of(&root)) else {
-            return finish(NAME);
+            return give_up(NAME, "the terminal and the folder's window are open");
         };
         let terminal_tab = controller.selected_tab();
         let line = view.visible_lines().iter().position(|line| line == "README.md:1:3");
@@ -208,7 +208,7 @@ fn open_file_link(id: u64, root: PathBuf) {
 /// With ⌘ held over a link the pointer is the pointing hand; without ⌘ or off the link it is the I-beam.
 fn pointer(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     view.type_text("echo https://example.com/docs\r");
     let printed = |view: &TerminalView| {
@@ -218,7 +218,7 @@ fn pointer(id: u64, root: PathBuf) {
     };
     wait(id, Duration::from_secs(5), printed, move |_| {
         let Some(view) = inspect::view(id) else {
-            return finish(NAME);
+            return give_up(NAME, "the terminal is open");
         };
         let line = view
             .visible_lines()
@@ -250,7 +250,7 @@ fn pointer(id: u64, root: PathBuf) {
 
 fn paste_image(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     let pasteboard = NSPasteboard::pasteboardWithUniqueName();
     pasteboard.clearContents();
@@ -285,7 +285,7 @@ fn paste_image(id: u64, root: PathBuf) {
 
 fn show_styles(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     // ⌃U empties the command line the pasted path is on.
     view.press(0x20, "\u{15}", "u", NSEventModifierFlags::Control);
@@ -390,7 +390,7 @@ fn accessibility(id: u64) {
 /// A flood of output, during which the main thread must keep answering.
 fn flood(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     let prompts = view.prompts();
     // `seq` alone writes line by line to a terminal; through `cat` the output comes in blocks, as from a build.
@@ -443,7 +443,7 @@ fn measure(mut flood: Flood, root: PathBuf) {
 /// A selection dragged above the lines keeps scrolling back while the button is held.
 fn autoscroll(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     let start = view.cell_center(ide_terminal::Point { line: 3, column: 2 });
     let above = NSPoint::new(start.x, -60.0);
@@ -451,7 +451,7 @@ fn autoscroll(id: u64, root: PathBuf) {
     view.mouse(NSEventType::LeftMouseDragged, above, NSEventModifierFlags::empty());
     helpers::after(HELD_DRAG, move || {
         let Some(view) = inspect::view(id) else {
-            return finish(NAME);
+            return give_up(NAME, "the terminal is open");
         };
         let back = view.scrolled_back();
         view.mouse(NSEventType::LeftMouseUp, above, NSEventModifierFlags::empty());
@@ -485,7 +485,7 @@ fn font_size(id: u64, root: PathBuf) {
 
 fn close_tab(id: u64, root: PathBuf) {
     let (Some(view), Some(controller)) = (inspect::view(id), controller_of(&root)) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal and the folder's window are open");
     };
     let shell = view.shell();
     drop(view);
@@ -510,11 +510,11 @@ fn close_tab(id: u64, root: PathBuf) {
 /// A second terminal whose shell exits: its tab stays and says so.
 fn exit_shell(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     crate::terminal::open_tab(&controller, None);
     let Some((id, _)) = inspect::latest() else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal tab opens");
     };
     wait(
         id,

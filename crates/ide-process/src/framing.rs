@@ -1,45 +1,95 @@
 //! The framing the Language Server Protocol and the Debug Adapter Protocol share on a process's standard streams: each
-//! message is a header block with its byte length, a blank line, then the JSON.
+//! message is a header block with its byte length, a blank line, then the JSON. Also the capped line reading that
+//! line-based protocols use.
 
 use std::io::{self, BufRead};
 
 /// The largest message accepted; a header claiming more means the stream is broken.
 const MAX_MESSAGE: usize = 256 * 1024 * 1024;
 
+/// The longest header line kept; a longer line is no header but output the server printed by mistake.
+const MAX_HEADER_LINE: usize = 64 * 1024;
+
+/// What [`read_line`] found.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Line {
+    /// A line, in the buffer with its newline; the last one of a stream may lack it.
+    Read,
+    /// A line longer than the limit, read up to its newline and dropped; the buffer is empty.
+    TooLong,
+    /// The stream ended before another line.
+    End,
+}
+
+/// Reads one line into `line`, which it empties first; a line of more than `limit` bytes before its newline is consumed
+/// to its end and dropped, so that one runaway line costs neither the memory nor the lines after it.
+pub fn read_line(reader: &mut impl BufRead, line: &mut Vec<u8>, limit: usize) -> io::Result<Line> {
+    line.clear();
+    let mut too_long = false;
+    let mut any = false;
+    loop {
+        let available = match reader.fill_buf() {
+            Ok(available) => available,
+            Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
+            Err(error) => return Err(error),
+        };
+        if available.is_empty() {
+            return Ok(match (any, too_long) {
+                (false, _) => Line::End,
+                (true, true) => Line::TooLong,
+                (true, false) => Line::Read,
+            });
+        }
+        any = true;
+        let newline = available.iter().position(|&b| b == b'\n');
+        let take = newline.map_or(available.len(), |at| at + 1);
+        if !too_long && line.len() + take - usize::from(newline.is_some()) > limit {
+            too_long = true;
+            line.clear();
+        }
+        if !too_long {
+            line.extend_from_slice(&available[..take]);
+        }
+        reader.consume(take);
+        if newline.is_some() {
+            return Ok(if too_long { Line::TooLong } else { Line::Read });
+        }
+    }
+}
+
 /// The next message body, or `None` when the stream ends between messages.
 ///
-/// Lines before a header that are not headers are skipped: some servers print stray lines to standard output.
+/// Output before a header that is not one is skipped, as some servers print stray lines to standard output: lines
+/// without a colon, overlong lines, and a block of lines with colons that ends without `Content-Length`.
 pub fn read(reader: &mut impl BufRead) -> io::Result<Option<Vec<u8>>> {
     let mut length = None;
     let mut line = Vec::new();
-    let mut in_header = false;
-    loop {
-        line.clear();
-        if reader.read_until(b'\n', &mut line)? == 0 {
-            return if in_header {
-                Err(io::Error::new(
+    let length = loop {
+        let text = match read_line(reader, &mut line, MAX_HEADER_LINE)? {
+            Line::End if length.is_some() => {
+                return Err(io::Error::new(
                     io::ErrorKind::UnexpectedEof,
                     "the stream ended inside a header",
-                ))
-            } else {
-                Ok(None)
-            };
-        }
-        let text = String::from_utf8_lossy(&line);
+                ));
+            }
+            Line::End => return Ok(None),
+            Line::TooLong if length.is_some() => return Err(invalid("a header line that is too long")),
+            Line::TooLong => continue,
+            Line::Read => String::from_utf8_lossy(&line),
+        };
         let text = text.trim_end_matches(['\r', '\n']);
         if text.is_empty() {
-            if in_header {
-                break;
+            match length {
+                Some(length) => break length,
+                None => continue,
             }
-            continue;
         }
         let Some((name, value)) = text.split_once(':') else {
-            if in_header {
+            if length.is_some() {
                 return Err(invalid("a header line without a colon"));
             }
             continue;
         };
-        in_header = true;
         if name.trim().eq_ignore_ascii_case("content-length") {
             let n: usize = value
                 .trim()
@@ -50,8 +100,7 @@ pub fn read(reader: &mut impl BufRead) -> io::Result<Option<Vec<u8>>> {
             }
             length = Some(n);
         }
-    }
-    let length = length.ok_or_else(|| invalid("a message without Content-Length"))?;
+    };
     let mut body = vec![0; length];
     reader.read_exact(&mut body)?;
     Ok(Some(body))
@@ -132,9 +181,48 @@ mod tests {
     }
 
     #[test]
+    fn stray_lines_with_a_colon_and_a_blank_line_are_skipped_up_to_the_next_header() {
+        let mut bytes = b"warning: something odd\n\nnote: twice\r\n\r\n".to_vec();
+        bytes.extend(frame(b"{}"));
+        bytes.extend(b"Content-Type: x\r\n\r\n{}");
+        let mut reader = trickle(bytes, 3);
+        assert_eq!(read(&mut reader).unwrap().unwrap(), b"{}");
+        assert_eq!(read(&mut reader).unwrap(), None);
+    }
+
+    #[test]
+    fn an_overlong_stray_line_is_skipped_without_keeping_it() {
+        let mut bytes = vec![b'x'; MAX_HEADER_LINE + 10];
+        bytes.extend(b": not a header\n");
+        bytes.extend(frame(b"[1]"));
+        assert_eq!(read(&mut trickle(bytes, 4096)).unwrap().unwrap(), b"[1]");
+        let mut long_header = b"Content-Length: 2\r\n".to_vec();
+        long_header.extend(vec![b'y'; MAX_HEADER_LINE + 1]);
+        long_header.extend(b"\r\n\r\n{}");
+        assert!(read(&mut trickle(long_header, 4096)).is_err());
+    }
+
+    #[test]
+    fn lines_are_capped_and_the_last_may_lack_its_newline() {
+        let mut reader = trickle(b"short\nwaytoolong\ncut off".to_vec(), 3);
+        let mut line = Vec::new();
+        assert_eq!(read_line(&mut reader, &mut line, 5).unwrap(), Line::Read);
+        assert_eq!(line, b"short\n");
+        assert_eq!(read_line(&mut reader, &mut line, 5).unwrap(), Line::TooLong);
+        assert!(line.is_empty());
+        assert_eq!(read_line(&mut reader, &mut line, 8).unwrap(), Line::Read);
+        assert_eq!(line, b"cut off");
+        assert_eq!(read_line(&mut reader, &mut line, 8).unwrap(), Line::End);
+        let mut overlong_at_the_end = trickle(b"0123456789".to_vec(), 4);
+        assert_eq!(
+            read_line(&mut overlong_at_the_end, &mut line, 5).unwrap(),
+            Line::TooLong
+        );
+        assert_eq!(read_line(&mut overlong_at_the_end, &mut line, 5).unwrap(), Line::End);
+    }
+
+    #[test]
     fn a_broken_header_is_an_error_not_a_hang() {
-        let missing = b"Content-Type: x\r\n\r\n{}".to_vec();
-        assert!(read(&mut trickle(missing, 4)).is_err());
         let huge = format!("Content-Length: {}\r\n\r\n", MAX_MESSAGE + 1).into_bytes();
         assert!(read(&mut trickle(huge, 4)).is_err());
         let cut = b"Content-Length: 10\r\n\r\n{}".to_vec();

@@ -4,26 +4,23 @@
 //! recording and while transcribing, a failure in the interface language, the states of the controls and the settings
 //! tab, in light and dark.
 
-use std::cell::Cell;
 use std::path::PathBuf;
-use std::ptr::NonNull;
 use std::time::Duration;
 
-use block2::RcBlock;
 use lowspeak::dictation::{Failure, Target};
 use lowspeak::models::ApiProvider;
 use lowspeak::transcription::error::TranscriptionError;
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::{
-    NSAlertFirstButtonReturn, NSAppearance, NSAppearanceCustomization, NSAppearanceNameDarkAqua, NSApplication,
-    NSModalResponse, NSStandardKeyBindingResponding, NSTextView,
+    NSAlertFirstButtonReturn, NSAppearance, NSAppearanceCustomization, NSAppearanceNameDarkAqua, NSModalResponse,
+    NSStandardKeyBindingResponding, NSTextView,
 };
-use objc2_foundation::{NSRange, NSRunLoop, NSRunLoopCommonModes, NSTimer};
+use objc2_foundation::NSRange;
 use splat_i18n::t;
 
 use super::helpers::wait_until;
-use super::{check, finish, helpers, snapshot};
+use super::{check, give_up, helpers, snapshot};
 use crate::util::{constant, main_on_run_loop};
 use crate::window::{self, WindowController};
 use ide_ui_agent::AgentKey;
@@ -82,16 +79,10 @@ fn escape() {
     }
 }
 
-/// Answers the alert in front with `response` after `delay`, from a timer of the run loop, which runs while the alert
-/// does, and takes a picture of it first.
-fn answer_alert(delay: Duration, picture: &'static str, response: NSModalResponse) {
-    let once = Cell::new(true);
-    let block = RcBlock::new(move |_timer: NonNull<NSTimer>| {
-        let Some(mtm) = MainThreadMarker::new().filter(|_| once.replace(false)) else {
-            return;
-        };
-        let app = NSApplication::sharedApplication(mtm);
-        let Some(alert) = app.modalWindow() else { return };
+/// Answers the next alert with `response` as soon as it shows, after checking that it offers to take Lowspeak's key
+/// over and taking a picture of it.
+fn answer_key_question(picture: &'static str, response: NSModalResponse) {
+    helpers::when_alert_shows(None, move |alert| {
         let texts = super::helpers::alert_texts();
         let question = splat_i18n::tf(
             "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?",
@@ -103,16 +94,12 @@ fn answer_alert(delay: Duration, picture: &'static str, response: NSModalRespons
             texts.join(" | "),
         );
         alert.display();
-        snapshot(&alert, picture);
-        app.stopModalWithCode(response);
+        snapshot(alert, picture);
+        helpers::answer_alert(response);
     });
-    // SAFETY: The block holds only a flag and a number, which may go to any thread; the main run loop calls it.
-    let timer = unsafe { NSTimer::timerWithTimeInterval_repeats_block(delay.as_secs_f64(), false, &block) };
-    // SAFETY: The main run loop takes the timer in its common modes, which include the one modal alerts run in.
-    unsafe { NSRunLoop::mainRunLoop().addTimer_forMode(&timer, NSRunLoopCommonModes) };
 }
 
-pub fn run() {
+pub(crate) fn run() {
     helpers::open_project(SCENARIO, PROJECT, &[(NOTES, TEXT)], |controller| {
         controller.open_file(&root().join(NOTES));
         wait_for_editor_target();
@@ -125,7 +112,7 @@ fn wait_for_editor_target() {
         |ok| {
             check("an editor has a microphone in its status bar", ok, "");
             if !ok {
-                return finish(SCENARIO);
+                return give_up(SCENARIO, "an editor has a microphone in its status bar");
             }
             first_dictation();
         },
@@ -135,7 +122,7 @@ fn wait_for_editor_target() {
 /// The first dictation asks for the missing key: Lowspeak has one, and taking it over keeps a copy of the app's own.
 fn first_dictation() {
     let (Some(view), Some(target)) = (editor(), editor_target()) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the editor is open and dictates into it");
     };
     let seen = dictation::seen(target);
     check(
@@ -148,11 +135,7 @@ fn first_dictation() {
         after: SLOW,
         result: Ok("mit Diktat".into()),
     }]);
-    answer_alert(
-        Duration::from_millis(1200),
-        "dictation-key-question",
-        NSAlertFirstButtonReturn,
-    );
+    answer_key_question("dictation-key-question", NSAlertFirstButtonReturn);
     main_on_run_loop(move || dictation::click(target));
     wait_until(
         move || dictation::seen(target).listening,
@@ -209,7 +192,9 @@ fn editor_transcribing(ok: bool, target: Target) {
 }
 
 fn undone() {
-    let Some(view) = editor() else { return finish(SCENARIO) };
+    let Some(view) = editor() else {
+        return give_up(SCENARIO, "the editor is open");
+    };
     if let Some(undo) = view.undoManager() {
         undo.undo();
     }
@@ -222,17 +207,15 @@ fn undone() {
 fn composer() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let Some(controller) = controller() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let Some(tab) = ide_ui_agent::open_replay(&controller) else {
-        check("an AI tab opens", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "an AI tab opens");
     };
     tab.focus_composer();
     tab.type_in_composer("Bitte ");
     let Some(target) = focused_text().as_deref().and_then(dictation::target_of) else {
-        check("the composer has a microphone", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the composer has a microphone");
     };
     let (title, enabled) = dictation::menu_item(mtm);
     check(
@@ -332,7 +315,7 @@ fn failure() {
         controller.open_file(&root().join(NOTES));
     }
     let Some(target) = editor_target() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the editor is a dictation target");
     };
     dictation::answer([Answer {
         after: QUICK,

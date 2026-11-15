@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use objc2::MainThreadMarker;
 
-use super::{check, finish, helpers, snapshot};
+use super::{check, finish, give_up, helpers, snapshot};
 
 const NAME: &str = "stored-rules";
 
@@ -21,7 +21,7 @@ const SETTINGS: &str = r#"{
 }
 "#;
 
-pub fn run() {
+pub(crate) fn run() {
     let files = [(".claude/settings.local.json", SETTINGS)];
     helpers::open_project(NAME, "rules-project", &files, |controller| {
         crate::settings::show_agents(MainThreadMarker::from(&*controller));
@@ -42,11 +42,10 @@ pub fn run() {
 
 fn listed(root: PathBuf) {
     let Some(rules) = crate::settings::stored_rules() else {
-        check("the Agents tab has Claude's rules", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the Agents tab has Claude's rules");
     };
     let cells = rules.cells();
-    let local = ide_ui_agent::scope_name("localSettings");
+    let local = ide_ui_agent::scope_name(&ide_thread::RuleScope::ProjectLocal);
     let ours: Vec<&Vec<String>> = cells
         .iter()
         .filter(|row| row.first().is_some_and(|p| p.ends_with("rules-project")))
@@ -64,7 +63,7 @@ fn listed(root: PathBuf) {
         snapshot(&window, NAME);
     }
     let Some(row) = cells.iter().position(|row| row[1] == "Bash(git log:*)") else {
-        return finish(NAME);
+        return give_up(NAME, "the project's rule for git log is listed");
     };
     rules.remove_row(row);
     let file = std::fs::read_to_string(root.join(".claude/settings.local.json")).unwrap_or_default();

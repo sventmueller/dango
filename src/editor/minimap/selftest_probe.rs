@@ -4,14 +4,14 @@ use super::*;
 
 /// The minimap of `view` as its width, the first row the editor shows and the logical lines of the rows it shows, for
 /// the self-test.
-pub fn probe(view: &EditorTextView) -> Option<(f64, usize, Vec<usize>)> {
+pub(crate) fn probe(view: &EditorTextView) -> Option<(f64, usize, Vec<usize>)> {
     let map = of(view)?;
     let (first, lines) = map.shown_rows();
     Some((map.frame().size.width, first, lines))
 }
 
 /// Clicks the minimap of `view` at `y` from its top, for the self-test.
-pub fn click(view: &EditorTextView, y: f64) {
+pub(crate) fn click(view: &EditorTextView, y: f64) {
     if let Some(map) = of(view) {
         map.jump_to(y);
     }

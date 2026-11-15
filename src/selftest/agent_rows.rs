@@ -8,7 +8,7 @@ use ide_ui_agent::AgentKey;
 use serde_json::json;
 
 use super::agent::{NAME, controller_of, long_session, picture, tab_of};
-use super::{check, finish, helpers};
+use super::{check, finish, give_up, helpers};
 
 /// How long the timeline gets to lay out a card and the entry after it; a card that took the wrong height stays wrong,
 /// so there is no state to wait for.
@@ -26,10 +26,10 @@ fn squeezed_frame(kind: &str, id: &str, content: serde_json::Value) -> String {
 /// A shell starts in a timeline that has taken its width.
 pub(super) fn squeezed(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let Some(tab) = ide_ui_agent::open_replay(&controller) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab opens");
     };
     tab.feed(&squeezed_frame(
         "assistant",
@@ -47,7 +47,7 @@ pub(super) fn squeezed(root: PathBuf) {
 /// The shell's output arrives, its card is built, and the next entry follows before the row took the card's height.
 fn squeezed_output(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     let output: String = (1..=40).map(|n| format!("line {n} of the output\n")).collect();
     tab.feed(&squeezed_frame(
@@ -83,10 +83,10 @@ fn squeezed_output(root: PathBuf, key: AgentKey) {
 /// A thousand entries: built and scrolled without building a card for each (E25).
 fn long(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let Some(tab) = ide_ui_agent::open_replay(&controller) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab opens");
     };
     let recording = long_session();
     let started = Instant::now();

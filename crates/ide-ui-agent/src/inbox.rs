@@ -11,12 +11,12 @@ const MAX_CHANGES: usize = 4096;
 
 #[derive(Default)]
 pub(super) struct Pending {
-    pub events: Vec<Incoming>,
-    pub changes: HashSet<Change>,
+    pub(crate) events: Vec<Incoming>,
+    pub(crate) changes: HashSet<Change>,
 }
 
 impl Pending {
-    pub fn push(&mut self, event: Incoming) {
+    pub(crate) fn push(&mut self, event: Incoming) {
         let changes = match event {
             Incoming::Claude(ide_claude::Event::Changed(changes))
             | Incoming::Acp(ide_acp::Event::Changed(changes))
@@ -38,7 +38,7 @@ impl Pending {
         }
     }
 
-    pub fn is_empty(&self) -> bool {
+    pub(crate) fn is_empty(&self) -> bool {
         self.events.is_empty() && self.changes.is_empty()
     }
 }

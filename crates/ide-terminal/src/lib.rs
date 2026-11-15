@@ -6,7 +6,7 @@
 //! thread.
 
 #![deny(unsafe_op_in_unsafe_fn)]
-#![warn(missing_docs, unreachable_pub)]
+#![warn(missing_docs)]
 
 mod devserver;
 pub mod event;
@@ -25,9 +25,7 @@ mod sys;
 
 pub use event::{Clipboard, Event, WorkingDirectory};
 pub use foreground::{Agent, Foreground};
-pub use input::{
-    InputModes, Key, KeyAction, KeyCode, KittyFlags, Modifiers, MouseAction, MouseButton, MouseEvent, NamedKey,
-};
-pub use paste::{PasteAction, QuoteStyle, Refusal};
-pub use session::{CellSide, MAX_SCROLLBACK, Options, Program, Scroll, SelectionKind, Session, Size};
+pub use input::{InputModes, Key, KeyAction, KeyCode, Modifiers, MouseAction, MouseButton, MouseEvent, NamedKey};
+pub use paste::{PasteAction, Refusal};
+pub use session::{CellSide, Options, Program, Scroll, SelectionKind, Session, Size};
 pub use snapshot::{Cell, CellFlags, Cursor, CursorShape, Damage, Highlight, Palette, Point, Rgb, Snapshot};

@@ -16,17 +16,17 @@ use splat_i18n::t;
 
 use ide_ui_common::util::live;
 
-use crate::util::{guarded, label, ns};
+use crate::util::{activate, guarded, label, ns, pin_sides};
 
 /// The margin around the text, as splat's preview has it.
-pub const INSET: NSSize = NSSize::new(24.0, 20.0);
+pub(crate) const INSET: NSSize = NSSize::new(24.0, 20.0);
 
 const BAR_HEIGHT: f64 = 32.0;
 
 /// A change of width this large lays the pictures out anew, as they are no wider than the text.
-pub const WIDTH_STEP: f64 = 24.0;
+pub(crate) const WIDTH_STEP: f64 = 24.0;
 
-pub struct PageIvars {
+pub(crate) struct PageIvars {
     /// The preview it shows.
     key: Cell<u64>,
     width: Cell<f64>,
@@ -40,7 +40,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEPreviewPage"]
     #[ivars = PageIvars]
-    pub struct Page;
+    pub(crate) struct Page;
 
     unsafe impl NSObjectProtocol for Page {}
 
@@ -84,28 +84,28 @@ impl Page {
     }
 
     /// The drag that changed the width ended.
-    pub fn drag_ended(&self) {
+    pub(crate) fn drag_ended(&self) {
         self.ivars().drag_due.set(false);
         self.width_may_have_changed(self.frame().size.width);
     }
 }
 
 /// The views of one preview tab.
-pub struct Views {
-    pub page: Retained<Page>,
-    pub scroll: Retained<NSScrollView>,
-    pub text: Retained<NSTextView>,
+pub(crate) struct Views {
+    pub(crate) page: Retained<Page>,
+    pub(crate) scroll: Retained<NSScrollView>,
+    pub(crate) text: Retained<NSTextView>,
     /// Owns the text system; a text view made from a container does not retain its storage.
-    pub storage: Retained<NSTextStorage>,
-    pub layout: Retained<NSLayoutManager>,
-    pub container: Retained<NSTextContainer>,
+    pub(crate) storage: Retained<NSTextStorage>,
+    pub(crate) layout: Retained<NSLayoutManager>,
+    pub(crate) container: Retained<NSTextContainer>,
     bar: Retained<NSStackView>,
     bar_height: Retained<NSLayoutConstraint>,
 }
 
 impl Views {
     /// The views of the preview `key`, which VoiceOver calls `name`.
-    pub fn new(mtm: MainThreadMarker, key: u64, name: &str) -> Views {
+    pub(crate) fn new(mtm: MainThreadMarker, key: u64, name: &str) -> Views {
         let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(600.0, 400.0));
         let page = Page::alloc(mtm).set_ivars(PageIvars {
             key: Cell::new(key),
@@ -119,21 +119,15 @@ impl Views {
         let bar = bar(mtm, &page);
         page.addSubview(&bar);
         page.addSubview(&scroll);
-        bar.setTranslatesAutoresizingMaskIntoConstraints(false);
-        scroll.setTranslatesAutoresizingMaskIntoConstraints(false);
+        pin_sides(&bar, &page, 0.0);
+        pin_sides(&scroll, &page, 0.0);
         let bar_height = bar.heightAnchor().constraintEqualToConstant(0.0);
-        for constraint in [
+        activate([
             bar.topAnchor().constraintEqualToAnchor(&page.topAnchor()),
-            bar.leadingAnchor().constraintEqualToAnchor(&page.leadingAnchor()),
-            bar.trailingAnchor().constraintEqualToAnchor(&page.trailingAnchor()),
             bar_height.clone(),
             scroll.topAnchor().constraintEqualToAnchor(&bar.bottomAnchor()),
-            scroll.leadingAnchor().constraintEqualToAnchor(&page.leadingAnchor()),
-            scroll.trailingAnchor().constraintEqualToAnchor(&page.trailingAnchor()),
             scroll.bottomAnchor().constraintEqualToAnchor(&page.bottomAnchor()),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         bar.setHidden(true);
         Views {
             page,
@@ -148,7 +142,7 @@ impl Views {
     }
 
     /// Shows or hides the offer to load the pictures from the web.
-    pub fn offer_web_pictures(&self, on: bool) {
+    pub(crate) fn offer_web_pictures(&self, on: bool) {
         if self.bar.isHidden() != on {
             return;
         }
@@ -157,12 +151,12 @@ impl Views {
     }
 
     /// Whether the offer shows.
-    pub fn offers_web_pictures(&self) -> bool {
+    pub(crate) fn offers_web_pictures(&self) -> bool {
         !self.bar.isHidden()
     }
 
     /// The widest a picture may be: the text's width.
-    pub fn picture_width(&self) -> f64 {
+    pub(crate) fn picture_width(&self) -> f64 {
         (self.scroll.contentSize().width - 2.0 * INSET.width - 4.0).max(80.0)
     }
 }

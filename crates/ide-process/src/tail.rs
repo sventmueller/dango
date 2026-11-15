@@ -5,7 +5,9 @@ use std::collections::VecDeque;
 use std::io::Read;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Duration;
+#[cfg(test)]
+use std::time::Instant;
 
 /// The last `limit` bytes a process wrote.
 #[derive(Debug, Clone)]
@@ -69,7 +71,8 @@ impl Collecting {
     }
 
     /// Waits for all of `readers` together, up to `limit` in all; whether every one reached its end.
-    pub fn wait_all<'a>(readers: impl IntoIterator<Item = &'a Collecting>, limit: Duration) -> bool {
+    #[cfg(test)]
+    pub(crate) fn wait_all<'a>(readers: impl IntoIterator<Item = &'a Collecting>, limit: Duration) -> bool {
         let deadline = Instant::now() + limit;
         readers
             .into_iter()

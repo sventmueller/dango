@@ -16,12 +16,13 @@ use objc2_app_kit::{
     NSColor, NSControlTextEditingDelegate, NSMenu, NSMenuDelegate, NSOutlineView, NSOutlineViewDataSource,
     NSOutlineViewDelegate, NSTableColumn, NSTableViewStyle, NSView,
 };
-use objc2_foundation::{NSObjectProtocol, NSString};
+use objc2_foundation::NSObjectProtocol;
 use splat_i18n::t;
 
 use super::rows::{self, Look};
 use crate::AgentKey;
 use crate::{AgentTab, Resume};
+use ide_ui_common::panel::{RowItem, RowItems};
 use ide_ui_common::util::{guarded, item, ns, set_action, set_target};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
@@ -32,7 +33,7 @@ const ROW_LEADING: f64 = -2.0;
 const ROW_TRAILING: f64 = 2.0;
 
 #[derive(Clone)]
-pub enum Node {
+pub(super) enum Node {
     /// A session of an AI tab: from the index, or open in a tab and not saved yet.
     Thread {
         entry: IndexEntry,
@@ -55,23 +56,23 @@ impl Node {
 
 /// The rows by id, in their order.
 #[derive(Default)]
-pub struct Model {
+pub(super) struct Model {
     nodes: HashMap<String, Node>,
     order: Vec<String>,
 }
 
 /// What the list is built from.
-pub struct Inputs<'a> {
-    pub index: &'a ThreadIndex,
-    pub root: &'a Path,
-    pub tabs: &'a [Rc<AgentTab>],
-    pub archived: bool,
-    pub terminal: Vec<ide_claude::history::PastSession>,
-    pub bookmarks: &'a BTreeSet<String>,
+pub(crate) struct Inputs<'a> {
+    pub(crate) index: &'a ThreadIndex,
+    pub(crate) root: &'a Path,
+    pub(crate) tabs: &'a [Rc<AgentTab>],
+    pub(crate) archived: bool,
+    pub(crate) terminal: Vec<ide_claude::history::PastSession>,
+    pub(crate) bookmarks: &'a BTreeSet<String>,
 }
 
 impl Model {
-    pub fn build(inputs: &Inputs<'_>) -> Model {
+    pub(super) fn build(inputs: &Inputs<'_>) -> Model {
         let mut rows: Vec<(bool, SystemTime, String, Node)> = Vec::new();
         let filter = Filter {
             archived: inputs.archived,
@@ -168,10 +169,10 @@ fn thread_node(entry: IndexEntry, tab: Option<&Rc<AgentTab>>, bookmarks: &BTreeS
     }
 }
 
-pub struct SourceIvars {
+pub(crate) struct SourceIvars {
     panel: Cell<usize>,
     model: RefCell<Model>,
-    items: RefCell<HashMap<String, Retained<NSString>>>,
+    items: RowItems<String>,
     /// The id of the row the context menu was opened on.
     clicked: RefCell<Option<String>>,
 }
@@ -182,7 +183,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEAgentPanelSource"]
     #[ivars = SourceIvars]
-    pub struct Source;
+    pub(crate) struct Source;
 
     unsafe impl NSObjectProtocol for Source {}
 
@@ -275,15 +276,15 @@ define_class!(
 );
 
 fn id_of(item: &AnyObject) -> Option<String> {
-    item.downcast_ref::<NSString>().map(|s| s.to_string())
+    RowItems::<String>::key_of(item)
 }
 
 /// The outline view of the list with its data source.
-pub fn outline(mtm: MainThreadMarker) -> (Retained<NSOutlineView>, Retained<Source>) {
+pub(super) fn outline(mtm: MainThreadMarker) -> (Retained<NSOutlineView>, Retained<Source>) {
     let ivars = SourceIvars {
         panel: Cell::new(0),
         model: RefCell::new(Model::default()),
-        items: RefCell::new(HashMap::new()),
+        items: RowItems::default(),
         clicked: RefCell::new(None),
     };
     // SAFETY: NSObject's initializer, called once on the newly allocated object.
@@ -318,7 +319,7 @@ pub fn outline(mtm: MainThreadMarker) -> (Retained<NSOutlineView>, Retained<Sour
 }
 
 impl Source {
-    pub fn set_panel(&self, key: usize) {
+    pub(super) fn set_panel(&self, key: usize) {
         self.ivars().panel.set(key);
     }
 
@@ -328,19 +329,17 @@ impl Source {
         }
     }
 
-    /// The one object that stands for row `id` while the panel lives; the view keeps no reference of its own.
-    fn item(&self, id: &str) -> Retained<NSString> {
-        self.ivars()
-            .items
-            .borrow_mut()
-            .entry(id.to_string())
-            .or_insert_with(|| ns(id))
-            .clone()
+    /// The one object that stands for row `id` while the row exists; the view keeps no reference of its own.
+    fn item(&self, id: &str) -> Retained<RowItem> {
+        self.ivars().items.item(self.mtm(), &id.to_string())
     }
 
-    pub fn show(&self, view: &NSOutlineView, model: Model) {
+    pub(super) fn show(&self, view: &NSOutlineView, model: Model) {
         *self.ivars().model.borrow_mut() = model;
         view.reloadData();
+        let model = self.ivars().model.borrow();
+        self.ivars().items.keep(|id| model.order.contains(id));
+        drop(model);
         view.sizeLastColumnToFit();
     }
 

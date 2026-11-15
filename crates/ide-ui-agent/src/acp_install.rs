@@ -8,12 +8,12 @@ use ide_acp::install::{InstallError, Progress, Refusal, Source as InstallSource}
 use ide_acp::{Installer, Installs, Plan};
 use ide_net::Http;
 use ide_process::Supervisor;
-use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn};
+use ide_ui_common::alert::{Alert, Role, first};
 use splat_i18n::{t, tf};
 
 use super::source::Problem;
 use super::tab::AgentTab;
-use ide_ui_common::util::{main_soon, ns};
+use ide_ui_common::util::main_soon;
 
 /// Why the register's entry is not installed.
 pub(super) fn refusal_text(refusal: &Refusal) -> String {
@@ -71,12 +71,13 @@ fn progress_text(name: &str, progress: Progress) -> String {
 
 /// Asks before installing `plan` of `agent`; whether the user agreed.
 pub fn confirm_install(mtm: objc2::MainThreadMarker, agent: &str, plan: &Plan) -> bool {
-    let alert = NSAlert::new(mtm);
-    alert.setMessageText(&ns(&tf("{} installieren?", &[agent])));
-    alert.setInformativeText(&ns(&plan_text(plan)));
-    alert.addButtonWithTitle(&ns(t("Installieren")));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
-    alert.runModal() == NSAlertFirstButtonReturn
+    first(
+        Alert::new(mtm, &tf("{} installieren?", &[agent]))
+            .informative(&plan_text(plan))
+            .button(t("Installieren"), Role::Plain)
+            .button(t("Abbrechen"), Role::Plain)
+            .run_modal(),
+    )
 }
 
 impl AgentTab {

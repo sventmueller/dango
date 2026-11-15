@@ -21,7 +21,7 @@ thread_local! {
 
 /// The menu of the "+" in the tab bar shown last, and what the self-test reads of it.
 #[derive(Default)]
-pub struct NewTabMenu {
+pub(crate) struct NewTabMenu {
     /// The menu shown last, kept until the next: AppKit sends the chosen entry's action after the menu closed.
     shown: RefCell<Option<Retained<NSMenu>>>,
     /// Whether the menu is only recorded instead of shown, so a self-test neither waits on it nor takes the focus.
@@ -43,14 +43,16 @@ fn with_below_plus<R>(f: impl FnOnce(&Cell<Option<bool>>) -> R) -> R {
 }
 
 /// Starts watching the presses on the "+" of the app's tab bars; once.
-pub fn install() {
+pub(crate) fn install() {
     if MONITOR.with(|monitor| monitor.borrow().is_some()) {
         return;
     }
     let block = RcBlock::new(|event: NonNull<NSEvent>| -> *mut NSEvent {
-        // SAFETY: AppKit passes a live event for the call.
-        let taken = guarded(false, || pressed(unsafe { event.as_ref() }));
-        if taken { std::ptr::null_mut() } else { event.as_ptr() }
+        guarded(event.as_ptr(), || {
+            // SAFETY: AppKit passes a live event for the call.
+            let taken = pressed(unsafe { event.as_ref() });
+            if taken { std::ptr::null_mut() } else { event.as_ptr() }
+        })
     });
     // SAFETY: The block returns the event it was given, or none for a press it handled itself.
     let monitor = unsafe { NSEvent::addLocalMonitorForEventsMatchingMask_handler(NSEventMask::LeftMouseDown, &block) };

@@ -18,7 +18,7 @@ use objc2_foundation::{NSMutableAttributedString, NSNotification, NSObjectProtoc
 use splat_i18n::t;
 
 use super::WindowController;
-use crate::util::{constant, guarded, main_soon, ns, set_action};
+use crate::util::{activate, auto_layout, constant, fixed_size, guarded, main_soon, ns, pin_sides, set_action};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
@@ -48,7 +48,7 @@ fn symbol_query(query: &str) -> Option<&str> {
     query.strip_prefix('#')
 }
 
-pub struct QuickIvars {
+pub(crate) struct QuickIvars {
     controller: Weak<WindowController>,
     root: PathBuf,
     hits: RefCell<Rows>,
@@ -66,7 +66,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEQuickOpenPanel"]
     #[ivars = QuickIvars]
-    pub struct QuickOpenPanel;
+    pub(crate) struct QuickOpenPanel;
 
     unsafe impl NSObjectProtocol for QuickOpenPanel {}
 
@@ -127,7 +127,7 @@ define_class!(
 );
 
 impl QuickOpenPanel {
-    pub fn new(mtm: MainThreadMarker, controller: &WindowController, root: PathBuf) -> Retained<QuickOpenPanel> {
+    pub(crate) fn new(mtm: MainThreadMarker, controller: &WindowController, root: PathBuf) -> Retained<QuickOpenPanel> {
         let ivars = QuickIvars {
             controller: Weak::from(controller),
             root,
@@ -143,7 +143,7 @@ impl QuickOpenPanel {
     }
 
     /// Shows the panel over `parent`, with `query` in the field and the field focused.
-    pub fn show(&self, parent: &objc2_app_kit::NSWindow, query: &str) {
+    pub(crate) fn show(&self, parent: &objc2_app_kit::NSWindow, query: &str) {
         let mtm = self.mtm();
         if self.ivars().panel.borrow().is_none() {
             self.build(mtm);
@@ -223,38 +223,23 @@ impl QuickOpenPanel {
         content.addSubview(&scroll);
         content.addSubview(&status);
         status.setTranslatesAutoresizingMaskIntoConstraints(false);
-        status
-            .centerXAnchor()
-            .constraintEqualToAnchor(&content.centerXAnchor())
-            .setActive(true);
-        status
-            .topAnchor()
-            .constraintEqualToAnchor_constant(&field.bottomAnchor(), 24.0)
-            .setActive(true);
-        for view in [&*field as &NSView, &scroll] {
-            view.setTranslatesAutoresizingMaskIntoConstraints(false);
-        }
-        for constraint in [
-            field
-                .leadingAnchor()
-                .constraintEqualToAnchor_constant(&content.leadingAnchor(), 14.0),
-            field
-                .trailingAnchor()
-                .constraintEqualToAnchor_constant(&content.trailingAnchor(), -14.0),
+        activate([
+            status.centerXAnchor().constraintEqualToAnchor(&content.centerXAnchor()),
+            status
+                .topAnchor()
+                .constraintEqualToAnchor_constant(&field.bottomAnchor(), 24.0),
+        ]);
+        pin_sides(&field, &content, 14.0);
+        pin_sides(&scroll, &content, 0.0);
+        activate([
             field
                 .topAnchor()
                 .constraintEqualToAnchor_constant(&content.topAnchor(), 30.0),
-            scroll.leadingAnchor().constraintEqualToAnchor(&content.leadingAnchor()),
-            scroll
-                .trailingAnchor()
-                .constraintEqualToAnchor(&content.trailingAnchor()),
             scroll
                 .topAnchor()
                 .constraintEqualToAnchor_constant(&field.bottomAnchor(), 10.0),
             scroll.bottomAnchor().constraintEqualToAnchor(&content.bottomAnchor()),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         *self.ivars().panel.borrow_mut() = Some(panel);
         *self.ivars().status.borrow_mut() = Some(status);
         *self.ivars().field.borrow_mut() = Some(field);
@@ -299,7 +284,7 @@ impl QuickOpenPanel {
     }
 
     /// Shows `hits`, the answer to query number `asked`, unless a newer one was sent since.
-    pub fn answered(&self, asked: u64, hits: Vec<Hit>) {
+    pub(crate) fn answered(&self, asked: u64, hits: Vec<Hit>) {
         if asked != self.ivars().asked.get() {
             return;
         }
@@ -358,7 +343,7 @@ impl QuickOpenPanel {
         }
     }
 
-    pub fn root(&self) -> &std::path::Path {
+    pub(crate) fn root(&self) -> &std::path::Path {
         &self.ivars().root
     }
 
@@ -432,10 +417,9 @@ fn symbol_view(mtm: MainThreadMarker, found: &ide_ui_lsp::FoundSymbol, root: &st
         title.push_str(container);
     }
     let name = NSTextField::labelWithString(&ns(&title), mtm);
-    // SAFETY: AppKit sets its font weight constants when it loads.
     name.setFont(Some(&NSFont::systemFontOfSize_weight(
         ide_ui_common::style::HEADING,
-        unsafe { NSFontWeightSemibold },
+        constant!(NSFontWeightSemibold),
     )));
     name.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
     let path = found.path.strip_prefix(root).unwrap_or(&found.path);
@@ -456,12 +440,11 @@ fn symbol_view(mtm: MainThreadMarker, found: &ide_ui_lsp::FoundSymbol, root: &st
         cell.addSubview(view);
         view.setTranslatesAutoresizingMaskIntoConstraints(false);
     }
-    for constraint in [
+    fixed_size(&icon, 16.0, 16.0);
+    activate([
         icon.leadingAnchor()
             .constraintEqualToAnchor_constant(&cell.leadingAnchor(), 6.0),
         icon.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-        icon.widthAnchor().constraintEqualToConstant(16.0),
-        icon.heightAnchor().constraintEqualToConstant(16.0),
         name.leadingAnchor()
             .constraintEqualToAnchor_constant(&icon.trailingAnchor(), 6.0),
         name.trailingAnchor()
@@ -473,9 +456,7 @@ fn symbol_view(mtm: MainThreadMarker, found: &ide_ui_lsp::FoundSymbol, root: &st
             .trailingAnchor()
             .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -6.0),
         place.topAnchor().constraintEqualToAnchor(&name.bottomAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     cell
 }
 
@@ -494,24 +475,21 @@ fn hit_view(mtm: MainThreadMarker, hit: &Hit) -> Retained<NSView> {
         }
     }
     let label = NSTextField::labelWithAttributedString(&text, mtm);
-    // SAFETY: AppKit sets its font weight constants when it loads.
     label.setFont(Some(&NSFont::systemFontOfSize_weight(
         ide_ui_common::style::HEADING,
-        unsafe { NSFontWeightSemibold },
+        constant!(NSFontWeightSemibold),
     )));
     label.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingHead);
     let icon = crate::file_icon::image_view(mtm, std::path::Path::new(&hit.path), false);
     let cell = NSView::new(mtm);
     cell.addSubview(&icon);
     cell.addSubview(&label);
-    icon.setTranslatesAutoresizingMaskIntoConstraints(false);
-    label.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
+    auto_layout(&[&icon, &label]);
+    fixed_size(&icon, 16.0, 16.0);
+    activate([
         icon.leadingAnchor()
             .constraintEqualToAnchor_constant(&cell.leadingAnchor(), 6.0),
         icon.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-        icon.widthAnchor().constraintEqualToConstant(16.0),
-        icon.heightAnchor().constraintEqualToConstant(16.0),
         label
             .leadingAnchor()
             .constraintEqualToAnchor_constant(&icon.trailingAnchor(), 6.0),
@@ -519,9 +497,7 @@ fn hit_view(mtm: MainThreadMarker, hit: &Hit) -> Retained<NSView> {
             .trailingAnchor()
             .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -6.0),
         label.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     cell
 }
 

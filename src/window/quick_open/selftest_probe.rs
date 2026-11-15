@@ -7,7 +7,7 @@
 use super::*;
 
 impl QuickOpenPanel {
-    pub fn hits(&self) -> Vec<String> {
+    pub(crate) fn hits(&self) -> Vec<String> {
         match &*self.ivars().hits.borrow() {
             Rows::Files(hits) => hits.iter().map(|hit| hit.path.clone()).collect(),
             Rows::Symbols(symbols) => symbols
@@ -21,21 +21,21 @@ impl QuickOpenPanel {
     }
 
     /// What the list says in place of rows, if anything.
-    pub fn status(&self) -> Option<String> {
+    pub(crate) fn status(&self) -> Option<String> {
         let status = self.ivars().status.borrow();
         let status = status.as_ref()?;
         (!status.isHidden()).then(|| status.stringValue().to_string())
     }
 
     /// Opens row `row` as Return does.
-    pub fn open_row(&self, row: usize) {
+    pub(crate) fn open_row(&self, row: usize) {
         if let Some(table) = self.ivars().table.borrow().as_ref() {
             table.selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(row), false);
         }
         self.open_selected();
     }
 
-    pub fn type_query(&self, query: &str) {
+    pub(crate) fn type_query(&self, query: &str) {
         if let Some(field) = self.ivars().field.borrow().as_ref() {
             field.setStringValue(&ns(query));
         }

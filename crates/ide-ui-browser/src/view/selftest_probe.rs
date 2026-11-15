@@ -7,11 +7,11 @@
 use super::*;
 
 impl BrowserView {
-    pub fn address_field(&self) -> Retained<objc2_app_kit::NSTextField> {
+    pub(crate) fn address_field(&self) -> Retained<objc2_app_kit::NSTextField> {
         self.parts().controls.field.clone()
     }
 
-    pub fn seen(&self) -> tabs::Seen {
+    pub(crate) fn seen(&self) -> tabs::Seen {
         let parts = self.parts();
         tabs::Seen {
             url: self.current_url(),

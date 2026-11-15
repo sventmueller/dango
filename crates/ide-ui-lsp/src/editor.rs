@@ -67,7 +67,7 @@ pub trait Editor: Deref<Target = NSTextView> {
 }
 
 /// The marker of the main thread, on which every editor lives.
-pub fn marker(editor: &dyn Editor) -> objc2::MainThreadMarker {
+pub(crate) fn marker(editor: &dyn Editor) -> objc2::MainThreadMarker {
     let view: &NSTextView = editor;
     objc2::MainThreadOnly::mtm(view)
 }

@@ -11,9 +11,9 @@ use serde_json::{Map, Value, json};
 
 use crate::adapter::AdapterKind;
 use crate::discover::Adapters;
-use crate::helper::{self, Helper};
 use crate::launch::LaunchConfig;
 use crate::types::Request;
+use ide_process::tool::{self, Helper, RunError};
 
 mod tests_program;
 pub use tests_program::{TestProgram, test_program};
@@ -158,7 +158,7 @@ fn rust(
     cancel: &Cancel,
     line: &mut dyn FnMut(&str),
 ) -> Result<LaunchConfig, CurrentError> {
-    let cargo = helper::which("cargo", adapters.path()).ok_or(CurrentError::Missing("cargo"))?;
+    let cargo = tool::which("cargo", adapters.path()).ok_or(CurrentError::Missing("cargo"))?;
     // Cargo names folders without symbolic links, such as /private/var for /var.
     let file = &std::fs::canonicalize(file).unwrap_or_else(|_| file.to_path_buf());
     let dir = file.parent().ok_or(CurrentError::NoPackage)?;
@@ -175,7 +175,7 @@ fn rust(
             dir,
             &mut |_| {},
         )
-        .map_err(|e| CurrentError::Build(e.to_string()))?;
+        .map_err(stopped)?;
     if !metadata.succeeded() {
         return Err(CurrentError::Build(metadata.stderr));
     }
@@ -198,12 +198,7 @@ fn rust(
     if !plan.target.is_empty() {
         args.push(&plan.target);
     }
-    let output = helper
-        .run(&cargo, &args, &manifest_dir, line)
-        .map_err(|e| CurrentError::Build(e.to_string()))?;
-    if output.ending.is_none() {
-        return Err(CurrentError::Cancelled);
-    }
+    let output = helper.run(&cargo, &args, &manifest_dir, line).map_err(stopped)?;
     if !output.succeeded() {
         let errors = compiler_errors(&output.stdout);
         return Err(CurrentError::Build(if errors.is_empty() {
@@ -348,10 +343,18 @@ fn compiler_errors(stdout: &str) -> String {
         .collect()
 }
 
+/// The error of a build step that did not end on its own: stopped by the user or at its time limit, or not started.
+pub(crate) fn stopped(error: RunError) -> CurrentError {
+    match error {
+        RunError::Cancelled | RunError::Timeout => CurrentError::Cancelled,
+        RunError::Start(error) => CurrentError::Build(error.to_string()),
+    }
+}
+
 /// The commands that load the toolchain's LLDB formatters for Rust's types, as `rust-lldb` does. Newer toolchains
 /// register them when `lldb_lookup.py` is imported and no longer ship the `lldb_commands` file older ones needed.
 fn rust_formatters(helper: &Helper<'_>, dir: &Path) -> Option<Vec<String>> {
-    let rustc = helper::which("rustc", helper::var(helper.env, "PATH"))?;
+    let rustc = tool::which("rustc", tool::var(helper.env, "PATH"))?;
     let output = helper.run(&rustc, &["--print", "sysroot"], dir, &mut |_| {}).ok()?;
     let etc = Path::new(output.stdout.trim()).join("lib/rustlib/etc");
     let lookup = etc.join("lldb_lookup.py");
@@ -378,7 +381,7 @@ pub(crate) fn resolve_cargo(
     let Some(cargo_config) = arguments.remove("cargo") else {
         return Ok(());
     };
-    let cargo = helper::which("cargo", adapters.path()).ok_or(CurrentError::Missing("cargo"))?;
+    let cargo = tool::which("cargo", adapters.path()).ok_or(CurrentError::Missing("cargo"))?;
     let mut args: Vec<String> = cargo_config
         .get("args")
         .and_then(Value::as_array)
@@ -398,12 +401,7 @@ pub(crate) fn resolve_cargo(
         cancel: Some(cancel),
     };
     let refs: Vec<&str> = args.iter().map(String::as_str).collect();
-    let output = helper
-        .run(&cargo, &refs, root, line)
-        .map_err(|e| CurrentError::Build(e.to_string()))?;
-    if output.ending.is_none() {
-        return Err(CurrentError::Cancelled);
-    }
+    let output = helper.run(&cargo, &refs, root, line).map_err(stopped)?;
     if !output.succeeded() {
         return Err(CurrentError::Build(compiler_errors(&output.stdout)));
     }

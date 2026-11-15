@@ -11,6 +11,8 @@ flowchart TB
     app["the app: ide-ui-agent own_agent"] -->|"Keychain: ApiKey per endpoint"| provider["Provider: Endpoint, key, Http"]
     app -->|"Session::start or resume(Config)"| session["Session: conversation, Thread, Policy"]
     app -->|"send, compact"| turn["thread own-agent-turn or own-agent-compact"]
+    app -->|"Session::cancel: closes the connections the turn has to itself, ending a silent stream at once"| provider
+    app -->|"Session::cancel: the Cancel's hook closes a running web_fetch's own connections"| tools
     turn -->|"compact::run when the context is full"| provider
     turn -->|"Provider::stream(Request)"| provider
     provider -->|"HTTPS, server-sent events"| remote(["provider endpoint"])

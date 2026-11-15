@@ -60,7 +60,7 @@ pub enum Spot {
 
 impl Spot {
     /// The file the row belongs to.
-    pub fn path(&self) -> &Path {
+    pub(crate) fn path(&self) -> &Path {
         let (Spot::File(path) | Spot::Line(path, _)) = self;
         path
     }
@@ -322,7 +322,7 @@ impl Model {
     }
 
     /// The match line `spot` points at, the first of its file for a file.
-    pub fn line(&self, spot: &Spot) -> Option<&LineResult> {
+    pub(crate) fn line(&self, spot: &Spot) -> Option<&LineResult> {
         let index = match spot {
             Spot::File(_) => 0,
             Spot::Line(_, index) => *index,

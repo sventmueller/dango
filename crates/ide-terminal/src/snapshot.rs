@@ -79,7 +79,7 @@ impl Default for Palette {
 
 impl Palette {
     /// Colour `index` of the 256-colour table: the ANSI colours, a 6×6×6 cube, then 24 greys.
-    pub fn indexed(&self, index: u8) -> Rgb {
+    pub(crate) fn indexed(&self, index: u8) -> Rgb {
         match index {
             0..=15 => self.ansi[usize::from(index)],
             16..=231 => {
@@ -123,7 +123,7 @@ pub struct CellFlags(u16);
 impl CellFlags {
     pub const BOLD: CellFlags = CellFlags(1);
     pub const ITALIC: CellFlags = CellFlags(1 << 1);
-    pub const DIM: CellFlags = CellFlags(1 << 2);
+    pub(crate) const DIM: CellFlags = CellFlags(1 << 2);
     pub const UNDERLINE: CellFlags = CellFlags(1 << 3);
     pub const DOUBLE_UNDERLINE: CellFlags = CellFlags(1 << 4);
     pub const UNDERCURL: CellFlags = CellFlags(1 << 5);
@@ -131,7 +131,7 @@ impl CellFlags {
     pub const DASHED_UNDERLINE: CellFlags = CellFlags(1 << 7);
     pub const STRIKETHROUGH: CellFlags = CellFlags(1 << 8);
     /// Foreground and background are swapped; `Cell::fg` and `Cell::bg` already are.
-    pub const INVERSE: CellFlags = CellFlags(1 << 9);
+    pub(crate) const INVERSE: CellFlags = CellFlags(1 << 9);
     /// The text is not drawn.
     pub const HIDDEN: CellFlags = CellFlags(1 << 10);
     /// A double-width character, drawn across this cell and the next.
@@ -146,11 +146,6 @@ impl CellFlags {
     /// Whether all of `flags` are set.
     pub fn contains(self, flags: CellFlags) -> bool {
         self.0 & flags.0 == flags.0
-    }
-
-    /// Whether no flag is set.
-    pub fn is_empty(self) -> bool {
-        self.0 == 0
     }
 
     fn from_term(flags: Flags) -> CellFlags {
@@ -225,10 +220,10 @@ pub enum CursorShape {
 
 /// The cursor as drawn.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Cursor {
     /// Where it is.
     pub point: Point,
-    /// Its shape.
     pub shape: CursorShape,
     /// Whether to draw it: the program has not hidden it and it is not scrolled out of view.
     pub visible: bool,
@@ -263,12 +258,13 @@ pub enum Damage {
 #[expect(missing_docs, reason = "the struct says it")]
 pub struct LineDamage {
     pub line: usize,
-    pub left: usize,
-    pub right: usize,
+    pub(crate) left: usize,
+    pub(crate) right: usize,
 }
 
 /// The visible screen at one moment.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Snapshot {
     /// Columns per line.
     pub columns: usize,
@@ -276,7 +272,6 @@ pub struct Snapshot {
     pub lines: usize,
     /// The visible lines, top first, each `columns` cells long.
     pub rows: Vec<Vec<Cell>>,
-    /// The cursor.
     pub cursor: Cursor,
     /// The selection where it is visible.
     pub selection: Option<Highlight>,

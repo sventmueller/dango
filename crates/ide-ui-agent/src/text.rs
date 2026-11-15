@@ -15,7 +15,7 @@ use objc2_foundation::{NSAttributedString, NSObjectProtocol, NSPoint, NSRange, N
 use super::timeline::TimelineTable;
 use ide_ui_common::util::{guarded, with_editing};
 
-pub struct TextIvars {
+pub(crate) struct TextIvars {
     /// Owns the text system; a text view made from a container does not retain its storage.
     storage: RefCell<Option<Retained<NSTextStorage>>>,
     width: Cell<f64>,
@@ -31,7 +31,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEAgentCardText"]
     #[ivars = TextIvars]
-    pub struct CardText;
+    pub(crate) struct CardText;
 
     unsafe impl NSObjectProtocol for CardText {}
 
@@ -104,7 +104,12 @@ fn constant_no_metric() -> f64 {
 
 impl CardText {
     /// `text`, laid out `width` points wide; selectable unless `selectable` is off.
-    pub fn new(mtm: MainThreadMarker, text: &NSAttributedString, width: f64, selectable: bool) -> Retained<CardText> {
+    pub(crate) fn new(
+        mtm: MainThreadMarker,
+        text: &NSAttributedString,
+        width: f64,
+        selectable: bool,
+    ) -> Retained<CardText> {
         let width = width.max(40.0);
         let storage = NSTextStorage::new();
         storage.setAttributedString(text);
@@ -142,7 +147,7 @@ impl CardText {
     }
 
     /// The live answer keeps its parser, rendered blocks and TextKit storage between updates.
-    pub fn streaming(mtm: MainThreadMarker, markdown: &str, width: f64) -> Retained<CardText> {
+    pub(crate) fn streaming(mtm: MainThreadMarker, markdown: &str, width: f64) -> Retained<CardText> {
         let (streaming, text) = super::markdown::Streaming::start(mtm, markdown, width);
         let view = Self::new(mtm, &text, width, true);
         *view.ivars().streaming.borrow_mut() = Some(streaming);
@@ -150,7 +155,7 @@ impl CardText {
     }
 
     /// Replaces the affected tail while preserving the user's text selection.
-    pub fn update_markdown(&self, markdown: &str) -> bool {
+    pub(crate) fn update_markdown(&self, markdown: &str) -> bool {
         let mut streaming = self.ivars().streaming.borrow_mut();
         let Some(streaming) = streaming.as_mut() else {
             return false;
@@ -187,7 +192,7 @@ impl CardText {
     }
 
     /// Keeps the text left to right in an interface that reads right to left, as code and output do.
-    pub fn left_to_right(&self) {
+    pub(crate) fn left_to_right(&self) {
         self.setUserInterfaceLayoutDirection(NSUserInterfaceLayoutDirection::LeftToRight);
     }
 

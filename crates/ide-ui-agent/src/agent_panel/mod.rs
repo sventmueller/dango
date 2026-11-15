@@ -25,11 +25,8 @@ use ide_ui_common::util::{main_after, main_soon, ns};
 use ide_ui_common::window::{AsWindow, Panel, Panels, Window};
 pub use rows::{flipped, section_label, small_label, spacer};
 use sessions::Source;
-pub use store::{
-    is_bookmarked, past_session, past_session_soon, past_sessions_cached, read_past, set_archived, set_bookmarked,
-    wait_for_writes,
-};
-pub(crate) use store::{record, remove, rename, upsert};
+pub use store::{is_bookmarked, past_session, wait_for_writes};
+pub(crate) use store::{past_sessions_cached, read_past, record, remove, rename, set_archived, set_bookmarked, upsert};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
@@ -40,7 +37,7 @@ pub use selftest_probe::*;
 const SIDE: f64 = 8.0;
 
 /// The panel of one window.
-pub struct AgentPanel {
+pub(crate) struct AgentPanel {
     /// The panel's id among the open ones, which callbacks carry.
     id: usize,
     controller: Window,
@@ -57,7 +54,7 @@ pub struct AgentPanel {
 
 /// The agent panels of every window.
 #[derive(Default)]
-pub struct AgentPanels {
+pub(crate) struct AgentPanels {
     panels: RefCell<Vec<Rc<AgentPanel>>>,
     last_id: Cell<usize>,
     offered_agents: agents::OfferedAgents,
@@ -112,7 +109,7 @@ pub fn attach(controller: &(impl AsWindow + ?Sized)) {
 }
 
 /// Shows what changed in the window's sessions, at most a few times a second.
-pub fn refresh(controller: &(impl AsWindow + ?Sized)) {
+pub(crate) fn refresh(controller: &(impl AsWindow + ?Sized)) {
     let controller = &controller.as_window();
     let Some(panel) = panel_of(controller) else { return };
     if panel.scheduled.replace(true) {
@@ -132,7 +129,11 @@ fn bookmarks_file() -> std::path::PathBuf {
 }
 
 fn bookmarks() -> BTreeSet<String> {
-    std::fs::read(bookmarks_file())
+    bookmarks_in(&bookmarks_file())
+}
+
+fn bookmarks_in(file: &Path) -> BTreeSet<String> {
+    std::fs::read(file)
         .ok()
         .and_then(|bytes| serde_json::from_slice(&bytes).ok())
         .unwrap_or_default()
@@ -140,16 +141,16 @@ fn bookmarks() -> BTreeSet<String> {
 
 /// Writes the bookmarks `marks`.
 fn write_bookmarks(marks: &BTreeSet<String>) -> std::io::Result<()> {
-    let file = bookmarks_file();
-    if let Some(parent) = file.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    std::fs::write(&file, serde_json::to_vec(marks).unwrap_or_default())
+    write_bookmarks_to(&bookmarks_file(), marks)
+}
+
+fn write_bookmarks_to(file: &Path, marks: &BTreeSet<String>) -> std::io::Result<()> {
+    ide_core::atomic_write::write(file, &serde_json::to_vec(marks).unwrap_or_default())
 }
 
 /// The sessions of `cwd` that can be resumed, newest first: the index's, then — experimental — those the CLI saved
 /// from a terminal. Reads the disk; the main thread takes `past_sessions_cached`.
-pub fn past_sessions(cwd: &Path, limit: usize) -> Vec<(Resume, SystemTime)> {
+pub(crate) fn past_sessions(cwd: &Path, limit: usize) -> Vec<(Resume, SystemTime)> {
     let index = ThreadIndex::open(&ThreadIndex::default_dir());
     let mut past: Vec<(Resume, SystemTime)> = index
         .list(&ide_thread::Filter::default())
@@ -322,4 +323,26 @@ fn scroll(mtm: objc2::MainThreadMarker, outline: &NSOutlineView) -> Retained<NSS
     scroll.setDrawsBackground(false);
     scroll.setDocumentView(Some(outline));
     scroll
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bookmarks_replace_the_file_whole_and_leave_no_scratch_file() {
+        let dir = ide_core::testing::scratch("bookmarks");
+        let file = dir.path().join("threads").join("bookmarks.json");
+        let first: BTreeSet<String> = ["a".to_string(), "b".to_string()].into();
+        write_bookmarks_to(&file, &first).unwrap();
+        assert_eq!(bookmarks_in(&file), first);
+        let second: BTreeSet<String> = ["c".to_string()].into();
+        write_bookmarks_to(&file, &second).unwrap();
+        assert_eq!(bookmarks_in(&file), second);
+        let names: Vec<_> = std::fs::read_dir(file.parent().unwrap())
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
+        assert_eq!(names, ["bookmarks.json"]);
+    }
 }

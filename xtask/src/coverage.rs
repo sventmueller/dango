@@ -1,6 +1,6 @@
 //! Line coverage of the workspace: `cargo test` and the offline selftest scenarios, built with LLVM's instrumentation
-//! by cargo-llvm-cov in `target/llvm-cov-target`, reported together in `target/coverage/`,
-//! with `cargo test` alone beside it.
+//! by cargo-llvm-cov in `target/llvm-cov-target`, reported together in `target/coverage/`, with `cargo test` alone
+//! and the self-test alone beside it, so that code only a window self-test reaches shows as such.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsString;
@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 
 use serde::Deserialize;
 
+use crate::source::rust_files;
 use crate::*;
 
 /// The least line coverage of all counted files together, in percent, that `--check` accepts.
@@ -18,6 +19,14 @@ const TOTAL_GOAL: f64 = 90.0;
 
 /// The least line coverage of each counted file, in percent, that `--check` accepts.
 const FILE_GOAL: f64 = 50.0;
+
+/// The line coverage, in percent to one decimal, that `cargo test` alone reaches in the app crate's `src/` outside its
+/// self-test, whose logic otherwise only the window self-tests run. A ratchet held like the others: `--check` fails
+/// below it and names the value to raise it to above it.
+const APP_UNIT_FLOOR: f64 = 8.4;
+
+/// Where the profiles of `cargo test` wait while the self-test alone is reported.
+const UNIT_PROFILES: &str = "unit-profiles";
 
 /// Folders under a counted source folder whose files are not counted.
 const NOT_COUNTED: &[&str] = &["tests", "benches", "examples", "fuzz"];
@@ -153,6 +162,8 @@ fn coverage_in(sh: &mut dyn Shell, args: &[String], root: &Path, target: &Path) 
     timings.push(("cargo test", step.elapsed()));
     let unit_export = out.join("llvm-cov-unit.json");
     export(sh, &env, &unit_export, "")?;
+    let waiting = env.target.join(UNIT_PROFILES);
+    move_profiles(&env.target, &waiting)?;
 
     let step = Instant::now();
     let scenarios = vec![OFFLINE.to_string()];
@@ -164,43 +175,72 @@ fn coverage_in(sh: &mut dyn Shell, args: &[String], root: &Path, target: &Path) 
     timings.push(("selftest", step.elapsed()));
 
     let step = Instant::now();
+    let objects = env.bundle_objects()?;
+    let selftest_export = out.join("llvm-cov-selftest.json");
+    let selftest_reported = export(sh, &env, &selftest_export, &objects);
+    move_profiles(&waiting, &env.target)?;
+    if selftest_reported.is_err() {
+        failed.push("the report of the self-test alone".to_string());
+    }
     let combined_export = out.join("llvm-cov.json");
-    export(sh, &env, &combined_export, &env.bundle_objects()?)?;
+    export(sh, &env, &combined_export, &objects)?;
     timings.push(("report", step.elapsed()));
 
-    let measured = parse_export(&read(&combined_export)?)?;
-    let unit_measured = parse_export(&read(&unit_export)?)?;
     let compiled = compiled(env.build_dir.as_ref().unwrap_or(&env.target), root)?;
-    let counted = counted(root, &measured, &compiled)?;
-    let unit = counted_unit(root, &unit_measured, &compiled)?;
+    let selftest = match selftest_reported {
+        Ok(()) => covered_lines(counted(root, &parse_export(&read(&selftest_export)?)?, &compiled)?),
+        Err(_) => BTreeMap::new(),
+    };
+    let alone = Alone {
+        unit: covered_lines(counted(root, &parse_export(&read(&unit_export)?)?, &compiled)?),
+        selftest,
+    };
+    let together = counted(root, &parse_export(&read(&combined_export)?)?, &compiled)?;
     timings.push(("total", started.elapsed()));
     let run = Run {
         scenarios,
         failed,
         timings,
     };
-    report(&out, &counted, &unit, &run, check, strict)
+    report(&out, &together, &alone, &run, check, strict)
+}
+
+/// Moves the profiles in `from` into `to`, so that a report reads only those recorded after; none without `from`.
+fn move_profiles(from: &Path, to: &Path) -> Result<(), String> {
+    if !from.is_dir() {
+        return Ok(());
+    }
+    files::create_dir_all(to)?;
+    for entry in files::read_dir(from)? {
+        let path = entry.map_err(|e| e.to_string())?.path();
+        if path.extension().is_some_and(|ext| ext == "profraw")
+            && let Some(name) = path.file_name()
+        {
+            files::rename(&path, to.join(name))?;
+        }
+    }
+    Ok(())
 }
 
 /// Writes the report into `out`, prints its summary and, with `check` and `strict`, fails as `coverage` describes.
 fn report(
     out: &Path,
     counted: &[FileCoverage],
-    unit: &Unit,
+    alone: &Alone,
     run: &Run,
     check: bool,
     strict: bool,
 ) -> Result<(), String> {
-    files::write(out.join("files.json"), files_json(counted, unit))?;
-    let table = table(counted, unit, run);
+    files::write(out.join("files.json"), files_json(counted, alone))?;
+    let table = table(counted, alone, run);
     files::write(out.join("coverage.txt"), &table)?;
-    print!("{}", summary(counted, unit, run));
+    print!("{}", summary(counted, alone, run));
     println!("{}", out.join("coverage.txt").display());
     let mut problems = Vec::new();
     if strict && !run.failed.is_empty() {
         problems.push(format!("failed: {}", run.failed.join(", ")));
     }
-    if check && let Err(below) = verdict(counted) {
+    if check && let Err(below) = verdict(counted, alone, APP_UNIT_FLOOR) {
         problems.push(below);
     }
     if problems.is_empty() {
@@ -231,26 +271,34 @@ fn read(path: &Path) -> Result<Vec<u8>, String> {
     std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))
 }
 
-/// Covered lines by file from `cargo test` alone, so code the self-test only runs without asserting shows as a gap.
-type Unit = BTreeMap<String, u64>;
+/// Covered lines by file.
+type Lines = BTreeMap<String, u64>;
 
-fn counted_unit(
-    root: &Path,
-    measured: &BTreeMap<PathBuf, (u64, u64)>,
-    compiled: &BTreeSet<PathBuf>,
-) -> Result<Unit, String> {
-    Ok(counted(root, measured, compiled)?
-        .into_iter()
-        .map(|file| (file.file, file.covered))
-        .collect())
+/// Covered lines by file from each kind of test alone: `cargo test`, so code that the self-test only runs without
+/// asserting shows as a gap, and the self-test, so code that only a window reaches shows as such.
+#[derive(Default)]
+struct Alone {
+    unit: Lines,
+    selftest: Lines,
 }
 
-/// The lines of `files` that `cargo test` alone covered.
-fn unit_covered<'a>(files: impl IntoIterator<Item = &'a FileCoverage>, unit: &Unit) -> u64 {
+fn covered_lines(files: Vec<FileCoverage>) -> Lines {
+    files.into_iter().map(|file| (file.file, file.covered)).collect()
+}
+
+/// The lines of `files` that the run whose lines are `alone` covered.
+fn covered_by<'a>(files: impl IntoIterator<Item = &'a FileCoverage>, alone: &Lines) -> u64 {
     files
         .into_iter()
-        .map(|file| unit.get(&file.file).copied().unwrap_or(0).min(file.lines))
+        .map(|file| alone.get(&file.file).copied().unwrap_or(0).min(file.lines))
         .sum()
+}
+
+/// The covered lines and lines of the app crate's counted files, which leave its self-test out, by `cargo test` alone.
+fn app_unit(files: &[FileCoverage], alone: &Alone) -> (u64, u64) {
+    let app: Vec<&FileCoverage> = files.iter().filter(|file| file.file.starts_with("src/")).collect();
+    let lines = app.iter().map(|file| file.lines).sum();
+    (covered_by(app, &alone.unit), lines)
 }
 
 /// What a run did besides measuring.
@@ -343,7 +391,7 @@ fn counted(
     }
     let mut sources = Vec::new();
     for folder in folders.iter().filter(|folder| folder.is_dir()) {
-        rust_files(folder, &mut sources)?;
+        sources.extend(rust_files(folder).into_iter().filter(|file| is_counted(folder, file)));
     }
     let mut counted = Vec::new();
     for source in sources {
@@ -379,19 +427,15 @@ fn counted(
     Ok(counted)
 }
 
-fn rust_files(folder: &Path, found: &mut Vec<PathBuf>) -> Result<(), String> {
-    for entry in files::read_dir(folder)? {
-        let path = entry.map_err(|e| e.to_string())?.path();
-        let name = path.file_name().unwrap_or_default().to_string_lossy();
-        if path.is_dir() {
-            if !NOT_COUNTED.contains(&name.as_ref()) {
-                rust_files(&path, found)?;
-            }
-        } else if path.extension().is_some_and(|ext| ext == "rs") && !is_not_counted(&name) {
-            found.push(path);
-        }
-    }
-    Ok(())
+/// Whether `file` below the counted source folder `folder` counts: not in a `NOT_COUNTED` folder below it, and no
+/// file `is_not_counted` names.
+fn is_counted(folder: &Path, file: &Path) -> bool {
+    let below = file.strip_prefix(folder).unwrap_or(file);
+    let name = file.file_name().unwrap_or_default().to_string_lossy();
+    let in_folder_not_counted = below
+        .parent()
+        .is_some_and(|parent| parent.iter().any(|part| NOT_COUNTED.iter().any(|skip| part == *skip)));
+    !in_folder_not_counted && !is_not_counted(&name)
 }
 
 /// A build script, a file of unit tests by cargo-llvm-cov's convention (`tests.rs`, `*_tests.rs`, `*-tests.rs`),
@@ -489,27 +533,37 @@ fn group(file: &str) -> String {
     }
 }
 
-fn files_json(files: &[FileCoverage], unit: &Unit) -> String {
+fn rounded(value: f64) -> f64 {
+    (value * 100.0).round() / 100.0
+}
+
+fn files_json(files: &[FileCoverage], alone: &Alone) -> String {
     let (covered, lines) = totals(files);
-    let unit_total = unit_covered(files, unit);
+    let (unit_total, selftest_total) = (covered_by(files, &alone.unit), covered_by(files, &alone.selftest));
+    let (app_covered, app_lines) = app_unit(files, alone);
     let files: Vec<serde_json::Value> = sorted(files)
         .iter()
         .map(|file| {
+            let (unit, selftest) = (covered_by([*file], &alone.unit), covered_by([*file], &alone.selftest));
             serde_json::json!({
                 "file": file.file,
                 "covered": file.covered,
                 "lines": file.lines,
-                "percent": (file.percent() * 100.0).round() / 100.0,
-                "unit_covered": unit_covered([*file], unit),
-                "unit_percent": (percent(unit_covered([*file], unit), file.lines) * 100.0).round() / 100.0,
+                "percent": rounded(file.percent()),
+                "unit_covered": unit,
+                "unit_percent": rounded(percent(unit, file.lines)),
+                "selftest_covered": selftest,
+                "selftest_percent": rounded(percent(selftest, file.lines)),
                 "built": file.built,
             })
         })
         .collect();
     let json = serde_json::json!({
-        "total": {"covered": covered, "lines": lines, "percent": (percent(covered, lines) * 100.0).round() / 100.0,
-            "unit_covered": unit_total, "unit_percent": (percent(unit_total, lines) * 100.0).round() / 100.0},
-        "goals": {"total": TOTAL_GOAL, "file": FILE_GOAL},
+        "total": {"covered": covered, "lines": lines, "percent": rounded(percent(covered, lines)),
+            "unit_covered": unit_total, "unit_percent": rounded(percent(unit_total, lines)),
+            "selftest_covered": selftest_total, "selftest_percent": rounded(percent(selftest_total, lines))},
+        "app_unit": {"covered": app_covered, "lines": app_lines, "percent": rounded(percent(app_covered, app_lines))},
+        "goals": {"total": TOTAL_GOAL, "file": FILE_GOAL, "app_unit": APP_UNIT_FLOOR},
         "files": files,
     });
     serde_json::to_string_pretty(&json).unwrap_or_default()
@@ -522,7 +576,7 @@ fn sorted(files: &[FileCoverage]) -> Vec<&FileCoverage> {
     sorted
 }
 
-fn summary(files: &[FileCoverage], unit: &Unit, run: &Run) -> String {
+fn summary(files: &[FileCoverage], alone: &Alone, run: &Run) -> String {
     let (covered, lines) = totals(files);
     let below = files.iter().filter(|file| file.percent() < FILE_GOAL).count();
     let mut text = format!(
@@ -531,11 +585,19 @@ fn summary(files: &[FileCoverage], unit: &Unit, run: &Run) -> String {
         percent(covered, lines),
         files.len(),
     );
-    let unit_total = unit_covered(files, unit);
+    for (name, lines_alone) in [("cargo test", &alone.unit), ("self-test", &alone.selftest)] {
+        let total = covered_by(files, lines_alone);
+        let _ = writeln!(
+            text,
+            "{name} alone {:.1} % ({total} of {lines} lines)",
+            percent(total, lines)
+        );
+    }
+    let (app_covered, app_lines) = app_unit(files, alone);
     let _ = writeln!(
         text,
-        "cargo test alone {:.1} % ({unit_total} of {lines} lines)",
-        percent(unit_total, lines)
+        "cargo test alone in the app crate's src/ {:.1} % ({app_covered} of {app_lines} lines), floor {APP_UNIT_FLOOR} %",
+        percent(app_covered, app_lines)
     );
     let unbuilt = files.iter().filter(|file| !file.built).count();
     if unbuilt > 0 {
@@ -566,42 +628,84 @@ pub(crate) fn minutes(took: Duration) -> String {
     format!("{}:{:02} min", seconds / 60, seconds % 60)
 }
 
-/// The report's text: the summary, the folders and then every file, lowest coverage first.
-fn table(files: &[FileCoverage], unit: &Unit, run: &Run) -> String {
-    let mut text = summary(files, unit, run);
+/// The crate a file belongs to: `crates/<name>`, `xtask`, or `src` for the app.
+fn crate_of(file: &str) -> String {
+    match file.split('/').collect::<Vec<_>>().as_slice() {
+        ["crates", name, ..] => format!("crates/{name}"),
+        [first, ..] => (*first).to_string(),
+        [] => String::new(),
+    }
+}
+
+/// A row of the report for several files.
+struct Group {
+    name: String,
+    covered: u64,
+    lines: u64,
+    /// The files below `FILE_GOAL`.
+    below: usize,
+    /// The lines `cargo test` covered alone.
+    unit: u64,
+    /// The lines the self-test covered alone.
+    selftest: u64,
+}
+
+/// The rows of `files` grouped by `key`, lowest coverage first.
+fn grouped(files: &[FileCoverage], alone: &Alone, key: fn(&str) -> String) -> Vec<Group> {
     let mut groups: BTreeMap<String, Vec<&FileCoverage>> = BTreeMap::new();
     for file in files {
-        groups.entry(group(&file.file)).or_default().push(file);
+        groups.entry(key(&file.file)).or_default().push(file);
     }
-    let mut groups: Vec<(String, u64, u64, usize, u64)> = groups
+    let mut rows: Vec<Group> = groups
         .into_iter()
         .map(|(name, members)| {
             let below = members.iter().filter(|file| file.percent() < FILE_GOAL).count();
-            let unit_lines = unit_covered(members.iter().copied(), unit);
+            let unit = covered_by(members.iter().copied(), &alone.unit);
+            let selftest = covered_by(members.iter().copied(), &alone.selftest);
             let (covered, lines) = totals(members);
-            (name, covered, lines, below, unit_lines)
+            Group {
+                name,
+                covered,
+                lines,
+                below,
+                unit,
+                selftest,
+            }
         })
         .collect();
-    groups.sort_by(|a, b| {
-        percent(a.1, a.2)
-            .total_cmp(&percent(b.1, b.2))
-            .then_with(|| a.0.cmp(&b.0))
+    rows.sort_by(|a, b| {
+        percent(a.covered, a.lines)
+            .total_cmp(&percent(b.covered, b.lines))
+            .then_with(|| a.name.cmp(&b.name))
     });
-    let _ = writeln!(
-        text,
-        "\nby folder, lowest first\n percent  covered    lines  <{FILE_GOAL}%     unit  folder"
-    );
-    for (name, covered, lines, below, unit_lines) in &groups {
+    rows
+}
+
+/// The report's text: the summary, the crates, the folders and then every file, lowest coverage first.
+fn table(files: &[FileCoverage], alone: &Alone, run: &Run) -> String {
+    let mut text = summary(files, alone, run);
+    for (title, key) in [("crate", crate_of as fn(&str) -> String), ("folder", group)] {
         let _ = writeln!(
             text,
-            "{:>7.1}  {covered:>7}  {lines:>7}  {below:>5}  {:>7.1}  {name}",
-            percent(*covered, *lines),
-            percent(*unit_lines, *lines)
+            "\nby {title}, lowest first\n percent  covered    lines  <{FILE_GOAL}%     unit  selftest  {title}"
         );
+        for row in grouped(files, alone, key) {
+            let _ = writeln!(
+                text,
+                "{:>7.1}  {:>7}  {:>7}  {:>5}  {:>7.1}  {:>8.1}  {}",
+                percent(row.covered, row.lines),
+                row.covered,
+                row.lines,
+                row.below,
+                percent(row.unit, row.lines),
+                percent(row.selftest, row.lines),
+                row.name
+            );
+        }
     }
     let _ = writeln!(
         text,
-        "\nby file, lowest first\n percent  covered    lines     unit  file"
+        "\nby file, lowest first\n percent  covered    lines     unit  selftest  file"
     );
     for file in sorted(files) {
         let unbuilt = if file.built {
@@ -611,19 +715,21 @@ fn table(files: &[FileCoverage], unit: &Unit, run: &Run) -> String {
         };
         let _ = writeln!(
             text,
-            "{:>7.1}  {:>7}  {:>7}  {:>7.1}  {}{unbuilt}",
+            "{:>7.1}  {:>7}  {:>7}  {:>7.1}  {:>8.1}  {}{unbuilt}",
             file.percent(),
             file.covered,
             file.lines,
-            percent(unit_covered([file], unit), file.lines),
+            percent(covered_by([file], &alone.unit), file.lines),
+            percent(covered_by([file], &alone.selftest), file.lines),
             file.file
         );
     }
     text
 }
 
-/// Fails when the total or any file is below its goal, naming them.
-fn verdict(files: &[FileCoverage]) -> Result<(), String> {
+/// Fails when the total or any file is below its goal, naming them, and when `cargo test` alone covers the app crate
+/// other than `floor` says, naming the value to put in.
+fn verdict(files: &[FileCoverage], alone: &Alone, floor: f64) -> Result<(), String> {
     let (covered, lines) = totals(files);
     let mut problems = Vec::new();
     let total = percent(covered, lines);
@@ -642,10 +748,31 @@ fn verdict(files: &[FileCoverage]) -> Result<(), String> {
             below.join("\n")
         ));
     }
+    problems.extend(floor_problem(app_unit(files, alone), floor));
     if problems.is_empty() {
         Ok(())
     } else {
         Err(problems.join("\n"))
+    }
+}
+
+/// The ratchet on the app crate's coverage by `cargo test` alone, `covered` of `lines`, against `floor`, both to one
+/// decimal: below it is a regression, above it must raise it.
+fn floor_problem((covered, lines): (u64, u64), floor: f64) -> Option<String> {
+    let measured = (percent(covered, lines) * 10.0).floor() / 10.0;
+    let floor = (floor * 10.0).round() / 10.0;
+    let what = format!("cargo test alone covers {measured:.1} % of the app crate's src/ ({covered} of {lines} lines)");
+    if measured < floor {
+        Some(format!(
+            "{what}, below its floor {floor:.1} %: test the new logic with unit tests"
+        ))
+    } else if measured > floor {
+        Some(format!(
+            "{what}, above its floor {floor:.1} %: raise APP_UNIT_FLOOR in xtask/src/coverage.rs to {measured:.1}, so it \
+             cannot fall again"
+        ))
+    } else {
+        None
     }
 }
 
@@ -766,14 +893,44 @@ mod tests {
 
     #[test]
     fn the_check_names_the_files_below_their_goal_and_a_low_total() {
-        assert!(verdict(&[file("src/a.rs", 95, 100), file("src/b.rs", 10, 10)]).is_ok());
-        let failed = verdict(&[file("src/a.rs", 40, 100), file("src/b.rs", 10, 10)]).unwrap_err();
+        let none = Alone::default();
+        assert!(verdict(&[file("src/a.rs", 95, 100), file("src/b.rs", 10, 10)], &none, 0.0).is_ok());
+        let failed = verdict(&[file("src/a.rs", 40, 100), file("src/b.rs", 10, 10)], &none, 0.0).unwrap_err();
         assert!(failed.contains("the total is 45.5 %"), "{failed}");
         assert!(
             failed.contains("1 files are below 50 %") && failed.contains("40.0 %  src/a.rs"),
             "{failed}"
         );
         assert!(!failed.contains("src/b.rs"), "{failed}");
+    }
+
+    #[test]
+    fn the_app_crate_is_held_to_its_floor_of_unit_test_coverage_both_ways() {
+        let files = [file("src/a.rs", 90, 100), file("crates/ide-x/src/lib.rs", 100, 100)];
+        let alone = Alone {
+            unit: Lines::from([
+                ("src/a.rs".to_string(), 34),
+                ("crates/ide-x/src/lib.rs".to_string(), 100),
+            ]),
+            selftest: Lines::new(),
+        };
+        assert_eq!(app_unit(&files, &alone), (34, 100));
+        assert!(verdict(&files, &alone, 34.0).is_ok());
+        let below = verdict(&files, &alone, 40.0).unwrap_err();
+        assert!(
+            below.contains("covers 34.0 % of the app crate's src/ (34 of 100 lines), below its floor 40.0 %"),
+            "{below}"
+        );
+        let above = verdict(&files, &alone, 0.0).unwrap_err();
+        assert!(
+            above.contains("raise APP_UNIT_FLOOR in xtask/src/coverage.rs to 34.0"),
+            "{above}"
+        );
+        assert_eq!(
+            floor_problem((3427, 10_000), 34.2),
+            None,
+            "measured to one decimal, rounded down"
+        );
     }
 
     #[test]
@@ -788,11 +945,24 @@ mod tests {
             failed: Vec::new(),
             timings: vec![("total", Duration::from_secs(75))],
         };
-        let unit = Unit::from([("src/b.rs".to_string(), 3)]);
-        let text = table(&files, &unit, &run);
+        let alone = Alone {
+            unit: Lines::from([("src/b.rs".to_string(), 3)]),
+            selftest: Lines::from([("src/b.rs".to_string(), 9)]),
+        };
+        let text = table(&files, &alone, &run);
         assert!(text.contains("cargo test alone 10.0 % (3 of 30 lines)\n"), "{text}");
+        assert!(text.contains("self-test alone 30.0 % (9 of 30 lines)\n"), "{text}");
         assert!(
-            text.contains("   90.0        9       10     30.0  src/b.rs\n"),
+            text.contains("cargo test alone in the app crate's src/ 15.0 % (3 of 20 lines)"),
+            "{text}"
+        );
+        assert!(
+            text.contains("   90.0        9       10     30.0      90.0  src/b.rs\n"),
+            "{text}"
+        );
+        assert!(text.contains("\nby crate, lowest first\n"), "{text}");
+        assert!(
+            text.contains("   50.0       10       20      1     15.0      45.0  src\n"),
             "{text}"
         );
         let a = text.find("src/a.rs").unwrap();

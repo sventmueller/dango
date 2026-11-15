@@ -22,25 +22,25 @@ pub(super) fn texts(view: &NSView) -> Vec<String> {
 }
 
 /// The registry window and the ids it lists, for the self-test.
-pub fn register_window() -> Option<(Retained<NSPanel>, Vec<String>)> {
+pub(crate) fn register_window() -> Option<(Retained<NSPanel>, Vec<String>)> {
     let panel = with_window(|w| w.borrow().clone())?;
     let ids = with_shown(|s| s.borrow().clone());
     Some((panel, ids))
 }
 
 /// Opens the registry window as its button does, for the self-test.
-pub fn open_register(target: &AgentsSettings) {
+pub(crate) fn open_register(target: &AgentsSettings) {
     show_register(target);
 }
 
 impl AgentsSettings {
     /// The list of Claude's stored rules, for the self-test.
-    pub fn stored_rules(&self) -> Retained<super::super::stored_rules::StoredRules> {
+    pub(crate) fn stored_rules(&self) -> Retained<super::super::stored_rules::StoredRules> {
         self.ivars().rules.clone()
     }
 
     /// What the tab shows, line by line, for the self-test.
-    pub fn lines(&self) -> Vec<String> {
+    pub(crate) fn lines(&self) -> Vec<String> {
         let groups = [self.ivars().agents.get(), self.ivars().register.get()];
         groups
             .into_iter()

@@ -37,17 +37,17 @@ const OPEN_WINDOWS: ide_core::settings::StateKey<Vec<WindowRecord>> =
 /// What a window shows, as the next launch puts it back.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct WindowRecord {
-    pub project: Option<PathBuf>,
-    pub tabs: Vec<TabRecord>,
+pub(crate) struct WindowRecord {
+    pub(crate) project: Option<PathBuf>,
+    pub(crate) tabs: Vec<TabRecord>,
     /// The tab in front, as an index into `tabs`.
-    pub selected: Option<usize>,
+    pub(crate) selected: Option<usize>,
 }
 
 /// A tab that comes back at the next launch.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
-pub enum TabRecord {
+pub(crate) enum TabRecord {
     Welcome,
     /// An editor: its file, if it has one, and the name of its copy against a crash, which exists while its text is
     /// unsaved.
@@ -59,7 +59,7 @@ pub enum TabRecord {
 
 /// Where writing down the record stands.
 #[derive(Default)]
-pub struct Saving {
+pub(crate) struct Saving {
     write_pending: Cell<bool>,
     quitting: Cell<bool>,
     /// Writes of the record and the layouts queued on the disk lane that have not ended yet.
@@ -67,17 +67,17 @@ pub struct Saving {
 }
 
 /// The app quits: what it wrote down last stays, as the terminals and agents that end now change their tabs.
-pub fn quitting() {
+pub(crate) fn quitting() {
     app().session().quitting.set(true);
 }
 
 /// Whether the app quits, after which nothing more is written down.
-pub fn is_quitting() -> bool {
+pub(crate) fn is_quitting() -> bool {
     app().session().quitting.get()
 }
 
 /// The windows or their tabs changed; the record follows a moment later.
-pub fn changed() {
+pub(crate) fn changed() {
     let cx = app();
     if cx.session().quitting.get() || cx.session().write_pending.replace(true) {
         return;
@@ -90,7 +90,7 @@ pub fn changed() {
 }
 
 /// Writes down what the windows show now, and each folder's panels.
-pub fn remember(cx: &crate::context::AppContext) {
+pub(crate) fn remember(cx: &crate::context::AppContext) {
     if cx.session().quitting.get() {
         return;
     }
@@ -104,7 +104,7 @@ pub fn remember(cx: &crate::context::AppContext) {
 impl Saving {
     /// Runs `write` on the disk lane after the writes queued before it, or here when the lane is full; a failure is
     /// reported as `what`.
-    pub fn write_soon(&self, what: &'static str, write: impl FnOnce() -> std::io::Result<()> + Send + 'static) {
+    pub(crate) fn write_soon(&self, what: &'static str, write: impl FnOnce() -> std::io::Result<()> + Send + 'static) {
         let job = Arc::new(Mutex::new(Some(write)));
         let queued = job.clone();
         self.writing.fetch_add(1, Ordering::SeqCst);
@@ -125,7 +125,7 @@ impl Saving {
     }
 
     /// Waits until the record and the layouts queued so far are on disk, as the app quits or a window closes.
-    pub fn wait_for_writes(&self) {
+    pub(crate) fn wait_for_writes(&self) {
         let until = Instant::now() + WRITE_LIMIT;
         while self.writing.load(Ordering::SeqCst) > 0 && Instant::now() < until {
             std::thread::sleep(Duration::from_millis(2));
@@ -143,7 +143,7 @@ fn written(what: &str, result: Option<std::io::Result<()>>) {
 
 /// Opens the windows of the last run with their tabs if the user wants them back, and in any case every document a
 /// crash left unsaved, each window with a note of how many came back; how many windows opened.
-pub fn restore(mtm: MainThreadMarker) -> usize {
+pub(crate) fn restore(mtm: MainThreadMarker) -> usize {
     let recovery = Recovery::in_data_dir();
     set_aside_damaged(&recovery);
     let pending = recovery.pending().unwrap_or_else(|error| {
@@ -515,4 +515,4 @@ mod tests {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

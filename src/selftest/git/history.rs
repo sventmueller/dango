@@ -10,7 +10,7 @@ use objc2::sel;
 use objc2_app_kit::{NSAlertFirstButtonReturn, NSPasteboard};
 
 use super::{SCENARIO, answer_sheet, fixture_git, in_background, wait_for, window_of, write};
-use crate::selftest::{check, finish};
+use crate::selftest::{check, give_up};
 use crate::window::WindowController;
 use ide_ui_git::selftest::{self as panel, HISTORY_PAGE};
 
@@ -27,7 +27,11 @@ fn root_commit() -> String {
     ROOT_COMMIT.lock_ignoring_poison().clone()
 }
 
-pub fn start(root: PathBuf) {
+fn root_id() -> Option<ide_git::CommitId> {
+    ide_git::CommitId::parse(&root_commit())
+}
+
+pub(crate) fn start(root: PathBuf) {
     in_background(root, stage_one, |root| wait_for(root, |c| staged(c, true), take_back));
 }
 
@@ -47,7 +51,7 @@ fn staged(controller: &WindowController, staged: bool) -> bool {
 
 fn take_back(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check("a staged file is listed as staged", ok, "");
     panel::staged_file_action(&controller, Path::new(TAKEN_BACK), sel!(ideGitUnstage:));
@@ -82,7 +86,7 @@ fn add_commits(root: &Path) -> Result<(), String> {
         .map_err(|e| e.to_string())?
         .into_iter()
         .find(|c| c.subject == OLDEST)
-        .map(|c| c.hash)
+        .map(|c| c.hash.to_string())
         .ok_or("no first commit")?;
     *ROOT_COMMIT.lock_ignoring_poison() = hash;
     Ok(())
@@ -90,7 +94,7 @@ fn add_commits(root: &Path) -> Result<(), String> {
 
 fn paged(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let commits = panel::seen(&controller).map_or(0, |s| s.commits);
     check(
@@ -98,17 +102,20 @@ fn paged(root: PathBuf, ok: bool) {
         ok,
         format!("{commits} commits"),
     );
-    ide_ui_git::reveal_commit(&controller, &root_commit());
+    let Some(hash) = root_id() else {
+        return give_up(SCENARIO, "the oldest commit is known");
+    };
+    ide_ui_git::reveal_commit(&controller, &hash);
     wait_for(
         root,
-        |c| ide_ui_git::selected_commit(c).is_some_and(|hash| hash == root_commit()),
+        |c| ide_ui_git::selected_commit(c).is_some_and(|hash| hash.as_str() == root_commit()),
         revealed,
     );
 }
 
 fn revealed(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let commits = panel::seen(&controller).map_or(0, |s| s.commits);
     check(
@@ -119,7 +126,9 @@ fn revealed(root: PathBuf, ok: bool) {
             ide_ui_git::selected_commit(&controller)
         ),
     );
-    let hash = root_commit();
+    let Some(hash) = root_id() else {
+        return give_up(SCENARIO, "the oldest commit is known");
+    };
     panel::commit_action(&controller, &hash, sel!(ideGitCopyHash:));
     let hash_copied = pasted();
     panel::commit_action(&controller, &hash, sel!(ideGitCopyMessage:));
@@ -141,8 +150,11 @@ fn pasted() -> Option<String> {
 
 fn name_branch(root: PathBuf, ok: bool) {
     check("a branch at a commit asks for its name", ok, "");
-    if !ok || !answer_sheet(&root, NSAlertFirstButtonReturn, Some(BRANCH)) {
-        return finish(SCENARIO);
+    if !ok {
+        return give_up(SCENARIO, "a branch at a commit asks for its name");
+    }
+    if !answer_sheet(&root, NSAlertFirstButtonReturn, Some(BRANCH)) {
+        return give_up(SCENARIO, "the sheet is there to answer");
     }
     wait_for(
         root,

@@ -24,14 +24,14 @@ const EXTENSIONS: &[&str] = &[
     "ppt", "pptx", "pages", "numbers",
 ];
 
-pub fn is_quick_look(path: &Path) -> bool {
+pub(crate) fn is_quick_look(path: &Path) -> bool {
     path.extension()
         .and_then(|e| e.to_str())
         .is_some_and(|e| EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()))
 }
 
 /// A `QLPreviewView` showing the file; `None` when Quick Look is missing.
-pub fn view(_mtm: MainThreadMarker, path: &Path, name: &str) -> Option<Retained<NSView>> {
+pub(crate) fn view(_mtm: MainThreadMarker, path: &Path, name: &str) -> Option<Retained<NSView>> {
     let class = AnyClass::get(c"QLPreviewView")?;
     let url = NSURL::fileURLWithPath(&ns(&path.to_string_lossy()));
     let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(600.0, 400.0));
@@ -53,4 +53,4 @@ pub fn view(_mtm: MainThreadMarker, path: &Path, name: &str) -> Option<Retained<
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

@@ -18,9 +18,9 @@ use objc2_foundation::{NSEdgeInsets, NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
 use super::diff::DiffTab;
-use ide_ui_common::util::{label, ns, set_action};
+use ide_ui_common::util::{center_in, label, ns, pin_sides, set_action};
 
-pub const HUNK_HEIGHT: f64 = 30.0;
+pub(crate) const HUNK_HEIGHT: f64 = 30.0;
 const NUMBER_WIDTH: f64 = 46.0;
 const MARK_WIDTH: f64 = 14.0;
 /// Longer lines are cut on screen, so a minified file does not make one row as wide as a city.
@@ -29,13 +29,13 @@ const TAB_WIDTH: usize = 4;
 
 /// A row of the table.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Row {
+pub(crate) enum Row {
     Hunk(usize),
     Line(usize, usize),
 }
 
 /// The rows of `diff`: each hunk's header, then its lines.
-pub fn rows(diff: &FileDiff) -> Vec<Row> {
+pub(crate) fn rows(diff: &FileDiff) -> Vec<Row> {
     let mut rows = vec![];
     for (h, hunk) in diff.hunks.iter().enumerate() {
         rows.push(Row::Hunk(h));
@@ -45,7 +45,7 @@ pub fn rows(diff: &FileDiff) -> Vec<Row> {
 }
 
 /// What the tab says instead of lines, when there are none to show.
-pub fn notice(diff: Option<&FileDiff>, staged: bool) -> Option<&'static str> {
+pub(crate) fn notice(diff: Option<&FileDiff>, staged: bool) -> Option<&'static str> {
     let Some(diff) = diff else {
         return Some(if staged {
             t("Von dieser Datei ist nichts mehr vorgemerkt.")
@@ -65,7 +65,7 @@ pub fn notice(diff: Option<&FileDiff>, staged: bool) -> Option<&'static str> {
 }
 
 /// The background of an added or removed line; the marker column says the same in a sign.
-pub fn background(kind: LineKind) -> Option<Retained<NSColor>> {
+pub(crate) fn background(kind: LineKind) -> Option<Retained<NSColor>> {
     let strong = NSWorkspace::sharedWorkspace().accessibilityDisplayShouldIncreaseContrast();
     let alpha = if strong { 0.32 } else { 0.16 };
     match kind {
@@ -75,7 +75,7 @@ pub fn background(kind: LineKind) -> Option<Retained<NSColor>> {
     }
 }
 
-pub fn marker(kind: LineKind) -> &'static str {
+pub(crate) fn marker(kind: LineKind) -> &'static str {
     match kind {
         LineKind::Added => "+",
         LineKind::Removed => "−",
@@ -83,7 +83,7 @@ pub fn marker(kind: LineKind) -> &'static str {
     }
 }
 
-pub fn hunk_title(hunk: &Hunk) -> String {
+pub(crate) fn hunk_title(hunk: &Hunk) -> String {
     let mut title = format!(
         "@@ -{},{} +{},{} @@",
         hunk.old_start, hunk.old_count, hunk.new_start, hunk.new_count
@@ -114,8 +114,8 @@ fn shown(line: &Line) -> String {
     out
 }
 
-pub struct Ui {
-    pub table: Retained<NSTableView>,
+pub(crate) struct Ui {
+    pub(crate) table: Retained<NSTableView>,
     text_column: Retained<NSTableColumn>,
     notice: Retained<NSTextField>,
     message: Retained<NSTextField>,
@@ -124,10 +124,9 @@ pub struct Ui {
 }
 
 impl Ui {
-    pub fn new(mtm: MainThreadMarker, tab: &DiffTab, path: &Path, side: &str) -> Ui {
+    pub(crate) fn new(mtm: MainThreadMarker, tab: &DiffTab, path: &Path, side: &str) -> Ui {
         let size = ide_core::settings::Settings::load_user().get(&ide_core::settings::keys::FONT_SIZE);
-        // SAFETY: AppKit sets its font weight constants when it loads.
-        let regular = unsafe { objc2_app_kit::NSFontWeightRegular };
+        let regular = ide_ui_common::constant!(objc2_app_kit::NSFontWeightRegular);
         let font = NSFont::monospacedSystemFontOfSize_weight(size, regular);
         let number_font = NSFont::monospacedDigitSystemFontOfSize_weight((size - 1.0).max(9.0), regular);
         let header = header(mtm, tab, path, side);
@@ -159,26 +158,13 @@ impl Ui {
             (&scroll, 0.0),
         ] {
             stack.addArrangedSubview(view);
-            view.leadingAnchor()
-                .constraintEqualToAnchor_constant(&stack.leadingAnchor(), inset)
-                .setActive(true);
-            view.trailingAnchor()
-                .constraintEqualToAnchor_constant(&stack.trailingAnchor(), -inset)
-                .setActive(true);
+            pin_sides(view, &stack, inset);
         }
         scroll.setContentHuggingPriority_forOrientation(1.0, objc2_app_kit::NSLayoutConstraintOrientation::Vertical);
         tab.addSubview(&stack);
         ide_ui_common::util::pin_edges(&stack, tab);
         tab.addSubview(&notice);
-        notice.setTranslatesAutoresizingMaskIntoConstraints(false);
-        notice
-            .centerXAnchor()
-            .constraintEqualToAnchor(&scroll.centerXAnchor())
-            .setActive(true);
-        notice
-            .centerYAnchor()
-            .constraintEqualToAnchor(&scroll.centerYAnchor())
-            .setActive(true);
+        center_in(&notice, &scroll);
         Ui {
             table,
             text_column,
@@ -189,22 +175,22 @@ impl Ui {
         }
     }
 
-    pub fn line_height(&self) -> f64 {
+    pub(crate) fn line_height(&self) -> f64 {
         (self.font.ascender() - self.font.descender() + self.font.leading()).ceil() + 3.0
     }
 
-    pub fn show_message(&self, message: Option<&str>) {
+    pub(crate) fn show_message(&self, message: Option<&str>) {
         self.message.setStringValue(&ns(message.unwrap_or("")));
         self.message.setHidden(message.is_none());
     }
 
-    pub fn show_notice(&self, notice: Option<&str>) {
+    pub(crate) fn show_notice(&self, notice: Option<&str>) {
         self.notice.setStringValue(&ns(notice.unwrap_or("")));
         self.notice.setHidden(notice.is_none());
     }
 
     /// Makes the text column as wide as the longest line, so long lines scroll sideways instead of being cut.
-    pub fn fit_text_column(&self, diff: Option<&FileDiff>) {
+    pub(crate) fn fit_text_column(&self, diff: Option<&FileDiff>) {
         let longest = diff
             .into_iter()
             .flat_map(|d| d.hunks.iter())
@@ -221,7 +207,7 @@ impl Ui {
     }
 
     /// The cell of `column` for `line`, reusing one the table keeps.
-    pub fn line_cell(&self, table: &NSTableView, column: &str, line: &Line) -> Retained<NSView> {
+    pub(crate) fn line_cell(&self, table: &NSTableView, column: &str, line: &Line) -> Retained<NSView> {
         let mtm = table.mtm();
         // SAFETY: The identifier names cells this function made, which are plain labels; no owner is involved.
         let reused = unsafe { table.makeViewWithIdentifier_owner(&ns(column), None) };
@@ -354,7 +340,13 @@ fn table(
 }
 
 /// The header row of the hunk at `index`, with its buttons first, so they stay in view when long lines scroll.
-pub fn hunk_header(tab: &DiffTab, diff: &FileDiff, index: usize, staged: bool, read_only: bool) -> Retained<NSView> {
+pub(crate) fn hunk_header(
+    tab: &DiffTab,
+    diff: &FileDiff,
+    index: usize,
+    staged: bool,
+    read_only: bool,
+) -> Retained<NSView> {
     let mtm = tab.mtm();
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
@@ -400,8 +392,7 @@ pub fn hunk_header(tab: &DiffTab, diff: &FileDiff, index: usize, staged: bool, r
     let title = label(mtm, &hunk_title(hunk));
     title.setFont(Some(&NSFont::monospacedSystemFontOfSize_weight(
         NSFont::smallSystemFontSize(),
-        // SAFETY: AppKit sets its font weight constants when it loads.
-        unsafe { objc2_app_kit::NSFontWeightRegular },
+        ide_ui_common::constant!(objc2_app_kit::NSFontWeightRegular),
     )));
     title.setTextColor(Some(&NSColor::secondaryLabelColor()));
     let spoken = tf(

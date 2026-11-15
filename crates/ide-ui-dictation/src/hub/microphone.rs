@@ -11,7 +11,7 @@ use objc2_av_foundation::{AVAuthorizationStatus, AVCaptureDevice, AVMediaTypeAud
 use ide_ui_common::util::{guarded, main_soon};
 
 /// Whether macOS has an answer about the microphone yet.
-pub fn undecided() -> bool {
+pub(super) fn undecided() -> bool {
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
         return false;
@@ -20,7 +20,7 @@ pub fn undecided() -> bool {
 }
 
 /// Whether macOS itself has no answer about the microphone yet, whatever the self-test plays.
-pub fn macos_undecided() -> bool {
+pub(super) fn macos_undecided() -> bool {
     // SAFETY: AVMediaTypeAudio is an immutable constant that AVFoundation sets when it loads.
     let Some(audio) = (unsafe { AVMediaTypeAudio }) else {
         return false;
@@ -31,7 +31,7 @@ pub fn macos_undecided() -> bool {
 }
 
 /// Shows macOS's question; `answered` runs on the main thread with whether the user allowed it.
-pub fn ask(answered: impl FnOnce(bool) + Send + 'static) {
+pub(super) fn ask(answered: impl FnOnce(bool) + Send + 'static) {
     // SAFETY: AVMediaTypeAudio is an immutable constant that AVFoundation sets when it loads.
     let Some(audio) = (unsafe { AVMediaTypeAudio }) else {
         return answered(false);
@@ -44,7 +44,7 @@ pub fn ask(answered: impl FnOnce(bool) + Send + 'static) {
 }
 
 /// `answered` as the handler AVFoundation calls on a queue of its own: the answer reaches the main thread, once.
-pub fn once_on_main(answered: impl FnOnce(bool) + Send + 'static) -> impl Fn(Bool) + Send + Sync + 'static {
+pub(super) fn once_on_main(answered: impl FnOnce(bool) + Send + 'static) -> impl Fn(Bool) + Send + Sync + 'static {
     let answered = Mutex::new(Some(answered));
     move |granted: Bool| {
         let answered = answered.lock_ignoring_poison().take();

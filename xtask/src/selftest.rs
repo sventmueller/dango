@@ -101,10 +101,23 @@ const TEXTKIT_ASSERTION: &str = "Make a symbolic breakpoint at NSText";
 #[derive(Debug, Deserialize)]
 pub(crate) struct Report {
     pub(crate) scenario: String,
+    pub(crate) ending: Ending,
     pub(crate) checks: Vec<Check>,
     /// `light` or `dark`, which the window pictures were taken in.
     #[serde(default)]
     pub(crate) appearance: Option<String>,
+}
+
+/// How a scenario ended, as `finish`, `skip` and `give_up` in `src/selftest.rs` tell.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum Ending {
+    /// It ran to its end.
+    Ran,
+    /// It ended before its end on purpose, for the reason given.
+    Skipped(String),
+    /// It ended before its end because something it needed was missing, which a failed check names.
+    GaveUp(String),
 }
 
 /// One thing a scenario checked.
@@ -302,6 +315,9 @@ fn judge(ended: Ended, expected: Ended, report: &Path, scenario: &str) -> Vec<St
         for check in &report.checks {
             println!("  {}", check_line(check));
         }
+        if let Ending::Skipped(why) = &report.ending {
+            println!("  skipped the rest: {why}");
+        }
     }
     problems(ended, expected, &report)
 }
@@ -331,8 +347,8 @@ fn wait_within_limit(child: &mut Child, limit: Duration) -> std::io::Result<Ende
     }
 }
 
-/// The report of `scenario` from what the app wrote, if it wrote anything. A report without checks is refused, since
-/// it would pass a run that checked nothing.
+/// The report of `scenario` from what the app wrote, if it wrote anything. A report without checks or without how
+/// the scenario ended is refused, since it would pass a run that checked nothing or stopped halfway.
 pub(crate) fn parse_report(scenario: &str, written: Option<&[u8]>) -> Result<Report, String> {
     let written = written.ok_or("the app wrote no report")?;
     let report: Report = serde_json::from_slice(written).map_err(|e| format!("the report is unreadable: {e}"))?;
@@ -346,7 +362,7 @@ pub(crate) fn parse_report(scenario: &str, written: Option<&[u8]>) -> Result<Rep
 }
 
 /// What failed in a run; none when the app ended by itself as `expected`, with status 0 or by the signal of a crash
-/// it made itself, and every reported check held.
+/// it made itself, the scenario did not give up, and every reported check held.
 pub(crate) fn problems(ended: Ended, expected: Ended, report: &Result<Report, String>) -> Vec<String> {
     let mut problems = Vec::new();
     if ended != expected {
@@ -365,6 +381,9 @@ pub(crate) fn problems(ended: Ended, expected: Ended, report: &Result<Report, St
     }
     match report {
         Ok(report) => {
+            if let Ending::GaveUp(why) = &report.ending {
+                problems.push(format!("the scenario gave up before its end: {why}"));
+            }
             let failed = report.checks.iter().filter(|check| !check.ok).count();
             if failed > 0 {
                 problems.push(format!("{failed} of {} checks failed", report.checks.len()));
@@ -388,12 +407,12 @@ pub(crate) fn check_line(check: &Check) -> String {
 mod tests {
     use super::*;
 
-    const PASSING: &str = r#"{"scenario": "probe", "checks": [
+    const PASSING: &str = r#"{"scenario": "probe", "ending": "ran", "checks": [
         {"name": "window opens", "ok": true, "detail": "1 window"},
         {"name": "settings load", "ok": true, "detail": ""}
     ]}"#;
 
-    const FAILING: &str = r#"{"scenario": "probe", "checks": [
+    const FAILING: &str = r#"{"scenario": "probe", "ending": "ran", "checks": [
         {"name": "window opens", "ok": true, "detail": "1 window"},
         {"name": "settings load", "ok": false, "detail": "missing key"}
     ]}"#;
@@ -431,9 +450,9 @@ mod tests {
         for written in [
             "",
             "{\"scenario\": \"probe\", \"checks\": [",
-            r#"{"scenario": "probe"}"#,
-            r#"{"scenario": "probe", "checks": [{"name": "x", "ok": "yes", "detail": ""}]}"#,
-            r#"{"scenario": "probe", "checks": [{"name": "x", "ok": true}]}"#,
+            r#"{"scenario": "probe", "ending": "ran"}"#,
+            r#"{"scenario": "probe", "ending": "ran", "checks": [{"name": "x", "ok": "yes", "detail": ""}]}"#,
+            r#"{"scenario": "probe", "ending": "ran", "checks": [{"name": "x", "ok": true}]}"#,
         ] {
             let problems = judged(Ended::Exited(0), Some(written));
             assert_eq!(problems.len(), 1, "{written}");
@@ -449,8 +468,67 @@ mod tests {
             ["the report is of scenario \"editor\""]
         );
         assert_eq!(
-            judged(Ended::Exited(0), Some(r#"{"scenario": "probe", "checks": []}"#)),
+            judged(
+                Ended::Exited(0),
+                Some(r#"{"scenario": "probe", "ending": "ran", "checks": []}"#)
+            ),
             ["the report lists no checks"]
+        );
+    }
+
+    #[test]
+    fn a_report_that_does_not_say_how_the_scenario_ended_fails_the_run() {
+        for written in [
+            r#"{"scenario": "probe", "checks": [{"name": "x", "ok": true, "detail": ""}]}"#,
+            r#"{"scenario": "probe", "ending": "stopped", "checks": [{"name": "x", "ok": true, "detail": ""}]}"#,
+            r#"{"scenario": "probe", "ending": {"gave_up": 3}, "checks": [{"name": "x", "ok": true, "detail": ""}]}"#,
+        ] {
+            let problems = judged(Ended::Exited(0), Some(written));
+            assert_eq!(problems.len(), 1, "{written}");
+            assert!(problems[0].starts_with("the report is unreadable: "), "{written}");
+        }
+    }
+
+    #[test]
+    fn a_scenario_that_gave_up_fails_even_with_every_check_held() {
+        let gave_up = r#"{"scenario": "probe", "ending": {"gave_up": "pairs.rs opens in an editor (gave up at src/selftest/editor_commands.rs:129)"},
+            "checks": [{"name": "window opens", "ok": true, "detail": "1 window"}]}"#;
+        assert_eq!(
+            judged(Ended::Exited(0), Some(gave_up)),
+            [
+                "the scenario gave up before its end: pairs.rs opens in an editor (gave up at \
+              src/selftest/editor_commands.rs:129)"
+            ]
+        );
+        let with_its_check = r#"{"scenario": "probe", "ending": {"gave_up": "pairs.rs opens in an editor"}, "checks": [
+            {"name": "window opens", "ok": true, "detail": "1 window"},
+            {"name": "pairs.rs opens in an editor", "ok": false, "detail": "gave up at src/selftest/editor_commands.rs:129"}
+        ]}"#;
+        assert_eq!(
+            judged(Ended::Exited(0), Some(with_its_check)),
+            [
+                "the scenario gave up before its end: pairs.rs opens in an editor",
+                "1 of 2 checks failed"
+            ]
+        );
+        let crashed = parse_report("probe", Some(gave_up.as_bytes()));
+        assert_eq!(
+            problems(Ended::Signalled(SIGKILL), Ended::Signalled(SIGKILL), &crashed).len(),
+            1
+        );
+    }
+
+    #[test]
+    fn a_scenario_that_skipped_its_rest_on_purpose_passes() {
+        let skipped = r#"{"scenario": "probe", "ending": {"skipped": "rust-analyzer missing"}, "checks": [
+            {"name": "rust-analyzer is there", "ok": true, "detail": "skipped: rust-analyzer missing"}
+        ]}"#;
+        assert!(judged(Ended::Exited(0), Some(skipped)).is_empty());
+        let report = parse_report("probe", Some(skipped.as_bytes())).unwrap();
+        assert_eq!(report.ending, Ending::Skipped("rust-analyzer missing".into()));
+        assert_eq!(
+            parse_report("probe", Some(PASSING.as_bytes())).unwrap().ending,
+            Ending::Ran
         );
     }
 

@@ -27,7 +27,7 @@ pub enum AdapterKind {
 impl AdapterKind {
     /// The adapter for a `type` of `.vscode/launch.json`, including the names other editors' adapters use for the
     /// same languages.
-    pub fn from_type(kind: &str) -> Option<AdapterKind> {
+    pub(crate) fn from_type(kind: &str) -> Option<AdapterKind> {
         match kind {
             "lldb" | "lldb-dap" | "lldb-vscode" | "cppdbg" | "swift" | "rust" => Some(AdapterKind::Lldb),
             "go" | "dlv" | "delve" => Some(AdapterKind::Go),
@@ -51,7 +51,8 @@ impl AdapterKind {
     }
 
     /// What the user reads, such as in the session list and the activity view.
-    pub fn label(self) -> &'static str {
+    #[cfg(test)]
+    pub(crate) fn label(self) -> &'static str {
         match self {
             AdapterKind::Lldb => "lldb-dap",
             AdapterKind::Go => "Delve",
@@ -63,7 +64,7 @@ impl AdapterKind {
     }
 
     /// The `adapterID` sent with `initialize`, and the `type` a launch configuration of this adapter gets.
-    pub fn adapter_id(self) -> &'static str {
+    pub(crate) fn adapter_id(self) -> &'static str {
         match self {
             AdapterKind::Lldb => "lldb-dap",
             AdapterKind::Go => "go",
@@ -94,10 +95,9 @@ pub(crate) enum Transport {
 
 /// A debug adapter ready to start: what `Adapters::find` returns, or one built for tests.
 pub struct Adapter {
-    /// Which adapter it is.
-    pub kind: AdapterKind,
+    pub(crate) kind: AdapterKind,
     /// What the activity view shows, such as `lldb-dap`.
-    pub label: String,
+    pub(crate) label: String,
     pub(crate) transport: Transport,
     pub(crate) record: Option<PathBuf>,
 }
@@ -127,7 +127,7 @@ impl Adapter {
 
     /// An adapter process that listens on `port` of the loopback interface, as `dlv dap` and js-debug do; `args`
     /// already name the port.
-    pub fn listening(
+    pub(crate) fn listening(
         kind: AdapterKind,
         program: &Path,
         args: &[String],
@@ -143,7 +143,7 @@ impl Adapter {
     }
 
     /// An adapter at the other end of two streams, such as a recording played back.
-    pub fn streams(
+    pub(crate) fn streams(
         kind: AdapterKind,
         label: &str,
         from_adapter: impl Read + Send + 'static,
@@ -182,7 +182,7 @@ impl Adapter {
     }
 
     /// The adapter's program, if it is a process.
-    pub fn program(&self) -> Option<&Path> {
+    pub(crate) fn program(&self) -> Option<&Path> {
         match &self.transport {
             Transport::Process { program, .. } => Some(program),
             _ => None,
@@ -190,7 +190,7 @@ impl Adapter {
     }
 
     /// The adapter's arguments, if it is a process.
-    pub fn args(&self) -> &[String] {
+    pub(crate) fn args(&self) -> &[String] {
         match &self.transport {
             Transport::Process { args, .. } => args,
             _ => &[],

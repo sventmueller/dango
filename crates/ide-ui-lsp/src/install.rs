@@ -34,7 +34,7 @@ pub(crate) fn server_status(view: &dyn Editor) -> (String, status::Action) {
 }
 
 /// The second servers the user declined to install, by name, which the status bar no longer offers.
-pub const DECLINED: ide_core::settings::Key<Vec<String>> =
+pub(crate) const DECLINED: ide_core::settings::Key<Vec<String>> =
     ide_core::settings::Key::user("companionsDeclined", ide_core::settings::Sharing::PerMac, Vec::new);
 
 /// The slot whose state the status bar of `view` shows: a second server that wants attention, such as one missing,
@@ -149,17 +149,17 @@ pub fn status_action(view: &dyn Editor) {
 
 /// Asks once for the app whether to install the second server `language`: install, never ask again, or not now.
 fn ask_companion(view: &dyn Editor, language: &ide_lsp::Language) -> bool {
-    use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn};
-    let alert = NSAlert::new(crate::editor::marker(view));
-    alert.setMessageText(&ide_ui_common::util::ns(&tf("{} installieren?", &[language.name()])));
-    alert.setInformativeText(&ide_ui_common::util::ns(&tf(
-        "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte.",
-        &[language.name()],
-    )));
-    alert.addButtonWithTitle(&ide_ui_common::util::ns(t("Installieren")));
-    alert.addButtonWithTitle(&ide_ui_common::util::ns(t("Nicht mehr fragen")));
-    alert.addButtonWithTitle(&ide_ui_common::util::ns(t("Abbrechen")));
-    let answer = alert.runModal();
+    use ide_ui_common::alert::{Alert, Role};
+    use objc2_app_kit::{NSAlertFirstButtonReturn, NSAlertSecondButtonReturn};
+    let answer = Alert::new(crate::editor::marker(view), &tf("{} installieren?", &[language.name()]))
+        .informative(&tf(
+            "{} läuft neben dem Sprachserver der Datei und gilt danach für alle Projekte.",
+            &[language.name()],
+        ))
+        .button(t("Installieren"), Role::Plain)
+        .button(t("Nicht mehr fragen"), Role::Plain)
+        .button(t("Abbrechen"), Role::Plain)
+        .run_modal();
     if answer == NSAlertSecondButtonReturn {
         let mut settings = ide_core::settings::Settings::load_user();
         let mut declined = settings.get(&DECLINED);

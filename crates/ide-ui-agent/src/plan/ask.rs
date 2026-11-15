@@ -17,12 +17,12 @@ use ide_ui_common::util::{ns, set_action};
 const WIDTH: f64 = 300.0;
 
 /// What the user wrote into the popover.
-pub struct Asked {
+pub(super) struct Asked {
     /// The comment changed, or `None` for a new one.
-    pub note: Option<u64>,
-    pub location: usize,
-    pub quote: String,
-    pub comment: String,
+    pub(crate) note: Option<u64>,
+    pub(crate) location: usize,
+    pub(crate) quote: String,
+    pub(crate) comment: String,
 }
 
 struct Ask {
@@ -37,7 +37,7 @@ struct Ask {
 
 /// The question about a plan on view.
 #[derive(Default)]
-pub struct PlanAsk {
+pub(super) struct PlanAsk {
     ask: RefCell<Option<Ask>>,
 }
 
@@ -47,7 +47,7 @@ fn with_ask<R>(f: impl FnOnce(&RefCell<Option<Ask>>) -> R) -> R {
 
 /// Shows the popover at `rect` of `anchor` for comment `note` of plan `entry`, or a new one, on the passage `quote`
 /// at `location`; the field starts with `current`.
-pub fn open(
+pub(super) fn open(
     tab: &AgentTab,
     entry: u64,
     note: Option<u64>,
@@ -111,7 +111,7 @@ pub fn open(
 }
 
 /// Closes the popover of plan `entry` in the AI tab `agent` and hands over what it holds.
-pub fn take(agent: AgentKey, entry: u64) -> Option<Asked> {
+pub(super) fn take(agent: AgentKey, entry: u64) -> Option<Asked> {
     let ask = with_ask(|a| {
         let mut a = a.borrow_mut();
         if a.as_ref().is_some_and(|ask| ask.agent == agent && ask.entry == entry) {
@@ -129,7 +129,7 @@ pub fn take(agent: AgentKey, entry: u64) -> Option<Asked> {
     })
 }
 
-pub fn close() {
+pub(crate) fn close() {
     if let Some(ask) = with_ask(|a| a.borrow_mut().take()) {
         ask.popover.close();
     }

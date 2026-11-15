@@ -6,13 +6,13 @@ use ide_thread::{AgentMessage, EntryKind, Lane, Thought, Update};
 
 use super::context::context_used;
 use super::{Mapper, Slot, Stream, Streamed, lane, put};
-use crate::protocol::{ApiUsage, Block, Delta, RawEvent, StreamEvent};
+use crate::protocol::{ApiUsage, BlockDelta, ContentBlock, Event, StreamEvent};
 
 impl Mapper {
     pub(super) fn stream(&mut self, e: &StreamEvent, now: SystemTime) -> Vec<Update> {
         let lane = lane(e.parent_tool_use_id.as_ref());
         match &e.event {
-            RawEvent::MessageStart { message } => {
+            Event::MessageStart { message } => {
                 let input = message.usage.as_ref().map_or(0, ApiUsage::context_input);
                 self.streams.insert(
                     lane.clone(),
@@ -26,11 +26,11 @@ impl Mapper {
                 }
                 Vec::new()
             }
-            RawEvent::ContentBlockStart { index, content_block } => self.block_start(&lane, *index, content_block, now),
-            RawEvent::ContentBlockDelta { index, delta } => {
+            Event::ContentBlockStart { index, content_block } => self.block_start(&lane, *index, content_block, now),
+            Event::ContentBlockDelta { index, delta } => {
                 let text = match delta {
-                    Delta::TextDelta { text } => text,
-                    Delta::ThinkingDelta { thinking } => thinking,
+                    BlockDelta::TextDelta { text } => text,
+                    BlockDelta::ThinkingDelta { thinking } => thinking,
                     _ => return Vec::new(),
                 };
                 let Some(stream) = self.streams.get(&lane) else {
@@ -41,7 +41,7 @@ impl Mapper {
                     text: text.clone(),
                 }]
             }
-            RawEvent::ContentBlockStop { index } => {
+            Event::ContentBlockStop { index } => {
                 let Some(stream) = self.streams.get(&lane) else {
                     return Vec::new();
                 };
@@ -56,7 +56,7 @@ impl Mapper {
                     at: now,
                 }]
             }
-            RawEvent::MessageDelta { usage: Some(usage) } if lane == Lane::Main => {
+            Event::MessageDelta { usage: Some(usage), .. } if lane == Lane::Main => {
                 let input = self.streams.get(&lane).map_or(0, |s| s.input_tokens);
                 vec![context_used(input + usage.output_tokens.unwrap_or(0))]
             }
@@ -64,20 +64,20 @@ impl Mapper {
         }
     }
 
-    fn block_start(&mut self, lane: &Lane, index: usize, block: &Block, now: SystemTime) -> Vec<Update> {
+    fn block_start(&mut self, lane: &Lane, index: usize, block: &ContentBlock, now: SystemTime) -> Vec<Update> {
         let Some(message) = self.streams.get(lane).map(|s| s.message.clone()) else {
             return Vec::new();
         };
         let key = format!("{message}:{index}");
         let (slot, entry) = match block {
-            Block::Text { .. } => (
+            ContentBlock::Text { .. } => (
                 Slot::Text,
                 EntryKind::AgentMessage(AgentMessage {
                     markdown: String::new(),
                     streaming: true,
                 }),
             ),
-            Block::Thinking { .. } | Block::RedactedThinking => (
+            ContentBlock::Thinking { .. } | ContentBlock::RedactedThinking { .. } => (
                 Slot::Thought,
                 EntryKind::Thought(Thought {
                     text: String::new(),
@@ -85,7 +85,7 @@ impl Mapper {
                     streaming: true,
                 }),
             ),
-            Block::ToolUse { id, name, input } | Block::ServerToolUse { id, name, input } => {
+            ContentBlock::ToolUse { id, name, input } | ContentBlock::ServerToolUse { id, name, input } => {
                 let parent = match lane {
                     Lane::Main => None,
                     Lane::Subagent(p) => Some(p.clone()),

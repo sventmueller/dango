@@ -19,7 +19,7 @@ use crate::util::{OnDrop, constant, ns};
 
 /// The carets and selections beyond NSTextView's own.
 #[derive(Debug, Default)]
-pub struct Carets {
+pub(crate) struct Carets {
     /// In UTF-16 code units, sorted, apart from the view's selection.
     extra: Vec<Range<usize>>,
     /// While an operation runs at every caret: where each caret ended so far, by its place in document order.
@@ -38,7 +38,7 @@ fn ns_range(r: &Range<usize>) -> NSRange {
 }
 
 /// The selections beyond the view's own.
-pub fn extra(view: &EditorTextView) -> Vec<Range<usize>> {
+pub(crate) fn extra(view: &EditorTextView) -> Vec<Range<usize>> {
     view.ivars().carets.borrow().extra.clone()
 }
 
@@ -49,12 +49,12 @@ fn active(view: &EditorTextView) -> bool {
 }
 
 /// Whether an operation runs at every caret now.
-pub fn replaying(view: &EditorTextView) -> bool {
+pub(crate) fn replaying(view: &EditorTextView) -> bool {
     view.ivars().carets.borrow().replaying
 }
 
 /// Back to one caret.
-pub fn clear(view: &EditorTextView) {
+pub(crate) fn clear(view: &EditorTextView) {
     let had = !view.ivars().carets.borrow().extra.is_empty();
     view.ivars().carets.borrow_mut().extra.clear();
     if had {
@@ -63,7 +63,7 @@ pub fn clear(view: &EditorTextView) {
 }
 
 /// Keeps the carets on their text while it changes.
-pub fn shift(view: &EditorTextView, change: &Change) {
+pub(crate) fn shift(view: &EditorTextView, change: &Change) {
     let Ok(mut carets) = view.ivars().carets.try_borrow_mut() else {
         return;
     };
@@ -76,7 +76,7 @@ pub fn shift(view: &EditorTextView, change: &Change) {
 }
 
 /// The view's selection changed: unless this module moved it, the user, or undo, went back to one caret.
-pub fn selection_changed(view: &EditorTextView) {
+pub(crate) fn selection_changed(view: &EditorTextView) {
     let ours = view
         .ivars()
         .carets
@@ -185,7 +185,7 @@ fn insert_text(view: &EditorTextView, text: &AnyObject) {
 }
 
 /// Text typed while there are several carets goes to each; whether it was taken.
-pub fn insert(view: &EditorTextView, text: &AnyObject) -> bool {
+pub(crate) fn insert(view: &EditorTextView, text: &AnyObject) -> bool {
     if !active(view) {
         return false;
     }
@@ -195,7 +195,7 @@ pub fn insert(view: &EditorTextView, text: &AnyObject) -> bool {
 
 /// A command of the keyboard while there are several carets: moves, deletions and insertions run at each, Esc
 /// leaves one, anything else leaves one and runs as usual. Whether it was taken.
-pub fn command(view: &EditorTextView, command: Sel) -> bool {
+pub(crate) fn command(view: &EditorTextView, command: Sel) -> bool {
     if !active(view) {
         return false;
     }
@@ -226,7 +226,7 @@ pub fn command(view: &EditorTextView, command: Sel) -> bool {
 
 /// Pastes one line of the clipboard per caret when it holds as many lines, else all of it at each; whether it was
 /// taken.
-pub fn paste(view: &EditorTextView) -> bool {
+pub(crate) fn paste(view: &EditorTextView) -> bool {
     if !active(view) {
         return false;
     }
@@ -238,7 +238,7 @@ pub fn paste(view: &EditorTextView) -> bool {
 }
 
 /// Inserts `text` at every caret, one line each when it has as many lines as there are carets.
-pub fn paste_text(view: &EditorTextView, text: &str) {
+pub(crate) fn paste_text(view: &EditorTextView, text: &str) {
     let count = all(view).0.len();
     let lines: Vec<&str> = text.strip_suffix('\n').unwrap_or(text).split('\n').collect();
     let pieces: Vec<String> = if lines.len() == count {
@@ -252,7 +252,7 @@ pub fn paste_text(view: &EditorTextView, text: &str) {
 }
 
 /// Copies every selection, one line each; whether it was taken.
-pub fn copy(view: &EditorTextView) -> bool {
+pub(crate) fn copy(view: &EditorTextView) -> bool {
     if !active(view) {
         return false;
     }
@@ -265,7 +265,7 @@ pub fn copy(view: &EditorTextView) -> bool {
 }
 
 /// The text of every selection that is not empty, one per line, in document order.
-pub fn copied(view: &EditorTextView) -> Option<String> {
+pub(crate) fn copied(view: &EditorTextView) -> Option<String> {
     let string = view.string();
     let parts: Vec<String> = all(view)
         .0
@@ -277,7 +277,7 @@ pub fn copied(view: &EditorTextView) -> Option<String> {
 }
 
 /// Copies and then deletes every selection; whether it was taken.
-pub fn cut(view: &EditorTextView) -> bool {
+pub(crate) fn cut(view: &EditorTextView) -> bool {
     if !copy(view) {
         return false;
     }
@@ -302,7 +302,7 @@ fn add_caret(view: &EditorTextView, at: Range<usize>) {
 }
 
 /// Adds a caret on the line above the first caret, or below the last, at the same column or the line's end.
-pub fn add_vertical(view: &EditorTextView, up: bool) {
+pub(crate) fn add_vertical(view: &EditorTextView, up: bool) {
     let (ranges, _) = all(view);
     let edge = if up { ranges.first() } else { ranges.last() };
     let Some(edge) = edge.cloned() else { return };
@@ -332,7 +332,7 @@ pub fn add_vertical(view: &EditorTextView, up: bool) {
 }
 
 /// Selects the word at the cursor, or adds the next occurrence of the selection as a further selection.
-pub fn add_next_occurrence(view: &EditorTextView) {
+pub(crate) fn add_next_occurrence(view: &EditorTextView) {
     let primary = range_of(view.selectedRange());
     if primary.is_empty() {
         let word =
@@ -359,7 +359,7 @@ pub fn add_next_occurrence(view: &EditorTextView) {
 
 /// Selects the block between `from` and `to`, points of the view: one selection per line, empty where the line is
 /// too short or the block has no width.
-pub fn column(view: &EditorTextView, from: NSPoint, to: NSPoint) {
+pub(crate) fn column(view: &EditorTextView, from: NSPoint, to: NSPoint) {
     let (Some(first), Some(last)) = (
         super::highlight::line_at(view, from),
         super::highlight::line_at(view, to),
@@ -406,7 +406,7 @@ fn newline_length(view: &EditorTextView, next_line: usize) -> usize {
 }
 
 /// ⌥-click adds a caret and ⌥-drag selects a column block; whether `event` was one of them.
-pub fn option_mouse(view: &EditorTextView, event: &NSEvent) -> bool {
+pub(crate) fn option_mouse(view: &EditorTextView, event: &NSEvent) -> bool {
     let flags = event.modifierFlags() & NSEventModifierFlags::DeviceIndependentFlagsMask;
     if flags != NSEventModifierFlags::Option {
         return false;
@@ -433,7 +433,7 @@ pub fn option_mouse(view: &EditorTextView, event: &NSEvent) -> bool {
 }
 
 /// The rectangles `range` takes on screen, in the view's coordinates, line by line.
-pub fn rects(view: &EditorTextView, range: Range<usize>) -> Vec<NSRect> {
+pub(crate) fn rects(view: &EditorTextView, range: Range<usize>) -> Vec<NSRect> {
     let (Some(layout), Some(content)) = (view.textLayoutManager(), view.textContentStorage()) else {
         return vec![];
     };
@@ -493,4 +493,4 @@ mod tests {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

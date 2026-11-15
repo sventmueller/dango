@@ -6,9 +6,11 @@ use std::path::PathBuf;
 
 use crate::diff::{Change, FileDiff, diff_args, literal_args, parse};
 use crate::error::{Error, Result};
+use crate::id::CommitId;
 use crate::path::{all_relative, from_bytes, nul_fields};
-use crate::remote::{overwritten_paths, word};
+use crate::remote::word;
 use crate::repo::Repository;
+use crate::said::{Said, overwritten_paths};
 
 /// A file a working tree changed since a commit.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,10 +39,10 @@ impl Repository {
     }
 
     /// The newest commit both `left` and `right` contain; `None` when their histories never meet.
-    pub fn merge_base(&self, left: &str, right: &str) -> Result<Option<String>> {
+    pub fn merge_base(&self, left: &str, right: &str) -> Result<Option<CommitId>> {
         let output = self.git().run(self.call(["merge-base", word(left)?, word(right)?]))?;
         match output.code {
-            0 => Ok(Some(String::from_utf8_lossy(&output.stdout).trim().to_string())),
+            0 => Ok(Some(CommitId::from_git(output.text()))),
             1 => Ok(None),
             _ => Err(crate::run::failure(&output)),
         }
@@ -113,7 +115,7 @@ impl Repository {
             return Ok(());
         }
         let said = output.said();
-        if said.contains("would be overwritten") || said.contains("Please commit your changes or stash them") {
+        if Said::LocalChanges.in_text(&said) {
             return Err(Error::LocalChanges {
                 paths: overwritten_paths(&said),
                 output: said,

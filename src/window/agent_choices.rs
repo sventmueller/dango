@@ -17,17 +17,17 @@ const ENVIRONMENT: Duration = Duration::from_secs(15);
 
 /// What the menus know of the agents.
 #[derive(Debug, Clone)]
-pub struct AgentChoices {
+pub(crate) struct AgentChoices {
     /// Claude's own program is there.
-    pub claude: bool,
+    pub(crate) claude: bool,
     /// The own agent has an endpoint to offer.
-    pub own: bool,
+    pub(crate) own: bool,
     /// Each ACP preset's name and whether it can be opened: it is there or can be installed.
-    pub presets: Vec<(String, bool)>,
+    pub(crate) presets: Vec<(String, bool)>,
     /// The ACP presets that are there, with their place among all presets.
-    pub installed_presets: Vec<(usize, String)>,
+    pub(crate) installed_presets: Vec<(usize, String)>,
     /// The agents of a thread in a worktree of its own, whether each can be opened now and whether it is there.
-    pub worktree: Vec<(Agent, bool, bool)>,
+    pub(crate) worktree: Vec<(Agent, bool, bool)>,
 }
 
 impl AgentChoices {
@@ -51,7 +51,7 @@ impl AgentChoices {
 
 /// The agents as read last, and whether a read runs.
 #[derive(Default)]
-pub struct AgentChoicesCache {
+pub(crate) struct AgentChoicesCache {
     last: RefCell<Option<Rc<AgentChoices>>>,
     reading: Cell<bool>,
     /// The agents changed while a read ran, so another follows it.
@@ -59,7 +59,7 @@ pub struct AgentChoicesCache {
 }
 
 /// What the menus offer now: what was read last, or, before the first read came, a read right here.
-pub fn now(context: &AppContext) -> Rc<AgentChoices> {
+pub(crate) fn now(context: &AppContext) -> Rc<AgentChoices> {
     let cache = &context.agent_choices();
     if let Some(last) = cache.last.borrow().as_ref() {
         return last.clone();
@@ -70,7 +70,7 @@ pub fn now(context: &AppContext) -> Rc<AgentChoices> {
 }
 
 /// Reads the agents again on a thread of its own, for the menus' next opening.
-pub fn refresh(context: &AppContext) {
+pub(crate) fn refresh(context: &AppContext) {
     let cache = &context.agent_choices();
     if cache.reading.replace(true) {
         cache.again.set(true);

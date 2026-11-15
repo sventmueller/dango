@@ -6,12 +6,12 @@ use std::sync::Arc;
 
 use ide_claude::{RemoteControl, Session};
 use ide_thread::{Attachment, Entry, EntryKind, Status, ToolView, UserMessage};
+use ide_ui_common::alert::{Alert, Role, first};
 use objc2::rc::Retained;
 use objc2::runtime::Sel;
 use objc2::{ClassType, MainThreadMarker, sel};
 use objc2_app_kit::{
-    NSAlert, NSAlertFirstButtonReturn, NSBitmapImageFileType, NSBitmapImageRep, NSMenu, NSModalResponseOK, NSOpenPanel,
-    NSPasteboard, NSView, NSWorkspace,
+    NSBitmapImageFileType, NSBitmapImageRep, NSMenu, NSModalResponseOK, NSOpenPanel, NSPasteboard, NSView, NSWorkspace,
 };
 use objc2_foundation::{NSArray, NSDictionary, NSPoint, NSURL};
 use splat_i18n::{t, tf};
@@ -197,7 +197,7 @@ impl AgentTab {
         self.refresh_queue();
     }
 
-    pub fn remove_attachment(&self, index: usize) {
+    pub(crate) fn remove_attachment(&self, index: usize) {
         self.state.borrow_mut().remove_attachment(index);
         self.refresh_chips();
     }
@@ -269,7 +269,7 @@ impl AgentTab {
     }
 
     /// `+`: files and pictures from an open panel.
-    pub fn attach(&self) {
+    pub(crate) fn attach(&self) {
         let panel = NSOpenPanel::openPanel(self.mtm);
         panel.setCanChooseFiles(true);
         panel.setCanChooseDirectories(false);
@@ -290,7 +290,7 @@ impl AgentTab {
     }
 
     /// `/`: the agent's slash commands.
-    pub fn slash_menu(&self, view: &NSView) {
+    pub(crate) fn slash_menu(&self, view: &NSView) {
         pop_up(&self.slash_items(), view);
     }
 
@@ -338,7 +338,7 @@ impl AgentTab {
         menu
     }
 
-    pub fn pick_command(&self, index: usize) {
+    pub(crate) fn pick_command(&self, index: usize) {
         let Some(name) = self.state.borrow().offered().commands.get(index).cloned() else {
             return;
         };
@@ -348,7 +348,7 @@ impl AgentTab {
     }
 
     /// The model and effort pill: the models the CLI offers, then the effort levels of the current one.
-    pub fn model_menu(&self, view: &NSView) {
+    pub(crate) fn model_menu(&self, view: &NSView) {
         pop_up(&self.model_items(), view);
     }
 
@@ -420,7 +420,7 @@ impl AgentTab {
         menu
     }
 
-    pub fn pick_model(&self, index: usize) {
+    pub(crate) fn pick_model(&self, index: usize) {
         if self.agent.is_acp() {
             return self.acp_pick_model(index);
         }
@@ -436,7 +436,7 @@ impl AgentTab {
         self.refresh_composer();
     }
 
-    pub fn pick_effort(&self, index: usize) {
+    pub(crate) fn pick_effort(&self, index: usize) {
         if self.agent.is_own() {
             return self.own_pick_effort(index);
         }
@@ -450,7 +450,7 @@ impl AgentTab {
     }
 
     /// The mode pill: how freely Claude may use tools.
-    pub fn mode_menu(&self, view: &NSView) {
+    pub(crate) fn mode_menu(&self, view: &NSView) {
         pop_up(&self.mode_items(), view);
     }
 
@@ -483,7 +483,7 @@ impl AgentTab {
         menu
     }
 
-    pub fn pick_mode(&self, index: usize) {
+    pub(crate) fn pick_mode(&self, index: usize) {
         if self.agent.is_acp() {
             return self.acp_pick_mode(index);
         }
@@ -516,7 +516,7 @@ impl AgentTab {
         super::choices::remember(self.agent.id(), |choice| choice.mode = Some(now.clone()));
         self.state.borrow_mut().pick_mode(now);
         self.refresh_composer();
-        crate::host::host().show_alert(self.mtm, t("Freigabemodus nicht gewechselt"), why);
+        ide_ui_common::alert::warn(self.mtm, t("Freigabemodus nicht gewechselt"), why);
     }
 
     /// The sandbox switch (E19): the CLI takes it at start, so a resting session starts again with it.
@@ -550,7 +550,7 @@ impl AgentTab {
     }
 
     /// The clock: sessions of this folder from the index and, experimentally, from the CLI's own transcripts.
-    pub fn history_menu(&self, view: &NSView) {
+    pub(crate) fn history_menu(&self, view: &NSView) {
         pop_up(&self.history_items(), view);
     }
 
@@ -577,7 +577,7 @@ impl AgentTab {
         menu
     }
 
-    pub fn open_past(&self, index: usize) {
+    pub(crate) fn open_past(&self, index: usize) {
         let Some(resume) = self.state.borrow().offered().past.get(index).cloned() else {
             return;
         };
@@ -602,7 +602,7 @@ impl AgentTab {
         self.set_title(&name);
     }
 
-    pub fn set_title(&self, name: &str) {
+    pub(crate) fn set_title(&self, name: &str) {
         self.state.borrow_mut().set_custom_title(name.to_string());
         crate::agent_panel::rename(&self.thread_id, name);
         self.persist();
@@ -612,7 +612,7 @@ impl AgentTab {
         }
     }
 
-    pub fn trust_folder(&self) {
+    pub(crate) fn trust_folder(&self) {
         crate::host::host().trust(&self.cwd);
         self.start();
     }
@@ -682,7 +682,7 @@ impl AgentTab {
     }
 
     /// An item of the Remote Control menu.
-    pub fn remote_control_action(&self, action: isize) {
+    pub(crate) fn remote_control_action(&self, action: isize) {
         let Some(session) = self.session() else { return };
         let RemoteControl::Connected(url) = session.remote_control() else {
             return;
@@ -706,7 +706,7 @@ impl AgentTab {
     }
 
     /// Copies the answer `id` as markdown.
-    pub fn copy_entry(&self, id: u64) {
+    pub(crate) fn copy_entry(&self, id: u64) {
         let Some(entry) = self.entry(id) else { return };
         let EntryKind::AgentMessage(message) = &entry.kind else {
             return;
@@ -715,7 +715,7 @@ impl AgentTab {
     }
 
     /// Opens the file a Read, Edit or Write card names.
-    pub fn open_path_of(&self, id: u64) {
+    pub(crate) fn open_path_of(&self, id: u64) {
         let Some(entry) = self.entry(id) else { return };
         let EntryKind::ToolCall(call) = &entry.kind else { return };
         let path = match &call.view {
@@ -793,19 +793,19 @@ fn as_png(data: &[u8]) -> Option<Vec<u8>> {
 }
 
 /// Asks for a line of text; `None` when the user cancels or leaves it empty.
-pub fn ask_text(mtm: MainThreadMarker, title: &str, current: &str) -> Option<String> {
-    let alert = NSAlert::new(mtm);
-    alert.setMessageText(&ns(title));
-    alert.addButtonWithTitle(&ns(t("OK")));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
+pub(crate) fn ask_text(mtm: MainThreadMarker, title: &str, current: &str) -> Option<String> {
     let field = objc2_app_kit::NSTextField::textFieldWithString(&ns(current), mtm);
     field.setFrame(objc2_foundation::NSRect::new(
         NSPoint::new(0.0, 0.0),
         objc2_foundation::NSSize::new(300.0, 24.0),
     ));
-    alert.setAccessoryView(Some(&field));
-    alert.window().setInitialFirstResponder(Some(&field));
-    if alert.runModal() != NSAlertFirstButtonReturn {
+    let answer = Alert::new(mtm, title)
+        .button(t("OK"), Role::Plain)
+        .button(t("Abbrechen"), Role::Plain)
+        .accessory(&field)
+        .focus(&field)
+        .run_modal();
+    if !first(answer) {
         return None;
     }
     let text = field.stringValue().to_string().trim().to_string();

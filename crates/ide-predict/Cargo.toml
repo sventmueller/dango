@@ -24,8 +24,8 @@ doc = false
 
 [dependencies]
 ide-core.workspace = true
-ide-agent = { path = "../ide-agent" }
 ide-lsp = { path = "../ide-lsp" }
+ide-net = { path = "../ide-net" }
 ide-process = { path = "../ide-process" }
 ide-product = { path = "../ide-product" }
 serde_json = "1.0.154"

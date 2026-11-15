@@ -12,7 +12,7 @@ use objc2_foundation::{NSPoint, NSRange};
 use splat_i18n::t;
 
 use super::helpers::{self, wait_until};
-use super::{check, finish, snapshot};
+use super::{check, finish, give_up, give_up_saying, snapshot};
 use crate::editor::blame_probe as blame;
 use crate::editor::insets::{self, Layer};
 use crate::editor::{self, EditorTextView};
@@ -102,19 +102,17 @@ fn column(view: &EditorTextView) -> Vec<(usize, String)> {
     blame::column(view).map(|c| c.shown()).unwrap_or_default()
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let dir = match helpers::make_project("blame-project", &[]) {
         Ok(dir) => dir,
         Err(error) => {
-            check("the repository's folder is made", false, error.to_string());
-            return finish(SCENARIO);
+            return give_up_saying(SCENARIO, "the repository's folder is made", error.to_string());
         }
     };
     match make(&dir) {
         Ok(_) => {}
         Err(error) => {
-            check("a repository with two commits is made", false, error);
-            return finish(SCENARIO);
+            return give_up_saying(SCENARIO, "a repository with two commits is made", error);
         }
     }
     super::helpers::open_trusted(&dir);
@@ -132,14 +130,18 @@ pub fn run() {
 
 /// After a rest on Bea's line, its end reads "Bea, vor 3 Tagen · Change the second line".
 fn line_end() {
-    let Some(view) = blamed() else { return finish(SCENARIO) };
+    let Some(view) = blamed() else {
+        return give_up(SCENARIO, "the blamed file opens in an editor");
+    };
     crate::editor::set_blame_at_line_end(true);
     let at = view.line_start(1).unwrap_or(0);
     view.setSelectedRange(NSRange::new(at, 0));
     wait_until(
         || view_line_end().is_some_and(|text| text.contains("Bea")),
         |_| {
-            let Some(view) = blamed() else { return finish(SCENARIO) };
+            let Some(view) = blamed() else {
+                return give_up(SCENARIO, "the blamed file opens in an editor");
+            };
             let text = line_end_text(&view).unwrap_or_default();
             check(
                 "at the end of the cursor's line after a rest: author, age and subject",
@@ -170,7 +172,9 @@ fn view_line_end() -> Option<String> {
 }
 
 fn column_blocks() {
-    let Some(view) = blamed() else { return finish(SCENARIO) };
+    let Some(view) = blamed() else {
+        return give_up(SCENARIO, "the blamed file opens in an editor");
+    };
     if let Some(window) = view.window() {
         window.displayIfNeeded();
     }
@@ -202,7 +206,9 @@ fn column_blocks() {
 
 /// Unsaved lines read "Nicht committet"; the others keep their commits, moved down by the inserted line.
 fn unsaved(ok: bool) {
-    let Some(view) = blamed() else { return finish(SCENARIO) };
+    let Some(view) = blamed() else {
+        return give_up(SCENARIO, "the blamed file opens in an editor");
+    };
     if let Some(window) = view.window() {
         window.displayIfNeeded();
     }
@@ -239,7 +245,9 @@ fn unsaved(ok: bool) {
 }
 
 fn popover() {
-    let Some(view) = blamed() else { return finish(SCENARIO) };
+    let Some(view) = blamed() else {
+        return give_up(SCENARIO, "the blamed file opens in an editor");
+    };
     let at = view.line_start(2).unwrap_or(0);
     view.setSelectedRange(NSRange::new(at, 0));
     send(&view, objc2::sel!(ideShowLineBlame:));
@@ -252,7 +260,9 @@ fn popover() {
             })
         },
         |ok| {
-            let Some(view) = blamed() else { return finish(SCENARIO) };
+            let Some(view) = blamed() else {
+                return give_up(SCENARIO, "the blamed file opens in an editor");
+            };
             let texts = blame::popover_texts(&view).unwrap_or_default();
             check(
                 "\"Blame der Zeile zeigen\": a popover with the whole message and its three buttons",
@@ -278,7 +288,7 @@ fn popover() {
                 || {
                     window::for_project(&root())
                         .and_then(|c| ide_ui_git::selected_commit(&c))
-                        .is_some_and(|hash| hash == head())
+                        .is_some_and(|hash| hash.as_str() == head())
                 },
                 graph,
             );
@@ -294,7 +304,9 @@ fn graph(ok: bool) {
         format!("{selected:?}"),
     );
     picture("blame-graph");
-    let Some(view) = blamed() else { return finish(SCENARIO) };
+    let Some(view) = blamed() else {
+        return give_up(SCENARIO, "the blamed file opens in an editor");
+    };
     blame::show_for_cursor(&view);
     send(&view, objc2::sel!(ideBlameShowDiff:));
     let short: String = head().chars().take(7).collect();
@@ -316,7 +328,7 @@ fn clicks(ok: bool) {
         titles.join(", "),
     );
     let Some(controller) = window::for_project(&root()) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     controller.open_file(&root().join(FILE));
     let shown = || {
@@ -328,7 +340,9 @@ fn clicks(ok: bool) {
         })
     };
     wait_until(shown, |_| {
-        let Some(view) = blamed() else { return finish(SCENARIO) };
+        let Some(view) = blamed() else {
+            return give_up(SCENARIO, "the blamed file opens in an editor");
+        };
         if let Some(window) = view.window() {
             window.displayIfNeeded();
         }
@@ -367,7 +381,9 @@ fn clicks(ok: bool) {
             }
         }
         wait_until(blamed_popover, |_| {
-            let Some(view) = blamed() else { return finish(SCENARIO) };
+            let Some(view) = blamed() else {
+                return give_up(SCENARIO, "the blamed file opens in an editor");
+            };
             check(
                 "resting the mouse on the blame at the line's end opens its popover",
                 blame::popover_texts(&view).is_some(),

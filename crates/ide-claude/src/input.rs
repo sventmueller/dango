@@ -64,7 +64,7 @@ fn mention(path: &Path) -> String {
 }
 
 /// A random version-4 UUID, as the CLI expects for message ids.
-pub fn uuid() -> String {
+pub(crate) fn uuid() -> String {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let mut words = [0u64; 2];
     for word in &mut words {

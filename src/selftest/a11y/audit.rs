@@ -90,20 +90,20 @@ const GENERIC: &[&str] = &[
 ];
 
 /// One element as VoiceOver gets it.
-pub struct Element {
-    pub object: Retained<AnyObject>,
+pub(crate) struct Element {
+    pub(crate) object: Retained<AnyObject>,
     /// The roles and names from the window down to the element.
-    pub path: String,
-    pub role: String,
-    pub subrole: String,
-    pub name: String,
-    pub class: String,
-    pub parent_role: String,
+    pub(crate) path: String,
+    pub(crate) role: String,
+    pub(crate) subrole: String,
+    pub(crate) name: String,
+    pub(crate) class: String,
+    pub(crate) parent_role: String,
 }
 
 impl Element {
     /// The element as a finding names it.
-    pub fn what(&self) -> String {
+    pub(crate) fn what(&self) -> String {
         let role = if self.subrole.is_empty() {
             self.role.clone()
         } else {
@@ -116,11 +116,11 @@ impl Element {
         }
     }
 
-    pub fn is_control(&self) -> bool {
+    pub(crate) fn is_control(&self) -> bool {
         CONTROLS.contains(&self.role.as_str()) || NAMED_GROUPS.contains(&self.role.as_str())
     }
 
-    pub fn enabled(&self) -> bool {
+    pub(crate) fn enabled(&self) -> bool {
         read::enabled(&self.object)
     }
 
@@ -144,14 +144,14 @@ impl Element {
 
 /// Something VoiceOver or a keyboard would miss.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Finding {
-    pub problem: String,
-    pub what: String,
-    pub path: String,
+pub(crate) struct Finding {
+    pub(crate) problem: String,
+    pub(crate) what: String,
+    pub(crate) path: String,
 }
 
 impl Finding {
-    pub fn new(problem: impl Into<String>, what: impl Into<String>, path: impl Into<String>) -> Finding {
+    pub(crate) fn new(problem: impl Into<String>, what: impl Into<String>, path: impl Into<String>) -> Finding {
         Finding {
             problem: problem.into(),
             what: what.into(),
@@ -161,7 +161,7 @@ impl Finding {
 }
 
 /// The elements of `window` VoiceOver reaches, depth first; sheets and popovers are windows of their own.
-pub fn elements(window: &NSWindow) -> Vec<Element> {
+pub(crate) fn elements(window: &NSWindow) -> Vec<Element> {
     let mut found = Vec::new();
     let root: &AnyObject = window.as_ref();
     let role = read::text_of(root, Property::Role);
@@ -171,7 +171,7 @@ pub fn elements(window: &NSWindow) -> Vec<Element> {
 }
 
 /// What VoiceOver misses about `window` itself: it announces a window by its title, also where the title bar hides it.
-pub fn window_findings(window: &NSWindow) -> Vec<Finding> {
+pub(crate) fn window_findings(window: &NSWindow) -> Vec<Finding> {
     let root: &AnyObject = window.as_ref();
     let titled = window.styleMask().contains(NSWindowStyleMask::Titled);
     if titled && read::text_of(root, Property::Role) == "AXWindow" && window.title().to_string().trim().is_empty() {
@@ -260,7 +260,7 @@ fn short(name: &str) -> String {
 }
 
 /// What VoiceOver would miss among `elements`.
-pub fn findings(elements: &[Element]) -> Vec<Finding> {
+pub(crate) fn findings(elements: &[Element]) -> Vec<Finding> {
     let mut found: Vec<Finding> = elements
         .iter()
         .flat_map(|element| {
@@ -362,7 +362,7 @@ fn repeated(elements: &[Element]) -> Vec<Finding> {
 }
 
 /// What turns wrongly when the interface reads right to left: code and terminal views stay left to right (E3).
-pub fn direction_findings(window: &NSWindow) -> Vec<Finding> {
+pub(crate) fn direction_findings(window: &NSWindow) -> Vec<Finding> {
     let mut found = Vec::new();
     if let Some(content) = window.contentView() {
         let path = format!("{:?}", window.title().to_string());

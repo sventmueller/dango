@@ -4,20 +4,22 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use ide_thread::{Decision, Update, UsagePatch};
+use ide_thread::{Decision, RuleScope, Update, UsagePatch};
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
 
 use crate::modes::{Effort, PermissionMode};
 use crate::protocol::{ModelUsage, typed};
 
+mod context;
 mod error;
 
+pub use context::*;
 pub use error::ControlError;
 
 /// A request the app sends to the CLI.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Request {
+pub(crate) enum Request {
     /// Starts the session's protocol; the answer lists commands, models and the account.
     Initialize {
         /// Whether the app offers a stop control per background task, so that an interrupt spares them.
@@ -41,11 +43,10 @@ pub enum Request {
     BackgroundTasks(Option<String>),
     /// Reads the end of a shell or monitor task's output.
     GetTaskOutput(String),
-    /// Reads how full the context window is, by category; `full` counts each category with the token-count API
-    /// instead of estimating from the last response.
+    /// Reads how full the context window is, by category, counted as `count` says.
     GetContextUsage {
-        /// Whether every category is counted exactly.
-        full: bool,
+        /// How the categories are counted.
+        count: ContextCount,
     },
     /// Reads the session's cost and the plan's usage windows; experimental in the CLI.
     GetUsage,
@@ -62,7 +63,7 @@ pub enum Request {
 
 impl Request {
     /// The request's `subtype`.
-    pub fn subtype(&self) -> &'static str {
+    pub(crate) fn subtype(&self) -> &'static str {
         match self {
             Request::Initialize { .. } => "initialize",
             Request::Interrupt => "interrupt",
@@ -80,7 +81,7 @@ impl Request {
     }
 
     /// How long the app waits for the answer.
-    pub fn timeout(&self) -> Duration {
+    pub(crate) fn timeout(&self) -> Duration {
         match self {
             Request::Initialize { .. } => Duration::from_secs(60),
             Request::GetContextUsage { .. }
@@ -91,8 +92,7 @@ impl Request {
         }
     }
 
-    /// The request's body.
-    pub fn body(&self) -> Value {
+    pub(crate) fn body(&self) -> Value {
         let mut body = match self {
             Request::Initialize {
                 per_task_stop,
@@ -115,7 +115,10 @@ impl Request {
             Request::SetEffort(level) => json!({ "settings": { "effortLevel": level.as_str() } }),
             Request::StopTask(task) | Request::GetTaskOutput(task) => json!({ "task_id": task }),
             Request::BackgroundTasks(Some(call)) => json!({ "tool_use_id": call }),
-            Request::GetContextUsage { full } => json!({ "detail": if *full { "full" } else { "summary" } }),
+            Request::GetContextUsage { count } => json!({ "detail": match count {
+                ContextCount::Estimated => "summary",
+                ContextCount::Exact => "full",
+            } }),
             Request::RewindFiles {
                 user_message_id,
                 dry_run,
@@ -129,65 +132,63 @@ impl Request {
     }
 
     /// The frame that sends it.
-    pub fn frame(&self, request_id: &str) -> Value {
+    pub(crate) fn frame(&self, request_id: &str) -> Value {
         json!({ "type": "control_request", "request_id": request_id, "request": self.body() })
     }
 }
 
 /// The frame that withdraws a request the app sent.
-pub fn cancel_frame(request_id: &str) -> Value {
+pub(crate) fn cancel_frame(request_id: &str) -> Value {
     json!({ "type": "control_cancel_request", "request_id": request_id })
 }
 
 /// The frame that answers one of the CLI's requests with `response`.
-pub fn success_frame(request_id: &str, response: Value) -> Value {
+pub(crate) fn success_frame(request_id: &str, response: Value) -> Value {
     json!({ "type": "control_response", "response": { "subtype": "success", "request_id": request_id, "response": response } })
 }
 
 /// The frame that refuses one of the CLI's requests.
-pub fn error_frame(request_id: &str, error: &str) -> Value {
+pub(crate) fn error_frame(request_id: &str, error: &str) -> Value {
     json!({ "type": "control_response", "response": { "subtype": "error", "request_id": request_id, "error": error } })
 }
 
 /// What `initialize` answers.
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(default)]
-pub struct InitializeResult {
+pub(crate) struct InitializeResult {
     /// The slash commands.
-    pub commands: Vec<CommandInfo>,
+    pub(crate) commands: Vec<CommandInfo>,
     /// The models the session can use.
-    pub models: Vec<ModelInfo>,
+    pub(crate) models: Vec<ModelInfo>,
     /// The signed-in account.
-    pub account: Account,
-    /// The output style.
-    pub output_style: String,
-    /// The CLI's version.
-    pub claude_code_version: Option<String>,
+    pub(crate) account: Account,
+    pub(crate) output_style: String,
+    pub(crate) claude_code_version: Option<String>,
     /// Whether the account and the organisation allow Remote Control; older CLIs leave it out.
-    pub remote_control_available: Option<bool>,
+    pub(crate) remote_control_available: Option<bool>,
     /// Whether the user's settings (`remoteControlAtStartup`) connect each session to Remote Control at start.
-    pub remote_control_auto_enable: Option<bool>,
+    pub(crate) remote_control_auto_enable: Option<bool>,
 }
 
 impl InitializeResult {
     /// Whether Remote Control can be offered at all.
-    pub fn remote_control_offered(&self) -> bool {
+    pub(crate) fn remote_control_offered(&self) -> bool {
         self.remote_control_available == Some(true)
     }
 
     /// Whether the session connects to Remote Control as it starts, unless the user decided otherwise for the thread.
-    pub fn remote_control_at_start(&self) -> bool {
+    pub(crate) fn remote_control_at_start(&self) -> bool {
         self.remote_control_offered() && self.remote_control_auto_enable == Some(true)
     }
 
     /// Whether the CLI has no sign-in at all: no subscription token and no API key on Anthropic's own API.
-    pub fn signed_out(&self) -> bool {
+    pub(crate) fn signed_out(&self) -> bool {
         self.first_party_without_key() && self.account.token_source.as_deref() == Some("none")
     }
 
     /// Whether the CLI runs on a subscription, signed in to Anthropic's own API without an API key; the cost it
     /// reports is then not what the user pays (E57).
-    pub fn on_subscription(&self) -> bool {
+    pub(crate) fn on_subscription(&self) -> bool {
         let plan = self.account.subscription_type.as_deref().is_some_and(|p| !p.is_empty());
         plan && self.first_party_without_key() && !self.signed_out()
     }
@@ -199,7 +200,7 @@ impl InitializeResult {
     }
 
     /// The thread's update that says whether the session runs on a subscription.
-    pub fn billing(&self) -> Update {
+    pub(crate) fn billing(&self) -> Update {
         Update::Usage(UsagePatch {
             subscription: Some(self.on_subscription()),
             ..UsagePatch::default()
@@ -216,12 +217,13 @@ pub struct CommandInfo {
     /// What it does.
     pub description: String,
     /// What it takes.
-    pub argument_hint: String,
+    pub(crate) argument_hint: String,
 }
 
 /// A model the session can use.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct ModelInfo {
     /// What `set_model` takes.
     pub value: String,
@@ -229,7 +231,6 @@ pub struct ModelInfo {
     pub display_name: String,
     /// What it is good for.
     pub description: String,
-    /// The effort levels it supports.
     pub supported_effort_levels: Vec<String>,
 }
 
@@ -237,18 +238,16 @@ pub struct ModelInfo {
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Account {
-    /// The account's e-mail address.
-    pub email: Option<String>,
-    /// The organisation.
-    pub organization: Option<String>,
+    pub(crate) email: Option<String>,
+    pub(crate) organization: Option<String>,
     /// The subscription, such as `max`.
-    pub subscription_type: Option<String>,
+    pub(crate) subscription_type: Option<String>,
     /// Where the token came from; `none` when there is none.
     pub token_source: Option<String>,
     /// Where an API key came from.
-    pub api_key_source: Option<String>,
+    pub(crate) api_key_source: Option<String>,
     /// The API the CLI talks to, such as `firstParty` or `bedrock`.
-    pub api_provider: Option<String>,
+    pub(crate) api_provider: Option<String>,
 }
 
 /// What `interrupt` answers.
@@ -256,7 +255,7 @@ pub struct Account {
 #[serde(default)]
 pub struct InterruptResult {
     /// Messages that survive the interrupt and will still run.
-    pub still_queued: Vec<String>,
+    pub(crate) still_queued: Vec<String>,
 }
 
 /// What `get_task_output` answers.
@@ -269,120 +268,6 @@ pub struct TaskOutput {
     pub total_bytes: u64,
     /// Whether `output` is only the end.
     pub truncated: bool,
-}
-
-/// What `get_context_usage` answers.
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
-#[serde(default, rename_all = "camelCase")]
-pub struct ContextUsage {
-    /// The rows of the breakdown.
-    pub categories: Vec<ContextCategory>,
-    /// Tokens in use.
-    pub total_tokens: u64,
-    /// The window measured against.
-    pub raw_max_tokens: u64,
-    /// The share in use, in percent.
-    pub percentage: f64,
-    /// The model.
-    pub model: String,
-    /// Where compacting by itself starts, in tokens.
-    pub auto_compact_threshold: Option<f64>,
-    /// Whether the conversation is compacted by itself.
-    pub is_auto_compact_enabled: bool,
-    /// The memory files, such as `CLAUDE.md`.
-    pub memory_files: Vec<ContextFile>,
-    /// The tools of MCP servers.
-    pub mcp_tools: Vec<ContextMcpTool>,
-    /// The custom agents.
-    pub agents: Vec<ContextAgent>,
-    /// The skills.
-    pub skills: Option<ContextSkills>,
-    /// The built-in tools.
-    pub system_tools: Option<Vec<ContextNamed>>,
-    /// The conversation by kind of message.
-    pub message_breakdown: Option<ContextMessages>,
-}
-
-/// A memory file in the context.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
-#[serde(default)]
-pub struct ContextFile {
-    /// Where it is.
-    pub path: String,
-    /// Its tokens.
-    pub tokens: u64,
-}
-
-/// An MCP tool in the context.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
-#[serde(default, rename_all = "camelCase")]
-pub struct ContextMcpTool {
-    /// The tool.
-    pub name: String,
-    /// Its server.
-    pub server_name: String,
-    /// Its tokens.
-    pub tokens: u64,
-}
-
-/// A custom agent in the context.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
-#[serde(default, rename_all = "camelCase")]
-pub struct ContextAgent {
-    /// The agent's type.
-    pub agent_type: String,
-    /// Its tokens.
-    pub tokens: u64,
-}
-
-/// The skills in the context.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
-#[serde(default, rename_all = "camelCase")]
-pub struct ContextSkills {
-    /// Their tokens together.
-    pub tokens: u64,
-    /// Each skill.
-    pub skill_frontmatter: Vec<ContextNamed>,
-}
-
-/// Something in the context with a name.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
-#[serde(default)]
-pub struct ContextNamed {
-    /// Its name.
-    pub name: String,
-    /// Its tokens.
-    pub tokens: u64,
-}
-
-/// The conversation in the context by kind of message.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
-#[serde(default, rename_all = "camelCase")]
-pub struct ContextMessages {
-    /// Tool calls.
-    pub tool_call_tokens: u64,
-    /// Tool results.
-    pub tool_result_tokens: u64,
-    /// Attachments.
-    pub attachment_tokens: u64,
-    /// The assistant's messages.
-    pub assistant_message_tokens: u64,
-    /// The user's messages.
-    pub user_message_tokens: u64,
-}
-
-/// One row of the context breakdown.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
-#[serde(default)]
-pub struct ContextCategory {
-    /// The stable id of the row, when the CLI sends one.
-    pub id: Option<String>,
-    /// The row's name as the CLI shows it.
-    pub name: String,
-    /// Its tokens.
-    pub tokens: u64,
-    /// `used`, `free`, `buffer` or `deferred`.
-    pub kind: String,
 }
 
 /// What `get_usage` answers, as far as the app reads it; the CLI marks the shape experimental.
@@ -457,19 +342,19 @@ pub struct RewindResult {
     /// The files that change.
     pub files_changed: Vec<String>,
     /// Lines added back.
-    pub insertions: u64,
+    pub(crate) insertions: u64,
     /// Lines removed.
-    pub deletions: u64,
+    pub(crate) deletions: u64,
 }
 
 /// What `remote_control` answers when it connects.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
 #[serde(default)]
-pub struct RemoteControlResult {
+pub(crate) struct RemoteControlResult {
     /// The session's page on claude.ai.
-    pub session_url: Option<String>,
+    pub(crate) session_url: Option<String>,
     /// Which connection of the session later `bridge_state` frames speak of.
-    pub bridge_epoch: Option<u64>,
+    pub(crate) bridge_epoch: Option<u64>,
 }
 
 /// Reads a success payload as the answer of a request type.
@@ -490,9 +375,18 @@ impl Answer for Value {
     }
 }
 
-impl Answer for bool {
-    fn read(payload: Value) -> Result<bool, ControlError> {
-        Ok(payload.get("backgrounded").and_then(Value::as_bool).unwrap_or(true))
+/// What `background_tasks` answers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Backgrounded {
+    /// Whether any task moved to the background.
+    pub moved: bool,
+}
+
+impl Answer for Backgrounded {
+    fn read(payload: Value) -> Result<Backgrounded, ControlError> {
+        // A CLI from before the flag sends none, and moved the tasks.
+        let moved = payload.get("backgrounded").and_then(Value::as_bool).unwrap_or(true);
+        Ok(Backgrounded { moved })
     }
 }
 
@@ -523,7 +417,7 @@ answer_by_serde!(
 
 /// A request from the CLI.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Incoming {
+pub(crate) enum Incoming {
     /// The CLI asks whether a tool may run.
     CanUseTool(Box<PermissionAsk>),
     /// The CLI runs one of the hooks the app registered.
@@ -542,7 +436,7 @@ pub enum Incoming {
 
 impl Incoming {
     /// The request in `body`.
-    pub fn read(body: &Value) -> Incoming {
+    pub(crate) fn read(body: &Value) -> Incoming {
         let subtype = body.get("subtype").and_then(Value::as_str).unwrap_or_default();
         match subtype {
             "can_use_tool" => typed(body).map_or_else(
@@ -569,50 +463,49 @@ impl Incoming {
 /// The CLI asks whether a tool may run.
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(default)]
-pub struct PermissionAsk {
-    /// The tool.
-    pub tool_name: String,
+pub(crate) struct PermissionAsk {
+    pub(crate) tool_name: String,
     /// The input it would run with.
-    pub input: Value,
+    pub(crate) input: Value,
     /// Rules or mode changes the CLI suggests for "always allow".
-    pub permission_suggestions: Vec<Value>,
+    pub(crate) permission_suggestions: Vec<Value>,
     /// The path that made it ask.
-    pub blocked_path: Option<String>,
-    /// Why it asks.
-    pub decision_reason: Option<String>,
+    pub(crate) blocked_path: Option<String>,
+    pub(crate) decision_reason: Option<String>,
     /// A headline for the dialog.
-    pub title: Option<String>,
+    pub(crate) title: Option<String>,
     /// A short name for the tool.
-    pub display_name: Option<String>,
-    /// What the call does.
-    pub description: Option<String>,
+    pub(crate) display_name: Option<String>,
+    pub(crate) description: Option<String>,
     /// The tool call.
-    pub tool_use_id: String,
+    pub(crate) tool_use_id: String,
     /// The subagent that wants to call it.
-    pub agent_id: Option<String>,
+    pub(crate) agent_id: Option<String>,
     /// Whether no "always allow" may be offered.
-    pub suppress_always_allow_rule: bool,
+    pub(crate) suppress_always_allow_rule: bool,
     /// Whether allowing must not be preselected.
-    pub default_to_no: bool,
+    pub(crate) default_to_no: bool,
 }
 
 /// One suggestion of the CLI for answering "always allow", as the user reads it.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Suggestion {
+pub(crate) struct Suggestion {
     /// What it allows.
-    pub rule: String,
-    /// Where it is stored: `session`, `localSettings`, `projectSettings` or `userSettings`.
-    pub scope: String,
+    pub(crate) rule: String,
+    /// Where it is stored.
+    pub(crate) scope: RuleScope,
 }
 
 impl Suggestion {
     /// The suggestion `raw` describes, if it allows something.
-    pub fn read(raw: &Value) -> Option<Suggestion> {
-        let scope = raw
-            .get("destination")
-            .and_then(Value::as_str)
-            .unwrap_or("session")
-            .to_string();
+    pub(crate) fn read(raw: &Value) -> Option<Suggestion> {
+        let scope = match raw.get("destination").and_then(Value::as_str) {
+            None | Some("session") => RuleScope::Session,
+            Some("localSettings") => RuleScope::ProjectLocal,
+            Some("projectSettings") => RuleScope::Project,
+            Some("userSettings") => RuleScope::User,
+            Some(other) => RuleScope::Other(other.to_string()),
+        };
         let rule = match raw.get("type").and_then(Value::as_str)? {
             "addRules" | "replaceRules" => {
                 if raw.get("behavior").and_then(Value::as_str) != Some("allow") {
@@ -672,7 +565,7 @@ pub enum PermissionAnswer {
 
 impl PermissionAnswer {
     /// The success payload answering `ask`.
-    pub fn payload(&self, ask: &PermissionAsk) -> Value {
+    pub(crate) fn payload(&self, ask: &PermissionAsk) -> Value {
         let mut payload = Map::new();
         match self {
             PermissionAnswer::Allow { updated_input, always } => {
@@ -728,7 +621,7 @@ pub enum PlanAnswer {
 
 impl PlanAnswer {
     /// The permission answer that says this.
-    pub fn permission(&self) -> PermissionAnswer {
+    pub(crate) fn permission(&self) -> PermissionAnswer {
         match self {
             PlanAnswer::Approve => PermissionAnswer::Allow {
                 updated_input: None,
@@ -756,7 +649,7 @@ impl PlanAnswer {
 }
 
 /// A plan the user did not accept, told to the model as `message`; the app's own fixed messages are no feedback.
-pub fn plan_rejection(message: Option<&str>, stop: bool) -> Decision {
+pub(crate) fn plan_rejection(message: Option<&str>, stop: bool) -> Decision {
     let feedback = message
         .map(str::trim)
         .filter(|m| !m.is_empty() && *m != PLAN_REVISE_MESSAGE && !m.contains(PLAN_REJECT_MESSAGE))
@@ -766,7 +659,7 @@ pub fn plan_rejection(message: Option<&str>, stop: bool) -> Decision {
 
 /// The input that answers an AskUserQuestion call: its questions with `answers`, several labels of one question
 /// joined by a comma as the official extension does.
-pub fn question_answer(input: &Value, answers: &[(String, String)]) -> Value {
+pub(crate) fn question_answer(input: &Value, answers: &[(String, String)]) -> Value {
     let mut updated = input.as_object().cloned().unwrap_or_default();
     let map: Map<String, Value> = answers
         .iter()
@@ -798,6 +691,30 @@ mod tests {
         assert_eq!(body["subtype"], "interrupt");
         assert_eq!(body["spare_background_tasks"], true);
         assert_eq!(body["reason"], "user-cancel");
+    }
+
+    #[test]
+    fn the_context_count_is_sent_as_its_detail() {
+        let detail = |count| Request::GetContextUsage { count }.body()["detail"].clone();
+        assert_eq!(detail(ContextCount::Estimated), "summary");
+        assert_eq!(detail(ContextCount::Exact), "full");
+    }
+
+    #[test]
+    fn a_suggestions_destination_names_where_the_rule_is_kept() {
+        let scope = |destination: Value| {
+            let mut raw = json!({"type": "addRules", "rules": [{"toolName": "Read"}], "behavior": "allow"});
+            if !destination.is_null() {
+                raw["destination"] = destination;
+            }
+            Suggestion::read(&raw).unwrap().scope
+        };
+        assert_eq!(scope(Value::Null), RuleScope::Session);
+        assert_eq!(scope(json!("session")), RuleScope::Session);
+        assert_eq!(scope(json!("localSettings")), RuleScope::ProjectLocal);
+        assert_eq!(scope(json!("projectSettings")), RuleScope::Project);
+        assert_eq!(scope(json!("userSettings")), RuleScope::User);
+        assert_eq!(scope(json!("cliArg")), RuleScope::Other("cliArg".into()));
     }
 
     #[test]
@@ -856,7 +773,7 @@ mod tests {
             Suggestion::read(&ask.permission_suggestions[0]),
             Some(Suggestion {
                 rule: "Bash(touch:*)".into(),
-                scope: "localSettings".into()
+                scope: RuleScope::ProjectLocal
             })
         );
         assert_eq!(
@@ -935,8 +852,11 @@ mod tests {
     fn answers_are_read_by_their_request_type() {
         let output = TaskOutput::read(json!({"output": "tick 1\n", "total_bytes": 7, "truncated": false})).unwrap();
         assert_eq!(output.output, "tick 1\n");
-        assert!(bool::read(json!({})).unwrap(), "an older CLI sends no flag");
-        assert!(!bool::read(json!({"backgrounded": false})).unwrap());
+        assert!(
+            Backgrounded::read(json!({})).unwrap().moved,
+            "an older CLI sends no flag"
+        );
+        assert!(!Backgrounded::read(json!({"backgrounded": false})).unwrap().moved);
         assert!(matches!(
             TaskOutput::read(json!({"output": 5})),
             Err(ControlError::Unexpected(_))

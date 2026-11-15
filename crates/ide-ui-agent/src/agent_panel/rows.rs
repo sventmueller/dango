@@ -9,14 +9,14 @@ use objc2_app_kit::{
 };
 
 use ide_ui_common::constant;
-use ide_ui_common::util::{ns, symbol};
+use ide_ui_common::util::{activate, ns, symbol};
 
 define_class!(
     // SAFETY: NSView has no subclassing requirements and `Flipped` does not implement Drop.
     #[unsafe(super(NSView))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEFlippedView"]
-    pub struct Flipped;
+    pub(crate) struct Flipped;
 
     impl Flipped {
         #[unsafe(method(isFlipped))]
@@ -68,22 +68,22 @@ fn icon(mtm: MainThreadMarker, name: &str, points: f64, color: &NSColor) -> Reta
 }
 
 /// What a row shows.
-pub struct Look<'a> {
+pub(super) struct Look<'a> {
     /// Whether the session is open in a tab: a green circle in front, else an empty one.
-    pub open: bool,
-    pub title: &'a str,
-    pub dim: bool,
+    pub(crate) open: bool,
+    pub(crate) title: &'a str,
+    pub(crate) dim: bool,
     /// The quieter text at the end.
-    pub detail: &'a str,
+    pub(crate) detail: &'a str,
     /// A symbol after the title, such as a bookmark.
-    pub badge: Option<(&'a str, Retained<NSColor>)>,
+    pub(crate) badge: Option<(&'a str, Retained<NSColor>)>,
 }
 
 /// The size of the circle in front of a session.
 const DOT_POINTS: f64 = 7.0;
 
 /// A row of the panel's list.
-pub fn cell(mtm: MainThreadMarker, look: &Look<'_>) -> Retained<NSView> {
+pub(super) fn cell(mtm: MainThreadMarker, look: &Look<'_>) -> Retained<NSView> {
     let cell = NSTableCellView::new(mtm);
     let title = NSTextField::labelWithString(&ns(look.title), mtm);
     title.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
@@ -121,14 +121,12 @@ pub fn cell(mtm: MainThreadMarker, look: &Look<'_>) -> Retained<NSView> {
     // SAFETY: The label is a subview of the cell, which keeps it.
     unsafe { cell.setTextField(Some(&title)) };
     stack.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
+    activate([
         stack
             .leadingAnchor()
             .constraintEqualToAnchor_constant(&cell.leadingAnchor(), 2.0),
         stack.trailingAnchor().constraintEqualToAnchor(&cell.trailingAnchor()),
         stack.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     Retained::into_super(cell)
 }

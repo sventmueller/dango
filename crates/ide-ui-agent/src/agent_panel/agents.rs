@@ -18,7 +18,7 @@ use ide_ui_common::window::Window;
 
 /// Agents installed from the registry that the "new session" menu offers, by its tags.
 #[derive(Default)]
-pub struct OfferedAgents {
+pub(super) struct OfferedAgents {
     offered: RefCell<Vec<String>>,
 }
 
@@ -26,7 +26,7 @@ fn with_offered<R>(f: impl FnOnce(&RefCell<Vec<String>>) -> R) -> R {
     f(&crate::host::state().agent_panels.offered_agents.offered)
 }
 
-pub struct TargetIvars {
+pub(crate) struct TargetIvars {
     controller: Window,
 }
 
@@ -36,7 +36,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEAgentsTarget"]
     #[ivars = TargetIvars]
-    pub struct Target;
+    pub(crate) struct Target;
 
     unsafe impl NSObjectProtocol for Target {}
 
@@ -75,13 +75,13 @@ fn tag(sender: Option<&AnyObject>) -> isize {
 }
 
 /// The panel's way to start a session.
-pub struct Agents {
+pub(super) struct Agents {
     target: Retained<Target>,
     mtm: MainThreadMarker,
 }
 
 impl Agents {
-    pub fn new(controller: &Window) -> Agents {
+    pub(super) fn new(controller: &Window) -> Agents {
         let mtm = controller.mtm();
         let this = Target::alloc(mtm).set_ivars(TargetIvars {
             controller: *controller,
@@ -92,7 +92,7 @@ impl Agents {
     }
 
     /// The button that opens a new session, with the choice of agent.
-    pub fn new_session_button(&self) -> Retained<NSButton> {
+    pub(super) fn new_session_button(&self) -> Retained<NSButton> {
         let button =
             ide_ui_common::util::borderless_button(self.mtm, t("+ Neue Sitzung"), None, sel!(ideAgentsNewSession:));
         set_action(&button, &self.target, sel!(ideAgentsNewSession:));

@@ -22,7 +22,7 @@ pub struct Entry {
     /// Where the failing assert is.
     pub failure: Option<Location>,
     /// It was found in the sources, and no listing or run named it yet.
-    pub guessed: bool,
+    pub(crate) guessed: bool,
 }
 
 impl Entry {
@@ -68,7 +68,7 @@ pub struct Board {
     /// Only failed tests show.
     pub failed_only: bool,
     /// The packages and files shown open; all others are closed.
-    pub open: std::collections::HashSet<Node>,
+    pub(crate) open: std::collections::HashSet<Node>,
     /// The last run, for running it again.
     pub last_run: Option<(Tool, Scope)>,
     /// The tools running every test, with whether they named one yet.
@@ -418,7 +418,8 @@ impl Board {
 
     /// Gives the tests of `path` the places that its `text` shows for `tool`'s tests, where the tool gave none:
     /// a Rust function under `#[test]`, a Go function `Test…`.
-    pub fn locate(&mut self, path: &Path, text: &str) {
+    #[cfg(test)]
+    pub(crate) fn locate(&mut self, path: &Path, text: &str) {
         self.place(path, &in_source(path, text));
     }
 

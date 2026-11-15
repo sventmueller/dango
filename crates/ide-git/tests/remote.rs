@@ -184,7 +184,7 @@ fn pulling_over_local_changes_names_them() {
 fn fetch_brings_new_remote_branches_and_prunes_gone_ones() {
     let scratch = Scratch::new("fetch");
     let (mine, theirs) = pair(&scratch);
-    theirs.create_branch("topic", None, false).unwrap();
+    theirs.create_branch("topic", None).unwrap();
     let topic = PushOptions {
         remote: Some("origin".into()),
         refspec: Some("topic".into()),
@@ -348,4 +348,20 @@ fn a_resolved_rebase_continues_to_its_end() {
     let log = mine.log(2).unwrap();
     assert_eq!(log[0].subject, "mine");
     assert_eq!(log[1].subject, "theirs");
+}
+
+#[test]
+fn a_branch_without_upstream_says_so_for_push_and_pull() {
+    let scratch = Scratch::new("no-upstream");
+    let lonely = scratch.repository("lonely", &[("a.txt", "a\n")]);
+    assert!(matches!(
+        lonely.push(&PushOptions::default(), &mut quiet(), &Cancel::new()),
+        Err(Error::NoUpstream { .. })
+    ));
+    let (mine, _) = pair(&scratch);
+    mine.switch_to_new_branch("topic", None).unwrap();
+    assert!(matches!(
+        mine.pull(&PullOptions::default(), &mut quiet(), &Cancel::new()),
+        Err(Error::NoUpstream { .. })
+    ));
 }

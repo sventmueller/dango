@@ -48,7 +48,7 @@ fn questions(input: &Value) -> Vec<QuestionItem> {
 
 impl Mapper {
     /// The updates for a permission request of the CLI.
-    pub fn permission(&mut self, request_id: &str, ask: &PermissionAsk, now: SystemTime) -> Vec<Update> {
+    pub(crate) fn permission(&mut self, request_id: &str, ask: &PermissionAsk, now: SystemTime) -> Vec<Update> {
         let lane = ask
             .agent_id
             .as_ref()
@@ -98,13 +98,8 @@ impl Mapper {
         out
     }
 
-    /// The entry key of the CLI's request `request_id`, while it waits.
-    pub fn request_key(&self, request_id: &str) -> Option<&str> {
-        self.asks.get(request_id).map(|a| a.key.as_str())
-    }
-
     /// The updates for the user's decision on the CLI's request `request_id`.
-    pub fn decided(&mut self, request_id: &str, decision: Decision) -> Vec<Update> {
+    pub(crate) fn decided(&mut self, request_id: &str, decision: Decision) -> Vec<Update> {
         let Some(ask) = self.asks.remove(request_id) else {
             return Vec::new();
         };
@@ -135,7 +130,7 @@ impl Mapper {
     }
 
     /// The updates when the CLI withdraws its request `request_id`.
-    pub fn withdrawn(&mut self, request_id: &str) -> Vec<Update> {
+    pub(crate) fn withdrawn(&mut self, request_id: &str) -> Vec<Update> {
         let Some(ask) = self.asks.remove(request_id) else {
             return Vec::new();
         };

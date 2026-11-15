@@ -16,13 +16,13 @@ use splat_i18n::t;
 
 use crate::editor::EditorTextView;
 use crate::window::{Panel, WindowController};
-pub use panel::{TestsPanel, state_symbol};
+pub(crate) use panel::{TestsPanel, state_symbol};
 
 /// The source of the marks failed asserts leave, beside the language servers' own (E111).
-pub const SOURCE: u64 = u64::MAX;
+pub(crate) const SOURCE: u64 = u64::MAX;
 
 /// Runs `f` with the panel `id`, if its window is still open.
-pub fn with_panel(id: u64, f: impl FnOnce(&TestsPanel)) {
+pub(crate) fn with_panel(id: u64, f: impl FnOnce(&TestsPanel)) {
     if let Some(mtm) = MainThreadMarker::new() {
         crate::context::AppContext::get(mtm).tests_panels().with(id, f);
     }
@@ -33,7 +33,7 @@ fn of(controller: &WindowController) -> Option<Retained<TestsPanel>> {
 }
 
 /// The window shows a folder: its panel lists the tests, those of tools that list by building from the sources.
-pub fn attach(controller: &WindowController) {
+pub(crate) fn attach(controller: &WindowController) {
     let Some(root) = controller.project_root() else { return };
     window_closed(controller);
     let panels = &controller.context().tests_panels();
@@ -46,7 +46,7 @@ pub fn attach(controller: &WindowController) {
 }
 
 /// The user trusts `root` now: its panels list their tests.
-pub fn trust_changed(root: &Path) {
+pub(crate) fn trust_changed(root: &Path) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     for panel in crate::context::AppContext::get(mtm).tests_panels().for_root(root) {
         panel.list(false);
@@ -54,7 +54,7 @@ pub fn trust_changed(root: &Path) {
 }
 
 /// The window's folder closes: its panel goes.
-pub fn window_closed(controller: &WindowController) {
+pub(crate) fn window_closed(controller: &WindowController) {
     controller.context().tests_panels().detach(controller.handle());
 }
 
@@ -113,30 +113,30 @@ fn locate(panel: &TestsPanel, editor: &EditorTextView) {
 }
 
 /// Runs the test at the caret, or says there is none (⌃⌥⌘U).
-pub fn run_at_cursor(controller: &WindowController) {
+pub(crate) fn run_at_cursor(controller: &WindowController) {
     match at_cursor(controller) {
         Some((panel, tool, id)) => panel.run(tool, Scope::Test(id)),
-        None => crate::editor::show_alert(controller.mtm(), t("Kein Test an der Einfügemarke"), ""),
+        None => ide_ui_common::alert::warn(controller.mtm(), t("Kein Test an der Einfügemarke"), ""),
     }
 }
 
 /// Debugs the test at the caret.
-pub fn debug_at_cursor(controller: &WindowController) {
+pub(crate) fn debug_at_cursor(controller: &WindowController) {
     match at_cursor(controller) {
         Some((panel, tool, id)) => debug(&panel, tool, &id),
-        None => crate::editor::show_alert(controller.mtm(), t("Kein Test an der Einfügemarke"), ""),
+        None => ide_ui_common::alert::warn(controller.mtm(), t("Kein Test an der Einfügemarke"), ""),
     }
 }
 
 /// Runs the last test run again (⌃⌥⌘G).
-pub fn rerun(controller: &WindowController) {
+pub(crate) fn rerun(controller: &WindowController) {
     if let Some(panel) = of(controller) {
         panel.rerun();
     }
 }
 
 /// Runs every test of the folder.
-pub fn run_all(controller: &WindowController) {
+pub(crate) fn run_all(controller: &WindowController) {
     if let Some(panel) = of(controller) {
         controller.activate_panel(Panel::Tests);
         panel.run_everything();
@@ -144,7 +144,7 @@ pub fn run_all(controller: &WindowController) {
 }
 
 /// Debugs the test `id` of `tool` in the panel's window, as the Debug panel does a program (C31, F27).
-pub fn debug(panel: &TestsPanel, tool: Tool, id: &TestId) {
+pub(crate) fn debug(panel: &TestsPanel, tool: Tool, id: &TestId) {
     let target = tool.debug(panel.root(), id);
     let program = match target {
         DebugTarget::Native { build, args } => {
@@ -180,7 +180,7 @@ fn marks_changed(panel: &TestsPanel) {
 }
 
 /// The state of the test whose source starts at `line` of `editor`, from 0, for the gutter's symbol.
-pub fn gutter_mark(editor: &EditorTextView, line: usize) -> Option<State> {
+pub(crate) fn gutter_mark(editor: &EditorTextView, line: usize) -> Option<State> {
     let controller = editor.controller()?;
     let panel = of(&controller)?;
     let (path, document) = {
@@ -215,7 +215,7 @@ pub fn gutter_mark(editor: &EditorTextView, line: usize) -> Option<State> {
 
 /// One file's tests for the gutter, so it looks up each line it draws instead of going through every test.
 #[derive(Default)]
-pub struct Marks {
+pub(crate) struct Marks {
     /// The document's revision `found` was read at.
     read: Option<ide_document::Revision>,
     /// The tests the text shows, by function name and line from 1.
@@ -228,7 +228,7 @@ pub struct Marks {
 
 /// A click on the gutter's test symbol at `line` of `editor`, from 0: runs the test, or debugs it with ⌥; whether
 /// there was one.
-pub fn gutter_click(editor: &EditorTextView, line: usize, debugging: bool) -> bool {
+pub(crate) fn gutter_click(editor: &EditorTextView, line: usize, debugging: bool) -> bool {
     let Some(controller) = editor.controller() else {
         return false;
     };
@@ -255,7 +255,7 @@ pub fn gutter_click(editor: &EditorTextView, line: usize, debugging: bool) -> bo
 }
 
 /// The items of the gutter's context menu at a test's line: run and debug it.
-pub fn gutter_items(editor: &EditorTextView, line: usize) -> Vec<Retained<NSMenuItem>> {
+pub(crate) fn gutter_items(editor: &EditorTextView, line: usize) -> Vec<Retained<NSMenuItem>> {
     if gutter_mark(editor, line).is_none() {
         return Vec::new();
     }
@@ -270,7 +270,7 @@ pub fn gutter_items(editor: &EditorTextView, line: usize) -> Vec<Retained<NSMenu
 
 /// The Debug menu with its Tests section (E111): run and debug the test at the caret, run the last run again and every
 /// test; the shortcuts are Xcode's, ⌘U stays Underline (HIG).
-pub fn with_menu_items(
+pub(crate) fn with_menu_items(
     mtm: MainThreadMarker,
     debug_menu: Retained<NSMenuItem>,
     key: &dyn Fn(&str) -> String,
@@ -310,4 +310,4 @@ pub fn with_menu_items(
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

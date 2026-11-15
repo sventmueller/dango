@@ -1,7 +1,12 @@
 //! Server-sent events as the providers stream them: `event:` and `data:` lines up to a blank line. An event the
 //! stream ends in before its blank line is dropped, as the HTML standard's event-stream parsing says.
 
-use std::io::BufRead;
+use std::io::{self, BufRead};
+
+use ide_process::framing::{self, Line};
+
+/// The longest line of a stream; more means a broken or hostile server, not an answer.
+const MAX_LINE: usize = 16 * 1024 * 1024;
 
 /// One event.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -15,32 +20,40 @@ pub(crate) struct Event {
 /// The events of a stream, one at a time.
 pub(crate) struct Events<R> {
     reader: R,
-    line: String,
+    line: Vec<u8>,
 }
 
 impl<R: BufRead> Events<R> {
     pub(crate) fn new(reader: R) -> Events<R> {
         Events {
             reader,
-            line: String::new(),
+            line: Vec::new(),
         }
     }
 }
 
 impl<R: BufRead> Iterator for Events<R> {
-    type Item = std::io::Result<Event>;
+    type Item = io::Result<Event>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut event: Option<String> = None;
         let mut data: Option<String> = None;
         loop {
-            self.line.clear();
-            match self.reader.read_line(&mut self.line) {
+            match framing::read_line(&mut self.reader, &mut self.line, MAX_LINE) {
                 Err(e) => return Some(Err(e)),
-                Ok(0) => return None,
-                Ok(_) => {}
+                Ok(Line::End) => return None,
+                Ok(Line::TooLong) => {
+                    return Some(Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("the stream sent a line longer than {} MiB", MAX_LINE >> 20),
+                    )));
+                }
+                Ok(Line::Read) => {}
             }
-            let line = self.line.trim_end_matches(['\n', '\r']);
+            let line = match std::str::from_utf8(&self.line) {
+                Ok(line) => line.trim_end_matches(['\n', '\r']),
+                Err(e) => return Some(Err(io::Error::new(io::ErrorKind::InvalidData, e))),
+            };
             if line.is_empty() {
                 if let Some(data) = data.take() {
                     return Some(Ok(Event { event, data }));
@@ -108,6 +121,18 @@ mod tests {
             }]
         );
         assert!(events("event: x\ndata: half\n").is_empty());
+    }
+
+    #[test]
+    fn an_overlong_line_ends_the_stream_with_an_error() {
+        let mut text = String::from("data: first\n\ndata: ");
+        text.push_str(&"x".repeat(MAX_LINE + 1));
+        text.push_str("\n\ndata: after\n\n");
+        let mut events = Events::new(text.as_bytes());
+        assert_eq!(events.next().unwrap().unwrap().data, "first");
+        let error = events.next().unwrap().unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+        assert!(error.to_string().contains("longer than 16 MiB"));
     }
 
     #[test]

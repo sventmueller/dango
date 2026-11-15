@@ -1,7 +1,7 @@
 //! The commit graph beside the history, as VS Code draws it: every commit a dot in its lane, lines from each commit
 //! down to its parents, a lane's colour kept for as long as the lane runs.
 
-use crate::Commit;
+use crate::{Commit, CommitId};
 
 /// A line in one half of a row: from a lane at one edge to a lane at the other, in the colour of `color`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,8 +60,8 @@ impl GraphRow {
 }
 
 /// The rows of `commits`, which come children before parents.
-pub fn layout(commits: &[Commit]) -> Vec<GraphRow> {
-    let mut lanes: Vec<Option<(String, usize)>> = Vec::new();
+pub(crate) fn layout(commits: &[Commit]) -> Vec<GraphRow> {
+    let mut lanes: Vec<Option<(CommitId, usize)>> = Vec::new();
     let mut next_color = 0;
     let mut rows = Vec::with_capacity(commits.len());
     for commit in commits {
@@ -149,7 +149,7 @@ pub fn layout(commits: &[Commit]) -> Vec<GraphRow> {
 }
 
 /// The first empty lane other than `except`, or a new one at the end.
-fn free_lane(lanes: &mut Vec<Option<(String, usize)>>, except: Option<usize>) -> usize {
+fn free_lane(lanes: &mut Vec<Option<(CommitId, usize)>>, except: Option<usize>) -> usize {
     if let Some(index) = (0..lanes.len()).find(|i| lanes[*i].is_none() && Some(*i) != except) {
         return index;
     }
@@ -163,8 +163,8 @@ mod tests {
 
     fn commit(hash: &str, parents: &[&str]) -> Commit {
         Commit {
-            hash: hash.into(),
-            parents: parents.iter().map(|p| (*p).to_string()).collect(),
+            hash: CommitId::from_git(hash),
+            parents: parents.iter().map(|p| CommitId::from_git(*p)).collect(),
             subject: String::new(),
             body: String::new(),
             author_name: String::new(),

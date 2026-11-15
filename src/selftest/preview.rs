@@ -10,7 +10,7 @@ use objc2::MainThreadMarker;
 use objc2_foundation::NSRange;
 
 use super::helpers::{self, editor, type_at, utf16_len, window_of};
-use super::{check, finish, snapshot};
+use super::{check, finish, give_up, give_up_saying, snapshot};
 use crate::preview::seen;
 
 const SCENARIO: &str = "preview";
@@ -94,13 +94,15 @@ pub(super) fn run() {
 
 fn open_preview(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        check("the folder gets its window", false, root.display().to_string());
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "the folder gets its window", root.display().to_string());
     };
     controller.open_file(&root.join("doc.md"));
     let Some(view) = editor(&controller, "doc.md") else {
-        check("the file opens in an editor", false, controller.tab_titles().join(", "));
-        return finish(SCENARIO);
+        return give_up_saying(
+            SCENARIO,
+            "the file opens in an editor",
+            controller.tab_titles().join(", "),
+        );
     };
     let tabs = controller.window_tabs();
     check(
@@ -148,10 +150,10 @@ fn figures(root: PathBuf, since: Instant) {
 
 fn typing(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let Some(view) = editor(&controller, "doc.md") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "doc.md opens in an editor");
     };
     let end_of_heading = utf16_len("# Vorschau");
     type_at(&view, NSRange::new(end_of_heading, 0), " neu");
@@ -177,10 +179,10 @@ fn typing(root: PathBuf) {
 
 fn scrolling(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let Some(view) = editor(&controller, "doc.md") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "doc.md opens in an editor");
     };
     let text = view.document().text().to_string();
     // Far enough from the end that the editor can bring it to its top at any text size and window height.
@@ -275,7 +277,7 @@ fn answers(root: PathBuf) {
 
 fn pdf_and_html(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     controller.open_file(&root.join("heft.pdf"));
     let pages = controller.selected_view().map(|view| seen::page_count(&view));
@@ -316,11 +318,7 @@ fn documents_again(controller: &crate::window::WindowController, root: &Path) {
     let broken = root.join("kaputt.pdf");
     let _ = std::fs::write(&broken, "no PDF at all");
     let message = splat_i18n::tf("„{}“ lässt sich nicht öffnen.", &["kaputt.pdf"]);
-    let said = helpers::answer_alert_saying(
-        Duration::from_millis(400),
-        message,
-        objc2_app_kit::NSAlertFirstButtonReturn,
-    );
+    let said = helpers::answer_alert_saying(message, objc2_app_kit::NSAlertFirstButtonReturn);
     let taken = crate::preview::open_document(controller, &broken, true);
     check(
         "a file that only claims to be a PDF opens no tab, and an alert says it is no readable PDF",
@@ -332,13 +330,13 @@ fn documents_again(controller: &crate::window::WindowController, root: &Path) {
 /// A picture wider than the window keeps the sidebar at its width, as a screenshot of a whole screen is.
 fn screenshot(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let before = controller.inspect().sidebar_width;
     controller.open_file(&root.join("bildschirmfoto.png"));
     helpers::after(QUICK_LOOK, move || {
         let Some(controller) = window_of(&root) else {
-            return finish(SCENARIO);
+            return give_up(SCENARIO, "the folder's window is open");
         };
         let after = controller.inspect().sidebar_width;
         check(
@@ -356,7 +354,7 @@ fn screenshot(root: PathBuf) {
 /// An SVG file opens as text, and its drawing in a tab of its own on request.
 fn svg(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let path = root.join("logo.svg");
     controller.open_file(&path);
@@ -380,16 +378,15 @@ fn svg(root: PathBuf) {
 
 fn html(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     controller.open_file(&root.join("seite.html"));
     let Some(view) = editor(&controller, "seite.html") else {
-        check(
+        return give_up_saying(
+            SCENARIO,
             "an HTML file opens in an editor",
-            false,
             controller.tab_titles().join(", "),
         );
-        return finish(SCENARIO);
     };
     let before = crate::browser::inspect(&controller).len();
     crate::preview::toggle_beside(&view);
@@ -417,12 +414,11 @@ fn untrusted() {
     let _ = std::fs::write(&path, format!("# Fremd\n\n![netz]({WEB_PICTURE})\n"));
     crate::app::open_project(mtm, root.clone());
     let Some(controller) = window_of(&root) else {
-        check("the untrusted folder gets its window", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the untrusted folder gets its window");
     };
     controller.open_file(&path);
     if editor(&controller, "fremd.md").is_none() {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "fremd.md opens in an editor");
     }
     let shown = path.clone();
     helpers::wait_until(

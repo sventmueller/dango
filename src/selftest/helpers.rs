@@ -5,13 +5,17 @@ use std::cell::Cell;
 use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 use std::rc::Rc;
+use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use block2::RcBlock;
 use dispatch2::MainThreadBound;
+use ide_core::LockIgnoringPoison;
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
-use objc2_app_kit::{NSApplication, NSEvent, NSEventModifierFlags, NSEventType, NSModalResponse, NSTextField, NSView};
+use objc2_app_kit::{
+    NSApplication, NSEvent, NSEventModifierFlags, NSEventType, NSModalResponse, NSTextField, NSView, NSWindow,
+};
 use objc2_foundation::{NSPoint, NSRange, NSRunLoop, NSRunLoopCommonModes, NSTimer};
 
 use crate::editor::EditorTextView;
@@ -19,13 +23,13 @@ use crate::util::main_after;
 use crate::window::{self, TabId, WindowController};
 
 /// How long a condition wait gives up after.
-pub const WAIT: Duration = Duration::from_secs(20);
+pub(crate) const WAIT: Duration = Duration::from_secs(20);
 const POLL: Duration = Duration::from_millis(50);
 
 /// Runs `then` on the main thread `delay` from now, from the main dispatch queue like `main_after`, but it may hold
 /// what only the main thread can touch. Only for something that has to elapse; a step that waits for a state uses
 /// `wait_until` or `wait_for`.
-pub fn after(delay: Duration, then: impl FnOnce() + 'static) {
+pub(crate) fn after(delay: Duration, then: impl FnOnce() + 'static) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let then = MainThreadBound::new(then, mtm);
     main_after(delay, move || {
@@ -36,23 +40,23 @@ pub fn after(delay: Duration, then: impl FnOnce() + 'static) {
 }
 
 /// Calls `then` with whether `ready` held, as soon as it does or once `WAIT` passed.
-pub fn wait_until(ready: impl Fn() -> bool + 'static, then: impl FnOnce(bool) + 'static) {
+pub(crate) fn wait_until(ready: impl Fn() -> bool + 'static, then: impl FnOnce(bool) + 'static) {
     wait_within(WAIT, ready, then);
 }
 
 /// `wait_until` with a limit of its own, for a condition that takes longer than `WAIT` or one whose failure should
 /// end the scenario sooner.
-pub fn wait_within(limit: Duration, ready: impl Fn() -> bool + 'static, then: impl FnOnce(bool) + 'static) {
+pub(crate) fn wait_within(limit: Duration, ready: impl Fn() -> bool + 'static, then: impl FnOnce(bool) + 'static) {
     wait_for_within(limit, move || ready().then_some(()), move |found| then(found.is_some()));
 }
 
 /// Calls `then` with what `find` found, as soon as it finds something or with none once `WAIT` passed.
-pub fn wait_for<T: 'static>(find: impl Fn() -> Option<T> + 'static, then: impl FnOnce(Option<T>) + 'static) {
+pub(crate) fn wait_for<T: 'static>(find: impl Fn() -> Option<T> + 'static, then: impl FnOnce(Option<T>) + 'static) {
     wait_for_within(WAIT, find, then);
 }
 
 /// `wait_for` with a limit of its own.
-pub fn wait_for_within<T: 'static>(
+pub(crate) fn wait_for_within<T: 'static>(
     limit: Duration,
     find: impl Fn() -> Option<T> + 'static,
     then: impl FnOnce(Option<T>) + 'static,
@@ -70,7 +74,7 @@ fn poll<T: 'static>(deadline: Instant, find: impl Fn() -> Option<T> + 'static, t
 
 /// Calls `then` with `root` and whether `ready` held for the window of `root`, as soon as it does or once `WAIT`
 /// passed.
-pub fn wait_on(
+pub(crate) fn wait_on(
     root: PathBuf,
     ready: impl Fn(&WindowController) -> bool + 'static,
     then: impl FnOnce(PathBuf, bool) + 'static,
@@ -79,7 +83,7 @@ pub fn wait_on(
 }
 
 /// `wait_on` with a limit of its own.
-pub fn wait_on_within(
+pub(crate) fn wait_on_within(
     root: PathBuf,
     limit: Duration,
     ready: impl Fn(&WindowController) -> bool + 'static,
@@ -94,7 +98,7 @@ pub fn wait_on_within(
 }
 
 /// The window whose folder is `root` as it is given, so that it is still found once the folder is gone.
-pub fn project_window(root: &Path) -> Option<Retained<WindowController>> {
+pub(crate) fn project_window(root: &Path) -> Option<Retained<WindowController>> {
     window::open_windows()
         .into_iter()
         .find(|w| w.project().as_deref() == Some(root))
@@ -102,22 +106,22 @@ pub fn project_window(root: &Path) -> Option<Retained<WindowController>> {
 
 /// The end of a scenario's time, below the runner's limit for it in `xtask/src/selftest.rs`, so that the scenario
 /// still writes its report when every wait runs to its bound.
-pub struct Deadline(std::sync::OnceLock<Instant>);
+pub(crate) struct Deadline(std::sync::OnceLock<Instant>);
 
 impl Deadline {
     /// A deadline that has not started; until it does, waits keep only their own limits.
-    pub const fn new() -> Deadline {
+    pub(crate) const fn new() -> Deadline {
         Deadline(std::sync::OnceLock::new())
     }
 
     /// Ends the scenario's time `budget` from now.
-    pub fn start(&self, budget: Duration) {
+    pub(crate) fn start(&self, budget: Duration) {
         let _ = self.0.set(Instant::now() + budget);
     }
 
     /// Calls `then` with whether `ready` held and how long it waited, as soon as it does or once `within` or the
     /// scenario's time passed.
-    pub fn poll(
+    pub(crate) fn poll(
         &self,
         within: Duration,
         ready: impl Fn() -> bool + 'static,
@@ -133,7 +137,7 @@ impl Deadline {
 }
 
 /// Trusts `folder` and opens it as the user does; its root with links resolved.
-pub fn open_trusted(folder: &Path) -> PathBuf {
+pub(crate) fn open_trusted(folder: &Path) -> PathBuf {
     crate::project::trust(folder);
     if let Some(mtm) = MainThreadMarker::new() {
         crate::app::open_project(mtm, folder.to_path_buf());
@@ -142,14 +146,18 @@ pub fn open_trusted(folder: &Path) -> PathBuf {
 }
 
 /// Calls `then` with the window of `folder` once it shows, or with none once `WAIT` passed.
-pub fn wait_for_window(folder: &Path, then: impl FnOnce(Option<Retained<WindowController>>) + 'static) {
+pub(crate) fn wait_for_window(folder: &Path, then: impl FnOnce(Option<Retained<WindowController>>) + 'static) {
     let folder = folder.to_path_buf();
     wait_for(move || window_of(&folder), then);
 }
 
 /// Calls `then` with the editor of `file` in `folder`'s window, opening it there, once it shows, or with none once
 /// `WAIT` passed.
-pub fn wait_for_editor(folder: &Path, file: &Path, then: impl FnOnce(Option<Retained<EditorTextView>>) + 'static) {
+pub(crate) fn wait_for_editor(
+    folder: &Path,
+    file: &Path,
+    then: impl FnOnce(Option<Retained<EditorTextView>>) + 'static,
+) {
     let (folder, file) = (folder.to_path_buf(), file.to_path_buf());
     wait_for(
         move || {
@@ -164,18 +172,18 @@ pub fn wait_for_editor(folder: &Path, file: &Path, then: impl FnOnce(Option<Reta
 }
 
 /// The folder `name` in the run's home, which a scenario fills and opens.
-pub fn folder(name: &str) -> PathBuf {
+pub(crate) fn folder(name: &str) -> PathBuf {
     ide_core::paths::home().join(name)
 }
 
 /// `folder(name)` as the app knows it, with links resolved; the folder itself when it does not exist yet.
-pub fn root(name: &str) -> PathBuf {
+pub(crate) fn root(name: &str) -> PathBuf {
     let folder = folder(name);
     folder.canonicalize().unwrap_or(folder)
 }
 
 /// Makes the folder `name` with `files`, given by path within it and text, and returns its root.
-pub fn make_project(name: &str, files: &[(&str, &str)]) -> std::io::Result<PathBuf> {
+pub(crate) fn make_project(name: &str, files: &[(&str, &str)]) -> std::io::Result<PathBuf> {
     let folder = folder(name);
     std::fs::create_dir_all(&folder)?;
     for (path, text) in files {
@@ -188,7 +196,7 @@ pub fn make_project(name: &str, files: &[(&str, &str)]) -> std::io::Result<PathB
 
 /// Makes the folder `name` with `files`, trusts it, opens it as the user does and calls `then` with its window once it
 /// shows; when it does not, that is a failed check and the end of `scenario`.
-pub fn open_project(
+pub(crate) fn open_project(
     scenario: &'static str,
     name: &str,
     files: &[(&str, &str)],
@@ -197,26 +205,24 @@ pub fn open_project(
     let root = match make_project(name, files) {
         Ok(root) => root,
         Err(error) => {
-            super::check("the scenario's folder is made", false, error.to_string());
-            return super::finish(scenario);
+            return super::give_up_saying(scenario, "the scenario's folder is made", error.to_string());
         }
     };
     let root = open_trusted(&root);
     wait_for_window(&root.clone(), move |controller| match controller {
         Some(controller) => then(controller),
         None => {
-            super::check(
+            super::give_up_saying(
+                scenario,
                 "the scenario's folder opens in a window",
-                false,
                 root.display().to_string(),
             );
-            super::finish(scenario);
         }
     });
 }
 
 /// The window whose folder is `folder`.
-pub fn window_of(folder: &Path) -> Option<Retained<WindowController>> {
+pub(crate) fn window_of(folder: &Path) -> Option<Retained<WindowController>> {
     let root = folder.canonicalize().ok()?;
     window::open_windows()
         .into_iter()
@@ -225,13 +231,13 @@ pub fn window_of(folder: &Path) -> Option<Retained<WindowController>> {
 
 /// Opens `folder` in a window of its own, as "In neuem Fenster öffnen" does, for a scenario that needs two folders
 /// side by side; opening it as the user does would replace the folder of the window in front (E56).
-pub fn open_beside(mtm: MainThreadMarker, folder: &Path) {
+pub(crate) fn open_beside(mtm: MainThreadMarker, folder: &Path) {
     let root = folder.canonicalize().unwrap_or_else(|_| folder.to_path_buf());
     WindowController::open_new(mtm, Some(root)).restore_layout();
 }
 
 /// The editor of the tab titled `title`.
-pub fn editor(controller: &WindowController, title: &str) -> Option<Retained<EditorTextView>> {
+pub(crate) fn editor(controller: &WindowController, title: &str) -> Option<Retained<EditorTextView>> {
     let id = tab(controller, title)?;
     crate::editor::editors_of(controller)
         .into_iter()
@@ -239,7 +245,7 @@ pub fn editor(controller: &WindowController, title: &str) -> Option<Retained<Edi
 }
 
 /// The id of the tab titled `title`.
-pub fn tab(controller: &WindowController, title: &str) -> Option<TabId> {
+pub(crate) fn tab(controller: &WindowController, title: &str) -> Option<TabId> {
     let titles = controller.tab_titles();
     let index = titles.iter().position(|t| t == title)?;
     controller.tab_ids().get(index).copied()
@@ -248,7 +254,7 @@ pub fn tab(controller: &WindowController, title: &str) -> Option<TabId> {
 /// Selects `range` of `view` and types `text` over it, a character at a time as the keyboard does, then lets an event
 /// pass: AppKit closes the undo group of typing once the event loop has handled an event, and without one the next
 /// undoable change would join it.
-pub fn type_at(view: &EditorTextView, range: NSRange, text: &str) {
+pub(crate) fn type_at(view: &EditorTextView, range: NSRange, text: &str) {
     view.setSelectedRange(range);
     for c in text.chars() {
         crate::editor::type_text(view, &c.to_string());
@@ -256,49 +262,170 @@ pub fn type_at(view: &EditorTextView, range: NSRange, text: &str) {
     post_event();
 }
 
-pub fn utf16_len(text: &str) -> usize {
+pub(crate) fn utf16_len(text: &str) -> usize {
     text.encode_utf16().count()
 }
 
 /// The text of `view`.
-pub fn text_of(view: &EditorTextView) -> String {
+pub(crate) fn text_of(view: &EditorTextView) -> String {
     view.document().text().to_string()
 }
 
-/// Answers the alert that is in front `delay` from now, from a timer of the run loop: an alert opened inside a
-/// callback of the main dispatch queue holds up every other such callback, but not the run loop's timers.
-pub fn answer_alert_after(delay: Duration, response: NSModalResponse) {
-    answer_after(delay, None, response);
+/// How often a call waiting for an alert looks for it.
+const ALERT_POLL: Duration = Duration::from_millis(50);
+
+/// The calls waiting for an alert, in the order they began to, and the alerts handed to one already.
+struct AlertWaits {
+    next: u64,
+    /// Each waiting call's place in line and the message it waits for, if it waits for one.
+    waiting: Vec<(u64, Option<String>)>,
+    /// The window numbers of the alerts handed to a call, which ends them.
+    handed: Vec<isize>,
 }
 
-/// `answer_alert_after` for the alert that says `message` only, so a timer meant for one alert never answers another;
-/// the cell tells whether it answered.
-pub fn answer_alert_saying(delay: Duration, message: String, response: NSModalResponse) -> Rc<Cell<bool>> {
-    answer_after(delay, Some(message), response)
+static ALERT_WAITS: Mutex<AlertWaits> = Mutex::new(AlertWaits {
+    next: 0,
+    waiting: Vec::new(),
+    handed: Vec::new(),
+});
+
+/// The messages of the alerts `answer_when_shown` answered, first first.
+static ANSWERED: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+/// Calls `then` with the alert or panel that runs modal as soon as one shows that says `saying`, any when none, and
+/// `then` ends it. Each alert goes to the call that began to wait first among those it suits; one that does not show
+/// within `WAIT` leaves `then` uncalled. Run loop timers look for it, which fire also while an alert runs modal and
+/// holds up the main dispatch queue.
+pub(crate) fn when_alert_shows(saying: Option<String>, then: impl FnOnce(&NSWindow) + 'static) -> AlertWait {
+    wait_for_alert(saying, true, Box::new(then))
 }
 
-fn answer_after(delay: Duration, message: Option<String>, response: NSModalResponse) -> Rc<Cell<bool>> {
+/// `when_alert_shows` for a look at the alert, such as a picture, that leaves it to the next call waiting for it.
+pub(crate) fn look_at_alert(saying: Option<String>, then: impl FnOnce(&NSWindow) + 'static) -> AlertWait {
+    wait_for_alert(saying, false, Box::new(then))
+}
+
+/// A call that waits for an alert, which may show or not.
+pub(crate) struct AlertWait(u64);
+
+impl AlertWait {
+    /// Stops waiting, once the alert can no longer show, so that the next alert goes to the call waiting after it.
+    pub(crate) fn stop(self) {
+        ALERT_WAITS
+            .lock_ignoring_poison()
+            .waiting
+            .retain(|(waiting, _)| *waiting != self.0);
+    }
+}
+
+fn wait_for_alert(saying: Option<String>, takes: bool, then: Box<dyn FnOnce(&NSWindow)>) -> AlertWait {
+    let place = {
+        let mut waits = ALERT_WAITS.lock_ignoring_poison();
+        let place = waits.next;
+        waits.next += 1;
+        waits.waiting.push((place, saying));
+        place
+    };
+    poll_alert(place, takes, Instant::now() + WAIT, then);
+    AlertWait(place)
+}
+
+fn poll_alert(place: u64, takes: bool, deadline: Instant, then: Box<dyn FnOnce(&NSWindow)>) {
+    in_any_mode_after(ALERT_POLL, move || {
+        let shown = MainThreadMarker::new().and_then(|mtm| NSApplication::sharedApplication(mtm).modalWindow());
+        let waiting = ALERT_WAITS
+            .lock_ignoring_poison()
+            .waiting
+            .iter()
+            .any(|(waiting, _)| *waiting == place);
+        if !waiting {
+            return;
+        }
+        if let Some(alert) = shown.filter(|alert| first_in_line(place, alert, takes)) {
+            then(&alert);
+        } else if Instant::now() > deadline {
+            ALERT_WAITS
+                .lock_ignoring_poison()
+                .waiting
+                .retain(|(waiting, _)| *waiting != place);
+        } else {
+            poll_alert(place, takes, deadline, then);
+        }
+    });
+}
+
+/// Whether `alert` goes to the call waiting at `place`, which then leaves the line, marking it handed if it `takes`
+/// it: no call waits before it that `alert` suits, and no call took `alert` already.
+fn first_in_line(place: u64, alert: &NSWindow, takes: bool) -> bool {
+    let number = alert.windowNumber();
+    let texts = alert_texts();
+    let says = |saying: &Option<String>| saying.as_ref().is_none_or(|message| texts.contains(message));
+    let mut waits = ALERT_WAITS.lock_ignoring_poison();
+    let first = waits
+        .waiting
+        .iter()
+        .find(|(_, saying)| says(saying))
+        .map(|(waiting, _)| *waiting);
+    if waits.handed.contains(&number) || first != Some(place) {
+        return false;
+    }
+    waits.waiting.retain(|(waiting, _)| *waiting != place);
+    if takes {
+        waits.handed.push(number);
+    }
+    true
+}
+
+/// Answers the alert that says `message`, as soon as it shows, with its button `response`; the cell tells whether it
+/// did.
+pub(crate) fn answer_alert_saying(message: String, response: NSModalResponse) -> Rc<Cell<bool>> {
+    answer_alert_when_shown(Some(message), response)
+}
+
+/// Answers the next alert, or the one that says `saying`, with its button `response` as soon as it shows; the cell
+/// tells whether it did.
+pub(crate) fn answer_alert_when_shown(saying: Option<String>, response: NSModalResponse) -> Rc<Cell<bool>> {
     let answered = Rc::new(Cell::new(false));
     let seen = Rc::clone(&answered);
-    in_any_mode_after(delay, move || {
-        let says = |message: &String| alert_texts().iter().any(|text| text == message);
-        if message.as_ref().is_none_or(says) {
-            seen.set(true);
-            answer_alert(response);
-        }
+    when_alert_shows(saying, move |_| {
+        seen.set(true);
+        answer_alert(response);
     });
     answered
 }
 
-/// Takes a picture named `name` of the alert in front `delay` from now, drawn by AppKit: `screencapture` gets an alert
-/// panel only as transparent pixels.
-pub fn picture_alert_after(delay: Duration, name: &'static str) {
-    in_any_mode_after(delay, move || {
-        let alert = MainThreadMarker::new().and_then(|mtm| NSApplication::sharedApplication(mtm).modalWindow());
-        if let Some(alert) = alert {
-            super::drawn_snapshot(&alert, name);
+/// Answers the next alert with `response` as soon as it shows, typing `text` into its field first when given, and
+/// notes its message for `answered`.
+pub(crate) fn answer_when_shown(response: NSModalResponse, text: Option<&'static str>) {
+    when_alert_shows(None, move |alert| {
+        if let (Some(text), Some(content)) = (text, alert.contentView()) {
+            fill_field(&content, text);
         }
+        let message = alert_texts().into_iter().find(|t| !t.is_empty()).unwrap_or_default();
+        ANSWERED.lock_ignoring_poison().push(message);
+        answer_alert(response);
     });
+}
+
+/// The messages of the alerts `answer_when_shown` answered, first first.
+pub(crate) fn answered() -> Vec<String> {
+    ANSWERED.lock_ignoring_poison().clone()
+}
+
+fn fill_field(view: &NSView, text: &str) -> bool {
+    if let Some(field) = view.downcast_ref::<NSTextField>()
+        && field.isEditable()
+    {
+        field.setStringValue(&crate::util::ns(text));
+        return true;
+    }
+    view.subviews().iter().any(|child| fill_field(&child, text))
+}
+
+/// Takes a picture named `name` of the next alert as soon as it shows, drawn by AppKit: `screencapture` gets an alert
+/// panel only as transparent pixels.
+pub(crate) fn picture_alert(name: &'static str) {
+    look_at_alert(None, move |alert| super::drawn_snapshot(alert, name));
 }
 
 /// Runs `then` once, `delay` from now, also while an alert runs modal.
@@ -336,7 +463,7 @@ fn texts_in(view: &NSView, out: &mut Vec<String>) {
 }
 
 /// Ends the alert in front as a click on its button `response` would.
-pub fn answer_alert(response: NSModalResponse) {
+pub(crate) fn answer_alert(response: NSModalResponse) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let app = NSApplication::sharedApplication(mtm);
     if app.modalWindow().is_none() {
@@ -348,7 +475,7 @@ pub fn answer_alert(response: NSModalResponse) {
 }
 
 /// Puts an empty event in front of the app's event queue.
-pub fn post_event() {
+pub(crate) fn post_event() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let event = NSEvent::otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2(
         NSEventType::ApplicationDefined,
@@ -368,7 +495,7 @@ pub fn post_event() {
 
 /// For every table in `window`, how far the buttons below it stand from it and the names of their pictures, left to
 /// right; tables without buttons below are left out.
-pub fn list_bars(window: &objc2_app_kit::NSWindow) -> Vec<(f64, Vec<String>)> {
+pub(crate) fn list_bars(window: &objc2_app_kit::NSWindow) -> Vec<(f64, Vec<String>)> {
     fn collect(
         view: &NSView,
         tables: &mut Vec<Retained<NSView>>,

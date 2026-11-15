@@ -19,7 +19,7 @@ use crate::util::constant;
 
 /// A property VoiceOver asks an element for.
 #[derive(Clone, Copy)]
-pub enum Property {
+pub(crate) enum Property {
     Role,
     Subrole,
     /// What `setAccessibilityLabel:` sets, the attribute `AXDescription`.
@@ -60,7 +60,7 @@ impl Property {
 }
 
 /// The property of `object`, from its NSAccessibility method where that says something, else from the attribute.
-pub fn property(object: &AnyObject, property: Property) -> Option<Retained<AnyObject>> {
+pub(crate) fn property(object: &AnyObject, property: Property) -> Option<Retained<AnyObject>> {
     // The older attribute lists the children with the ignored views in between left out, as VoiceOver gets them.
     if matches!(property, Property::Children) {
         return legacy(object, property).or_else(|| modern(object, property));
@@ -98,7 +98,7 @@ fn says_something(value: &AnyObject) -> bool {
 }
 
 /// A property's text: a string as it is, a number as its digits, anything else as nothing.
-pub fn text(value: &AnyObject) -> String {
+pub(crate) fn text(value: &AnyObject) -> String {
     if let Some(string) = value.downcast_ref::<NSString>() {
         string.to_string()
     } else if let Some(string) = value.downcast_ref::<NSAttributedString>() {
@@ -111,12 +111,12 @@ pub fn text(value: &AnyObject) -> String {
 }
 
 /// The property's text, or nothing if the element has none.
-pub fn text_of(object: &AnyObject, which: Property) -> String {
+pub(crate) fn text_of(object: &AnyObject, which: Property) -> String {
     property(object, which).map(|value| text(&value)).unwrap_or_default()
 }
 
 /// The children of `object` VoiceOver walks to.
-pub fn children(object: &AnyObject) -> Vec<Retained<AnyObject>> {
+pub(crate) fn children(object: &AnyObject) -> Vec<Retained<AnyObject>> {
     property(object, Property::Children)
         .and_then(|value| value.downcast::<NSArray>().ok())
         .map(|array| array.iter().collect())
@@ -125,7 +125,7 @@ pub fn children(object: &AnyObject) -> Vec<Retained<AnyObject>> {
 
 /// Whether VoiceOver can press `object`: a cell lists the press action, a view implements the method itself instead
 /// of inheriting NSView's.
-pub fn can_press(object: &AnyObject) -> bool {
+pub(crate) fn can_press(object: &AnyObject) -> bool {
     let press = sel!(accessibilityPerformPress);
     let base: &AnyClass = NSView::class();
     let own = object.class().instance_method(press).map(std::ptr::from_ref::<Method>);
@@ -138,7 +138,7 @@ pub fn can_press(object: &AnyObject) -> bool {
 }
 
 /// Whether the element can be used now; VoiceOver reads a disabled control, but nobody operates it.
-pub fn enabled(object: &AnyObject) -> bool {
+pub(crate) fn enabled(object: &AnyObject) -> bool {
     let modern = sel!(isAccessibilityEnabled);
     // SAFETY: `isAccessibilityEnabled` takes no argument and returns a BOOL.
     let off_modern = object.class().responds_to(modern) && !unsafe { msg_send![object, isAccessibilityEnabled] };
@@ -152,7 +152,7 @@ pub fn enabled(object: &AnyObject) -> bool {
 }
 
 /// Whether the keyboard focus can go to `object`, which VoiceOver moves there for typing.
-pub fn focusable(object: &AnyObject) -> bool {
+pub(crate) fn focusable(object: &AnyObject) -> bool {
     if let Some(view) = object.downcast_ref::<NSView>() {
         return view.acceptsFirstResponder();
     }

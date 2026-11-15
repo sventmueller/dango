@@ -25,8 +25,8 @@ use splat_i18n::{t, tf};
 
 use super::WindowController;
 use super::agent_choices::AgentChoices;
-use super::panes::{Pane, Panes, Place};
-use crate::util::{item, ns, pin_edges, separator, submenu, symbol, symbol_button};
+use super::panes::{PaneId, Panes, Place};
+use crate::util::{activate, fixed_size, item, ns, pin_edges, pin_sides, separator, submenu, symbol, symbol_button};
 
 const WINDOW_SIZE: NSSize = NSSize::new(1240.0, 780.0);
 const MIN_WINDOW_SIZE: NSSize = NSSize::new(720.0, 440.0);
@@ -35,17 +35,17 @@ const BADGE_INSET: f64 = 8.0;
 /// The height of the icon before a tab's title.
 const ICON_HEIGHT: f64 = 14.0;
 
-pub use ide_ui_common::window::{TabId, TabKind};
+pub(crate) use ide_ui_common::window::{TabId, TabKind};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
 /// A document of a window tab: its view and what its tab and badge say about it.
-pub struct Document {
-    pub id: TabId,
-    pub kind: TabKind,
+pub(crate) struct Document {
+    pub(crate) id: TabId,
+    pub(crate) kind: TabKind,
     /// What the document shows, such as a file's path, so it opens once.
-    pub key: Option<String>,
-    pub view: Retained<NSView>,
+    pub(crate) key: Option<String>,
+    pub(crate) view: Retained<NSView>,
     /// `view` with the badge over it, which sits in a pane.
     pub(super) host: Retained<NSView>,
     badge: Retained<NSBox>,
@@ -64,7 +64,7 @@ pub struct Document {
 }
 
 impl Document {
-    pub fn new(
+    pub(crate) fn new(
         controller: &WindowController,
         id: TabId,
         kind: TabKind,
@@ -89,7 +89,7 @@ impl Document {
         host.addSubview(&badge);
         pin_edges(&view, &host);
         badge.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
+        activate([
             badge
                 .topAnchor()
                 .constraintEqualToAnchor_constant(&host.topAnchor(), BADGE_INSET),
@@ -99,9 +99,7 @@ impl Document {
             badge
                 .leadingAnchor()
                 .constraintGreaterThanOrEqualToAnchor_constant(&host.leadingAnchor(), BADGE_INSET),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         badge.setHidden(true);
         Rc::new(Document {
             id,
@@ -123,24 +121,24 @@ impl Document {
         })
     }
 
-    pub fn title(&self) -> String {
+    pub(crate) fn title(&self) -> String {
         self.title.borrow().clone()
     }
 
-    pub fn is_preview(&self) -> bool {
+    pub(crate) fn is_preview(&self) -> bool {
         self.preview.get()
     }
 
-    pub fn set_title(&self, title: &str) {
+    pub(crate) fn set_title(&self, title: &str) {
         *self.title.borrow_mut() = title.to_string();
         self.name_badge();
     }
 
-    pub fn set_preview(&self, preview: bool) {
+    pub(crate) fn set_preview(&self, preview: bool) {
         self.preview.set(preview);
     }
 
-    pub fn set_dirty(&self, dirty: bool) {
+    pub(crate) fn set_dirty(&self, dirty: bool) {
         self.dirty.set(dirty);
     }
 
@@ -152,16 +150,16 @@ impl Document {
         self.status.borrow().clone()
     }
 
-    pub fn set_status(&self, color: Option<&NSColor>) {
+    pub(crate) fn set_status(&self, color: Option<&NSColor>) {
         *self.status.borrow_mut() = color.map(objc2::Message::retain);
     }
 
-    pub fn set_tint(&self, color: &NSColor) {
+    pub(crate) fn set_tint(&self, color: &NSColor) {
         *self.tint.borrow_mut() = Some(objc2::Message::retain(color));
         self.name_badge();
     }
 
-    pub fn set_four_colours(&self, colors: [Retained<NSColor>; 4]) {
+    pub(crate) fn set_four_colours(&self, colors: [Retained<NSColor>; 4]) {
         *self.four_colours.borrow_mut() = Some(colors);
         self.name_badge();
     }
@@ -189,8 +187,7 @@ impl Document {
         };
         let configuration = NSImageSymbolConfiguration::configurationWithPointSize_weight(
             11.0,
-            // SAFETY: AppKit sets its font weight constants when it loads.
-            unsafe { objc2_app_kit::NSFontWeightRegular },
+            crate::util::constant!(objc2_app_kit::NSFontWeightRegular),
         )
         .configurationByApplyingConfiguration(&NSImageSymbolConfiguration::configurationWithHierarchicalColor(&color));
         let image = symbol(name, "")?.imageWithSymbolConfiguration(&configuration)?;
@@ -291,8 +288,8 @@ fn badge(mtm: MainThreadMarker, close: &NSButton) -> (Retained<NSBox>, Retained<
 }
 
 /// A window tab: its window and the panes of the documents it shows.
-pub struct TabWindow {
-    pub window: Retained<NSWindow>,
+pub(crate) struct TabWindow {
+    pub(crate) window: Retained<NSWindow>,
     split: Retained<NSSplitViewController>,
     sidebar: Retained<NSSplitViewItem>,
     /// The inspector at the trailing edge (E94, E101), and where the folder's inspector goes while the tab is in front.
@@ -326,7 +323,7 @@ impl Drop for TabWindow {
 }
 
 impl TabWindow {
-    pub fn new(controller: &WindowController, identifier: &str, frame: Option<NSRect>) -> Rc<TabWindow> {
+    pub(crate) fn new(controller: &WindowController, identifier: &str, frame: Option<NSRect>) -> Rc<TabWindow> {
         let mtm = controller.mtm();
         let style = NSWindowStyleMask::Titled
             | NSWindowStyleMask::Closable
@@ -372,17 +369,13 @@ impl TabWindow {
         let content = NSView::new(mtm);
         let area = NSView::new(mtm);
         content.addSubview(&area);
-        area.setTranslatesAutoresizingMaskIntoConstraints(false);
+        pin_sides(&area, &content, 0.0);
         // Below the title bar and the tab bar, which the content reaches under, so the panes' bars and badges show.
-        for constraint in [
+        activate([
             area.topAnchor()
                 .constraintEqualToAnchor(&content.safeAreaLayoutGuide().topAnchor()),
-            area.leadingAnchor().constraintEqualToAnchor(&content.leadingAnchor()),
-            area.trailingAnchor().constraintEqualToAnchor(&content.trailingAnchor()),
             area.bottomAnchor().constraintEqualToAnchor(&content.bottomAnchor()),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         let panes = Panes::new(mtm, area);
         let content_controller = NSViewController::new(mtm);
         content_controller.setView(&content);
@@ -428,40 +421,40 @@ impl TabWindow {
     }
 
     /// The documents, pane by pane, left to right and top to bottom.
-    pub fn documents(&self) -> Vec<Rc<Document>> {
+    pub(crate) fn documents(&self) -> Vec<Rc<Document>> {
         self.panes.documents()
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.panes.all().iter().all(|pane| pane.count() == 0)
+    pub(crate) fn is_empty(&self) -> bool {
+        self.panes.is_empty()
     }
 
-    pub fn holds(&self, id: TabId) -> bool {
+    pub(crate) fn holds(&self, id: TabId) -> bool {
         self.panes.of_document(id).is_some()
     }
 
-    pub fn document(&self, id: TabId) -> Option<Rc<Document>> {
-        self.documents().into_iter().find(|doc| doc.id == id)
+    pub(crate) fn document(&self, id: TabId) -> Option<Rc<Document>> {
+        self.panes.document(id)
     }
 
     /// The document commands act on: the one in front in the active pane.
-    pub fn focused(&self) -> Option<Rc<Document>> {
-        self.panes.active().front()
+    pub(crate) fn focused(&self) -> Option<Rc<Document>> {
+        self.panes.focused()
     }
 
     /// The area under the documents, where notes show.
-    pub fn content(&self) -> &NSView {
+    pub(crate) fn content(&self) -> &NSView {
         &self.content
     }
 
     /// Puts `document` where `place` says and brings it to the front of its pane.
-    pub fn insert(&self, document: Rc<Document>, place: Place) {
+    pub(crate) fn insert(&self, document: Rc<Document>, place: Place) {
         self.panes.insert(document, place);
         self.refresh();
     }
 
     /// Takes the document `id` out of the window tab; a pane left empty goes with it.
-    pub fn remove(&self, id: TabId) -> Option<Rc<Document>> {
+    pub(crate) fn remove(&self, id: TabId) -> Option<Rc<Document>> {
         let document = self.panes.take(id);
         self.refresh();
         document
@@ -469,77 +462,59 @@ impl TabWindow {
 
     /// Follows the keyboard focus: the pane that has it becomes the active one, and the document remembers where it
     /// was.
-    pub fn follow_focus(&self) {
+    pub(crate) fn follow_focus(&self) {
         let responder = self.window.firstResponder();
         let Some(view) = responder.and_then(|r| Retained::downcast::<NSView>(r).ok()) else {
             return;
         };
-        let Some(pane) = self.panes.all().into_iter().find(|pane| pane.holds_view(&view)) else {
+        let Some(pane) = self.panes.pane_holding(&view) else {
             return;
         };
-        if let Some(doc) = pane.front().filter(|doc| doc.holds(&view)) {
+        if let Some(doc) = self.panes.front(pane).filter(|doc| doc.holds(&view)) {
             *doc.focus.borrow_mut() = Some(Weak::from(&*view));
         }
-        if !Rc::ptr_eq(&self.panes.active(), &pane) {
-            self.panes.set_active(&pane);
+        if self.panes.active() != pane {
+            self.panes.set_active(pane);
             self.refresh();
         }
     }
 
     /// Makes the document `id` the one commands act on, in front of its pane, without moving the keyboard focus.
-    pub fn mark_focused(&self, id: TabId) {
-        if let Some(pane) = self.panes.of_document(id) {
-            pane.select(id);
-            self.panes.set_active(&pane);
+    pub(crate) fn mark_focused(&self, id: TabId) {
+        if self.panes.mark_focused(id) {
             self.refresh();
         }
     }
 
     /// Gives the keyboard focus to the document `id`, bringing it to the front of its pane.
-    pub fn activate(&self, id: TabId) {
+    pub(crate) fn activate(&self, id: TabId) {
         let Some(pane) = self.panes.of_document(id) else { return };
-        pane.select(id);
-        self.activate_pane(&pane);
+        self.panes.select(id);
+        self.activate_pane(pane);
     }
 
     /// Makes `pane` the active one and gives the keyboard focus to its document in front.
-    pub(super) fn activate_pane(&self, pane: &Rc<Pane>) {
+    pub(super) fn activate_pane(&self, pane: PaneId) {
         self.panes.set_active(pane);
         self.refresh();
-        match pane.focus_target() {
+        match self.panes.focus_target(pane) {
             Some(view) => self.window.makeFirstResponder(Some(&view)),
             None => self.window.makeFirstResponder(None),
         };
     }
 
     /// Gives the keyboard focus to the next pane that shows, after the last the first.
-    pub fn focus_next_pane(&self) {
-        if self.panes.is_zoomed() {
-            self.panes.toggle_zoom(&self.panes.active());
-        }
-        let panes: Vec<Rc<Pane>> = self
-            .panes
-            .all()
-            .into_iter()
-            .filter(|pane| pane.companion_of.get().is_none() || pane.count() > 0)
-            .collect();
-        if panes.len() < 2 {
-            return;
-        }
-        let active = self.panes.active();
-        let index = panes.iter().position(|pane| Rc::ptr_eq(pane, &active)).unwrap_or(0);
+    pub(crate) fn focus_next_pane(&self) {
+        let next = self.panes.step_pane(1);
         self.refresh();
-        let next = (1..=panes.len())
-            .map(|step| &panes[(index + step) % panes.len()])
-            .find(|pane| !pane.host.isHidden());
-        if let Some(next) = next.cloned() {
-            self.activate_pane(&next);
+        if let Some(next) = next {
+            self.activate_pane(next);
         }
     }
 
     /// Says on the tab what the focused document is and whether a document has unsaved changes, and shows the panes'
     /// bars or the badges.
-    pub fn refresh(&self) {
+    pub(crate) fn refresh(&self) {
         if let Some(controller) = self.controller.load() {
             self.panes.settle(&controller);
         }
@@ -581,7 +556,7 @@ impl TabWindow {
     }
 
     /// Puts the folder's sidebar `view` into the tab, in place of its picture.
-    pub fn adopt_sidebar(&self, view: &NSView) {
+    pub(crate) fn adopt_sidebar(&self, view: &NSView) {
         self.picture.setHidden(true);
         self.picture.setImage(None);
         self.slot.addSubview(view);
@@ -589,7 +564,7 @@ impl TabWindow {
     }
 
     /// Shows what `view`, the sidebar about to leave, looks like now, for a window that stays on screen.
-    pub fn keep_picture_of(&self, view: &NSView) {
+    pub(crate) fn keep_picture_of(&self, view: &NSView) {
         let bounds = view.bounds();
         let Some(rep) = view.bitmapImageRepForCachingDisplayInRect(bounds) else {
             return;
@@ -602,37 +577,37 @@ impl TabWindow {
     }
 
     /// Lets go of the sidebar's picture, for a window that left the screen with it.
-    pub fn forget_picture(&self) {
+    pub(crate) fn forget_picture(&self) {
         self.picture.setHidden(true);
         self.picture.setImage(None);
     }
 
     /// Whether the tab shows a picture of the sidebar.
-    pub fn has_picture(&self) -> bool {
+    pub(crate) fn has_picture(&self) -> bool {
         self.picture.image().is_some()
     }
 
     /// Clears the toolbar's background above the sidebar in full screen, or brings it back with `clear` false.
-    pub fn clear_above_sidebar(&self, clear: bool) {
+    pub(crate) fn clear_above_sidebar(&self, clear: bool) {
         super::full_screen::clear_above_sidebar(&self.window, &self.slot, clear);
     }
 
     /// How far the toolbar reaches down over the sidebar in full screen, where the menu bar can push it down.
-    pub fn toolbar_reach(&self) -> f64 {
+    pub(crate) fn toolbar_reach(&self) -> f64 {
         super::full_screen::toolbar_reach(&self.window, &self.slot, &self.content)
     }
 
     /// The width of the sidebar now.
-    pub fn sidebar_width(&self) -> f64 {
+    pub(crate) fn sidebar_width(&self) -> f64 {
         self.sidebar.viewController(self.window.mtm()).view().frame().size.width
     }
 
-    pub fn sidebar_collapsed(&self) -> bool {
+    pub(crate) fn sidebar_collapsed(&self) -> bool {
         self.sidebar.isCollapsed()
     }
 
     /// Holds the sidebar at `width`, which a window tab that has not shown yet takes only this way.
-    pub fn pin_sidebar(&self, width: f64, collapsed: bool) {
+    pub(crate) fn pin_sidebar(&self, width: f64, collapsed: bool) {
         self.sidebar.setMinimumThickness(width);
         self.sidebar.setMaximumThickness(width);
         if self.sidebar.isCollapsed() != collapsed {
@@ -645,7 +620,7 @@ impl TabWindow {
     }
 
     /// Lets the user drag the sidebar between `min` and `max` again.
-    pub fn release_sidebar(&self, min: f64, max: f64) {
+    pub(crate) fn release_sidebar(&self, min: f64, max: f64) {
         if self.sidebar.minimumThickness() != min {
             self.sidebar.setMinimumThickness(min);
         }
@@ -661,15 +636,12 @@ fn content_top(content: &NSView) -> Retained<NSView> {
     line.setHidden(true);
     content.addSubview(&line);
     line.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
+    activate([
         line.topAnchor()
             .constraintEqualToAnchor(&content.safeAreaLayoutGuide().topAnchor()),
         line.leadingAnchor().constraintEqualToAnchor(&content.leadingAnchor()),
-        line.widthAnchor().constraintEqualToConstant(1.0),
-        line.heightAnchor().constraintEqualToConstant(0.0),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
+    fixed_size(&line, 1.0, 0.0);
     line
 }
 
@@ -709,8 +681,7 @@ fn status_dot(mtm: MainThreadMarker) -> Retained<NSImageView> {
     status.setImage(symbol("circle.fill", "").as_deref());
     status.setSymbolConfiguration(Some(&NSImageSymbolConfiguration::configurationWithPointSize_weight(
         7.0,
-        // SAFETY: AppKit sets its font weight constants when it loads.
-        unsafe { objc2_app_kit::NSFontWeightRegular },
+        crate::util::constant!(objc2_app_kit::NSFontWeightRegular),
     )));
     crate::util::hide_from_voiceover(&status);
     status
@@ -761,7 +732,7 @@ fn worktree_menu(mtm: MainThreadMarker, choices: &AgentChoices) -> Option<Retain
 
 /// What a new tab can show (E17), the menu that ⌘T and the tab bar's "+" open (E79). The installed agents stand in it
 /// directly, a thread in a worktree of its own below them, as `choices` knows them.
-pub fn new_tab_menu(mtm: MainThreadMarker, choices: &AgentChoices) -> Retained<NSMenu> {
+pub(crate) fn new_tab_menu(mtm: MainThreadMarker, choices: &AgentChoices) -> Retained<NSMenu> {
     let menu = NSMenu::new(mtm);
     menu.setAutoenablesItems(false);
     let entry = |title: &str, symbol_name: &str, action: Option<Sel>| {
@@ -811,7 +782,7 @@ pub fn new_tab_menu(mtm: MainThreadMarker, choices: &AgentChoices) -> Retained<N
 }
 
 /// Fills the parts of `menu` that change: the own agent's endpoints.
-pub fn fill_new_tab_menu(controller: &WindowController, menu: &NSMenu) {
+pub(crate) fn fill_new_tab_menu(controller: &WindowController, menu: &NSMenu) {
     let own = menu
         .itemWithTitle(&ns(t("Eigener Agent")))
         .and_then(|item| item.submenu());
@@ -821,6 +792,6 @@ pub fn fill_new_tab_menu(controller: &WindowController, menu: &NSMenu) {
 }
 
 /// The documents' default size, for a window that has no saved frame.
-pub fn default_size() -> NSSize {
+pub(crate) fn default_size() -> NSSize {
     WINDOW_SIZE
 }

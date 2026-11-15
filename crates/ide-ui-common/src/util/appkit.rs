@@ -3,7 +3,7 @@ use objc2::runtime::{AnyObject, Bool, Sel};
 use objc2::{MainThreadMarker, MainThreadOnly, Message};
 use objc2_app_kit::{
     NSAccessibility, NSButton, NSColor, NSControl, NSEventModifierFlags, NSImage, NSImageSymbolConfiguration, NSMenu,
-    NSMenuItem, NSTextField, NSView,
+    NSMenuItem, NSTextField,
 };
 use objc2_foundation::{NSRect, NSString};
 
@@ -147,8 +147,7 @@ pub fn symbol_button(
     button.setBordered(false);
     button.setSymbolConfiguration(Some(&NSImageSymbolConfiguration::configurationWithPointSize_weight(
         points,
-        // SAFETY: AppKit sets its font weight constants when it loads.
-        unsafe { objc2_app_kit::NSFontWeightRegular },
+        crate::constant!(objc2_app_kit::NSFontWeightRegular),
     )));
     button.setToolTip(Some(&ns(description)));
     button
@@ -204,20 +203,6 @@ pub fn set_title_element(control: &NSControl, title: &NSTextField) {
 /// A label that does not wrap or take input.
 pub fn label(mtm: MainThreadMarker, text: &str) -> Retained<NSTextField> {
     NSTextField::labelWithString(&ns(text), mtm)
-}
-
-/// Pins `view` to all four edges of `container`, which must be its superview.
-pub fn pin_edges(view: &NSView, container: &NSView) {
-    view.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
-        view.leadingAnchor().constraintEqualToAnchor(&container.leadingAnchor()),
-        view.trailingAnchor()
-            .constraintEqualToAnchor(&container.trailingAnchor()),
-        view.topAnchor().constraintEqualToAnchor(&container.topAnchor()),
-        view.bottomAnchor().constraintEqualToAnchor(&container.bottomAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
 }
 
 /// The characters AppKit expects as the key equivalent for the key `name` of a shortcut.

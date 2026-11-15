@@ -15,13 +15,13 @@ use crate::util::{guarded, item, ns, set_target};
 const SPLAT: &str = "local.splat";
 
 /// Where Splat is installed, if it is.
-pub fn location() -> Option<Retained<NSURL>> {
+pub(crate) fn location() -> Option<Retained<NSURL>> {
     NSWorkspace::sharedWorkspace().URLForApplicationWithBundleIdentifier(&ns(SPLAT))
 }
 
 /// Opens the file at `path` in Splat, after an editor that has it open saved what it holds; a document that does
 /// not save stays here.
-pub fn open(_mtm: MainThreadMarker, path: &Path) {
+pub(crate) fn open(_mtm: MainThreadMarker, path: &Path) {
     let Some(app) = location() else { return };
     if !saved(path) {
         return;
@@ -37,7 +37,7 @@ pub fn open(_mtm: MainThreadMarker, path: &Path) {
 }
 
 /// Saves every editor of `path` with unsaved changes; whether none is left.
-pub fn saved(path: &Path) -> bool {
+pub(crate) fn saved(path: &Path) -> bool {
     let unsaved = || {
         crate::editor::all_editors()
             .into_iter()
@@ -51,7 +51,7 @@ pub fn saved(path: &Path) -> bool {
 }
 
 /// "In Splat öffnen" for a context menu, when `path` is a Markdown file and Splat is installed.
-pub fn open_in_splat_item(mtm: MainThreadMarker, path: &Path) -> Option<Retained<NSMenuItem>> {
+pub(crate) fn open_in_splat_item(mtm: MainThreadMarker, path: &Path) -> Option<Retained<NSMenuItem>> {
     if !crate::preview::is_markdown(path) || location().is_none() {
         return None;
     }

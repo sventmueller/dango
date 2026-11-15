@@ -21,6 +21,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::diff::FileDiff;
 use crate::error::{Error, Result};
+use crate::id::CommitId;
 use crate::repo::Repository;
 use crate::run::{Call, Git};
 use crate::staging::apply_hunks;
@@ -47,25 +48,59 @@ pub struct Checkpoints {
     max_file_size: u64,
 }
 
+/// The name of the thread checkpoints belong to, which is one part of their ref names.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct CheckpointThread(String);
+
+impl CheckpointThread {
+    /// `name` as a thread's name: letters, digits, `.`, `_` and `-`, at most 128, not starting with `.` or `-`, and
+    /// nothing else git refuses in a ref name; otherwise `Error::InvalidName`.
+    pub fn new(name: impl Into<String>) -> Result<CheckpointThread> {
+        let name = name.into();
+        let fine = !name.is_empty()
+            && name.len() <= 128
+            && name.bytes().all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b))
+            && !name.starts_with(['.', '-'])
+            && !name.ends_with(".lock")
+            && !name.contains("..");
+        if fine {
+            Ok(CheckpointThread(name))
+        } else {
+            Err(Error::InvalidName { name })
+        }
+    }
+
+    /// The name.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for CheckpointThread {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
 /// A checkpoint as listed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Checkpoint {
     /// The thread it belongs to.
-    pub thread: String,
+    pub thread: CheckpointThread,
     /// Its number in the thread, counting from 1.
     pub number: u64,
     /// The commit holding it.
-    pub commit: String,
+    pub commit: CommitId,
     /// The caller's label, on one line.
     pub label: String,
     /// When it was taken.
-    pub created: SystemTime,
+    pub(crate) created: SystemTime,
     /// Why it was taken.
     pub kind: CheckpointKind,
     /// Whether the turn it started has ended.
     pub finished: bool,
     /// The commit HEAD pointed at; `None` outside a repository or before its first commit.
-    pub base: Option<String>,
+    pub base: Option<CommitId>,
 }
 
 /// Why a checkpoint was taken.
@@ -88,8 +123,8 @@ impl CheckpointKind {
 
 /// A new checkpoint.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Created {
-    /// The checkpoint.
     pub checkpoint: Checkpoint,
     /// Untracked files left out: larger than the limit, or folders with a repository of their own.
     pub skipped: Vec<PathBuf>,
@@ -165,7 +200,7 @@ impl Checkpoints {
     }
 
     /// The app's store for folders outside repositories.
-    pub fn default_store() -> PathBuf {
+    pub(crate) fn default_store() -> PathBuf {
         ide_core::paths::data_dir().join("checkpoints")
     }
 
@@ -188,8 +223,7 @@ impl Checkpoints {
 
     /// Takes a checkpoint for `thread` before an agent's turn. `buffers` are unsaved editor contents by path, kept
     /// byte for byte and handed back by a restore; the files on disk are kept as they are.
-    pub fn create(&self, thread: &str, label: &str, buffers: &[(PathBuf, Vec<u8>)]) -> Result<Created> {
-        valid_thread(thread)?;
+    pub fn create(&self, thread: &CheckpointThread, label: &str, buffers: &[(PathBuf, Vec<u8>)]) -> Result<Created> {
         let snapshot = self.space.snapshot(self.max_file_size)?;
         let parts = Parts {
             worktree: snapshot.worktree,
@@ -206,16 +240,15 @@ impl Checkpoints {
 
     /// Records the state the turn `checkpoint` started has ended in; what changes after it is the user's.
     pub fn finish(&self, checkpoint: &Checkpoint) -> Result<Checkpoint> {
-        let mut parts = self.space.parts(&checkpoint.commit)?;
+        let mut parts = self.space.parts(checkpoint.commit.as_str())?;
         parts.after = Some(self.space.snapshot(self.max_file_size)?.worktree);
         let tree = self.space.meta_tree(&parts)?;
         let message = message(&checkpoint.label, checkpoint.kind, Some(unix(SystemTime::now())));
         let created = unix(checkpoint.created);
-        let commit = self
-            .space
-            .commit_tree(&tree, checkpoint.base.as_deref(), &message, Some(created))?;
+        let base = checkpoint.base.as_ref().map(CommitId::as_str);
+        let commit = self.space.commit_tree(&tree, base, &message, Some(created))?;
         let name = ref_name(&checkpoint.thread, checkpoint.number);
-        let output = self.space.update_ref(&name, &commit, &checkpoint.commit)?;
+        let output = self.space.update_ref(&name, &commit, checkpoint.commit.as_str())?;
         if output.code != 0 {
             return Err(crate::run::failure(&output));
         }
@@ -223,9 +256,9 @@ impl Checkpoints {
     }
 
     /// The checkpoints of `thread`, or of every thread, ordered by thread and number.
-    pub fn list(&self, thread: Option<&str>) -> Result<Vec<Checkpoint>> {
+    pub fn list(&self, thread: Option<&CheckpointThread>) -> Result<Vec<Checkpoint>> {
         let pattern = match thread {
-            Some(thread) => format!("{REFS}{}/", valid_thread(thread)?),
+            Some(thread) => format!("{REFS}{thread}/"),
             None => REFS.to_string(),
         };
         self.read(&pattern)
@@ -233,14 +266,14 @@ impl Checkpoints {
 
     /// The changes from `checkpoint` to the working tree now.
     pub fn diff(&self, checkpoint: &Checkpoint) -> Result<Vec<FileDiff>> {
-        let parts = self.space.parts(&checkpoint.commit)?;
+        let parts = self.space.parts(checkpoint.commit.as_str())?;
         let now = self.space.snapshot(self.max_file_size)?;
         self.space.diff(&parts.worktree, &now.worktree)
     }
 
     /// The changes of the turn `checkpoint` started: to its end, or to now while it runs.
     pub fn turn_diff(&self, checkpoint: &Checkpoint) -> Result<Vec<FileDiff>> {
-        let parts = self.space.parts(&checkpoint.commit)?;
+        let parts = self.space.parts(checkpoint.commit.as_str())?;
         let to = match parts.after {
             Some(after) => after,
             None => self.space.snapshot(self.max_file_size)?.worktree,
@@ -258,13 +291,13 @@ impl Checkpoints {
     pub fn delete(&self, checkpoint: &Checkpoint) -> Result<()> {
         self.space.delete_refs(&[(
             ref_name(&checkpoint.thread, checkpoint.number),
-            checkpoint.commit.clone(),
+            checkpoint.commit.to_string(),
         )])?;
         self.collect_garbage()
     }
 
     /// Deletes every checkpoint of `thread` and returns how many there were.
-    pub fn delete_thread(&self, thread: &str) -> Result<usize> {
+    pub fn delete_thread(&self, thread: &CheckpointThread) -> Result<usize> {
         let doomed = self.list(Some(thread))?;
         self.delete_all(&doomed)
     }
@@ -287,7 +320,7 @@ impl Checkpoints {
     fn delete_all(&self, doomed: &[Checkpoint]) -> Result<usize> {
         let refs: Vec<(String, String)> = doomed
             .iter()
-            .map(|c| (ref_name(&c.thread, c.number), c.commit.clone()))
+            .map(|c| (ref_name(&c.thread, c.number), c.commit.to_string()))
             .collect();
         self.space.delete_refs(&refs)?;
         self.collect_garbage()?;
@@ -303,12 +336,21 @@ impl Checkpoints {
     }
 
     /// Commits `parts` and points the thread's next free ref at it.
-    fn record(&self, thread: &str, label: &str, kind: CheckpointKind, parts: &Parts) -> Result<Checkpoint> {
+    fn record(
+        &self,
+        thread: &CheckpointThread,
+        label: &str,
+        kind: CheckpointKind,
+        parts: &Parts,
+    ) -> Result<Checkpoint> {
         let tree = self.space.meta_tree(parts)?;
         let base = self.space.head()?;
-        let commit = self
-            .space
-            .commit_tree(&tree, base.as_deref(), &message(label, kind, None), None)?;
+        let commit = self.space.commit_tree(
+            &tree,
+            base.as_ref().map(CommitId::as_str),
+            &message(label, kind, None),
+            None,
+        )?;
         let first = self.list(Some(thread))?.last().map_or(1, |c| c.number + 1);
         let mut last = None;
         // Another window may take the same number at the same moment; the ref is only created if it is free.
@@ -327,7 +369,7 @@ impl Checkpoints {
         ))
     }
 
-    fn get(&self, thread: &str, number: u64) -> Result<Checkpoint> {
+    fn get(&self, thread: &CheckpointThread, number: u64) -> Result<Checkpoint> {
         self.read(&ref_name(thread, number))?
             .into_iter()
             .next()
@@ -391,25 +433,8 @@ fn store_config<'a>(store: &'a Path, git_dir: &Path, args: &[&OsStr]) -> Call<'a
     .args(args.iter().copied())
 }
 
-fn ref_name(thread: &str, number: u64) -> String {
+fn ref_name(thread: &CheckpointThread, number: u64) -> String {
     format!("{REFS}{thread}/{number}")
-}
-
-/// `thread` if it can be one component of a ref name.
-fn valid_thread(thread: &str) -> Result<&str> {
-    let fine = !thread.is_empty()
-        && thread.len() <= 128
-        && thread.bytes().all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b))
-        && !thread.starts_with(['.', '-'])
-        && !thread.ends_with(".lock")
-        && !thread.contains("..");
-    if fine {
-        Ok(thread)
-    } else {
-        Err(Error::InvalidName {
-            name: thread.to_string(),
-        })
-    }
 }
 
 fn message(label: &str, kind: CheckpointKind, turn_end: Option<i64>) -> String {
@@ -443,14 +468,15 @@ fn parse_checkpoint(record: &str) -> Option<Checkpoint> {
         }
     }
     Some(Checkpoint {
-        thread: thread.to_string(),
+        // Refs another program made keep their name, so that pruning still finds them.
+        thread: CheckpointThread(thread.to_string()),
         number: number.parse().ok()?,
-        commit: commit.to_string(),
+        commit: CommitId::from_git(commit),
         label: contents.lines().next().unwrap_or_default().to_string(),
         created: UNIX_EPOCH + Duration::from_secs(date.parse().unwrap_or(0)),
         kind,
         finished,
-        base: parents.split_whitespace().next().map(String::from),
+        base: parents.split_whitespace().next().map(CommitId::from_git),
     })
 }
 
@@ -492,10 +518,14 @@ mod tests {
 
     #[test]
     fn thread_names_must_fit_in_a_ref() {
-        assert!(valid_thread("thread-1_a.b").is_ok());
+        assert_eq!(CheckpointThread::new("thread-1_a.b").unwrap().as_str(), "thread-1_a.b");
         for bad in ["", "a/b", "a b", ".hidden", "-x", "x.lock", "a..b", "ü"] {
-            assert!(valid_thread(bad).is_err(), "{bad}");
+            assert!(
+                matches!(CheckpointThread::new(bad), Err(Error::InvalidName { name }) if name == bad),
+                "{bad}"
+            );
         }
+        assert!(CheckpointThread::new("x".repeat(128)).is_ok() && CheckpointThread::new("x".repeat(129)).is_err());
     }
 
     #[test]
@@ -507,7 +537,7 @@ mod tests {
         assert_eq!(checkpoint.label, "Fix the parser");
         assert_eq!(checkpoint.kind, CheckpointKind::BeforeRestore);
         assert!(checkpoint.finished);
-        assert_eq!(checkpoint.base.as_deref(), Some("head"));
+        assert_eq!(checkpoint.base.as_ref().map(CommitId::as_str), Some("head"));
         assert_eq!(unix(checkpoint.created), 1_794_247_537);
     }
 

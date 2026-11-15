@@ -13,7 +13,7 @@ use objc2_foundation::NSRange;
 use super::snappy::measure;
 use super::snappy_recolor::{delete, no_longer};
 use super::snappy_recolor_markdown::markdown;
-use super::{check, finish, helpers};
+use super::{check, finish, give_up, helpers};
 use crate::editor::{self, EditorTextView};
 use crate::preview::seen;
 
@@ -122,13 +122,12 @@ fn top(view: &EditorTextView) -> f64 {
     view.visibleRect().origin.y
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let text = markdown();
     helpers::open_project(SCENARIO, PROJECT, &[(FILE, &text)], |_| {
         helpers::wait_for_editor(&root(), &path(), |view| {
             let Some(view) = view else {
-                check("the Markdown file of 10 000 lines opens", false, "");
-                return finish(SCENARIO);
+                return give_up(SCENARIO, "the Markdown file of 10 000 lines opens");
             };
             helpers::wait_within(
                 SHOWN_WITHIN,
@@ -150,7 +149,9 @@ pub fn run() {
 
 /// Types `typing` with the preview closed and hands on how long it held up the main thread.
 fn plain(typing: Typing, then: impl FnOnce(Duration) + 'static) {
-    let Some(view) = big() else { return finish(SCENARIO) };
+    let Some(view) = big() else {
+        return give_up(SCENARIO, "the big file opens in an editor");
+    };
     measure();
     let typed = insert(&view, typing);
     helpers::after(KEYSTROKE, move || {
@@ -186,7 +187,9 @@ fn reopen(plain: Plain) {
 }
 
 fn scroll_to_middle(plain: Plain) {
-    let Some(view) = big() else { return finish(SCENARIO) };
+    let Some(view) = big() else {
+        return give_up(SCENARIO, "the big file opens in an editor");
+    };
     let middle = view.line_start(view.document().text().line_count() / 2).unwrap_or(0);
     view.scrollRangeToVisible(NSRange::new(middle, 0));
     view.displayIfNeeded();
@@ -224,7 +227,9 @@ fn type_in_middle(plain: Plain) {
 }
 
 fn type_lines(plain: Plain) {
-    let Some(view) = big() else { return finish(SCENARIO) };
+    let Some(view) = big() else {
+        return give_up(SCENARIO, "the big file opens in an editor");
+    };
     let (editor_before, preview_before) = (top(&view), seen::scrolled(&path()));
     typed_into(
         Typing::Lines,
@@ -254,7 +259,9 @@ fn type_lines(plain: Plain) {
 /// Types `typing` on screen, waits for the preview to show it and for the work it started to end, checks the longest
 /// main thread step against the same typing without the preview, deletes the typing again and goes on with `then`.
 fn typed_into(typing: Typing, plain: Plain, name: &'static str, then: impl FnOnce(Plain) + 'static) {
-    let Some(view) = big() else { return finish(SCENARIO) };
+    let Some(view) = big() else {
+        return give_up(SCENARIO, "the big file opens in an editor");
+    };
     measure();
     let typed = insert(&view, typing);
     helpers::wait_within(

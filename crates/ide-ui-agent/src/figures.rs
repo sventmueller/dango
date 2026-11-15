@@ -28,7 +28,7 @@ struct Asked {
 
 /// The figures the AI tabs asked the renderer for.
 #[derive(Default)]
-pub struct Figures {
+pub(crate) struct Figures {
     asked: RefCell<Option<Asked>>,
     asking: Cell<bool>,
     collect: RefCell<Option<Vec<Key>>>,
@@ -43,7 +43,7 @@ fn with_collect<R>(f: impl FnOnce(&RefCell<Option<Vec<Key>>>) -> R) -> R {
 }
 
 /// Records the figures a card uses, including those it finds in the renderer's cache.
-pub fn collect<R>(build: impl FnOnce() -> R) -> (R, Vec<Key>) {
+pub(crate) fn collect<R>(build: impl FnOnce() -> R) -> (R, Vec<Key>) {
     struct Capture(Option<Vec<Key>>);
     impl Drop for Capture {
         fn drop(&mut self) {
@@ -58,6 +58,10 @@ pub fn collect<R>(build: impl FnOnce() -> R) -> (R, Vec<Key>) {
 }
 
 /// Whether the app shows itself dark, which the pictures of formulas and diagrams follow.
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unreachable_pub, reason = "the self-test re-exports it")
+)]
 pub fn is_dark(mtm: MainThreadMarker) -> bool {
     let appearance = NSApplication::sharedApplication(mtm).effectiveAppearance();
     matches!(
@@ -67,7 +71,7 @@ pub fn is_dark(mtm: MainThreadMarker) -> bool {
 }
 
 /// Asks for `keys` beside what earlier answers asked for, on a later turn: a card is built while the table lays out.
-pub fn want(keys: Vec<Key>) {
+pub(crate) fn want(keys: Vec<Key>) {
     with_collect(|slot| {
         if let Some(collected) = slot.borrow_mut().as_mut() {
             collected.extend(keys.iter().cloned());

@@ -29,9 +29,9 @@ use objc2_foundation::{NSDictionary, NSObjectProtocol, NSString};
 use splat_i18n::{t, tf};
 
 use self::form::Row;
-use crate::util::{guarded, label, ns, set_action, symbol};
+use crate::util::{activate, guarded, label, ns, set_action, symbol};
 
-pub use stored_rules::remember as remember_claude_rules;
+pub(crate) use stored_rules::remember as remember_claude_rules;
 
 /// Where the CI tab sits in the toolbar.
 const CI_TAB: isize = 1;
@@ -43,7 +43,7 @@ const AGENT_TAB: isize = 3;
 #[cfg(feature = "dictation")]
 const DICTATION_TAB: isize = 5;
 
-pub struct Ivars {
+pub(crate) struct Ivars {
     settings: RefCell<Settings>,
     font_label: RefCell<Option<Retained<NSTextField>>>,
     ci: Retained<ci::CiSettings>,
@@ -60,7 +60,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDESettingsController"]
     #[ivars = Ivars]
-    pub struct SettingsController;
+    pub(crate) struct SettingsController;
 
     unsafe impl NSObjectProtocol for SettingsController {}
 
@@ -176,7 +176,7 @@ define_class!(
 
 /// The settings window and the parts of it on view.
 #[derive(Default)]
-pub struct SettingsState {
+pub(crate) struct SettingsState {
     settings_window: SettingsWindow,
     agent_registry: agents::AgentRegistryWindow,
     commit_message_settings: commit_message::CommitMessageShown,
@@ -188,7 +188,7 @@ pub struct SettingsState {
 
 /// The settings window while it exists, with its controller.
 #[derive(Default)]
-pub struct SettingsWindow {
+pub(crate) struct SettingsWindow {
     window: RefCell<Option<(Retained<NSWindow>, Retained<SettingsController>)>>,
 }
 
@@ -223,7 +223,7 @@ impl SettingsController {
 }
 
 /// Brings the settings window to the front, building it the first time.
-pub fn show(mtm: MainThreadMarker) {
+pub(crate) fn show(mtm: MainThreadMarker) {
     with_window(|cell| {
         let mut cell = cell.borrow_mut();
         let (window, controller) = cell.get_or_insert_with(|| build(mtm));
@@ -245,23 +245,23 @@ pub fn show(mtm: MainThreadMarker) {
 const PREDICTION_TAB: isize = if cfg!(feature = "dictation") { 6 } else { 5 };
 
 /// Brings the settings window to the front on the tab of edit prediction.
-pub fn show_prediction(mtm: MainThreadMarker) {
+pub(crate) fn show_prediction(mtm: MainThreadMarker) {
     show_tab(mtm, PREDICTION_TAB);
 }
 
-pub use predict::prediction_changed;
+pub(crate) use predict::prediction_changed;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;
 
 /// Brings the settings window to the front on its CI tab.
-pub fn show_ci(mtm: MainThreadMarker) {
+pub(crate) fn show_ci(mtm: MainThreadMarker) {
     show_tab(mtm, CI_TAB);
 }
 
 /// Brings the settings window to the front on its own agent's tab.
-pub fn show_agent(mtm: MainThreadMarker) {
+pub(crate) fn show_agent(mtm: MainThreadMarker) {
     show_tab(mtm, AGENT_TAB);
 }
 
@@ -273,7 +273,7 @@ fn servers_found(lines: Vec<(String, String)>) {
 }
 
 /// The language servers tab of the settings window, once it was built.
-pub fn servers_tab() -> Option<Retained<servers::ServersSettings>> {
+pub(crate) fn servers_tab() -> Option<Retained<servers::ServersSettings>> {
     with_window(|cell| {
         cell.borrow()
             .as_ref()
@@ -282,12 +282,12 @@ pub fn servers_tab() -> Option<Retained<servers::ServersSettings>> {
 }
 
 /// Brings the settings window to the front on its Agents tab.
-pub fn show_agents(mtm: MainThreadMarker) {
+pub(crate) fn show_agents(mtm: MainThreadMarker) {
     show_tab(mtm, AGENTS_TAB);
 }
 
 /// The agents changed, such as an installation that finished; an open settings window shows them again.
-pub fn agents_changed() {
+pub(crate) fn agents_changed() {
     if let Some(mtm) = MainThreadMarker::new() {
         crate::window::refresh_agent_choices(&crate::context::AppContext::get(mtm));
     }
@@ -353,7 +353,7 @@ fn show_tab(mtm: MainThreadMarker, tab: isize) {
 }
 
 /// Something else changed the CI settings; an open settings window shows them again.
-pub fn ci_changed() {
+pub(crate) fn ci_changed() {
     with_window(|cell| {
         if let Some((_, controller)) = cell.borrow().as_ref() {
             controller.ivars().ci.reload();
@@ -362,7 +362,7 @@ pub fn ci_changed() {
 }
 
 /// The settings window, if it was opened.
-pub fn window() -> Option<Retained<NSWindow>> {
+pub(crate) fn window() -> Option<Retained<NSWindow>> {
     with_window(|cell| cell.borrow().as_ref().map(|(window, _)| window.clone()))
 }
 
@@ -468,9 +468,7 @@ fn add_tab(tabs: &NSTabViewController, page: &Page, width: f64) {
         constraints.push(view.widthAnchor().constraintEqualToConstant(size.width));
         constraints.push(view.heightAnchor().constraintEqualToConstant(size.height));
     }
-    for constraint in constraints {
-        constraint.setActive(true);
-    }
+    activate(constraints);
     let controller = NSViewController::new(mtm);
     controller.setPreferredContentSize(content.fittingSize());
     controller.setView(&content);
@@ -483,7 +481,7 @@ fn add_tab(tabs: &NSTabViewController, page: &Page, width: f64) {
 
 /// The dictation tab of the open settings window, for the self-test.
 #[cfg(all(feature = "selftest", feature = "dictation"))]
-pub fn dictation_keys() -> Vec<String> {
+pub(crate) fn dictation_keys() -> Vec<String> {
     with_window(|cell| {
         cell.borrow()
             .as_ref()
@@ -494,7 +492,7 @@ pub fn dictation_keys() -> Vec<String> {
 
 /// Whether the open dictation tab offers Lowspeak's choices and shows a missing model's download, for the self-test.
 #[cfg(all(feature = "selftest", feature = "dictation"))]
-pub fn dictation_rows() -> (bool, bool) {
+pub(crate) fn dictation_rows() -> (bool, bool) {
     with_window(|cell| {
         cell.borrow()
             .as_ref()
@@ -505,7 +503,7 @@ pub fn dictation_rows() -> (bool, bool) {
 
 /// Brings the settings window to the front on its dictation tab, for the self-test.
 #[cfg(all(feature = "selftest", feature = "dictation"))]
-pub fn show_dictation(mtm: MainThreadMarker) {
+pub(crate) fn show_dictation(mtm: MainThreadMarker) {
     show(mtm);
     with_window(|cell| {
         let tabs = cell

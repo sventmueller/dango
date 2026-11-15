@@ -12,7 +12,7 @@ pub enum Shape {
 
 /// The system colour an icon is drawn in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Tint {
+pub(crate) enum Tint {
     /// The colour of secondary text, for kinds that need no colour of their own.
     Plain,
     Blue,
@@ -35,7 +35,7 @@ pub struct Icon {
     /// Its name in this table, such as `rust`.
     pub id: &'static str,
     pub shape: Shape,
-    pub tint: Tint,
+    pub(crate) tint: Tint,
 }
 
 const fn logo(id: &'static str, tint: Tint) -> Icon {
@@ -54,7 +54,7 @@ const fn symbol(id: &'static str, name: &'static str, tint: Tint) -> Icon {
     }
 }
 
-pub const DOCUMENT: Icon = symbol("document", "doc", Tint::Plain);
+pub(crate) const DOCUMENT: Icon = symbol("document", "doc", Tint::Plain);
 const TEXT: Icon = symbol("text", "doc.plaintext", Tint::Plain);
 const README: Icon = symbol("readme", "book.closed", Tint::Blue);
 const LICENSE: Icon = symbol("license", "checkmark.seal", Tint::Yellow);
@@ -111,7 +111,7 @@ const PRISMA: Icon = logo("prisma", Tint::Indigo);
 
 /// Every logo the table draws, for the test that each one parses.
 #[cfg(test)]
-pub const LOGOS: &[Icon] = &[
+pub(crate) const LOGOS: &[Icon] = &[
     RUST, GO, TYPESCRIPT, JAVASCRIPT, REACT, PYTHON, SWIFT, C, CPP, JAVA, KOTLIN, RUBY, PHP, HTML, CSS, DOCKER, GIT,
     MARKDOWN, YAML, DART, LUA, ZIG, SVELTE, HASKELL, ELIXIR, SCALA, GRAPHQL, PRISMA,
 ];
@@ -245,7 +245,7 @@ const EXTENSIONS: &[(&[&str], Icon)] = &[
 
 /// The icon of a file called `name`: by its whole name, then by the name before its first dot, then by how it begins
 /// and ends, then by its extensions from the longest, else a plain document.
-pub fn icon_of(name: &str) -> Icon {
+pub(crate) fn icon_of(name: &str) -> Icon {
     let lower = name.to_lowercase();
     let named = || NAMES.iter().find(|(n, _)| *n == lower).map(|(_, icon)| *icon);
     let stem = lower.split('.').next().unwrap_or_default();

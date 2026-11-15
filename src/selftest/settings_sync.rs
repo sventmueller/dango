@@ -10,7 +10,7 @@ use ide_core::settings_sync::{Clock, DeviceFile, Entry};
 use serde_json::json;
 
 use super::helpers::wait_within;
-use super::{check, finish};
+use super::{check, finish, give_up_saying};
 use crate::settings_sync::{self, Status};
 
 const SCENARIO: &str = "settings-sync";
@@ -38,14 +38,13 @@ fn own() -> Option<DeviceFile> {
     serde_json::from_slice(&bytes).ok()
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let Some(mtm) = objc2::MainThreadMarker::new() else {
         return;
     };
     let folder = ide_core::paths::data_dir().join("sync-folder");
     if let Err(error) = std::fs::create_dir_all(&folder) {
-        check("the sync folder is made", false, error.to_string());
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "the sync folder is made", error.to_string());
     }
     let mut settings = Settings::load_user();
     let _ = settings.set(&keys::FONT_SIZE, &13.0);
@@ -80,8 +79,7 @@ fn arrives(folder: std::path::PathBuf) {
     );
     let bytes = serde_json::to_vec(&file).unwrap_or_default();
     if let Err(error) = std::fs::write(folder.join("zz-other-mac.json"), bytes) {
-        check("another Mac's file is written", false, error.to_string());
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "another Mac's file is written", error.to_string());
     }
     wait_within(
         Duration::from_secs(15),

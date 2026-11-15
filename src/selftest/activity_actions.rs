@@ -14,7 +14,7 @@ use objc2::{MainThreadOnly, Message, sel};
 use objc2_app_kit::{NSAccessibility, NSApplication, NSButton, NSToolbarItem, NSView};
 
 use super::agent::tab_of;
-use super::{check, finish, helpers};
+use super::{check, finish, give_up, helpers};
 use crate::window::{TabId, WindowController};
 
 const NAME: &str = "activity-actions";
@@ -29,12 +29,11 @@ const CHILD: &str = "child:";
 /// The shell's process the typed command reached, 0 before the answer and `u32::MAX` for none.
 static SHELL: AtomicU32 = AtomicU32::new(0);
 
-pub fn run() {
+pub(crate) fn run() {
     helpers::open_project(NAME, "activity-project", &[], move |controller| {
         let root = helpers::root("activity-project");
         let Some(tab) = ide_ui_agent::open_replay(&controller) else {
-            check("an AI tab opens", false, "");
-            return finish(NAME);
+            return give_up(NAME, "an AI tab opens");
         };
         let running: String = SUBAGENT.lines().take(RUNNING).map(|line| format!("{line}\n")).collect();
         tab.feed(&running);
@@ -49,7 +48,7 @@ pub fn run() {
 
 fn typed(root: PathBuf, key: AgentKey) {
     let Some(controller) = helpers::window_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let pid = SHELL.load(Ordering::SeqCst);
     let tab = crate::terminal::tab_of_process(&controller, pid);
@@ -94,7 +93,7 @@ fn typed(root: PathBuf, key: AgentKey) {
 
 fn popover(root: PathBuf, key: AgentKey, terminal: Option<TabId>) {
     let Some(controller) = helpers::window_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     click_activity_item(&controller);
     check("the activity item opens its popover", popover_shown(&controller), "");
@@ -116,10 +115,11 @@ fn popover(root: PathBuf, key: AgentKey, terminal: Option<TabId>) {
         format!("{} (shell {shell:?}, session {session:?})", labels.join(" | ")),
     );
     let Some(ai) = tab_of(key).and_then(|tab| controller.tab_with_key(&tab.tab_key())) else {
-        check("the AI tab is in the window", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the AI tab is in the window");
     };
-    let Some(terminal) = terminal else { return finish(NAME) };
+    let Some(terminal) = terminal else {
+        return give_up(NAME, "the terminal tab is open");
+    };
     let show = splat_i18n::t("Zeigen");
     press(&controller, |label| label == format!("{show}: {shell}"));
     check(
@@ -151,7 +151,7 @@ fn popover(root: PathBuf, key: AgentKey, terminal: Option<TabId>) {
 
 fn stop(root: PathBuf, shell: String) {
     let Some(controller) = helpers::window_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let pid = SHELL.load(Ordering::SeqCst);
     let stop = splat_i18n::t("Stopp");
@@ -166,7 +166,7 @@ fn stop(root: PathBuf, shell: String) {
                 format!("pressed {pressed}"),
             );
             let Some(controller) = helpers::window_of(&root) else {
-                return finish(NAME);
+                return give_up(NAME, "the folder's window is open");
             };
             click_activity_item(&controller);
             let probe = root.clone();
@@ -189,7 +189,7 @@ fn child_of(text: &str) -> Option<u32> {
 /// Of two terminals, the one in view is the one whose screen `@terminal` hands over, also when the other is newer.
 fn second_terminal(root: PathBuf) {
     let Some(controller) = helpers::window_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let first = crate::terminal::recent_output(&controller).map(|(label, _)| label);
     crate::terminal::open_tab(&controller, None);
@@ -203,7 +203,7 @@ fn second_terminal(root: PathBuf) {
         },
         move |opened| {
             let Some(controller) = helpers::window_of(&root) else {
-                return finish(NAME);
+                return give_up(NAME, "the folder's window is open");
             };
             let titles = controller.tab_titles();
             let first_tab = titles

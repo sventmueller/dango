@@ -1,6 +1,7 @@
 //! What the client tells a server it can do, and reading back what the server offers.
 
-use serde_json::{Value, json};
+use lsp_types::ServerCapabilities;
+use serde_json::{Map, Value, json};
 
 use crate::encoding::Encoding;
 
@@ -173,6 +174,49 @@ fn completion() -> Value {
     })
 }
 
+/// What a server's capabilities say as `lsp_types` reads them, and the fields it could not read.
+pub(crate) struct Read {
+    /// Every field that reads; `None` only when the capabilities are not an object at all.
+    pub(crate) capabilities: Option<ServerCapabilities>,
+    /// The fields left out, with why.
+    pub(crate) unreadable: Vec<(String, serde_json::Error)>,
+}
+
+/// Reads `raw` field by field, so one field a server words against the protocol does not cost all the others.
+pub(crate) fn read(raw: &Value) -> Read {
+    let Value::Object(fields) = raw else {
+        let unreadable = serde_json::from_value::<ServerCapabilities>(raw.clone()).err();
+        return Read {
+            capabilities: None,
+            unreadable: unreadable
+                .map(|e| ("capabilities".to_string(), e))
+                .into_iter()
+                .collect(),
+        };
+    };
+    if let Ok(capabilities) = serde_json::from_value(raw.clone()) {
+        return Read {
+            capabilities: Some(capabilities),
+            unreadable: Vec::new(),
+        };
+    }
+    let mut readable = Map::new();
+    let mut unreadable = Vec::new();
+    for (key, value) in fields {
+        let alone = Value::Object(Map::from_iter([(key.clone(), value.clone())]));
+        match serde_json::from_value::<ServerCapabilities>(alone) {
+            Ok(_) => {
+                readable.insert(key.clone(), value.clone());
+            }
+            Err(error) => unreadable.push((key.clone(), error)),
+        }
+    }
+    Read {
+        capabilities: serde_json::from_value(Value::Object(readable)).ok(),
+        unreadable,
+    }
+}
+
 /// Whether `capabilities` offer `key`: present and neither `false` nor `null`.
 pub(crate) fn offers(capabilities: &Value, key: &str) -> bool {
     !matches!(capabilities.get(key), None | Some(Value::Null | Value::Bool(false)))
@@ -215,6 +259,25 @@ mod tests {
         assert_eq!(workspace.apply_edit, Some(true));
         let resolve = workspace.symbol.unwrap().resolve_support.unwrap();
         assert_eq!(resolve.properties, ["location.range"]);
+    }
+
+    #[test]
+    fn capabilities_keep_the_fields_that_read_when_one_does_not() {
+        let read = read(&json!({"hoverProvider": true, "renameProvider": "yes please", "definitionProvider": true}));
+        let capabilities = read.capabilities.unwrap();
+        assert!(capabilities.hover_provider.is_some() && capabilities.definition_provider.is_some());
+        assert!(capabilities.rename_provider.is_none());
+        let names: Vec<_> = read.unreadable.iter().map(|(key, _)| key.as_str()).collect();
+        assert_eq!(names, ["renameProvider"]);
+    }
+
+    #[test]
+    fn capabilities_that_read_whole_name_nothing_and_no_object_reads_as_none() {
+        let whole = read(&json!({"hoverProvider": true, "experimental": {"x": 1}}));
+        assert!(whole.capabilities.is_some() && whole.unreadable.is_empty());
+        let missing = read(&Value::Null);
+        assert!(missing.capabilities.is_none());
+        assert_eq!(missing.unreadable.len(), 1);
     }
 
     #[test]

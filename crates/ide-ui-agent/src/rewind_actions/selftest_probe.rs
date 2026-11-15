@@ -8,7 +8,7 @@ use super::*;
 
 /// The answers the self-test gives the rewind's questions, first first, and the questions it saw.
 #[derive(Default)]
-pub struct RewindAlerts {
+pub(crate) struct RewindAlerts {
     alerts: std::cell::RefCell<(std::collections::VecDeque<objc2_app_kit::NSModalResponse>, Vec<String>)>,
 }
 

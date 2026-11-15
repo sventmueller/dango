@@ -3,14 +3,14 @@
 use super::*;
 
 /// Whether the lines on screen show the colours the document has for them, for the self-test.
-pub fn colours_painted(view: &EditorTextView) -> bool {
+pub(crate) fn colours_painted(view: &EditorTextView) -> bool {
     let visible = visible_lines(view);
-    !view.ivars().unpainted.borrow().meets(&visible)
-        && !view.ivars().unstyled.borrow().meets(&on_screen(view, &visible))
+    !view.ivars().paint.unpainted.borrow().meets(&visible)
+        && !view.ivars().paint.unstyled.borrow().meets(&on_screen(view, &visible))
 }
 
 /// The colour shown at UTF-16 offset `at`: the lexing's or the server's where one paints it, else the storage's.
-pub fn shown_color(view: &EditorTextView, at: usize) -> Option<Retained<AnyObject>> {
+pub(crate) fn shown_color(view: &EditorTextView, at: usize) -> Option<Retained<AnyObject>> {
     let key = constant!(NSForegroundColorAttributeName);
     let (layout, content) = layout_of(view)?;
     let start = content.documentRange().location();

@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 use crate::error::{Error, Result};
+use crate::id::CommitId;
 use crate::repo::Repository;
 use crate::run::{Call, Git};
 
@@ -34,7 +35,7 @@ pub struct Finding {
     /// The line it starts on.
     pub line: u32,
     /// The commit it is in; `None` for staged changes.
-    pub commit: Option<String>,
+    pub commit: Option<CommitId>,
 }
 
 #[derive(Deserialize)]
@@ -144,7 +145,7 @@ fn parse(report: &[u8]) -> Result<Vec<Finding>> {
             description: r.description,
             file: PathBuf::from(r.file),
             line: r.start_line,
-            commit: (!r.commit.is_empty()).then_some(r.commit),
+            commit: (!r.commit.is_empty()).then(|| CommitId::from_git(r.commit)),
         })
         .collect())
 }

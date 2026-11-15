@@ -11,7 +11,7 @@ use ide_process::Supervisor;
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 
-use super::{check, finish, helpers, snapshot};
+use super::{check, finish, give_up_saying, helpers, snapshot};
 use crate::window::{self, TabId, WindowController};
 
 const SCENARIO: &str = "panels";
@@ -60,8 +60,7 @@ fn window_of(root: &Path) -> Option<Retained<WindowController>> {
         .into_iter()
         .find(|w| w.project().as_deref() == Some(root));
     if controller.is_none() {
-        check("the folder gets its window", false, root.display().to_string());
-        finish(SCENARIO);
+        give_up_saying(SCENARIO, "the folder gets its window", root.display().to_string());
     }
     controller
 }
@@ -337,9 +336,10 @@ fn reopen(root: PathBuf, expected: Vec<Vec<String>>, share: Option<f64>) {
         "closing the window with its close button saves all its tabs",
         saved.as_ref().is_some_and(|layout| {
             layout.tabs.len() == expected.len()
-                && layout.has(&ide_core::layout::Tab::Agent {
+                && ide_core::layout::Tab::new(&ide_ui_agent::KeptSession {
                     session: SESSION.into(),
                 })
+                .is_some_and(|agent| layout.has(&agent))
                 && layout.tabs.iter().any(
                     |tab| matches!(&tab.root, ide_core::layout::Node::Split { children, .. } if children.len() == 2),
                 )

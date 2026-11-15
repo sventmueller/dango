@@ -48,7 +48,7 @@ struct Help {
 
 /// The signature help on view.
 #[derive(Default)]
-pub struct ShownSignature {
+pub(crate) struct ShownSignature {
     help: RefCell<Option<std::rc::Rc<Help>>>,
 }
 
@@ -125,7 +125,7 @@ fn triggers(view: &dyn Editor) -> (Vec<String>, Vec<String>) {
 }
 
 /// Asks for the signatures at the cursor, as the menu item does.
-pub fn show(view: &dyn Editor) {
+pub(crate) fn show(view: &dyn Editor) {
     let context = SignatureHelpContext {
         trigger_kind: SignatureHelpTriggerKind::INVOKED,
         trigger_character: None,
@@ -136,7 +136,7 @@ pub fn show(view: &dyn Editor) {
 }
 
 /// Text was typed into `view`: a trigger character opens the window, and while it shows, every keystroke updates it.
-pub fn typed(view: &dyn Editor, typed: &str) {
+pub(crate) fn typed(view: &dyn Editor, typed: &str) {
     let open = open_for(view);
     if open.is_none() && server_of(view).is_none() {
         return;
@@ -162,7 +162,7 @@ pub fn typed(view: &dyn Editor, typed: &str) {
 }
 
 /// The cursor moved or the text changed while the window shows: it follows, or closes once the cursor left the call.
-pub fn moved(view: &dyn Editor) {
+pub(crate) fn moved(view: &dyn Editor) {
     let Some(help) = open_for(view) else { return };
     let about = (view.document().revision(), view.selectedRange().location);
     if help.about.get() == about {
@@ -215,7 +215,7 @@ fn request(view: &dyn Editor, context: SignatureHelpContext) {
 }
 
 /// A command of the keyboard reached `view`; whether the window took it: ↑ and ↓ between overloads, Esc to close.
-pub fn command(view: &dyn Editor, command: Sel) -> bool {
+pub(crate) fn command(view: &dyn Editor, command: Sel) -> bool {
     let Some(help) = open_for(view) else {
         return false;
     };
@@ -238,7 +238,7 @@ pub fn command(view: &dyn Editor, command: Sel) -> bool {
 }
 
 /// Closes the window if it shows for `view`.
-pub fn dismiss_for(view: &dyn Editor) {
+pub(crate) fn dismiss_for(view: &dyn Editor) {
     if let Some(help) = open_for(view) {
         close(&help);
     }
@@ -448,7 +448,7 @@ fn place(help: &Help, view: &dyn Editor, size: NSSize) {
 }
 
 /// Whether the menu command `action` can run in `view`, for "Parameter zeigen"; `None` for every other one.
-pub fn validate(view: &dyn Editor, action: Sel) -> Option<bool> {
+pub(crate) fn validate(view: &dyn Editor, action: Sel) -> Option<bool> {
     (action == sel!(ideSignatureHelp:)).then(|| {
         server_of(view).is_some_and(|(server, _)| {
             server

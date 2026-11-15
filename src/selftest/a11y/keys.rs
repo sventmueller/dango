@@ -20,7 +20,7 @@ const LINKS: usize = 5000;
 
 /// The views Tab moves the focus to in `window`, from its focus onwards, until it comes round; whether it did. The
 /// focus is put back afterwards.
-pub fn tab_loop(window: &NSWindow) -> (Vec<Retained<NSView>>, bool) {
+pub(crate) fn tab_loop(window: &NSWindow) -> (Vec<Retained<NSView>>, bool) {
     let start = focused(window);
     let mut reached: Vec<Retained<NSView>> = Vec::new();
     let mut round = false;
@@ -65,7 +65,7 @@ fn step(window: &NSWindow, view: &NSView) -> Option<Retained<NSView>> {
 }
 
 /// The view with the focus; for the field editor, the text field it edits.
-pub fn focused(window: &NSWindow) -> Option<Retained<NSView>> {
+pub(crate) fn focused(window: &NSWindow) -> Option<Retained<NSView>> {
     let view = window.firstResponder()?.downcast::<NSView>().ok()?;
     if let Some(text) = view.downcast_ref::<NSTextView>()
         && text.isFieldEditor()
@@ -163,13 +163,13 @@ fn needs_full_keyboard_access(view: &NSView) -> bool {
 
 /// Whether the key view loop links `view`, as AppKit does with each view it lets Tab reach: it is among `loop_views`,
 /// or following the links from it comes back to it.
-pub fn linked(view: &NSView, loop_views: &[Retained<NSView>]) -> bool {
+pub(crate) fn linked(view: &NSView, loop_views: &[Retained<NSView>]) -> bool {
     loop_views.iter().any(|seen| std::ptr::eq(&**seen, view))
         || chain(view).iter().skip(1).any(|next| std::ptr::eq(&**next, view))
 }
 
 /// The longest run of views the key view loop of `window` links, from where Tab started or the window's first views.
-pub fn key_view_loop(window: &NSWindow, reached: &[Retained<NSView>]) -> Vec<Retained<NSView>> {
+pub(crate) fn key_view_loop(window: &NSWindow, reached: &[Retained<NSView>]) -> Vec<Retained<NSView>> {
     [
         reached.first().cloned(),
         window.initialFirstResponder(),
@@ -189,7 +189,7 @@ fn in_window(view: &NSView, window: &NSWindow) -> bool {
 
 /// The controls among `elements` of `window` that Tab never reaches, and how many were left out with the reason. With
 /// full keyboard access off on this Mac, a button counts as reached where the key view loop links it.
-pub fn unreached(window: &NSWindow, elements: &[Element]) -> (Vec<Finding>, Vec<(&'static str, usize)>) {
+pub(crate) fn unreached(window: &NSWindow, elements: &[Element]) -> (Vec<Finding>, Vec<(&'static str, usize)>) {
     let (reached, round) = tab_loop(window);
     let loop_views = key_view_loop(window, &reached);
     let has = |views: &[Retained<NSView>], view: &NSView| views.iter().any(|seen| std::ptr::eq(&**seen, view));
@@ -227,7 +227,12 @@ pub fn unreached(window: &NSWindow, elements: &[Element]) -> (Vec<Finding>, Vec<
 }
 
 /// A key press with `characters`, the key `code` and `modifiers` for `window`.
-pub fn key_event(window: &NSWindow, characters: &str, code: u16, modifiers: NSEventModifierFlags) -> Retained<NSEvent> {
+pub(crate) fn key_event(
+    window: &NSWindow,
+    characters: &str,
+    code: u16,
+    modifiers: NSEventModifierFlags,
+) -> Retained<NSEvent> {
     let plain = if modifiers.contains(NSEventModifierFlags::Shift) {
         characters.to_lowercase()
     } else {
@@ -249,7 +254,7 @@ pub fn key_event(window: &NSWindow, characters: &str, code: u16, modifiers: NSEv
 }
 
 /// Where a key press went.
-pub enum Went {
+pub(crate) enum Went {
     /// A view of the window took it as a key equivalent.
     Equivalent,
     /// The menu bar's item with that shortcut sent its action.
@@ -275,7 +280,7 @@ impl std::fmt::Display for Went {
 /// views, then to the menu bar's item with that shortcut; else to the view with the focus, whose responder chain ends
 /// at the window. The keys go to the window itself, since a selftest app is never the active one and has no key
 /// window.
-pub fn press(window: &NSWindow, characters: &str, code: u16, modifiers: NSEventModifierFlags) -> Went {
+pub(crate) fn press(window: &NSWindow, characters: &str, code: u16, modifiers: NSEventModifierFlags) -> Went {
     let event = key_event(window, characters, code, modifiers);
     if modifiers.intersects(NSEventModifierFlags::Command | NSEventModifierFlags::Control) {
         if window.performKeyEquivalent(&event) {
@@ -338,7 +343,7 @@ fn types_tabs(window: &NSWindow) -> bool {
 }
 
 /// The shortcut of the menu bar's item for `action`, as AppKit shows it: its characters and modifiers.
-pub fn shortcut_of(window: &NSWindow, action: Sel) -> Option<(String, NSEventModifierFlags)> {
+pub(crate) fn shortcut_of(window: &NSWindow, action: Sel) -> Option<(String, NSEventModifierFlags)> {
     fn find(menu: &NSMenu, action: Sel) -> Option<Retained<NSMenuItem>> {
         menu.itemArray().iter().find_map(|item| match item.submenu() {
             Some(submenu) => find(&submenu, action),
@@ -357,7 +362,7 @@ pub fn shortcut_of(window: &NSWindow, action: Sel) -> Option<(String, NSEventMod
 }
 
 /// Types `text` into the view with the focus of `window`, a key press for each character.
-pub fn type_keys(window: &NSWindow, text: &str) {
+pub(crate) fn type_keys(window: &NSWindow, text: &str) {
     for c in text.chars() {
         let _ = press(window, &c.to_string(), 0, NSEventModifierFlags::empty());
     }
@@ -366,7 +371,7 @@ pub fn type_keys(window: &NSWindow, text: &str) {
 /// Sends the action of `item` as a menu does for `window` as the key window: to the item's target, else to the first
 /// along the window's responder chain, its delegate, the application and its delegate that answers it, if that one
 /// enables the item; whether it went out.
-pub fn perform(window: &NSWindow, item: &NSMenuItem) -> bool {
+pub(crate) fn perform(window: &NSWindow, item: &NSMenuItem) -> bool {
     let Some(action) = item.action() else { return false };
     let Some(target) = item.target().or_else(|| chain_target(window, action)) else {
         return false;

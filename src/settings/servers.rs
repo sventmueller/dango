@@ -6,13 +6,13 @@ use std::cell::{OnceCell, RefCell};
 
 use ide_core::settings::Settings;
 use ide_lsp::CustomServer;
+use ide_ui_common::alert::{Alert, Role, first};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAlert, NSAlertFirstButtonReturn, NSButton, NSControlTextEditingDelegate, NSLayoutAttribute, NSStackView,
-    NSTableColumn, NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTextField,
-    NSUserInterfaceLayoutOrientation, NSView,
+    NSButton, NSControlTextEditingDelegate, NSLayoutAttribute, NSStackView, NSTableColumn, NSTableView,
+    NSTableViewDataSource, NSTableViewDelegate, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::{NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::t;
@@ -24,7 +24,7 @@ use ide_ui_lsp::LANGUAGE_SERVERS;
 const BUILT_IN_HEIGHT: f64 = 190.0;
 const CUSTOM_HEIGHT: f64 = 110.0;
 
-pub struct ServersIvars {
+pub(crate) struct ServersIvars {
     /// The built-in languages with where their server is, once the survey came back.
     found: RefCell<Vec<(String, String)>>,
     custom: RefCell<Vec<CustomServer>>,
@@ -44,7 +44,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEServersSettings"]
     #[ivars = ServersIvars]
-    pub struct ServersSettings;
+    pub(crate) struct ServersSettings;
 
     unsafe impl NSObjectProtocol for ServersSettings {}
 
@@ -87,7 +87,7 @@ define_class!(
 );
 
 impl ServersSettings {
-    pub fn new(mtm: MainThreadMarker) -> Retained<ServersSettings> {
+    pub(crate) fn new(mtm: MainThreadMarker) -> Retained<ServersSettings> {
         let this = Self::alloc(mtm).set_ivars(ServersIvars {
             found: RefCell::new(Vec::new()),
             custom: RefCell::new(Vec::new()),
@@ -100,7 +100,7 @@ impl ServersSettings {
     }
 
     /// Reads the user's servers again and looks anew for the built-in ones, which may have been installed meanwhile.
-    pub fn reload(&self) {
+    pub(crate) fn reload(&self) {
         self.read();
         if let Some(views) = self.ivars().views.get() {
             views.custom.reloadData();
@@ -110,7 +110,7 @@ impl ServersSettings {
     }
 
     /// The built-in languages and where their servers are, from a survey that came back.
-    pub fn found(&self, lines: Vec<(String, String)>) {
+    pub(crate) fn found(&self, lines: Vec<(String, String)>) {
         *self.ivars().found.borrow_mut() = lines;
         if let Some(views) = self.ivars().views.get() {
             views.built_in.reloadData();
@@ -129,7 +129,7 @@ impl ServersSettings {
     }
 
     /// The rows of the user's servers or of the built-in languages, as their table shows them.
-    pub fn rows(&self, custom: bool) -> Vec<Vec<String>> {
+    pub(crate) fn rows(&self, custom: bool) -> Vec<Vec<String>> {
         if !custom {
             return self
                 .ivars()
@@ -224,13 +224,6 @@ impl ServersSettings {
             return;
         };
         let mtm = self.mtm();
-        let alert = NSAlert::new(mtm);
-        alert.setMessageText(&ns(t("Sprachserver hinzufügen")));
-        alert.setInformativeText(&ns(t(
-            "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten.",
-        )));
-        alert.addButtonWithTitle(&ns(t("Hinzufügen")));
-        alert.addButtonWithTitle(&ns(t("Abbrechen")));
         let field = |placeholder: &str| {
             let field = NSTextField::textFieldWithString(&ns(""), mtm);
             field.setPlaceholderString(Some(&ns(placeholder)));
@@ -246,22 +239,29 @@ impl ServersSettings {
             accessory.addArrangedSubview(view);
         }
         accessory.setFrame(NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(300.0, 88.0)));
-        alert.setAccessoryView(Some(&accessory));
-        alert.window().setInitialFirstResponder(Some(&name));
         let this = self.retain();
-        crate::ci_panel::sheet(&alert, &window, move |response| {
-            if response == NSAlertFirstButtonReturn {
-                this.add(
-                    &name.stringValue().to_string(),
-                    &extensions.stringValue().to_string(),
-                    &command.stringValue().to_string(),
-                );
-            }
-        });
+        let informative = t(
+            "Etwa „Elixir“, „ex, exs“ und „elixir-ls“. Der Befehl ist ein Programm auf dem PATH der Login-Shell oder ein Pfad, gefolgt von seinen Argumenten.",
+        );
+        Alert::new(mtm, t("Sprachserver hinzufügen"))
+            .informative(informative)
+            .button(t("Hinzufügen"), Role::Plain)
+            .button(t("Abbrechen"), Role::Plain)
+            .accessory(&accessory)
+            .focus(&name)
+            .sheet(&window, move |response| {
+                if first(response) {
+                    this.add(
+                        &name.stringValue().to_string(),
+                        &extensions.stringValue().to_string(),
+                        &command.stringValue().to_string(),
+                    );
+                }
+            });
     }
 
     /// The tab's view.
-    pub fn view(&self) -> Retained<NSView> {
+    pub(crate) fn view(&self) -> Retained<NSView> {
         let mtm = self.mtm();
         let (built_in, built_in_scroll) = form::table(
             mtm,
@@ -324,7 +324,7 @@ impl ServersSettings {
 
 /// What the self-test reads from and does with the tab, through the code its controls run.
 #[cfg(feature = "selftest")]
-pub mod selftest {
+pub(crate) mod selftest {
     use objc2::DefinedClass;
     use objc2_app_kit::NSModalResponse;
 
@@ -332,7 +332,7 @@ pub mod selftest {
     use crate::util::ns;
 
     /// The rows the table of the user's servers or of the built-in languages shows, and how many it counts.
-    pub fn rows(owner: &ServersSettings, custom: bool) -> (Vec<Vec<String>>, isize) {
+    pub(crate) fn rows(owner: &ServersSettings, custom: bool) -> (Vec<Vec<String>>, isize) {
         let shown = owner.ivars().views.get().map_or(0, |views| {
             if custom {
                 views.custom.numberOfRows()
@@ -344,7 +344,7 @@ pub mod selftest {
     }
 
     /// Selects `row` of the user's servers and clicks the remove button.
-    pub fn remove(owner: &ServersSettings, row: usize) {
+    pub(crate) fn remove(owner: &ServersSettings, row: usize) {
         let Some(views) = owner.ivars().views.get() else { return };
         views
             .custom
@@ -354,12 +354,12 @@ pub mod selftest {
     }
 
     /// Asks for a server to add, as the add button does.
-    pub fn click_add(owner: &ServersSettings) {
+    pub(crate) fn click_add(owner: &ServersSettings) {
         owner.ask();
     }
 
     /// Types `values` into the add sheet's fields in their order and ends it with `response`.
-    pub fn answer_add(owner: &ServersSettings, values: [&str; 3], response: NSModalResponse) -> bool {
+    pub(crate) fn answer_add(owner: &ServersSettings, values: [&str; 3], response: NSModalResponse) -> bool {
         let Some(window) = owner.ivars().views.get().and_then(|v| v.custom.window()) else {
             return false;
         };
@@ -392,7 +392,7 @@ pub mod selftest {
     }
 
     /// The problem the tab shows, if any.
-    pub fn problem(owner: &ServersSettings) -> Option<String> {
+    pub(crate) fn problem(owner: &ServersSettings) -> Option<String> {
         let views = owner.ivars().views.get()?;
         (!views.problem.isHidden()).then(|| views.problem.stringValue().to_string())
     }

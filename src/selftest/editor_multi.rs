@@ -10,7 +10,7 @@ use objc2::sel;
 use objc2_app_kit::NSStandardKeyBindingResponding;
 use objc2_foundation::{NSPoint, NSRange};
 
-use super::{check, finish, helpers, snapshot};
+use super::{check, finish, give_up, helpers, snapshot};
 use crate::editor::{self, EditorTextView, selftest as edit};
 use crate::window::{self, WindowController};
 
@@ -71,7 +71,7 @@ fn picture(name: &str) {
     }
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let files = [
         ("lines.txt", LINES),
         ("blocks.txt", BLOCKS),
@@ -86,9 +86,7 @@ pub fn run() {
 
 fn carets_type_and_delete() {
     let Some(view) = open("lines.txt") else {
-        check("the file opens", false, "");
-        finish(SCENARIO);
-        return;
+        return give_up(SCENARIO, "the file opens");
     };
     view.setSelectedRange(NSRange::new(0, 0));
     edit::add_vertical(&view, false);

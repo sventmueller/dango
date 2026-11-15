@@ -9,21 +9,21 @@ use std::path::PathBuf;
 
 use ide_agent::{Endpoint, Price, ProviderKind, Rule};
 use ide_core::settings::Settings;
+use ide_ui_common::alert::{Alert, Role, first};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, Sel};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAlert, NSAlertFirstButtonReturn, NSBezelStyle, NSButton, NSColor, NSComboBox, NSControlTextEditingDelegate,
-    NSLayoutAttribute, NSModalResponseOK, NSOpenPanel, NSPopUpButton, NSScrollView, NSSecureTextField, NSStackView,
-    NSTableColumn, NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTextField,
-    NSUserInterfaceLayoutOrientation, NSView,
+    NSBezelStyle, NSButton, NSColor, NSComboBox, NSControlTextEditingDelegate, NSLayoutAttribute, NSModalResponseOK,
+    NSOpenPanel, NSPopUpButton, NSScrollView, NSSecureTextField, NSStackView, NSTableColumn, NSTableView,
+    NSTableViewDataSource, NSTableViewDelegate, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
 };
-use objc2_foundation::{NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
+use objc2_foundation::{NSEdgeInsets, NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
 use super::form::{self, Row};
 use super::list_bar;
-use crate::util::{guarded, ns, set_action};
+use crate::util::{activate, guarded, ns, pin_inset, set_action};
 use ide_ui_agent::own_agent::{self, ModelChoice};
 
 /// The height of the endpoints' table, which lists the services and the user's endpoints.
@@ -35,14 +35,14 @@ const MAX_HEIGHT: f64 = 640.0;
 
 /// The tab's lists.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum List {
+pub(crate) enum List {
     Endpoints,
     Prices,
     Rules,
     Folders,
 }
 
-pub struct AgentIvars {
+pub(crate) struct AgentIvars {
     endpoints: RefCell<Vec<Endpoint>>,
     prices: RefCell<Vec<(String, Price)>>,
     rules: RefCell<Vec<(String, usize, Rule)>>,
@@ -73,7 +73,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEAgentSettings"]
     #[ivars = AgentIvars]
-    pub struct AgentSettings;
+    pub(crate) struct AgentSettings;
 
     unsafe impl NSObjectProtocol for AgentSettings {}
 
@@ -166,7 +166,7 @@ define_class!(
 );
 
 impl AgentSettings {
-    pub fn new(mtm: MainThreadMarker) -> Retained<AgentSettings> {
+    pub(crate) fn new(mtm: MainThreadMarker) -> Retained<AgentSettings> {
         let this = Self::alloc(mtm).set_ivars(AgentIvars {
             endpoints: RefCell::new(Vec::new()),
             prices: RefCell::new(Vec::new()),
@@ -181,7 +181,7 @@ impl AgentSettings {
     }
 
     /// Reads everything again and shows it.
-    pub fn reload(&self) {
+    pub(crate) fn reload(&self) {
         self.read();
         if let Some(views) = self.ivars().views.get() {
             views.endpoints.reloadData();
@@ -222,7 +222,7 @@ impl AgentSettings {
     }
 
     /// The rows of `list` as its table shows them.
-    pub fn rows(&self, list: List) -> Vec<Vec<String>> {
+    pub(crate) fn rows(&self, list: List) -> Vec<Vec<String>> {
         let dollars = |value: f64| format!("{value:.2}");
         match list {
             List::Endpoints => self
@@ -394,13 +394,8 @@ impl AgentSettings {
         self.ivars().views.get().and_then(|v| v.endpoints.window())
     }
 
-    fn alert(&self, title: &str, info: &str, fields: &[Retained<NSView>]) -> Retained<NSAlert> {
+    fn alert(&self, title: &str, info: &str, fields: &[Retained<NSView>]) -> Alert {
         let mtm = self.mtm();
-        let alert = NSAlert::new(mtm);
-        alert.setMessageText(&ns(title));
-        alert.setInformativeText(&ns(info));
-        alert.addButtonWithTitle(&ns(t("Sichern")));
-        alert.addButtonWithTitle(&ns(t("Abbrechen")));
         let accessory = NSStackView::new(mtm);
         accessory.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         accessory.setAlignment(NSLayoutAttribute::Leading);
@@ -411,11 +406,15 @@ impl AgentSettings {
         }
         let height = 30.0 * f64::from(u32::try_from(fields.len()).unwrap_or(1));
         accessory.setFrame(NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(320.0, height)));
-        alert.setAccessoryView(Some(&accessory));
-        if let Some(first) = fields.first() {
-            alert.window().setInitialFirstResponder(Some(first));
+        let alert = Alert::new(mtm, title)
+            .informative(info)
+            .button(t("Sichern"), Role::Plain)
+            .button(t("Abbrechen"), Role::Plain)
+            .accessory(&accessory);
+        match fields.first() {
+            Some(first) => alert.focus(first),
+            None => alert,
         }
-        alert
     }
 
     fn field(&self, value: &str, placeholder: &str) -> Retained<NSTextField> {
@@ -443,8 +442,8 @@ impl AgentSettings {
             ],
         );
         let this = self.retain();
-        crate::ci_panel::sheet(&alert, &window, move |response| {
-            if response != NSAlertFirstButtonReturn {
+        alert.sheet(&window, move |response| {
+            if !first(response) {
                 return;
             }
             let kind = if kind.indexOfSelectedItem() == 0 {
@@ -488,8 +487,8 @@ impl AgentSettings {
             &[field.clone().into_super().into_super().into_super()],
         );
         let this = self.retain();
-        crate::ci_panel::sheet(&alert, &window, move |response| {
-            if response == NSAlertFirstButtonReturn {
+        alert.sheet(&window, move |response| {
+            if first(response) {
                 this.store_key(&endpoint, &field.stringValue().to_string());
             }
         });
@@ -517,8 +516,8 @@ impl AgentSettings {
             &[field.clone().into_super().into_super()],
         );
         let this = self.retain();
-        crate::ci_panel::sheet(&alert, &window, move |response| {
-            if response != NSAlertFirstButtonReturn {
+        alert.sheet(&window, move |response| {
+            if !first(response) {
                 return;
             }
             let address = field.stringValue().to_string();
@@ -554,8 +553,8 @@ impl AgentSettings {
             ],
         );
         let this = self.retain();
-        crate::ci_panel::sheet(&alert, &window, move |response| {
-            if response != NSAlertFirstButtonReturn {
+        alert.sheet(&window, move |response| {
+            if !first(response) {
                 return;
             }
             let number = |field: &NSTextField| field.stringValue().to_string().trim().replace(',', ".").parse::<f64>();
@@ -686,7 +685,7 @@ impl AgentSettings {
 
 /// The tab's view.
 impl AgentSettings {
-    pub fn view(&self) -> Retained<NSView> {
+    pub(crate) fn view(&self) -> Retained<NSView> {
         let mtm = self.mtm();
         let (endpoints, endpoints_scroll) = form::table(
             mtm,
@@ -804,23 +803,17 @@ fn stacked(mtm: MainThreadMarker, views: &[Retained<NSView>]) -> Retained<NSView
     let stack = form::stack(mtm, views);
     let document = ide_ui_agent::agent_panel::flipped(mtm);
     document.addSubview(&stack);
-    stack.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
-        stack
-            .leadingAnchor()
-            .constraintEqualToAnchor_constant(&document.leadingAnchor(), form::MARGIN),
-        stack
-            .trailingAnchor()
-            .constraintEqualToAnchor_constant(&document.trailingAnchor(), -form::MARGIN),
-        stack
-            .topAnchor()
-            .constraintEqualToAnchor_constant(&document.topAnchor(), form::MARGIN),
-        stack
-            .bottomAnchor()
-            .constraintEqualToAnchor_constant(&document.bottomAnchor(), -form::MARGIN),
-    ] {
-        constraint.setActive(true);
-    }
+    let margin = form::MARGIN;
+    pin_inset(
+        &stack,
+        &document,
+        NSEdgeInsets {
+            top: margin,
+            left: margin,
+            bottom: margin,
+            right: margin,
+        },
+    );
     let size = document.fittingSize();
     let scroll = NSScrollView::initWithFrame(
         NSScrollView::alloc(mtm),
@@ -835,15 +828,13 @@ fn stacked(mtm: MainThreadMarker, views: &[Retained<NSView>]) -> Retained<NSView
     document.setTranslatesAutoresizingMaskIntoConstraints(false);
     scroll.setDocumentView(Some(&document));
     let clip = scroll.contentView();
-    for constraint in [
+    activate([
         document.leadingAnchor().constraintEqualToAnchor(&clip.leadingAnchor()),
         document
             .trailingAnchor()
             .constraintEqualToAnchor(&clip.trailingAnchor()),
         document.topAnchor().constraintEqualToAnchor(&clip.topAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     scroll.into_super()
 }
 
@@ -857,23 +848,23 @@ fn text_button(mtm: MainThreadMarker, owner: &AgentSettings, title: &str, action
 
 /// What the self-test reads from and does with the Agent tab, through the code its controls run.
 #[cfg(feature = "selftest")]
-pub mod selftest {
+pub(crate) mod selftest {
     use objc2::DefinedClass;
 
     use super::{AgentSettings, List};
 
     /// The rows the table of `list` shows.
-    pub fn rows(owner: &AgentSettings, list: List) -> Vec<Vec<String>> {
+    pub(crate) fn rows(owner: &AgentSettings, list: List) -> Vec<Vec<String>> {
         owner.rows(list)
     }
 
     /// Adds an endpoint as the add sheet does.
-    pub fn add_endpoint(owner: &AgentSettings, kind: ide_agent::ProviderKind, name: &str, address: &str) {
+    pub(crate) fn add_endpoint(owner: &AgentSettings, kind: ide_agent::ProviderKind, name: &str, address: &str) {
         owner.add_endpoint(kind, name, address);
     }
 
     /// Keeps `key` for the endpoint in row `row`, as the key sheet does.
-    pub fn set_key(owner: &AgentSettings, row: usize, key: &str) {
+    pub(crate) fn set_key(owner: &AgentSettings, row: usize, key: &str) {
         let endpoint = owner.ivars().endpoints.borrow().get(row).cloned();
         if let Some(endpoint) = endpoint {
             owner.store_key(&endpoint, key);
@@ -881,7 +872,7 @@ pub mod selftest {
     }
 
     /// Picks the endpoint in row `row` for new threads, as the popup does.
-    pub fn choose_endpoint(owner: &AgentSettings, row: usize) {
+    pub(crate) fn choose_endpoint(owner: &AgentSettings, row: usize) {
         if let Some(views) = owner.ivars().views.get() {
             views.endpoint.selectItemAtIndex(isize::try_from(row).unwrap_or(0));
         }
@@ -889,12 +880,12 @@ pub mod selftest {
     }
 
     /// Adds folders for the sandbox as the open panel does.
-    pub fn add_folders(owner: &AgentSettings, folders: Vec<std::path::PathBuf>) {
+    pub(crate) fn add_folders(owner: &AgentSettings, folders: Vec<std::path::PathBuf>) {
         owner.add_folders(folders);
     }
 
     /// Selects row `row` of `list`, as a click on it does.
-    pub fn select(owner: &AgentSettings, list: List, row: usize) {
+    pub(crate) fn select(owner: &AgentSettings, list: List, row: usize) {
         if let Some(views) = owner.ivars().views.get() {
             let table = [&views.endpoints, &views.prices, &views.rules, &views.folders][list as usize];
             table.selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(row), false);
@@ -902,13 +893,13 @@ pub mod selftest {
     }
 
     /// Removes the folder in row `row`, as selecting it and clicking "−" does.
-    pub fn remove_folder(owner: &AgentSettings, row: usize) {
+    pub(crate) fn remove_folder(owner: &AgentSettings, row: usize) {
         select(owner, List::Folders, row);
         owner.remove_selected(List::Folders);
     }
 
     /// Scrolls the tab down to the folders of the sandbox, for a picture.
-    pub fn reveal_folders(owner: &AgentSettings) {
+    pub(crate) fn reveal_folders(owner: &AgentSettings) {
         if let Some(views) = owner.ivars().views.get()
             && let Some(scroll) = views.folders.enclosingScrollView()
         {
@@ -917,7 +908,7 @@ pub mod selftest {
     }
 
     /// The model the combo box shows and the line under the providers.
-    pub fn shown(owner: &AgentSettings) -> (String, String) {
+    pub(crate) fn shown(owner: &AgentSettings) -> (String, String) {
         owner.ivars().views.get().map_or_else(Default::default, |views| {
             (
                 views.model.stringValue().to_string(),

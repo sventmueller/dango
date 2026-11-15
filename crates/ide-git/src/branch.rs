@@ -1,8 +1,10 @@
 //! Branches and the history of the current one.
 
 use crate::error::{Error, Result};
-use crate::remote::{overwritten_paths, word};
+use crate::id::CommitId;
+use crate::remote::word;
 use crate::repo::Repository;
+use crate::said::{Said, overwritten_paths};
 
 /// A local or remote-tracking branch.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,28 +18,28 @@ pub struct Branch {
     /// Whether HEAD is on it.
     pub current: bool,
     /// The commit it points at.
-    pub commit: String,
+    pub commit: CommitId,
     /// The upstream's short name.
     pub upstream: Option<String>,
     /// Commits ahead of the upstream.
-    pub ahead: u32,
+    pub(crate) ahead: u32,
     /// Commits behind the upstream.
-    pub behind: u32,
+    pub(crate) behind: u32,
     /// Whether the upstream is set but gone from the remote.
-    pub upstream_gone: bool,
+    pub(crate) upstream_gone: bool,
     /// The subject of its commit.
     pub subject: String,
     /// When its commit was made, in seconds since 1970.
-    pub time: i64,
+    pub(crate) time: i64,
 }
 
 /// A commit in the history.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Commit {
-    /// The full hash.
-    pub hash: String,
-    /// The parents' hashes.
-    pub parents: Vec<String>,
+    /// Its name.
+    pub hash: CommitId,
+    pub parents: Vec<CommitId>,
     /// The first line of the message.
     pub subject: String,
     /// The message after its first line, empty unless read by [`Repository::history`].
@@ -74,14 +76,18 @@ impl Repository {
         Ok((output.code == 0).then(|| output.text()))
     }
 
-    /// Creates the branch `name` at `start`, or at HEAD; with `switch`, also switches to it.
-    pub fn create_branch(&self, name: &str, start: Option<&str>, switch: bool) -> Result<()> {
+    /// Creates the branch `name` at `start`, or at HEAD, and stays where HEAD is.
+    pub fn create_branch(&self, name: &str, start: Option<&str>) -> Result<()> {
+        self.new_branch(vec!["branch", name], name, start)
+    }
+
+    /// Creates the branch `name` at `start`, or at HEAD, and switches to it.
+    pub fn switch_to_new_branch(&self, name: &str, start: Option<&str>) -> Result<()> {
+        self.new_branch(vec!["switch", "--create", name], name, start)
+    }
+
+    fn new_branch<'a>(&self, mut args: Vec<&'a str>, name: &str, start: Option<&'a str>) -> Result<()> {
         self.check_branch_name(name)?;
-        let mut args = if switch {
-            vec!["switch", "--create", name]
-        } else {
-            vec!["branch", name]
-        };
         if let Some(start) = start {
             args.push(word(start)?);
         }
@@ -110,14 +116,36 @@ impl Repository {
         if output.code == 0 {
             return Ok(());
         }
-        let said = output.said();
-        if said.contains("not fully merged") {
+        if self.unmerged_branch(name)? {
             return Err(Error::NotMerged {
                 branch: name.to_string(),
-                output: said,
+                output: output.said(),
             });
         }
         Err(crate::run::failure(&output))
+    }
+
+    /// Whether the local branch `name` has commits that `git branch --delete` would lose: commits its upstream lacks,
+    /// or HEAD for a branch without one.
+    fn unmerged_branch(&self, name: &str) -> Result<bool> {
+        let branch = format!("refs/heads/{name}");
+        if self.resolve(&branch)?.is_none() {
+            return Ok(false);
+        }
+        let upstream = format!("{name}@{{upstream}}");
+        let into = if self.resolve(&upstream)?.is_some() {
+            upstream
+        } else {
+            "HEAD".to_string()
+        };
+        let output = self
+            .git()
+            .run(self.call(["merge-base", "--is-ancestor", branch.as_str(), into.as_str()]))?;
+        match output.code {
+            0 => Ok(false),
+            1 => Ok(true),
+            _ => Err(crate::run::failure(&output)),
+        }
     }
 
     /// The last `limit` commits of HEAD, newest first; empty before the first commit.
@@ -166,7 +194,7 @@ impl Repository {
             });
         }
         let said = output.said();
-        if said.contains("would be overwritten") {
+        if Said::LocalChanges.in_text(&said) {
             return Err(Error::LocalChanges {
                 paths: overwritten_paths(&said),
                 output: said,
@@ -196,7 +224,7 @@ fn parse_branch(line: &str) -> Option<Branch> {
         full_name: full_name.to_string(),
         remote: full_name.starts_with("refs/remotes/"),
         current: head == "*",
-        commit: commit.to_string(),
+        commit: CommitId::from_git(commit),
         upstream: (!upstream.is_empty()).then(|| upstream.to_string()),
         ahead: count("ahead "),
         behind: count("behind "),
@@ -213,8 +241,8 @@ pub(crate) fn parse_commit(record: &[u8]) -> Option<Commit> {
         return None;
     };
     Some(Commit {
-        hash: hash.to_string(),
-        parents: parents.split_whitespace().map(String::from).collect(),
+        hash: CommitId::from_git(hash),
+        parents: parents.split_whitespace().map(CommitId::from_git).collect(),
         subject: subject.to_string(),
         body: body.first().map_or_else(String::new, |b| b.trim().to_string()),
         author_name: author_name.to_string(),
@@ -268,7 +296,7 @@ mod tests {
         let record =
             "abc\u{1f}p1 p2\u{1f}Ann\u{1f}ann@example.org\u{1f}1794247537\u{1f}HEAD -> main, tag: v1\u{1f}Merge";
         let commit = parse_commit(record.as_bytes()).unwrap();
-        assert_eq!(commit.parents, ["p1", "p2"]);
+        assert_eq!(commit.parents, [CommitId::from_git("p1"), CommitId::from_git("p2")]);
         assert_eq!(commit.refs, ["HEAD -> main", "tag: v1"]);
         assert_eq!(commit.author_time, 1_794_247_537);
         assert!(parse_commit(b"short").is_none());

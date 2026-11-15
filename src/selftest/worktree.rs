@@ -17,7 +17,7 @@ use objc2_app_kit::NSAlertFirstButtonReturn;
 use super::git::{
     answer_sheet, append, fixture_git, pictures, sheet_pictures, sheet_ready, wait_for, window_of, write,
 };
-use super::{check, finish};
+use super::{check, finish, give_up, give_up_saying};
 use crate::util::main_soon;
 use crate::window::{Panel, WindowController};
 use ide_ui_git::selftest::{self as panel, Control, TreeAction};
@@ -52,7 +52,7 @@ fn tree() -> PathBuf {
     TREE.lock_ignoring_poison().clone().unwrap_or_default()
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let folder = crate::selftest::helpers::folder("worktree-project");
     let launch = std::env::current_exe().ok().map(|program| {
         ide_acp::Launch::new(
@@ -75,8 +75,7 @@ pub fn run() {
         main_soon(move || match made {
             Ok(()) => open(folder),
             Err(error) => {
-                check("a test repository is made", false, error);
-                finish(SCENARIO);
+                give_up_saying(SCENARIO, "a test repository is made", error);
             }
         });
     });
@@ -112,8 +111,14 @@ fn ready(root: PathBuf, ok: bool) {
         ok,
         "",
     );
-    if window_of(&root).filter(|_| ok).is_none() {
-        return finish(SCENARIO);
+    if !ok {
+        return give_up(
+            SCENARIO,
+            "a trusted repository with a commit offers a thread in its own worktree",
+        );
+    }
+    if window_of(&root).is_none() {
+        return give_up(SCENARIO, "the folder's window is open");
     }
     let installed = |agent: ide_ui_agent::Agent| ide_ui_agent::installed(&agent);
     let expected: Vec<String> = installed(ide_ui_agent::Agent::Claude)
@@ -133,7 +138,7 @@ fn ready(root: PathBuf, ok: bool) {
 
 fn offered(root: PathBuf, expected: Vec<String>) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let offered = controller.worktree_menu_titles();
     check(
@@ -159,12 +164,11 @@ fn created(controller: &WindowController) -> bool {
 
 fn made(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let trees = panel::worktrees(&controller);
     let Some((path, branch, ..)) = trees.first().cloned().filter(|_| ok) else {
-        check("the worktree and its thread start", false, format!("{trees:?}"));
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "the worktree and its thread start", format!("{trees:?}"));
     };
     *TREE.lock_ignoring_poison() = Some(path.clone());
     let data = crate::worktrees::folder(&root);
@@ -183,8 +187,7 @@ fn made(root: PathBuf, ok: bool) {
     let written = write(&path, LIBRARY, "pub fn login() {\n    check_password();\n}\n")
         .and_then(|()| write(&path, NOTES, "What the thread found.\n"));
     if let Err(error) = written {
-        check("the thread writes into its worktree", false, error);
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "the thread writes into its worktree", error);
     }
     crate::worktrees::turn_ended(&controller, &path);
     wait_for(
@@ -196,7 +199,7 @@ fn made(root: PathBuf, ok: bool) {
 
 fn listed(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let files = panel::worktrees(&controller)
         .first()
@@ -216,7 +219,7 @@ fn listed(root: PathBuf, ok: bool) {
 
 fn cached(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let (before, now) = (counts_before(), crate::worktrees::read_counts());
     check(
@@ -234,7 +237,7 @@ fn cached(root: PathBuf, ok: bool) {
 
 fn diffed(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let titles = controller.tab_titles();
     check(
@@ -262,15 +265,14 @@ fn diffed(root: PathBuf, ok: bool) {
 /// Types a line into the worktree's file in its editor tab and saves it.
 fn save_in_editor(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let Some(view) = super::helpers::editor(&controller, "lib.rs · Worktree login-reparieren") else {
-        check(
+        return give_up_saying(
+            SCENARIO,
             "the worktree's file has an editor",
-            false,
             format!("{:?}", controller.tab_titles()),
         );
-        return finish(SCENARIO);
     };
     note_counts();
     let end = super::helpers::utf16_len(&super::helpers::text_of(&view));
@@ -310,7 +312,7 @@ fn merged(controller: &WindowController) -> bool {
 
 fn taken(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let library = std::fs::read_to_string(root.join(LIBRARY)).unwrap_or_default();
     check(
@@ -329,8 +331,7 @@ fn taken(root: PathBuf, ok: bool) {
         main_soon(move || match clashed {
             Ok(()) => clash_written(root),
             Err(error) => {
-                check("the user and the thread change the same line", false, error);
-                finish(SCENARIO);
+                give_up_saying(SCENARIO, "the user and the thread change the same line", error);
             }
         });
     });
@@ -365,7 +366,7 @@ fn conflicting(controller: &WindowController) -> bool {
 fn conflicted(root: PathBuf, ok: bool) {
     check("a clash stops the merge with the file in the conflict section", ok, "");
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     panel::click(&controller, Control::Abort);
     wait_for(root, sheet_ready, |root, _| {
@@ -380,7 +381,7 @@ fn conflicted(root: PathBuf, ok: bool) {
 
 fn aborted(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let readme = std::fs::read_to_string(root.join(README)).unwrap_or_default();
     check(
@@ -477,7 +478,7 @@ fn removed(root: PathBuf, ok: bool) {
 /// A second thread, whose branch stays when its worktree goes.
 fn second(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     crate::worktrees::ask_and_open(&controller, CODEX);
     wait_for(root, sheet_ready, |root, _| {
@@ -488,15 +489,14 @@ fn second(root: PathBuf) {
 
 fn second_made(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let Some(path) = panel::worktrees(&controller)
         .first()
         .map(|t| t.0.clone())
         .filter(|_| ok)
     else {
-        check("a second thread starts in a worktree of its own", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "a second thread starts in a worktree of its own");
     };
     *TREE.lock_ignoring_poison() = Some(path.clone());
     wait_for(
@@ -513,7 +513,7 @@ fn second_made(root: PathBuf, ok: bool) {
 
 fn second_live(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let path = tree();
     let tab = ide_ui_agent::all().into_iter().find(|tab| tab.cwd() == path);
@@ -528,8 +528,7 @@ fn second_live(root: PathBuf, ok: bool) {
         format!("{name}, noted {noted:?}"),
     );
     if let Err(error) = write(&path, EXTRA, "left uncommitted\n") {
-        check("the second thread writes into its worktree", false, error);
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "the second thread writes into its worktree", error);
     }
     close_thread(&controller, &path);
     wait_for(

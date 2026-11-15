@@ -9,21 +9,20 @@ use ide_net::install::{InstallError, Progress, Step};
 use ide_net::{Cancel, Net};
 
 use crate::discover::Adapters;
-use crate::helper::Helper;
+use ide_process::tool::{self, Helper, RunError};
 
 /// A pinned release of an adapter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Pinned {
-    /// Its version.
-    pub version: &'static str,
+pub(crate) struct Pinned {
+    pub(crate) version: &'static str,
     /// Where its archive is downloaded from.
-    pub url: &'static str,
+    pub(crate) url: &'static str,
     /// The SHA-256 of the archive, in lowercase hex.
-    pub sha256: &'static str,
+    pub(crate) sha256: &'static str,
 }
 
 /// The js-debug release the app installs; a new one is pinned by hand after checking its digest.
-pub const JS_DEBUG: Pinned = Pinned {
+pub(crate) const JS_DEBUG: Pinned = Pinned {
     version: "1.140.1",
     url: "https://github.com/microsoft/vscode-js-debug/releases/download/v1.140.1/js-debug-dap-v1.140.1.tar.gz",
     sha256: "c72fab31bcbfdce6ad1f42adfd28eff8d4681dd3b03b5e2e6f9e72e6f9927faf",
@@ -78,7 +77,7 @@ fn js_debug_release(
         progress(Progress::Step(Step::Done));
         return Ok(server);
     }
-    if crate::helper::which("node", adapters.path()).is_none() {
+    if tool::which("node", adapters.path()).is_none() {
         return Err(InstallError::Missing("node"));
     }
     fs::create_dir_all(adapters.tools())?;
@@ -103,19 +102,29 @@ fn js_debug_release(
         cancel: Some(cancel),
     };
     let archive_path = archive.0.display().to_string();
-    let output = helper.run(
-        Path::new("/usr/bin/tar"),
-        &["-xzf", &archive_path],
-        &unpacked.0,
-        &mut |_| {},
-    )?;
+    let output = helper
+        .run(
+            Path::new("/usr/bin/tar"),
+            &["-xzf", &archive_path],
+            &unpacked.0,
+            &mut |_| {},
+        )
+        .map_err(|error| match error {
+            RunError::Cancelled => InstallError::Cancelled,
+            RunError::Timeout => InstallError::Failed {
+                program: "tar".into(),
+                ending: None,
+                output: String::new(),
+            },
+            RunError::Start(error) => InstallError::Io(error),
+        })?;
     if cancel.is_cancelled() {
         return Err(InstallError::Cancelled);
     }
     if !output.succeeded() {
         return Err(InstallError::Failed {
             program: "tar".into(),
-            ending: output.ending,
+            ending: Some(output.ending),
             output: output.stderr,
         });
     }

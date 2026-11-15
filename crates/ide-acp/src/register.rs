@@ -11,7 +11,7 @@ use crate::sandbox::{Effect, Sandbox};
 use ide_net::Net;
 
 /// Where the registry publishes all its entries in one file.
-pub const REGISTRY_URL: &str = "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json";
+pub(crate) const REGISTRY_URL: &str = "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json";
 
 /// The most the registry file may weigh; it is a few hundred kilobytes.
 const MAX_REGISTRY_BYTES: u64 = 8 * 1024 * 1024;
@@ -20,13 +20,14 @@ const MAX_REGISTRY_BYTES: u64 = 8 * 1024 * 1024;
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Register {
     /// The version of the registry's format.
-    pub version: String,
+    pub(crate) version: String,
     /// The agents.
     pub entries: Vec<Entry>,
 }
 
 /// One agent of the registry.
 #[derive(Debug, Clone, PartialEq, Default)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Entry {
     /// The registry's id, such as `codex-acp`.
     pub id: String,
@@ -34,7 +35,6 @@ pub struct Entry {
     pub name: String,
     /// The version the entry offers.
     pub version: String,
-    /// What it is.
     pub description: String,
     /// Its source code.
     pub repository: Option<String>,
@@ -54,6 +54,7 @@ pub struct Entry {
 
 /// One way to get and run an agent.
 #[derive(Debug, Clone, PartialEq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub enum Distribution {
     /// An archive to download for this Mac.
     Binary {
@@ -63,7 +64,6 @@ pub enum Distribution {
         cmd: String,
         /// Its arguments.
         args: Vec<String>,
-        /// Variables for its environment.
         env: Vec<(String, String)>,
         /// The archive's SHA-256, when the entry gives one.
         sha256: Option<String>,
@@ -81,10 +81,8 @@ pub struct Package {
     pub name: String,
     /// The version the entry asks for, when it names one.
     pub version: Option<String>,
-    /// The program's arguments.
-    pub args: Vec<String>,
-    /// Variables for its environment.
-    pub env: Vec<(String, String)>,
+    pub(crate) args: Vec<String>,
+    pub(crate) env: Vec<(String, String)>,
 }
 
 /// Why the registry could not be read.
@@ -115,7 +113,7 @@ impl std::error::Error for FetchError {
 }
 
 /// This Mac's target as the registry names it.
-pub fn target() -> &'static str {
+pub(crate) fn target() -> &'static str {
     if cfg!(target_arch = "aarch64") {
         "darwin-aarch64"
     } else {
@@ -124,7 +122,7 @@ pub fn target() -> &'static str {
 }
 
 /// Whether `version` names one release, like `1.2.3` or `1.2.3-beta.1`, not a range or a tag such as `latest`.
-pub fn is_exact(version: &str) -> bool {
+pub(crate) fn is_exact(version: &str) -> bool {
     let core = version.split(['-', '+']).next().unwrap_or_default();
     let parts: Vec<&str> = core.split('.').collect();
     parts.len() == 3
@@ -244,7 +242,7 @@ impl Register {
     }
 
     /// Where the last fetched registry is kept.
-    pub fn cache_file() -> PathBuf {
+    pub(crate) fn cache_file() -> PathBuf {
         ide_core::paths::cache_dir().join("acp-registry.json")
     }
 
@@ -262,14 +260,7 @@ impl Register {
             .get_text(REGISTRY_URL, MAX_REGISTRY_BYTES)
             .map_err(FetchError::Net)?;
         let register = Register::parse(&json)?;
-        let file = Register::cache_file();
-        if let Some(dir) = file.parent() {
-            let _ = std::fs::create_dir_all(dir);
-        }
-        let staged = file.with_extension("json.part");
-        if std::fs::write(&staged, &json).is_ok() {
-            let _ = std::fs::rename(&staged, &file);
-        }
+        let _ = ide_core::atomic_write::write(&Register::cache_file(), json.as_bytes());
         Ok(register)
     }
 }
@@ -468,12 +459,13 @@ pub const PRESETS: &[Preset] = &[
 impl Preset {
     /// Where the program `cli` names is on the login shell's PATH in `env`.
     pub fn cli_on_path(&self, env: &[(String, String)]) -> Option<PathBuf> {
-        crate::tool::which(self.cli?, crate::tool::var(env, "PATH"))
+        ide_process::tool::which(self.cli?, ide_process::tool::var(env, "PATH"))
     }
 
     /// Where the agent's own command is on the login shell's PATH in `env`.
-    pub fn own_command(&self, env: &[(String, String)]) -> Option<PathBuf> {
-        crate::tool::which(self.on_path?.0, crate::tool::var(env, "PATH"))
+    #[cfg(test)]
+    pub(crate) fn own_command(&self, env: &[(String, String)]) -> Option<PathBuf> {
+        ide_process::tool::which(self.on_path?.0, ide_process::tool::var(env, "PATH"))
     }
 }
 

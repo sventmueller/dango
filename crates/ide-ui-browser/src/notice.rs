@@ -16,7 +16,7 @@ use splat_i18n::{t, tf};
 use ide_ui_common::constant;
 use ide_ui_common::util::{borderless_button, label, ns, symbol, symbol_button};
 
-pub struct Notice {
+pub(crate) struct Notice {
     view: Retained<NSView>,
     icon: Retained<NSImageView>,
     text: Retained<NSTextField>,
@@ -28,7 +28,7 @@ pub struct Notice {
 
 impl Notice {
     /// The bar, hidden; its buttons send `ideBrowserShowDownload:` and `ideBrowserCloseNotice:` to `target`.
-    pub fn new(mtm: MainThreadMarker, target: &AnyObject) -> Notice {
+    pub(crate) fn new(mtm: MainThreadMarker, target: &AnyObject) -> Notice {
         let icon = NSImageView::new(mtm);
         icon.setImage(symbol("arrow.down.circle", t("Download")).as_deref());
         icon.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
@@ -99,12 +99,12 @@ impl Notice {
         }
     }
 
-    pub fn view(&self) -> &NSView {
+    pub(crate) fn view(&self) -> &NSView {
         &self.view
     }
 
     /// Tells that `file` finished downloading.
-    pub fn show_download(&self, file: &NSURL) {
+    pub(crate) fn show_download(&self, file: &NSURL) {
         let name = file
             .lastPathComponent()
             .map_or_else(String::new, |name| name.to_string());
@@ -117,7 +117,7 @@ impl Notice {
     }
 
     /// Tells why a login was not filled into the page.
-    pub fn show_login(&self, text: &str) {
+    pub(crate) fn show_login(&self, text: &str) {
         self.icon.setImage(symbol("key", t("Anmeldung")).as_deref());
         self.text.setStringValue(&ns(text));
         self.show.setHidden(true);
@@ -131,14 +131,14 @@ impl Notice {
         self.view.setHidden(false);
     }
 
-    pub fn close(&self) {
+    pub(crate) fn close(&self) {
         self.view.setHidden(true);
         self.collapsed.setActive(true);
         *self.file.borrow_mut() = None;
     }
 
     /// Shows the downloaded file in the Finder.
-    pub fn reveal(&self) {
+    pub(crate) fn reveal(&self) {
         if let Some(file) = self.file.borrow().as_ref() {
             NSWorkspace::sharedWorkspace()
                 .activateFileViewerSelectingURLs(&NSArray::from_retained_slice(std::slice::from_ref(file)));

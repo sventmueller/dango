@@ -13,7 +13,7 @@
 //! server registered for, and [`symbol_search`] plans and ranks a project-wide symbol search.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs, unreachable_pub)]
+#![warn(missing_docs)]
 
 mod capabilities;
 mod convert;
@@ -37,7 +37,6 @@ mod server;
 pub mod snippet;
 pub mod symbol_search;
 mod text;
-mod tool;
 pub mod uri;
 pub mod workspace_edit;
 
@@ -47,11 +46,9 @@ pub use error::Error;
 pub use features::{Completions, Hover, Insertion, insertion};
 pub use ide_net::{Cancel, Download, Http, Net};
 pub use install::{InstallError, Installer, Progress, Step};
-pub use language::{BUILT_IN, CustomServer, Language, companions, flat_config, root, uses_eslint};
+pub use language::{BUILT_IN, CustomServer, Language, companions, root};
 pub use lsp_types;
 pub use navigation::{Calls, HierarchyItem, Neighbour, ProjectSymbol, Types};
-pub use registry::{
-    ESLINT_DIGEST, ESLINT_TAG, Install, Launch, NotFound, Registry, Source, VTSLS, default_tools, eslint_settings,
-};
-pub use semantic::{Legend, SemanticTokens, Token};
+pub use registry::{Install, Launch, NotFound, Registry, Source, VTSLS, default_tools, eslint_settings};
+pub use semantic::{SemanticTokens, Token};
 pub use server::{Event, Refresh, Reply, RestartPolicy, Server, ServerConfig, Status, Ticket, wait};

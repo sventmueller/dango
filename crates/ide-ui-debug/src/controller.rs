@@ -16,39 +16,39 @@ use super::panel::{DebugPanel, with_panel};
 use ide_ui_common::util::main_soon;
 
 /// What happens with the process the user picks to attach to.
-pub type Pick = Box<dyn FnOnce(&DebugPanel, u32)>;
+pub(crate) type Pick = Box<dyn FnOnce(&DebugPanel, u32)>;
 
 /// A running session of the window, with the session it belongs to if the adapter started it beneath another.
-pub struct Link {
-    pub id: u64,
-    pub session: Session,
-    pub parent: Option<u64>,
+pub(crate) struct Link {
+    pub(crate) id: u64,
+    pub(crate) session: Session,
+    pub(crate) parent: Option<u64>,
 }
 
 /// What the debugger of a window holds besides its model: the running sessions, the console tabs, the configurations
 /// of `launch.json` and the start under way.
 #[derive(Default)]
-pub struct Links {
-    pub sessions: Vec<Link>,
-    pub consoles: Vec<Rc<ConsoleTab>>,
-    pub configurations: Vec<ide_dap::Entry>,
+pub(crate) struct Links {
+    pub(crate) sessions: Vec<Link>,
+    pub(crate) consoles: Vec<Rc<ConsoleTab>>,
+    pub(crate) configurations: Vec<ide_dap::Entry>,
     /// Why `launch.json` could not be read, if there is one that could not.
-    pub configuration_problem: Option<String>,
+    pub(crate) configuration_problem: Option<String>,
     /// The name and kind of the session that is being started, for its first events.
-    pub starting: Option<(String, super::model::session::Origin)>,
+    pub(crate) starting: Option<(String, super::model::session::Origin)>,
     /// Cancels a build that a start waits for.
-    pub cancel: Option<ide_lsp::Cancel>,
+    pub(crate) cancel: Option<ide_lsp::Cancel>,
     /// The user stopped the start under way before it returned a session, which then stops at once.
-    pub stop_pending: bool,
+    pub(crate) stop_pending: bool,
     /// What happens with the process the user picks to attach to.
-    pub picking: Option<Pick>,
+    pub(crate) picking: Option<Pick>,
     /// Counts the starts, so that a check for an answer finds only the start it was made for.
-    pub starts: u64,
+    pub(crate) starts: u64,
 }
 
 impl DebugPanel {
     /// The handle of the session `id`.
-    pub fn session(&self, id: u64) -> Option<Session> {
+    pub(crate) fn session(&self, id: u64) -> Option<Session> {
         let links = self.ivars().links.borrow();
         links.sessions.iter().find(|l| l.id == id).map(|l| l.session.clone())
     }
@@ -65,7 +65,7 @@ impl DebugPanel {
     }
 
     /// Carries out `effects` and shows the model again.
-    pub fn apply(&self, effects: Vec<Effect>) {
+    pub(crate) fn apply(&self, effects: Vec<Effect>) {
         for effect in effects {
             self.carry_out(effect);
         }
@@ -112,13 +112,13 @@ impl DebugPanel {
             return;
         }
         let kept = self.read().kept();
-        if let Err(error) = ide_core::debugging::save(self.root(), &kept) {
+        if let Err(error) = ide_dap::kept::save(self.root(), &kept) {
             ide_ui_common::diag::report("saving breakpoints", error);
         }
     }
 
     /// The breakpoints of `path` as the adapter takes them, lines from 1.
-    pub fn source_breakpoints(&self, path: &Path) -> Vec<SourceBreakpoint> {
+    pub(crate) fn source_breakpoints(&self, path: &Path) -> Vec<SourceBreakpoint> {
         self.read()
             .breakpoints
             .for_adapter(path)
@@ -172,7 +172,7 @@ impl DebugPanel {
     /// A request failed: the console of its session says so.
     fn note_failure(&self, id: u64, why: &str) {
         if let Some(console) = self.console_for(id) {
-            console.push(ide_core::debugging::ConsoleKind::Error, &format!("{why}\n"));
+            console.push(ide_dap::kept::ConsoleKind::Error, &format!("{why}\n"));
         }
     }
 
@@ -316,7 +316,7 @@ impl DebugPanel {
     }
 
     /// Evaluates `expression` typed into the console of session `id`, in its selected frame while it is paused.
-    pub fn evaluate_in_console(&self, id: u64, expression: &str) {
+    pub(crate) fn evaluate_in_console(&self, id: u64, expression: &str) {
         let Some(session) = self.session(id) else { return };
         let frame = self
             .read()
@@ -333,9 +333,9 @@ impl DebugPanel {
                     with_panel(panel, |p| {
                         if let Some(console) = p.console_for(id) {
                             match answer {
-                                Ok(value) => console.push(ide_core::debugging::ConsoleKind::Result, &value.result),
+                                Ok(value) => console.push(ide_dap::kept::ConsoleKind::Result, &value.result),
                                 Err(error) => console.push(
-                                    ide_core::debugging::ConsoleKind::Error,
+                                    ide_dap::kept::ConsoleKind::Error,
                                     &ide_core::explain::Explain::explain(&error),
                                 ),
                             }
@@ -384,7 +384,7 @@ impl DebugPanel {
     }
 
     /// The console session `id` writes to: its own, or that of the session it runs beneath.
-    pub fn console_for(&self, id: u64) -> Option<Rc<ConsoleTab>> {
+    pub(crate) fn console_for(&self, id: u64) -> Option<Rc<ConsoleTab>> {
         if let Some(console) = self.console_of(id) {
             return Some(console);
         }
@@ -400,7 +400,7 @@ impl DebugPanel {
     }
 
     /// The files with breakpoints, each with what the adapter gets.
-    pub fn setup(&self) -> ide_dap::Setup {
+    pub(crate) fn setup(&self) -> ide_dap::Setup {
         let files: Vec<PathBuf> = self.read().breakpoints.files();
         let mut setup = ide_dap::Setup::default();
         for path in files {
@@ -417,7 +417,7 @@ impl DebugPanel {
     }
 
     /// Stops every session of the window, as it closes.
-    pub fn end_all(&self) {
+    pub(crate) fn end_all(&self) {
         let sessions: Vec<Session> = self
             .ivars()
             .links

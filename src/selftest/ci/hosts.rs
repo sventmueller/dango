@@ -11,7 +11,7 @@ use objc2_app_kit::NSAlertFirstButtonReturn;
 
 use super::super::git::wait_for;
 use super::super::helpers;
-use super::super::{check, finish, snapshot};
+use super::super::{check, finish, give_up, give_up_saying, snapshot};
 use super::stubs;
 use crate::ci_panel::{CI_HOSTS, CI_OAUTH_CLIENTS, selftest as panel};
 use crate::settings::{CiList, ci_selftest as tab};
@@ -29,8 +29,7 @@ pub(super) fn start(root: PathBuf, ok: bool) {
     check("the GitLab stub's host rule lets the panel ask to sign in", ok, "");
     let app = format!("127.0.0.1:{}=selftest-app", stubs().gitlab.port);
     if let Err(error) = Settings::load_user().set(&CI_OAUTH_CLIENTS, &vec![app]) {
-        check("an OAuth app is set up", false, error.to_string());
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "an OAuth app is set up", error.to_string());
     }
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::settings::show_ci(mtm);
@@ -39,8 +38,7 @@ pub(super) fn start(root: PathBuf, ok: bool) {
 
 fn listed(root: PathBuf) {
     let Some(owner) = crate::settings::ci_tab() else {
-        check("the settings show a CI tab", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the settings show a CI tab");
     };
     let (hosts, host_rows) = tab::rows(&owner, CiList::Hosts);
     let (apps, app_rows) = tab::rows(&owner, CiList::Apps);
@@ -146,7 +144,7 @@ fn host_added(root: PathBuf, ok: bool) {
 
 fn remove_app() {
     let Some(owner) = crate::settings::ci_tab() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the settings show the CI page");
     };
     tab::remove(&owner, CiList::Apps, 0);
     let (apps, shown) = tab::rows(&owner, CiList::Apps);

@@ -10,7 +10,7 @@ use objc2::rc::Retained;
 use objc2_foundation::NSRange;
 
 use super::helpers::{self, wait_within};
-use super::{check, finish, snapshot};
+use super::{check, finish, give_up, snapshot};
 use crate::editor::{self, EditorTextView};
 use crate::window::{self, Panel, WindowController};
 
@@ -48,7 +48,7 @@ fn state(name: &str) -> Option<ide_test::State> {
         .map(|(_, _, s)| s)
 }
 
-pub fn run() {
+pub(crate) fn run() {
     helpers::open_project(
         SCENARIO,
         PROJECT,
@@ -90,7 +90,7 @@ fn listed(controller: Retained<WindowController>) {
 
 fn gutter() {
     let Some(view) = editor_view() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the test file opens in an editor");
     };
     let fail_line = 10;
     let mark = crate::tests_panel::gutter_mark(&view, fail_line);
@@ -126,7 +126,7 @@ fn gutter() {
 
 fn at_cursor() {
     let (Some(view), Some(controller)) = (editor_view(), controller()) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the test file opens in an editor in the folder's window");
     };
     if let Some(window) = view.window() {
         window.makeFirstResponder(Some(&view));
@@ -151,7 +151,7 @@ fn at_cursor() {
 /// Debugging the test at the caret starts a session named after it in the Debug panel, through Delve.
 fn debugged() {
     let Some(window) = controller() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     crate::tests_panel::debug_at_cursor(&window);
     let seen = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));

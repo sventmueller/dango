@@ -13,7 +13,7 @@ use crate::util::main_soon;
 
 /// Hosts whose name does not say which service runs there, as `host[:port][/prefix]=github|gitlab`. Only the user
 /// sets them: a project could otherwise send a token elsewhere.
-pub const CI_HOSTS: Key<Vec<String>> = Key::user("ciHosts", ide_core::settings::Sharing::Shared, Vec::new);
+pub(crate) const CI_HOSTS: Key<Vec<String>> = Key::user("ciHosts", ide_core::settings::Sharing::Shared, Vec::new);
 
 /// How long `gh` or `glab` may take to say their token.
 const TOOL_TIMEOUT: Duration = Duration::from_secs(8);
@@ -26,12 +26,12 @@ static NETWORK: OnceLock<Arc<dyn Transport>> = OnceLock::new();
 static AUTH: OnceLock<Auth> = OnceLock::new();
 
 /// The network every CI call goes through.
-pub fn network() -> Arc<dyn Transport> {
+pub(crate) fn network() -> Arc<dyn Transport> {
     NETWORK.get_or_init(|| Arc::new(Network::new())).clone()
 }
 
 /// The app-wide token keeper; waits for the login shell's environment, so only for worker threads.
-pub fn auth() -> Option<Auth> {
+pub(crate) fn auth() -> Option<Auth> {
     if let Some(auth) = AUTH.get() {
         return Some(auth.clone());
     }
@@ -43,7 +43,7 @@ pub fn auth() -> Option<Auth> {
 static STORE: OnceLock<Arc<dyn SecretStore>> = OnceLock::new();
 
 /// Keeps the tokens in `store`, the app's one store of secrets; once, before the first token is read.
-pub fn use_secrets(store: Arc<dyn SecretStore>) {
+pub(crate) fn use_secrets(store: Arc<dyn SecretStore>) {
     let _ = STORE.set(store);
 }
 
@@ -59,7 +59,7 @@ fn store() -> Arc<dyn SecretStore> {
 }
 
 /// The host rules of the user's settings.
-pub fn host_rules() -> Vec<HostRule> {
+pub(crate) fn host_rules() -> Vec<HostRule> {
     Settings::load_user()
         .get(&CI_HOSTS)
         .iter()
@@ -69,7 +69,7 @@ pub fn host_rules() -> Vec<HostRule> {
 
 /// Runs `work`, which may wait for minutes, on a thread of its own and hands its result to `done` on the main thread,
 /// `None` if it panicked.
-pub fn long<T: Send + 'static>(
+pub(crate) fn long<T: Send + 'static>(
     work: impl FnOnce() -> T + Send + 'static,
     done: impl FnOnce(Option<T>) + Send + 'static,
 ) {
@@ -84,7 +84,7 @@ pub fn long<T: Send + 'static>(
 
 /// Runs `work` on the CI lane and hands its result to `done` on the main thread, `None` if it panicked; false when
 /// the lane is full.
-pub fn run<T: Send + 'static>(
+pub(crate) fn run<T: Send + 'static>(
     work: impl FnOnce() -> T + Send + 'static,
     done: impl FnOnce(Option<T>) + Send + 'static,
 ) -> bool {

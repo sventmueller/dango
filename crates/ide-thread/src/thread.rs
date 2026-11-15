@@ -11,6 +11,10 @@ use crate::model::{
 };
 use crate::update::{BackgroundPatch, Change, Field, SubagentPatch, ToolPatch, Update, UsagePatch};
 
+#[cfg(feature = "fuzzing")]
+#[doc(hidden)]
+pub mod fuzzing;
+
 /// The longest title a first message gives; the views cut it further to their width.
 const TITLE_LIMIT: usize = 200;
 

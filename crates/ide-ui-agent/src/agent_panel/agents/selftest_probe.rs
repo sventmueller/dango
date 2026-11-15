@@ -4,7 +4,7 @@ use super::*;
 
 impl Agents {
     /// The titles of the "new session" menu, for the self-test.
-    pub fn menu_titles(&self) -> Vec<String> {
+    pub(crate) fn menu_titles(&self) -> Vec<String> {
         session_menu(&self.target)
             .itemArray()
             .iter()

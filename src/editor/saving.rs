@@ -6,12 +6,13 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 
 use ide_core::explain::Explain;
-use ide_document::{SaveError, SaveJob, Saved};
+use ide_document::{ChangedOnDisk, SaveError, SaveJob, Saved};
+use ide_ui_common::alert::{confirm, warn};
 use objc2::{DefinedClass, MainThreadOnly};
 use objc2_app_kit::{NSModalResponseOK, NSSavePanel};
 use splat_i18n::{t, tf};
 
-use super::{EditorTextView, alert, confirm, display_name, indent};
+use super::{EditorTextView, display_name, indent};
 use crate::util::{main_soon, ns};
 
 /// Whether a write of the editor's document runs on the disk lane, and whether ⌘S asked for another meanwhile.
@@ -36,24 +37,28 @@ enum Wait {
 pub(crate) fn save(view: &EditorTextView, save_as: bool) {
     let Some(target) = target(view, save_as) else { return };
     // A write still running holds what the document knows of the file; this one waits behind it and replaces it.
-    let overwrite = view.ivars().writing.get() != Writing::Idle;
-    if let Some(job) = begin(view, target.as_deref(), overwrite) {
+    let changed = if view.ivars().file.writing.get() == Writing::Idle {
+        ChangedOnDisk::Refuse
+    } else {
+        ChangedOnDisk::Overwrite
+    };
+    if let Some(job) = begin(view, target.as_deref(), changed) {
         finish(view, target, wait_for(job), Wait::Done);
     }
 }
 
 /// Saves `view` as ⌘S does: the write runs on the disk lane, and the editor takes note when it is done.
 pub(crate) fn save_soon(view: &EditorTextView, save_as: bool) {
-    let writing = view.ivars().writing.get();
+    let writing = view.ivars().file.writing.get();
     if writing != Writing::Idle {
         if save_as {
             return save(view, true);
         }
-        view.ivars().writing.set(Writing::Again);
+        view.ivars().file.writing.set(Writing::Again);
         return;
     }
     let Some(target) = target(view, save_as) else { return };
-    if let Some(job) = begin(view, target.as_deref(), false) {
+    if let Some(job) = begin(view, target.as_deref(), ChangedOnDisk::Refuse) {
         write_soon(view, job, target);
     }
 }
@@ -71,10 +76,10 @@ fn target(view: &EditorTextView, save_as: bool) -> Option<Option<PathBuf>> {
     Some(target)
 }
 
-fn begin(view: &EditorTextView, target: Option<&Path>, overwrite: bool) -> Option<SaveJob> {
+fn begin(view: &EditorTextView, target: Option<&Path>, changed: ChangedOnDisk) -> Option<SaveJob> {
     let job = match target {
         Some(path) => view.document().begin_save_as(path.to_path_buf()),
-        None => view.document().begin_save(overwrite),
+        None => view.document().begin_save(changed),
     };
     job.map_err(|error| failed(view, &error)).ok()
 }
@@ -87,7 +92,7 @@ fn write_soon(view: &EditorTextView, job: SaveJob, target: Option<PathBuf>) {
         move |written| main_soon(move || written_soon(serial, target, written)),
     );
     match queued {
-        Ok(()) => view.ivars().writing.set(Writing::Running),
+        Ok(()) => view.ivars().file.writing.set(Writing::Running),
         Err(_) => finish(view, kept, Some(pending.run()), Wait::Done),
     }
 }
@@ -95,7 +100,7 @@ fn write_soon(view: &EditorTextView, job: SaveJob, target: Option<PathBuf>) {
 /// The write that ⌘S started for the editor `serial` is done; `None` if it panicked.
 fn written_soon(serial: ide_ui_lsp::EditorSerial, target: Option<PathBuf>, written: Option<Result<Saved, SaveError>>) {
     let Some(view) = super::find_editor(serial) else { return };
-    let again = view.ivars().writing.replace(Writing::Idle) == Writing::Again;
+    let again = view.ivars().file.writing.replace(Writing::Idle) == Writing::Again;
     finish(&view, target, written, Wait::Not);
     if again && view.document().is_dirty() {
         save_soon(&view, false);
@@ -126,7 +131,7 @@ fn finish(view: &EditorTextView, target: Option<PathBuf>, written: Option<Result
                 t("Sichern überschreibt diese Änderungen."),
                 t("Überschreiben"),
             );
-            if agreed && let Some(job) = begin(view, None, true) {
+            if agreed && let Some(job) = begin(view, None, ChangedOnDisk::Overwrite) {
                 match wait {
                     Wait::Done => finish(view, None, wait_for(job), Wait::Done),
                     Wait::Not => write_soon(view, job, None),
@@ -134,7 +139,7 @@ fn finish(view: &EditorTextView, target: Option<PathBuf>, written: Option<Result
             }
         }
         Some(Err(error)) => failed(view, &error),
-        None => alert(
+        None => warn(
             view.mtm(),
             t("Sichern fehlgeschlagen"),
             t("Das Schreiben der Datei ist abgebrochen."),
@@ -143,7 +148,7 @@ fn finish(view: &EditorTextView, target: Option<PathBuf>, written: Option<Result
 }
 
 fn failed(view: &EditorTextView, error: &SaveError) {
-    alert(view.mtm(), t("Sichern fehlgeschlagen"), &error.explain());
+    warn(view.mtm(), t("Sichern fehlgeschlagen"), &error.explain());
 }
 
 fn saved(view: &EditorTextView, new_path: Option<&Path>) {

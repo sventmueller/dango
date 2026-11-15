@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 use objc2_core_foundation::{CFRetained, CFRunLoop, CFRunLoopActivity, CFRunLoopObserver, kCFRunLoopCommonModes};
 
 /// Longer than this is a stall the user feels: three frames at 60 Hz.
-pub const STALL: Duration = Duration::from_millis(50);
+pub(crate) const STALL: Duration = Duration::from_millis(50);
 
 static START: OnceLock<Instant> = OnceLock::new();
 /// When the run loop last stepped, in microseconds since `START`.

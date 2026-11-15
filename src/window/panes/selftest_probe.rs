@@ -9,16 +9,16 @@ use super::*;
 impl Panes {
     /// The tree in a line: a pane as its documents' titles in brackets, the one in front starred, the active pane
     /// with `!`; a split as `H(…)` side by side or `V(…)` one above the other.
-    pub fn shape(&self) -> String {
-        fn of(node: &Node, active: &Rc<Pane>) -> String {
+    pub(crate) fn shape(&self) -> String {
+        fn of(panes: &Panes, node: &Node, active: PaneId) -> String {
             match node {
-                Node::Pane(pane) => {
-                    let front = pane.front().map(|doc| doc.id);
-                    let titles: Vec<String> = pane
-                        .documents()
+                Node::Pane(id) => {
+                    let front = panes.front(*id).map(|doc| doc.id);
+                    let documents = panes.documents_in(*id);
+                    let titles: Vec<String> = documents
                         .iter()
                         .map(|doc| {
-                            let star = if Some(doc.id) == front && pane.count() > 1 {
+                            let star = if Some(doc.id) == front && documents.len() > 1 {
                                 "*"
                             } else {
                                 ""
@@ -26,62 +26,70 @@ impl Panes {
                             format!("{}{star}", doc.title())
                         })
                         .collect();
-                    let mark = if Rc::ptr_eq(pane, active) { "!" } else { "" };
+                    let mark = if *id == active { "!" } else { "" };
                     format!("[{}]{mark}", titles.join(", "))
                 }
                 Node::Split(split) => {
                     let kind = if split.side_by_side() { "H" } else { "V" };
-                    let children: Vec<String> = split.children.borrow().iter().map(|child| of(child, active)).collect();
+                    let children: Vec<String> = split.children().iter().map(|child| of(panes, child, active)).collect();
                     format!("{kind}({})", children.join(" "))
                 }
             }
         }
-        of(&self.root.borrow(), &self.active())
+        let root = self.read(|tree| tree.root().clone());
+        of(self, &root, self.active())
     }
 
     /// Whether each pane shows its tab bar, and whether it shows at all, in reading order.
-    pub fn bars_and_shown(&self) -> Vec<(bool, bool)> {
+    pub(crate) fn bars_and_shown(&self) -> Vec<(bool, bool)> {
         self.all()
-            .iter()
+            .into_iter()
+            .filter_map(|id| self.view(id))
             .map(|pane| (!pane.bar.view.isHidden(), !pane.host.isHidden()))
             .collect()
     }
 
     /// The point, in window coordinates, at `x` and `y` of the width and height of the documents of the pane
     /// `number`, measured from its bottom left.
-    pub fn point_in(&self, number: usize, x: f64, y: f64) -> Option<objc2_foundation::NSPoint> {
-        let pane = self.by_number(number)?;
+    pub(crate) fn point_in(&self, number: usize, x: f64, y: f64) -> Option<objc2_foundation::NSPoint> {
+        let pane = self.view(self.by_number(number)?)?;
         let size = pane.content_size();
         let local = objc2_foundation::NSPoint::new(size.width * x, size.height * y);
         Some(pane.content.convertPoint_toView(local, None))
     }
 
-    /// The share of the first of two parts side by side, while the window tab is split so.
-    pub fn first_share(&self) -> Option<f64> {
-        match &*self.root.borrow() {
-            Node::Split(split) if split.side_by_side() && split.children.borrow().len() == 2 => {
-                split.shares().first().copied()
-            }
+    /// The root split while it holds two parts side by side.
+    fn halves(&self) -> Option<SplitId> {
+        self.read(|tree| match tree.root() {
+            Node::Split(split) if split.side_by_side() && split.children().len() == 2 => Some(split.id()),
             _ => None,
-        }
+        })
+    }
+
+    /// The share of the first of two parts side by side, while the window tab is split so.
+    pub(crate) fn first_share(&self) -> Option<f64> {
+        let id = self.halves()?;
+        self.read(|tree| tree.split(id)?.shares().first().copied())
     }
 
     /// The split view of the root while the window tab is split.
-    pub fn root_area(&self) -> Option<Retained<crate::window::document_area::DocumentArea>> {
-        match &*self.root.borrow() {
-            Node::Split(split) => Some(split.area.clone()),
+    pub(crate) fn root_area(&self) -> Option<Retained<crate::window::document_area::DocumentArea>> {
+        let id = self.read(|tree| match tree.root() {
+            Node::Split(split) => Some(split.id()),
             Node::Pane(_) => None,
-        }
+        })?;
+        self.splits.borrow().get(&id).map(|split| split.area.clone())
     }
 
     /// Gives the first of two parts side by side `share` of the width.
-    pub fn set_first_share(&self, share: f64) {
-        if let Node::Split(split) = &*self.root.borrow()
-            && split.children.borrow().len() == 2
-        {
-            let share = share.clamp(0.1, 0.9);
-            split.set_shares(&[share, 1.0 - share]);
-            split.hold();
+    pub(crate) fn set_first_share(&self, share: f64) {
+        let Some(id) = self.halves() else { return };
+        let share = share.clamp(0.1, 0.9);
+        self.tree.borrow_mut().set_shares(id, &[share, 1.0 - share]);
+        let split = self.splits.borrow().get(&id).cloned();
+        let shares = self.read(|tree| tree.split(id).map(|split| split.shares().to_vec()));
+        if let (Some(split), Some(shares)) = (split, shares) {
+            split.hold(&shares);
         }
     }
 }

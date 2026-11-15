@@ -9,7 +9,7 @@ use objc2_app_kit::{NSAppearanceNameAqua, NSAppearanceNameDarkAqua};
 use splat_i18n::t;
 
 use super::agent::{DRAWN, appearance, controller_of, picture, view_picture};
-use super::{check, finish, helpers};
+use super::{check, give_up, helpers};
 use crate::util::constant;
 use crate::window::Panel;
 
@@ -17,12 +17,12 @@ const NAME: &str = "agent";
 const CONTEXT: &str = include_str!("../../crates/ide-claude/tests/fixtures/context_cost.ndjson");
 
 /// Plays the recording up to its first turn's end, before any context answer, then goes on with `then`.
-pub fn run(root: PathBuf, then: fn(PathBuf)) {
+pub(crate) fn run(root: PathBuf, then: fn(PathBuf)) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let Some(tab) = ide_ui_agent::open_replay(&controller) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab opens");
     };
     let lines: Vec<&str> = CONTEXT.lines().collect();
     let first_end = lines
@@ -56,7 +56,7 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
 
 fn opened(root: PathBuf, key: AgentKey, clicked: bool, then: fn(PathBuf)) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let seen = ide_ui_agent::context_seen(key);
     let names = seen.rows.join(" | ");
@@ -87,7 +87,7 @@ fn opened(root: PathBuf, key: AgentKey, clicked: bool, then: fn(PathBuf)) {
 
 fn dark(root: PathBuf, key: AgentKey, then: fn(PathBuf)) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     controller.activate_panel(Panel::Files);
     let clicked = ide_ui_agent::click_context(key);

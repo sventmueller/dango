@@ -1,8 +1,9 @@
 //! The format commands of splat's toolbar as source edits: a style toggles on the selection or the word at the caret,
 //! a block kind toggles on the selected lines; each is one undo step.
 
+use ide_ui_common::alert::{Alert, Role, first};
 use objc2::MainThreadOnly;
-use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSPasteboard, NSPasteboardTypeString, NSTextField};
+use objc2_app_kit::{NSPasteboard, NSPasteboardTypeString, NSTextField};
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 use splat_i18n::t;
 use splat_markdown::commands::{self, Edit, InlineStyle, ListStyle};
@@ -12,7 +13,7 @@ use super::{Command, apply, text_and_selection};
 use crate::editor::EditorTextView;
 use crate::util::{constant, ns};
 
-pub fn run(view: &EditorTextView, command: Command) {
+pub(crate) fn run(view: &EditorTextView, command: Command) {
     if command == Command::Link {
         if let Some(url) = ask_link(view) {
             link_with(view, &url);
@@ -45,7 +46,7 @@ pub fn run(view: &EditorTextView, command: Command) {
 }
 
 /// Inserts a link to `url` at the selection, which becomes its text; without a selection the address is the text.
-pub fn link_with(view: &EditorTextView, url: &str) {
+pub(crate) fn link_with(view: &EditorTextView, url: &str) {
     let (text, sel) = text_and_selection(view);
     let selected = text.at(sel.clone()).to_string();
     let label = if selected.trim().is_empty() {
@@ -65,16 +66,16 @@ fn ask_link(view: &EditorTextView) -> Option<String> {
         .map(|s| s.to_string().trim().to_string())
         .filter(|s| s.contains("://") && !s.contains(char::is_whitespace))
         .unwrap_or_default();
-    let alert = NSAlert::new(mtm);
-    alert.setMessageText(&ns(t("Link einfügen")));
-    alert.setInformativeText(&ns(t("Adresse des Links:")));
-    alert.addButtonWithTitle(&ns(t("Einfügen")));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
     let field = NSTextField::textFieldWithString(&ns(&offered), mtm);
     field.setFrame(NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(300.0, 24.0)));
-    alert.setAccessoryView(Some(&field));
-    alert.window().setInitialFirstResponder(Some(&field));
-    if alert.runModal() != NSAlertFirstButtonReturn {
+    let answer = Alert::new(mtm, t("Link einfügen"))
+        .informative(t("Adresse des Links:"))
+        .button(t("Einfügen"), Role::Plain)
+        .button(t("Abbrechen"), Role::Plain)
+        .accessory(&field)
+        .focus(&field)
+        .run_modal();
+    if !first(answer) {
         return None;
     }
     let url = field.stringValue().to_string().trim().to_string();

@@ -18,11 +18,12 @@ use objc2_foundation::{NSNotification, NSObjectProtocol, NSUndoManager};
 
 use super::model::{Read, RowKey, State, Task};
 use super::ui::Ui;
+use ide_ui_common::panel::{RowItem, RowItems};
 use ide_ui_common::registry::WindowPart;
 use ide_ui_common::util::{guarded, ns};
 use ide_ui_common::window::{AsWindow, Trust, Window};
 
-pub struct PanelIvars {
+pub(crate) struct PanelIvars {
     id: u64,
     controller: Window,
     /// The window's folder, which may lie below the repository's root.
@@ -31,7 +32,7 @@ pub struct PanelIvars {
     state: RefCell<State>,
     /// The objects that stand for rows in the outline view, which keeps no reference of its own; the same object
     /// for a key for as long as the row exists, so the view keeps it open and selected.
-    items: RefCell<HashMap<RowKey, Retained<RowItem>>>,
+    items: RowItems<RowKey>,
     /// The keys below each row the outline asked for, kept until the state changes.
     children: RefCell<HashMap<Option<RowKey>, Rc<[RowKey]>>>,
     /// The state changed while the page was out of view, so the list reloads when it comes into view.
@@ -42,22 +43,13 @@ pub struct PanelIvars {
 }
 
 define_class!(
-    // SAFETY: NSObject has no subclassing requirements and `RowItem` does not implement Drop.
-    #[unsafe(super(NSObject))]
-    #[thread_kind = MainThreadOnly]
-    #[name = "IDEGitRowItem"]
-    #[ivars = RowKey]
-    pub struct RowItem;
-);
-
-define_class!(
     // SAFETY: NSView has no subclassing requirements and `GitPage` does not implement Drop.
     /// The panel's page, which tells the panel of the id it holds when it comes into view.
     #[unsafe(super(NSView))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEGitPage"]
     #[ivars = u64]
-    pub struct GitPage;
+    pub(crate) struct GitPage;
 
     unsafe impl NSObjectProtocol for GitPage {}
 
@@ -76,7 +68,7 @@ define_class!(
 
 impl GitPage {
     /// The page of the panel `panel`.
-    pub fn new(mtm: MainThreadMarker, panel: u64) -> Retained<GitPage> {
+    pub(crate) fn new(mtm: MainThreadMarker, panel: u64) -> Retained<GitPage> {
         // SAFETY: NSView's initializer, called once on the newly allocated object.
         unsafe { msg_send![super(GitPage::alloc(mtm).set_ivars(panel)), init] }
     }
@@ -88,7 +80,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEGitPanel"]
     #[ivars = PanelIvars]
-    pub struct GitPanel;
+    pub(crate) struct GitPanel;
 
     unsafe impl NSObjectProtocol for GitPanel {}
 
@@ -289,12 +281,12 @@ define_class!(
 
         #[unsafe(method(ideGitApplyStash:))]
         fn apply_stash_action(&self, sender: Option<&AnyObject>) {
-            guarded((), || self.apply_stash(&self.keys_for(sender), false));
+            guarded((), || self.apply_stash(&self.keys_for(sender), ide_git::Unstash::Apply));
         }
 
         #[unsafe(method(ideGitPopStash:))]
         fn pop_stash_action(&self, sender: Option<&AnyObject>) {
-            guarded((), || self.apply_stash(&self.keys_for(sender), true));
+            guarded((), || self.apply_stash(&self.keys_for(sender), ide_git::Unstash::Pop));
         }
 
         #[unsafe(method(ideGitDropStash:))]
@@ -422,17 +414,17 @@ define_class!(
 );
 
 /// Runs `f` with the panel `id`, if its window is still open.
-pub fn with_panel(id: u64, f: impl FnOnce(&GitPanel)) {
+pub(crate) fn with_panel(id: u64, f: impl FnOnce(&GitPanel)) {
     crate::host::state().panels.with(id, f);
 }
 
 /// The panels of windows that show `root`.
-pub fn for_root(root: &Path) -> Vec<Retained<GitPanel>> {
+pub(crate) fn for_root(root: &Path) -> Vec<Retained<GitPanel>> {
     crate::host::state().panels.for_root(root)
 }
 
 /// The panel of `controller`'s window.
-pub fn of(controller: &(impl AsWindow + ?Sized)) -> Option<Retained<GitPanel>> {
+pub(crate) fn of(controller: &(impl AsWindow + ?Sized)) -> Option<Retained<GitPanel>> {
     let controller = &controller.as_window();
     crate::host::state().panels.of(*controller)
 }
@@ -455,7 +447,7 @@ impl GitPanel {
             root,
             ui: OnceCell::new(),
             state: RefCell::new(State::default()),
-            items: RefCell::new(HashMap::new()),
+            items: RowItems::default(),
             children: RefCell::new(HashMap::new()),
             stale: Cell::new(false),
             undo: NSUndoManager::new(mtm),
@@ -466,19 +458,19 @@ impl GitPanel {
         panel
     }
 
-    pub fn id(&self) -> u64 {
+    pub(crate) fn id(&self) -> u64 {
         self.ivars().id
     }
 
-    pub fn root(&self) -> &Path {
+    pub(crate) fn root(&self) -> &Path {
         &self.ivars().root
     }
 
-    pub fn ui(&self) -> &Ui {
+    pub(crate) fn ui(&self) -> &Ui {
         self.ivars().ui.get().expect("the panel builds its views in `new`")
     }
 
-    pub fn state(&self) -> std::cell::RefMut<'_, State> {
+    pub(crate) fn state(&self) -> std::cell::RefMut<'_, State> {
         let state = self.ivars().state.borrow_mut();
         self.ivars().children.borrow_mut().clear();
         state
@@ -502,30 +494,30 @@ impl GitPanel {
         }
     }
 
-    pub fn read(&self) -> std::cell::Ref<'_, State> {
+    pub(crate) fn read(&self) -> std::cell::Ref<'_, State> {
         self.ivars().state.borrow()
     }
 
     /// The commit message's undo.
-    pub fn message_undo(&self) -> &NSUndoManager {
+    pub(crate) fn message_undo(&self) -> &NSUndoManager {
         &self.ivars().undo
     }
 
-    pub fn controller(&self) -> Option<Window> {
+    pub(crate) fn controller(&self) -> Option<Window> {
         Window::open(self.ivars().controller.id())
     }
 
     /// How many commits the graph reads.
-    pub fn history_limit(&self) -> usize {
+    pub(crate) fn history_limit(&self) -> usize {
         self.read().history_limit()
     }
 
-    pub fn repo(&self) -> Option<Repository> {
+    pub(crate) fn repo(&self) -> Option<Repository> {
         self.ivars().state.borrow().repo.clone()
     }
 
     /// The rows below `item`, the sections for the top.
-    pub fn children(&self, item: Option<&AnyObject>) -> Rc<[RowKey]> {
+    pub(crate) fn children(&self, item: Option<&AnyObject>) -> Rc<[RowKey]> {
         let parent = match item {
             None => None,
             Some(item) => match key_of(item) {
@@ -542,21 +534,14 @@ impl GitPanel {
     }
 
     /// The object that stands for `key`, the same one for as long as its row exists.
-    pub fn item_for(&self, key: &RowKey) -> Retained<RowItem> {
-        if let Some(item) = self.ivars().items.borrow().get(key) {
-            return item.clone();
-        }
-        let item = RowItem::alloc(self.mtm()).set_ivars(key.clone());
-        // SAFETY: NSObject's initializer, called once on the newly allocated object.
-        let item: Retained<RowItem> = unsafe { msg_send![super(item), init] };
-        self.ivars().items.borrow_mut().insert(key.clone(), item.clone());
-        item
+    pub(crate) fn item_for(&self, key: &RowKey) -> Retained<RowItem> {
+        self.ivars().items.item(self.mtm(), key)
     }
 
     /// Lets go of the items of rows the panel no longer has, after the outline view read the rows anew.
     pub(super) fn forget_gone_items(&self) {
         let live = self.read().all_keys();
-        self.ivars().items.borrow_mut().retain(|key, _| live.contains(key));
+        self.ivars().items.keep(|key| live.contains(key));
     }
 
     fn note_expansion(&self, notification: &NSNotification, expanded: bool) {
@@ -574,6 +559,6 @@ impl GitPanel {
 }
 
 /// The key `item` stands for.
-pub fn key_of(item: &AnyObject) -> Option<RowKey> {
-    item.downcast_ref::<RowItem>().map(|item| item.ivars().clone())
+pub(crate) fn key_of(item: &AnyObject) -> Option<RowKey> {
+    RowItems::<RowKey>::key_of(item)
 }

@@ -20,7 +20,7 @@ use splat_i18n::{t, tf};
 use super::stash::sheet_labels;
 use super::{answer_sheet, fixture_git, pictures, sheet_ready, sheet_text, window_of, write};
 use crate::selftest::helpers::wait_on;
-use crate::selftest::{check, finish, snapshot};
+use crate::selftest::{check, finish, give_up, give_up_saying, snapshot};
 use crate::util::main_soon;
 use ide_ui_agent::own_agent::ModelChoice;
 use ide_ui_git::message::source::{CONSENT, MODEL};
@@ -61,12 +61,11 @@ fn requests() -> Vec<ide_agent::stub::Seen> {
     STUB.with(|stub| stub.borrow().as_ref().map(Stub::seen).unwrap_or_default())
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let stub = match Stub::start(|_| Answer::events_slowly(&answer(), Duration::from_millis(150))) {
         Ok(stub) => stub,
         Err(error) => {
-            check("the stub provider starts", false, error.to_string());
-            return finish(SCENARIO);
+            return give_up_saying(SCENARIO, "the stub provider starts", error.to_string());
         }
     };
     let base = format!("{}/v1", stub.url());
@@ -92,8 +91,7 @@ pub fn run() {
         main_soon(move || match made {
             Ok(()) => open(folder),
             Err(error) => {
-                check("a test repository is made", false, error);
-                finish(SCENARIO);
+                give_up_saying(SCENARIO, "a test repository is made", error);
             }
         });
     });
@@ -136,7 +134,7 @@ fn open(folder: PathBuf) {
 
 fn listed(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     probe::set_draft(&controller, DRAFT);
     let seen = probe::message(&controller);
@@ -164,7 +162,7 @@ fn consent_asked(root: PathBuf, ok: bool) {
     check("nothing went out before the answer", requests().is_empty(), "");
     super::sheet_pictures(root, "git-message-consent", |root| {
         if !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
-            return finish(SCENARIO);
+            return give_up(SCENARIO, "the sheet is there to answer");
         }
         wait_on(
             root.clone(),
@@ -179,7 +177,7 @@ fn consent_asked(root: PathBuf, ok: bool) {
 
 fn streaming(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let seen = probe::message(&controller);
     check(
@@ -197,7 +195,7 @@ fn streaming(root: PathBuf, ok: bool) {
 
 fn done(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let seen = probe::message(&controller);
     check(
@@ -224,7 +222,7 @@ fn done(root: PathBuf, ok: bool) {
     );
     pictures(root, "git-message", |root| {
         let Some(controller) = window_of(&root) else {
-            return finish(SCENARIO);
+            return give_up(SCENARIO, "the folder's window is open");
         };
         probe::show_sent(&controller);
         wait_on(root.clone(), sheet_ready, sent_shown);
@@ -233,7 +231,7 @@ fn done(root: PathBuf, ok: bool) {
 
 fn sent_shown(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let shown = sheet_text(&root);
     let sent = probe::message(&controller).sent.unwrap_or_default();
@@ -245,7 +243,7 @@ fn sent_shown(root: PathBuf, ok: bool) {
     super::sheet_pictures(root, "git-message-sent", |root| {
         answer_sheet(&root, NSAlertFirstButtonReturn, None);
         let Some(controller) = window_of(&root) else {
-            return finish(SCENARIO);
+            return give_up(SCENARIO, "the folder's window is open");
         };
         probe::undo(&controller);
         let seen = probe::message(&controller);
@@ -261,7 +259,7 @@ fn sent_shown(root: PathBuf, ok: bool) {
 
 fn regenerated(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check(
         "Neu erzeugen writes again without asking once more",
@@ -298,7 +296,7 @@ fn regenerated(root: PathBuf, ok: bool) {
 
 fn cancelled(root: PathBuf, ok: bool, typed: String) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let seen = probe::message(&controller);
     check(
@@ -315,8 +313,7 @@ fn cancelled(root: PathBuf, ok: bool, typed: String) {
                 with_secret,
             ),
             Err(error) => {
-                check("a secret is planted in an unstaged change", false, error);
-                finish(SCENARIO);
+                give_up_saying(SCENARIO, "a secret is planted in an unstaged change", error);
             }
         });
     });
@@ -331,7 +328,7 @@ fn plant_secret(root: &Path) -> Result<(), String> {
 
 fn with_secret(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check("the panel shows nothing staged", ok, "");
     probe::generate(&controller);
@@ -344,7 +341,7 @@ fn with_secret(root: PathBuf, ok: bool) {
 
 fn secret_found(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let problem = panel::seen(&controller).and_then(|s| s.problem).unwrap_or_default();
     let seen = probe::message(&controller);
@@ -395,7 +392,7 @@ fn revoke(root: PathBuf, ok: bool) {
         "",
     );
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     if let Some(window) = controller.window() {
         window.makeKeyAndOrderFront(None);
@@ -413,7 +410,7 @@ fn asked_again(root: PathBuf, ok: bool) {
     );
     super::answer_sheet(&root, objc2_app_kit::NSAlertSecondButtonReturn, None);
     let Some(window) = window_of(&root).and_then(|c| c.window()) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the window shows");
     };
     check("cancelling the consent sends nothing", requests().len() == 3, "");
     let findings = crate::selftest::a11y::audit::findings(&crate::selftest::a11y::audit::elements(&window));

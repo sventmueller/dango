@@ -18,7 +18,7 @@ type Server = (String, u16);
 
 /// The certificates of development servers that macOS refused and those the user accepted, while the app runs.
 #[derive(Default)]
-pub struct Certificates {
+pub(crate) struct Certificates {
     /// The certificate each development server showed last when macOS refused it, as Security's exceptions for it.
     refused: RefCell<HashMap<Server, CFRetained<CFData>>>,
     /// The certificates the user accepted.
@@ -48,7 +48,7 @@ pub fn may_accept(host: &str) -> bool {
 }
 
 /// The server of `url`, with the default port of its scheme.
-pub fn server_of(url: &str) -> Option<Server> {
+pub(crate) fn server_of(url: &str) -> Option<Server> {
     let origin = address::origin(url)?;
     let (scheme, authority) = origin.split_once("://")?;
     let (host, port) = address::split_port(authority)?;
@@ -65,12 +65,12 @@ fn normal_host(host: &str) -> String {
 }
 
 /// Whether the certificate `url`'s server showed last can be accepted.
-pub fn can_accept(url: &str) -> bool {
+pub(crate) fn can_accept(url: &str) -> bool {
     server_of(url).is_some_and(|server| with_refused(|refused| refused.borrow().contains_key(&server)))
 }
 
 /// Accepts the certificate `url`'s server showed last; whether there was one.
-pub fn accept(url: &str) -> bool {
+pub(crate) fn accept(url: &str) -> bool {
     let Some(server) = server_of(url) else { return false };
     let Some(exceptions) = with_refused(|refused| refused.borrow_mut().remove(&server)) else {
         return false;
@@ -81,7 +81,7 @@ pub fn accept(url: &str) -> bool {
 
 /// The answer to a server trust challenge: a credential for an accepted certificate of a development server, else
 /// macOS's own judgement, after noting a refused certificate so the user can accept it.
-pub fn answer(
+pub(crate) fn answer(
     challenge: &NSURLAuthenticationChallenge,
 ) -> (NSURLSessionAuthChallengeDisposition, Option<Retained<NSURLCredential>>) {
     let default = (NSURLSessionAuthChallengeDisposition::PerformDefaultHandling, None);

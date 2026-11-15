@@ -14,25 +14,26 @@ use ide_acp::register::{self, Distribution, PRESETS, Preset, Register};
 use ide_acp::{Installer, Installs};
 use ide_net::Http;
 use ide_process::Supervisor;
+use ide_ui_common::alert::Alert;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, Sel};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAlert, NSBackingStoreType, NSBezelStyle, NSButton, NSColor, NSControlSize, NSLayoutAttribute, NSPanel,
+    NSBackingStoreType, NSBezelStyle, NSButton, NSColor, NSControlSize, NSLayoutAttribute, NSPanel,
     NSProgressIndicator, NSProgressIndicatorStyle, NSScrollView, NSStackView, NSTextField,
     NSUserInterfaceLayoutOrientation, NSView, NSWindowStyleMask,
 };
-use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize};
+use objc2_foundation::{NSEdgeInsets, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
-use crate::util::{guarded, main_soon, ns, set_action};
+use crate::util::{activate, fixed_size, guarded, main_soon, ns, pin_inset, set_action};
 use ide_ui_agent::AcpAgent;
 
 use super::form::{self, MARGIN, WIDTH};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;
 
 /// The tallest the groups get before they scroll.
 const MAX_HEIGHT: f64 = 560.0;
@@ -46,7 +47,7 @@ const MARK: f64 = 16.0;
 
 /// The agent registry window, what its installations have got to and what it lists.
 #[derive(Default)]
-pub struct AgentRegistryWindow {
+pub(crate) struct AgentRegistryWindow {
     /// What each installation running now has got to, by the agent's id; the registry's fetch under the empty id.
     progress: RefCell<HashMap<String, String>>,
     /// The registry window, kept while the app runs.
@@ -83,7 +84,7 @@ enum Mark {
     Blank,
 }
 
-pub struct AgentsIvars {
+pub(crate) struct AgentsIvars {
     /// The agents' lines, and the registry's line in a group of its own.
     agents: OnceCell<Retained<NSStackView>>,
     register: OnceCell<Retained<NSStackView>>,
@@ -98,7 +99,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEAgentsSettings"]
     #[ivars = AgentsIvars]
-    pub struct AgentsSettings;
+    pub(crate) struct AgentsSettings;
 
     unsafe impl NSObjectProtocol for AgentsSettings {}
 
@@ -117,7 +118,9 @@ define_class!(
             guarded((), || {
                 if let Some(preset) = usize::try_from(tag(sender)).ok().and_then(|n| PRESETS.get(n)) {
                     if let Err(error) = installs().rollback(preset.id) {
-                        alert(self.mtm(), &tf("{} konnte nicht zurückgesetzt werden", &[preset.name]), &error.to_string());
+                        Alert::new(self.mtm(), &tf("{} konnte nicht zurückgesetzt werden", &[preset.name]))
+                            .informative(&error.to_string())
+                            .run_modal();
                     }
                     super::agents_changed();
                 }
@@ -163,13 +166,6 @@ fn installs() -> Installs {
     Installs::new(Installs::default_root())
 }
 
-fn alert(mtm: MainThreadMarker, title: &str, detail: &str) {
-    let alert = NSAlert::new(mtm);
-    alert.setMessageText(&ns(title));
-    alert.setInformativeText(&ns(detail));
-    alert.runModal();
-}
-
 fn link(mtm: MainThreadMarker, title: &str, target: &AgentsSettings, action: Sel, tag: isize) -> Retained<NSButton> {
     let button = crate::util::borderless_button(mtm, title, None, action);
     set_action(&button, target, action);
@@ -212,8 +208,7 @@ fn mark_view(mtm: MainThreadMarker, mark: Mark) -> Retained<NSView> {
         Retained::into_super(Retained::into_super(dot))
     };
     view.setTranslatesAutoresizingMaskIntoConstraints(false);
-    view.widthAnchor().constraintEqualToConstant(MARK).setActive(true);
-    view.heightAnchor().constraintEqualToConstant(MARK).setActive(true);
+    fixed_size(&view, MARK, MARK);
     view
 }
 
@@ -242,7 +237,9 @@ fn install(mtm: MainThreadMarker, id: &str, name: &str, plan: Plan) {
             if let Err(error) = result
                 && let Some(mtm) = MainThreadMarker::new()
             {
-                alert(mtm, &tf("{} wurde nicht installiert", &[&name]), &error.to_string());
+                Alert::new(mtm, &tf("{} wurde nicht installiert", &[&name]))
+                    .informative(&error.to_string())
+                    .run_modal();
             }
             super::agents_changed();
             refresh_register();
@@ -250,7 +247,9 @@ fn install(mtm: MainThreadMarker, id: &str, name: &str, plan: Plan) {
     }) {
         let (id, name) = failed;
         with_progress(|p| p.borrow_mut().remove(&id));
-        alert(mtm, &tf("{} wurde nicht installiert", &[&name]), &why.0);
+        Alert::new(mtm, &tf("{} wurde nicht installiert", &[&name]))
+            .informative(&why.0)
+            .run_modal();
         super::agents_changed();
     }
 }
@@ -269,7 +268,9 @@ fn fetch() {
             if let Err(error) = result
                 && let Some(mtm) = MainThreadMarker::new()
             {
-                alert(mtm, t("Das Register wurde nicht geladen"), &error.to_string());
+                Alert::new(mtm, t("Das Register wurde nicht geladen"))
+                    .informative(&error.to_string())
+                    .run_modal();
             }
             super::agents_changed();
             refresh_register();
@@ -277,7 +278,9 @@ fn fetch() {
     }) {
         with_progress(|p| p.borrow_mut().remove(""));
         if let Some(mtm) = MainThreadMarker::new() {
-            alert(mtm, t("Das Register wurde nicht geladen"), &why.0);
+            Alert::new(mtm, t("Das Register wurde nicht geladen"))
+                .informative(&why.0)
+                .run_modal();
         }
         super::agents_changed();
     }
@@ -399,7 +402,7 @@ fn registry_installed() -> Vec<(String, String)> {
 }
 
 impl AgentsSettings {
-    pub fn new(mtm: MainThreadMarker) -> Retained<AgentsSettings> {
+    pub(crate) fn new(mtm: MainThreadMarker) -> Retained<AgentsSettings> {
         let this = Self::alloc(mtm).set_ivars(AgentsIvars {
             agents: OnceCell::new(),
             register: OnceCell::new(),
@@ -412,7 +415,7 @@ impl AgentsSettings {
 
     /// The tab: what it is about, the agents in a group, the registry in another; as tall as they are, scrolling only
     /// past `MAX_HEIGHT`.
-    pub fn view(&self) -> Retained<NSView> {
+    pub(crate) fn view(&self) -> Retained<NSView> {
         let mtm = self.mtm();
         let agents = self.ivars().agents.get_or_init(|| group_lines(mtm));
         let register = self.ivars().register.get_or_init(|| group_lines(mtm));
@@ -450,7 +453,7 @@ impl AgentsSettings {
     }
 
     /// Shows every agent's state again, as it is now.
-    pub fn reload(&self) {
+    pub(crate) fn reload(&self) {
         self.ivars().rules.reload();
         let (Some(agents), Some(register)) = (self.ivars().agents.get(), self.ivars().register.get()) else {
             return;
@@ -549,13 +552,11 @@ impl AgentsSettings {
         line.setTranslatesAutoresizingMaskIntoConstraints(false);
         // A stack centring its views keeps its insets across them only as loosely as it hugs them, which measuring
         // the tab for the window's height overrides.
-        for constraint in [
+        activate([
             line.widthAnchor().constraintEqualToConstant(WIDTH),
             line.heightAnchor()
                 .constraintGreaterThanOrEqualToAnchor_constant(&text.heightAnchor(), 2.0 * INSET),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         Retained::into_super(line)
     }
 }
@@ -752,19 +753,16 @@ fn show_register(target: &AgentsSettings) {
     let rows = register_rows(target, &register);
     let document = ide_ui_agent::agent_panel::flipped(mtm);
     document.addSubview(&rows);
-    rows.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
-        rows.topAnchor()
-            .constraintEqualToAnchor_constant(&document.topAnchor(), 14.0),
-        rows.leadingAnchor()
-            .constraintEqualToAnchor_constant(&document.leadingAnchor(), 16.0),
-        rows.trailingAnchor()
-            .constraintEqualToAnchor_constant(&document.trailingAnchor(), -16.0),
-        rows.bottomAnchor()
-            .constraintEqualToAnchor_constant(&document.bottomAnchor(), -14.0),
-    ] {
-        constraint.setActive(true);
-    }
+    pin_inset(
+        &rows,
+        &document,
+        NSEdgeInsets {
+            top: 14.0,
+            left: 16.0,
+            bottom: 14.0,
+            right: 16.0,
+        },
+    );
     let scroll = NSScrollView::new(mtm);
     scroll.setHasVerticalScroller(true);
     scroll.setDocumentView(Some(&document));

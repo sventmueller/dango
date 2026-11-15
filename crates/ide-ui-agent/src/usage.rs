@@ -15,21 +15,21 @@ const FRESH: Duration = Duration::from_secs(120);
 
 /// The latest answer to `get_usage` with when it came, and whether a question is out.
 #[derive(Default)]
-pub struct Usage {
+pub(crate) struct Usage {
     report: RefCell<Option<(SystemTime, Option<UsageReport>)>>,
     asking: Cell<bool>,
 }
 
 /// A window of the plan: the CLI's name for it, the share used from 0 to 1, and when it starts over.
-pub struct Window {
-    pub name: String,
-    pub used: f64,
-    pub resets: Option<String>,
+pub(crate) struct Window {
+    pub(crate) name: String,
+    pub(crate) used: f64,
+    pub(crate) resets: Option<String>,
 }
 
 /// The plan's weekly and five-hour window, in that order and where known: from the latest report, else from what
 /// `thread`'s session reported.
-pub fn windows(thread: &Thread) -> Vec<Window> {
+pub(crate) fn windows(thread: &Thread) -> Vec<Window> {
     let cx = crate::host::state();
     let report = cx.usage.report.borrow().as_ref().and_then(|(_, r)| r.clone());
     windows_of(thread, report)
@@ -64,7 +64,7 @@ fn windows_of(thread: &Thread, report: Option<UsageReport>) -> Vec<Window> {
 }
 
 /// Asks `session` for the plan's usage when the last answer is old; the answer redraws the status line of every tab.
-pub fn fetch(session: &Session) {
+pub(crate) fn fetch(session: &Session) {
     let cx = crate::host::state();
     let usage = &cx.usage;
     let stale = usage

@@ -11,7 +11,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSRect, NSSize};
 use serde_json::json;
 
-use super::{check, finish, helpers, snapshot};
+use super::{check, give_up, helpers, snapshot};
 use crate::activity::Part;
 use crate::util::constant;
 use crate::window::{self, Panel, WindowController};
@@ -178,7 +178,7 @@ pub(super) fn picture(controller: &WindowController, name: &str) {
     }
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let files = [("src/main.rs", "fn main() {}\n"), ("README.md", "# Agent\n")];
     helpers::open_project(NAME, "agent-project", &files, opened);
 }
@@ -188,9 +188,7 @@ fn opened(controller: objc2::rc::Retained<WindowController>) {
     check("a trusted folder does not ask again", !controller.has_sheet(), "");
     let before = controller.window().map(|w| w.frame());
     let Some(tab) = ide_ui_agent::open_replay(&controller) else {
-        check("an AI tab opens", false, "");
-        finish(NAME);
-        return;
+        return give_up(NAME, "an AI tab opens");
     };
     let after = controller.window().map(|w| {
         w.layoutIfNeeded();
@@ -242,7 +240,7 @@ fn opened(controller: objc2::rc::Retained<WindowController>) {
 /// all the same.
 fn sidebar_let_go(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     let ai = controller.tab_with_key(&tab.tab_key());
     let other = controller.tab_ids().into_iter().find(|id| Some(*id) != ai);
@@ -259,7 +257,7 @@ fn sidebar_let_go(root: PathBuf, key: AgentKey) {
         },
         move |_| {
             let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-                return finish(NAME);
+                return give_up(NAME, "the folder's window and the AI tab are open");
             };
             let range = ai.and_then(|id| controller.sidebar_range_of(id));
             check(
@@ -452,7 +450,7 @@ fn follows_window(controller: &WindowController, tab: &AgentTab) {
 /// A rich answer, file changes, and a permission that waits.
 fn permission(root: PathBuf, key: AgentKey) {
     let (Some(_), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     tab.feed(&markdown_turn());
     tab.feed(EDIT);
@@ -501,7 +499,7 @@ fn scroller_rests_at_the_end(tab: &AgentTab) {
 /// A subagent and a background shell that run.
 fn running(root: PathBuf, key: AgentKey) {
     let (Some(_), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     let (_, rest) = split(SUBAGENT, 56);
     let (to_running, _) = split(&rest, 174 - 56);
@@ -553,7 +551,7 @@ fn running(root: PathBuf, key: AgentKey) {
 
 fn activity(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     let (lines, tooltip) = crate::activity::inspect(&controller);
     check(
@@ -583,7 +581,7 @@ fn activity(root: PathBuf, key: AgentKey) {
 
 fn panel(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     tab.timeline().table().scrollRowToVisible(0);
     controller.activate_panel(Panel::Agents);
@@ -640,7 +638,7 @@ fn panel(root: PathBuf, key: AgentKey) {
 
 fn dark(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     let (_, rest) = split(SUBAGENT, 174);
     tab.feed(&rest);
@@ -652,7 +650,7 @@ fn dark(root: PathBuf, key: AgentKey) {
     let key = tab.key;
     helpers::after(DRAWN, move || {
         let Some(controller) = controller_of(&root) else {
-            return finish(NAME);
+            return give_up(NAME, "the folder's window is open");
         };
         picture(&controller, "agent-dark");
         appearance(
@@ -661,13 +659,13 @@ fn dark(root: PathBuf, key: AgentKey) {
         );
         helpers::after(DRAWN, move || {
             let Some(controller) = controller_of(&root) else {
-                return finish(NAME);
+                return give_up(NAME, "the folder's window is open");
             };
             picture(&controller, "agent-contrast-dark");
             appearance(&controller, constant!(NSAppearanceNameAccessibilityHighContrastAqua));
             helpers::after(DRAWN, move || {
                 let Some(controller) = controller_of(&root) else {
-                    return finish(NAME);
+                    return give_up(NAME, "the folder's window is open");
                 };
                 picture(&controller, "agent-contrast");
                 appearance(&controller, constant!(NSAppearanceNameAqua));
@@ -681,10 +679,10 @@ fn dark(root: PathBuf, key: AgentKey) {
 /// Questions, plans, to-dos and status notices in a second tab.
 fn requests(root: PathBuf, first: AgentKey) {
     let (Some(controller), Some(first)) = (controller_of(&root), tab_of(first)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     let Some(tab) = ide_ui_agent::open_replay(&controller) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab opens");
     };
     tab.feed(COMPACTION);
     tab.feed(RETRY);
@@ -728,7 +726,9 @@ fn requests(root: PathBuf, first: AgentKey) {
 
 /// An Edit permission with its content editable, the hooks of a turn on one line, and the focus view.
 pub(super) fn context(root: PathBuf, key: AgentKey, first: AgentKey) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     let (edit, _) = until(EDIT, "\"subtype\":\"can_use_tool\"");
     tab.feed(&edit);
     tab.feed(&hook_frames());
@@ -740,7 +740,9 @@ pub(super) fn context(root: PathBuf, key: AgentKey, first: AgentKey) {
         })
     };
     helpers::wait_until(shown, move |_| {
-        let Some(tab) = tab_of(key) else { return finish(NAME) };
+        let Some(tab) = tab_of(key) else {
+            return give_up(NAME, "the AI tab is open");
+        };
         let seen = tab.inspect();
         check(
             "the hooks of a turn that ran fine share one line",
@@ -780,7 +782,7 @@ pub(super) fn context(root: PathBuf, key: AgentKey, first: AgentKey) {
 /// Completing `@` mentions, the editor's selection as context, and a terminal for `@terminal`.
 fn mentions(root: PathBuf, key: AgentKey, first: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     let labels = tab.suggestion_labels();
     check(
@@ -827,7 +829,7 @@ fn mentions(root: PathBuf, key: AgentKey, first: AgentKey) {
 /// The terminal's output for `@terminal`, its tab for its process, and a session's own task overview.
 fn terminal(root: PathBuf, first: AgentKey) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let shells: Vec<u32> = ide_process::Supervisor::global()
         .running()
@@ -858,7 +860,7 @@ fn terminal(root: PathBuf, first: AgentKey) {
         "",
     );
     let Some(first) = tab_of(first) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab is open");
     };
     first.select();
     first.show_work(Part::All, None);
@@ -883,7 +885,7 @@ fn terminal(root: PathBuf, first: AgentKey) {
 /// The head's lists of the session's subagents and of its background processes, each of its own kind.
 fn work_lists(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     tab.show_work(Part::Subagents, None);
     let subagents = crate::activity::overview_lines(&controller);
@@ -952,7 +954,7 @@ fn page_server() -> Option<String> {
 /// `@browser` hands over the address, title and selected text of the page in view.
 fn browser(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let Some(url) = page_server() else {
         check("the page server starts", false, "");
@@ -963,7 +965,7 @@ fn browser(root: PathBuf) {
     let loaded = move || controller_of(&page).is_some_and(|c| c.tab_titles().iter().any(|t| t == PAGE_TITLE));
     helpers::wait_until(loaded, move |_| {
         let Some(controller) = controller_of(&root) else {
-            return finish(NAME);
+            return give_up(NAME, "the folder's window is open");
         };
         ide_ui_agent::browser_context(&controller, move |text| {
             let text = text.unwrap_or_default();

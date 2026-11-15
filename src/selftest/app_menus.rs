@@ -5,7 +5,6 @@
 //! how it went.
 
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use ide_core::settings::{State, remembered};
 use objc2::rc::Retained;
@@ -15,7 +14,7 @@ use objc2_app_kit::{NSAlertFirstButtonReturn, NSApplication, NSMenu, NSToolbarIt
 use objc2_foundation::{NSArray, NSURL};
 use splat_i18n::{t, tf};
 
-use super::{check, finish, helpers};
+use super::{check, finish, give_up, helpers};
 use crate::util::ns;
 use crate::window::WindowController;
 
@@ -26,7 +25,7 @@ fn folders() -> (PathBuf, PathBuf) {
     (home.join("menus-a"), home.join("menus-b"))
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let (a, b) = folders();
     for (folder, files) in [(&a, &["one.txt", "gone.txt", "two.txt"][..]), (&b, &["b.txt"][..])] {
@@ -39,8 +38,7 @@ pub fn run() {
     crate::app::open_project(mtm, a.clone());
     helpers::wait_for_window(&a.clone(), move |controller| {
         let Some(controller) = controller else {
-            check("the project's window opens", false, "");
-            return finish(NAME);
+            return give_up(NAME, "the project's window opens");
         };
         navigation(&controller, &a);
         recent(controller.mtm());
@@ -132,8 +130,7 @@ fn recent(mtm: MainThreadMarker) {
     let (a, b) = folders();
     let (a, b) = (a.canonicalize().unwrap_or(a), b.canonicalize().unwrap_or(b));
     let Some(delegate) = delegate(mtm) else {
-        check("the app has its delegate", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the app has its delegate");
     };
     let _ = State::load_user().note_recent(&b);
     let menu = NSMenu::new(mtm);
@@ -207,18 +204,14 @@ fn handed(mtm: MainThreadMarker, delegate: &AnyObject, a: &Path, b: &Path) {
 fn install() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let Some(delegate) = delegate(mtm) else {
-        return finish(NAME);
+        return give_up(NAME, "the app has its delegate");
     };
     let command = ide_product::COMMAND;
     let path = ide_core::paths::home().join(".local/bin").join(command);
     let installed = tf("Der Befehl „{}“ ist installiert.", &[command]);
     let refused = tf("Der Befehl „{}“ wurde nicht installiert.", &[command]);
     let run = |message: &str| {
-        let answered = helpers::answer_alert_saying(
-            Duration::from_millis(400),
-            message.to_string(),
-            NSAlertFirstButtonReturn,
-        );
+        let answered = helpers::answer_alert_saying(message.to_string(), NSAlertFirstButtonReturn);
         send(&delegate, sel!(ideInstallCommand:), None);
         answered.get()
     };

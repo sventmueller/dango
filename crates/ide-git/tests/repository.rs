@@ -164,7 +164,7 @@ fn branches_are_created_switched_and_deleted_only_when_merged() {
     let scratch = Scratch::new("branches");
     let repository = scratch.repository("r", &[("a.txt", "a\n")]);
     let root = repository.root();
-    repository.create_branch("feature/x", None, true).unwrap();
+    repository.switch_to_new_branch("feature/x", None).unwrap();
     assert_eq!(repository.current_branch().unwrap().as_deref(), Some("feature/x"));
     write(root, "a.txt", "feature\n");
     repository.stage(&["a.txt"]).unwrap();
@@ -185,11 +185,11 @@ fn branches_are_created_switched_and_deleted_only_when_merged() {
         Err(Error::NotMerged { .. })
     ));
     assert!(matches!(
-        repository.create_branch("bad name", None, false),
+        repository.create_branch("bad name", None),
         Err(Error::InvalidName { .. })
     ));
     assert!(matches!(
-        repository.create_branch("-x", None, false),
+        repository.create_branch("-x", None),
         Err(Error::InvalidName { .. })
     ));
     repository.destructive().delete_branch("feature/x").unwrap();
@@ -201,7 +201,7 @@ fn switching_over_local_changes_names_the_files_and_changes_nothing() {
     let scratch = Scratch::new("switch-dirty");
     let repository = scratch.repository("r", &[("a.txt", "a\n")]);
     let root = repository.root();
-    repository.create_branch("other", None, true).unwrap();
+    repository.switch_to_new_branch("other", None).unwrap();
     write(root, "a.txt", "other\n");
     repository.stage(&["a.txt"]).unwrap();
     repository.commit("other", ide_git::CommitOptions::default()).unwrap();
@@ -370,7 +370,7 @@ fn a_worktree_is_added_on_a_new_branch_listed_and_removed() {
 fn a_threads_worktree_shows_its_changes_and_is_merged_cherry_picked_or_stopped_at_conflicts() {
     let scratch = Scratch::new("worktree-life");
     let repository = scratch.repository("r", &[("README.md", "one\ntwo\n"), ("src/lib.rs", "fn a() {}\n")]);
-    let base = repository.head().unwrap().unwrap();
+    let base = repository.head().unwrap().unwrap().to_string();
     let place = scratch.path("trees/fix");
     let tree = repository.add_worktree(&place, "thread/fix", None).unwrap();
     write(&place, "src/lib.rs", "fn a() {}\nfn b() {}\n");
@@ -418,8 +418,11 @@ fn a_threads_worktree_shows_its_changes_and_is_merged_cherry_picked_or_stopped_a
     scratch.raw(repository.root(), &["commit", "--quiet", "-m", "mine"]);
     assert_eq!(repository.ahead_behind("main", "thread/fix").unwrap(), (1, 1));
     assert_eq!(
-        repository.merge_base("main", "thread/fix").unwrap().as_deref(),
-        Some(base.as_str())
+        repository
+            .merge_base("main", "thread/fix")
+            .unwrap()
+            .map(|b| b.to_string()),
+        Some(base.clone())
     );
     assert!(tree.changes_since("HEAD").unwrap().is_empty());
 
@@ -454,7 +457,7 @@ fn a_threads_worktree_shows_its_changes_and_is_merged_cherry_picked_or_stopped_a
 
     let pick = scratch.path("trees/pick");
     let picking = repository.add_worktree(&pick, "thread/pick", None).unwrap();
-    let pick_base = picking.head().unwrap().unwrap();
+    let pick_base = picking.head().unwrap().unwrap().to_string();
     write(&pick, "picked.txt", "picked\n");
     picking.stage_all().unwrap();
     picking.commit("picked", CommitOptions::default()).unwrap();

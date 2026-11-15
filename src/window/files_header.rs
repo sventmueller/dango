@@ -10,7 +10,7 @@ use splat_i18n::t;
 use super::panels::{header_button, header_row};
 
 /// The buttons, sending their actions to `target`, the tree's data source.
-pub fn buttons(mtm: MainThreadMarker, target: &AnyObject) -> Retained<NSStackView> {
+pub(crate) fn buttons(mtm: MainThreadMarker, target: &AnyObject) -> Retained<NSStackView> {
     let row = header_row(mtm);
     for (symbol, name, action) in [
         ("doc.badge.plus", t("Neue Datei …"), sel!(ideTreeNewFile:)),

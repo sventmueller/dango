@@ -36,9 +36,9 @@ const REQUEST_PAUSE: Duration = Duration::from_millis(350);
 
 /// What the preview shows now.
 #[derive(Default)]
-pub struct Shown {
-    pub layout: Option<Layout>,
-    pub index: Index,
+pub(crate) struct Shown {
+    pub(crate) layout: Option<Layout>,
+    pub(crate) index: Index,
     keys: Vec<Key>,
     macros: Arc<str>,
     dark: bool,
@@ -64,19 +64,19 @@ impl PartialEq for Look {
     }
 }
 
-pub struct Preview {
-    pub key: u64,
+pub(crate) struct Preview {
+    pub(crate) key: u64,
     mtm: MainThreadMarker,
     controller: objc2::rc::Weak<WindowController>,
     editor: RefCell<objc2::rc::Weak<EditorTextView>>,
     path: PathBuf,
-    pub views: Views,
+    pub(crate) views: Views,
     tab: Cell<Option<TabId>>,
     text: RefCell<ide_document::Text>,
     images: RefCell<ImageStore>,
     viewer: OnceCell<Rc<dyn Viewer>>,
     owner: Cell<Option<Owner>>,
-    pub shown: RefCell<Shown>,
+    pub(crate) shown: RefCell<Shown>,
     /// What the whole text was last rendered with, which the blocks set since were rendered with too.
     painted: RefCell<Option<Look>>,
     /// Counts the changes of the text; a layout of an older one does not replace that of a newer one.
@@ -90,11 +90,11 @@ pub struct Preview {
     closed: Cell<bool>,
     /// It opened with its document and closes with its editor.
     automatic: bool,
-    pub sync: super::sync::State,
+    pub(crate) sync: super::sync::State,
 }
 
 impl Preview {
-    pub fn new(
+    pub(crate) fn new(
         controller: &WindowController,
         editor: &EditorTextView,
         path: &Path,
@@ -130,48 +130,48 @@ impl Preview {
         })
     }
 
-    pub fn automatic(&self) -> bool {
+    pub(crate) fn automatic(&self) -> bool {
         self.automatic
     }
 
-    pub fn tab(&self) -> Option<TabId> {
+    pub(crate) fn tab(&self) -> Option<TabId> {
         self.tab.get()
     }
 
-    pub fn set_tab(&self, id: TabId) {
+    pub(crate) fn set_tab(&self, id: TabId) {
         self.tab.set(Some(id));
     }
 
-    pub fn controller(&self) -> Option<Retained<WindowController>> {
+    pub(crate) fn controller(&self) -> Option<Retained<WindowController>> {
         self.controller.load()
     }
 
-    pub fn editor(&self) -> Option<Retained<EditorTextView>> {
+    pub(crate) fn editor(&self) -> Option<Retained<EditorTextView>> {
         self.editor.borrow().load()
     }
 
     /// Whether it follows `view`, or shows the file `view` has open now that its own editor is gone.
-    pub fn follows(&self, view: &EditorTextView) -> bool {
+    pub(crate) fn follows(&self, view: &EditorTextView) -> bool {
         match self.editor() {
             Some(editor) => std::ptr::eq(&*editor, view),
             None => view.document().path() == Some(self.path.as_path()),
         }
     }
 
-    pub fn follow(&self, view: &EditorTextView) {
+    pub(crate) fn follow(&self, view: &EditorTextView) {
         *self.editor.borrow_mut() = objc2::rc::Weak::from(view);
     }
 
-    pub fn images(&self) -> &RefCell<ImageStore> {
+    pub(crate) fn images(&self) -> &RefCell<ImageStore> {
         &self.images
     }
 
-    pub fn is_closed(&self) -> bool {
+    pub(crate) fn is_closed(&self) -> bool {
         self.closed.get() || self.controller.load().is_none()
     }
 
     /// The preview as the render path knows it.
-    pub fn viewer(self: &Rc<Self>) -> Rc<dyn Viewer> {
+    pub(crate) fn viewer(self: &Rc<Self>) -> Rc<dyn Viewer> {
         self.viewer.get_or_init(|| Rc::new(Hears(Rc::downgrade(self)))).clone()
     }
 
@@ -184,17 +184,17 @@ impl Preview {
     }
 
     /// Pictures from the web load when the folder is trusted or the user asked for them in this document (E22).
-    pub fn loads_web_pictures(&self) -> bool {
+    pub(crate) fn loads_web_pictures(&self) -> bool {
         self.web_allowed.get() || self.controller().is_some_and(|c| c.is_trusted())
     }
 
-    pub fn allow_web_pictures(self: &Rc<Self>) {
+    pub(crate) fn allow_web_pictures(self: &Rc<Self>) {
         self.web_allowed.set(true);
         self.render();
     }
 
     /// The text changed: it is laid out again after a pause in typing.
-    pub fn text_changed(&self) {
+    pub(crate) fn text_changed(&self) {
         let edits = self.edits.get() + 1;
         self.edits.set(edits);
         self.last_edit.set(Instant::now());
@@ -209,7 +209,7 @@ impl Preview {
     }
 
     /// Lays the text out on a background lane; what is ready of its formulas and diagrams shows as pictures.
-    pub fn lay_out(&self) {
+    pub(crate) fn lay_out(&self) {
         if let Some(editor) = self.editor() {
             *self.text.borrow_mut() = editor.document().text().clone();
         }
@@ -279,7 +279,7 @@ impl Preview {
     }
 
     /// Sets the blocks that hold pictures anew on a later turn of the run loop, once for any number of arrivals.
-    pub fn render_soon(&self) {
+    pub(crate) fn render_soon(&self) {
         if self.render_due.replace(true) {
             return;
         }
@@ -293,7 +293,7 @@ impl Preview {
     }
 
     /// Sets the whole layout as text, keeping the place the reader is at.
-    pub fn render(self: &Rc<Self>) {
+    pub(crate) fn render(self: &Rc<Self>) {
         let Some(count) = self.shown.borrow().layout.as_ref().map(|laid| laid.blocks.len()) else {
             return;
         };
@@ -417,7 +417,7 @@ impl Preview {
         self.views.offer_web_pictures(offer);
     }
 
-    pub fn close(self: &Rc<Self>) {
+    pub(crate) fn close(self: &Rc<Self>) {
         if self.closed.replace(true) {
             return;
         }

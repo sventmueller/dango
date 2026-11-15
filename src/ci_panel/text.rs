@@ -8,7 +8,7 @@ use objc2_app_kit::NSColor;
 use splat_i18n::{t, tf};
 
 /// The symbol of `state`; its colour and word say the same for those who do not see the colour.
-pub fn symbol(state: State) -> &'static str {
+pub(crate) fn symbol(state: State) -> &'static str {
     match state {
         State::Queued => "clock",
         State::Running => "circle.dotted.circle",
@@ -21,7 +21,7 @@ pub fn symbol(state: State) -> &'static str {
     }
 }
 
-pub fn color(state: State) -> Retained<NSColor> {
+pub(crate) fn color(state: State) -> Retained<NSColor> {
     match state {
         State::Success => NSColor::systemGreenColor(),
         State::Failed => NSColor::systemRedColor(),
@@ -31,7 +31,7 @@ pub fn color(state: State) -> Retained<NSColor> {
     }
 }
 
-pub fn word(state: State) -> &'static str {
+pub(crate) fn word(state: State) -> &'static str {
     match state {
         State::Queued => t("wartet"),
         State::Running => t("läuft"),
@@ -45,18 +45,18 @@ pub fn word(state: State) -> &'static str {
 }
 
 /// How long ago `seconds` since 1970 was.
-pub fn ago(seconds: i64) -> String {
+pub(crate) fn ago(seconds: i64) -> String {
     let at = UNIX_EPOCH + Duration::from_secs(u64::try_from(seconds).unwrap_or(0));
     ide_ui_agent::age(at.min(SystemTime::now()))
 }
 
 /// How long something took that ran for `seconds`.
-pub fn took(seconds: i64) -> String {
+pub(crate) fn took(seconds: i64) -> String {
     ide_ui_agent::elapsed(Duration::from_secs(u64::try_from(seconds).unwrap_or(0)))
 }
 
 /// Where the token came from, in words.
-pub fn source(source: &Source) -> String {
+pub(crate) fn source(source: &Source) -> String {
     match source {
         Source::Keychain => t("Schlüsselbund").into(),
         Source::Gh => "gh".into(),
@@ -66,7 +66,7 @@ pub fn source(source: &Source) -> String {
 }
 
 /// What went wrong, in the panel's words.
-pub fn problem(error: &Error) -> String {
+pub(crate) fn problem(error: &Error) -> String {
     match error {
         Error::Unauthorized { host } => tf("{} nimmt den Token nicht an.", &[host]),
         Error::Forbidden { message } => tf("Der Token darf das nicht: {}", &[message]),

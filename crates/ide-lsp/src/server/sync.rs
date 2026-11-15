@@ -10,10 +10,35 @@ use crate::error::Error;
 /// What the server wants to hear about documents.
 pub(crate) struct SyncOptions {
     pub(crate) open_close: bool,
-    /// 0 none, 1 the whole text, 2 the changed ranges.
-    pub(crate) change: u64,
-    /// Whether to send `didSave`, and whether with the text.
-    pub(crate) save: Option<bool>,
+    pub(crate) change: ChangeSync,
+    pub(crate) save: SaveSync,
+}
+
+/// How the server wants edits sent, from LSP's `TextDocumentSyncKind`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ChangeSync {
+    None,
+    FullText,
+    Ranges,
+}
+
+impl ChangeSync {
+    /// The kind numbered `kind` on the wire; numbers after 2 are read as ranges, as the protocol may add kinds.
+    fn from_wire(kind: Option<u64>) -> ChangeSync {
+        match kind {
+            None | Some(0) => ChangeSync::None,
+            Some(1) => ChangeSync::FullText,
+            Some(_) => ChangeSync::Ranges,
+        }
+    }
+}
+
+/// Whether the server wants `didSave`, and whether with the text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SaveSync {
+    Never,
+    WithoutText,
+    WithText,
 }
 
 impl State {
@@ -22,24 +47,25 @@ impl State {
             // The short form means: open and close, this kind of change, and saves without text (as VS Code does).
             Some(Value::Number(kind)) => SyncOptions {
                 open_close: true,
-                change: kind.as_u64().unwrap_or(0),
-                save: Some(false),
+                change: ChangeSync::from_wire(kind.as_u64()),
+                save: SaveSync::WithoutText,
             },
             Some(options @ Value::Object(_)) => SyncOptions {
                 open_close: options.get("openClose").and_then(Value::as_bool) == Some(true),
-                change: options.get("change").and_then(Value::as_u64).unwrap_or(0),
+                change: ChangeSync::from_wire(options.get("change").and_then(Value::as_u64)),
                 save: match options.get("save") {
-                    Some(Value::Bool(true)) => Some(false),
-                    Some(save @ Value::Object(_)) => {
-                        Some(save.get("includeText").and_then(Value::as_bool) == Some(true))
+                    Some(Value::Bool(true)) => SaveSync::WithoutText,
+                    Some(save @ Value::Object(_)) if save.get("includeText").and_then(Value::as_bool) == Some(true) => {
+                        SaveSync::WithText
                     }
-                    _ => None,
+                    Some(Value::Object(_)) => SaveSync::WithoutText,
+                    _ => SaveSync::Never,
                 },
             },
             _ => SyncOptions {
                 open_close: false,
-                change: 0,
-                save: None,
+                change: ChangeSync::None,
+                save: SaveSync::Never,
             },
         }
     }
@@ -106,15 +132,15 @@ impl State {
         };
         let document = json!({"uri": uri, "version": doc.version});
         let sent = match options.change {
-            0 => return,
-            1 => {
+            ChangeSync::None => return,
+            ChangeSync::FullText => {
                 let text = doc.text.clone();
                 self.notify_with(
                     "textDocument/didChange",
                     move || json!({"textDocument": document, "contentChanges": [{"text": text.text()}]}),
                 )
             }
-            _ => self.notify(
+            ChangeSync::Ranges => self.notify(
                 "textDocument/didChange",
                 json!({"textDocument": document, "contentChanges": changes}),
             ),
@@ -150,7 +176,7 @@ impl State {
                 })
                 .is_ok()
             }
-            Told::NeedsFullText if options.change == 0 => true,
+            Told::NeedsFullText if options.change == ChangeSync::None => true,
             Told::NeedsFullText => {
                 let (document, text) = (json!({"uri": uri, "version": doc.version}), doc.text.clone());
                 self.notify_with(
@@ -163,5 +189,19 @@ impl State {
         if sent && let Some(doc) = self.documents.get_mut(uri) {
             doc.sync = Told::Synced;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ChangeSync;
+
+    #[test]
+    fn change_kinds_read_from_their_wire_numbers() {
+        assert_eq!(ChangeSync::from_wire(None), ChangeSync::None);
+        assert_eq!(ChangeSync::from_wire(Some(0)), ChangeSync::None);
+        assert_eq!(ChangeSync::from_wire(Some(1)), ChangeSync::FullText);
+        assert_eq!(ChangeSync::from_wire(Some(2)), ChangeSync::Ranges);
+        assert_eq!(ChangeSync::from_wire(Some(7)), ChangeSync::Ranges);
     }
 }

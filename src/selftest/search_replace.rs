@@ -31,7 +31,7 @@ fn main_text(root: &Path) -> String {
         .unwrap_or_default()
 }
 
-pub fn run(root: PathBuf, then: fn(PathBuf)) {
+pub(crate) fn run(root: PathBuf, then: fn(PathBuf)) {
     let _ = std::fs::write(root.join("crlf.txt"), CRLF);
     let probe = root.clone();
     wait_until(

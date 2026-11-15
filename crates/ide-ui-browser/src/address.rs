@@ -8,7 +8,7 @@ use ide_core::settings::SearchEngine;
 
 /// Where typed text leads.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Address {
+pub(crate) enum Address {
     /// A page at this URL.
     Url(String),
     /// A local file; the browser opens it only inside the window's folder.
@@ -17,7 +17,7 @@ pub enum Address {
 
 impl Address {
     /// The address a URL has, such as one a page led to.
-    pub fn of_url(url: &str) -> Address {
+    pub(crate) fn of_url(url: &str) -> Address {
         match file_path(url).filter(|_| scheme_of(url).as_deref() == Some("file")) {
             Some(path) => Address::File(path),
             None => Address::Url(url.to_string()),
@@ -26,7 +26,7 @@ impl Address {
 
     /// What names the tab that shows it, so opening it again finds the tab: a local server's origin, since a dev
     /// server is one tab whatever page it shows, else the page without its fragment.
-    pub fn key(&self) -> String {
+    pub(crate) fn key(&self) -> String {
         match self {
             Address::Url(url) => key_of(url),
             Address::File(path) => format!("file://{}", path.display()),
@@ -35,7 +35,7 @@ impl Address {
 }
 
 /// The page or file `input` names, else a search for its words with `engine`; `None` for blank input.
-pub fn resolve(input: &str, engine: SearchEngine) -> Option<Address> {
+pub(crate) fn resolve(input: &str, engine: SearchEngine) -> Option<Address> {
     let input = input.trim();
     if input.is_empty() {
         return None;
@@ -58,7 +58,7 @@ pub fn resolve(input: &str, engine: SearchEngine) -> Option<Address> {
 }
 
 /// The URL that asks `engine` for `words`.
-pub fn search_url(engine: SearchEngine, words: &str) -> String {
+pub(crate) fn search_url(engine: SearchEngine, words: &str) -> String {
     let base = match engine {
         SearchEngine::DuckDuckGo => "https://duckduckgo.com/?q=",
         SearchEngine::Google => "https://www.google.com/search?q=",
@@ -83,7 +83,7 @@ fn form_encode(text: &str) -> String {
 }
 
 /// The lower-case scheme of `url`, if it starts with one.
-pub fn scheme_of(url: &str) -> Option<String> {
+pub(crate) fn scheme_of(url: &str) -> Option<String> {
     let (scheme, _) = url.split_once(':')?;
     let mut chars = scheme.chars();
     let valid = chars.next().is_some_and(|c| c.is_ascii_alphabetic())
@@ -93,12 +93,12 @@ pub fn scheme_of(url: &str) -> Option<String> {
 
 /// Whether the browser shows pages of `scheme` itself; everything else, such as `mailto:` or another app's scheme,
 /// it refuses rather than handing to the system.
-pub fn is_web_scheme(scheme: &str) -> bool {
+pub(crate) fn is_web_scheme(scheme: &str) -> bool {
     matches!(scheme, "http" | "https" | "about" | "data" | "blob")
 }
 
 /// The path a `file:` URL or a typed absolute path names.
-pub fn file_path(input: &str) -> Option<PathBuf> {
+pub(crate) fn file_path(input: &str) -> Option<PathBuf> {
     if input.starts_with('/') {
         return Some(PathBuf::from(input));
     }
@@ -136,7 +136,7 @@ fn percent_decode(text: &str) -> Vec<u8> {
 }
 
 /// Whether `path` lies inside the folder `root`, after resolving links on both.
-pub fn is_inside(path: &Path, root: &Path) -> bool {
+pub(crate) fn is_inside(path: &Path, root: &Path) -> bool {
     match (path.canonicalize(), root.canonicalize()) {
         (Ok(path), Ok(root)) => path.starts_with(root),
         _ => false,
@@ -168,7 +168,7 @@ fn bare_host(input: &str) -> Option<String> {
 }
 
 /// `authority` split into host and port; an IPv6 literal keeps its brackets.
-pub fn split_port(authority: &str) -> Option<(&str, Option<&str>)> {
+pub(crate) fn split_port(authority: &str) -> Option<(&str, Option<&str>)> {
     if authority.starts_with('[') {
         let end = authority.find(']')?;
         let rest = &authority[end + 1..];
@@ -201,7 +201,7 @@ fn prefers_plain_http(host: &str) -> bool {
 }
 
 /// Whether `host` is this Mac.
-pub fn is_loopback(host: &str) -> bool {
+pub(crate) fn is_loopback(host: &str) -> bool {
     host == "localhost"
         || host.ends_with(".localhost")
         || host == "[::1]"
@@ -211,7 +211,7 @@ pub fn is_loopback(host: &str) -> bool {
 
 /// The origin of `url` as `scheme://host[:port]`, lower case and without a default port; `None` for URLs without
 /// a host, such as `about:` and `file:`.
-pub fn origin(url: &str) -> Option<String> {
+pub(crate) fn origin(url: &str) -> Option<String> {
     let scheme = scheme_of(url)?;
     let rest = url[scheme.len() + 1..].strip_prefix("//")?;
     let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
@@ -233,7 +233,7 @@ pub fn origin(url: &str) -> Option<String> {
 }
 
 /// Whether `url` names a server rather than a page of it, such as `http://localhost:5173/`.
-pub fn is_origin_only(url: &str) -> bool {
+pub(crate) fn is_origin_only(url: &str) -> bool {
     let Some(rest) = url.split_once("://").map(|(_, rest)| rest) else {
         return false;
     };
@@ -242,19 +242,19 @@ pub fn is_origin_only(url: &str) -> bool {
 }
 
 /// The host of `url`, if it has one.
-pub fn host_of(url: &str) -> Option<String> {
+pub(crate) fn host_of(url: &str) -> Option<String> {
     let origin = origin(url)?;
     let authority = origin.split_once("://")?.1;
     Some(split_port(authority)?.0.to_string())
 }
 
 /// Whether `url` is served from this Mac.
-pub fn is_local(url: &str) -> bool {
+pub(crate) fn is_local(url: &str) -> bool {
     host_of(url).is_some_and(|host| is_loopback(&host))
 }
 
 /// The tab key of the page at `url`; see [`Address::key`].
-pub fn key_of(url: &str) -> String {
+pub(crate) fn key_of(url: &str) -> String {
     match origin(url) {
         Some(origin) if is_local(url) => origin,
         _ => url.split('#').next().unwrap_or(url).to_string(),
@@ -262,7 +262,7 @@ pub fn key_of(url: &str) -> String {
 }
 
 /// A tab title for a page titled `title` at `url`: the title, shortened to `limit` characters, else the page's host.
-pub fn tab_title(title: &str, url: Option<&str>, limit: usize) -> Option<String> {
+pub(crate) fn tab_title(title: &str, url: Option<&str>, limit: usize) -> Option<String> {
     let title = title.split_whitespace().collect::<Vec<_>>().join(" ");
     if title.is_empty() {
         return url.and_then(host_of);

@@ -4,13 +4,14 @@
 
 use ide_document::merge::{self, Reconciliation};
 use ide_document::{DiskCheck, FileContent, Outcome};
+use ide_ui_common::alert::{Alert, Role};
 use objc2::rc::Retained;
 use objc2::runtime::Sel;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
-    NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSAlertStyle, NSBezelStyle, NSBox, NSBoxType,
-    NSButton, NSColor, NSControlSize, NSImageView, NSLayoutConstraint, NSLayoutConstraintOrientation, NSLineBreakMode,
-    NSStackView, NSStackViewGravity, NSTextField, NSTitlePosition, NSUserInterfaceLayoutOrientation, NSView,
+    NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSBezelStyle, NSBox, NSBoxType, NSButton, NSColor,
+    NSControlSize, NSImageView, NSLayoutConstraint, NSLayoutConstraintOrientation, NSLineBreakMode, NSStackView,
+    NSStackViewGravity, NSTextField, NSTitlePosition, NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::{NSEdgeInsets, NSRange, NSSize};
 use splat_i18n::{t, tf};
@@ -21,10 +22,10 @@ use crate::util::{label, ns, set_action, symbol};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;
 
 /// What the bar is about.
-pub enum State {
+pub(crate) enum State {
     /// The file holds this version, which differs from the one the editor's text started from.
     Changed(FileContent),
     /// A merge marked this many places where both sides changed the same lines.
@@ -34,7 +35,7 @@ pub enum State {
 }
 
 /// The views of the bar, which takes no room while it is hidden.
-pub struct Bar {
+pub(crate) struct Bar {
     view: Retained<NSBox>,
     message: Retained<NSTextField>,
     buttons: Retained<NSStackView>,
@@ -42,7 +43,7 @@ pub struct Bar {
 }
 
 impl Bar {
-    pub fn new(mtm: MainThreadMarker) -> Bar {
+    pub(crate) fn new(mtm: MainThreadMarker) -> Bar {
         let view = NSBox::new(mtm);
         view.setBoxType(NSBoxType::Custom);
         view.setTitlePosition(NSTitlePosition::NoTitle);
@@ -88,7 +89,7 @@ impl Bar {
         }
     }
 
-    pub fn view(&self) -> &NSView {
+    pub(crate) fn view(&self) -> &NSView {
         &self.view
     }
 
@@ -127,7 +128,7 @@ fn button(target: &EditorTextView, title: &str, action: Sel) -> Retained<NSButto
 
 /// Follows what a look at the file of `view` found. An editor without unsaved text takes a changed file as it is;
 /// one with unsaved text gets the bar, whatever a merge would make of it, and a gone file gets it in any case.
-pub fn follow(view: &EditorTextView, check: DiskCheck) {
+pub(crate) fn follow(view: &EditorTextView, check: DiskCheck) {
     let content = match check {
         DiskCheck::Changed(content) => content,
         DiskCheck::Missing => {
@@ -150,7 +151,7 @@ pub fn follow(view: &EditorTextView, check: DiskCheck) {
     }
     take(view, DiskCheck::Changed(content));
     if matches!(
-        *view.ivars().conflict.borrow(),
+        *view.ivars().file.conflict.borrow(),
         Some(State::Changed(_) | State::Removed)
     ) {
         set(view, None);
@@ -172,14 +173,14 @@ fn take(view: &EditorTextView, check: DiskCheck) {
 }
 
 fn set(view: &EditorTextView, state: Option<State>) {
-    *view.ivars().conflict.borrow_mut() = state;
+    *view.ivars().file.conflict.borrow_mut() = state;
     refresh(view);
 }
 
 /// Shows the bar for the view's state, or hides it.
 fn refresh(view: &EditorTextView) {
     let name = view.document().path().map(display_name).unwrap_or_default();
-    let shown = match &*view.ivars().conflict.borrow() {
+    let shown = match &*view.ivars().file.conflict.borrow() {
         None => None,
         Some(State::Changed(_)) => Some((
             tf("„{}“ wurde außerhalb geändert.", &[&name]),
@@ -209,7 +210,7 @@ fn refresh(view: &EditorTextView) {
             ],
         )),
     };
-    let bar = view.ivars().bar.borrow();
+    let bar = view.ivars().around.bar.borrow();
     let Some(bar) = bar.as_ref() else { return };
     match shown {
         Some((message, buttons)) => bar.show(view, &message, &buttons),
@@ -219,7 +220,7 @@ fn refresh(view: &EditorTextView) {
 
 /// The file's version the bar is about, taken out of the view's state; the state stays if it is about something else.
 fn changed_version(view: &EditorTextView) -> Option<FileContent> {
-    let mut state = view.ivars().conflict.borrow_mut();
+    let mut state = view.ivars().file.conflict.borrow_mut();
     match state.take() {
         Some(State::Changed(content)) => Some(content),
         other => {
@@ -242,11 +243,11 @@ fn adopt(view: &EditorTextView, disk: FileContent, text: &str) {
 }
 
 /// Opens a tab with the differences between the file's version and the editor's text.
-pub fn show_differences(view: &EditorTextView) {
+pub(crate) fn show_differences(view: &EditorTextView) {
     let (Some(controller), Some(path)) = (view.controller(), view.document().path().map(ToOwned::to_owned)) else {
         return;
     };
-    let state = view.ivars().conflict.borrow();
+    let state = view.ivars().file.conflict.borrow();
     let Some(State::Changed(disk)) = &*state else { return };
     let buffer = view.document().text().to_string();
     super::compare::show(&controller, &path, &disk.text, &buffer);
@@ -254,7 +255,7 @@ pub fn show_differences(view: &EditorTextView) {
 
 /// Merges the file's changes into the editor's text against the version both started from: a clean merge as one undo
 /// step, overlapping changes between conflict markers for the user to settle.
-pub fn merge(view: &EditorTextView) {
+pub(crate) fn merge(view: &EditorTextView) {
     let Some(disk) = changed_version(view) else { return };
     let reconciliation = view.document().reconciliation(&disk);
     match reconciliation {
@@ -282,7 +283,7 @@ pub fn merge(view: &EditorTextView) {
 }
 
 /// Makes the editor's text the file's version, as one undo step.
-pub fn load(view: &EditorTextView) {
+pub(crate) fn load(view: &EditorTextView) {
     let Some(disk) = changed_version(view) else { return };
     let text = disk.text.clone();
     adopt(view, disk, &text);
@@ -290,7 +291,7 @@ pub fn load(view: &EditorTextView) {
 }
 
 /// Keeps the editor's text, unsaved, against the file's version.
-pub fn keep(view: &EditorTextView) {
+pub(crate) fn keep(view: &EditorTextView) {
     let Some(disk) = changed_version(view) else { return };
     let text = view.document().text().to_string();
     adopt(view, disk, &text);
@@ -298,26 +299,26 @@ pub fn keep(view: &EditorTextView) {
 }
 
 /// Writes the text of a gone file anew.
-pub fn save(view: &EditorTextView) {
+pub(crate) fn save(view: &EditorTextView) {
     super::save_soon(view, false);
 }
 
 /// Closes the editor of a gone file once the user agreed.
-pub fn close(view: &EditorTextView) {
+pub(crate) fn close(view: &EditorTextView) {
     if let (Some(controller), Some(tab)) = (view.controller(), view.ivars().tab.get()) {
         controller.close_tab(tab);
     }
 }
 
 /// Whether the file of `view` is gone from the disk.
-pub fn is_gone(view: &EditorTextView) -> bool {
-    matches!(*view.ivars().conflict.borrow(), Some(State::Removed))
+pub(crate) fn is_gone(view: &EditorTextView) -> bool {
+    matches!(*view.ivars().file.conflict.borrow(), Some(State::Removed))
 }
 
 /// Whether the editor of a gone file may close, asked every time, saved or not, since its text may be the file's last
 /// copy: the user saved the text or let it go.
-pub fn may_close(view: &EditorTextView) -> bool {
-    let answer = discard_question(view).runModal();
+pub(crate) fn may_close(view: &EditorTextView) -> bool {
+    let answer = discard_question(view).run_modal();
     if answer == NSAlertFirstButtonReturn {
         super::save(view, false);
         !view.document().is_dirty()
@@ -331,32 +332,31 @@ pub fn may_close(view: &EditorTextView) -> bool {
 
 /// The question before the text of a gone file's editor goes; Return cancels, as with every loss that cannot be
 /// undone.
-fn discard_question(view: &EditorTextView) -> Retained<NSAlert> {
+fn discard_question(view: &EditorTextView) -> Alert {
     let name = view.document().path().map(display_name).unwrap_or_default();
-    let alert = NSAlert::new(view.mtm());
-    alert.setAlertStyle(NSAlertStyle::Warning);
-    if view.document().has_own_changes() {
-        alert.setMessageText(&ns(&tf("Ungesicherte Änderungen an „{}“ verwerfen?", &[&name])));
-        alert.setInformativeText(&ns(t("Ohne Sichern gehen deine Änderungen verloren.")));
+    let (message, informative) = if view.document().has_own_changes() {
+        (
+            tf("Ungesicherte Änderungen an „{}“ verwerfen?", &[&name]),
+            t("Ohne Sichern gehen deine Änderungen verloren."),
+        )
     } else {
-        alert.setMessageText(&ns(&tf("„{}“ wurde gelöscht. Inhalt verwerfen?", &[&name])));
-        alert.setInformativeText(&ns(t(
-            "Dieser Editor hält die letzte Kopie der Datei. „Sichern“ stellt sie wieder her.",
-        )));
-    }
-    let save = alert.addButtonWithTitle(&ns(t("Sichern")));
-    let discard = alert.addButtonWithTitle(&ns(t("Verwerfen")));
-    discard.setHasDestructiveAction(true);
-    let cancel = alert.addButtonWithTitle(&ns(t("Abbrechen")));
-    cancel.setKeyEquivalent(&ns("\r"));
-    save.setKeyEquivalent(&ns(""));
-    alert
+        (
+            tf("„{}“ wurde gelöscht. Inhalt verwerfen?", &[&name]),
+            t("Dieser Editor hält die letzte Kopie der Datei. „Sichern“ stellt sie wieder her."),
+        )
+    };
+    Alert::new(view.mtm(), &message)
+        .warning()
+        .informative(informative)
+        .button(t("Sichern"), Role::Plain)
+        .button(t("Verwerfen"), Role::Destructive)
+        .button(t("Abbrechen"), Role::CancelOnReturn)
 }
 
 /// The file now holds the editor's text: the bar about its change or its loss goes.
-pub fn saved(view: &EditorTextView) {
+pub(crate) fn saved(view: &EditorTextView) {
     if matches!(
-        *view.ivars().conflict.borrow(),
+        *view.ivars().file.conflict.borrow(),
         Some(State::Changed(_) | State::Removed)
     ) {
         set(view, None);
@@ -364,15 +364,15 @@ pub fn saved(view: &EditorTextView) {
 }
 
 /// The text changed: while conflict markers are in it, they are counted again once typing rests.
-pub fn text_changed(view: &EditorTextView) {
-    if matches!(*view.ivars().conflict.borrow(), Some(State::Marked(_))) {
+pub(crate) fn text_changed(view: &EditorTextView) {
+    if matches!(*view.ivars().file.conflict.borrow(), Some(State::Marked(_))) {
         view.later(sel!(ideConflictRecount), 0.3);
     }
 }
 
 /// Counts the conflict markers left; the bar goes with the last.
-pub fn recount(view: &EditorTextView) {
-    if !matches!(*view.ivars().conflict.borrow(), Some(State::Marked(_))) {
+pub(crate) fn recount(view: &EditorTextView) {
+    if !matches!(*view.ivars().file.conflict.borrow(), Some(State::Marked(_))) {
         return;
     }
     let count = merge::conflict_markers(&view.document().text().to_string()).len();
@@ -380,7 +380,7 @@ pub fn recount(view: &EditorTextView) {
 }
 
 /// Selects the next conflict marker after the selection, or the previous one before it, wrapping around.
-pub fn go_to_conflict(view: &EditorTextView, forward: bool) {
+pub(crate) fn go_to_conflict(view: &EditorTextView, forward: bool) {
     let range = {
         let document = view.document();
         let text = document.text();

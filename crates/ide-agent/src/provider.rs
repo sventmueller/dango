@@ -129,10 +129,10 @@ impl ProviderKind {
 
 /// One place the agent sends requests to: a service at its address, or an endpoint the user added.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Endpoint {
     /// Names it in settings and in the keychain: the kind's id for a service, a name of the user's for an added one.
     pub id: String,
-    /// What it is.
     pub kind: ProviderKind,
     /// What the user calls it.
     pub name: String,
@@ -162,7 +162,7 @@ impl Endpoint {
     }
 
     /// The URL of `path` under the base URL.
-    pub fn url(&self, path: &str) -> String {
+    pub(crate) fn url(&self, path: &str) -> String {
         format!(
             "{}/{}",
             self.base_url.trim_end_matches('/'),

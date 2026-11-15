@@ -1,24 +1,18 @@
 //! What the Tests panel's outline asks its data source, answered from an index built once per tree: each row's
-//! children, and one object per node that stays the same while the panel lives.
+//! children, and the row of each node.
 
 use std::collections::HashMap;
 
 use ide_test::board::{Node, Row};
-use objc2::rc::Retained;
-use objc2::runtime::AnyObject;
-use objc2_foundation::NSNumber;
 
 #[derive(Default)]
 pub(super) struct Outline {
     top: Vec<usize>,
     children: Vec<Vec<usize>>,
-    /// The serial of each row's node.
-    serial_of: Vec<usize>,
-    /// The row of each serial shown now.
-    row_of: HashMap<usize, usize>,
-    serials: HashMap<Node, usize>,
-    /// The object standing for each serial in the outline.
-    items: Vec<Retained<NSNumber>>,
+    /// The node of each row.
+    nodes: Vec<Node>,
+    /// The row of each node shown now.
+    row_of: HashMap<Node, usize>,
 }
 
 impl Outline {
@@ -26,7 +20,7 @@ impl Outline {
     pub(super) fn index(&mut self, rows: &[Row]) {
         self.top.clear();
         self.children = vec![Vec::new(); rows.len()];
-        self.serial_of.clear();
+        self.nodes.clear();
         self.row_of.clear();
         let mut open: Vec<usize> = Vec::new();
         for (at, row) in rows.iter().enumerate() {
@@ -39,13 +33,8 @@ impl Outline {
                 _ => {}
             }
             open.push(at);
-            let next = self.items.len();
-            let serial = *self.serials.entry(row.node.clone()).or_insert(next);
-            if serial == next {
-                self.items.push(NSNumber::new_usize(serial));
-            }
-            self.serial_of.push(serial);
-            self.row_of.insert(serial, at);
+            self.nodes.push(row.node.clone());
+            self.row_of.insert(row.node.clone(), at);
         }
     }
 
@@ -57,24 +46,22 @@ impl Outline {
         }
     }
 
-    /// The rows one level under the row `item` stands for, or the packages for none; `None` where `item` stands for
-    /// no row.
-    pub(super) fn children_of(&self, item: Option<&AnyObject>) -> Option<&[usize]> {
-        match item {
+    /// The rows one level under the row of `node`, or the packages for none; `None` where `node` has no row.
+    pub(super) fn children_of(&self, node: Option<&Node>) -> Option<&[usize]> {
+        match node {
             None => Some(&self.top),
-            Some(item) => Some(self.children(Some(self.row_of(item)?))),
+            Some(node) => Some(self.children(Some(self.row_of(node)?))),
         }
     }
 
-    /// The row `item` stands for.
-    pub(super) fn row_of(&self, item: &AnyObject) -> Option<usize> {
-        let serial = item.downcast_ref::<NSNumber>()?.unsignedIntegerValue();
-        self.row_of.get(&serial).copied()
+    /// The row of `node`.
+    pub(super) fn row_of(&self, node: &Node) -> Option<usize> {
+        self.row_of.get(node).copied()
     }
 
-    /// The object that stands for `row`.
-    pub(super) fn item(&self, row: usize) -> Option<Retained<NSNumber>> {
-        self.items.get(*self.serial_of.get(row)?).cloned()
+    /// The node of `row`.
+    pub(super) fn node(&self, row: usize) -> Option<&Node> {
+        self.nodes.get(row)
     }
 }
 
@@ -115,14 +102,13 @@ mod tests {
         assert_eq!(outline.children(Some(1)), [2, 3]);
         assert_eq!(outline.children(Some(4)), [5]);
         assert!(outline.children(Some(5)).is_empty());
-        let file = outline.item(1).unwrap();
-        let file: &AnyObject = &file;
-        assert_eq!(outline.children_of(Some(file)), Some(&[2, 3][..]));
+        let file = outline.node(1).unwrap().clone();
+        assert_eq!(outline.children_of(Some(&file)), Some(&[2, 3][..]));
         assert_eq!(outline.children_of(None), Some(&[0, 4][..]));
-        let item = outline.item(3).unwrap();
+        assert_eq!(outline.children_of(Some(&Node::Test(9))), None);
+        let node = outline.node(3).unwrap().clone();
         outline.index(&rows[2..]);
-        assert_eq!(outline.item(1).unwrap(), item, "a node keeps its object");
-        assert_eq!(outline.row_of(&item), Some(1));
+        assert_eq!(outline.row_of(&node), Some(1), "a node is found in its new row");
         assert!(same_shape(&rows, &rows) && !same_shape(&rows, &rows[1..]));
     }
 }

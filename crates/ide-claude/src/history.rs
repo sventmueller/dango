@@ -23,12 +23,12 @@ const TAIL_BYTES: u64 = 256 * 1024;
 
 /// A session the CLI saved.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct PastSession {
     /// Its id, which resuming names.
     pub id: String,
     /// The title the user set or the CLI generated.
     pub title: Option<String>,
-    /// The first prompt.
     pub first_prompt: Option<String>,
     /// The latest prompt.
     pub last_prompt: Option<String>,
@@ -187,7 +187,7 @@ fn prompt_text(record: &Value) -> Option<String> {
 }
 
 /// The main conversation of a transcript as frames, for `Mapper::for_history`; records it cannot read are skipped.
-pub fn load(path: &Path) -> std::io::Result<Vec<Message>> {
+pub(crate) fn load(path: &Path) -> std::io::Result<Vec<Message>> {
     let file = File::open(path)?;
     Ok(BufReader::new(file)
         .lines()

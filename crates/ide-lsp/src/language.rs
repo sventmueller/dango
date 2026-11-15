@@ -97,7 +97,7 @@ const ESLINT_CONFIGS: &[&str] = &[
 
 /// Whether ESLint in `root` reads the flat configuration of ESLint 9: a file `eslint.config.*`, or an installed ESLint
 /// of version 9 or later without an `.eslintrc*` (as Zed decides).
-pub fn flat_config(root: &Path) -> bool {
+pub(crate) fn flat_config(root: &Path) -> bool {
     if ESLINT_CONFIGS.iter().take(6).any(|name| root.join(name).is_file()) {
         return true;
     }
@@ -113,7 +113,7 @@ pub fn flat_config(root: &Path) -> bool {
 
 /// Whether the project of `path` within `root` uses ESLint: a configuration file in a folder up to `root`, or
 /// `eslint` among a `package.json`'s dependencies.
-pub fn uses_eslint(path: &Path, root: &Path) -> bool {
+pub(crate) fn uses_eslint(path: &Path, root: &Path) -> bool {
     path.ancestors()
         .skip(1)
         .take_while(|dir| dir.starts_with(root))
@@ -151,7 +151,7 @@ pub fn companions(path: &Path, root: &Path, emmet: bool) -> Vec<Language> {
 
 impl Language {
     /// The built-in language of `path` and the protocol's language id for the document.
-    pub fn of_path(path: &Path) -> Option<(Language, &'static str)> {
+    pub(crate) fn of_path(path: &Path) -> Option<(Language, &'static str)> {
         let name = path.file_name()?.to_str()?;
         match name {
             "go.mod" => return Some((Language::Go, "go.mod")),
@@ -226,7 +226,7 @@ impl Language {
 
     /// Whether its servers search the project's symbols; the servers of data and style formats do not, so a project
     /// symbol search does not start them.
-    pub fn searches_project(&self) -> bool {
+    pub(crate) fn searches_project(&self) -> bool {
         !matches!(
             self,
             Language::Json
@@ -339,14 +339,14 @@ pub struct CustomServer {
 
 impl CustomServer {
     /// Whether it serves files with `extension`.
-    pub fn serves(&self, extension: &str) -> bool {
+    pub(crate) fn serves(&self, extension: &str) -> bool {
         self.extensions
             .iter()
             .any(|e| e.trim().trim_start_matches('.').eq_ignore_ascii_case(extension))
     }
 
     /// The protocol's language id for its documents: the name in lower case, without spaces.
-    pub fn language_id(&self) -> String {
+    pub(crate) fn language_id(&self) -> String {
         self.name
             .chars()
             .filter(|c| !c.is_whitespace())
@@ -355,7 +355,7 @@ impl CustomServer {
     }
 
     /// The program and its arguments; double quotes keep spaces inside a word.
-    pub fn words(&self) -> Vec<String> {
+    pub(crate) fn words(&self) -> Vec<String> {
         let mut words = vec![];
         let mut word = String::new();
         let (mut quoted, mut started) = (false, false);

@@ -7,7 +7,7 @@ use ide_thread::Attachment;
 
 /// What a mention names.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Mention {
+pub(crate) enum Mention {
     /// A file, relative to the project folder or absolute, whole or some of its lines.
     File { path: String, lines: Option<(u32, u32)> },
     /// The output of the terminal in view.
@@ -17,11 +17,11 @@ pub enum Mention {
 }
 
 /// The words that stand for something other than a file.
-pub const TERMINAL: &str = "terminal";
-pub const BROWSER: &str = "browser";
+pub(crate) const TERMINAL: &str = "terminal";
+pub(crate) const BROWSER: &str = "browser";
 
 /// The mention the user types at `caret`, a byte offset: its range in `text` and what follows the `@` up to a `#`.
-pub fn typing(text: &str, caret: usize) -> Option<(Range<usize>, String)> {
+pub(crate) fn typing(text: &str, caret: usize) -> Option<(Range<usize>, String)> {
     let before = text.get(..caret)?;
     let start = before
         .rfind(char::is_whitespace)
@@ -39,7 +39,7 @@ pub fn typing(text: &str, caret: usize) -> Option<(Range<usize>, String)> {
 }
 
 /// How a mention of `path` is written: quoted when it holds a space, as the CLI reads it.
-pub fn written(path: &str) -> String {
+pub(crate) fn written(path: &str) -> String {
     if path.contains(char::is_whitespace) {
         format!("@\"{path}\"")
     } else {
@@ -48,7 +48,7 @@ pub fn written(path: &str) -> String {
 }
 
 /// Every mention in `text`, with its range.
-pub fn parse(text: &str) -> Vec<(Range<usize>, Mention)> {
+pub(crate) fn parse(text: &str) -> Vec<(Range<usize>, Mention)> {
     let mut found = Vec::new();
     let mut at = 0;
     while let Some(offset) = text[at..].find('@') {
@@ -116,7 +116,7 @@ fn line_range(spec: &str) -> Option<(u32, u32)> {
 /// `text` with the line ranges of file mentions taken out and handed over as attachments, since the CLI's own
 /// mentions name whole files; a whole file stays a mention, which the CLI reads itself. A file outside the project
 /// goes along as outside text (E22) and its mention as a plain path, so the agent does not read it unmarked.
-pub fn resolve_files(text: &str, cwd: &Path) -> (String, Vec<Attachment>) {
+pub(crate) fn resolve_files(text: &str, cwd: &Path) -> (String, Vec<Attachment>) {
     let mut out = String::new();
     let mut attachments = Vec::new();
     let mut copied = 0;
@@ -154,7 +154,7 @@ pub fn resolve_files(text: &str, cwd: &Path) -> (String, Vec<Attachment>) {
 }
 
 /// Whether `text` mentions `which`.
-pub fn mentions(text: &str, which: &Mention) -> bool {
+pub(crate) fn mentions(text: &str, which: &Mention) -> bool {
     parse(text).iter().any(|(_, m)| m == which)
 }
 

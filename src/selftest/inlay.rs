@@ -11,7 +11,7 @@ use objc2::rc::Retained;
 use objc2_app_kit::{NSApplication, NSMenu, NSMenuItem};
 use objc2_foundation::{NSPoint, NSRange};
 
-use super::{check, finish, helpers, snapshot};
+use super::{check, finish, give_up, give_up_saying, helpers, snapshot};
 use crate::editor::insets::{self, Layer};
 use crate::editor::{self, EditorTextView};
 use crate::window;
@@ -118,7 +118,7 @@ fn poll(
     END.poll(within, ready, then);
 }
 
-pub fn run() {
+pub(crate) fn run() {
     END.start(BUDGET);
     let big = big_rust();
     let written = helpers::make_project(
@@ -135,14 +135,12 @@ pub fn run() {
     let root = match written {
         Ok(root) => root,
         Err(error) => {
-            check("a cargo project is made", false, error.to_string());
-            return finish(SCENARIO);
+            return give_up_saying(SCENARIO, "a cargo project is made", error.to_string());
         }
     };
     helpers::open_trusted(&root);
     let Some(controller) = window::for_project(&root) else {
-        check("the project opens", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the project opens");
     };
     controller.open_file(&root.join("src/main.rs"));
     poll(
@@ -156,7 +154,7 @@ pub fn run() {
 fn rust_hints(ok: bool, waited: Duration) {
     let root = rust_root();
     let Some(view) = view(&root, "src/main.rs") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "src/main.rs opens in an editor");
     };
     if !ok && ide_ui_lsp::server_running(&*view).is_err() {
         check(
@@ -192,7 +190,7 @@ fn in_gap(view: &EditorTextView) -> bool {
 
 fn rust_drawn(root: &Path) {
     let Some(view) = view(root, "src/main.rs") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "src/main.rs opens in an editor");
     };
     let total = offset_of(&view, "total", 5);
     let drawn = insets::shown(&view);
@@ -294,10 +292,10 @@ fn jump(view: &EditorTextView) {
 fn edit() {
     let root = rust_root();
     let Some(view) = view(&root, "src/main.rs") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "src/main.rs opens in an editor");
     };
     let Some(at) = offset_of(&view, "    let words", 0) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "main.rs holds the line with the words");
     };
     super::helpers::type_at(&view, NSRange::new(at, 0), "    let extra = total + 1;\n");
     poll(
@@ -343,7 +341,7 @@ fn menu_state(view: &EditorTextView, action: objc2::runtime::Sel) -> Option<(Str
 fn switches() {
     let root = rust_root();
     let Some(view) = view(&root, "src/main.rs") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "src/main.rs opens in an editor");
     };
     let Some(mtm) = MainThreadMarker::new() else { return };
     let on = menu_state(&view, objc2::sel!(ideToggleInlayHints:));
@@ -402,7 +400,7 @@ fn switches() {
 fn scroll_and_budget() {
     let root = rust_root();
     let Some(controller) = window::for_project(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     controller.open_file(&root.join("src/big.rs"));
     let Some(big) = view(&root, "src/big.rs") else {
@@ -553,57 +551,61 @@ fn go() {
     ) {
         Ok(root) => root,
         Err(error) => {
-            check("a Go module is made", false, error.to_string());
-            return done();
+            return give_up_saying(SCENARIO, "a Go module is made", error.to_string());
         }
     };
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::project::trust(&root);
     super::helpers::open_beside(mtm, &root);
     let Some(controller) = window::for_project(&root) else {
-        check("the Go module opens", false, "");
-        return done();
+        return give_up(SCENARIO, "the Go module opens");
     };
     controller.open_file(&root.join("main.go"));
     poll(
         WAIT,
         Some((root.clone(), "main.go")),
         has_hint(root, "main.go", "add(1", 4, "left"),
-        |ok, waited| {
-            let root = go_root();
-            let Some(view) = view(&root, "main.go") else {
-                return done();
-            };
-            if !ok && ide_ui_lsp::server_running(&*view).is_err() {
-                check(
-                    "skipped: gopls missing",
-                    true,
-                    format!("{:?}", ide_ui_lsp::server_running(&*view)),
-                );
-                return done();
-            }
-            redraw(&view);
-            let found = hints(&view);
-            let total = offset_of(&view, "total", 5);
-            check(
-                "gopls: parameter names before the arguments and the type of a new variable",
-                ok && found
-                    .iter()
-                    .any(|(at, text, _)| Some(*at) == total && text.contains("int")),
-                format!("after {:.1} s: {found:?}", waited.as_secs_f64()),
-            );
-            let probe = root.clone();
-            helpers::wait_until(
-                move || self::view(&probe, "main.go").is_some_and(|v| in_gap(&v)),
-                move |shown| {
-                    let kerns = self::view(&root, "main.go")
-                        .map(|v| insets::kerns(&v))
-                        .unwrap_or_default();
-                    check("gopls's hints show in gaps", shown, format!("{kerns:?}"));
-                    picture(&root, "inlay-go");
-                    done();
-                },
-            );
+        go_hints,
+    );
+}
+
+fn go_hints(ok: bool, waited: Duration) {
+    let root = go_root();
+    let Some(view) = view(&root, "main.go") else {
+        return give_up(SCENARIO, "main.go opens in an editor");
+    };
+    if ok || ide_ui_lsp::server_running(&*view).is_ok() {
+        return go_drawn(root, &view, ok, waited);
+    }
+    check(
+        "skipped: gopls missing",
+        true,
+        format!("{:?}", ide_ui_lsp::server_running(&*view)),
+    );
+    done();
+}
+
+fn go_drawn(root: PathBuf, view: &EditorTextView, ok: bool, waited: Duration) {
+    redraw(view);
+    let found = hints(view);
+    let total = offset_of(view, "total", 5);
+    check(
+        "gopls: parameter names before the arguments and the type of a new variable",
+        ok && found
+            .iter()
+            .any(|(at, text, _)| Some(*at) == total && text.contains("int")),
+        format!("after {:.1} s: {found:?}", waited.as_secs_f64()),
+    );
+    let probe = root.clone();
+    helpers::wait_until(
+        move || self::view(&probe, "main.go").is_some_and(|v| in_gap(&v)),
+        move |shown| {
+            let kerns = self::view(&root, "main.go")
+                .map(|v| insets::kerns(&v))
+                .unwrap_or_default();
+            check("gopls's hints show in gaps", shown, format!("{kerns:?}"));
+            picture(&root, "inlay-go");
+            done();
         },
     );
 }

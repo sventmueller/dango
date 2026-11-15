@@ -4,7 +4,7 @@ use super::*;
 
 /// The lines of the log tab of `job` in `controller`'s window, and whether its find bar shows; with `find`, after
 /// the find command ⌘F sends.
-pub fn inspect(controller: &WindowController, job: u64, find: bool) -> Option<(Vec<LogLine>, bool)> {
+pub(crate) fn inspect(controller: &WindowController, job: u64, find: bool) -> Option<(Vec<LogLine>, bool)> {
     let tab = live_tabs().into_iter().find(|tab| {
         tab.ivars().job.borrow().id == job
             && tab
@@ -28,7 +28,7 @@ pub fn inspect(controller: &WindowController, job: u64, find: bool) -> Option<(V
 
 impl LogTab {
     /// The lines on view, for the self-test.
-    pub fn lines(&self) -> Vec<LogLine> {
+    pub(crate) fn lines(&self) -> Vec<LogLine> {
         self.ivars().lines.borrow().clone()
     }
 }

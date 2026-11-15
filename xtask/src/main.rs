@@ -17,6 +17,7 @@ mod rules;
 mod seal;
 mod selftest;
 mod shell;
+mod source;
 mod structure;
 mod thread_locals;
 mod universal;
@@ -60,12 +61,15 @@ pub(crate) const USAGE: &str = "usage: cargo xtask <task>
   acknowledgements                 target/Acknowledgements.txt, the license texts the distribution carries
   claude-latest [--signed-in]      install the newest Claude CLI into target/claude-latest and check the contract the
                                    app relies on without a sign-in; --signed-in adds a short turn with haiku (R7)
-  fuzz [<target>…]                 run the crates' fuzz targets (all if none) for FUZZ_SECONDS each, 60 by default, with
-                                   the pinned nightly; needs rustup and cargo-fuzz
+  fuzz [<target>…|properties]      run the crates' fuzz targets (all if none) for FUZZ_SECONDS each, 60 by default, with
+                                   the pinned nightly; needs rustup and cargo-fuzz. properties (also part of all) runs
+                                   the property tests with PROPTEST_CASES cases, 10000 by default, and a fresh seed
+                                   it prints, or PROPTEST_RNG_SEED
   coverage [--check] [--strict]    line coverage of cargo test and the offline selftest scenarios, instrumented with
                                    rustup's toolchain and cargo-llvm-cov, into target/coverage/, with cargo test
-                                   alone beside it per folder and file; --check fails below
-                                   90 % in total or 50 % in any file, --strict when a test or scenario failed
+                                   alone and the self-test alone beside it per crate, folder and file; --check fails below
+                                   90 % in total or 50 % in any file, or when cargo test alone covers the app crate other
+                                   than its floor; --strict when a test or scenario failed
   ci                               cargo fmt, then check, coverage --check --strict and perf, fail-fast; a complete run
                                    seals the working tree's content in the local ref refs/ci-seals/<green|red>/<fp>;
                                    refuses while the screen is locked
@@ -78,8 +82,10 @@ pub(crate) const USAGE: &str = "usage: cargo xtask <task>
                                    seal to origin
   thread-locals                    fail for a thread-local that docs/thread-locals.md does not allow to stay
   structure                        fail for a Rust file over 1000 lines or a model.rs that uses objc2 (E98)
-  rules                            fail for unlisted stateful statics, mem::forget, unguarded blocks and literal sizes
-                                   in the app's AppKit code, and for a discarded spawn anywhere
+  rules                            fail for unlisted stateful statics, mem::forget, unguarded blocks, literal sizes,
+                                   unseen thread failures, errors as String, and lookups of global state past their
+                                   ratchets in the app's AppKit code, for a discarded spawn anywhere, and for a
+                                   self-test scenario that ends early without give_up or skip
   icon                             compile assets/AppIcon.icon into assets/Assets.car and assets/AppIcon.icns; needs
                                    Xcode";
 

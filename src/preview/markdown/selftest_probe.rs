@@ -3,7 +3,7 @@
 use super::*;
 
 impl Preview {
-    pub fn path(&self) -> &Path {
+    pub(crate) fn path(&self) -> &Path {
         &self.path
     }
 }

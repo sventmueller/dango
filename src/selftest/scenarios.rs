@@ -7,7 +7,7 @@ use super::*;
 
 /// How a scenario's launches end.
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Launches {
+pub(crate) enum Launches {
     /// One launch that ends by itself.
     Once,
     /// A first launch that quits as the user does and a second one in the same home that checks what came back.
@@ -18,18 +18,18 @@ pub enum Launches {
 }
 
 /// One scenario and how to run it.
-pub struct Scenario {
-    pub name: &'static str,
-    pub run: fn(),
+pub(crate) struct Scenario {
+    pub(crate) name: &'static str,
+    pub(crate) run: fn(),
     /// How long it may run before the runner kills it as hung.
-    pub limit: Duration,
+    pub(crate) limit: Duration,
     /// Runs without network, account, real agent CLI or person, so coverage runs it.
-    pub offline: bool,
-    pub launches: Launches,
+    pub(crate) offline: bool,
+    pub(crate) launches: Launches,
     /// Arguments for the launch, which go to the app's defaults before anything reads them.
-    pub arguments: &'static [&'static str],
+    pub(crate) arguments: &'static [&'static str],
     /// Needs the app built with dictation.
-    pub dictation: bool,
+    pub(crate) dictation: bool,
 }
 
 const SHORT: Duration = Duration::from_secs(120);
@@ -93,11 +93,10 @@ fn dictation() {
 
 #[cfg(not(feature = "dictation"))]
 fn dictation() {
-    check("the app is built with dictation", false, "");
-    finish("dictation");
+    give_up("dictation", "the app is built with dictation");
 }
 
-pub const SCENARIOS: &[Scenario] = &[
+pub(crate) const SCENARIOS: &[Scenario] = &[
     plain("probe", probe),
     plain("app-context", app_context::run),
     plain("app-menus", app_menus::run),
@@ -214,12 +213,12 @@ pub const SCENARIOS: &[Scenario] = &[
 ];
 
 /// The scenario named `name`.
-pub fn named(name: &str) -> Option<&'static Scenario> {
+pub(crate) fn named(name: &str) -> Option<&'static Scenario> {
     SCENARIOS.iter().find(|scenario| scenario.name == name)
 }
 
 /// The table as JSON lines, one scenario each, for the runner.
-pub fn listing() -> String {
+pub(crate) fn listing() -> String {
     SCENARIOS
         .iter()
         .map(|s| {

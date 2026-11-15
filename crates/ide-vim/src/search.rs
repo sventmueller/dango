@@ -7,7 +7,7 @@ use regex::Regex;
 
 /// The prompt being typed and the last search, for `n` and `N`.
 #[derive(Debug, Default)]
-pub struct Search {
+pub(crate) struct Search {
     /// The prompt's first character and what follows it, while it is open.
     open: Option<(char, String)>,
     /// The last pattern and whether it searched forward.
@@ -23,7 +23,37 @@ pub(crate) enum Step {
     /// An Ex command was entered.
     Command(String),
     /// Nothing was found, or the pattern is not valid.
-    Failed(String),
+    Failed(Miss),
+}
+
+/// Why a search or substitution found nothing to do; its `Display` is Vim's message.
+#[derive(Debug)]
+pub(crate) enum Miss {
+    /// The pattern is no regular expression.
+    Invalid(regex::Error),
+    /// Nothing matches the pattern.
+    NotFound(String),
+    /// An empty pattern repeats the last one, and there is none.
+    NoPrevious,
+}
+
+impl std::fmt::Display for Miss {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Miss::Invalid(error) => error.fmt(f),
+            Miss::NotFound(pattern) => write!(f, "pattern not found: {pattern}"),
+            Miss::NoPrevious => f.write_str("no previous pattern"),
+        }
+    }
+}
+
+impl std::error::Error for Miss {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Miss::Invalid(error) => Some(error),
+            Miss::NotFound(_) | Miss::NoPrevious => None,
+        }
+    }
 }
 
 /// Whether `key` opens the prompt in Normal mode.
@@ -37,13 +67,12 @@ pub(crate) fn repeats(key: &TerminalKey) -> bool {
 }
 
 impl Search {
-    /// Whether the prompt is open.
-    pub fn is_open(&self) -> bool {
+    pub(crate) fn is_open(&self) -> bool {
         self.open.is_some()
     }
 
     /// What the prompt shows, such as `/foo`, while it is open.
-    pub fn shown(&self) -> Option<String> {
+    pub(crate) fn shown(&self) -> Option<String> {
         self.open.as_ref().map(|(kind, typed)| format!("{kind}{typed}"))
     }
 
@@ -76,7 +105,7 @@ impl Search {
                 let pattern = if typed.is_empty() {
                     match &self.last {
                         Some((pattern, _)) => pattern.clone(),
-                        None => return Step::Failed("no previous pattern".into()),
+                        None => return Step::Failed(Miss::NoPrevious),
                     }
                 } else {
                     typed
@@ -117,7 +146,7 @@ impl Search {
 fn find(pattern: &str, text: &str, cursor: (usize, usize), forward: bool) -> Step {
     let regex = match Regex::new(pattern) {
         Ok(regex) => regex,
-        Err(error) => return Step::Failed(error.to_string()),
+        Err(error) => return Step::Failed(Miss::Invalid(error)),
     };
     let at = byte_of(text, cursor);
     let starts: Vec<usize> = regex.find_iter(text).map(|m| m.start()).collect();
@@ -131,13 +160,13 @@ fn find(pattern: &str, text: &str, cursor: (usize, usize), forward: bool) -> Ste
             let (line, column) = place_of(text, *start);
             Step::Jump(line, column, pattern.to_string())
         }
-        None => Step::Failed(format!("pattern not found: {pattern}")),
+        None => Step::Failed(Miss::NotFound(pattern.to_string())),
     }
 }
 
 /// `:s/old/new/[g]` on the cursor's line `line` or `:%s/…` on every line of `text`: the text after it, or why not;
 /// `None` for any other command.
-pub(crate) fn substitute(command: &str, text: &str, line: usize) -> Option<Result<String, String>> {
+pub(crate) fn substitute(command: &str, text: &str, line: usize) -> Option<Result<String, Miss>> {
     let (whole, rest) = match command.strip_prefix('%') {
         Some(rest) => (true, rest),
         None => (false, command),
@@ -149,7 +178,7 @@ pub(crate) fn substitute(command: &str, text: &str, line: usize) -> Option<Resul
     let global = parts.get(2).is_some_and(|flags| flags.contains('g'));
     let regex = match Regex::new(old) {
         Ok(regex) => regex,
-        Err(error) => return Some(Err(error.to_string())),
+        Err(error) => return Some(Err(Miss::Invalid(error))),
     };
     let replacement = new.replace('&', "$0");
     let lines: Vec<String> = text
@@ -193,4 +222,25 @@ fn word_at(text: &str, cursor: (usize, usize)) -> Option<String> {
     let start = chars[..at].iter().rev().take_while(|c| is_word(c)).count();
     let end = chars[at..].iter().take_while(|c| is_word(c)).count();
     Some(chars[at - start..at + end].iter().collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_failed_search_keeps_why_and_says_it_as_vim_does() {
+        let invalid = substitute("s/(/x/", "a\n", 0);
+        let Some(Err(miss @ Miss::Invalid(_))) = &invalid else {
+            panic!("{invalid:?}")
+        };
+        assert!(std::error::Error::source(miss).is_some());
+        assert_eq!(Miss::NotFound("x".into()).to_string(), "pattern not found: x");
+        assert_eq!(Miss::NoPrevious.to_string(), "no previous pattern");
+        assert!(matches!(
+            find("zz", "a\n", (0, 0), true),
+            Step::Failed(Miss::NotFound(_))
+        ));
+        assert_eq!(substitute("s/a/b/", "a\n", 0).map(Result::ok), Some(Some("b\n".into())));
+    }
 }

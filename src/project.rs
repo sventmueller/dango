@@ -10,9 +10,9 @@ use ide_project::{Entry, QuickOpen, Tree, TreeOptions, TrustStore, WatchEvent, W
 use crate::util::main_soon;
 
 /// A folder of the tree with its entries as last read, `None` once the tree no longer follows it.
-pub type Listing = (PathBuf, Option<Arc<[Entry]>>);
+pub(crate) type Listing = (PathBuf, Option<Arc<[Entry]>>);
 
-pub struct Project {
+pub(crate) struct Project {
     root: PathBuf,
     /// Locked only off the main thread, by the watcher and the disk lane, which read the disk while they hold it.
     tree: Arc<Mutex<Tree>>,
@@ -25,7 +25,7 @@ impl Project {
     /// folders `crate::window::tree_changed` and the project search, changed files `ide_ui_lsp::files_changed`, every
     /// change `ide_ui_git::changed` and `crate::ci_panel::changed`, and a change in `.git` the editors' change marks,
     /// all on the main thread.
-    pub fn open(root: &Path) -> std::io::Result<Project> {
+    pub(crate) fn open(root: &Path) -> std::io::Result<Project> {
         let options = TreeOptions {
             show_ignored: Settings::load_user().get(&keys::SHOW_IGNORED_FILES),
         };
@@ -104,16 +104,16 @@ impl Project {
         Ok(project)
     }
 
-    pub fn root(&self) -> &Path {
+    pub(crate) fn root(&self) -> &Path {
         &self.root
     }
 
-    pub fn quick_open(&self) -> Option<&QuickOpen> {
+    pub(crate) fn quick_open(&self) -> Option<&QuickOpen> {
         self.quick_open.as_deref()
     }
 
     /// Reads the folder `dir` unless the tree holds it, and hands its entries to `crate::window::tree_listed`.
-    pub fn expand(&self, dir: &Path) {
+    pub(crate) fn expand(&self, dir: &Path) {
         let dir = dir.to_path_buf();
         self.on_disk(move |tree| {
             // A folder that cannot be read lists as none.
@@ -123,7 +123,7 @@ impl Project {
     }
 
     /// Forgets `dir` and every folder below it, after what was asked before.
-    pub fn collapse(&self, dir: &Path) {
+    pub(crate) fn collapse(&self, dir: &Path) {
         let dir = dir.to_path_buf();
         self.on_disk(move |tree| {
             tree.collapse(&dir);
@@ -132,7 +132,7 @@ impl Project {
     }
 
     /// Lists with `options` from now on, and hands the folders that changed to `crate::window::tree_listed`.
-    pub fn set_options(&self, options: TreeOptions) {
+    pub(crate) fn set_options(&self, options: TreeOptions) {
         self.on_disk(move |tree| tree.set_options(options));
     }
 
@@ -163,11 +163,11 @@ fn listings(tree: &Tree, dirs: Vec<PathBuf>) -> Vec<Listing> {
 }
 
 /// Whether the user trusts `folder` or a folder above it.
-pub fn is_trusted(folder: &Path) -> bool {
+pub(crate) fn is_trusted(folder: &Path) -> bool {
     TrustStore::open().is_trusted(folder)
 }
 
-pub fn trust(folder: &Path) {
+pub(crate) fn trust(folder: &Path) {
     if let Err(error) = TrustStore::open().trust(folder) {
         crate::diag::report("trusting a folder", error);
     }
@@ -176,4 +176,4 @@ pub fn trust(folder: &Path) {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

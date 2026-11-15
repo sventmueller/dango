@@ -47,6 +47,8 @@ fn a_run_measures_tests_and_scenarios_and_reports_every_counted_file() {
         "/b/libxtask.rlib: xtask/src/lib.rs\n",
     );
     let measured = root.join("src/main.rs");
+    let unit_profile = target.join("llvm-cov-target/ide-1.profraw");
+    let mut reports: Vec<(String, bool)> = Vec::new();
     let mut seen: Seen = Vec::new();
     let mut sh = Fake::new(|cmd: &Command, line: &str| {
         let keys = [
@@ -66,8 +68,14 @@ fn a_run_measures_tests_and_scenarios_and_reports_every_counted_file() {
                     shared.display()
                 ),
             ),
-            l if l.starts_with("cargo test") => (101, String::new()),
+            l if l.starts_with("cargo test") => {
+                write(&unit_profile, "profile");
+                (101, String::new())
+            }
             l if l.starts_with("cargo llvm-cov report") => {
+                let output = arg(cmd, Some("--output-path"));
+                let name = output.file_name().unwrap().to_string_lossy().into_owned();
+                reports.push((name, unit_profile.exists()));
                 let export = serde_json::json!({"data": [{"files": [
                     {"filename": measured, "summary": {"lines": {"count": 10, "covered": 8}}}
                 ]}]});
@@ -93,6 +101,25 @@ fn a_run_measures_tests_and_scenarios_and_reports_every_counted_file() {
     );
 
     let lines: Vec<&str> = sh.commands.iter().map(String::as_str).collect();
+    commands_run_in_order(&lines);
+    drop(sh);
+    assert_eq!(
+        reports[..3],
+        [
+            ("llvm-cov-unit.json".to_string(), true),
+            ("llvm-cov-selftest.json".to_string(), false),
+            ("llvm-cov.json".to_string(), true)
+        ],
+        "the profiles of cargo test wait aside while the self-test alone is reported"
+    );
+    commands_carry_their_environment(&seen, &target, &shared);
+
+    written_report_is_complete(&target);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+/// The commands of the first run over `workspace`, in the order a run gives them.
+fn commands_run_in_order(lines: &[&str]) {
     assert_eq!(lines[0], "rustup which --toolchain 1.99.1 cargo");
     assert_eq!(&lines[1..3], ["cargo llvm-cov show-env"; 2]);
     assert_eq!(lines[3], "cargo llvm-cov clean --workspace");
@@ -102,8 +129,16 @@ fn a_run_measures_tests_and_scenarios_and_reports_every_counted_file() {
         "cargo test alone, before the self-test"
     );
     assert_eq!(lines[6], "cargo xtask selftest --offline");
-    assert!(lines[7].starts_with("cargo llvm-cov report --workspace --json --summary-only --failure-mode all"));
-    drop(sh);
+    assert!(
+        lines[7].ends_with("coverage/llvm-cov-selftest.json"),
+        "the self-test alone"
+    );
+    assert!(lines[8].starts_with("cargo llvm-cov report --workspace --json --summary-only --failure-mode all"));
+    assert!(lines[8].ends_with("coverage/llvm-cov.json"), "both together");
+}
+
+/// The variables the first run's commands had, as `seen` recorded them.
+fn commands_carry_their_environment(seen: &Seen, target: &Path, shared: &Path) {
     let instrumented = Some(target.join("llvm-cov-target").display().to_string());
     let own_build = Some(format!("{}-coverage", shared.display()));
     let toolchain = Some("1.99.1".to_string());
@@ -120,9 +155,7 @@ fn a_run_measures_tests_and_scenarios_and_reports_every_counted_file() {
     assert_eq!(selftest[3].as_deref(), Some(profiles.as_str()));
     let objects = format!("-object={}", target.join("llvm-cov-target/release/ide").display());
     assert_eq!(seen[7].1[4].as_deref(), Some(objects.as_str()));
-
-    written_report_is_complete(&target);
-    std::fs::remove_dir_all(dir).unwrap();
+    assert_eq!(seen[8].1[4].as_deref(), Some(objects.as_str()));
 }
 
 /// The report and the file list a run over `workspace` writes into `target`.
@@ -133,20 +166,23 @@ fn written_report_is_complete(target: &Path) {
         "{report}"
     );
     assert!(report.contains("cargo test alone 61.5 % (8 of 13 lines)\n"), "{report}");
+    assert!(report.contains("self-test alone 61.5 % (8 of 13 lines)\n"), "{report}");
     assert!(report.contains("1 files are in no instrumented program and count as uncovered\n"));
     assert!(report.contains("selftest scenarios: --offline\n"));
     assert!(report.contains("failed, so the numbers miss what it did not reach: cargo test\n"));
+    assert!(report.contains(
+        "    0.0        0        3      0.0       0.0  crates/ide-x/src/lib.rs  (in no instrumented program)\n"
+    ));
     assert!(
-        report.contains("    0.0        0        3      0.0  crates/ide-x/src/lib.rs  (in no instrumented program)\n")
-    );
-    assert!(
-        report.contains("  100.0        0        0    100.0  xtask/src/lib.rs\n"),
+        report.contains("  100.0        0        0    100.0     100.0  xtask/src/lib.rs\n"),
         "{report}"
     );
     let json: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(target.join("coverage/files.json")).unwrap()).unwrap();
     assert_eq!(json["total"]["lines"], 13);
     assert_eq!(json["total"]["unit_covered"], 8);
+    assert_eq!(json["total"]["selftest_covered"], 8);
+    assert_eq!(json["app_unit"]["lines"], 10);
     let files: Vec<&str> = json["files"]
         .as_array()
         .unwrap()

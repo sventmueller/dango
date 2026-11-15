@@ -39,7 +39,7 @@ fn for_selftest(environment: Vec<(String, String)>) -> Vec<(String, String)> {
 
 /// Runs `work` on the git lane and hands its result to `done` on the main thread, `None` if it panicked; false when
 /// the lane is full and nothing runs.
-pub fn local<T: Send + 'static>(
+pub(crate) fn local<T: Send + 'static>(
     work: impl FnOnce() -> T + Send + 'static,
     done: impl FnOnce(Option<T>) + Send + 'static,
 ) -> bool {
@@ -48,7 +48,7 @@ pub fn local<T: Send + 'static>(
 
 /// Runs `work` on a thread of its own, for hooks and the network, which may take minutes, and hands its result to
 /// `done` on the main thread; `None` if it panicked or no thread could start.
-pub fn long<T: Send + 'static, D: FnOnce(Option<T>) + Send + 'static>(
+pub(crate) fn long<T: Send + 'static, D: FnOnce(Option<T>) + Send + 'static>(
     work: impl FnOnce() -> T + Send + 'static,
     done: D,
 ) {

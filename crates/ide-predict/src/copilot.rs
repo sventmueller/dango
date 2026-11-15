@@ -21,7 +21,7 @@ use std::time::{Duration, Instant};
 
 use ide_lsp::lsp_types::{ShowDocumentResult, Uri};
 use ide_lsp::{Event, Install, Server, ServerConfig, Status};
-use ide_process::{Kind, Supervisor};
+use ide_process::{Kind, Supervisor, tool};
 use serde_json::{Value, json};
 
 pub use account::{Account, DeviceCode, SignIn};
@@ -49,22 +49,10 @@ const FINISH_DEVICE_FLOW: &str = "github.copilot.finishDeviceFlow";
 /// The server's program: installed into `tools` (the app's tools folder), else on the login shell's PATH in `env`.
 pub fn find(tools: &Path, env: &[(String, String)]) -> Option<PathBuf> {
     let installed = tools.join("node_modules/.bin").join(PROGRAM);
-    if is_executable(&installed) {
+    if tool::is_executable(&installed) {
         return Some(installed);
     }
-    let path = env
-        .iter()
-        .find(|(key, _)| key == "PATH")
-        .map(|(_, value)| value.as_str())?;
-    path.split(':')
-        .filter(|dir| !dir.is_empty())
-        .map(|dir| Path::new(dir).join(PROGRAM))
-        .find(|candidate| is_executable(candidate))
-}
-
-fn is_executable(path: &Path) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    std::fs::metadata(path).is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+    tool::which(PROGRAM, tool::var(env, "PATH"))
 }
 
 /// What the server's events and the provider's threads share.

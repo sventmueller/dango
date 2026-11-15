@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::{Commit, EntryKind, FileState, Stash, Status, StatusEntry};
+use crate::{Commit, CommitId, EntryKind, FileState, Stash, Status, StatusEntry};
 use splat_i18n::t;
 
 use super::graph::{self, GraphRow};
@@ -28,7 +28,7 @@ pub enum Section {
 
 impl Section {
     /// Every section in the order the panel lists them.
-    pub const ALL: [Section; 6] = [
+    pub(crate) const ALL: [Section; 6] = [
         Section::Conflicts,
         Section::Staged,
         Section::Changes,
@@ -231,7 +231,7 @@ impl Model {
     }
 
     /// The files of `section`; none for sections without files.
-    pub fn files(&self, section: Section) -> &[FileRow] {
+    pub(crate) fn files(&self, section: Section) -> &[FileRow] {
         match section {
             Section::Conflicts => &self.conflicts,
             Section::Staged => &self.staged,
@@ -279,18 +279,18 @@ impl Model {
     }
 
     /// The stash entry whose commit is `hash`.
-    pub fn stash(&self, hash: &str) -> Option<&Stash> {
-        self.stashes.iter().find(|s| s.hash == hash)
+    pub fn stash(&self, hash: &CommitId) -> Option<&Stash> {
+        self.stashes.iter().find(|s| s.hash == *hash)
     }
 
     /// The commit `hash`, when it was read.
-    pub fn commit(&self, hash: &str) -> Option<&Commit> {
-        self.commits.iter().find(|c| c.hash == hash)
+    pub fn commit(&self, hash: &CommitId) -> Option<&Commit> {
+        self.commits.iter().find(|c| c.hash == *hash)
     }
 
     /// The commit `hash` with its row of the graph.
-    pub fn commit_row(&self, hash: &str) -> Option<(&Commit, &GraphRow)> {
-        let index = self.commits.iter().position(|c| c.hash == hash)?;
+    pub fn commit_row(&self, hash: &CommitId) -> Option<(&Commit, &GraphRow)> {
+        let index = self.commits.iter().position(|c| c.hash == *hash)?;
         Some((&self.commits[index], self.graph.get(index)?))
     }
 
@@ -336,20 +336,20 @@ pub enum RowKey {
     Section(Section),
     /// A file of a section, relative to the repository's root.
     File(Section, PathBuf),
-    /// A commit, by hash.
-    Commit(String),
+    /// A commit.
+    Commit(CommitId),
     /// A thread's worktree, by its folder.
     Worktree(PathBuf),
     /// A file a thread's worktree changed: the worktree's folder, the file relative to it.
     WorktreeFile(PathBuf, PathBuf),
     /// A file a commit changed: the commit's hash, the file relative to the repository's root.
-    CommitFile(String, PathBuf),
+    CommitFile(CommitId, PathBuf),
     /// The row that reads more of the history.
     More,
     /// A stash entry, by its commit.
-    Stash(String),
+    Stash(CommitId),
     /// A file a stash entry changed: the entry's commit, the file relative to the repository's root.
-    StashFile(String, PathBuf),
+    StashFile(CommitId, PathBuf),
 }
 
 #[cfg(test)]

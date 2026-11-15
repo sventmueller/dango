@@ -8,7 +8,7 @@ use objc2::rc::Retained;
 use objc2_app_kit::NSTabViewController;
 
 use super::helpers::after;
-use super::{check, finish, snapshot};
+use super::{check, finish, give_up, snapshot};
 
 /// How long the window takes to resize to a tab it switched to.
 const SETTLE: Duration = Duration::from_millis(700);
@@ -21,7 +21,7 @@ fn name() -> &'static str {
     }
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::settings::show(mtm);
     after(SETTLE, || step(0, Vec::new()));
@@ -30,26 +30,24 @@ pub fn run() {
 /// Shows the tab at `index` and counts the toolbar items it shows; `crowded` names the tabs that hid some.
 fn step(index: usize, crowded: Vec<String>) {
     let Some(tabs) = tabs() else {
-        check("the settings window opens", false, "");
-        return finish(name());
+        return give_up(name(), "the settings window opens");
     };
     let items = tabs.tabViewItems();
-    let Some(label) = items.iter().nth(index).map(|item| item.label().to_string()) else {
-        check(
-            "every settings tab shows all tabs' toolbar items, none in the overflow menu",
-            crowded.is_empty() && items.count() >= 6,
-            format!("{} tabs, crowded: {crowded:?}", items.count()),
-        );
-        return finish(name());
-    };
-    tabs.setSelectedTabViewItemIndex(isize::try_from(index).unwrap_or(0));
-    after(SETTLE, move || counted(index, label, crowded));
+    if let Some(label) = items.iter().nth(index).map(|item| item.label().to_string()) {
+        tabs.setSelectedTabViewItemIndex(isize::try_from(index).unwrap_or(0));
+        return after(SETTLE, move || counted(index, label, crowded));
+    }
+    check(
+        "every settings tab shows all tabs' toolbar items, none in the overflow menu",
+        crowded.is_empty() && items.count() >= 6,
+        format!("{} tabs, crowded: {crowded:?}", items.count()),
+    );
+    finish(name());
 }
 
 fn counted(index: usize, label: String, mut crowded: Vec<String>) {
     let Some(window) = crate::settings::window() else {
-        check("the settings window opens", false, "");
-        return finish(name());
+        return give_up(name(), "the settings window opens");
     };
     let (shown, all) = window.toolbar().map_or((0, 0), |toolbar| {
         (

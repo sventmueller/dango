@@ -8,21 +8,21 @@ use super::{SearchPanel, Toggle};
 use crate::util::ns;
 
 /// What the panel shows.
-pub struct Seen {
+pub(crate) struct Seen {
     /// Whether the matches shown are those of the field and options as they are now, found to the end.
-    pub settled: bool,
+    pub(crate) settled: bool,
     /// The files with their match counts, in the order shown.
-    pub files: Vec<(String, usize)>,
+    pub(crate) files: Vec<(String, usize)>,
     /// The rows of the outline.
-    pub rows: isize,
-    pub status: String,
-    pub results_shown: bool,
-    pub field_focused: bool,
+    pub(crate) rows: isize,
+    pub(crate) status: String,
+    pub(crate) results_shown: bool,
+    pub(crate) field_focused: bool,
     /// Whether "Alle ersetzen" can be pressed.
-    pub can_replace_all: bool,
+    pub(crate) can_replace_all: bool,
 }
 
-pub fn seen(panel: &SearchPanel) -> Seen {
+pub(crate) fn seen(panel: &SearchPanel) -> Seen {
     let options = panel.options();
     let model = panel.read();
     let views = panel.ivars().views.get();
@@ -46,18 +46,18 @@ pub fn seen(panel: &SearchPanel) -> Seen {
 }
 
 /// The distance from one result row to the next.
-pub fn row_pitch(panel: &SearchPanel) -> Option<f64> {
+pub(crate) fn row_pitch(panel: &SearchPanel) -> Option<f64> {
     let outline = &panel.ivars().views.get()?.outline;
     (outline.numberOfRows() > 1).then(|| outline.rectOfRow(1).origin.y - outline.rectOfRow(0).origin.y)
 }
 
 /// The chevron that opens the replace field.
-pub fn replace_chevron(panel: &SearchPanel) -> Option<objc2::rc::Retained<objc2_app_kit::NSButton>> {
+pub(crate) fn replace_chevron(panel: &SearchPanel) -> Option<objc2::rc::Retained<objc2_app_kit::NSButton>> {
     panel.ivars().views.get().map(|views| views.replace_toggle.clone())
 }
 
 /// Opens the replace field, as its chevron does, and types `with` into it.
-pub fn replace_with(panel: &SearchPanel, with: &str) {
+pub(crate) fn replace_with(panel: &SearchPanel, with: &str) {
     if let Some(views) = panel.ivars().views.get() {
         if !views.replace_shown() {
             views.set_replace_shown(true);
@@ -85,7 +85,7 @@ fn row(panel: &SearchPanel, relative: &str, line: Option<u64>) -> Option<isize> 
 
 /// Clicks the replace button of the row of `relative`, or of its line `line`, which shows while the pointer is on
 /// the row; whether the button was there and hidden before.
-pub fn click_replace(panel: &SearchPanel, relative: &str, line: Option<u64>) -> bool {
+pub(crate) fn click_replace(panel: &SearchPanel, relative: &str, line: Option<u64>) -> bool {
     let Some(views) = panel.ivars().views.get() else {
         return false;
     };
@@ -104,12 +104,12 @@ pub fn click_replace(panel: &SearchPanel, relative: &str, line: Option<u64>) -> 
 }
 
 /// Presses "Alle ersetzen", which asks first in a sheet.
-pub fn replace_all(panel: &SearchPanel) {
+pub(crate) fn replace_all(panel: &SearchPanel) {
     panel.ask_replace_all();
 }
 
 /// Types `query` into the field as the keyboard does.
-pub fn type_query(panel: &SearchPanel, query: &str) {
+pub(crate) fn type_query(panel: &SearchPanel, query: &str) {
     if let Some(views) = panel.ivars().views.get() {
         views.field.setStringValue(&ns(query));
     }
@@ -117,7 +117,7 @@ pub fn type_query(panel: &SearchPanel, query: &str) {
 }
 
 /// Switches `toggle` as a click on its button does.
-pub fn set(panel: &SearchPanel, toggle: Toggle, on: bool) {
+pub(crate) fn set(panel: &SearchPanel, toggle: Toggle, on: bool) {
     if let Some(views) = panel.ivars().views.get() {
         views.set_toggled(toggle, on);
     }
@@ -125,7 +125,7 @@ pub fn set(panel: &SearchPanel, toggle: Toggle, on: bool) {
 }
 
 /// Opens the file filters and types `include` and `exclude` into them.
-pub fn set_globs(panel: &SearchPanel, include: &str, exclude: &str) {
+pub(crate) fn set_globs(panel: &SearchPanel, include: &str, exclude: &str) {
     if let Some(views) = panel.ivars().views.get() {
         views.set_globs_shown(true);
         views.include.setStringValue(&ns(include));
@@ -135,7 +135,7 @@ pub fn set_globs(panel: &SearchPanel, include: &str, exclude: &str) {
 }
 
 /// Opens the match on line `line` of the file `relative` as Return on its row does.
-pub fn open(panel: &SearchPanel, relative: &str, line: u64) -> bool {
+pub(crate) fn open(panel: &SearchPanel, relative: &str, line: u64) -> bool {
     let Some(views) = panel.ivars().views.get() else {
         return false;
     };
@@ -158,7 +158,7 @@ pub fn open(panel: &SearchPanel, relative: &str, line: u64) -> bool {
 }
 
 /// Presses Esc in the field, as the field editor reports it.
-pub fn escape(panel: &SearchPanel) {
+pub(crate) fn escape(panel: &SearchPanel) {
     panel.focus();
     if let Some(views) = panel.ivars().views.get() {
         let field: &objc2_app_kit::NSControl = &views.field;
@@ -167,7 +167,7 @@ pub fn escape(panel: &SearchPanel) {
 }
 
 /// The rows of the hierarchy on show, each with its level and name; empty while the text search shows.
-pub fn hierarchy_rows(panel: &SearchPanel) -> Vec<(isize, String)> {
+pub(crate) fn hierarchy_rows(panel: &SearchPanel) -> Vec<(isize, String)> {
     match panel.ivars().hierarchy.get() {
         Some(h) if h.showing() => super::hierarchy::selftest::rows(h),
         _ => vec![],
@@ -175,28 +175,28 @@ pub fn hierarchy_rows(panel: &SearchPanel) -> Vec<(isize, String)> {
 }
 
 /// Opens row `row` of the hierarchy as its disclosure triangle does.
-pub fn hierarchy_expand(panel: &SearchPanel, row: isize) {
+pub(crate) fn hierarchy_expand(panel: &SearchPanel, row: isize) {
     if let Some(h) = panel.ivars().hierarchy.get() {
         super::hierarchy::selftest::expand(h, row);
     }
 }
 
 /// Clicks row `row` of the hierarchy.
-pub fn hierarchy_click(panel: &SearchPanel, row: isize) {
+pub(crate) fn hierarchy_click(panel: &SearchPanel, row: isize) {
     if let Some(h) = panel.ivars().hierarchy.get() {
         super::hierarchy::selftest::click(h, row);
     }
 }
 
 /// Clicks segment `segment` of the hierarchy's direction switch.
-pub fn hierarchy_direction(panel: &SearchPanel, segment: isize) {
+pub(crate) fn hierarchy_direction(panel: &SearchPanel, segment: isize) {
     if let Some(h) = panel.ivars().hierarchy.get() {
         super::hierarchy::selftest::choose_direction(h, segment);
     }
 }
 
 /// The titles of the hierarchy's menu of earlier searches.
-pub fn hierarchy_history(panel: &SearchPanel) -> Vec<String> {
+pub(crate) fn hierarchy_history(panel: &SearchPanel) -> Vec<String> {
     panel
         .ivars()
         .hierarchy
@@ -206,14 +206,14 @@ pub fn hierarchy_history(panel: &SearchPanel) -> Vec<String> {
 }
 
 /// Chooses item `index` of the hierarchy's menu of earlier searches; 0 is the text search.
-pub fn hierarchy_choose(panel: &SearchPanel, index: isize) {
+pub(crate) fn hierarchy_choose(panel: &SearchPanel, index: isize) {
     if let Some(h) = panel.ivars().hierarchy.get() {
         super::hierarchy::selftest::choose_history(h, index);
     }
 }
 
 /// What VoiceOver reads for the row `row`.
-pub fn row_label(panel: &SearchPanel, row: isize) -> Option<String> {
+pub(crate) fn row_label(panel: &SearchPanel, row: isize) -> Option<String> {
     let views = panel.ivars().views.get()?;
     let view = views.outline.viewAtColumn_row_makeIfNecessary(0, row, true)?;
     super::rows::spoken(&view)

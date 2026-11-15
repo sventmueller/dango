@@ -5,6 +5,12 @@
 use std::collections::HashSet;
 
 use crate::Kind;
+use crate::system::children;
+
+/// The short name of process `pid`.
+fn name(pid: u32) -> Option<String> {
+    crate::system::name(libc::c_int::try_from(pid).ok()?)
+}
 
 /// How much a thread's work matters to the user right now; a thread nobody sets one for runs at macOS's `default`,
 /// the same as every build tool an agent starts.
@@ -45,10 +51,10 @@ pub fn background() {
 }
 
 /// The nice value of the commands agents run: the lowest there is.
-pub const AGENT_COMMAND_NICE: i32 = 20;
+pub(crate) const AGENT_COMMAND_NICE: i32 = 20;
 
 /// The nice value a process of `kind` starts with, above the app's 0; `None` keeps the app's.
-pub fn nice(kind: Kind) -> Option<i32> {
+pub(crate) fn nice(kind: Kind) -> Option<i32> {
     match kind {
         Kind::LanguageServer | Kind::Tool => Some(5),
         Kind::AgentCommand => Some(AGENT_COMMAND_NICE),
@@ -57,7 +63,7 @@ pub fn nice(kind: Kind) -> Option<i32> {
 }
 
 /// Gives process `pid` the nice value `nice`; children it starts afterwards inherit it.
-pub fn lower(pid: u32, nice: i32) {
+pub(crate) fn lower(pid: u32, nice: i32) {
     // SAFETY: setpriority reads only its arguments; for a process that ended meanwhile it fails and changes nothing.
     unsafe { libc::setpriority(libc::PRIO_PROCESS, pid, nice) };
 }
@@ -102,7 +108,7 @@ fn runs_commands(name: &str) -> bool {
 /// Lowers to [`AGENT_COMMAND_NICE`] every process below one of `agents` that runs their commands, and all below it;
 /// the agent and its own helpers, such as the `claude` an adapter starts, keep theirs. `lowered` remembers the ones
 /// done between calls and loses those that ended.
-pub fn lower_agent_commands(agents: &[u32], lowered: &mut HashSet<u32>) {
+pub(crate) fn lower_agent_commands(agents: &[u32], lowered: &mut HashSet<u32>) {
     let mut seen = HashSet::new();
     for &agent in agents {
         walk(agent, false, &mut seen, lowered);
@@ -121,33 +127,6 @@ fn walk(parent: u32, below_command: bool, seen: &mut HashSet<u32>, lowered: &mut
         }
         walk(child, command, seen, lowered);
     }
-}
-
-/// The processes `parent` started that still run.
-fn children(parent: u32) -> Vec<u32> {
-    let Ok(parent) = libc::pid_t::try_from(parent) else {
-        return Vec::new();
-    };
-    let mut pids: Vec<libc::pid_t> = vec![0; 256];
-    let size = libc::c_int::try_from(pids.len() * std::mem::size_of::<libc::pid_t>()).unwrap_or(libc::c_int::MAX);
-    // SAFETY: The buffer holds `size` bytes and outlives the call, which writes at most that many.
-    let count = unsafe { libc::proc_listchildpids(parent, pids.as_mut_ptr().cast(), size) };
-    pids.truncate(usize::try_from(count).unwrap_or(0).min(pids.len()));
-    pids.into_iter()
-        .filter_map(|p| u32::try_from(p).ok())
-        .filter(|&p| p > 0)
-        .collect()
-}
-
-/// The name of process `pid`, as `ps` shows it without arguments.
-fn name(pid: u32) -> Option<String> {
-    let pid = libc::c_int::try_from(pid).ok()?;
-    let mut buffer = [0u8; 256];
-    let size = u32::try_from(buffer.len()).unwrap_or(u32::MAX);
-    // SAFETY: The buffer holds `size` bytes and outlives the call, which writes at most that many.
-    let length = unsafe { libc::proc_name(pid, buffer.as_mut_ptr().cast(), size) };
-    let length = usize::try_from(length).ok().filter(|&l| l > 0)?;
-    Some(String::from_utf8_lossy(&buffer[..length.min(buffer.len())]).into_owned())
 }
 
 /// The nice value of process `pid`, for tests.

@@ -25,7 +25,7 @@ thread_local! {
 }
 
 /// Whether editors show their whitespace, as the user last chose.
-pub fn shown() -> bool {
+pub(crate) fn shown() -> bool {
     SHOWN.with(|shown| {
         shown.get().unwrap_or_else(|| {
             let value = Settings::load_user().get(&keys::SHOW_WHITESPACE);
@@ -36,7 +36,7 @@ pub fn shown() -> bool {
 }
 
 /// Reads the setting again on next use, after it changed elsewhere, and redraws every editor.
-pub fn forget() {
+pub(crate) fn forget() {
     SHOWN.with(|shown| shown.set(None));
     for view in super::open_editors() {
         redraw(&view);
@@ -44,7 +44,7 @@ pub fn forget() {
 }
 
 /// Shows whitespace in every editor, or hides it again, and remembers the choice.
-pub fn toggle() {
+pub(crate) fn toggle() {
     let value = !shown();
     SHOWN.with(|shown| shown.set(Some(value)));
     let mut settings = Settings::load_user();
@@ -56,7 +56,7 @@ pub fn toggle() {
     }
 }
 
-pub struct OverlayIvars {
+pub(crate) struct OverlayIvars {
     editor: Weak<EditorTextView>,
     /// The scrolling it redraws for, which ends with the overlay.
     scrolled: std::cell::OnceCell<crate::util::Observation>,
@@ -68,7 +68,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEWhitespace"]
     #[ivars = OverlayIvars]
-    pub struct Overlay;
+    pub(crate) struct Overlay;
 
     unsafe impl NSObjectProtocol for Overlay {}
 
@@ -91,7 +91,7 @@ define_class!(
 );
 
 /// Lays the overlay over `editor`, redrawn as `scroll` scrolls.
-pub fn attach(editor: &EditorTextView, scroll: &NSScrollView) {
+pub(crate) fn attach(editor: &EditorTextView, scroll: &NSScrollView) {
     let this = Overlay::alloc(editor.mtm()).set_ivars(OverlayIvars {
         editor: Weak::from(editor),
         scrolled: std::cell::OnceCell::new(),
@@ -104,7 +104,7 @@ pub fn attach(editor: &EditorTextView, scroll: &NSScrollView) {
     this.setAccessibilityElement(false);
     this.setHidden(!shown());
     editor.addSubview_positioned_relativeTo(&this, NSWindowOrderingMode::Above, None);
-    *editor.ivars().whitespace.borrow_mut() = Some(Weak::from(&*this));
+    *editor.ivars().around.whitespace.borrow_mut() = Some(Weak::from(&*this));
     let clip = scroll.contentView();
     clip.setPostsBoundsChangedNotifications(true);
     let mtm = editor.mtm();
@@ -121,7 +121,7 @@ pub fn attach(editor: &EditorTextView, scroll: &NSScrollView) {
 }
 
 /// Whether `item` is the menu item that shows whitespace, which then gets its check mark.
-pub fn validate(item: &objc2_app_kit::NSMenuItem) -> Option<bool> {
+pub(crate) fn validate(item: &objc2_app_kit::NSMenuItem) -> Option<bool> {
     if item.action() != Some(objc2::sel!(ideToggleWhitespace:)) {
         return None;
     }
@@ -134,8 +134,8 @@ pub fn validate(item: &objc2_app_kit::NSMenuItem) -> Option<bool> {
 }
 
 /// Draws the whitespace of `view`'s lines on screen again, or hides it.
-pub fn redraw(view: &EditorTextView) {
-    let Some(overlay) = view.ivars().whitespace.borrow().as_ref().and_then(Weak::load) else {
+pub(crate) fn redraw(view: &EditorTextView) {
+    let Some(overlay) = view.ivars().around.whitespace.borrow().as_ref().and_then(Weak::load) else {
         return;
     };
     let show = shown();
@@ -282,4 +282,4 @@ fn arrow(left: f64, right: f64, y: f64) {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

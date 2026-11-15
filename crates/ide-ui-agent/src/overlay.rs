@@ -20,7 +20,7 @@ fn centered(mtm: MainThreadMarker, views: &[&NSView]) -> Retained<NSStackView> {
 }
 
 /// The empty state: Claude's /model tip, nothing for the other agents.
-pub fn empty(mtm: MainThreadMarker, agent: &super::Agent) -> Retained<NSStackView> {
+pub(crate) fn empty(mtm: MainThreadMarker, agent: &super::Agent) -> Retained<NSStackView> {
     let mut views: Vec<Retained<NSView>> = Vec::new();
     // `/model` is a command of Claude Code; the other agents choose their model elsewhere.
     if *agent == super::Agent::Claude {
@@ -125,7 +125,7 @@ fn acp_problem(
     Some(centered(mtm, &[&icon, &heading, &text, &row]))
 }
 
-pub fn problem(
+pub(crate) fn problem(
     mtm: MainThreadMarker,
     target: &AgentTarget,
     problem: &Problem,

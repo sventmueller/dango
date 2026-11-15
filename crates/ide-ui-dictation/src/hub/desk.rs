@@ -8,7 +8,7 @@ use lowspeak::dictation::{Event, Failure, Nothing, Target};
 
 /// How far the recording of a field has come.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Phase {
+pub(crate) enum Phase {
     Idle,
     /// Lowspeak was asked to open the microphone.
     Opening,
@@ -20,7 +20,7 @@ pub enum Phase {
 
 /// What the hub carries out for the desk.
 #[derive(Debug)]
-pub enum Act {
+pub(super) enum Act {
     Start(Target),
     Stop(Target),
     /// Asks lowspeak again in a moment for a start it refused while the microphone was still busy.
@@ -36,7 +36,7 @@ pub enum Act {
 }
 
 #[derive(Debug, Default)]
-pub struct Desk {
+pub(super) struct Desk {
     recording: Option<(Target, Phase)>,
     /// The field whose start waits until the microphone is free.
     pending: Option<Target>,
@@ -44,7 +44,7 @@ pub struct Desk {
 }
 
 impl Desk {
-    pub fn phase(&self, target: Target) -> Phase {
+    pub(super) fn phase(&self, target: Target) -> Phase {
         match self.recording {
             Some((t, phase)) if t == target => phase,
             _ => Phase::Idle,
@@ -52,27 +52,27 @@ impl Desk {
     }
 
     /// The field that records, or waits to.
-    pub fn recording(&self) -> Option<Target> {
+    pub(super) fn recording(&self) -> Option<Target> {
         self.recording.map(|(t, _)| t).or(self.pending)
     }
 
-    pub fn is_waiting(&self, target: Target) -> bool {
+    pub(super) fn is_waiting(&self, target: Target) -> bool {
         self.pending == Some(target)
     }
 
     /// How many recordings of the field are being transcribed.
-    pub fn transcribing(&self, target: Target) -> usize {
+    pub(super) fn transcribing(&self, target: Target) -> usize {
         self.transcribing.get(&target).copied().unwrap_or(0)
     }
 
     /// Whether anything of the field runs.
-    pub fn is_busy(&self, target: Target) -> bool {
+    pub(super) fn is_busy(&self, target: Target) -> bool {
         self.phase(target) != Phase::Idle || self.is_waiting(target) || self.transcribing(target) > 0
     }
 
     /// The user asked to dictate into `target`, or to end its dictation; a recording of another field ends first and
     /// is still transcribed for that field.
-    pub fn toggle(&mut self, target: Target) -> Vec<Act> {
+    pub(super) fn toggle(&mut self, target: Target) -> Vec<Act> {
         if self.pending == Some(target) {
             self.pending = None;
             return vec![Act::Show(target)];
@@ -99,7 +99,7 @@ impl Desk {
     }
 
     /// Lowspeak's answer to the start of `target`: taken, or refused while the microphone is still busy.
-    pub fn started(&mut self, target: Target, taken: bool) -> Vec<Act> {
+    pub(super) fn started(&mut self, target: Target, taken: bool) -> Vec<Act> {
         if taken {
             self.pending = self.pending.filter(|t| *t != target);
             let replaced = self.recording.replace((target, Phase::Opening));
@@ -114,12 +114,12 @@ impl Desk {
     }
 
     /// A retry of the waiting start is due; whether it still waits.
-    pub fn retry_due(&self, target: Target) -> bool {
+    pub(super) fn retry_due(&self, target: Target) -> bool {
         self.pending == Some(target)
     }
 
     /// The user cancelled the dictation of `target`; whether one ran.
-    pub fn cancel(&mut self, target: Target) -> bool {
+    pub(super) fn cancel(&mut self, target: Target) -> bool {
         let mut ran = false;
         if self.recording.is_some_and(|(t, _)| t == target) {
             self.recording = None;
@@ -133,7 +133,7 @@ impl Desk {
         ran
     }
 
-    pub fn event(&mut self, event: Event) -> Vec<Act> {
+    pub(super) fn event(&mut self, event: Event) -> Vec<Act> {
         match event {
             Event::Started(t) => self.advance(t, Phase::Opening, Phase::Recording),
             Event::Live(t) => {

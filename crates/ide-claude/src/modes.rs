@@ -22,7 +22,7 @@ pub enum PermissionMode {
 
 impl PermissionMode {
     /// The mode's name on the wire, such as `acceptEdits`.
-    pub fn as_str(&self) -> &str {
+    pub(crate) fn as_str(&self) -> &str {
         match self {
             PermissionMode::Default => "default",
             PermissionMode::AcceptEdits => "acceptEdits",
@@ -70,7 +70,7 @@ pub enum Effort {
 
 impl Effort {
     /// The level's name on the wire, such as `xhigh`.
-    pub fn as_str(&self) -> &str {
+    pub(crate) fn as_str(&self) -> &str {
         match self {
             Effort::Minimal => "minimal",
             Effort::Low => "low",

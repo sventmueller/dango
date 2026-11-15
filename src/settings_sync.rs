@@ -26,9 +26,10 @@ use splat_i18n::t;
 use crate::context::AppContext;
 
 /// Whether this Mac syncs its settings (E112); off at first.
-pub const ENABLED: Key<bool> = Key::user("settingsSync", ide_core::settings::Sharing::PerMac, || false);
+pub(crate) const ENABLED: Key<bool> = Key::user("settingsSync", ide_core::settings::Sharing::PerMac, || false);
 /// The folder the user picked in place of iCloud Drive's, after macOS refused access to it.
-pub const FOLDER: Key<Option<PathBuf>> = Key::user("settingsSyncFolder", ide_core::settings::Sharing::PerMac, || None);
+pub(crate) const FOLDER: Key<Option<PathBuf>> =
+    Key::user("settingsSyncFolder", ide_core::settings::Sharing::PerMac, || None);
 
 /// How long reading the folder may take before the round gives up.
 const LIMIT: Duration = Duration::from_secs(20);
@@ -39,7 +40,7 @@ const SHORTCUT: &str = "keybinding:";
 
 /// What the sync does now, as the settings show it.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub enum Status {
+pub(crate) enum Status {
     /// Turned off.
     #[default]
     Off,
@@ -55,7 +56,7 @@ pub enum Status {
 
 /// The sync's state in the app.
 #[derive(Default)]
-pub struct SettingsSync {
+pub(crate) struct SettingsSync {
     status: RefCell<Status>,
     presenter: RefCell<Option<Retained<Presenter>>>,
     /// Counts the requests for a round, so that a burst of changes makes one.
@@ -114,7 +115,7 @@ fn device_id() -> String {
 }
 
 /// The sync's status now.
-pub fn status(mtm: MainThreadMarker) -> Status {
+pub(crate) fn status(mtm: MainThreadMarker) -> Status {
     let cx = context(mtm);
     let status = cx.settings_sync().status.borrow().clone();
     if !Settings::load_user().get(&ENABLED) {
@@ -127,19 +128,19 @@ pub fn status(mtm: MainThreadMarker) -> Status {
 }
 
 /// Whether the sync can be turned on: iCloud Drive is on, or the user picked a folder.
-pub fn available() -> bool {
+pub(crate) fn available() -> bool {
     icloud_on() || Settings::load_user().get(&FOLDER).is_some()
 }
 
 /// At launch: starts the sync when it is on.
-pub fn launched(mtm: MainThreadMarker) {
+pub(crate) fn launched(mtm: MainThreadMarker) {
     if Settings::load_user().get(&ENABLED) {
         start(mtm);
     }
 }
 
 /// Turns the sync on or off and remembers it.
-pub fn set_enabled(mtm: MainThreadMarker, on: bool) {
+pub(crate) fn set_enabled(mtm: MainThreadMarker, on: bool) {
     let mut settings = Settings::load_user();
     if let Err(error) = settings.set(&ENABLED, &on) {
         crate::diag::report("saving the settings sync's switch", error);
@@ -156,7 +157,7 @@ pub fn set_enabled(mtm: MainThreadMarker, on: bool) {
 }
 
 /// Uses `picked` in place of iCloud Drive's folder, as the way around a refused access.
-pub fn use_folder(mtm: MainThreadMarker, picked: &Path) {
+pub(crate) fn use_folder(mtm: MainThreadMarker, picked: &Path) {
     let mut settings = Settings::load_user();
     if let Err(error) = settings.set(&FOLDER, &Some(picked.to_path_buf())) {
         crate::diag::report("saving the settings sync's folder", error);
@@ -183,7 +184,7 @@ fn start(mtm: MainThreadMarker) {
 }
 
 /// A setting changed here, or another Mac wrote: a round follows once things rest.
-pub fn request(mtm: MainThreadMarker) {
+pub(crate) fn request(mtm: MainThreadMarker) {
     if !Settings::load_user().get(&ENABLED) {
         return;
     }
@@ -270,7 +271,7 @@ fn round_in(folder: &Path, device: &str) -> Result<Round, SyncError> {
         }
     }
     let local = local_values();
-    let shared = |name: &str| name.starts_with(SHORTCUT) || shared_setting(name);
+    let shared = |name: &str| name.starts_with(SHORTCUT) || registry::is_shared(name);
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
@@ -300,11 +301,6 @@ fn local_values() -> Map<String, Value> {
         values.insert(format!("{SHORTCUT}{command}"), key);
     }
     values
-}
-
-/// Whether the setting `name` follows the user to their other Macs, as its key says (E113).
-fn shared_setting(name: &str) -> bool {
-    ide_core::settings::SHARED.contains(&name)
 }
 
 fn coordinated_read(path: &Path) -> Option<Vec<u8>> {
@@ -414,7 +410,7 @@ fn apply_shortcut(command: &str, key: Option<Value>) {
     }
 }
 
-pub struct PresenterIvars {
+pub(crate) struct PresenterIvars {
     url: Retained<NSURL>,
 }
 
@@ -423,7 +419,7 @@ define_class!(
     #[unsafe(super(NSObject))]
     #[name = "IDESettingsSyncPresenter"]
     #[ivars = PresenterIvars]
-    pub struct Presenter;
+    pub(crate) struct Presenter;
 
     unsafe impl NSObjectProtocol for Presenter {}
 
@@ -459,7 +455,8 @@ impl Presenter {
     }
 }
 
+mod registry;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

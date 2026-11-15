@@ -65,16 +65,16 @@ pub(crate) fn of_terminal(master: &File) -> Foreground {
     let Some(group) = sys::foreground_group(master) else {
         return Foreground::Unknown;
     };
-    let processes: Vec<Vec<String>> = sys::group_members(group)
+    let processes: Vec<Vec<String>> = ide_process::system::group_members(group)
         .into_iter()
-        .filter_map(|pid| sys::arguments(pid).or_else(|| sys::process_name(pid).map(|name| vec![name])))
+        .filter_map(|pid| sys::arguments(pid).or_else(|| ide_process::system::name(pid).map(|name| vec![name])))
         .collect();
     classify_group(&processes)
 }
 
 /// The foreground of a process group from its processes' arguments; an agent anywhere in the group wins, then a
 /// remote session, then any program other than a shell.
-pub fn classify_group(processes: &[Vec<String>]) -> Foreground {
+pub(crate) fn classify_group(processes: &[Vec<String>]) -> Foreground {
     processes
         .iter()
         .map(|argv| classify(argv))
@@ -93,7 +93,7 @@ fn rank(foreground: &Foreground) -> u8 {
 }
 
 /// What one process is, from its arguments.
-pub fn classify(argv: &[String]) -> Foreground {
+pub(crate) fn classify(argv: &[String]) -> Foreground {
     let Some(first) = argv.first() else {
         return Foreground::Unknown;
     };

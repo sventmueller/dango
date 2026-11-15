@@ -3,7 +3,7 @@
 use super::*;
 
 /// Whether `view` is a Quick Look view, for the self-test.
-pub fn shows(view: &NSView) -> bool {
+pub(crate) fn shows(view: &NSView) -> bool {
     use objc2_foundation::NSObjectProtocol;
     AnyClass::get(c"QLPreviewView").is_some_and(|class| view.isKindOfClass(class))
 }

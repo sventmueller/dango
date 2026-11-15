@@ -21,10 +21,10 @@ use super::view::EditorTextView;
 use crate::util::{constant, guarded, ns};
 
 /// The column's width while it shows.
-pub const WIDTH: f64 = 190.0;
+pub(crate) const WIDTH: f64 = 190.0;
 const INSET: f64 = 8.0;
 
-pub struct ColumnIvars {
+pub(crate) struct ColumnIvars {
     editor: Weak<EditorTextView>,
     width: std::cell::RefCell<Option<Retained<NSLayoutConstraint>>>,
     /// The scrolling it redraws for, which ends with the column.
@@ -37,7 +37,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEBlameColumn"]
     #[ivars = ColumnIvars]
-    pub struct BlameColumn;
+    pub(crate) struct BlameColumn;
 
     unsafe impl NSObjectProtocol for BlameColumn {}
 
@@ -69,7 +69,7 @@ struct Entry {
 
 impl BlameColumn {
     /// The column for `editor`, hidden, redrawn when `scroll` scrolls.
-    pub fn new(mtm: MainThreadMarker, scroll: &NSScrollView, editor: &EditorTextView) -> Retained<BlameColumn> {
+    pub(crate) fn new(mtm: MainThreadMarker, scroll: &NSScrollView, editor: &EditorTextView) -> Retained<BlameColumn> {
         let this = Self::alloc(mtm).set_ivars(ColumnIvars {
             editor: Weak::from(editor),
             width: std::cell::RefCell::new(None),
@@ -98,7 +98,7 @@ impl BlameColumn {
     }
 
     /// Holds the column at `constraint`'s width, zero while hidden.
-    pub fn set_width_constraint(&self, constraint: Retained<NSLayoutConstraint>) {
+    pub(crate) fn set_width_constraint(&self, constraint: Retained<NSLayoutConstraint>) {
         *self.ivars().width.borrow_mut() = Some(constraint);
     }
 
@@ -250,7 +250,7 @@ fn column_of(view: &EditorTextView) -> Option<Retained<BlameColumn>> {
 }
 
 /// Shows or hides the column of `view`.
-pub fn show(view: &EditorTextView, on: bool) {
+pub(crate) fn show(view: &EditorTextView, on: bool) {
     let Some(column) = column_of(view) else { return };
     if let Some(constraint) = column.ivars().width.borrow().as_ref() {
         constraint.setConstant(if on { WIDTH } else { 0.0 });
@@ -260,7 +260,7 @@ pub fn show(view: &EditorTextView, on: bool) {
 }
 
 /// Draws the column of `view` again, if it shows.
-pub fn redraw(view: &EditorTextView) {
+pub(crate) fn redraw(view: &EditorTextView) {
     if let Some(column) = column_of(view)
         && column.frame().size.width > 0.0
     {
@@ -271,4 +271,4 @@ pub fn redraw(view: &EditorTextView) {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

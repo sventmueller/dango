@@ -12,7 +12,7 @@ use objc2_app_kit::{
 use splat_i18n::t;
 
 use super::WindowController;
-use crate::util::{borderless_button, label, ns};
+use crate::util::{activate, borderless_button, fixed_size, label, ns};
 
 /// How many recent folders the welcome tab lists.
 const SHOWN_RECENT: usize = 8;
@@ -21,7 +21,7 @@ const SHOWN_RECENT: usize = 8;
 const ICON_SIZE: f64 = 72.0;
 
 /// The recent folders that still exist, as the welcome tab lists them.
-pub fn recent_folders() -> Vec<PathBuf> {
+pub(crate) fn recent_folders() -> Vec<PathBuf> {
     State::load_user()
         .get(&remembered::RECENT_PROJECTS)
         .into_iter()
@@ -30,7 +30,7 @@ pub fn recent_folders() -> Vec<PathBuf> {
         .collect()
 }
 
-pub fn view(mtm: MainThreadMarker, target: &WindowController) -> Retained<NSView> {
+pub(crate) fn view(mtm: MainThreadMarker, target: &WindowController) -> Retained<NSView> {
     let stack = NSStackView::new(mtm);
     stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     stack.setAlignment(NSLayoutAttribute::Leading);
@@ -45,25 +45,21 @@ pub fn view(mtm: MainThreadMarker, target: &WindowController) -> Retained<NSView
         let frame = NSView::new(mtm);
         frame.setTranslatesAutoresizingMaskIntoConstraints(false);
         frame.addSubview(&image);
-        for constraint in [
-            image.widthAnchor().constraintEqualToConstant(ICON_SIZE),
-            image.heightAnchor().constraintEqualToConstant(ICON_SIZE),
+        fixed_size(&image, ICON_SIZE, ICON_SIZE);
+        activate([
             image.topAnchor().constraintEqualToAnchor(&frame.topAnchor()),
             image.bottomAnchor().constraintEqualToAnchor(&frame.bottomAnchor()),
             image
                 .leadingAnchor()
                 .constraintEqualToAnchor_constant(&frame.leadingAnchor(), -margin),
             frame.widthAnchor().constraintEqualToConstant(ICON_SIZE - margin),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         stack.addArrangedSubview(&frame);
     }
     let title = label(mtm, ide_product::NAME);
-    // SAFETY: AppKit sets its font weight constants when it loads.
     title.setFont(Some(&NSFont::systemFontOfSize_weight(
         ide_ui_common::style::DISPLAY,
-        unsafe { NSFontWeightSemibold },
+        crate::util::constant!(NSFontWeightSemibold),
     )));
     stack.addArrangedSubview(&title);
     let tagline = label(mtm, t("Code, Terminal und Agenten in einem Fenster."));
@@ -101,7 +97,7 @@ pub fn view(mtm: MainThreadMarker, target: &WindowController) -> Retained<NSView
     let view = NSView::new(mtm);
     view.addSubview(&stack);
     stack.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
+    activate([
         stack.centerXAnchor().constraintEqualToAnchor(&view.centerXAnchor()),
         stack
             .centerYAnchor()
@@ -109,8 +105,6 @@ pub fn view(mtm: MainThreadMarker, target: &WindowController) -> Retained<NSView
         stack
             .leadingAnchor()
             .constraintGreaterThanOrEqualToAnchor_constant(&view.leadingAnchor(), 24.0),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     view
 }

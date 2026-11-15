@@ -24,7 +24,7 @@ const MAX_HEIGHT: f64 = 340.0;
 const PADDING: f64 = 10.0;
 
 #[derive(Default)]
-pub struct State {
+pub(crate) struct State {
     /// Where the mouse rests, in the view's coordinates.
     rest: Option<NSPoint>,
     /// Counts questions, so that an answer to an older one is dropped.

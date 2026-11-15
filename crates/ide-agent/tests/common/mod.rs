@@ -13,10 +13,10 @@ use ide_thread::{Entry, EntryKind, Lane, Notice, Status, Thread, ThreadId, UserM
 use serde_json::{Value, json};
 
 /// A scratch project with a file to work on, removed when dropped.
-pub struct Project(pub ide_core::testing::Scratch);
+pub(crate) struct Project(pub ide_core::testing::Scratch);
 
 impl Project {
-    pub fn new(name: &str) -> Project {
+    pub(crate) fn new(name: &str) -> Project {
         let dir = ide_core::testing::scratch(&format!("agent-session-{name}"));
         std::fs::create_dir_all(dir.join("project/src")).unwrap();
         std::fs::write(
@@ -27,17 +27,17 @@ impl Project {
         Project(dir)
     }
 
-    pub fn root(&self) -> PathBuf {
+    pub(crate) fn root(&self) -> PathBuf {
         self.0.join("project").canonicalize().unwrap()
     }
 }
 
-pub fn event(name: &str, value: &Value) -> String {
+pub(crate) fn event(name: &str, value: &Value) -> String {
     format!("event: {name}\ndata: {value}\n\n")
 }
 
 /// An Anthropic stream that answers `text` and ends the turn.
-pub fn says(text: &str) -> Answer {
+pub(crate) fn says(text: &str) -> Answer {
     let mut stream = event(
         "message_start",
         &json!({"type": "message_start", "message": {"model": "claude-opus-5-5", "usage": {"input_tokens": 200, "output_tokens": 1}}}),
@@ -58,12 +58,18 @@ pub fn says(text: &str) -> Answer {
     Answer::events(&stream)
 }
 
-pub struct Run {
+pub(crate) struct Run {
     pub session: Session,
     pub events: Arc<Mutex<Vec<Event>>>,
 }
 
-pub fn config(stub: &Stub, project: &Project, approval: Approval, sandbox: bool, store: Option<PathBuf>) -> Config {
+pub(crate) fn config(
+    stub: &Stub,
+    project: &Project,
+    approval: Approval,
+    sandbox: bool,
+    store: Option<PathBuf>,
+) -> Config {
     let endpoint = Endpoint::new("stub", ProviderKind::AnthropicCompatible, "Stub", &stub.url());
     let environment: Vec<(String, String)> = std::env::vars().collect();
     let workspace = Workspace::new(
@@ -94,14 +100,14 @@ pub fn config(stub: &Stub, project: &Project, approval: Approval, sandbox: bool,
     }
 }
 
-pub fn start(config: Config) -> Run {
+pub(crate) fn start(config: Config) -> Run {
     let events = Arc::new(Mutex::new(Vec::new()));
     let sink = events.clone();
     let session = Session::start(config, move |event| sink.lock().unwrap().push(event));
     Run { session, events }
 }
 
-pub fn send(run: &Run, text: &str) {
+pub(crate) fn send(run: &Run, text: &str) {
     run.session
         .send(UserMessage {
             text: text.into(),
@@ -110,7 +116,7 @@ pub fn send(run: &Run, text: &str) {
         .unwrap();
 }
 
-pub fn wait_for(run: &Run, what: &str, ready: impl Fn(&Thread) -> bool) -> Thread {
+pub(crate) fn wait_for(run: &Run, what: &str, ready: impl Fn(&Thread) -> bool) -> Thread {
     let deadline = Instant::now() + Duration::from_secs(20);
     loop {
         let thread = run.session.snapshot();
@@ -126,30 +132,30 @@ pub fn wait_for(run: &Run, what: &str, ready: impl Fn(&Thread) -> bool) -> Threa
     }
 }
 
-pub fn idle(run: &Run) -> Thread {
+pub(crate) fn idle(run: &Run) -> Thread {
     wait_for(run, "the turn's end", |t| {
         t.status() == Status::Idle && !run.session.is_running()
     })
 }
 
-pub fn entries(thread: &Thread) -> Vec<Entry> {
+pub(crate) fn entries(thread: &Thread) -> Vec<Entry> {
     thread.entries(&Lane::Main).iter().map(|e| (**e).clone()).collect()
 }
 
-pub fn tool(thread: &Thread, id: &str) -> ide_thread::ToolCall {
+pub(crate) fn tool(thread: &Thread, id: &str) -> ide_thread::ToolCall {
     match &thread.entry_by_key(id).expect(id).kind {
         EntryKind::ToolCall(call) => call.clone(),
         other => panic!("{other:?}"),
     }
 }
 
-pub fn sent_results(stub: &Stub, request: usize) -> Vec<Value> {
+pub(crate) fn sent_results(stub: &Stub, request: usize) -> Vec<Value> {
     let body = stub.seen()[request].json();
     let last = body["messages"].as_array().unwrap().last().unwrap().clone();
     last["content"].as_array().unwrap().clone()
 }
 
-pub fn notices(thread: &Thread) -> Vec<Notice> {
+pub(crate) fn notices(thread: &Thread) -> Vec<Notice> {
     entries(thread)
         .iter()
         .filter_map(|e| match &e.kind {

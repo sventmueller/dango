@@ -33,18 +33,18 @@ const WIDTH_TAG: isize = 100;
 
 /// How one editor indents and what its saves tidy.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Format {
-    pub tabs: bool,
+pub(crate) struct Format {
+    pub(crate) tabs: bool,
     /// The columns of a level indented with spaces.
-    pub size: usize,
+    pub(crate) size: usize,
     /// The columns a tab shows as.
-    pub tab_width: usize,
+    pub(crate) tab_width: usize,
     /// The break new lines get in a file that had none when it was opened.
-    pub newline: Option<LineEnding>,
-    pub trim_trailing: bool,
-    pub final_newline: bool,
+    pub(crate) newline: Option<LineEnding>,
+    pub(crate) trim_trailing: bool,
+    pub(crate) final_newline: bool,
     /// The charset `.editorconfig` asks for when the file has another.
-    pub other_charset: Option<Charset>,
+    pub(crate) other_charset: Option<Charset>,
 }
 
 impl Default for Format {
@@ -64,7 +64,7 @@ impl Default for Format {
 impl Format {
     /// The format of a file with `properties` from its `.editorconfig`, the lines `text`, read as `encoding` with or
     /// without a byte order mark.
-    pub fn of(properties: &Properties, text: &str, encoding: Option<(Encoding, bool)>) -> Format {
+    pub(crate) fn of(properties: &Properties, text: &str, encoding: Option<(Encoding, bool)>) -> Format {
         let detected = spacing::detect_indent(text);
         let tabs = match properties.indent_style {
             Some(style) => style == IndentStyle::Tab,
@@ -93,12 +93,12 @@ impl Format {
     }
 
     /// One level of indentation.
-    pub fn unit(&self) -> String {
+    pub(crate) fn unit(&self) -> String {
         if self.tabs { "\t".into() } else { " ".repeat(self.size) }
     }
 
     /// What the status bar shows.
-    pub fn title(&self) -> String {
+    pub(crate) fn title(&self) -> String {
         if self.tabs {
             tf("Tabs: {}", &[&self.tab_width.to_string()])
         } else {
@@ -128,7 +128,7 @@ fn fits(charset: Charset, (encoding, bom): (Encoding, bool)) -> bool {
 
 /// The edits that tidy `text` for a save with `format`: whitespace at line ends, a missing last line break, which
 /// is `last`, and every break made `convert` for a file saved the first time.
-pub fn tidy_edits(
+pub(crate) fn tidy_edits(
     text: &str,
     format: &Format,
     convert: Option<LineEnding>,
@@ -158,14 +158,14 @@ pub fn tidy_edits(
 
 /// The state of one editor: its format and the status bar's controls.
 #[derive(Default)]
-pub struct State {
-    pub format: Format,
+pub(crate) struct State {
+    pub(crate) format: Format,
     button: Option<Retained<NSButton>>,
     warning: Option<Retained<NSTextField>>,
 }
 
 /// Reads the `.editorconfig` of `view`'s file and its lines, and sets the indentation and tab width from them.
-pub fn configure(view: &EditorTextView) {
+pub(crate) fn configure(view: &EditorTextView) {
     let format = {
         let document = view.document();
         let properties = document.path().map(editorconfig::for_file).unwrap_or_default();
@@ -222,7 +222,7 @@ fn set_tab_width(view: &EditorTextView, columns: usize) {
 }
 
 /// The controls this module adds to the status bar of `view`: a warning about the charset and the indentation menu.
-pub fn status_items(mtm: MainThreadMarker, view: &EditorTextView, stack: &NSStackView) {
+pub(crate) fn status_items(mtm: MainThreadMarker, view: &EditorTextView, stack: &NSStackView) {
     let warning = label(mtm, "");
     warning.setFont(Some(&NSFont::systemFontOfSize(ide_ui_common::style::SMALL)));
     warning.setTextColor(Some(&NSColor::systemOrangeColor()));
@@ -264,7 +264,7 @@ fn refresh(view: &EditorTextView) {
 }
 
 /// Opens the indentation menu below `sender`, the status bar's button.
-pub fn show_menu(view: &EditorTextView, sender: Option<&AnyObject>) {
+pub(crate) fn show_menu(view: &EditorTextView, sender: Option<&AnyObject>) {
     let Some(button) = sender.and_then(|s| s.downcast_ref::<NSButton>()) else {
         return;
     };
@@ -275,7 +275,7 @@ pub fn show_menu(view: &EditorTextView, sender: Option<&AnyObject>) {
 }
 
 /// The indentation menu of `view`: tabs or spaces and the widths, the current ones ticked.
-pub fn menu(view: &EditorTextView) -> Retained<NSMenu> {
+pub(crate) fn menu(view: &EditorTextView) -> Retained<NSMenu> {
     let mtm = view.mtm();
     let format = view.ivars().spacing.borrow().format.clone();
     let menu = NSMenu::new(mtm);
@@ -310,7 +310,7 @@ pub fn menu(view: &EditorTextView) -> Retained<NSMenu> {
 }
 
 /// The user chose an entry of the indentation menu, by its tag.
-pub fn choose(view: &EditorTextView, tag: isize) {
+pub(crate) fn choose(view: &EditorTextView, tag: isize) {
     let mut format = view.ivars().spacing.borrow().format.clone();
     match tag {
         TABS_TAG => format.tabs = true,
@@ -333,7 +333,7 @@ pub fn choose(view: &EditorTextView, tag: isize) {
 }
 
 /// Tidies `view`'s text before it is saved, to `target` when that is a new place for it, as one undoable step.
-pub fn before_save(view: &EditorTextView, target: Option<&Path>) {
+pub(crate) fn before_save(view: &EditorTextView, target: Option<&Path>) {
     let (format, convert) = match target {
         Some(target) => {
             let properties = editorconfig::for_file(target);
@@ -355,13 +355,13 @@ pub fn before_save(view: &EditorTextView, target: Option<&Path>) {
 
 /// The break a new line gets in `view`: the one `.editorconfig` asks for in a file that had none, else the one most
 /// lines have.
-pub fn newline(view: &EditorTextView) -> LineEnding {
+pub(crate) fn newline(view: &EditorTextView) -> LineEnding {
     let chosen = view.ivars().spacing.borrow().format.newline;
     chosen.unwrap_or_else(|| view.document().line_endings().dominant)
 }
 
 /// The tab size and whether to indent with spaces, as a language server's formatting expects them.
-pub fn formatting(view: &EditorTextView) -> (u32, bool) {
+pub(crate) fn formatting(view: &EditorTextView) -> (u32, bool) {
     let state = view.ivars().spacing.borrow();
     let format = &state.format;
     let size = if format.tabs { format.tab_width } else { format.size };
@@ -370,7 +370,7 @@ pub fn formatting(view: &EditorTextView) -> (u32, bool) {
 
 /// Indents `lines` of `view`, counted from 0, by `levels` of its own indentation, or takes as many away where negative,
 /// as one undo step; for Vim's `>>`, `<<` and `>` (E106).
-pub fn shift_lines(view: &EditorTextView, lines: std::ops::Range<usize>, levels: isize) {
+pub(crate) fn shift_lines(view: &EditorTextView, lines: std::ops::Range<usize>, levels: isize) {
     let unit = view.ivars().indent.borrow().clone();
     let width = unit.chars().count().max(1);
     let mut changes = Vec::new();
@@ -509,4 +509,4 @@ mod tests {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

@@ -16,12 +16,12 @@ use super::tab::AgentTab;
 use crate::AgentKey;
 use ide_ui_common::util::guarded;
 
-pub struct TargetIvars {
+pub(crate) struct TargetIvars {
     key: AgentKey,
 }
 
 /// The tag of the control or menu item that sent an action.
-pub fn tag(sender: Option<&AnyObject>) -> isize {
+pub(crate) fn tag(sender: Option<&AnyObject>) -> isize {
     let Some(sender) = sender else { return -1 };
     if let Some(item) = sender.downcast_ref::<NSMenuItem>() {
         return item.tag();
@@ -39,7 +39,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEAgentTarget"]
     #[ivars = TargetIvars]
-    pub struct AgentTarget;
+    pub(crate) struct AgentTarget;
 
     unsafe impl NSObjectProtocol for AgentTarget {}
 
@@ -369,7 +369,7 @@ define_class!(
 );
 
 impl AgentTarget {
-    pub fn new(mtm: MainThreadMarker, key: AgentKey) -> Retained<AgentTarget> {
+    pub(crate) fn new(mtm: MainThreadMarker, key: AgentKey) -> Retained<AgentTarget> {
         let this = Self::alloc(mtm).set_ivars(TargetIvars { key });
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         unsafe { msg_send![super(this), init] }

@@ -10,7 +10,7 @@ use ide_core::LockIgnoringPoison;
 use ide_rpc::{RequestId, SendError, Transport};
 use serde_json::{Value, json};
 
-use crate::error::Error;
+use crate::error::{Error, Refusal};
 use crate::protocol::{self, Message};
 
 pub(crate) use ide_rpc::contained;
@@ -188,7 +188,7 @@ impl ide_rpc::Receiver<Waiting> for Dispatch {
 }
 
 /// Answers one request from the adapter; dropped unanswered, it answers with a failure.
-pub(crate) struct Responder(ide_rpc::Responder<String>);
+pub(crate) struct Responder(ide_rpc::Responder<Refusal>);
 
 impl Responder {
     fn new(
@@ -197,13 +197,13 @@ impl Responder {
         seq: i64,
         command: String,
     ) -> Responder {
-        let answer = move |answer: Result<Value, String>| {
+        let answer = move |answer: Result<Value, Refusal>| {
             let Some(transport) = transport.upgrade() else {
                 return;
             };
             let (success, message, body) = match answer {
                 Ok(body) => (true, None, body),
-                Err(message) => (false, Some(message), Value::Null),
+                Err(refusal) => (false, Some(refusal.to_string()), Value::Null),
             };
             let response = Message::Response {
                 seq: transport.next_id().get(),
@@ -215,18 +215,15 @@ impl Responder {
             };
             let _ = send(&transport, recorder.as_deref(), &response);
         };
-        Responder(ide_rpc::Responder::new(
-            answer,
-            "the request was not answered".to_string(),
-        ))
+        Responder(ide_rpc::Responder::new(answer, Refusal::Unanswered))
     }
 
     pub(crate) fn ok(self, body: Value) {
         self.0.ok(body);
     }
 
-    pub(crate) fn fail(self, message: &str) {
-        self.0.fail(message.to_string());
+    pub(crate) fn fail(self, refusal: Refusal) {
+        self.0.fail(refusal);
     }
 }
 

@@ -36,16 +36,16 @@ impl Part {
 
 /// How many entries of a part run and how many ended, for the button in the session's head.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
-pub struct Tally {
+pub(crate) struct Tally {
     /// What runs, without the housekeeping that activity indicators leave out.
-    pub running: usize,
-    pub ended: usize,
+    pub(crate) running: usize,
+    pub(crate) ended: usize,
     /// Every entry the list shows.
-    pub listed: usize,
+    pub(crate) listed: usize,
 }
 
 /// What the list of `part` of `thread` holds.
-pub fn tally(thread: &Thread, part: Part) -> Tally {
+pub(crate) fn tally(thread: &Thread, part: Part) -> Tally {
     let mut tally = Tally::default();
     let mut count = |status: TaskStatus, ambient: bool| {
         tally.listed += 1;

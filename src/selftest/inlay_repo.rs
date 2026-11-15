@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 use objc2::rc::Retained;
 use objc2_foundation::NSRect;
 
-use super::{check, finish, helpers, snapshot};
+use super::{check, finish, give_up, helpers, snapshot};
 use crate::editor::insets::{self, Layer};
 use crate::editor::{self, EditorTextView};
 use crate::window;
@@ -34,12 +34,11 @@ fn view() -> Option<Retained<EditorTextView>> {
     editor::editor_for(&controller, &root().join(FILE))
 }
 
-pub fn run() {
+pub(crate) fn run() {
     helpers::open_trusted(&root());
     helpers::wait_for_editor(&root(), &root().join(FILE), |opened| {
         if opened.is_none() {
-            check("the file opens", false, "");
-            return finish(SCENARIO);
+            return give_up(SCENARIO, "the file opens");
         }
         let asked = Cell::new(Instant::now());
         let hinted = move || {
@@ -72,8 +71,7 @@ fn gaps_shown(view: &EditorTextView) -> (bool, usize, usize, usize) {
 /// Scrolls to `LINE` once rust-analyzer's hints arrived, or once it gave up on them.
 fn scrolled() {
     let Some(view) = view() else {
-        check("the file opens", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the file opens");
     };
     let at = view.line_start(LINE).unwrap_or(0);
     let before = editor::LAID_OUT.load(std::sync::atomic::Ordering::Relaxed);
@@ -91,7 +89,9 @@ fn scrolled() {
 }
 
 fn look() {
-    let Some(view) = view() else { return finish(SCENARIO) };
+    let Some(view) = view() else {
+        return give_up(SCENARIO, "the editor is open");
+    };
     if let Some(window) = view.window() {
         window.displayIfNeeded();
         snapshot(&window, "inlay-repo");

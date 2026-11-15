@@ -3,7 +3,7 @@
 use super::*;
 
 /// Puts carets at UTF-16 offsets `at`, the last one the view's own, for the self-test.
-pub fn set(view: &EditorTextView, mut at: Vec<Range<usize>>) {
+pub(crate) fn set(view: &EditorTextView, mut at: Vec<Range<usize>>) {
     let Some(primary) = at.pop() else { return };
     view.ivars().carets.borrow_mut().extra = at;
     select(view, &primary);
@@ -11,6 +11,6 @@ pub fn set(view: &EditorTextView, mut at: Vec<Range<usize>>) {
 }
 
 /// Every caret, sorted, for the self-test.
-pub fn carets(view: &EditorTextView) -> Vec<Range<usize>> {
+pub(crate) fn carets(view: &EditorTextView) -> Vec<Range<usize>> {
     all(view).0
 }

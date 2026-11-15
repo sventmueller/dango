@@ -17,10 +17,10 @@ use splat_render::picture::Sizing;
 use splat_render::remote;
 
 /// Pictures on paper are three quarters of their size on screen, as the text is.
-pub const PRINT_SCALE: f64 = 0.75;
+pub(crate) const PRINT_SCALE: f64 = 0.75;
 
 /// What a page says instead of a formula or diagram.
-pub fn alt_of(figure: &Figure) -> String {
+pub(crate) fn alt_of(figure: &Figure) -> String {
     match figure {
         Figure::Math { tex, .. } => tex.to_string(),
         Figure::Diagram { .. } => splat_i18n::t("Diagramm").to_string(),
@@ -28,7 +28,7 @@ pub fn alt_of(figure: &Figure) -> String {
 }
 
 /// A drawn formula or diagram as `<img>` with the picture inside it, at twice its size for sharp display; main thread.
-pub fn figure_html(key: &Key, alt: &str) -> Option<String> {
+pub(crate) fn figure_html(key: &Key, alt: &str) -> Option<String> {
     let rendered = js::cached(key)?;
     // One ex is about half the 16 px body text of the page.
     let (size, attributes) = match rendered.sizing {
@@ -47,7 +47,7 @@ pub fn figure_html(key: &Key, alt: &str) -> Option<String> {
 }
 
 /// A drawn formula or diagram for Word; main thread.
-pub fn word_figure(key: &Key) -> Option<Picture> {
+pub(crate) fn word_figure(key: &Key) -> Option<Picture> {
     let rendered = js::cached(key)?;
     // One ex is about half the 11 pt body text.
     let size = match rendered.sizing {
@@ -58,13 +58,13 @@ pub fn word_figure(key: &Key) -> Option<Picture> {
 }
 
 /// A picture from the web that is already loaded, for Word; main thread.
-pub fn remote_picture(url: &str) -> Option<Picture> {
+pub(crate) fn remote_picture(url: &str) -> Option<Picture> {
     let rendered = remote::get(url, None).flatten()?;
     picture_of(&rendered.image, rendered.image.size())
 }
 
 /// `picture` at its size on paper.
-pub fn on_paper(picture: Picture) -> Picture {
+pub(crate) fn on_paper(picture: Picture) -> Picture {
     Picture {
         width: picture.width * PRINT_SCALE,
         height: picture.height * PRINT_SCALE,
@@ -82,7 +82,7 @@ fn picture_of(image: &NSImage, size: NSSize) -> Option<Picture> {
 }
 
 /// A local image for Word: PNG and JPEG as they are, other formats converted to PNG.
-pub fn local_picture(url: &str, doc_dir: Option<&Path>) -> Option<Picture> {
+pub(crate) fn local_picture(url: &str, doc_dir: Option<&Path>) -> Option<Picture> {
     let path = &resolve_path(url, doc_dir)?;
     if !may_carry_along(path, doc_dir) {
         return None;
@@ -120,7 +120,7 @@ pub fn local_picture(url: &str, doc_dir: Option<&Path>) -> Option<Picture> {
 }
 
 /// A local image as `data:` URL: web formats as they are, others converted to PNG. Images from the web stay links.
-pub fn embedded(url: &str, doc_dir: Option<&Path>) -> Option<String> {
+pub(crate) fn embedded(url: &str, doc_dir: Option<&Path>) -> Option<String> {
     if url.contains("://") && splat_markdown::url::behind_file_scheme(url).is_none() {
         return None;
     }
@@ -167,7 +167,7 @@ fn decoded_file(path: &Path, bytes: &[u8]) -> Option<Decoded> {
 /// Whether a file that leaves the Mac with the document may take `path` along: what lies in the document's folder or
 /// its repository does, so a document from someone else cannot pull the user's files into what gets sent on. The rule
 /// is splat's.
-pub fn may_carry_along(path: &Path, doc_dir: Option<&Path>) -> bool {
+pub(crate) fn may_carry_along(path: &Path, doc_dir: Option<&Path>) -> bool {
     let Some(doc_dir) = doc_dir else { return false };
     let home = splat_markdown::url::home();
     let root = doc_dir
@@ -182,7 +182,7 @@ pub fn may_carry_along(path: &Path, doc_dir: Option<&Path>) -> bool {
 }
 
 /// A relative link of the document as the exported page in `export_dir` reaches the same file.
-pub fn rebased(link: &str, doc_dir: Option<&Path>, export_dir: Option<&Path>) -> String {
+pub(crate) fn rebased(link: &str, doc_dir: Option<&Path>, export_dir: Option<&Path>) -> String {
     let (Some(doc_dir), Some(export_dir)) = (doc_dir, export_dir) else {
         return link.to_string();
     };

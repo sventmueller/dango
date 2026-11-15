@@ -12,13 +12,10 @@
 //!
 //! [`guard`] holds a request for a provider outside the Mac back until gitleaks found nothing in its text (R15).
 
-#![warn(missing_docs, unreachable_pub)]
+#![warn(missing_docs)]
 
-use ide_core::LockIgnoringPoison;
 use std::ops::Range;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
 
 pub mod copilot;
 pub mod fim;
@@ -117,55 +114,7 @@ impl ide_core::explain::Explain for Error {
 /// cancel.cancel();
 /// assert_eq!(rx.recv().unwrap(), Err(Error::Cancelled));
 /// ```
-#[derive(Clone, Default)]
-pub struct Cancel(Arc<CancelState>);
-
-#[derive(Default)]
-struct CancelState {
-    cancelled: AtomicBool,
-    hooks: Mutex<Vec<Box<dyn FnOnce() + Send>>>,
-}
-
-impl Cancel {
-    /// A request not cancelled yet.
-    pub fn new() -> Cancel {
-        Cancel::default()
-    }
-
-    /// Cancels the request and runs the hooks the provider set, on the caller's thread; they only close connections
-    /// or send a cancel note, so this does not block.
-    pub fn cancel(&self) {
-        if self.0.cancelled.swap(true, Ordering::SeqCst) {
-            return;
-        }
-        let hooks = std::mem::take(&mut *self.0.hooks.lock_ignoring_poison());
-        for hook in hooks {
-            hook();
-        }
-    }
-
-    /// Whether the request was cancelled.
-    pub fn is_cancelled(&self) -> bool {
-        self.0.cancelled.load(Ordering::SeqCst)
-    }
-
-    /// Runs `hook` when the request is cancelled, or now if it already was; how a provider stops work under way.
-    pub fn on_cancel(&self, hook: impl FnOnce() + Send + 'static) {
-        let mut hooks = self.0.hooks.lock_ignoring_poison();
-        if self.is_cancelled() {
-            drop(hooks);
-            hook();
-        } else {
-            hooks.push(Box::new(hook));
-        }
-    }
-}
-
-impl std::fmt::Debug for Cancel {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Cancel").field(&self.is_cancelled()).finish()
-    }
-}
+pub use ide_core::Cancel;
 
 /// Where an answer goes: called once, on a thread of the provider's, never on the caller's.
 pub type Reply = Box<dyn FnOnce(Result<Vec<Prediction>, Error>) + Send>;

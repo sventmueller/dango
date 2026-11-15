@@ -16,10 +16,9 @@ use crate::uri;
 
 /// A symbol the project search found.
 #[derive(Debug, Clone, PartialEq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct ProjectSymbol {
-    /// Its name.
     pub name: String,
-    /// What kind of symbol it is.
     pub kind: SymbolKind,
     /// The name of what contains it, such as a module or type, if the server said.
     pub container: Option<String>,
@@ -50,17 +49,16 @@ pub enum Types {
 
 /// An entry of a call or type hierarchy.
 #[derive(Debug, Clone, PartialEq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct HierarchyItem {
-    /// Its name.
     pub name: String,
-    /// What kind of symbol it is.
     pub kind: SymbolKind,
     /// More about it, such as its signature, if the server said.
-    pub detail: Option<String>,
+    pub(crate) detail: Option<String>,
     /// Its document.
     pub uri: Uri,
     /// All of it, in UTF-16.
-    pub range: Range,
+    pub(crate) range: Range,
     /// Its name, in UTF-16; where a click leads.
     pub selection_range: Range,
     raw: Value,
@@ -260,7 +258,7 @@ impl Server {
     }
 
     /// Whether the server can fill in the range of a project symbol it sent without one.
-    pub fn resolves_project_symbols(&self) -> bool {
+    pub(crate) fn resolves_project_symbols(&self) -> bool {
         capabilities::option(&self.inner().lock().raw, "workspaceSymbolProvider", "resolveProvider")
     }
 

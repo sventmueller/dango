@@ -8,7 +8,7 @@ pub struct Theme {
     /// What the session resolves cell colours from.
     pub palette: Palette,
     /// Behind selected text.
-    pub selection: Rgb,
+    pub(crate) selection: Rgb,
 }
 
 const fn hex(rgb: u32) -> Rgb {

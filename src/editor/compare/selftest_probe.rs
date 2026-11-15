@@ -3,7 +3,7 @@
 use super::*;
 
 /// The text of the comparison tab for `path`, for the self-test.
-pub fn shown(path: &Path) -> Option<String> {
+pub(crate) fn shown(path: &Path) -> Option<String> {
     let key = format!("compare:{}", path.display());
     with_shown(|shown| {
         shown

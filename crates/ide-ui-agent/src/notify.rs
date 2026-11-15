@@ -26,7 +26,7 @@ fn allowed() -> bool {
 }
 
 /// Whether the user would miss what happens in a tab that is `shown` now.
-pub fn user_looks_elsewhere(shown: bool) -> bool {
+pub(crate) fn user_looks_elsewhere(shown: bool) -> bool {
     let Some(mtm) = MainThreadMarker::new() else {
         return false;
     };
@@ -34,7 +34,7 @@ pub fn user_looks_elsewhere(shown: bool) -> bool {
 }
 
 /// Posts a notification; asks for permission the first time.
-pub fn post(id: &str, title: &str, body: &str) {
+pub(crate) fn post(id: &str, title: &str, body: &str) {
     NOTIFIED.fetch_add(1, Ordering::Relaxed);
     if !allowed() {
         return;
@@ -86,4 +86,4 @@ mod tests {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

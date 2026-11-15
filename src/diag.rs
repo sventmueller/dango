@@ -1,1 +1,1 @@
-pub use ide_ui_common::diag::*;
+pub(crate) use ide_ui_common::diag::*;

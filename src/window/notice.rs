@@ -9,7 +9,7 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSObjectNSDelayedPerforming, NSSize};
 
-use crate::util::{ns, symbol};
+use crate::util::{activate, ns, symbol};
 
 /// How far the note keeps from the foot, above an editor's status line.
 const BOTTOM: f64 = 40.0;
@@ -18,7 +18,7 @@ const SHOWN: f64 = 8.0;
 
 /// Shows `text` at the foot of `over`, in front of what it holds, until it goes by itself; the top is the place of an
 /// editor's bar about its file.
-pub fn show(mtm: MainThreadMarker, over: &NSView, text: &str) -> Retained<NSBox> {
+pub(crate) fn show(mtm: MainThreadMarker, over: &NSView, text: &str) -> Retained<NSBox> {
     let note = NSBox::new(mtm);
     note.setBoxType(NSBoxType::Custom);
     note.setTitlePosition(NSTitlePosition::NoTitle);
@@ -44,12 +44,11 @@ pub fn show(mtm: MainThreadMarker, over: &NSView, text: &str) -> Retained<NSBox>
     }
     over.addSubview(&note);
     note.setTranslatesAutoresizingMaskIntoConstraints(false);
-    note.bottomAnchor()
-        .constraintEqualToAnchor_constant(&over.bottomAnchor(), -BOTTOM)
-        .setActive(true);
-    note.centerXAnchor()
-        .constraintEqualToAnchor(&over.centerXAnchor())
-        .setActive(true);
+    activate([
+        note.bottomAnchor()
+            .constraintEqualToAnchor_constant(&over.bottomAnchor(), -BOTTOM),
+        note.centerXAnchor().constraintEqualToAnchor(&over.centerXAnchor()),
+    ]);
     announce(mtm, text);
     // SAFETY: `removeFromSuperview` takes no argument, so the nil object is never read; the run loop keeps the note
     // alive until then.
@@ -57,4 +56,4 @@ pub fn show(mtm: MainThreadMarker, over: &NSView, text: &str) -> Retained<NSBox>
     note
 }
 
-pub use ide_ui_common::panel::announce;
+pub(crate) use ide_ui_common::panel::announce;

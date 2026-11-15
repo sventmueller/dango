@@ -32,7 +32,7 @@ pub(super) struct Follow {
 }
 
 impl Follow {
-    pub fn new() -> Rc<Follow> {
+    pub(super) fn new() -> Rc<Follow> {
         Rc::new(Follow {
             on: Cell::new(true),
             last: Cell::new(0.0),
@@ -40,7 +40,7 @@ impl Follow {
         })
     }
 
-    pub fn on(&self) -> bool {
+    pub(super) fn on(&self) -> bool {
         self.on.get()
     }
 }
@@ -194,7 +194,7 @@ impl Timeline {
     }
 
     /// Moves a glide on by one frame of `link`.
-    pub fn glide_frame(&self, link: &CADisplayLink) {
+    pub(crate) fn glide_frame(&self, link: &CADisplayLink) {
         if !self.follow.on() || !self.is_visible() {
             return self.stop_glide();
         }

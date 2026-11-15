@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Sender, channel};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use alacritty_terminal::event::{Event as TermEvent, EventListener, WindowSize};
 use alacritty_terminal::grid::{Dimensions, Scroll as TermScroll};
@@ -32,7 +32,7 @@ use crate::snapshot::{self, Palette, Point, Snapshot};
 use crate::{integration, io as reader, sys};
 
 /// The most history lines a session keeps, whatever the settings say.
-pub const MAX_SCROLLBACK: usize = 100_000;
+pub(crate) const MAX_SCROLLBACK: usize = 100_000;
 
 /// What runs in the terminal.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -50,10 +50,9 @@ pub enum Program {
 
 /// The size of the terminal in cells and of one cell in pixels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Size {
-    /// Columns.
     pub columns: u16,
-    /// Lines.
     pub lines: u16,
     /// Width of a cell in pixels.
     pub cell_width: u16,
@@ -133,12 +132,12 @@ impl Dimensions for GridSize {
 
 /// How a session starts.
 #[derive(Debug, Clone)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Options {
     /// What runs in it.
     pub program: Program,
     /// The working directory it starts in.
     pub cwd: PathBuf,
-    /// Its size.
     pub size: Size,
     /// How many lines of history it keeps, at most `MAX_SCROLLBACK`.
     pub scrollback: usize,
@@ -346,11 +345,6 @@ impl Session {
     /// The process number of the program, which leads the terminal's session.
     pub fn pid(&self) -> u32 {
         self.pid
-    }
-
-    /// The supervisor's number for the program.
-    pub fn process(&self) -> ProcessId {
-        self.process
     }
 
     /// Whether the program still runs.
@@ -646,23 +640,12 @@ fn hang_up(master: &File, shell: i32, grace: Duration) {
     sys::signal_group(front, libc::SIGHUP);
     ide_core::thread::detach_or_run("terminal-hang-up", move || {
         for signal in [libc::SIGTERM, libc::SIGKILL] {
-            if group_ends_within(front, grace) {
+            if ide_process::reaper::group_ends_within(front, grace) {
                 return;
             }
             sys::signal_group(front, signal);
         }
     });
-}
-
-fn group_ends_within(group: i32, grace: Duration) -> bool {
-    let deadline = Instant::now() + grace;
-    while sys::group_exists(group) {
-        if Instant::now() >= deadline {
-            return false;
-        }
-        std::thread::sleep(Duration::from_millis(20));
-    }
-    true
 }
 
 #[cfg(test)]

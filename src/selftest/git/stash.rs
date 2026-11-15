@@ -14,7 +14,7 @@ use splat_i18n::{t, tf};
 
 use super::{answer_sheet, fixture_git, pictures, sheet_default_button, sheet_ready, sheet_views, window_of, write};
 use crate::selftest::helpers::{editor, text_of, type_at, wait_on};
-use crate::selftest::{check, finish, snapshot};
+use crate::selftest::{check, finish, give_up, give_up_saying, snapshot};
 use crate::util::main_soon;
 use crate::window::WindowController;
 use ide_ui_git::probe::{self, StashAction};
@@ -29,15 +29,14 @@ const CHANGED_README: &str = "# Stash\n\nchanged in the working tree\n";
 const COMMITTED_LIBRARY: &str = "pub fn one() {}\n";
 const PARKED: &str = "Parked work";
 
-pub fn run() {
+pub(crate) fn run() {
     let folder = crate::selftest::helpers::folder("stash-project");
     std::thread::spawn(move || {
         let made = make_repository(&folder);
         main_soon(move || match made {
             Ok(()) => open(folder),
             Err(error) => {
-                check("a test repository is made", false, error);
-                finish(SCENARIO);
+                give_up_saying(SCENARIO, "a test repository is made", error);
             }
         });
     });
@@ -71,8 +70,7 @@ fn job(
         main_soon(move || match done {
             Ok(()) => then(root),
             Err(error) => {
-                check("a step of the test repository works", false, error);
-                finish(SCENARIO);
+                give_up_saying(SCENARIO, "a step of the test repository works", error);
             }
         });
     });
@@ -115,7 +113,7 @@ fn open(folder: PathBuf) {
 
 fn listed(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check("the panel lists the changes and the editors are open", ok, "");
     check(
@@ -124,7 +122,7 @@ fn listed(root: PathBuf, ok: bool) {
         "",
     );
     let Some(library) = editor(&controller, "lib.rs") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "lib.rs opens in an editor");
     };
     type_at(&library, objc2_foundation::NSRange::new(0, 0), "// unsaved\n");
     probe::stash(&controller);
@@ -140,7 +138,7 @@ fn save_offered(root: PathBuf, ok: bool) {
     );
     super::sheet_pictures(root, "git-stash-save", |root| {
         if !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
-            return finish(SCENARIO);
+            return give_up(SCENARIO, "the sheet is there to answer");
         }
         wait_on(root.clone(), sheet_ready, options_asked);
     });
@@ -163,7 +161,7 @@ fn options_asked(root: PathBuf, ok: bool) {
     }
     super::sheet_pictures(root, "git-stash-options", |root| {
         if !answer_sheet(&root, NSAlertFirstButtonReturn, Some(PARKED)) {
-            return finish(SCENARIO);
+            return give_up(SCENARIO, "the sheet is there to answer");
         }
         wait_on(
             root.clone(),
@@ -175,7 +173,7 @@ fn options_asked(root: PathBuf, ok: bool) {
 
 fn stashed(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let listed = probe::stashes(&controller);
     check(
@@ -201,7 +199,7 @@ fn stashed(root: PathBuf, ok: bool) {
 
 fn reloaded(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let shown: Vec<(String, bool)> = ["README.md", "lib.rs"]
         .iter()
@@ -225,7 +223,7 @@ fn reloaded(root: PathBuf, ok: bool) {
 
 fn stash_opened(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let hash = probe::stashes(&controller).remove(0).0;
     let rows = probe::stash_rows(&controller, &hash);
@@ -255,7 +253,7 @@ fn stash_opened(root: PathBuf, ok: bool) {
 
 fn apply(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let hash = probe::stashes(&controller).remove(0).0;
     probe::stash_action(&controller, &hash, StashAction::Apply);
@@ -268,7 +266,7 @@ fn apply(root: PathBuf) {
 
 fn applied(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check(
         "applying brings the changes back and keeps the entry",
@@ -306,7 +304,7 @@ fn pop_into_conflict(root: PathBuf) {
         |c| idle(c) && panel::seen(c).is_some_and(|s| s.changes.is_empty()),
         |root, _| {
             let Some(controller) = window_of(&root) else {
-                return finish(SCENARIO);
+                return give_up(SCENARIO, "the folder's window is open");
             };
             let hash = probe::stashes(&controller).remove(0).0;
             probe::stash_action(&controller, &hash, StashAction::Pop);
@@ -317,7 +315,7 @@ fn pop_into_conflict(root: PathBuf) {
 
 fn popped(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let banner = probe::banner(&controller).unwrap_or_default();
     check(
@@ -334,7 +332,7 @@ fn popped(root: PathBuf, ok: bool) {
     );
     pictures(root, "git-stash-conflict", |root| {
         let Some(controller) = window_of(&root) else {
-            return finish(SCENARIO);
+            return give_up(SCENARIO, "the folder's window is open");
         };
         probe::end_conflict(&controller, false);
         wait_on(root.clone(), sheet_ready, abort_asked);
@@ -349,7 +347,7 @@ fn abort_asked(root: PathBuf, ok: bool) {
         format!("{default:?}"),
     );
     if !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the sheet is there to answer");
     }
     wait_on(
         root.clone(),
@@ -360,7 +358,7 @@ fn abort_asked(root: PathBuf, ok: bool) {
 
 fn aborted(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let readme = std::fs::read_to_string(root.join(README)).unwrap_or_default();
     check(
@@ -389,7 +387,7 @@ fn aborted(root: PathBuf, ok: bool) {
 
 fn finish_conflict(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     probe::end_conflict(&controller, true);
     wait_on(
@@ -401,7 +399,7 @@ fn finish_conflict(root: PathBuf) {
 
 fn finished(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let seen = panel::seen(&controller);
     check(
@@ -424,7 +422,7 @@ fn finished(root: PathBuf, ok: bool) {
 
 fn staged_stashed(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check(
         "Nur Vorgemerktes stashen parks the staged changes and leaves the others",
@@ -449,7 +447,7 @@ fn delete_asked(root: PathBuf, ok: bool) {
     );
     super::sheet_pictures(root, "git-stash-delete", |root| {
         if !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
-            return finish(SCENARIO);
+            return give_up(SCENARIO, "the sheet is there to answer");
         }
         wait_on(root.clone(), |c| idle(c) && stash_count(c) == 1, deleted);
     });
@@ -458,7 +456,7 @@ fn delete_asked(root: PathBuf, ok: bool) {
 fn deleted(root: PathBuf, ok: bool) {
     check("Löschen deletes the entry", ok, "");
     let Some(window) = window_of(&root).and_then(|c| c.window()) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the window shows");
     };
     snapshot(&window, "git-stash-end");
     let findings = crate::selftest::a11y::audit::findings(&crate::selftest::a11y::audit::elements(&window));

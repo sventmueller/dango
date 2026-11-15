@@ -3,6 +3,6 @@
 use super::*;
 
 /// The folder and this Mac's id, for the self-test.
-pub fn where_and_who() -> (PathBuf, String) {
+pub(crate) fn where_and_who() -> (PathBuf, String) {
     (folder(), device_id())
 }

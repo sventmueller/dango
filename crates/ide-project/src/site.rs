@@ -53,7 +53,8 @@ impl Site {
     }
 
     /// The port it listens on.
-    pub fn port(&self) -> u16 {
+    #[cfg(test)]
+    pub(crate) fn port(&self) -> u16 {
         self.port
     }
 

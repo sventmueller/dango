@@ -104,7 +104,7 @@ fn member(source: &str, open: usize, key: &str) -> Option<usize> {
 
 /// `source` without the entries of the container at `path` whose key, or string value, `doomed` picks, and how many
 /// went; `None` when none matched or the result is not the same document minus them.
-pub fn remove(source: &str, path: &[&str], doomed: impl Fn(&str) -> bool) -> Option<(String, usize)> {
+pub(crate) fn remove(source: &str, path: &[&str], doomed: impl Fn(&str) -> bool) -> Option<(String, usize)> {
     let mut open = skip_space(source.as_bytes(), 0);
     for key in path {
         open = member(source, open, key)?;
@@ -145,7 +145,7 @@ pub fn remove(source: &str, path: &[&str], doomed: impl Fn(&str) -> bool) -> Opt
 
 /// `source`, a TOML file, without the `[projects."…"]` or `[projects.'…']` tables whose folder `doomed` picks, and how
 /// many went.
-pub fn remove_toml_projects(source: &str, doomed: impl Fn(&str) -> bool) -> Option<(String, usize)> {
+pub(crate) fn remove_toml_projects(source: &str, doomed: impl Fn(&str) -> bool) -> Option<(String, usize)> {
     let mut out = String::with_capacity(source.len());
     let mut skipping = false;
     let mut removed = 0;
@@ -189,7 +189,7 @@ fn replace(file: &Path, before: &str, text: &str) -> std::io::Result<bool> {
 
 /// Edits `file` with `edit` until the edit lands on the content it was made from, at most a few times.
 /// The files among the CLIs' settings that still name a folder `doomed` picks.
-pub fn named(home: &Path, doomed: &dyn Fn(&str) -> bool) -> Vec<String> {
+pub(crate) fn named(home: &Path, doomed: &dyn Fn(&str) -> bool) -> Vec<String> {
     [
         (home.join(".claude.json"), &["projects"][..]),
         (
@@ -231,7 +231,7 @@ fn edit_file(file: &Path, edit: impl Fn(&str) -> Option<(String, usize)>) -> Opt
 }
 
 /// Takes out of the CLIs' settings every entry for a folder `doomed` picks; what was removed, per file.
-pub fn forget(home: &Path, doomed: &dyn Fn(&str) -> bool) -> Vec<String> {
+pub(crate) fn forget(home: &Path, doomed: &dyn Fn(&str) -> bool) -> Vec<String> {
     [
         edit_file(&home.join(".claude.json"), |source| {
             remove(source, &["projects"], doomed)

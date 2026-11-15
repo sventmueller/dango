@@ -96,8 +96,7 @@ pub fn chevron(open: bool) -> Option<Retained<NSImage>> {
     let name = if open { "chevron.down" } else { "chevron.right" };
     let configuration = NSImageSymbolConfiguration::configurationWithPointSize_weight(
         CHEVRON_POINTS,
-        // SAFETY: AppKit sets its font weight constants when it loads.
-        unsafe { objc2_app_kit::NSFontWeightSemibold },
+        crate::constant!(objc2_app_kit::NSFontWeightSemibold),
     )
     .configurationByApplyingConfiguration(&NSImageSymbolConfiguration::configurationWithHierarchicalColor(
         &NSColor::secondaryLabelColor(),

@@ -26,19 +26,19 @@ use ide_ui_common::constant;
 use ide_ui_common::util::ns;
 
 /// The space between the cells and the left and right edges of the view.
-pub const INSET_X: f64 = 8.0;
+pub(crate) const INSET_X: f64 = 8.0;
 /// The space between the cells and the top and bottom edges of the view.
-pub const INSET_Y: f64 = 6.0;
+pub(crate) const INSET_Y: f64 = 6.0;
 
 /// The four faces come first in the font list, fallback fonts after them.
 const FACES: usize = 4;
 
-pub fn rect(x: f64, y: f64, width: f64, height: f64) -> CGRect {
+pub(crate) fn rect(x: f64, y: f64, width: f64, height: f64) -> CGRect {
     CGRect::new(CGPoint::new(x, y), CGSize::new(width, height))
 }
 
 /// The part of `a` inside `b`, empty where they do not meet.
-pub fn intersect(a: CGRect, b: CGRect) -> CGRect {
+pub(crate) fn intersect(a: CGRect, b: CGRect) -> CGRect {
     let left = a.origin.x.max(b.origin.x);
     let top = a.origin.y.max(b.origin.y);
     let right = (a.origin.x + a.size.width).min(b.origin.x + b.size.width);
@@ -52,7 +52,7 @@ pub fn intersect(a: CGRect, b: CGRect) -> CGRect {
     clippy::cast_sign_loss,
     reason = "the value is clamped to the target's range first"
 )]
-pub fn clamp_to(value: f64, max: usize) -> usize {
+pub(crate) fn clamp_to(value: f64, max: usize) -> usize {
     if value.is_nan() {
         return 0;
     }
@@ -61,19 +61,19 @@ pub fn clamp_to(value: f64, max: usize) -> usize {
 
 /// The size of a cell and where in it the text sits, in points rounded to the screen's pixels.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Metrics {
-    pub cell_width: f64,
-    pub cell_height: f64,
+pub(crate) struct Metrics {
+    pub(crate) cell_width: f64,
+    pub(crate) cell_height: f64,
     /// The baseline below the top of a cell.
-    pub baseline: f64,
+    pub(crate) baseline: f64,
     /// The top of an underline below the baseline.
     underline: f64,
     /// The width of underlines, strike lines and light frame lines.
-    pub stroke: f64,
+    pub(crate) stroke: f64,
     /// The middle of a strike line above the baseline.
     strike: f64,
     /// Device pixels per point.
-    pub scale: f64,
+    pub(crate) scale: f64,
 }
 
 impl Metrics {
@@ -82,7 +82,7 @@ impl Metrics {
     }
 
     /// The cells from `point` on, `cells` wide.
-    pub fn cell_rect(&self, point: Point, cells: usize) -> CGRect {
+    pub(crate) fn cell_rect(&self, point: Point, cells: usize) -> CGRect {
         rect(
             INSET_X + point.column as f64 * self.cell_width,
             INSET_Y + point.line as f64 * self.cell_height,
@@ -92,17 +92,17 @@ impl Metrics {
     }
 
     /// The band of `line` across the whole view.
-    pub fn line_rect(&self, line: usize, width: f64) -> CGRect {
+    pub(crate) fn line_rect(&self, line: usize, width: f64) -> CGRect {
         rect(0.0, INSET_Y + line as f64 * self.cell_height, width, self.cell_height)
     }
 
     /// The column and line at `x`, `y`, as fractions; outside the cells they run below 0 or past the last.
-    pub fn position(&self, x: f64, y: f64) -> (f64, f64) {
+    pub(crate) fn position(&self, x: f64, y: f64) -> (f64, f64) {
         ((x - INSET_X) / self.cell_width, (y - INSET_Y) / self.cell_height)
     }
 
     /// The columns and lines that fit into `width` × `height`.
-    pub fn fit(&self, width: f64, height: f64) -> (u16, u16) {
+    pub(crate) fn fit(&self, width: f64, height: f64) -> (u16, u16) {
         let columns = clamp_to(
             ((width - 2.0 * INSET_X) / self.cell_width).floor(),
             usize::from(u16::MAX),
@@ -118,14 +118,14 @@ impl Metrics {
     }
 
     /// A length in points as whole device pixels, as the PTY reports cell sizes.
-    pub fn pixels(&self, points: f64) -> u16 {
+    pub(crate) fn pixels(&self, points: f64) -> u16 {
         u16::try_from(clamp_to((points * self.scale).round(), usize::from(u16::MAX))).unwrap_or(u16::MAX)
     }
 }
 
 /// One of the four faces of the terminal font.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Face {
+pub(crate) enum Face {
     Regular,
     Bold,
     Italic,
@@ -142,33 +142,33 @@ impl Face {
         }
     }
 
-    pub fn index(self) -> usize {
+    pub(crate) fn index(self) -> usize {
         self as usize
     }
 }
 
 /// A glyph in one of the fonts.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Glyph {
+pub(crate) struct Glyph {
     /// The index of its font in `Fonts`.
-    pub font: usize,
-    pub glyph: CGGlyph,
-    pub advance: f64,
+    pub(crate) font: usize,
+    pub(crate) glyph: CGGlyph,
+    pub(crate) advance: f64,
 }
 
 /// The terminal's faces at one size, the fonts that fill in characters they lack, and the glyphs found so far.
-pub struct Fonts {
+pub(crate) struct Fonts {
     /// Tells these fonts from any made before, for caches of what was drawn with them.
-    pub id: u64,
+    pub(crate) id: u64,
     fonts: RefCell<Vec<CFRetained<CTFont>>>,
     fallback_names: RefCell<Vec<String>>,
     glyphs: RefCell<HashMap<(char, Face), Option<Glyph>>>,
-    pub metrics: Metrics,
+    pub(crate) metrics: Metrics,
 }
 
 impl Fonts {
     /// The system's monospaced faces at `size` points for a screen with `scale` pixels per point.
-    pub fn new(size: f64, scale: f64) -> Fonts {
+    pub(crate) fn new(size: f64, scale: f64) -> Fonts {
         let regular = system_mono(size, constant!(NSFontWeightRegular));
         let bold = system_mono(size, constant!(NSFontWeightBold));
         let italic = italic_of(&regular);
@@ -184,12 +184,12 @@ impl Fonts {
         }
     }
 
-    pub fn font(&self, index: usize) -> CFRetained<CTFont> {
+    pub(crate) fn font(&self, index: usize) -> CFRetained<CTFont> {
         self.fonts.borrow()[index].clone()
     }
 
     /// The glyph for `c` in `face`, from a fallback font where the face lacks it.
-    pub fn glyph(&self, c: char, face: Face) -> Option<Glyph> {
+    pub(crate) fn glyph(&self, c: char, face: Face) -> Option<Glyph> {
         if let Some(found) = self.glyphs.borrow().get(&(c, face)) {
             return *found;
         }
@@ -316,12 +316,12 @@ fn measure(font: &CTFont, scale: f64) -> Metrics {
     }
 }
 
-pub fn fill(ctx: &CGContext, color: Rgb, area: CGRect) {
+pub(crate) fn fill(ctx: &CGContext, color: Rgb, area: CGRect) {
     set_color(ctx, color, 1.0);
     CGContext::fill_rect(Some(ctx), area);
 }
 
-pub fn set_color(ctx: &CGContext, color: Rgb, alpha: f64) {
+pub(crate) fn set_color(ctx: &CGContext, color: Rgb, alpha: f64) {
     let channel = |v: u8| f64::from(v) / 255.0;
     let (r, g, b) = (channel(color.r), channel(color.g), channel(color.b));
     CGContext::set_rgb_fill_color(Some(ctx), r, g, b, alpha);
@@ -329,21 +329,21 @@ pub fn set_color(ctx: &CGContext, color: Rgb, alpha: f64) {
 }
 
 /// What a frame shows besides the screen itself.
-pub struct Overlay<'a> {
+pub(crate) struct Overlay<'a> {
     /// The view has the keyboard focus and its window is the key window.
-    pub focused: bool,
+    pub(crate) focused: bool,
     /// The cursor is in the visible phase of its blinking.
-    pub cursor_on: bool,
+    pub(crate) cursor_on: bool,
     /// Text an input method is composing, shown at the cursor.
-    pub marked: &'a str,
+    pub(crate) marked: &'a str,
     /// A line drawn after the program ended, and where.
-    pub final_line: Option<(usize, &'a str)>,
+    pub(crate) final_line: Option<(usize, &'a str)>,
     /// The bell's flash.
-    pub flash: bool,
+    pub(crate) flash: bool,
 }
 
 /// What a frame is drawn onto, in points from the view's top left: a Core Graphics context, or the GPU's quads.
-pub trait Canvas {
+pub(crate) trait Canvas {
     /// Fills `area` with `color` at `alpha`.
     fn fill(&mut self, color: Rgb, alpha: f64, area: CGRect);
     /// `glyph` with its origin at `x` on `baseline`.
@@ -368,7 +368,7 @@ struct Batch {
 }
 
 /// Draws straight into a Core Graphics context, as `drawRect:` and pictures of the view do.
-pub struct CgCanvas<'a> {
+pub(crate) struct CgCanvas<'a> {
     ctx: &'a CGContext,
     fonts: &'a Fonts,
     batch: Option<Batch>,
@@ -443,7 +443,7 @@ impl Canvas for CgCanvas<'_> {
 }
 
 /// Draws the lines of `screen` that meet `dirty` with Core Graphics, and over them what `overlay` adds.
-pub fn draw(ctx: &CGContext, fonts: &Fonts, theme: &Theme, screen: &Snapshot, overlay: &Overlay, dirty: CGRect) {
+pub(crate) fn draw(ctx: &CGContext, fonts: &Fonts, theme: &Theme, screen: &Snapshot, overlay: &Overlay, dirty: CGRect) {
     let mut canvas = CgCanvas {
         ctx,
         fonts,
@@ -453,7 +453,7 @@ pub fn draw(ctx: &CGContext, fonts: &Fonts, theme: &Theme, screen: &Snapshot, ov
 }
 
 /// Paints the lines of `screen` that meet `dirty` onto `canvas`, and over them what `overlay` adds.
-pub fn paint(
+pub(crate) fn paint(
     canvas: &mut impl Canvas,
     fonts: &Fonts,
     theme: &Theme,
@@ -587,7 +587,7 @@ fn text(
 }
 
 /// Draws `glyphs` of `font` at `positions` along `baseline`, in a space turned upright for them.
-pub fn show_glyphs(ctx: &CGContext, font: &CTFont, glyphs: &[CGGlyph], positions: &[CGPoint], baseline: f64) {
+pub(crate) fn show_glyphs(ctx: &CGContext, font: &CTFont, glyphs: &[CGGlyph], positions: &[CGPoint], baseline: f64) {
     let count = glyphs.len().min(positions.len());
     let c = Some(ctx);
     CGContext::save_g_state(c);
@@ -621,7 +621,7 @@ fn upright_text(ctx: &CGContext) {
 }
 
 /// A line of Core Text in `face` whose glyphs take the context's fill colour.
-pub fn line_of(fonts: &Fonts, text: &str, face: Face) -> CFRetained<CTLine> {
+pub(crate) fn line_of(fonts: &Fonts, text: &str, face: Face) -> CFRetained<CTLine> {
     let font = fonts.font(face.index());
     let string = NSMutableAttributedString::initWithString(NSMutableAttributedString::alloc(), &ns(text));
     let whole = NSRange::new(0, string.length());
@@ -644,12 +644,12 @@ pub fn line_of(fonts: &Fonts, text: &str, face: Face) -> CFRetained<CTLine> {
     unsafe { CTLine::with_attributed_string(attributed) }
 }
 
-pub fn line_width(line: &CTLine) -> f64 {
+pub(crate) fn line_width(line: &CTLine) -> f64 {
     // SAFETY: Null pointers skip the metrics not asked for.
     unsafe { line.typographic_bounds(std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut()) }
 }
 
-pub fn draw_line(ctx: &CGContext, line: &CTLine, x: f64, baseline: f64, color: Rgb) {
+pub(crate) fn draw_line(ctx: &CGContext, line: &CTLine, x: f64, baseline: f64, color: Rgb) {
     set_color(ctx, color, 1.0);
     let c = Some(ctx);
     CGContext::save_g_state(c);
@@ -663,7 +663,7 @@ pub fn draw_line(ctx: &CGContext, line: &CTLine, x: f64, baseline: f64, color: R
 
 /// The kinds of underline a cell can carry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Stroke {
+pub(crate) enum Stroke {
     Single,
     Double,
     Curly,
@@ -673,7 +673,7 @@ pub enum Stroke {
 
 impl Stroke {
     /// The length after which a dotted or dashed line repeats, for a line `width` thick.
-    pub fn period(self, width: f64) -> Option<f64> {
+    pub(crate) fn period(self, width: f64) -> Option<f64> {
         match self {
             Stroke::Dotted => Some(2.0 * width),
             Stroke::Dashed => Some(5.0 * width),
@@ -723,7 +723,7 @@ fn decorations(canvas: &mut impl Canvas, m: &Metrics, line: usize, row: &[Cell])
 
 /// Strokes an underline of `kind` across `area` with its top at `y` in the context's colour; dotted and dashed lines
 /// start `phase` into their pattern.
-pub fn draw_underline(ctx: &CGContext, m: &Metrics, kind: Stroke, area: CGRect, y: f64, phase: f64) {
+pub(crate) fn draw_underline(ctx: &CGContext, m: &Metrics, kind: Stroke, area: CGRect, y: f64, phase: f64) {
     let (x, width, t) = (area.origin.x, area.size.width, m.stroke);
     let c = Some(ctx);
     match kind {

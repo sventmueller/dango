@@ -27,7 +27,7 @@ const MAX_LINE: usize = 400;
 /// The width of the IN and OUT labels.
 const LABEL_WIDTH: f64 = 28.0;
 
-pub fn card(ctx: &Ctx<'_>, id: EntryId, call: &ToolCall) -> Retained<NSView> {
+pub(super) fn card(ctx: &Ctx<'_>, id: EntryId, call: &ToolCall) -> Retained<NSView> {
     match &call.view {
         ToolView::Agent { .. } => super::subagent::card(ctx, id, call),
         ToolView::Command {

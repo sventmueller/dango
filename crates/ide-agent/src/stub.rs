@@ -13,14 +13,14 @@ use serde_json::Value;
 
 /// A request the stub got.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Seen {
     /// The method, such as `POST`.
     pub method: String,
     /// The path with its query.
     pub path: String,
     /// The headers, names in lower case.
-    pub headers: Vec<(String, String)>,
-    /// The body.
+    pub(crate) headers: Vec<(String, String)>,
     pub body: String,
 }
 
@@ -41,8 +41,8 @@ impl Seen {
 
 /// What the stub answers.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Answer {
-    /// The status.
     pub status: u16,
     /// The headers besides `connection: close`.
     pub headers: Vec<(String, String)>,

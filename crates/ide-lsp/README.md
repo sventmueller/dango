@@ -8,7 +8,8 @@ UTF-16 code units whatever the server chose. Servers run only for folders the us
 ```mermaid
 flowchart TB
     app["the app: src/lsp"] -->|"thread lsp-find: Registry::find, Registry::config"| registry["Registry"]
-    registry -->|"helpers such as rustup which, go env, through the supervisor"| helpers(["short-lived tools"])
+    registry -->|"ide_process::tool: which on the login PATH, Helper::run of rustup which, go env"| helpers(["short-lived tools"])
+    installer -->|"ide_process::tool::Helper::run with a Cancel"| helpers
     app -->|"thread lsp-install: Installer"| installer["go install, npm install, or a checked download"]
     installer --> tools[("tools folder")]
     app -->|"Server::start(ServerConfig)"| server["Server"]
@@ -16,9 +17,9 @@ flowchart TB
     server --> writer["thread lsp-write"]
     writer -->|"stdin, Content-Length frames"| process
     process -->|"stdout"| reader["thread lsp-read: dispatch"]
-    server --> timer["thread lsp-timer: expires requests"]
+    server --> timer["ide_core::timer, the app's one timer thread: expires requests"]
     app -->|"open, change, hover, completion, ... with a callback"| server
-    reader -->|"reply callback, or timeout from lsp-timer"| callback["callback on that thread"]
+    reader -->|"reply callback, or timeout from the timer"| callback["callback on that thread"]
     reader -->|"Event: diagnostics, status, requests from the server"| sink["events sink, main_soon in the app"]
     reader -->|"pipe closed"| restart["thread lsp-restart: RestartPolicy, then launch again"]
     restart --> server

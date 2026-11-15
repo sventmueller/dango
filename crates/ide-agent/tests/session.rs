@@ -378,6 +378,51 @@ fn cancelling_while_a_request_waits_withdraws_it_and_ends_the_turn() {
 }
 
 #[test]
+fn cancelling_while_the_provider_is_silent_ends_the_stream_at_once() {
+    let project = Project::new("cancel-silent");
+    let mut first = event(
+        "message_start",
+        &json!({"type": "message_start", "message": {"model": "claude-opus-5-5", "usage": {"input_tokens": 200, "output_tokens": 1}}}),
+    );
+    first.push_str(&event(
+        "content_block_start",
+        &json!({"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}}),
+    ));
+    first.push_str(&event(
+        "content_block_delta",
+        &json!({"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "Let me think"}}),
+    ));
+    let silent = Answer {
+        parts: vec![
+            (Duration::ZERO, first),
+            (
+                Duration::from_secs(120),
+                event("message_stop", &json!({"type": "message_stop"})),
+            ),
+        ],
+        ..Answer::events("")
+    };
+    let stub = Stub::script(vec![silent]).unwrap();
+    let run = start(config(&stub, &project, Approval::Manual, false, None));
+    send(&run, "Think");
+    wait_for(&run, "the first words", |thread| {
+        entries(thread)
+            .iter()
+            .any(|e| matches!(&e.kind, EntryKind::AgentMessage(m) if m.markdown == "Let me think"))
+    });
+    let cancelled = std::time::Instant::now();
+    run.session.cancel();
+    let thread = idle(&run);
+    assert!(
+        cancelled.elapsed() < Duration::from_secs(5),
+        "the turn waited {:?} for the silent provider",
+        cancelled.elapsed()
+    );
+    assert!(notices(&thread).contains(&Notice::Interrupted));
+    assert_eq!(stub.seen().len(), 1, "no request after the cancel");
+}
+
+#[test]
 fn searches_the_to_do_list_and_a_fetched_page_run_in_one_reply() {
     let project = Project::new("tools");
     let page = Stub::start(|_| {
@@ -422,6 +467,40 @@ fn searches_the_to_do_list_and_a_fetched_page_run_in_one_reply() {
     let todos = thread.todos();
     assert_eq!(todos.len(), 2);
     assert_eq!(todos[1].status, TodoStatus::InProgress);
+}
+
+#[test]
+fn cancelling_while_a_fetched_page_is_silent_ends_the_fetch_at_once() {
+    let project = Project::new("cancel-fetch");
+    let page = Stub::start(|_| {
+        let mut answer = Answer::json(200, &json!(null));
+        answer.headers = vec![("content-type".into(), "text/html".into())];
+        answer.parts = vec![(Duration::from_secs(120), "<p>late</p>".into())];
+        answer
+    })
+    .unwrap();
+    let stub = Stub::script(vec![
+        calls(&[("f1", "web_fetch", json!({"url": format!("{}/slow", page.url())}))]),
+        says("Never asked for."),
+    ])
+    .unwrap();
+    let run = start(config(&stub, &project, Approval::All, false, None));
+    send(&run, "Read the page");
+    let asked = std::time::Instant::now() + Duration::from_secs(20);
+    while page.seen().is_empty() {
+        assert!(std::time::Instant::now() < asked, "the page was never fetched");
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    let cancelled = std::time::Instant::now();
+    run.session.cancel();
+    let thread = idle(&run);
+    assert!(
+        cancelled.elapsed() < Duration::from_secs(5),
+        "the fetch waited {:?} for the silent page",
+        cancelled.elapsed()
+    );
+    assert_eq!(tool(&thread, "f1").status, ToolStatus::Failed);
+    assert_eq!(stub.seen().len(), 1, "no request after the cancel");
 }
 
 #[test]

@@ -13,7 +13,7 @@ fn commit(repository: &Repository, path: &str, content: &str, message: &str) -> 
     write(repository.root(), path, content);
     repository.stage(&[path]).unwrap();
     repository.commit(message, CommitOptions::default()).unwrap();
-    repository.head().unwrap().unwrap()
+    repository.head().unwrap().unwrap().to_string()
 }
 
 /// A repository whose `topic` branch changed `a.txt` one way and whose `main` changed it another.

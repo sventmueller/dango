@@ -12,7 +12,7 @@ use splat_i18n::t;
 
 use ide_ui_common::util::{label, ns, pin_edges, set_action, symbol, symbol_button};
 
-pub struct Banner {
+pub(crate) struct Banner {
     root: Retained<NSView>,
     message: Retained<NSTextField>,
 }
@@ -20,7 +20,7 @@ pub struct Banner {
 impl Banner {
     /// A banner with the symbol `symbol_name` on a background of `tint`, whose button, if any, sends its action and
     /// whose close button sends `close` to `target`.
-    pub fn new(
+    pub(crate) fn new(
         mtm: MainThreadMarker,
         symbol_name: &str,
         tint: &NSColor,
@@ -79,16 +79,16 @@ impl Banner {
         Banner { root, message }
     }
 
-    pub fn view(&self) -> &NSView {
+    pub(crate) fn view(&self) -> &NSView {
         &self.root
     }
 
-    pub fn show(&self, text: &str) {
+    pub(crate) fn show(&self, text: &str) {
         self.message.setStringValue(&ns(text));
         self.root.setHidden(false);
     }
 
-    pub fn hide(&self) {
+    pub(crate) fn hide(&self) {
         self.root.setHidden(true);
     }
 }

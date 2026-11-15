@@ -4,6 +4,7 @@
 use std::path::PathBuf;
 
 use crate::error::{Error, Result};
+use crate::id::CommitId;
 use crate::path::from_bytes;
 use crate::repo::Repository;
 
@@ -43,7 +44,7 @@ pub struct Status {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct BranchStatus {
     /// The commit HEAD points at; `None` before the first commit.
-    pub commit: Option<String>,
+    pub commit: Option<CommitId>,
     /// The branch's short name; `None` when HEAD is detached.
     pub head: Option<String>,
     /// The upstream, such as `origin/main`.
@@ -54,10 +55,10 @@ pub struct BranchStatus {
 
 /// One file in the status.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct StatusEntry {
     /// The path relative to the repository's root; for a rename, the new one.
     pub path: PathBuf,
-    /// What kind of entry it is.
     pub kind: EntryKind,
     /// The change between HEAD and the index.
     pub index: FileState,
@@ -138,11 +139,11 @@ pub enum Conflict {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Submodule {
     /// It points at another commit.
-    pub commit_changed: bool,
+    pub(crate) commit_changed: bool,
     /// Its tracked files changed.
-    pub modified: bool,
+    pub(crate) modified: bool,
     /// It has untracked files.
-    pub untracked: bool,
+    pub(crate) untracked: bool,
 }
 
 impl Repository {
@@ -205,7 +206,7 @@ fn header(status: &mut Status, line: &str) {
         return;
     };
     match key {
-        "branch.oid" => status.branch.commit = (value != "(initial)").then(|| value.to_string()),
+        "branch.oid" => status.branch.commit = (value != "(initial)").then(|| CommitId::from_git(value)),
         "branch.head" => status.branch.head = (value != "(detached)").then(|| value.to_string()),
         "branch.upstream" => status.branch.upstream = Some(value.to_string()),
         "branch.ab" => {
@@ -338,7 +339,7 @@ mod tests {
             "# branch.oid {HASH}\0# branch.head main\0# branch.upstream origin/main\0# branch.ab +2 -3\0# stash 4\0"
         );
         let status = parse(output.as_bytes()).unwrap();
-        assert_eq!(status.branch.commit.as_deref(), Some(HASH));
+        assert_eq!(status.branch.commit.as_ref().map(CommitId::as_str), Some(HASH));
         assert_eq!(status.branch.head.as_deref(), Some("main"));
         assert_eq!(status.branch.upstream.as_deref(), Some("origin/main"));
         assert_eq!(status.branch.ahead_behind, Some((2, 3)));

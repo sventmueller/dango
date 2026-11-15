@@ -5,7 +5,7 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use ide_core::debugging::{ConsoleKind, ConsoleLine};
+use ide_dap::kept::{ConsoleKind, ConsoleLine};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, sel};
@@ -19,18 +19,18 @@ use splat_i18n::{t, tf};
 use super::model::console::Console;
 use super::panel::DebugPanel;
 use ide_ui_common::constant;
-use ide_ui_common::util::{label, ns, set_action, with_editing};
+use ide_ui_common::util::{label, ns, pin_sides, set_action, with_editing};
 use ide_ui_common::window::{TabId, TabKind, Tabs, Window};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
 /// A debug console tab.
-pub struct ConsoleTab {
+pub(crate) struct ConsoleTab {
     /// The tab's document number; none when its window had closed.
-    pub tab: Option<TabId>,
+    pub(crate) tab: Option<TabId>,
     /// The session it belongs to; none once it came back after a restart.
-    pub session: Cell<Option<u64>>,
-    pub title: RefCell<String>,
+    pub(crate) session: Cell<Option<u64>>,
+    pub(crate) title: RefCell<String>,
     model: RefCell<Console>,
     text: Retained<NSTextView>,
     input: Retained<NSTextField>,
@@ -41,14 +41,19 @@ pub struct ConsoleTab {
 
 impl ConsoleTab {
     /// Opens a console tab for the session `session` named `title`, beside nothing, in `controller`'s window.
-    pub fn open(panel: &DebugPanel, controller: &Window, session: u64, title: &str) -> Rc<ConsoleTab> {
+    pub(crate) fn open(panel: &DebugPanel, controller: &Window, session: u64, title: &str) -> Rc<ConsoleTab> {
         let console = ConsoleTab::build(panel, controller, title, Console::default());
         console.session.set(Some(session));
         console
     }
 
     /// Opens the finished console `title` with `history`, as a restart brings it back; no session starts.
-    pub fn reopen(panel: &DebugPanel, controller: &Window, title: &str, history: Vec<ConsoleLine>) -> Rc<ConsoleTab> {
+    pub(crate) fn reopen(
+        panel: &DebugPanel,
+        controller: &Window,
+        title: &str,
+        history: Vec<ConsoleLine>,
+    ) -> Rc<ConsoleTab> {
         ConsoleTab::build(panel, controller, title, Console::finished(history))
     }
 
@@ -71,22 +76,22 @@ impl ConsoleTab {
         console
     }
 
-    pub fn lines(&self) -> Vec<ConsoleLine> {
+    pub(crate) fn lines(&self) -> Vec<ConsoleLine> {
         self.model.borrow().lines().to_vec()
     }
 
-    pub fn is_finished(&self) -> bool {
+    pub(crate) fn is_finished(&self) -> bool {
         self.model.borrow().finished
     }
 
     /// Adds `text` of `kind` and shows it.
-    pub fn push(&self, kind: ConsoleKind, text: &str) {
+    pub(crate) fn push(&self, kind: ConsoleKind, text: &str) {
         self.model.borrow_mut().push(kind, text);
         self.show_all();
     }
 
     /// Takes the expression the user typed; `None` when there is nothing to evaluate.
-    pub fn ask(&self, expression: &str) -> Option<String> {
+    pub(crate) fn ask(&self, expression: &str) -> Option<String> {
         let asked = self.model.borrow_mut().ask(expression)?;
         self.back.set(None);
         self.input.setStringValue(&ns(""));
@@ -95,14 +100,14 @@ impl ConsoleTab {
     }
 
     /// Ends the console with `note`: it takes no more input and says it is over.
-    pub fn finish(&self, note: &str) {
+    pub(crate) fn finish(&self, note: &str) {
         self.model.borrow_mut().finish(note);
         self.session.set(None);
         self.show_all();
     }
 
     /// Empties a finished console for a new session named `title`, which writes to it from now on.
-    pub fn start_over(&self, controller: &Window, title: &str) {
+    pub(crate) fn start_over(&self, controller: &Window, title: &str) {
         *self.model.borrow_mut() = Console::default();
         *self.title.borrow_mut() = title.to_string();
         self.session.set(None);
@@ -113,7 +118,7 @@ impl ConsoleTab {
     }
 
     /// Puts what was asked one step further back (↑) or forward (↓) into the field.
-    pub fn step_history(&self, older: bool) {
+    pub(crate) fn step_history(&self, older: bool) {
         let back = match (self.back.get(), older) {
             (None, true) => Some(0),
             (None, false) => None,
@@ -226,30 +231,16 @@ fn views(
     stack.addArrangedSubview(&scroll);
     for below in [&input, &finished] {
         stack.addArrangedSubview(below);
-        below
-            .leadingAnchor()
-            .constraintEqualToAnchor_constant(&stack.leadingAnchor(), 8.0)
-            .setActive(true);
-        below
-            .trailingAnchor()
-            .constraintEqualToAnchor_constant(&stack.trailingAnchor(), -8.0)
-            .setActive(true);
+        pin_sides(below, &stack, 8.0);
     }
-    scroll
-        .leadingAnchor()
-        .constraintEqualToAnchor(&stack.leadingAnchor())
-        .setActive(true);
-    scroll
-        .trailingAnchor()
-        .constraintEqualToAnchor(&stack.trailingAnchor())
-        .setActive(true);
+    pin_sides(&scroll, &stack, 0.0);
     scroll.setContentHuggingPriority_forOrientation(1.0, objc2_app_kit::NSLayoutConstraintOrientation::Vertical);
     (stack.into_super(), text, input, finished)
 }
 
 impl DebugPanel {
     /// The console of the tab `tab`.
-    pub fn console_of_tab(&self, tab: TabId) -> Option<Rc<ConsoleTab>> {
+    pub(crate) fn console_of_tab(&self, tab: TabId) -> Option<Rc<ConsoleTab>> {
         self.ivars()
             .links
             .borrow()
@@ -260,7 +251,7 @@ impl DebugPanel {
     }
 
     /// The console of the session `session`.
-    pub fn console_of(&self, session: u64) -> Option<Rc<ConsoleTab>> {
+    pub(crate) fn console_of(&self, session: u64) -> Option<Rc<ConsoleTab>> {
         self.ivars()
             .links
             .borrow()
@@ -271,12 +262,12 @@ impl DebugPanel {
     }
 
     /// The tab of a console closed.
-    pub fn console_closed(&self, tab: TabId) {
+    pub(crate) fn console_closed(&self, tab: TabId) {
         self.ivars().links.borrow_mut().consoles.retain(|c| c.tab != Some(tab));
     }
 
     /// Opens the finished console `title` with `history`, as the layout brings it back.
-    pub fn reopen_console(&self, title: &str, history: Vec<ConsoleLine>) -> bool {
+    pub(crate) fn reopen_console(&self, title: &str, history: Vec<ConsoleLine>) -> bool {
         let Some(controller) = self.controller() else {
             return false;
         };

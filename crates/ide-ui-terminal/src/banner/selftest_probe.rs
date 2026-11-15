@@ -3,7 +3,7 @@
 use super::*;
 
 impl Banner {
-    pub fn shown(&self) -> Option<String> {
+    pub(crate) fn shown(&self) -> Option<String> {
         (!self.root.isHidden()).then(|| self.message.stringValue().to_string())
     }
 }

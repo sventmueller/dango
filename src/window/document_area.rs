@@ -9,7 +9,7 @@ use objc2_app_kit::{NSEvent, NSSplitView};
 
 use crate::util::guarded;
 
-pub struct AreaIvars {
+pub(crate) struct AreaIvars {
     dragged: RefCell<Option<Box<dyn Fn()>>>,
 }
 
@@ -19,7 +19,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEDocumentArea"]
     #[ivars = AreaIvars]
-    pub struct DocumentArea;
+    pub(crate) struct DocumentArea;
 
     unsafe impl NSObjectProtocol for DocumentArea {}
 
@@ -39,7 +39,7 @@ define_class!(
 );
 
 impl DocumentArea {
-    pub fn new(mtm: MainThreadMarker) -> Retained<DocumentArea> {
+    pub(crate) fn new(mtm: MainThreadMarker) -> Retained<DocumentArea> {
         let this = Self::alloc(mtm).set_ivars(AreaIvars {
             dragged: RefCell::new(None),
         });
@@ -48,7 +48,7 @@ impl DocumentArea {
     }
 
     /// Calls `dragged` each time the user lets go of the divider.
-    pub fn on_drag(&self, dragged: impl Fn() + 'static) {
+    pub(crate) fn on_drag(&self, dragged: impl Fn() + 'static) {
         *self.ivars().dragged.borrow_mut() = Some(Box::new(dragged));
     }
 }

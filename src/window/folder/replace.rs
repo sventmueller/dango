@@ -4,12 +4,13 @@
 
 use std::path::PathBuf;
 
+use ide_ui_common::alert::{Alert, Role};
 use objc2::MainThreadOnly;
-use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSAlertStyle};
+use objc2_app_kit::{NSAlertFirstButtonReturn, NSAlertSecondButtonReturn};
 use splat_i18n::{t, tf};
 
-use super::{WindowController, folder_name, layout};
-use crate::util::{guarded, ns};
+use super::folder_name;
+use crate::window::{WindowController, layout};
 
 /// What replacing a window's folder would lose.
 #[derive(Default)]
@@ -61,28 +62,25 @@ impl WindowController {
         if losses.is_empty() {
             return self.replace_project(folder);
         }
-        let alert = NSAlert::new(self.mtm());
-        alert.setAlertStyle(NSAlertStyle::Warning);
         let old = self.project().map(|p| folder_name(&p)).unwrap_or_default();
-        alert.setMessageText(&ns(&tf("„{}“ statt „{}“ öffnen?", &[&folder_name(&folder), &old])));
-        alert.setInformativeText(&ns(&losses.detail()));
-        alert.addButtonWithTitle(&ns(t("In neuem Fenster öffnen")));
-        let close = alert.addButtonWithTitle(&ns(t("Alles schließen")));
-        close.setHasDestructiveAction(true);
-        let cancel = alert.addButtonWithTitle(&ns(t("Abbrechen")));
-        cancel.setKeyEquivalent(&ns("\u{1b}"));
         let this = objc2::rc::Weak::from(self);
-        let handler = block2::RcBlock::new(move |response: objc2_app_kit::NSModalResponse| {
-            guarded((), || {
-                let Some(this) = this.load() else { return };
-                if response == NSAlertFirstButtonReturn {
-                    open_beside(&this, folder.clone());
-                } else if response == NSAlertSecondButtonReturn {
-                    this.replace_project(folder.clone());
-                }
-            });
+        Alert::new(
+            self.mtm(),
+            &tf("„{}“ statt „{}“ öffnen?", &[&folder_name(&folder), &old]),
+        )
+        .warning()
+        .informative(&losses.detail())
+        .button(t("In neuem Fenster öffnen"), Role::Plain)
+        .button(t("Alles schließen"), Role::Destructive)
+        .button(t("Abbrechen"), Role::CancelOnEscape)
+        .sheet(&window, move |response| {
+            let Some(this) = this.load() else { return };
+            if response == NSAlertFirstButtonReturn {
+                open_beside(&this, folder);
+            } else if response == NSAlertSecondButtonReturn {
+                this.replace_project(folder);
+            }
         });
-        alert.beginSheetModalForWindow_completionHandler(&window, Some(&handler));
     }
 
     /// Closes what the window shows of its folder, keeping the folder's layout for next time, and opens `folder`

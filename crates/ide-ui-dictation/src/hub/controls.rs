@@ -17,23 +17,23 @@ use super::desk::Phase;
 use ide_ui_common::util::{ns, set_action, symbol};
 
 /// How long one half of the button's pulse takes while it listens.
-pub const PULSE: Duration = Duration::from_millis(650);
+pub(super) const PULSE: Duration = Duration::from_millis(650);
 
 /// What the controls of a field show.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Shown {
-    pub phase: Phase,
-    pub waiting: bool,
-    pub transcribing: bool,
+pub(crate) struct Shown {
+    pub(crate) phase: Phase,
+    pub(crate) waiting: bool,
+    pub(crate) transcribing: bool,
     /// The line beside the controls: what happens, or how the last dictation ended.
-    pub line: String,
-    pub error: bool,
+    pub(crate) line: String,
+    pub(crate) error: bool,
     /// The shortcut, as the menu writes it, for the tooltip.
-    pub shortcut: String,
+    pub(crate) shortcut: String,
 }
 
 impl Shown {
-    pub fn recording(&self) -> bool {
+    pub(crate) fn recording(&self) -> bool {
         self.phase != Phase::Idle || self.waiting
     }
 }
@@ -43,12 +43,12 @@ impl Shown {
 pub struct Mic {
     pub view: Retained<NSStackView>,
     pub button: Retained<NSButton>,
-    pub spinner: Retained<NSProgressIndicator>,
+    pub(crate) spinner: Retained<NSProgressIndicator>,
 }
 
 impl Mic {
     /// The controls at `points`, sending `action` to `target`; the tag names the field once it is registered.
-    pub fn new(mtm: MainThreadMarker, points: f64, target: &AnyObject, action: Sel) -> Mic {
+    pub(crate) fn new(mtm: MainThreadMarker, points: f64, target: &AnyObject, action: Sel) -> Mic {
         let image = symbol("mic", t("Diktat starten")).unwrap_or_default();
         // SAFETY: Without a target the button sends nothing until `set_action` gives it one, right below.
         let button = unsafe { NSButton::buttonWithImage_target_action(&image, None, None, mtm) };
@@ -81,11 +81,11 @@ impl Mic {
         mic
     }
 
-    pub fn set_field(&self, tag: isize) {
+    pub(crate) fn set_field(&self, tag: isize) {
         self.button.setTag(tag);
     }
 
-    pub fn show(&self, shown: &Shown) {
+    pub(crate) fn show(&self, shown: &Shown) {
         let (name, label, tint) = if shown.recording() {
             ("mic.fill", t("Diktat beenden"), NSColor::systemRedColor())
         } else {
@@ -117,14 +117,14 @@ impl Mic {
     }
 
     /// One step of the pulse while the field listens; `bright` says which way.
-    pub fn pulse(&self, bright: bool) {
+    pub(crate) fn pulse(&self, bright: bool) {
         let alpha = if bright { 1.0 } else { 0.35 };
         self.button.animator().setAlphaValue(alpha);
     }
 }
 
 /// The line that says what dictation does, in the field's status bar.
-pub fn line(mtm: MainThreadMarker) -> Retained<NSTextField> {
+pub(super) fn line(mtm: MainThreadMarker) -> Retained<NSTextField> {
     let line = NSTextField::labelWithString(&ns(""), mtm);
     line.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(
         ide_ui_common::style::SMALL,
@@ -139,7 +139,7 @@ pub fn line(mtm: MainThreadMarker) -> Retained<NSTextField> {
     line
 }
 
-pub fn show_line(line: &NSTextField, shown: &Shown) {
+pub(super) fn show_line(line: &NSTextField, shown: &Shown) {
     line.setStringValue(&ns(&shown.line));
     line.setToolTip(Some(&ns(&shown.line)));
     line.setHidden(shown.line.is_empty());
@@ -152,7 +152,7 @@ pub fn show_line(line: &NSTextField, shown: &Shown) {
 }
 
 /// Whether the user asked for less motion, which leaves out the pulse.
-pub fn reduce_motion() -> bool {
+pub(super) fn reduce_motion() -> bool {
     NSWorkspace::sharedWorkspace().accessibilityDisplayShouldReduceMotion()
 }
 

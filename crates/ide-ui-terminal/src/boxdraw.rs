@@ -170,10 +170,10 @@ fn dashes(code: u32) -> Option<Dashes> {
 
 /// How a cell is filled: its rectangle, the device scale and the width of a light line.
 #[derive(Clone, Copy)]
-pub struct Pen {
-    pub rect: CGRect,
-    pub scale: f64,
-    pub light: f64,
+pub(crate) struct Pen {
+    pub(crate) rect: CGRect,
+    pub(crate) scale: f64,
+    pub(crate) light: f64,
 }
 
 impl Pen {
@@ -214,7 +214,7 @@ fn rect(x: f64, y: f64, width: f64, height: f64) -> CGRect {
 
 /// Draws `c` with the context's fill and stroke colour if it is a line or block character drawn by hand; whether it
 /// was.
-pub fn draw(ctx: &CGContext, c: char, pen: &Pen) -> bool {
+pub(crate) fn draw(ctx: &CGContext, c: char, pen: &Pen) -> bool {
     let code = u32::from(c);
     if let Some(dashes) = dashes(code) {
         dashed(ctx, dashes, pen);
@@ -236,7 +236,7 @@ pub fn draw(ctx: &CGContext, c: char, pen: &Pen) -> bool {
 }
 
 /// Whether `draw` draws `c`.
-pub fn covers(c: char) -> bool {
+pub(crate) fn covers(c: char) -> bool {
     let code = u32::from(c);
     dashes(code).is_some()
         || match code {

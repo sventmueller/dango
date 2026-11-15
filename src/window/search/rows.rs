@@ -19,7 +19,7 @@ use objc2_foundation::{NSMutableAttributedString, NSNumber, NSObjectProtocol, NS
 use splat_i18n::tf;
 
 use super::SearchPanel;
-use crate::util::{constant, guarded, label, ns};
+use crate::util::{activate, constant, fixed_size, guarded, label, ns};
 
 const FONT_SIZE: f64 = 11.0;
 
@@ -32,7 +32,7 @@ pub(super) struct Replacing<'a> {
 }
 
 #[derive(Default)]
-pub struct CellIvars {
+pub(crate) struct CellIvars {
     button: RefCell<Option<Retained<NSButton>>>,
     /// What the button covers while it shows.
     covered: RefCell<Option<Retained<NSView>>>,
@@ -45,7 +45,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDESearchResultCell"]
     #[ivars = CellIvars]
-    pub struct ResultCell;
+    pub(crate) struct ResultCell;
 
     unsafe impl NSObjectProtocol for ResultCell {}
 
@@ -121,14 +121,12 @@ impl ResultCell {
         button.setHidden(true);
         self.addSubview(&button);
         button.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
+        activate([
             button
                 .trailingAnchor()
                 .constraintEqualToAnchor_constant(&self.trailingAnchor(), -4.0),
             button.centerYAnchor().constraintEqualToAnchor(&self.centerYAnchor()),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         *self.ivars().button.borrow_mut() = Some(button);
         *self.ivars().covered.borrow_mut() = covered.map(objc2::Message::retain);
     }
@@ -151,10 +149,9 @@ pub(super) fn file_row(
         .parent()
         .map_or_else(String::new, |p| p.to_string_lossy().into_owned());
     let title = label(mtm, &name);
-    // SAFETY: AppKit sets its font weight constants when it loads.
     title.setFont(Some(&NSFont::systemFontOfSize_weight(
         ide_ui_common::style::LABEL,
-        unsafe { objc2_app_kit::NSFontWeightSemibold },
+        constant!(objc2_app_kit::NSFontWeightSemibold),
     )));
     title.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
     let place = label(mtm, &folder);
@@ -162,10 +159,9 @@ pub(super) fn file_row(
     place.setTextColor(Some(&NSColor::secondaryLabelColor()));
     place.setLineBreakMode(NSLineBreakMode::ByTruncatingHead);
     let number = label(mtm, &matches.to_string());
-    // SAFETY: AppKit sets its font weight constants when it loads.
     number.setFont(Some(&NSFont::monospacedDigitSystemFontOfSize_weight(
         FONT_SIZE,
-        unsafe { objc2_app_kit::NSFontWeightRegular },
+        constant!(objc2_app_kit::NSFontWeightRegular),
     )));
     number.setTextColor(Some(&NSColor::secondaryLabelColor()));
     let spoken = match (matches, folder.is_empty()) {
@@ -188,11 +184,10 @@ pub(super) fn file_row(
     }
     place.setContentCompressionResistancePriority_forOrientation(200.0, NSLayoutConstraintOrientation::Horizontal);
     title.setContentCompressionResistancePriority_forOrientation(700.0, NSLayoutConstraintOrientation::Horizontal);
-    for constraint in [
+    fixed_size(&image, 16.0, 16.0);
+    activate([
         image.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
         image.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-        image.widthAnchor().constraintEqualToConstant(16.0),
-        image.heightAnchor().constraintEqualToConstant(16.0),
         title
             .leadingAnchor()
             .constraintEqualToAnchor_constant(&image.trailingAnchor(), 5.0),
@@ -212,9 +207,7 @@ pub(super) fn file_row(
         number
             .firstBaselineAnchor()
             .constraintEqualToAnchor(&title.firstBaselineAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     cell.setToolTip(Some(&ns(relative)));
     if let Some(replacing) = replacing {
         let covered: &NSView = &number;
@@ -233,8 +226,7 @@ pub(super) fn line_row(
 ) -> Retained<NSView> {
     let cell = ResultCell::new(mtm);
     cell.setUserInterfaceLayoutDirection(NSUserInterfaceLayoutDirection::LeftToRight);
-    // SAFETY: AppKit sets its font weight constants when it loads.
-    let font = NSFont::monospacedDigitSystemFontOfSize_weight(FONT_SIZE, unsafe { objc2_app_kit::NSFontWeightRegular });
+    let font = NSFont::monospacedDigitSystemFontOfSize_weight(FONT_SIZE, constant!(objc2_app_kit::NSFontWeightRegular));
     let sample = label(mtm, &"0".repeat(widest.max(line.line).to_string().len()));
     sample.setFont(Some(&font));
     let number_width = sample.intrinsicContentSize().width;
@@ -257,7 +249,7 @@ pub(super) fn line_row(
         view.setTranslatesAutoresizingMaskIntoConstraints(false);
     }
     text.setContentCompressionResistancePriority_forOrientation(200.0, NSLayoutConstraintOrientation::Horizontal);
-    for constraint in [
+    activate([
         number.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
         number.widthAnchor().constraintEqualToConstant(number_width),
         number.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
@@ -267,9 +259,7 @@ pub(super) fn line_row(
             .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
         text.firstBaselineAnchor()
             .constraintEqualToAnchor(&number.firstBaselineAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     if let Some(replacing) = replacing {
         cell.offer(replacing, splat_i18n::t("Ersetzen"), None);
     }
@@ -301,8 +291,7 @@ fn marked(line: &LineResult, replacing: Option<&Replacing>) -> Retained<NSMutabl
     let style = NSMutableParagraphStyle::new();
     style.setBaseWritingDirection(NSWritingDirection::LeftToRight);
     style.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
-    // SAFETY: AppKit sets its font weight constants when it loads.
-    let font = NSFont::monospacedSystemFontOfSize_weight(FONT_SIZE, unsafe { objc2_app_kit::NSFontWeightRegular });
+    let font = NSFont::monospacedSystemFontOfSize_weight(FONT_SIZE, constant!(objc2_app_kit::NSFontWeightRegular));
     let (font_key, style_key) = (constant!(NSFontAttributeName), constant!(NSParagraphStyleAttributeName));
     let (color_key, marker_key) = (
         constant!(NSForegroundColorAttributeName),

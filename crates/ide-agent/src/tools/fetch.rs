@@ -39,11 +39,18 @@ pub(super) fn fetch(input: &Value, context: &Context<'_>) -> Result<Outcome, Too
     if context.sandbox {
         return Err(ToolNote::Refused(Refusal::NoNetwork));
     }
-    let (kind, body) = context
-        .workspace
-        .http()
-        .get_text(url, MAX_PAGE)
-        .map_err(ToolNote::Fetch)?;
+    // The workspace's client waits five minutes for a silent server, so the fetch gets connections of its own that
+    // cancelling the turn closes.
+    let http = context.workspace.http().separate();
+    let closing = http.clone();
+    context.cancel.on_cancel(move || closing.close());
+    let fetched = http.get_text(url, MAX_PAGE);
+    http.close();
+    // A closed connection can also read as a page that simply ended, so what came is not trusted after a cancel.
+    if context.cancel.is_cancelled() {
+        return Err(ToolNote::Withdrawn);
+    }
+    let (kind, body) = fetched.map_err(ToolNote::Fetch)?;
     let text = if kind.contains("html") {
         html_text(&body)
     } else if kind.starts_with("text/") || kind.contains("json") || kind.contains("xml") || kind.is_empty() {

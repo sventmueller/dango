@@ -19,7 +19,8 @@ pub enum Family {
 
 impl Family {
     /// Every supported family, in the order the settings name them.
-    pub const ALL: [Family; 6] = [
+    #[cfg(test)]
+    pub(crate) const ALL: [Family; 6] = [
         Family::QwenCoder,
         Family::StarCoder,
         Family::DeepSeekCoder,
@@ -56,20 +57,8 @@ impl Family {
         })
     }
 
-    /// The family's name as the settings show it.
-    pub fn name(self) -> &'static str {
-        match self {
-            Family::QwenCoder => "Qwen Coder",
-            Family::StarCoder => "StarCoder",
-            Family::DeepSeekCoder => "DeepSeek Coder",
-            Family::CodeLlama => "Code Llama",
-            Family::Codestral => "Codestral",
-            Family::CodeGemma => "CodeGemma",
-        }
-    }
-
     /// The prompt that asks for the text between `prefix` and `suffix`.
-    pub fn prompt(self, prefix: &str, suffix: &str) -> String {
+    pub(crate) fn prompt(self, prefix: &str, suffix: &str) -> String {
         match self {
             Family::QwenCoder | Family::CodeGemma => {
                 format!("<|fim_prefix|>{prefix}<|fim_suffix|>{suffix}<|fim_middle|>")
@@ -82,7 +71,7 @@ impl Family {
     }
 
     /// Where the model's answer ends: its end-of-text marks and its own marks, which it writes when it starts over.
-    pub fn stops(self) -> &'static [&'static str] {
+    pub(crate) fn stops(self) -> &'static [&'static str] {
         match self {
             Family::QwenCoder => &[
                 "<|endoftext|>",

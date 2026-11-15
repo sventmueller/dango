@@ -12,17 +12,17 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSArray, NSPoint, NSRect, NSSize};
 
-use crate::util::{label, ns};
+use crate::util::{activate, fixed_size, label, ns};
 
 /// The room between a tab's content and the window's edges.
-pub const MARGIN: f64 = 20.0;
+pub(crate) const MARGIN: f64 = 20.0;
 /// The width of every tab's content, so the window keeps its width from tab to tab.
-pub const WIDTH: f64 = 520.0;
+pub(crate) const WIDTH: f64 = 520.0;
 /// The narrowest the column of a form's titles gets, so the forms of all tabs line up their controls.
 const TITLES: f64 = 140.0;
 const COLUMN_GAP: f64 = 8.0;
 /// The width left for a form's controls next to its titles.
-pub const CONTROLS: f64 = WIDTH - TITLES - COLUMN_GAP;
+pub(crate) const CONTROLS: f64 = WIDTH - TITLES - COLUMN_GAP;
 const ROW_GAP: f64 = 10.0;
 const GAP: f64 = 8.0;
 const AFTER_HEADING: f64 = 4.0;
@@ -30,7 +30,7 @@ const BEFORE_HEADING: f64 = 22.0;
 const HEADING: &str = "settings.heading";
 
 /// A section's heading.
-pub fn heading(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
+pub(crate) fn heading(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
     let heading = label(mtm, text);
     heading.setFont(Some(&NSFont::boldSystemFontOfSize(NSFont::systemFontSize())));
     heading.setIdentifier(Some(&ns(HEADING)));
@@ -38,7 +38,7 @@ pub fn heading(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
 }
 
 /// The small grey text that explains a section or a control, wrapped at `width`.
-pub fn note_field(mtm: MainThreadMarker, text: &str, width: f64) -> Retained<NSTextField> {
+pub(crate) fn note_field(mtm: MainThreadMarker, text: &str, width: f64) -> Retained<NSTextField> {
     let note = NSTextField::wrappingLabelWithString(&ns(text), mtm);
     note.setFont(Some(&ide_ui_common::style::small_system()));
     note.setTextColor(Some(&NSColor::secondaryLabelColor()));
@@ -47,19 +47,19 @@ pub fn note_field(mtm: MainThreadMarker, text: &str, width: f64) -> Retained<NST
 }
 
 /// The note under a section's heading, as wide as the tab.
-pub fn note(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
+pub(crate) fn note(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
     note_field(mtm, text, WIDTH).into_super().into_super()
 }
 
 /// A value a form shows rather than lets the user change, wrapped at the controls' width.
-pub fn value(mtm: MainThreadMarker, text: &str) -> Retained<NSTextField> {
+pub(crate) fn value(mtm: MainThreadMarker, text: &str) -> Retained<NSTextField> {
     let value = NSTextField::wrappingLabelWithString(&ns(text), mtm);
     value.setPreferredMaxLayoutWidth(CONTROLS);
     value
 }
 
 /// The red line that says what went wrong in a section, hidden until there is something to say.
-pub fn problem(mtm: MainThreadMarker) -> Retained<NSTextField> {
+pub(crate) fn problem(mtm: MainThreadMarker) -> Retained<NSTextField> {
     let problem = NSTextField::wrappingLabelWithString(&ns(""), mtm);
     problem.setTextColor(Some(&NSColor::systemRedColor()));
     problem.setPreferredMaxLayoutWidth(WIDTH);
@@ -69,7 +69,7 @@ pub fn problem(mtm: MainThreadMarker) -> Retained<NSTextField> {
 
 /// A row of a form: its title, what stands next to it, and the view in it whose first line of text the title sits
 /// on. A row without a title continues the one above it.
-pub struct Row {
+pub(crate) struct Row {
     title: Option<Retained<NSTextField>>,
     content: Retained<NSView>,
     baseline: Retained<NSView>,
@@ -77,7 +77,7 @@ pub struct Row {
 
 impl Row {
     /// `control` titled `title`, which VoiceOver also reads as the control's name when it is a control.
-    pub fn new(mtm: MainThreadMarker, title: &str, control: &NSView) -> Row {
+    pub(crate) fn new(mtm: MainThreadMarker, title: &str, control: &NSView) -> Row {
         let caption = label(mtm, title);
         if let Some(control) = control.downcast_ref::<objc2_app_kit::NSControl>()
             && control
@@ -94,7 +94,7 @@ impl Row {
     }
 
     /// `content`, several views side by side, titled `title` on the line of `baseline`, one of them.
-    pub fn group(mtm: MainThreadMarker, title: &str, content: &NSView, baseline: &NSView) -> Row {
+    pub(crate) fn group(mtm: MainThreadMarker, title: &str, content: &NSView, baseline: &NSView) -> Row {
         Row {
             content: content.retain(),
             ..Row::new(mtm, title, baseline)
@@ -102,12 +102,12 @@ impl Row {
     }
 
     /// The row's title, if it has one.
-    pub fn caption(&self) -> Option<&NSTextField> {
+    pub(crate) fn caption(&self) -> Option<&NSTextField> {
         self.title.as_deref()
     }
 
     /// `view` in the controls' column, under the row before it.
-    pub fn under(view: &NSView) -> Row {
+    pub(crate) fn under(view: &NSView) -> Row {
         Row {
             title: None,
             content: view.retain(),
@@ -117,7 +117,7 @@ impl Row {
 }
 
 /// Views side by side, for a row of a form.
-pub fn line(mtm: MainThreadMarker, views: &[&NSView]) -> Retained<NSView> {
+pub(crate) fn line(mtm: MainThreadMarker, views: &[&NSView]) -> Retained<NSView> {
     let line = NSStackView::new(mtm);
     line.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
     line.setAlignment(NSLayoutAttribute::FirstBaseline);
@@ -129,14 +129,14 @@ pub fn line(mtm: MainThreadMarker, views: &[&NSView]) -> Retained<NSView> {
 }
 
 /// The rows as a form: titles right-aligned in a column of their own, each on the first line of text of its control.
-pub fn grid(mtm: MainThreadMarker, rows: &[Row]) -> Retained<NSGridView> {
+pub(crate) fn grid(mtm: MainThreadMarker, rows: &[Row]) -> Retained<NSGridView> {
     let grid = NSGridView::new(mtm);
     fill(&grid, rows);
     grid
 }
 
 /// Lays `rows` out in `grid`, an empty one, as [`grid`] does.
-pub fn fill(grid: &NSGridView, rows: &[Row]) {
+pub(crate) fn fill(grid: &NSGridView, rows: &[Row]) {
     let mtm = grid.mtm();
     for row in rows {
         let title = row
@@ -174,7 +174,7 @@ pub fn fill(grid: &NSGridView, rows: &[Row]) {
 
 /// Shows or hides `view` and, when it stands in a form, the row it stands in; in a [`stack`], the room before the
 /// next heading stays the same.
-pub fn show(view: &NSView, shown: bool) {
+pub(crate) fn show(view: &NSView, shown: bool) {
     view.setHidden(!shown);
     // SAFETY: Asking a view for its superview on the main thread, where views live.
     let parent = unsafe { view.superview() };
@@ -190,7 +190,7 @@ pub fn show(view: &NSView, shown: bool) {
 }
 
 /// The views one under another as a tab's sections: close together, with room before each heading.
-pub fn stack(mtm: MainThreadMarker, views: &[Retained<NSView>]) -> Retained<NSStackView> {
+pub(crate) fn stack(mtm: MainThreadMarker, views: &[Retained<NSView>]) -> Retained<NSStackView> {
     let stack = NSStackView::new(mtm);
     stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     stack.setAlignment(NSLayoutAttribute::Leading);
@@ -227,11 +227,11 @@ fn is_heading(view: &NSView) -> bool {
 }
 
 /// `content` with the tab's margins around it, as wide as every tab.
-pub fn page(mtm: MainThreadMarker, content: &NSView) -> Retained<NSView> {
+pub(crate) fn page(mtm: MainThreadMarker, content: &NSView) -> Retained<NSView> {
     let view = NSView::new(mtm);
     view.addSubview(content);
     content.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
+    activate([
         content
             .leadingAnchor()
             .constraintEqualToAnchor_constant(&view.leadingAnchor(), MARGIN),
@@ -246,15 +246,13 @@ pub fn page(mtm: MainThreadMarker, content: &NSView) -> Retained<NSView> {
             .constraintEqualToAnchor_constant(&view.bottomAnchor(), -MARGIN),
         view.widthAnchor()
             .constraintGreaterThanOrEqualToConstant(WIDTH + 2.0 * MARGIN),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     view
 }
 
 /// A list `height` tall with the columns `columns`, titles and widths, the last one taking the room left; `owner`
 /// gives its rows.
-pub fn table<T>(
+pub(crate) fn table<T>(
     mtm: MainThreadMarker,
     owner: &T,
     columns: &[(&str, f64)],
@@ -286,13 +284,12 @@ where
     scroll.setBorderType(objc2_app_kit::NSBorderType::BezelBorder);
     scroll.setDocumentView(Some(&table));
     table.sizeLastColumnToFit();
-    scroll.widthAnchor().constraintEqualToConstant(WIDTH).setActive(true);
-    scroll.heightAnchor().constraintEqualToConstant(height).setActive(true);
+    fixed_size(&scroll, WIDTH, height);
     (table, scroll.into_super())
 }
 
 /// A list's cell showing `text` in the middle of its row's height, cut in the middle when it does not fit.
-pub fn cell(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
+pub(crate) fn cell(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
     let cell = NSTableCellView::new(mtm);
     let field = label(mtm, text);
     field.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
@@ -305,7 +302,7 @@ pub fn cell(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
     // SAFETY: The label is a subview of the cell, which keeps it.
     unsafe { cell.setTextField(Some(&field)) };
     field.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
+    activate([
         field
             .leadingAnchor()
             .constraintEqualToAnchor_constant(&cell.leadingAnchor(), 2.0),
@@ -313,8 +310,6 @@ pub fn cell(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
             .trailingAnchor()
             .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -2.0),
         field.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     cell.into_super()
 }

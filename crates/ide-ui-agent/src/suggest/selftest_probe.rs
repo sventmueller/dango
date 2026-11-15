@@ -4,7 +4,7 @@ use super::*;
 
 impl Suggestions {
     /// The labels shown, for the self-test.
-    pub fn labels(&self) -> Vec<String> {
+    pub(crate) fn labels(&self) -> Vec<String> {
         self.items.borrow().iter().map(|i| i.label.clone()).collect()
     }
 }

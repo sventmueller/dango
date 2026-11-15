@@ -7,11 +7,11 @@
 use super::*;
 
 /// A panel with its text fields.
-pub(super) type Asking = (Retained<NSAlert>, Vec<Retained<NSTextField>>);
+pub(super) type Asking = (Retained<objc2_app_kit::NSAlert>, Vec<Retained<NSTextField>>);
 
 /// The panel with text fields that shows, for the self-test to fill in.
 #[derive(Default)]
-pub struct Dialogs {
+pub(crate) struct Dialogs {
     asking: RefCell<Option<Asking>>,
 }
 

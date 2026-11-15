@@ -7,7 +7,6 @@ use std::path::Path;
 use std::rc::Rc;
 use std::sync::{Arc, OnceLock};
 
-use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::{NSColor, NSFont};
 
@@ -40,8 +39,6 @@ pub trait Host {
     fn editor_in(&self, window: WindowId, path: &Path) -> Option<Box<dyn Editor>>;
     /// Shows `hierarchy` in the window `window`.
     fn show_hierarchy(&self, window: WindowId, hierarchy: Hierarchy);
-    /// Shows a warning with `message` and `detail` and waits for OK.
-    fn show_alert(&self, mtm: MainThreadMarker, message: &str, detail: &str);
     /// The editor's font of code at `size` points.
     fn code_font(&self, size: f64) -> Retained<NSFont>;
     /// The colour of tokens of kind `token`.
@@ -81,10 +78,6 @@ pub(crate) fn editor_in(window: WindowId, path: &Path) -> Option<Box<dyn Editor>
 
 pub(crate) fn show_hierarchy(window: WindowId, hierarchy: Hierarchy) {
     host().show_hierarchy(window, hierarchy);
-}
-
-pub(crate) fn show_alert(mtm: MainThreadMarker, message: &str, detail: &str) {
-    host().show_alert(mtm, message, detail);
 }
 
 pub(crate) fn code_font(size: f64) -> Retained<NSFont> {

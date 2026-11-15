@@ -25,7 +25,7 @@ const TERMINAL_LINES: usize = 200;
 const BROWSER_WAIT: Duration = Duration::from_millis(1500);
 
 /// The output of the terminal in view, else of the one opened last.
-pub fn terminal(controller: &(impl AsWindow + ?Sized)) -> Option<Attachment> {
+pub(crate) fn terminal(controller: &(impl AsWindow + ?Sized)) -> Option<Attachment> {
     let controller = &controller.as_window();
     let (label, text) = crate::host::host().recent_output(controller.id())?;
     let lines: Vec<&str> = text.lines().collect();
@@ -34,7 +34,7 @@ pub fn terminal(controller: &(impl AsWindow + ?Sized)) -> Option<Attachment> {
 }
 
 /// The selection of the editor in view in `controller`'s window, else of any of its editors that has one.
-pub fn editor_selection(controller: &(impl AsWindow + ?Sized)) -> Option<Attachment> {
+pub(crate) fn editor_selection(controller: &(impl AsWindow + ?Sized)) -> Option<Attachment> {
     let controller = &controller.as_window();
     let (path, lines, text) = crate::host::host().editor_selection(controller.id())?;
     Some(Attachment::Selection { path, lines, text })
@@ -55,7 +55,7 @@ fn web_views(view: &NSView, found: &mut Vec<Retained<WKWebView>>) {
 type Waiting = Box<dyn FnOnce(Option<String>)>;
 
 /// The answers awaited from pages about what is selected on them, by id.
-pub struct PageSelections {
+pub(crate) struct PageSelections {
     waiting: RefCell<HashMap<u64, Waiting>>,
     next: std::cell::Cell<u64>,
 }
@@ -85,7 +85,7 @@ fn settle(key: u64, selection: Option<String>) {
 
 /// The page of the browser tab in view in `controller`'s window, else of any: its address, title and selected text,
 /// handed to `done` once the page answered or did not in time.
-pub fn browser(controller: &(impl AsWindow + ?Sized), done: impl FnOnce(Option<Attachment>) + 'static) {
+pub(crate) fn browser(controller: &(impl AsWindow + ?Sized), done: impl FnOnce(Option<Attachment>) + 'static) {
     let controller = &controller.as_window();
     let mut found = Vec::new();
     for window in controller.tab_windows() {

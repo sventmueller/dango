@@ -1,6 +1,7 @@
 //! One debug session: its adapter, started through the supervisor or reached over a stream, initialized, configured
 //! with the breakpoints, and stopped by who owns the program (Review C7).
 
+mod course;
 mod event;
 mod handler;
 #[cfg(test)]
@@ -25,8 +26,9 @@ use crate::adapter::{Adapter, AdapterKind};
 use crate::connection::Connection;
 use crate::error::Error;
 use crate::launch::LaunchConfig;
-use crate::types::{Capabilities, End, EndReason, Program, Request, SessionId, SourceBreakpoint, State, Thread};
+use crate::types::{Capabilities, End, Program, Request, SessionId, SourceBreakpoint, State, Thread};
 
+use course::Course;
 pub use event::{Event, TerminalAnswer};
 pub use stop::stop_all;
 
@@ -72,14 +74,7 @@ pub(crate) struct Shared {
     /// The adapter asked for `runInTerminal`, so the program belongs to a terminal tab.
     pub(crate) in_terminal: bool,
     pub(crate) exit_code: Option<i64>,
-    pub(crate) terminated: bool,
-    pub(crate) launched: bool,
-    pub(crate) configured: bool,
-    pub(crate) stopping: bool,
-    /// How the session ends once the connection or the adapter goes, when that was decided before.
-    pub(crate) intended: Option<EndReason>,
-    /// `terminate` and `disconnect` were sent, by the user's stop or the supervisor's graceful step.
-    pub(crate) said_goodbye: bool,
+    pub(crate) course: Course,
     /// Counts `stopped` events, so a step's late response does not undo a stop that came before it.
     pub(crate) stops: u64,
     pub(crate) threads: Vec<Thread>,
@@ -210,12 +205,7 @@ impl Session {
                 program: None,
                 in_terminal: false,
                 exit_code: None,
-                terminated: false,
-                launched: false,
-                configured: false,
-                stopping: false,
-                intended: None,
-                said_goodbye: false,
+                course: Course::default(),
                 stops: 0,
                 threads: Vec::new(),
                 setup,
@@ -248,7 +238,8 @@ impl Session {
     }
 
     /// The configuration it was started with.
-    pub fn config(&self) -> &LaunchConfig {
+    #[cfg(test)]
+    pub(crate) fn config(&self) -> &LaunchConfig {
         &self.inner().config
     }
 
@@ -258,7 +249,8 @@ impl Session {
     }
 
     /// What the activity view shows for its adapter.
-    pub fn label(&self) -> &str {
+    #[cfg(test)]
+    pub(crate) fn label(&self) -> &str {
         &self.inner().label
     }
 
@@ -277,13 +269,9 @@ impl Session {
         self.inner().lock().capabilities.clone()
     }
 
-    /// The program, once the adapter described it.
-    pub fn program(&self) -> Option<Program> {
-        self.inner().lock().program.clone()
-    }
-
     /// The threads the last `threads` answer listed.
-    pub fn known_threads(&self) -> Vec<Thread> {
+    #[cfg(test)]
+    pub(crate) fn known_threads(&self) -> Vec<Thread> {
         self.inner().lock().threads.clone()
     }
 
@@ -293,7 +281,8 @@ impl Session {
     }
 
     /// The supervisor's number for the adapter process, if this session started one.
-    pub fn adapter_process(&self) -> Option<ProcessId> {
+    #[cfg(test)]
+    pub(crate) fn adapter_process(&self) -> Option<ProcessId> {
         self.inner().lock().adapter
     }
 
@@ -303,7 +292,8 @@ impl Session {
     }
 
     /// Whether `other` is a handle of the same session.
-    pub fn same(&self, other: &Session) -> bool {
+    #[cfg(test)]
+    pub(crate) fn same(&self, other: &Session) -> bool {
         Arc::ptr_eq(self.inner(), other.inner())
     }
 

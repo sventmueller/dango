@@ -3,6 +3,6 @@
 use super::*;
 
 /// The panel of `controller`'s window, for the self-test.
-pub fn panel_of(controller: &WindowController) -> Option<Retained<TestsPanel>> {
+pub(crate) fn panel_of(controller: &WindowController) -> Option<Retained<TestsPanel>> {
     of(controller)
 }

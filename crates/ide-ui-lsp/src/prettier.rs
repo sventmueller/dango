@@ -48,19 +48,19 @@ fn run_for(view: &dyn Editor) -> Option<Run> {
         return None;
     }
     let env = ide_ui_common::window::try_environment(Duration::ZERO).unwrap_or_default();
-    let path = env.iter().find(|(k, _)| k == "PATH").map(|(_, v)| v.as_str());
+    let path = ide_process::tool::var(&env, "PATH");
     let (program, dir) = prettier::program(&file, &root, path)?;
     Some(Run { program, dir, file })
 }
 
 /// Whether Prettier formats the document of `view`.
-pub fn formats(view: &dyn Editor) -> bool {
+pub(crate) fn formats(view: &dyn Editor) -> bool {
     run_for(view).is_some()
 }
 
 /// Formats `view` with Prettier and calls `then` afterwards, also when it failed, took too long or the text changed
 /// meanwhile; `false` when Prettier does not format this document, and `then` was not called.
-pub fn format(view: &dyn Editor, then: Option<Then>) -> Result<(), Option<Then>> {
+pub(crate) fn format(view: &dyn Editor, then: Option<Then>) -> Result<(), Option<Then>> {
     let Some(run) = run_for(view) else { return Err(then) };
     let serial = view.lsp().borrow().serial;
     let revision = view.document().revision();

@@ -16,7 +16,7 @@
 //! assert_eq!(reports[0].id.name, "TestA");
 //! ```
 
-#![warn(missing_docs, unreachable_pub)]
+#![warn(missing_docs)]
 
 pub mod board;
 mod cargo;
@@ -54,7 +54,7 @@ pub struct TestId {
     /// The package, crate target or Go package it belongs to.
     pub package: String,
     /// The file it is in, where the tool says so.
-    pub file: Option<PathBuf>,
+    pub(crate) file: Option<PathBuf>,
     /// Its name as the tool writes it, parameters included, such as `tests::adds`, `TestTable/case_one`,
     /// `test_param[2]` or `math > adds`.
     pub name: String,
@@ -95,17 +95,17 @@ pub enum State {
 
 /// One test's outcome.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Report {
-    /// Which test.
     pub id: TestId,
     /// What became of it.
-    pub state: State,
+    pub(crate) state: State,
     /// The failure's or skip's message.
-    pub message: Option<String>,
+    pub(crate) message: Option<String>,
     /// Where the failing assert is, for a mark at its line.
-    pub failure: Option<Location>,
+    pub(crate) failure: Option<Location>,
     /// Where the test is, where the run says so.
-    pub location: Option<Location>,
+    pub(crate) location: Option<Location>,
 }
 
 /// What to run.
@@ -123,10 +123,10 @@ pub enum Scope {
 
 /// A command to start, in a folder, with variables beside the login shell's.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Command {
     /// The program, looked for on the PATH where it is no path.
     pub program: String,
-    /// Its arguments.
     pub args: Vec<String>,
     /// Where it runs.
     pub cwd: PathBuf,
@@ -176,7 +176,7 @@ pub enum DebugTarget {
 }
 
 /// Dango's pytest plugin, which reports collection, starts and results as JSON lines.
-pub const PYTEST_PLUGIN: &str = include_str!("dango_pytest.py");
+pub(crate) const PYTEST_PLUGIN: &str = include_str!("dango_pytest.py");
 
 /// The tools whose tests the project at `root` has, the ones found on `path` taken into account: cargo-nextest
 /// in place of `cargo test` where it is installed.
@@ -224,7 +224,7 @@ impl Tool {
 
     /// Whether a run reports each test as it starts; without, the panel shows the whole run as running. Every
     /// tool's output reads as the reports of the tests that ended so far.
-    pub fn reports_starts(self) -> bool {
+    pub(crate) fn reports_starts(self) -> bool {
         !matches!(self, Tool::Cargo)
     }
 

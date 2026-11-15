@@ -2,8 +2,7 @@
 //! agent hooks: a folder is trusted when it or a folder above it is.
 
 use ide_core::LockIgnoringPoison;
-use ide_core::stamp::Stamp;
-use std::collections::HashMap;
+use ide_core::stamp::ByStamp;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -21,12 +20,9 @@ const VERSION: u64 = 1;
 /// Keeps two windows that trust folders at the same moment from losing one of the two.
 static WRITING: Mutex<()> = Mutex::new(());
 
-/// The answers given for the file as it was at its stamp, by folder: the main thread asks on every caret rest and
-/// every redraw of some views, and each answer otherwise reads the file and resolves every path in it on disk.
-static ANSWERS: Mutex<Option<Answers>> = Mutex::new(None);
-
-/// The trust file, its stamp, and whether each folder asked about was trusted then.
-type Answers = (PathBuf, Stamp, HashMap<PathBuf, bool>);
+/// Whether each folder asked about was trusted, by trust file: the main thread asks on every caret rest and every
+/// redraw of some views, and each answer otherwise reads the file and resolves every path in it on disk.
+static ANSWERS: ByStamp<PathBuf, bool> = ByStamp::new();
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 struct Stored {
@@ -53,37 +49,13 @@ impl TrustStore {
     }
 
     /// The store in `dir`, for tests.
-    pub fn in_dir(dir: &Path) -> TrustStore {
+    pub(crate) fn in_dir(dir: &Path) -> TrustStore {
         TrustStore { file: dir.join(FILE) }
     }
 
     /// Whether `folder` or a folder above it is trusted; nothing is while the file cannot be read.
     pub fn is_trusted(&self, folder: &Path) -> bool {
-        let stamp = Stamp::of(&self.file);
-        if let Some(stamp) = stamp
-            && let Some((file, seen, answers)) = &*ANSWERS.lock_ignoring_poison()
-            && *file == self.file
-            && *seen == stamp
-            && let Some(&answer) = answers.get(folder)
-        {
-            return answer;
-        }
-        let answer = self.ask(folder);
-        if let Some(stamp) = stamp
-            && Stamp::of(&self.file) == Some(stamp)
-        {
-            let mut cached = ANSWERS.lock_ignoring_poison();
-            let fresh = cached
-                .as_ref()
-                .is_none_or(|(file, seen, _)| *file != self.file || *seen != stamp);
-            if fresh {
-                *cached = Some((self.file.clone(), stamp, HashMap::new()));
-            }
-            if let Some((_, _, answers)) = cached.as_mut() {
-                answers.insert(folder.to_path_buf(), answer);
-            }
-        }
-        answer
+        ANSWERS.get(&self.file, folder.to_path_buf(), || self.ask(folder))
     }
 
     fn ask(&self, folder: &Path) -> bool {
@@ -125,7 +97,8 @@ impl TrustStore {
     }
 
     /// The folders trusted with everything below them, in the order of their paths.
-    pub fn list(&self) -> Vec<PathBuf> {
+    #[cfg(test)]
+    pub(crate) fn list(&self) -> Vec<PathBuf> {
         self.roots()
     }
 
@@ -165,7 +138,7 @@ impl TrustStore {
             return Ok(());
         }
         stored.version = VERSION;
-        write_atomically(&self.file, &stored)
+        ide_core::atomic_write::write_json(&self.file, &stored)
     }
 }
 
@@ -186,18 +159,6 @@ fn canonical(path: &Path) -> PathBuf {
             _ => return absolute,
         }
     }
-}
-
-fn write_atomically(path: &Path, stored: &Stored) -> io::Result<()> {
-    let dir = path.parent().unwrap_or(Path::new("."));
-    std::fs::create_dir_all(dir)?;
-    let mut bytes = serde_json::to_vec_pretty(stored).map_err(io::Error::other)?;
-    bytes.push(b'\n');
-    let temporary = dir.join(format!(".{FILE}.{}.tmp", std::process::id()));
-    std::fs::write(&temporary, &bytes)?;
-    std::fs::rename(&temporary, path).inspect_err(|_| {
-        let _ = std::fs::remove_file(&temporary);
-    })
 }
 
 #[cfg(test)]

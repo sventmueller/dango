@@ -16,7 +16,7 @@ pub fn open_popups_unasked() {
 }
 
 /// Whether `web` offers the Web Inspector, from Safari's Develop menu and its own context menu.
-pub fn has_inspector(web: &WKWebView) -> bool {
+pub(crate) fn has_inspector(web: &WKWebView) -> bool {
     // SAFETY: Plain properties; reading the key `enable_inspect_element` set raises no exception once setting it did
     // not.
     unsafe {

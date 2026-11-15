@@ -24,14 +24,14 @@ use view::{FileTreeSource, Pending};
 mod selftest_probe;
 
 /// The tree view with what feeds it.
-pub struct FileTree {
+pub(crate) struct FileTree {
     scroll: Retained<NSScrollView>,
     view: Retained<NSOutlineView>,
     source: Retained<FileTreeSource>,
 }
 
 impl FileTree {
-    pub fn new(mtm: MainThreadMarker, controller: &WindowController, project: Rc<Project>) -> FileTree {
+    pub(crate) fn new(mtm: MainThreadMarker, controller: &WindowController, project: Rc<Project>) -> FileTree {
         let source = FileTreeSource::new(mtm, controller, project);
         let view: Retained<NSOutlineView> = Retained::into_super(super::file_outline::FileOutline::new(
             mtm,
@@ -65,21 +65,21 @@ impl FileTree {
     }
 
     /// The tree in its scroll view, the files page.
-    pub fn page(&self) -> Retained<NSView> {
+    pub(crate) fn page(&self) -> Retained<NSView> {
         Retained::into_super(self.scroll.clone())
     }
 
     /// The buttons for the files panel's title row.
-    pub fn header_buttons(&self, mtm: MainThreadMarker) -> Retained<NSView> {
+    pub(crate) fn header_buttons(&self, mtm: MainThreadMarker) -> Retained<NSView> {
         Retained::into_super(super::files_header::buttons(mtm, &self.source))
     }
 
-    pub fn outline(&self) -> Retained<NSOutlineView> {
+    pub(crate) fn outline(&self) -> Retained<NSOutlineView> {
         self.view.clone()
     }
 
     /// Shows the entries the tree read of the folders in `listings`, those the view shows or waits for.
-    pub fn listed(&self, listings: &[Listing]) {
+    pub(crate) fn listed(&self, listings: &[Listing]) {
         for (dir, entries) in listings {
             self.source.listed(&self.view, dir, entries.as_ref());
         }

@@ -3,7 +3,7 @@
 use super::*;
 
 impl Mic {
-    pub fn spinning(&self) -> bool {
+    pub(crate) fn spinning(&self) -> bool {
         !self.spinner.isHidden()
     }
 }

@@ -20,7 +20,7 @@ use splat_i18n::{t, tf};
 use super::format::{dollars, elapsed, percent, tokens};
 use super::{style, ui};
 use crate::AgentKey;
-use ide_ui_common::util::{guarded, ns, set_action};
+use ide_ui_common::util::{activate, guarded, ns, pin_inset, set_action};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
@@ -39,7 +39,7 @@ thread_local! {
 
 /// The context gauges of the AI tabs and the breakdown on view.
 #[derive(Default)]
-pub struct ContextGauges {
+pub(crate) struct ContextGauges {
     /// The gauge of each tab, by the tab's key.
     gauges: RefCell<HashMap<AgentKey, Weak<NSButton>>>,
     shown: RefCell<Option<Shown>>,
@@ -67,7 +67,7 @@ define_class!(
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEAgentContextOpener"]
-    pub struct Opener;
+    pub(crate) struct Opener;
 
     unsafe impl NSObjectProtocol for Opener {}
 
@@ -95,7 +95,7 @@ fn opener(mtm: MainThreadMarker) -> Retained<Opener> {
 
 /// A button without a look of its own over the gauge, from `ring` to `text` in the status line `row`, that opens the
 /// breakdown of the tab with `key`; hidden until there is one.
-pub fn gauge(
+pub(crate) fn gauge(
     mtm: MainThreadMarker,
     key: AgentKey,
     row: &NSStackView,
@@ -113,14 +113,12 @@ pub fn gauge(
     button.setHidden(true);
     row.addSubview(&button);
     button.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
+    activate([
         button.leadingAnchor().constraintEqualToAnchor(&ring.leadingAnchor()),
         button.trailingAnchor().constraintEqualToAnchor(&text.trailingAnchor()),
         button.topAnchor().constraintEqualToAnchor(&row.topAnchor()),
         button.bottomAnchor().constraintEqualToAnchor(&row.bottomAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     with_gauges(|gauges| gauges.borrow_mut().insert(key, Weak::from(&*button)));
     button
 }
@@ -131,7 +129,7 @@ fn key_of(gauge: &NSButton) -> AgentKey {
 }
 
 /// Lets `gauge` open the breakdown once `usage` has one, and shows a new one in the popover if it is open.
-pub fn follow(gauge: &NSButton, usage: &Usage) {
+pub(crate) fn follow(gauge: &NSButton, usage: &Usage) {
     gauge.setHidden(usage.breakdown.is_none());
     let Some(breakdown) = &usage.breakdown else { return };
     let key = key_of(gauge);
@@ -182,7 +180,7 @@ fn show(key: AgentKey, anchor: &NSView) {
     if !breakdown.exact
         && let Some(session) = tab.session()
     {
-        drop(session.context_usage(true));
+        drop(session.context_usage(ide_claude::control::ContextCount::Exact));
     }
 }
 
@@ -262,22 +260,7 @@ fn padded(mtm: MainThreadMarker, column: &NSStackView) -> Retained<NSView> {
     let holder = NSView::new(mtm);
     holder.addSubview(column);
     ui::fixed_width(&holder, WIDTH);
-    for constraint in [
-        column
-            .leadingAnchor()
-            .constraintEqualToAnchor_constant(&holder.leadingAnchor(), 14.0),
-        column
-            .trailingAnchor()
-            .constraintEqualToAnchor_constant(&holder.trailingAnchor(), -14.0),
-        column
-            .topAnchor()
-            .constraintEqualToAnchor_constant(&holder.topAnchor(), 12.0),
-        column
-            .bottomAnchor()
-            .constraintEqualToAnchor_constant(&holder.bottomAnchor(), -12.0),
-    ] {
-        constraint.setActive(true);
-    }
+    pin_inset(column, &holder, ui::insets(12.0, 14.0, 12.0, 14.0));
     holder
 }
 
@@ -441,7 +424,7 @@ define_class!(
     #[unsafe(super(NSView))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEAgentContextColumn"]
-    pub struct TopDown;
+    pub(crate) struct TopDown;
 
     impl TopDown {
         #[unsafe(method(isFlipped))]
@@ -451,7 +434,7 @@ define_class!(
     }
 );
 
-pub struct BarIvars {
+pub(crate) struct BarIvars {
     /// Each segment's share of the window and colour.
     segments: Vec<(f64, Retained<NSColor>)>,
     /// Where compacting by itself starts, as a share of the window.
@@ -464,7 +447,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEAgentContextBar"]
     #[ivars = BarIvars]
-    pub struct Bar;
+    pub(crate) struct Bar;
 
     unsafe impl NSObjectProtocol for Bar {}
 
@@ -520,7 +503,7 @@ impl Bar {
     }
 }
 
-pub struct SwatchIvars {
+pub(crate) struct SwatchIvars {
     color: Retained<NSColor>,
 }
 
@@ -530,7 +513,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEAgentContextSwatch"]
     #[ivars = SwatchIvars]
-    pub struct Swatch;
+    pub(crate) struct Swatch;
 
     unsafe impl NSObjectProtocol for Swatch {}
 
@@ -558,6 +541,10 @@ impl Swatch {
 
 /// The agent's last token report for the left of the status line, where other agents show the context, with its
 /// breakdown as a tooltip; `None` without a report.
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unreachable_pub, reason = "the self-test re-exports it")
+)]
 pub fn token_text(usage: &Usage) -> Option<(String, String)> {
     let report = usage.reported_tokens.as_ref()?;
     let count = tf("{} Tokens", &[&tokens(report.total)]);
@@ -579,6 +566,10 @@ pub fn token_text(usage: &Usage) -> Option<(String, String)> {
 }
 
 /// The status line's cost: the session's, and the last turn's when it is known; with the details as a tooltip.
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unreachable_pub, reason = "the self-test re-exports it")
+)]
 pub fn cost_text(usage: &Usage) -> (String, Option<String>) {
     if let Some(cost) = usage.reported_cost.as_ref().filter(|c| c.currency != "USD") {
         let text = super::format::reported_cost(cost);
@@ -618,7 +609,7 @@ pub fn cost_text(usage: &Usage) -> (String, Option<String>) {
 
 /// What the status line says about spending: on a subscription the plan's usage windows instead of dollars, else
 /// the cost (E57).
-pub fn spend_text(thread: &ide_thread::Thread) -> (String, Option<String>) {
+pub(crate) fn spend_text(thread: &ide_thread::Thread) -> (String, Option<String>) {
     let usage = thread.usage();
     if !usage.subscription {
         return cost_text(usage);

@@ -31,6 +31,8 @@ pub trait Host {
         limit: usize,
         answer: Box<dyn FnOnce(Vec<ide_project::Hit>) + Send>,
     );
+    /// The app's one git, once the login shell's environment is known; waits for it, so worker threads only.
+    fn git(&self) -> Option<ide_git::Git>;
     /// The texts of the editors with unsaved changes to files below `root`, for a checkpoint (I6).
     fn unsaved_buffers(&self, root: &Path) -> Vec<(PathBuf, Vec<u8>)>;
     /// Gives the editors of `window` back the unsaved texts a restored checkpoint held, opening the files not open.
@@ -45,8 +47,6 @@ pub trait Host {
     fn remember_claude_rules(&self, cwd: &Path);
     /// A thread finished a turn in `cwd`, which may be a worktree whose changes the Git panel reads then (I1).
     fn turn_ended(&self, window: WindowId, cwd: &Path);
-    /// Shows an alert with `message` and `detail`.
-    fn show_alert(&self, mtm: MainThreadMarker, message: &str, detail: &str);
     /// The user trusts `folder` (E22).
     fn trust(&self, folder: &Path);
     /// Opens the activity view's list of `part` of the AI tab `key` below `anchor`.

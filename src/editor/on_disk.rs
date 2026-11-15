@@ -23,8 +23,8 @@ pub(super) fn look(view: &EditorTextView, why: Look) {
     let Some(probe) = view.document().disk_probe() else {
         return;
     };
-    let asked = view.ivars().disk_asked.get() + 1;
-    view.ivars().disk_asked.set(asked);
+    let asked = view.ivars().file.disk_asked.get() + 1;
+    view.ivars().file.disk_asked.set(asked);
     let serial = view.ivars().serial;
     let (sent, kept) = (probe.clone(), probe.clone());
     let queued = ide_core::lane::DISK.ask(
@@ -46,7 +46,7 @@ fn found(
     let Some(view) = super::find_editor(serial) else {
         return;
     };
-    if view.ivars().disk_asked.get() != asked {
+    if view.ivars().file.disk_asked.get() != asked {
         if why == Look::Recovered {
             super::recovery::store(&view);
         }

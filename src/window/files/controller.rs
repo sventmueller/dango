@@ -6,12 +6,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use ide_project::Entry;
+use ide_ui_common::alert::{Alert, Role, first, warn};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
-    NSAlert, NSModalResponse, NSOutlineView, NSPasteboard, NSPasteboardTypeString, NSTableViewAnimationOptions,
-    NSTextField, NSWorkspace,
+    NSOutlineView, NSPasteboard, NSPasteboardTypeString, NSTableViewAnimationOptions, NSTextField, NSWorkspace,
 };
 use objc2_foundation::{NSArray, NSFileManager, NSMutableIndexSet, NSPoint, NSRect, NSSize, NSURL};
 use splat_i18n::t;
@@ -74,7 +74,7 @@ impl FileTreeSource {
         }
     }
 
-    pub(super) fn create_from_header(&self, folder: bool) {
+    pub(super) fn create_from_header(&self, new: Kind) {
         let view = self.ivars().controller.load().and_then(|c| c.file_tree_view());
         let selected = view
             .and_then(|view| view.itemAtRow(view.selectedRow()))
@@ -84,7 +84,7 @@ impl FileTreeSource {
             .ivars()
             .model
             .borrow()
-            .create_from_header(selected.as_deref(), kind, folder);
+            .create_from_header(selected.as_deref(), kind, new);
         self.run(effect);
     }
 
@@ -114,9 +114,7 @@ impl FileTreeSource {
         };
         main_after(SPINNER_AFTER, move || {
             crate::window::deliver(window, move |controller| {
-                if let Some(files) = controller.ivars().files.borrow().as_ref() {
-                    files.spin(&dir);
-                }
+                controller.with_file_tree(|files| files.spin(&dir));
             });
         });
     }
@@ -271,19 +269,19 @@ impl FileTreeSource {
                 }
             }
             Effect::AskName { naming, title, current } => self.ask_name(&naming, title, &current),
-            Effect::Create { path, folder } => {
-                let result = create(&path, folder).map_err(|error| error.to_string());
-                if let Some(effect) = Model::created(&path, folder, result) {
+            Effect::Create { path, kind } => {
+                let result = create(&path, kind);
+                if let Some(effect) = Model::created(&path, kind, result) {
                     self.run(effect);
                 }
             }
             Effect::Rename { from, to } => {
-                let result = std::fs::rename(&from, &to).map_err(|error| error.to_string());
+                let result = std::fs::rename(&from, &to);
                 if let Some(effect) = Model::renamed(&from, result) {
                     self.run(effect);
                 }
             }
-            Effect::Fail { message, detail } => show_error(self.mtm(), &message, &detail),
+            Effect::Fail { message, detail } => warn(self.mtm(), &message, &detail),
         }
     }
 
@@ -308,15 +306,14 @@ fn kind_of(path: &Path) -> Option<Kind> {
     }
 }
 
-fn create(path: &Path, folder: bool) -> std::io::Result<()> {
-    if folder {
-        std::fs::create_dir(path)
-    } else {
-        std::fs::OpenOptions::new()
+fn create(path: &Path, kind: Kind) -> std::io::Result<()> {
+    match kind {
+        Kind::Folder => std::fs::create_dir(path),
+        Kind::File => std::fs::OpenOptions::new()
             .write(true)
             .create_new(true)
             .open(path)
-            .map(|_| ())
+            .map(|_| ()),
     }
 }
 
@@ -332,27 +329,18 @@ fn copy_text(text: &str) {
 
 /// Asks for a file name; `None` if the user cancels or leaves it empty, or it holds a slash.
 fn ask_name(mtm: MainThreadMarker, title: &str, current: &str) -> Option<String> {
-    let alert = NSAlert::new(mtm);
-    alert.setMessageText(&ns(title));
-    alert.addButtonWithTitle(&ns(t("OK")));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
     let field = NSTextField::textFieldWithString(&ns(current), mtm);
     field.setFrame(NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(260.0, 24.0)));
-    alert.setAccessoryView(Some(&field));
-    alert.window().setInitialFirstResponder(Some(&field));
-    let response: NSModalResponse = alert.runModal();
-    if response != objc2_app_kit::NSAlertFirstButtonReturn {
+    let response = Alert::new(mtm, title)
+        .button(t("OK"), Role::Plain)
+        .button(t("Abbrechen"), Role::Plain)
+        .accessory(&field)
+        .focus(&field)
+        .run_modal();
+    if !first(response) {
         return None;
     }
     valid_name(&field.stringValue().to_string())
-}
-
-fn show_error(mtm: MainThreadMarker, message: &str, detail: &str) {
-    let alert = NSAlert::new(mtm);
-    alert.setAlertStyle(objc2_app_kit::NSAlertStyle::Warning);
-    alert.setMessageText(&ns(message));
-    alert.setInformativeText(&ns(detail));
-    alert.runModal();
 }
 
 #[cfg(test)]
@@ -367,8 +355,8 @@ mod tests {
         let file = scratch.path().join("a.txt");
         let folder = scratch.path().join("sub");
         assert_eq!(kind_of(&file), None);
-        create(&file, false).unwrap();
-        create(&folder, true).unwrap();
+        create(&file, Kind::File).unwrap();
+        create(&folder, Kind::Folder).unwrap();
         assert_eq!(kind_of(&file), Some(Kind::File));
         assert_eq!(kind_of(&folder), Some(Kind::Folder));
     }
@@ -378,8 +366,8 @@ mod tests {
         let scratch = Scratch::new("files-exists");
         let file = scratch.path().join("a.txt");
         std::fs::write(&file, "kept").unwrap();
-        assert!(create(&file, false).is_err());
-        assert!(create(scratch.path(), true).is_err());
+        assert!(create(&file, Kind::File).is_err());
+        assert!(create(scratch.path(), Kind::Folder).is_err());
         assert_eq!(std::fs::read_to_string(&file).unwrap(), "kept");
     }
 }

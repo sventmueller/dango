@@ -5,10 +5,10 @@ use std::time::{Duration, Instant};
 use ide_process::Supervisor;
 use ide_terminal::{Event, Options, Program, Session};
 
-pub const PATIENCE: Duration = Duration::from_secs(10);
+pub(crate) const PATIENCE: Duration = Duration::from_secs(10);
 
 /// A session with its events collected.
-pub struct Harness {
+pub(crate) struct Harness {
     pub session: Session,
     pub supervisor: Supervisor,
     pub events: Vec<Event>,
@@ -16,7 +16,7 @@ pub struct Harness {
 }
 
 impl Harness {
-    pub fn start(options: Options, home: &Path) -> Harness {
+    pub(crate) fn start(options: Options, home: &Path) -> Harness {
         let supervisor = Supervisor::new();
         let (sender, receiver) = channel();
         let session = Session::spawn(&supervisor, &environment(home), options, move |event| {
@@ -32,7 +32,7 @@ impl Harness {
     }
 
     /// Waits until `done` holds, collecting events; whether it did within `PATIENCE`.
-    pub fn wait_until(&mut self, mut done: impl FnMut(&Harness) -> bool) -> bool {
+    pub(crate) fn wait_until(&mut self, mut done: impl FnMut(&Harness) -> bool) -> bool {
         let deadline = Instant::now() + PATIENCE;
         loop {
             while let Ok(event) = self.receiver.try_recv() {
@@ -50,20 +50,20 @@ impl Harness {
         }
     }
 
-    pub fn screen_has(&self, text: &str) -> bool {
+    pub(crate) fn screen_has(&self, text: &str) -> bool {
         self.session.visible_text().iter().any(|line| line.contains(text))
     }
 
-    pub fn screen_line(&self, text: &str) -> bool {
+    pub(crate) fn screen_line(&self, text: &str) -> bool {
         self.session.visible_text().iter().any(|line| line.trim_end() == text)
     }
 
-    pub fn saw(&self, wanted: &Event) -> bool {
+    pub(crate) fn saw(&self, wanted: &Event) -> bool {
         self.events.contains(wanted)
     }
 
     /// The number after `prefix` on the screen, as printed by `echo prefix$$`.
-    pub fn number_after(&self, prefix: &str) -> Option<i32> {
+    pub(crate) fn number_after(&self, prefix: &str) -> Option<i32> {
         self.session.visible_text().iter().find_map(|line| {
             let at = line.find(prefix)? + prefix.len();
             let digits: String = line[at..].chars().take_while(char::is_ascii_digit).collect();
@@ -83,7 +83,7 @@ impl Drop for Harness {
     }
 }
 
-pub fn environment(home: &Path) -> Vec<(String, String)> {
+pub(crate) fn environment(home: &Path) -> Vec<(String, String)> {
     [
         ("PATH", "/usr/bin:/bin:/usr/sbin:/sbin"),
         ("HOME", &home.to_string_lossy()),
@@ -96,9 +96,9 @@ pub fn environment(home: &Path) -> Vec<(String, String)> {
     .collect()
 }
 
-pub use ide_core::testing::scratch as temporary;
+pub(crate) use ide_core::testing::scratch as temporary;
 
-pub fn command(program: &str, args: &[&str], cwd: &Path) -> Options {
+pub(crate) fn command(program: &str, args: &[&str], cwd: &Path) -> Options {
     Options {
         program: Program::Command {
             program: program.into(),
@@ -110,7 +110,7 @@ pub fn command(program: &str, args: &[&str], cwd: &Path) -> Options {
 }
 
 /// Whether a process numbered `pid` exists, asked of `kill -0`.
-pub fn alive(pid: i32) -> bool {
+pub(crate) fn alive(pid: i32) -> bool {
     std::process::Command::new("/bin/kill")
         .args(["-0", &pid.to_string()])
         .stderr(std::process::Stdio::null())
@@ -118,7 +118,7 @@ pub fn alive(pid: i32) -> bool {
         .is_ok_and(|status| status.success())
 }
 
-pub fn gone_within(pid: i32, limit: Duration) -> bool {
+pub(crate) fn gone_within(pid: i32, limit: Duration) -> bool {
     let deadline = Instant::now() + limit;
     while alive(pid) {
         if Instant::now() > deadline {

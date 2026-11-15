@@ -13,31 +13,31 @@ use ide_process::{Ending, Kind, ProcessId, Supervisor};
 use ide_test::{Reading, Report, Test, Tool};
 
 /// A started run: its process and what it printed so far.
-pub struct Running {
+pub(crate) struct Running {
     /// The panel's name for the run.
-    pub key: u64,
-    pub id: ProcessId,
-    pub output: Arc<Mutex<String>>,
-    pub results: Option<PathBuf>,
+    pub(crate) key: u64,
+    pub(crate) id: ProcessId,
+    pub(crate) output: Arc<Mutex<String>>,
+    pub(crate) results: Option<PathBuf>,
     /// It lists tests rather than running them.
-    pub listing: bool,
+    pub(crate) listing: bool,
     /// How far the run was read, while no poll has it on the worker.
-    pub progress: Option<Progress>,
+    pub(crate) progress: Option<Progress>,
     /// Every report of the run so far, by its place in the run's reading.
-    pub reports: Vec<Option<Report>>,
+    pub(crate) reports: Vec<Option<Report>>,
     /// The board's revision of the run's tool right after the run's reports were last applied.
-    pub applied: Option<u64>,
+    pub(crate) applied: Option<u64>,
 }
 
 /// How far a run's output or results file was read.
 #[derive(Default)]
-pub struct Progress {
+pub(crate) struct Progress {
     reading: Option<Reading>,
     read: usize,
 }
 
 /// What a poll takes to the worker for one run.
-pub struct Look {
+pub(crate) struct Look {
     key: u64,
     id: ProcessId,
     tool: Tool,
@@ -49,24 +49,24 @@ pub struct Look {
 }
 
 /// What the worker found of a run.
-pub struct Polled {
-    pub key: u64,
+pub(crate) struct Polled {
+    pub(crate) key: u64,
     /// How the run ended; `None` while it goes.
-    pub ending: Option<Ending>,
+    pub(crate) ending: Option<Ending>,
     /// The tests an ended listing named.
-    pub tests: Option<Vec<Test>>,
+    pub(crate) tests: Option<Vec<Test>>,
     /// The results file was written anew, so the reports of the run start over.
-    pub restarted: bool,
+    pub(crate) restarted: bool,
     /// The reports that changed, by their place in the run's reading.
-    pub reports: Vec<(usize, Report)>,
+    pub(crate) reports: Vec<(usize, Report)>,
     /// All the run printed, once it ended.
-    pub output: Option<String>,
-    pub progress: Progress,
+    pub(crate) output: Option<String>,
+    pub(crate) progress: Progress,
 }
 
 /// Starts `command` with `env`, the login shell's environment, after writing the files it needs; `label` names it in
 /// the activity view. It writes files and starts a process, so it runs off the main thread.
-pub fn start(
+pub(crate) fn start(
     key: u64,
     command: &ide_test::Command,
     env: &[(String, String)],
@@ -131,19 +131,12 @@ fn resolve(program: &str, env: &[(String, String)]) -> PathBuf {
     if program.contains('/') {
         return PathBuf::from(program);
     }
-    env.iter()
-        .find(|(k, _)| k == "PATH")
-        .and_then(|(_, path)| {
-            path.split(':')
-                .map(|dir| Path::new(dir).join(program))
-                .find(|candidate| candidate.is_file())
-        })
-        .unwrap_or_else(|| PathBuf::from(program))
+    ide_process::tool::which(program, ide_process::tool::var(env, "PATH")).unwrap_or_else(|| PathBuf::from(program))
 }
 
 impl Running {
     /// What the worker needs to read the run of `tool` in `root` further; `None` while a poll has it.
-    pub fn look(&mut self, tool: Tool, root: &Path) -> Option<Look> {
+    pub(crate) fn look(&mut self, tool: Tool, root: &Path) -> Option<Look> {
         Some(Look {
             key: self.key,
             id: self.id,
@@ -158,7 +151,7 @@ impl Running {
 }
 
 /// Reads a run further, on a worker: whether it ended, and what it said since the last look; a listing once it ended.
-pub fn look(look: Look) -> Polled {
+pub(crate) fn look(look: Look) -> Polled {
     let Look {
         key,
         id,
@@ -238,6 +231,26 @@ fn from_file(file: &Path, progress: &mut Progress, done: bool, restarted: &mut b
 }
 
 /// Stops the run.
-pub fn stop(running: &Running) {
+pub(crate) fn stop(running: &Running) {
     Supervisor::global().stop(running.id, Duration::from_secs(2));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_program_is_found_on_the_path_a_child_sees() {
+        let env = [
+            ("PATH".to_string(), "/nonexistent".to_string()),
+            ("PATH".to_string(), "/usr/bin:/bin".to_string()),
+        ];
+        assert_eq!(
+            resolve("sh", &env),
+            PathBuf::from("/bin/sh"),
+            "the last PATH of the list wins"
+        );
+        assert_eq!(resolve("./gradlew", &env), PathBuf::from("./gradlew"));
+        assert_eq!(resolve("no-such-tool", &env), PathBuf::from("no-such-tool"));
+    }
 }

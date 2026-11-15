@@ -49,11 +49,9 @@ pub fn stop_all(timeout: Duration) {
 pub(super) fn begin(inner: &Arc<Inner>) {
     {
         let mut shared = inner.lock();
-        if shared.stopping || matches!(shared.state, State::Ended(_)) {
+        if matches!(shared.state, State::Ended(_)) || !shared.course.ask_end(EndReason::Stopped) {
             return;
         }
-        shared.stopping = true;
-        shared.intended.get_or_insert(EndReason::Stopped);
         shared.state = State::Stopping;
     }
     inner.changed.notify_all();
@@ -80,14 +78,10 @@ fn end(inner: &Arc<Inner>) {
 pub(crate) fn goodbye(inner: &Arc<Inner>) {
     let (connection, capabilities, terminated) = {
         let mut shared = inner.lock();
-        if std::mem::replace(&mut shared.said_goodbye, true) {
+        let Some(terminated) = shared.course.take_goodbye() else {
             return;
-        }
-        (
-            shared.connection.clone(),
-            shared.capabilities.clone(),
-            shared.terminated,
-        )
+        };
+        (shared.connection.clone(), shared.capabilities.clone(), terminated)
     };
     let Some(connection) = connection.filter(|c| c.is_open()) else {
         return;
@@ -123,7 +117,7 @@ fn ask(connection: &crate::connection::Connection, command: &str, arguments: Val
 fn wait_terminated(inner: &Inner, timeout: Duration) {
     let deadline = Instant::now() + timeout;
     let mut shared = inner.lock();
-    while !shared.terminated && !matches!(shared.state, State::Ended(_)) {
+    while !shared.course.is_terminated() && !matches!(shared.state, State::Ended(_)) {
         let now = Instant::now();
         if now >= deadline {
             return;
@@ -157,8 +151,7 @@ pub(super) fn watch_adapter(inner: &Arc<Inner>, process: ProcessId) {
             {
                 let mut shared = inner.lock();
                 if !matches!(shared.state, State::Ended(_)) {
-                    shared.stopping = true;
-                    shared.intended.get_or_insert(EndReason::Stopped);
+                    shared.course.ask_end(EndReason::Stopped);
                 }
             }
             goodbye(&inner);
@@ -190,9 +183,9 @@ pub(super) fn watch_adapter(inner: &Arc<Inner>, process: ProcessId) {
 fn adapter_ended(inner: &Arc<Inner>, ending: Ending) {
     let reason = {
         let shared = inner.lock();
-        if let Some(intended) = &shared.intended {
+        if let Some(intended) = shared.course.intended() {
             intended.clone()
-        } else if shared.terminated || (shared.exit_code.is_some() && ending == Ending::Code(0)) {
+        } else if shared.exit_code.is_some() && ending == Ending::Code(0) {
             EndReason::Finished
         } else {
             EndReason::AdapterCrashed {
@@ -208,10 +201,8 @@ fn adapter_ended(inner: &Arc<Inner>, ending: Ending) {
 pub(super) fn connection_closed(inner: &Arc<Inner>) {
     let (adapter, reason) = {
         let shared = inner.lock();
-        let reason = if let Some(intended) = &shared.intended {
+        let reason = if let Some(intended) = shared.course.intended() {
             intended.clone()
-        } else if shared.terminated {
-            EndReason::Finished
         } else {
             EndReason::AdapterCrashed {
                 ending: None,
@@ -236,18 +227,14 @@ pub(super) fn connection_closed(inner: &Arc<Inner>) {
 
 /// The adapter says the session is over: it is closed as the user would stop it, without asking the program to end.
 pub(super) fn terminated(inner: &Arc<Inner>) {
-    {
+    let ends_now = {
         let mut shared = inner.lock();
-        shared.terminated = true;
-        if shared.stopping || matches!(shared.state, State::Ended(_)) {
-            drop(shared);
-            inner.changed.notify_all();
-            return;
-        }
-        shared.stopping = true;
-        shared.intended.get_or_insert(EndReason::Finished);
-    }
+        !matches!(shared.state, State::Ended(_)) && shared.course.adapter_terminated()
+    };
     inner.changed.notify_all();
+    if !ends_now {
+        return;
+    }
     let inner = inner.clone();
     ide_core::thread::detach_or_run("dap-terminated", move || {
         let children = inner.lock().children.clone();
@@ -270,7 +257,7 @@ pub(super) fn fail(inner: &Arc<Inner>, error: &Error) {
         if matches!(shared.state, State::Ended(_)) {
             return;
         }
-        shared.stopping = true;
+        shared.course.ask_end(start::failed_reason(error));
         shared.adapter
     };
     finish(inner, start::failed_reason(error));

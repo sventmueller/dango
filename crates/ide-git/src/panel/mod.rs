@@ -5,6 +5,6 @@ mod graph;
 mod rows;
 mod text;
 
-pub use graph::{GraphRow, Segment, layout};
+pub use graph::{GraphRow, Segment};
 pub use rows::{FileRow, Mark, Model, RowKey, Section};
 pub use text::{Problem, ago, problem};

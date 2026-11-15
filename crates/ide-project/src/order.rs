@@ -7,7 +7,7 @@ use unicode_normalization::char::is_combining_mark;
 
 /// A name prepared for sorting many times.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct NameKey {
+pub(crate) struct NameKey {
     base: Vec<char>,
     accented: Vec<char>,
     name: String,
@@ -15,7 +15,7 @@ pub struct NameKey {
 
 impl NameKey {
     /// The key of `name`.
-    pub fn new(name: &str) -> NameKey {
+    pub(crate) fn new(name: &str) -> NameKey {
         let accented: Vec<char> = name.nfc().flat_map(char::to_lowercase).collect();
         let base = name
             .nfd()
@@ -50,7 +50,8 @@ impl PartialOrd for NameKey {
 }
 
 /// Compares two names as the Finder sorts them.
-pub fn compare(a: &str, b: &str) -> Ordering {
+#[cfg(test)]
+pub(crate) fn compare(a: &str, b: &str) -> Ordering {
     NameKey::new(a).cmp(&NameKey::new(b))
 }
 

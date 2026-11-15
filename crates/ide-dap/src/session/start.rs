@@ -195,7 +195,7 @@ fn begin(inner: &Arc<Inner>) {
         };
         match result {
             Ok(_) => {
-                inner.lock().launched = true;
+                inner.lock().course.launched();
                 running_if_ready(&inner);
             }
             Err(error) => stop::fail(&inner, &error),
@@ -259,7 +259,7 @@ pub(super) fn configure(inner: &Arc<Inner>) {
 }
 
 fn configured(inner: &Arc<Inner>) {
-    inner.lock().configured = true;
+    inner.lock().course.configured();
     running_if_ready(inner);
 }
 
@@ -268,7 +268,7 @@ fn configured(inner: &Arc<Inner>) {
 fn running_if_ready(inner: &Arc<Inner>) {
     {
         let mut shared = inner.lock();
-        if !(shared.launched && shared.configured) || !matches!(shared.state, State::Starting) {
+        if !shared.course.is_ready() || !matches!(shared.state, State::Starting) {
             return;
         }
         shared.state = State::Running;

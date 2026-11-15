@@ -11,7 +11,7 @@ use ide_process::Supervisor;
 use ide_process::shell_env::{capture, user_shell};
 
 /// A folder of its own for one test, deleted at the end.
-pub struct Scratch {
+pub(crate) struct Scratch {
     pub dir: PathBuf,
     _folder: ide_core::testing::Scratch,
     /// The login shell's environment, for a test of the user's own git and configuration.
@@ -20,7 +20,7 @@ pub struct Scratch {
 }
 
 impl Scratch {
-    pub fn new(name: &str) -> Scratch {
+    pub(crate) fn new(name: &str) -> Scratch {
         let folder = ide_core::testing::scratch(&format!("git-test-{name}"));
         std::fs::create_dir_all(folder.join("home")).unwrap();
         Scratch {
@@ -33,7 +33,7 @@ impl Scratch {
 
     /// A folder whose git is the user's own: the git on the login shell's PATH, with their HOME and global
     /// configuration, as the app runs it.
-    pub fn with_users_git(name: &str) -> Scratch {
+    pub(crate) fn with_users_git(name: &str) -> Scratch {
         let mut scratch = Scratch::new(name);
         let env = capture(&Supervisor::new(), &user_shell(), &scratch.dir, Duration::from_secs(30))
             .expect("the login shell's environment");
@@ -48,12 +48,12 @@ impl Scratch {
         scratch
     }
 
-    pub fn path(&self, name: &str) -> PathBuf {
+    pub(crate) fn path(&self, name: &str) -> PathBuf {
         self.dir.join(name)
     }
 
     /// The environment the app would pass, without the user's or the system's git configuration.
-    pub fn environment(&self) -> Vec<(String, String)> {
+    pub(crate) fn environment(&self) -> Vec<(String, String)> {
         if let Some(env) = &self.users {
             return env.clone();
         }
@@ -65,12 +65,12 @@ impl Scratch {
         ]
     }
 
-    pub fn git(&self) -> Git {
+    pub(crate) fn git(&self) -> Git {
         Git::new(&Supervisor::new(), self.environment())
     }
 
     /// A new repository on `main` with a user, and a first commit of `files` unless there are none.
-    pub fn repository(&self, name: &str, files: &[(&str, &str)]) -> Repository {
+    pub(crate) fn repository(&self, name: &str, files: &[(&str, &str)]) -> Repository {
         let root = self.path(name);
         std::fs::create_dir_all(&root).unwrap();
         self.raw(&root, &["init", "--quiet", "--initial-branch=main"]);
@@ -87,7 +87,7 @@ impl Scratch {
     }
 
     /// Runs git directly, for setting up what the test then looks at; panics when git fails.
-    pub fn raw(&self, dir: &Path, args: &[&str]) -> String {
+    pub(crate) fn raw(&self, dir: &Path, args: &[&str]) -> String {
         let output = Command::new(&self.program)
             .args(args)
             .current_dir(dir)
@@ -104,7 +104,7 @@ impl Scratch {
     }
 
     /// Like `raw`, but returns whether git succeeded.
-    pub fn try_raw(&self, dir: &Path, args: &[&str]) -> bool {
+    pub(crate) fn try_raw(&self, dir: &Path, args: &[&str]) -> bool {
         Command::new(&self.program)
             .args(args)
             .current_dir(dir)
@@ -117,21 +117,21 @@ impl Scratch {
     }
 }
 
-pub fn write(root: &Path, path: &str, content: &str) {
+pub(crate) fn write(root: &Path, path: &str, content: &str) {
     write_bytes(root, path, content.as_bytes());
 }
 
-pub fn write_bytes(root: &Path, path: &str, content: &[u8]) {
+pub(crate) fn write_bytes(root: &Path, path: &str, content: &[u8]) {
     let full = root.join(path);
     std::fs::create_dir_all(full.parent().unwrap()).unwrap();
     std::fs::write(full, content).unwrap();
 }
 
-pub fn read(root: &Path, path: &str) -> String {
+pub(crate) fn read(root: &Path, path: &str) -> String {
     std::fs::read_to_string(root.join(path)).unwrap()
 }
 
 /// Lines `1` to `n`, one per line.
-pub fn numbered(n: usize) -> String {
+pub(crate) fn numbered(n: usize) -> String {
     (1..=n).map(|i| format!("line {i}\n")).collect()
 }

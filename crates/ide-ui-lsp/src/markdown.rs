@@ -122,7 +122,7 @@ fn attributes(font: &NSFont, color: &NSColor) -> Retained<NSDictionary<NSString,
 }
 
 /// `markdown` as styled text at `size` points.
-pub fn attributed(markdown: &str, size: f64) -> Retained<NSAttributedString> {
+pub(crate) fn attributed(markdown: &str, size: f64) -> Retained<NSAttributedString> {
     let result = NSMutableAttributedString::new();
     let text = attributes(&NSFont::systemFontOfSize(size), &NSColor::labelColor());
     let bold = attributes(&NSFont::boldSystemFontOfSize(size), &NSColor::labelColor());

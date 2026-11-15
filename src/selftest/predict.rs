@@ -18,7 +18,7 @@ use objc2::{MainThreadMarker, sel};
 use objc2_app_kit::{NSStandardKeyBindingResponding, NSTextView, NSWindow};
 use objc2_foundation::NSRange;
 
-use super::{check, finish, helpers, snapshot};
+use super::{check, give_up, helpers, snapshot};
 use crate::editor::insets::{self, Layer};
 use crate::editor::predict::{self, model::Kind};
 use crate::editor::{self, EditorTextView};
@@ -130,7 +130,7 @@ fn ask(view: &EditorTextView) {
     predict::request(view);
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let secret = format!("fn token() -> &'static str {{\n    \"{}\"\n}}\n", token());
     let big = big();
     let files = [
@@ -151,8 +151,7 @@ fn big() -> String {
 /// Typing pauses, the stub answers, and the answer shows as ghost text after the caret.
 fn ghost() {
     let Some(view) = main_view() else {
-        check("the file opens", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the file opens");
     };
     let caret = after_text(&view, "total = sc");
     caret_at_byte(&view, caret);
@@ -171,7 +170,7 @@ fn drawn(view: &EditorTextView, layer: Layer) -> bool {
 
 fn ghost_shown() {
     let Some(view) = main_view() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "main.rs opens in an editor");
     };
     let asked = STUB
         .lock()
@@ -248,11 +247,10 @@ fn menu_enabled(view: &EditorTextView, tag: isize) -> Option<bool> {
 
 fn undo_take() {
     let Some(view) = main_view() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "main.rs opens in an editor");
     };
     let Some(undo) = view.undoManager() else {
-        check("the editor has an undo manager", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the editor has an undo manager");
     };
     undo.undo();
     let once = text(&view);
@@ -271,7 +269,7 @@ fn undo_take() {
 
 fn escape() {
     let Some(view) = main_view() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "main.rs opens in an editor");
     };
     if let Some(window) = view.window() {
         window.displayIfNeeded();
@@ -312,7 +310,7 @@ fn escape() {
 
 fn late() {
     let Some(view) = main_view() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "main.rs opens in an editor");
     };
     check(
         "an answer that arrives after a further edit never shows",
@@ -331,7 +329,7 @@ fn late() {
 
 fn list_first() {
     let Some(view) = main_view() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "main.rs opens in an editor");
     };
     let had = kind(&view).is_some();
     ide_ui_lsp::completion::show(&*view, &["scale_factor"]);
@@ -356,7 +354,7 @@ fn list_first() {
 
 fn snippet_first() {
     let Some(view) = main_view() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "main.rs opens in an editor");
     };
     let had = kind(&view).is_some();
     let before = text(&view);
@@ -379,7 +377,7 @@ fn snippet_first() {
 
 fn replace() {
     let Some(view) = main_view() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "main.rs opens in an editor");
     };
     let boxed = predict::boxed_text(&view).unwrap_or_default();
     check(
@@ -411,7 +409,7 @@ fn replace() {
 
 fn delete() {
     let Some(view) = main_view() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "main.rs opens in an editor");
     };
     let boxed = predict::boxed_text(&view).unwrap_or_default();
     let shown = kind(&view) == Some(Kind::Change) && boxed.contains("− ") && !boxed.contains('+');
@@ -435,7 +433,7 @@ fn delete() {
 
 fn jump() {
     let Some(view) = main_view() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "main.rs opens in an editor");
     };
     let hint = insets::of(&view, Layer::Prediction);
     check(
@@ -469,7 +467,7 @@ fn jump() {
 
 fn lines() {
     let Some(view) = main_view() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "main.rs opens in an editor");
     };
     let ghost = insets::of(&view, Layer::Prediction);
     check(
@@ -489,7 +487,7 @@ fn lines() {
 
 fn line_start() {
     let Some(view) = main_view() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "main.rs opens in an editor");
     };
     check(
         "at a line's start, where no gap can open, the proposal shows in the box (E81)",
@@ -508,8 +506,7 @@ fn line_start() {
         format!("{off:?}"),
     );
     let Some(env) = open(".env.local") else {
-        check("the excluded file opens", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the excluded file opens");
     };
     ask(&env);
     check(
@@ -530,8 +527,7 @@ fn token() -> String {
 /// provider outside the Mac.
 fn secrets() {
     let Some(big) = open("big.rs") else {
-        check("the big file opens", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the big file opens");
     };
     let (text, folder) = (text(&big), root());
     let scan = predict::provider::gitleaks();
@@ -548,8 +544,7 @@ fn secrets() {
             crate::util::main_soon(move || secrets_timed(&times, &verdicts));
         });
     if spawned.is_err() {
-        check("the secrets check starts", false, "");
-        finish(SCENARIO);
+        give_up(SCENARIO, "the secrets check starts");
     }
 }
 
@@ -561,8 +556,7 @@ fn secrets_timed(times: &[Duration], verdicts: &[predict::guard::Verdict]) {
         format!("{verdicts:?} in {times:?}"),
     );
     let Some(view) = open("src/secret.rs") else {
-        check("the file with a secret opens", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the file with a secret opens");
     };
     let end = after_text(&view, "\"\n");
     caret_at_byte(&view, end);
@@ -582,7 +576,7 @@ fn secrets_timed(times: &[Duration], verdicts: &[predict::guard::Verdict]) {
 /// Without gitleaks the text goes out, and the status bar says so once.
 fn secrets_unchecked() {
     let Some(view) = open("src/secret.rs") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "src/secret.rs opens in an editor");
     };
     check(
         "skipped: gitleaks missing; the text goes out unchecked and the status bar says so",
@@ -595,7 +589,7 @@ fn secrets_unchecked() {
 
 fn secret_found() {
     let Some(view) = open("src/secret.rs") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "src/secret.rs opens in an editor");
     };
     let status = predict::status_shown(&view);
     check(
@@ -620,7 +614,7 @@ fn secret_found() {
 
 fn secret_gone() {
     let Some(view) = open("src/secret.rs") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "src/secret.rs opens in an editor");
     };
     let status = predict::status_shown(&view);
     check(
@@ -688,8 +682,7 @@ fn picture_window(window: &NSWindow, name: &str) {
 /// proposal alternate, so that the load of this Mac weighs on both alike.
 fn budget() {
     let Some(big) = open("big.rs") else {
-        check("the big file opens", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the big file opens");
     };
     let middle = big.line_start(5000).unwrap_or(0) + 30;
     editor::scroll_to_byte(&big, big.document().text().utf16_to_byte(middle).unwrap_or(0));
@@ -717,7 +710,7 @@ fn budget() {
     );
     match main_view() {
         Some(view) => super::predict_menu::run(view),
-        None => finish(SCENARIO),
+        None => give_up(SCENARIO, "main.rs opens in an editor"),
     }
 }
 

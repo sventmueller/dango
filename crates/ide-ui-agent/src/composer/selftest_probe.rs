@@ -6,7 +6,7 @@ impl Composer {
     /// Through the middle of the text, left to right: whether a click there reaches the text view, which takes the
     /// keyboard focus in a key window; then on the card's margin and below the text: whether a click there puts the
     /// focus into the text. A self-test's window is never key, so the text view's own click is not tried.
-    pub fn clicks(&self) -> Vec<bool> {
+    pub(crate) fn clicks(&self) -> Vec<bool> {
         use objc2_app_kit::{NSApplication, NSEventType};
 
         let Some(window) = self.text.window() else {

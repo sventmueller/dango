@@ -128,6 +128,7 @@ pub fn split(shortcut: &str) -> Option<(Vec<&str>, &str)> {
 }
 
 /// `shortcut` with its modifiers in a fixed order, so two spellings of one shortcut compare equal.
+#[cfg(test)]
 fn normal(shortcut: &str) -> Option<String> {
     let (modifiers, key) = split(shortcut)?;
     let mut ordered: Vec<&str> = MODIFIERS.iter().copied().filter(|m| modifiers.contains(m)).collect();
@@ -160,7 +161,7 @@ impl Keymap {
 
     /// The table with `entries`, a command each with its shortcut or `""` for none; unknown commands and shortcuts are
     /// reported and left out.
-    pub fn with(entries: BTreeMap<String, String>) -> (Keymap, Vec<String>) {
+    pub(crate) fn with(entries: BTreeMap<String, String>) -> (Keymap, Vec<String>) {
         let mut problems = vec![];
         let mut overrides = BTreeMap::new();
         for (command, key) in entries {
@@ -185,7 +186,8 @@ impl Keymap {
     }
 
     /// Shortcuts that more than one command claims, each with the commands.
-    pub fn conflicts(&self) -> Vec<(String, Vec<&'static str>)> {
+    #[cfg(test)]
+    pub(crate) fn conflicts(&self) -> Vec<(String, Vec<&'static str>)> {
         let mut by_key: BTreeMap<String, Vec<&'static str>> = BTreeMap::new();
         for binding in DEFAULTS {
             if let Some(key) = self.key(binding.command).and_then(normal) {

@@ -17,7 +17,7 @@ use splat_i18n::t;
 
 use super::super::git::{answer_sheet, pictures, sheet_pictures, wait_for, window_of};
 use super::super::helpers::wait_on_within;
-use super::super::{check, finish};
+use super::super::{check, finish, give_up, give_up_saying};
 use super::stub::{DEVICE_TOKEN, USER_CODE};
 use super::{TOKEN, describe, stubs};
 use crate::ci_panel::selftest as panel;
@@ -34,7 +34,7 @@ static BLOCKER: Mutex<Option<TcpListener>> = Mutex::new(None);
 
 pub(super) fn start(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let phase = panel::seen(&controller).map(|s| s.phase).unwrap_or_default();
     check(
@@ -57,8 +57,11 @@ pub(super) fn start(root: PathBuf, ok: bool) {
 
 fn app_sheet(root: PathBuf, ok: bool) {
     check("the browser login asks for the host's app id first", ok, "");
-    if !ok || !answer_sheet(&root, NSAlertFirstButtonReturn, Some(GITLAB_APP)) {
-        return finish(SCENARIO);
+    if !ok {
+        return give_up(SCENARIO, "the browser login asks for the host's app id first");
+    }
+    if !answer_sheet(&root, NSAlertFirstButtonReturn, Some(GITLAB_APP)) {
+        return give_up(SCENARIO, "the sheet is there to answer");
     }
     wait_for(
         root,
@@ -73,7 +76,7 @@ fn app_sheet(root: PathBuf, ok: bool) {
 
 fn port_taken(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check(
         "a taken return port says so and no login waits",
@@ -107,7 +110,7 @@ fn query(url: &str, name: &str) -> Option<String> {
 
 fn authorize_opened(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let url = authorize_url().unwrap_or_default();
     let fitting = query(&url, "client_id").as_deref() == Some(GITLAB_APP)
@@ -133,8 +136,11 @@ fn authorize_opened(root: PathBuf, ok: bool) {
         match copy_tree(&root, &twin).and_then(|()| twin.canonicalize()) {
             Ok(twin) => open_beside(twin),
             Err(error) => {
-                check("a second window on the same repository opens", false, error.to_string());
-                finish(SCENARIO);
+                give_up_saying(
+                    SCENARIO,
+                    "a second window on the same repository opens",
+                    error.to_string(),
+                );
             }
         }
     });
@@ -172,7 +178,7 @@ fn authorize_count() -> usize {
 
 fn twin_ready(twin: PathBuf, ok: bool) {
     let Some(controller) = window_of(&twin) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let phase = panel::seen(&controller).map(|s| s.phase).unwrap_or_default();
     check(
@@ -249,7 +255,7 @@ fn browser_returns(target: &str) {
 
 fn gitlab_signed_in(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let exchange = stubs()
         .gitlab
@@ -290,7 +296,7 @@ fn gitlab_signed_in(root: PathBuf, ok: bool) {
 
 fn signed_out(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check(
         "signing out forgets the token and asks to sign in again",
@@ -310,8 +316,11 @@ fn github_open(root: PathBuf, ok: bool) {
 
 fn github_app_sheet(root: PathBuf, ok: bool) {
     check("GitHub Enterprise asks for the host's OAuth app first", ok, "");
-    if !ok || !answer_sheet(&root, NSAlertFirstButtonReturn, Some(GITHUB_APP)) {
-        return finish(SCENARIO);
+    if !ok {
+        return give_up(SCENARIO, "GitHub Enterprise asks for the host's OAuth app first");
+    }
+    if !answer_sheet(&root, NSAlertFirstButtonReturn, Some(GITHUB_APP)) {
+        return give_up(SCENARIO, "the sheet is there to answer");
     }
     wait_for(root, code_shown, code_sheet);
 }
@@ -323,7 +332,7 @@ fn code_shown(controller: &WindowController) -> bool {
 fn code_sheet(root: PathBuf, ok: bool) {
     check("the device flow shows its code in a sheet", ok, "");
     if !ok {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the device flow shows its code in a sheet");
     }
     sheet_pictures(root, "ci-device-code", |root| {
         answer_sheet(&root, NSAlertSecondButtonReturn, None);
@@ -350,8 +359,11 @@ fn code_cancelled(root: PathBuf, ok: bool) {
 
 fn code_again(root: PathBuf, ok: bool) {
     check("the second login skips the app id it remembered", ok, "");
-    if !ok || !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
-        return finish(SCENARIO);
+    if !ok {
+        return give_up(SCENARIO, "the second login skips the app id it remembered");
+    }
+    if !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
+        return give_up(SCENARIO, "the sheet is there to answer");
     }
     wait_for(
         root,
@@ -362,7 +374,7 @@ fn code_again(root: PathBuf, ok: bool) {
 
 fn github_signed_in(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let noted = panel::opened();
     let seen = stubs().github.seen();

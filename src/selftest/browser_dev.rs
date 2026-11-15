@@ -12,7 +12,7 @@ use ide_process::{Kind, ProcessId, Supervisor};
 use splat_i18n::{t, tf};
 
 use super::helpers::wait_within;
-use super::{check, finish, first_window, snapshot};
+use super::{check, finish, first_window, give_up_saying, snapshot};
 
 const SCENARIO: &str = "browser-dev";
 const TLS_TITLE: &str = "TLS Page";
@@ -59,9 +59,7 @@ pub(super) fn run() {
     match server {
         Ok(port) => PORT.store(port, Ordering::SeqCst),
         Err(error) => {
-            check("the page server starts", false, error.to_string());
-            finish(SCENARIO);
-            return;
+            return give_up_saying(SCENARIO, "the page server starts", error.to_string());
         }
     }
     let folder = tls_folder();
@@ -90,9 +88,7 @@ pub(super) fn run() {
         .stdout(Stdio::null())
         .stderr(Stdio::null());
     if let Err(error) = Supervisor::global().spawn(command, Kind::Tool, "openssl req") {
-        check("a self-signed certificate is made", false, error.to_string());
-        finish(SCENARIO);
-        return;
+        return give_up_saying(SCENARIO, "a self-signed certificate is made", error.to_string());
     }
     wait_within(
         Duration::from_secs(20),
@@ -173,8 +169,7 @@ fn start_tls_server(made: bool) {
             );
         }
         Err(error) => {
-            check("the TLS server starts", false, error.to_string());
-            finish(SCENARIO);
+            give_up_saying(SCENARIO, "the TLS server starts", error.to_string());
         }
     }
 }

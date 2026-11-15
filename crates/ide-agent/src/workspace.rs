@@ -88,12 +88,12 @@ impl Workspace {
     }
 
     /// The project folder.
-    pub fn root(&self) -> &Path {
+    pub(crate) fn root(&self) -> &Path {
         &self.root
     }
 
     /// The login shell's environment.
-    pub fn environment(&self) -> &[(String, String)] {
+    pub(crate) fn environment(&self) -> &[(String, String)] {
         &self.environment
     }
 
@@ -137,7 +137,7 @@ impl Workspace {
     }
 
     /// `path` as the user reads it: relative inside the project.
-    pub fn display(&self, path: &Path) -> String {
+    pub(crate) fn display(&self, path: &Path) -> String {
         match path.strip_prefix(&self.root) {
             Ok(relative) if relative.as_os_str().is_empty() => ".".into(),
             Ok(relative) => relative.display().to_string(),

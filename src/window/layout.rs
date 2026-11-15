@@ -9,24 +9,24 @@
 use std::cell::RefCell;
 use std::path::Path;
 
-use ide_core::layout::{Layout, Tab, WindowTab};
+use ide_core::layout::{Editor, Layout, Tab, Untitled, Welcome, WindowTab};
 
 use objc2::DefinedClass;
 
 use super::{TabId, TabKind, WindowController};
 
 /// A document an editor of a layout shows.
-pub enum Document<'a> {
+pub(crate) enum Document<'a> {
     File(&'a Path),
     /// An untitled one, by the name of its copy.
     Untitled(&'a str),
 }
 
 /// Opens a document's editor where the window's open target says; whether it did.
-pub type Opener<'a> = dyn FnMut(&WindowController, Document) -> bool + 'a;
+pub(crate) type Opener<'a> = dyn FnMut(&WindowController, Document) -> bool + 'a;
 
 /// Saves the window tabs of `controller`'s window for its folder; a window without a folder keeps nothing.
-pub fn save(controller: &WindowController) {
+pub(crate) fn save(controller: &WindowController) {
     let Some(root) = controller.project_root() else { return };
     if controller.ivars().closing.get() || crate::session::is_quitting() {
         return;
@@ -55,37 +55,41 @@ pub fn save(controller: &WindowController) {
 fn reopenable(controller: &WindowController, id: TabId, kind: TabKind, key: Option<&str>) -> Option<Tab> {
     match kind {
         TabKind::Editor => match key {
-            Some(path) => Some(Tab::Editor { path: path.into() }),
-            None => crate::editor::tab_document(controller, id).map(|(_, recovery)| Tab::Untitled {
-                recovery: recovery.as_str().to_string(),
+            Some(path) => Tab::new(&Editor { path: path.into() }),
+            None => crate::editor::tab_document(controller, id).and_then(|(_, recovery)| {
+                Tab::new(&Untitled {
+                    recovery: recovery.as_str().to_string(),
+                })
             }),
         },
-        TabKind::Welcome => Some(Tab::Welcome),
-        TabKind::Terminal => crate::terminal::folder_of_tab(controller, id).map(|folder| Tab::Terminal { folder }),
-        TabKind::Browser => crate::browser::url_of_tab(controller, id).map(|url| {
-            match crate::site_preview::page_of(objc2::MainThreadOnly::mtm(controller), &url) {
-                Some(path) => Tab::SitePreview { path },
-                None => Tab::Browser { url },
-            }
-        }),
+        TabKind::Welcome => Tab::new(&Welcome {}),
+        TabKind::Terminal => crate::terminal::folder_of_tab(controller, id)
+            .and_then(|folder| Tab::new(&crate::terminal::KeptTerminal { folder })),
+        TabKind::Browser => {
+            crate::browser::url_of_tab(controller, id).and_then(|url| {
+                match crate::site_preview::page_of(objc2::MainThreadOnly::mtm(controller), &url) {
+                    Some(path) => Tab::new(&crate::site_preview::KeptSite { path }),
+                    None => Tab::new(&crate::browser::KeptPage { url }),
+                }
+            })
+        }
         TabKind::Agent => {
             let key = key?;
             ide_ui_agent::of_window(controller)
                 .into_iter()
                 .find(|tab| tab.tab_key() == key)
                 .and_then(|tab| tab.session_id())
-                .map(|session| Tab::Agent { session })
+                .and_then(|session| Tab::new(&ide_ui_agent::KeptSession { session }))
         }
-        TabKind::Console => {
-            crate::debug::console_of_tab(controller, id).map(|(title, history)| Tab::Debug { title, history })
-        }
+        TabKind::Console => crate::debug::console_of_tab(controller, id)
+            .and_then(|(title, history)| Tab::new(&crate::debug::KeptConsole { title, history })),
         TabKind::Diff | TabKind::Log | TabKind::Plan | TabKind::Preview => None,
     }
 }
 
 /// Opens the window tabs saved for `controller`'s folder, each editor's document through `editor`; the welcome page
 /// the window started with gives way once anything opened, unless the layout has one.
-pub fn restore(controller: &WindowController, editor: &mut Opener) {
+pub(crate) fn restore(controller: &WindowController, editor: &mut Opener) {
     let Some(root) = controller.project_root() else { return };
     let Some(layout) = ide_core::layout::load(&root).filter(|layout| layout.document_count() > 0) else {
         return;
@@ -109,7 +113,11 @@ pub fn restore(controller: &WindowController, editor: &mut Opener) {
     }
     if let Some(welcome) = welcome
         && controller.documents().len() > 1
-        && !layout.has(&Tab::Welcome)
+        && !layout
+            .tabs
+            .iter()
+            .flat_map(WindowTab::documents)
+            .any(Tab::is::<Welcome>)
     {
         controller.close_tab(welcome);
     }
@@ -126,16 +134,16 @@ fn restore_tab(controller: &WindowController, opener: &Documents, window_tab: &W
     for (pane, saved) in tab.panes.build(&window_tab.root) {
         let mut front = None;
         for (index, document) in saved.documents.iter().enumerate() {
-            let before = pane.count();
-            controller.open_into(&pane, || {
+            let before = tab.panes.count(pane);
+            controller.open_into(&tab, pane, || {
                 opener.open(controller, document);
             });
-            if index == saved.selected && pane.count() > before {
-                front = pane.front().map(|doc| doc.id);
+            if index == saved.selected && tab.panes.count(pane) > before {
+                front = tab.panes.front(pane).map(|doc| doc.id);
             }
         }
         if let Some(front) = front {
-            pane.select(front);
+            tab.panes.select(front);
         }
     }
     tab.panes.prune();
@@ -162,38 +170,50 @@ struct Documents<'a, 'b> {
 }
 
 impl Documents<'_, '_> {
-    /// Opens `tab`; whether it opened.
+    /// Opens `tab`; whether it opened. A kind no feature of this version reads opens nothing.
     fn open(&self, controller: &WindowController, tab: &Tab) -> bool {
         let (root, trusted) = (self.root, self.trusted);
-        match tab {
-            Tab::Welcome => {
-                controller.open_welcome();
-                true
-            }
-            Tab::Editor { path } => (self.editor.borrow_mut())(controller, Document::File(path)),
-            Tab::Untitled { recovery } => (self.editor.borrow_mut())(controller, Document::Untitled(recovery)),
-            Tab::Terminal { folder } if trusted => {
-                let folder = Some(folder.as_path()).filter(|f| f.is_dir());
-                crate::terminal::open_tab(controller, folder);
-                true
-            }
-            Tab::Browser { url } => {
-                crate::browser::open_tab(controller, Some(url));
-                true
-            }
-            Tab::SitePreview { path } if trusted && path.is_file() => {
-                crate::site_preview::open(controller, path);
-                true
-            }
-            Tab::Agent { session } if trusted => resume_agent(controller, root, session),
-            // Only the history comes back; no session starts or attaches (Review C18).
-            Tab::Debug { title, history } => crate::debug::reopen_console(controller, title, history.clone()),
-            Tab::Cli { .. } if trusted => {
-                crate::terminal::open_tab(controller, Some(root));
-                true
-            }
-            _ => false,
+        if tab.is::<Welcome>() {
+            controller.open_welcome();
+            return true;
         }
+        if let Some(Editor { path }) = tab.read() {
+            return (self.editor.borrow_mut())(controller, Document::File(&path));
+        }
+        if let Some(Untitled { recovery }) = tab.read() {
+            return (self.editor.borrow_mut())(controller, Document::Untitled(&recovery));
+        }
+        if let Some(crate::browser::KeptPage { url }) = tab.read() {
+            crate::browser::open_tab(controller, Some(&url));
+            return true;
+        }
+        // Only the history comes back; no session starts or attaches (Review C18).
+        if let Some(crate::debug::KeptConsole { title, history }) = tab.read() {
+            return crate::debug::reopen_console(controller, &title, history);
+        }
+        trusted && self.open_trusted(controller, root, tab)
+    }
+
+    /// Opens `tab` of a kind that runs what the folder configures; whether it opened.
+    fn open_trusted(&self, controller: &WindowController, root: &Path, tab: &Tab) -> bool {
+        if let Some(crate::terminal::KeptTerminal { folder }) = tab.read() {
+            crate::terminal::open_tab(controller, Some(folder.as_path()).filter(|f| f.is_dir()));
+            return true;
+        }
+        if let Some(crate::site_preview::KeptSite { path }) = tab.read()
+            && path.is_file()
+        {
+            crate::site_preview::open(controller, &path);
+            return true;
+        }
+        if let Some(ide_ui_agent::KeptSession { session }) = tab.read() {
+            return resume_agent(controller, root, &session);
+        }
+        if tab.read::<crate::terminal::KeptCli>().is_some() {
+            crate::terminal::open_tab(controller, Some(root));
+            return true;
+        }
+        false
     }
 }
 
@@ -215,9 +235,24 @@ pub(crate) fn past_session(root: &Path, session: &str) -> Option<(ide_ui_agent::
 }
 
 impl WindowController {
+    /// Opens the tabs the folder's window had when it closed, as opening a folder does.
+    pub(crate) fn restore_layout(&self) {
+        let size = ide_core::settings::Settings::load_user().get(&ide_core::settings::keys::FONT_SIZE);
+        restore(self, &mut |controller, document| match document {
+            Document::File(path) => path.is_file() && crate::editor::open_quietly(controller, path, size),
+            Document::Untitled(_) => false,
+        });
+    }
+
+    /// `restore_layout` with `editor` opening each editor's document, and saying whether it did, so the launch can put
+    /// the copies a crash left in their places (`session::restore`).
+    pub(crate) fn restore_layout_with(&self, editor: &mut Opener) {
+        restore(self, editor);
+    }
+
     /// What the window shows, for the next launch: its folder, its editors and welcome pages in every tab and which
     /// one is in front. The tabs of the other documents are the layout's, which `layout::restore` opens again.
-    pub fn record(&self) -> crate::session::WindowRecord {
+    pub(crate) fn record(&self) -> crate::session::WindowRecord {
         use crate::session::TabRecord;
         let selected = self.selected_tab();
         let mut record = crate::session::WindowRecord {
@@ -244,3 +279,6 @@ impl WindowController {
         record
     }
 }
+
+#[cfg(test)]
+mod tests;

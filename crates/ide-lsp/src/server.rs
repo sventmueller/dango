@@ -25,6 +25,7 @@ use crate::rpc::Connection;
 use crate::semantic::Previous;
 use crate::text::Text;
 use crate::uri;
+use sync::SaveSync;
 
 pub use config::{RestartPolicy, ServerConfig};
 pub use event::{Event, Refresh, Reply, Status};
@@ -102,7 +103,6 @@ pub(crate) struct State {
 pub(crate) struct Inner {
     pub(crate) config: ServerConfig,
     supervisor: Supervisor,
-    exits: crate::tool::Exits,
     sink: Sink,
     state: Mutex<State>,
     changed: Condvar,
@@ -159,7 +159,6 @@ impl Server {
         let inner = Arc::new(Inner {
             config,
             supervisor: supervisor.clone(),
-            exits: crate::tool::Exits::watch(supervisor),
             sink: Arc::new(events),
             state: Mutex::new(State {
                 status: Status::Stopped,
@@ -189,7 +188,7 @@ impl Server {
     }
 
     /// Whether `other` is a handle of the same server.
-    pub fn same(&self, other: &Server) -> bool {
+    pub(crate) fn same(&self, other: &Server) -> bool {
         Arc::ptr_eq(&self.handle, &other.handle)
     }
 
@@ -219,7 +218,7 @@ impl Server {
     }
 
     /// What the server offers, once it is running, without copying it: for checks on every keystroke.
-    pub fn shared_capabilities(&self) -> Option<Arc<ServerCapabilities>> {
+    pub(crate) fn shared_capabilities(&self) -> Option<Arc<ServerCapabilities>> {
         self.inner().lock().capabilities.clone()
     }
 
@@ -323,13 +322,14 @@ impl Server {
     pub fn save(&self, uri: &Uri) {
         let uri = uri::normalize(uri);
         let state = self.inner().lock();
-        let Some(include_text) = state.sync_options().save else {
+        let save = state.sync_options().save;
+        if save == SaveSync::Never {
             return;
-        };
+        }
         let Some(doc) = state.documents.get(&uri).filter(|doc| doc.sync == Told::Synced) else {
             return;
         };
-        if include_text {
+        if save == SaveSync::WithText {
             let text = doc.text.clone();
             state.notify_document_with(
                 "textDocument/didSave",

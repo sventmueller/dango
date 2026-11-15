@@ -5,28 +5,25 @@
 
 use std::cell::Cell;
 use std::path::PathBuf;
-use std::ptr::NonNull;
 use std::time::Duration;
 
-use block2::RcBlock;
 use ide_process::Supervisor;
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, Message};
 use objc2_app_kit::{NSApplication, NSEventModifierFlags, NSSavePanel, NSView, NSWindow};
-use objc2_foundation::{NSRunLoop, NSRunLoopCommonModes, NSTimer};
 
 use super::super::git::sheet_ready;
-use super::super::helpers::{wait_until, wait_within};
+use super::super::helpers::{wait_until, wait_within, when_alert_shows};
 use super::{end, keys, walk, window_of};
 use crate::selftest::check;
 use crate::window::{Panel, WindowController};
 use ide_ui_git::selftest as git;
 
-pub const CREDENTIALS: &str = "credentials.txt";
+pub(crate) const CREDENTIALS: &str = "credentials.txt";
 /// An access key in the shape gitleaks' `aws-access-token` rule looks for; it opens nothing.
-pub const FAKE_KEY: &str = "aws_access_key_id = AKIAQYLPMN5HHHFPZAM2\n";
+pub(crate) const FAKE_KEY: &str = "aws_access_key_id = AKIAQYLPMN5HHHFPZAM2\n";
 /// A folder the welcome tab lists among the recent ones.
-pub const RECENT: &str = "a11y-recent";
+pub(crate) const RECENT: &str = "a11y-recent";
 const MESSAGE: &str = "Commit by keyboard";
 const REGISTRY: &str = include_str!("../../../crates/ide-acp/tests/fixtures/registry.json");
 /// The place of Gemini in the "+" menu, played by the test agent.
@@ -42,7 +39,7 @@ const SPACE: (&str, u16) = (" ", 49);
 const DOWN: (&str, u16) = ("\u{f701}", 125);
 
 /// The panel window in front of `controller`'s window, such as Open Quickly.
-pub fn child_panel(controller: &WindowController) -> Option<Retained<NSWindow>> {
+pub(crate) fn child_panel(controller: &WindowController) -> Option<Retained<NSWindow>> {
     let window = controller.window()?;
     let children = window.childWindows()?;
     children.iter().find(|child| child.isVisible())
@@ -105,7 +102,7 @@ fn control_tab_leaves(window: &NSWindow, class: &str, back: bool) -> (bool, Stri
 
 /// ⌘4 shows the Git panel, Tab reaches its list, Space stages the row Down selected, Tab reaches the message, and ⌘↩
 /// commits what was typed there; `then` goes on.
-pub fn commit(root: PathBuf, then: fn(PathBuf)) {
+pub(crate) fn commit(root: PathBuf, then: fn(PathBuf)) {
     let Some(controller) = window_of(&root) else { return };
     let Some(window) = controller.window() else { return };
     controller.activate_panel(Panel::Files);
@@ -290,7 +287,7 @@ fn gitleaks_installed() -> bool {
 }
 
 /// The flows after the states: Open Quickly, a new tab, the next panel, a prompt, a plan, opening a folder.
-pub fn start(root: PathBuf) {
+pub(crate) fn start(root: PathBuf) {
     let Some(controller) = window_of(&root) else { return };
     let Some(window) = controller.window() else { return };
     let went = keys::press(&window, "p", 35, COMMAND);
@@ -471,31 +468,20 @@ fn open_folder(root: PathBuf) {
     let Some(window) = controller.window() else { return };
     let seen = std::rc::Rc::new(Cell::new(false));
     let saw = seen.clone();
-    let tries = Cell::new(0);
-    let block = RcBlock::new(move |timer: NonNull<NSTimer>| {
-        let Some(mtm) = MainThreadMarker::new() else { return };
-        let app = NSApplication::sharedApplication(mtm);
-        tries.set(tries.get() + 1);
-        let modal = app.modalWindow();
-        if let Some(window) = &modal {
-            saw.set(true);
-            match window.clone().downcast::<NSSavePanel>() {
-                // SAFETY: Cancelling takes any sender; none is given.
-                Ok(panel) => unsafe { panel.cancel(None) },
-                Err(_) => app.abortModal(),
+    let wait = when_alert_shows(None, move |modal| {
+        saw.set(true);
+        match modal.downcast_ref::<NSSavePanel>() {
+            // SAFETY: Cancelling takes any sender; none is given.
+            Some(panel) => unsafe { panel.cancel(None) },
+            None => {
+                if let Some(mtm) = MainThreadMarker::new() {
+                    NSApplication::sharedApplication(mtm).abortModal();
+                }
             }
         }
-        if modal.is_some() || tries.get() > 40 {
-            // SAFETY: The timer calling this block is alive while it runs.
-            unsafe { timer.as_ref() }.invalidate();
-        }
     });
-    // SAFETY: The block holds a flag of the main thread, whose run loop calls it.
-    let timer = unsafe { NSTimer::timerWithTimeInterval_repeats_block(0.25, true, &block) };
-    // SAFETY: The main run loop takes the timer in its common modes, which include the one modal panels run in.
-    unsafe { NSRunLoop::mainRunLoop().addTimer_forMode(&timer, NSRunLoopCommonModes) };
     let went = keys::press(&window, "o", 31, COMMAND);
-    timer.invalidate();
+    wait.stop();
     check(
         "⌘O opens the panel to choose a folder",
         seen.get(),

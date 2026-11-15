@@ -16,7 +16,7 @@ pub enum Encoding {
 
 impl Encoding {
     /// The encoding a server announced; none or an unknown one means UTF-16, which every server must support.
-    pub fn from_kind(kind: Option<&PositionEncodingKind>) -> Encoding {
+    pub(crate) fn from_kind(kind: Option<&PositionEncodingKind>) -> Encoding {
         match kind.map(PositionEncodingKind::as_str) {
             Some("utf-8") => Encoding::Utf8,
             Some("utf-32") => Encoding::Utf32,
@@ -25,7 +25,7 @@ impl Encoding {
     }
 
     /// The protocol's name for it.
-    pub fn kind(self) -> PositionEncodingKind {
+    pub(crate) fn kind(self) -> PositionEncodingKind {
         match self {
             Encoding::Utf8 => PositionEncodingKind::UTF8,
             Encoding::Utf16 => PositionEncodingKind::UTF16,

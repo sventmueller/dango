@@ -4,7 +4,7 @@ use super::*;
 
 impl TestsPanel {
     /// The panel's rows as their indentation, label and state, for the self-test.
-    pub fn shown(&self) -> Vec<(usize, String, State)> {
+    pub(crate) fn shown(&self) -> Vec<(usize, String, State)> {
         self.ivars()
             .rows
             .borrow()
@@ -14,7 +14,7 @@ impl TestsPanel {
     }
 
     /// Whether the panel shows its tree rather than the hint that no test ran yet, for the self-test.
-    pub fn tree_shown(&self) -> bool {
+    pub(crate) fn tree_shown(&self) -> bool {
         self.ivars()
             .scroll
             .borrow()

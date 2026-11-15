@@ -8,7 +8,7 @@ use ide_thread::{Decision, PlanApproval, RequestState};
 use objc2::rc::Retained;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{NSButton, NSColor, NSScrollView, NSStackView, NSTextField, NSTextStorage, NSTextView, NSView};
-use objc2_foundation::{NSAttributedString, NSObjectProtocol, NSRange, NSSize};
+use objc2_foundation::{NSAttributedString, NSEdgeInsets, NSObjectProtocol, NSRange, NSSize};
 use splat_i18n::{t, tf};
 
 use super::super::cards::request::PLAN_APPROVE;
@@ -17,13 +17,13 @@ use super::super::tab::AgentTab;
 use super::super::{style, ui};
 use super::{PLAN_IN_DOC, PLAN_REJECT, PLAN_REVISE, PlanNote, locate};
 use crate::AgentKey;
-use ide_ui_common::util::{guarded, main_soon, ns};
+use ide_ui_common::util::{activate, guarded, main_soon, ns, pin_inset};
 use ide_ui_common::window::{AsWindow, TabDecor, TabKind, Tabs, Window};
 
 /// The width of the comments' column.
 const COLUMN: f64 = 320.0;
 
-pub struct RootIvars {
+pub(crate) struct RootIvars {
     agent: AgentKey,
     entry: u64,
 }
@@ -34,7 +34,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEPlanDocRoot"]
     #[ivars = RootIvars]
-    pub struct DocRoot;
+    pub(crate) struct DocRoot;
 
     unsafe impl NSObjectProtocol for DocRoot {}
 
@@ -73,7 +73,7 @@ struct PlanDoc {
 
 /// The open plan documents.
 #[derive(Default)]
-pub struct PlanDocs {
+pub(super) struct PlanDocs {
     docs: RefCell<Vec<Rc<PlanDoc>>>,
 }
 
@@ -106,9 +106,7 @@ fn place(
         root.addSubview(view);
         view.setTranslatesAutoresizingMaskIntoConstraints(false);
     }
-    for constraint in constraints() {
-        constraint.setActive(true);
-    }
+    activate(constraints());
 }
 
 /// The comments' column: the list, scrolling, above a hint how comments reach the agent.
@@ -119,22 +117,14 @@ fn side(mtm: MainThreadMarker, notes: &NSStackView) -> Retained<NSView> {
     scroll.setDocumentView(Some(&document));
     scroll.setHasVerticalScroller(true);
     scroll.setDrawsBackground(false);
-    place(&document, &[notes], || {
-        vec![
-            notes
-                .topAnchor()
-                .constraintEqualToAnchor_constant(&document.topAnchor(), 14.0),
-            notes
-                .leadingAnchor()
-                .constraintEqualToAnchor_constant(&document.leadingAnchor(), 14.0),
-            notes
-                .trailingAnchor()
-                .constraintEqualToAnchor_constant(&document.trailingAnchor(), -14.0),
-            notes
-                .bottomAnchor()
-                .constraintEqualToAnchor_constant(&document.bottomAnchor(), -14.0),
-        ]
-    });
+    document.addSubview(notes);
+    let inset = NSEdgeInsets {
+        top: 14.0,
+        left: 14.0,
+        bottom: 14.0,
+        right: 14.0,
+    };
+    pin_inset(notes, &document, inset);
     document.setTranslatesAutoresizingMaskIntoConstraints(false);
     document
         .widthAnchor()
@@ -321,7 +311,7 @@ fn tab_key(agent: AgentKey, id: u64) -> String {
 }
 
 /// Closes the document tabs of the AI tab `agent`, which closed, as their answers would go nowhere.
-pub fn close_all(controller: &(impl AsWindow + ?Sized), agent: AgentKey) {
+pub(crate) fn close_all(controller: &(impl AsWindow + ?Sized), agent: AgentKey) {
     let controller = &controller.as_window();
     for id in open_entries(agent) {
         if let Some(tab) = controller.tab_with_key(&tab_key(agent, id)) {
@@ -331,7 +321,7 @@ pub fn close_all(controller: &(impl AsWindow + ?Sized), agent: AgentKey) {
 }
 
 /// Opens plan `id` of `tab` as a document in a tab of its own, or selects the one already open.
-pub fn open(tab: &AgentTab, id: u64) {
+pub(super) fn open(tab: &AgentTab, id: u64) {
     let (Some(controller), Some(plan)) = (tab.controller(), tab.plan_of(id)) else {
         return;
     };
@@ -362,14 +352,14 @@ fn focus(controller: &Window, agent: AgentKey, id: u64) {
 }
 
 /// Shows plan `id`'s document, if it is open, as `plan` and `notes` now are.
-pub fn show(tab: &AgentTab, id: u64, plan: &PlanApproval, notes: &[PlanNote]) {
+pub(super) fn show(tab: &AgentTab, id: u64, plan: &PlanApproval, notes: &[PlanNote]) {
     if let Some(doc) = doc(tab.key, id) {
         doc.show(tab, plan, notes);
     }
 }
 
 /// The plans of the AI tab `agent` that are open as documents.
-pub fn open_entries(agent: AgentKey) -> Vec<u64> {
+pub(super) fn open_entries(agent: AgentKey) -> Vec<u64> {
     with_docs(|docs| {
         docs.borrow()
             .iter()
@@ -380,12 +370,16 @@ pub fn open_entries(agent: AgentKey) -> Vec<u64> {
 }
 
 /// The text view of plan `id`'s document.
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unreachable_pub, reason = "the self-test re-exports it")
+)]
 pub fn text_of(agent: AgentKey, id: u64) -> Option<Retained<NSTextView>> {
     doc(agent, id).map(|d| d.text.clone())
 }
 
 /// Selects the passage of `note` in plan `id`'s document and points at it.
-pub fn reveal(agent: AgentKey, id: u64, note: &PlanNote) {
+pub(super) fn reveal(agent: AgentKey, id: u64, note: &PlanNote) {
     let Some(doc) = doc(agent, id) else { return };
     let units: Vec<u16> = doc.text.string().to_string().encode_utf16().collect();
     if let Some((at, length)) = locate(&units, note) {

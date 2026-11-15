@@ -1,12 +1,12 @@
 //! Where a folder's window is and how its sidebar looks, kept in the defaults for the next time the folder opens; a
 //! folder that opens for the first time takes what the window saved last had.
 
+use objc2::MainThreadOnly;
 use objc2::rc::Retained;
-use objc2::{DefinedClass, MainThreadOnly};
 use objc2_app_kit::{NSScreen, NSWindow};
 use objc2_foundation::{NSPoint, NSRect, NSString, NSUserDefaults};
 
-use super::{ACTIVITY_WIDTH, PANEL_MAX_WIDTH, PANEL_MIN_WIDTH, Panel, WindowController, tabs};
+use super::{ACTIVITY_WIDTH, Panel, WindowController, tabs};
 use crate::util::ns;
 
 /// The name the window saved last is also kept under, for a folder without a name of its own.
@@ -15,12 +15,12 @@ const LAST: &str = "ProjectWindow Last";
 const CASCADE: f64 = 22.0;
 
 /// How the sidebar of a window looked when it was saved.
-pub struct Sidebar {
-    pub panel: Panel,
+pub(crate) struct Sidebar {
+    pub(crate) panel: Panel,
     /// Whether the panel beside the activity bar showed.
-    pub open: bool,
+    pub(crate) open: bool,
     /// Whether the whole sidebar was folded away.
-    pub collapsed: bool,
+    pub(crate) collapsed: bool,
 }
 
 fn key(kind: &str, name: &str) -> Retained<NSString> {
@@ -37,6 +37,14 @@ fn saved_name(name: &str) -> Option<String> {
 }
 
 impl WindowController {
+    /// The name the window's frame and sidebar are kept under, the folder's.
+    fn frame_name(&self) -> String {
+        match self.project() {
+            Some(path) => format!("ProjectWindow {}", path.display()),
+            None => "ProjectWindow".into(),
+        }
+    }
+
     /// Puts the window where it was for this folder, else where the window saved last was, a step aside if a window
     /// is there, else at its default size in the middle; a frame no screen shows any more moves onto the main one.
     /// The sidebar gets the width it had.
@@ -52,10 +60,7 @@ impl WindowController {
         }
         keep_on_screen(window);
         if let Some(saved) = saved_name(&name) {
-            let width = NSUserDefaults::standardUserDefaults().doubleForKey(&key("Sidebar", &saved)) - ACTIVITY_WIDTH;
-            self.ivars()
-                .panel_width
-                .set(width.clamp(PANEL_MIN_WIDTH, PANEL_MAX_WIDTH));
+            self.set_saved_panel_width(NSUserDefaults::standardUserDefaults().doubleForKey(&key("Sidebar", &saved)));
             let defaults = NSUserDefaults::standardUserDefaults();
             self.set_saved_inspector(
                 defaults.boolForKey(&key("Inspector open", &saved)),
@@ -88,18 +93,17 @@ impl WindowController {
     pub(super) fn save_frame(&self) {
         let Some(tab) = self.current_tab() else { return };
         self.remember_sidebar_width(&tab);
-        let ivars = self.ivars();
         let defaults = NSUserDefaults::standardUserDefaults();
         let (inspector_shown, inspector_width) = self.saved_inspector();
         for name in [self.frame_name().as_str(), LAST] {
             defaults.setBool_forKey(inspector_shown, &key("Inspector open", name));
             defaults.setDouble_forKey(inspector_width, &key("Inspector", name));
             tab.window.saveFrameUsingName(&ns(name));
-            defaults.setDouble_forKey(ACTIVITY_WIDTH + ivars.panel_width.get(), &key("Sidebar", name));
-            if let Some(panel) = ivars.panel.get() {
+            defaults.setDouble_forKey(ACTIVITY_WIDTH + self.panel_width(), &key("Sidebar", name));
+            if let Some(panel) = self.picked_panel() {
                 defaults.setInteger_forKey(panel.tag(), &key("Panel", name));
             }
-            defaults.setBool_forKey(ivars.panel_open.get(), &key("Panel open", name));
+            defaults.setBool_forKey(self.panel_open(), &key("Panel open", name));
             defaults.setBool_forKey(tab.sidebar_collapsed(), &key("Sidebar collapsed", name));
         }
     }

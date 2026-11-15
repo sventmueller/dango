@@ -12,23 +12,23 @@ use splat_i18n::tf;
 use super::tab::AgentTab;
 
 /// What the thread was before a rewind, to go back to when the agent refuses it.
-pub struct Fork {
+pub(crate) struct Fork {
     /// The session the rewind branches off.
-    pub session: String,
+    pub(crate) session: String,
     /// Where it branches, when the prompt was not the first; a first prompt starts a new session instead.
-    pub rewind: Option<ide_thread::Rewind>,
+    pub(crate) rewind: Option<ide_thread::Rewind>,
     /// The whole thread before the rewind.
-    pub before: Thread,
+    pub(crate) before: Thread,
     /// Whether a prompt went out on the rewound session; once a second one does, the agent has accepted the rewind.
-    pub prompted: bool,
+    pub(crate) prompted: bool,
     /// The history entry that keeps the session as it was before the rewind.
-    pub kept_entry: Option<ide_thread::ThreadId>,
+    pub(crate) kept_entry: Option<ide_thread::ThreadId>,
 }
 
 /// `thread` up to, not including, the main-lane entry `prompt`, with the agent's ids of each kept entry, so that a
 /// later rewind to an earlier prompt still finds them. Subagents keep their own timelines; those that still ran
 /// stop with the process the rewind ends.
-pub fn kept_before(thread: &Thread, prompt: EntryId) -> Thread {
+pub(crate) fn kept_before(thread: &Thread, prompt: EntryId) -> Thread {
     let main = thread.entries(&Lane::Main);
     kept_until(thread, main.iter().position(|e| e.id == prompt).unwrap_or(main.len()))
 }

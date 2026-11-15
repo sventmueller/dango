@@ -12,13 +12,13 @@ use objc2_foundation::NSError;
 use splat_i18n::{t, tf};
 
 use super::address;
-use ide_ui_common::util::{label, ns, set_action, symbol};
+use ide_ui_common::util::{activate, label, ns, set_action, symbol};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
 /// What keeps a tab from showing a web page.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Failure {
+pub(crate) enum Failure {
     /// Nothing was asked for yet.
     Start,
     /// No server answers at the address.
@@ -47,7 +47,7 @@ const WEBKIT_DOMAIN: &str = "WebKitErrorDomain";
 impl Failure {
     /// The failure an error of `domain` with `code` means; `None` for errors that are no failure, such as a load the
     /// user replaced with another or one that became a download.
-    pub fn of(domain: &str, code: isize, description: &str) -> Option<Failure> {
+    pub(crate) fn of(domain: &str, code: isize, description: &str) -> Option<Failure> {
         Some(match (domain, code) {
             (URL_DOMAIN, -999) | (WEBKIT_DOMAIN, 102 | 204) => return None,
             (URL_DOMAIN, -1004 | -1005) => Failure::Unreachable,
@@ -60,7 +60,7 @@ impl Failure {
         })
     }
 
-    pub fn of_error(error: &NSError) -> Option<Failure> {
+    pub(crate) fn of_error(error: &NSError) -> Option<Failure> {
         Failure::of(
             &error.domain().to_string(),
             error.code(),
@@ -138,7 +138,7 @@ impl Failure {
 }
 
 /// The page's views, which `show` fills.
-pub struct FailurePage {
+pub(crate) struct FailurePage {
     view: Retained<NSView>,
     image: Retained<NSImageView>,
     heading: Retained<NSTextField>,
@@ -150,12 +150,11 @@ pub struct FailurePage {
 
 impl FailurePage {
     /// The page, empty; its buttons send `ideBrowserRetry:` and `ideBrowserProceed:` to `target`.
-    pub fn new(mtm: MainThreadMarker, target: &AnyObject) -> FailurePage {
+    pub(crate) fn new(mtm: MainThreadMarker, target: &AnyObject) -> FailurePage {
         let image = NSImageView::new(mtm);
         image.setSymbolConfiguration(Some(&NSImageSymbolConfiguration::configurationWithPointSize_weight(
             34.0,
-            // SAFETY: AppKit sets its font weight constants when it loads.
-            unsafe { objc2_app_kit::NSFontWeightLight },
+            ide_ui_common::constant!(objc2_app_kit::NSFontWeightLight),
         )));
         image.setContentTintColor(Some(&NSColor::tertiaryLabelColor()));
         let heading = label(mtm, "");
@@ -191,7 +190,7 @@ impl FailurePage {
         let view = NSView::new(mtm);
         view.addSubview(&stack);
         stack.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
+        activate([
             stack.centerXAnchor().constraintEqualToAnchor(&view.centerXAnchor()),
             stack
                 .centerYAnchor()
@@ -202,9 +201,7 @@ impl FailurePage {
             stack
                 .trailingAnchor()
                 .constraintLessThanOrEqualToAnchor_constant(&view.trailingAnchor(), -24.0),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         view.setHidden(true);
         FailurePage {
             view,
@@ -216,12 +213,12 @@ impl FailurePage {
         }
     }
 
-    pub fn view(&self) -> &NSView {
+    pub(crate) fn view(&self) -> &NSView {
         &self.view
     }
 
     /// Fills the page for `failure` at `url` and shows it; `proceed` offers to accept the server's certificate.
-    pub fn show(&self, failure: &Failure, url: Option<&str>, proceed: bool) {
+    pub(crate) fn show(&self, failure: &Failure, url: Option<&str>, proceed: bool) {
         let (symbol_name, heading, mut detail) = failure.texts(url);
         if proceed {
             detail = format!(
@@ -238,7 +235,7 @@ impl FailurePage {
         self.view.setHidden(false);
     }
 
-    pub fn hide(&self) {
+    pub(crate) fn hide(&self) {
         self.view.setHidden(true);
     }
 }

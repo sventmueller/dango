@@ -9,10 +9,10 @@ pub enum ControlError {
     Timeout,
     /// The CLI ended before it answered.
     Closed,
+    /// The CLI stopped reading what the app writes to it, so the request was not sent.
+    Congested,
     /// The answer did not have the expected shape.
     Unexpected(String),
-    /// No thread could wait for the answer.
-    Unwaited(String),
 }
 
 impl std::fmt::Display for ControlError {
@@ -21,8 +21,8 @@ impl std::fmt::Display for ControlError {
             ControlError::Refused(why) => write!(f, "refused: {why}"),
             ControlError::Timeout => f.write_str("no answer in time"),
             ControlError::Closed => f.write_str("the CLI ended"),
+            ControlError::Congested => f.write_str("the CLI does not read its input"),
             ControlError::Unexpected(why) => write!(f, "unexpected answer: {why}"),
-            ControlError::Unwaited(why) => write!(f, "the answer could not be waited for: {why}"),
         }
     }
 }
@@ -34,8 +34,8 @@ impl ide_core::explain::Explain for ControlError {
             ControlError::Refused(why) => tf("Claude Code lehnt ab: {}", &[why]),
             ControlError::Timeout => t("Claude Code hat nicht rechtzeitig geantwortet.").to_string(),
             ControlError::Closed => t("Claude Code ist beendet.").to_string(),
+            ControlError::Congested => t("Claude Code liest seine Eingabe nicht mehr.").to_string(),
             ControlError::Unexpected(why) => tf("Unerwartete Antwort: {}", &[why]),
-            ControlError::Unwaited(why) => why.clone(),
         }
     }
 }

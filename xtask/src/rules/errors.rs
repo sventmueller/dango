@@ -1,131 +1,191 @@
-//! How errors reach the user in the app's AppKit code: as typed errors that explain themselves
+//! How errors reach the user in the app's AppKit code (E141): as typed errors that explain themselves
 //! (`ide_core::explain::Explain`), never as a bare `String` whose language and origin nobody can tell, and never in
 //! their `Debug` form.
 
-use super::{arguments, code_only, line_of, occurrences};
+use proc_macro2::{TokenStream, TokenTree};
+use syn::visit::Visit;
+use syn::{Expr, GenericArgument, PathArguments, Type};
 
-/// Calls whose arguments the user reads, or that carry an error on to where the user reads it.
-const SHOWN: [&str; 12] = [
-    "setInformativeText(",
-    "setMessageText(",
-    "setStringValue(",
-    "setToolTip(",
-    "alert(",
-    "notify(",
-    "set_status(",
-    "show_note(",
-    "Problem::plain(",
-    "Problem::Start(",
-    "Failed(",
-    "map_err(",
+use crate::source::{Build, Cx, Hooks, line};
+
+/// Calls whose arguments the user reads, or that carry an error on to where the user reads it, by the end of their
+/// name (`alert` stands for `show_alert` too), the last two segments where they have two.
+const SHOWN: [&str; 16] = [
+    "setInformativeText",
+    "setMessageText",
+    "Alert::new",
+    "informative",
+    "warn",
+    "confirm",
+    "setStringValue",
+    "setToolTip",
+    "alert",
+    "notify",
+    "set_status",
+    "show_note",
+    "Problem::plain",
+    "Problem::Start",
+    "Failed",
+    "map_err",
 ];
 
-/// What breaks the rules on errors in the production file at `relative` with the content `text`.
-pub(super) fn problems(relative: &str, text: &str) -> Vec<String> {
-    let text = production(text);
-    let code = code_only(text);
-    let mut problems = string_errors(relative, &code);
-    problems.extend(debug_shown(relative, text, &code));
-    problems
+/// What breaks the rules on errors in production code; tests may compare errors as they like.
+#[derive(Default)]
+pub(super) struct Errors {
+    pub(super) problems: Vec<String>,
 }
 
-/// `text` without its unit tests, which may compare errors as they like.
-fn production(text: &str) -> &str {
-    text.find("#[cfg(test)]\nmod tests").map_or(text, |end| &text[..end])
-}
-
-/// The `Result`s whose error is a bare `String`.
-fn string_errors(relative: &str, code: &str) -> Vec<String> {
-    occurrences(code, "Result<")
-        .into_iter()
-        .filter(|&at| last_argument(&code[at + "Result<".len()..]) == Some("String"))
-        .map(|at| {
-            format!(
-                "{relative}:{}: an error as a bare String; give it a type that implements Explain, or Explained for \
-                 one already in the user's words",
-                line_of(code, at)
-            )
-        })
-        .collect()
-}
-
-/// The last of two or more generic arguments of a type whose arguments start at `rest`, trimmed; `None` for one,
-/// as in `io::Result<String>`, or if they never close.
-fn last_argument(rest: &str) -> Option<&str> {
-    let (mut depth, mut start) = (1, None);
-    let mut previous = ' ';
-    for (offset, c) in rest.char_indices() {
-        match c {
-            '<' | '(' | '[' => depth += 1,
-            '>' if previous == '-' => {}
-            '>' | ')' | ']' => {
-                depth -= 1;
-                if depth == 0 {
-                    return start.map(|start| rest[start..offset].trim());
-                }
-            }
-            ',' if depth == 1 => start = Some(offset + 1),
-            _ => {}
+impl Hooks for Errors {
+    fn path(&mut self, cx: &Cx, path: &syn::Path) {
+        if cx.build() != Build::Production {
+            return;
         }
-        previous = c;
-    }
-    None
-}
-
-/// The calls of `SHOWN` that format a value with `{:?}`, which shows the user a type's insides.
-fn debug_shown(relative: &str, text: &str, code: &str) -> Vec<String> {
-    let mut problems = Vec::new();
-    for (number, (line, code_line)) in text.lines().zip(code.lines()).enumerate() {
-        for name in SHOWN {
-            if !code_line.contains(name) {
+        for segment in path.segments.iter().filter(|segment| segment.ident == "Result") {
+            let PathArguments::AngleBracketed(arguments) = &segment.arguments else {
                 continue;
-            }
-            let Some(at) = line.find(name) else { continue };
-            let start = text_offset(text, number) + at + name.len();
-            if arguments(text, start).contains(":?}") {
-                problems.push(format!(
-                    "{relative}:{}: `{name}..)` formats with {{:?}}; say it in the user's words with Explain",
-                    number + 1
+            };
+            if arguments.args.len() >= 2
+                && let Some(GenericArgument::Type(Type::Path(error))) = arguments.args.last()
+                && error.qself.is_none()
+                && error
+                    .path
+                    .segments
+                    .last()
+                    .is_some_and(|last| last.ident == "String" && last.arguments.is_none())
+            {
+                self.problems.push(format!(
+                    "{}:{}: an error as a bare String; give it a type that implements Explain, or Explained for one \
+                     already in the user's words",
+                    cx.source.relative,
+                    line(segment.ident.span())
                 ));
             }
         }
     }
-    problems
+
+    fn expr(&mut self, cx: &Cx, expr: &Expr) {
+        if cx.build() != Build::Production {
+            return;
+        }
+        let (names, args, at): (Vec<String>, _, _) = match expr {
+            Expr::Call(call) => match &*call.func {
+                Expr::Path(path) => (
+                    path.path.segments.iter().map(|s| s.ident.to_string()).collect(),
+                    &call.args,
+                    line(path.path.segments[0].ident.span()),
+                ),
+                _ => return,
+            },
+            Expr::MethodCall(call) => (vec![call.method.to_string()], &call.args, line(call.method.span())),
+            _ => return,
+        };
+        let Some(name) = SHOWN.iter().find(|shown| is_named(&names, shown)) else {
+            return;
+        };
+        let mut debug = DebugFormat(false);
+        args.iter().for_each(|arg| debug.visit_expr(arg));
+        if debug.0 {
+            self.problems.push(format!(
+                "{}:{at}: `{name}(..)` formats with {{:?}}; say it in the user's words with Explain",
+                cx.source.relative
+            ));
+        }
+    }
 }
 
-/// The byte offset of the line `number`, from 0, of `text`.
-fn text_offset(text: &str, number: usize) -> usize {
-    text.split_inclusive('\n').take(number).map(str::len).sum()
+/// Whether the path `names` ends in `shown`: its last segment ends with the last of `shown`, and a segment before it
+/// in the first.
+fn is_named(names: &[String], shown: &str) -> bool {
+    match shown.split_once("::") {
+        Some((owner, function)) => {
+            matches!(names, [.., before, last] if before.ends_with(owner) && last == function)
+        }
+        None => names.last().is_some_and(|last| last.ends_with(shown)),
+    }
+}
+
+/// Finds a `{:?}` in the string literals of an expression, also those inside a macro such as `format!`.
+struct DebugFormat(bool);
+
+impl<'ast> Visit<'ast> for DebugFormat {
+    fn visit_lit_str(&mut self, lit: &'ast syn::LitStr) {
+        self.0 |= lit.value().contains(":?}");
+    }
+
+    fn visit_macro(&mut self, mac: &'ast syn::Macro) {
+        self.0 |= debug_in(mac.tokens.clone());
+    }
+}
+
+fn debug_in(tokens: TokenStream) -> bool {
+    tokens.into_iter().any(|token| match token {
+        TokenTree::Literal(literal) => literal.to_string().contains(":?}"),
+        TokenTree::Group(group) => debug_in(group.stream()),
+        _ => false,
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::source::{snippets, walk};
+
+    fn lines(files: &[(&str, &str)], path: &str) -> Vec<String> {
+        let mut all = vec![("src/main.rs", "mod a;\n")];
+        all.extend_from_slice(files);
+        let ws = snippets(&all);
+        let mut errors = Errors::default();
+        walk(ws.file(path).unwrap(), Some(&ws.index), &mut errors);
+        errors
+            .problems
+            .iter()
+            .map(|p| p.split(": ").next().unwrap().to_string())
+            .collect()
+    }
 
     #[test]
     fn a_bare_string_error_is_found_and_typed_ones_are_not() {
         let source = "fn a() -> Result<(), String> {}\nfn b() -> Result<Vec<String>, Explained> {}\n\
                       fn c(f: impl FnOnce(Result<u8, String>)) {}\nfn d() -> io::Result<String> {}\n\
-                      fn e(f: impl Fn() -> Result<u8, Error>) -> Result<u8, String> {}\n";
-        let found = problems("src/a.rs", source);
-        let lines: Vec<&str> = found.iter().map(|p| p.split(": ").next().unwrap()).collect();
-        assert_eq!(lines, ["src/a.rs:1", "src/a.rs:3", "src/a.rs:5"], "{found:?}");
+                      fn e(f: impl Fn() -> Result<u8, Error>) -> Result<u8, String> {}\n\
+                      type Answer = std::result::Result<\n    u8,\n    std::string::String,\n>;\n\
+                      // fn f() -> Result<(), String>\nconst S: &str = \"Result<(), String>\";\n";
+        assert_eq!(
+            lines(&[("src/a.rs", source)], "src/a.rs"),
+            ["src/a.rs:1", "src/a.rs:3", "src/a.rs:5", "src/a.rs:6"]
+        );
     }
 
     #[test]
     fn a_debug_form_shown_to_the_user_is_found() {
-        let source = "alert(mtm, t(\"Fehler\"), &format!(\"{error:?}\"));\n\
-                      alert.setInformativeText(&ns(&format!(\n    \"{:?}\",\n    error\n)));\n\
-                      .map_err(|e| format!(\"{e:?}\"))?;\nlet shown = format!(\"{e:?}\");\n\
-                      // alert(\"{e:?}\")\n";
-        let found = problems("src/a.rs", source);
-        let lines: Vec<&str> = found.iter().map(|p| p.split(": ").next().unwrap()).collect();
-        assert_eq!(lines, ["src/a.rs:1", "src/a.rs:2", "src/a.rs:6"], "{found:?}");
+        let source = "fn f() {\n    alert(mtm, t(\"Fehler\"), &format!(\"{error:?}\"));\n    \
+                      alert.setInformativeText(&ns(&format!(\n        \"{:?}\",\n        error\n    )));\n    \
+                      let r = x.map_err(|e| format!(\"{e:?}\"));\n    let shown = format!(\"{e:?}\");\n    \
+                      // alert(\"{e:?}\")\n    show_alert(mtm, &format!(\"{}\", e));\n    \
+                      panel.state().phase = Phase::Failed(format!(\"{e:?}\"));\n}\n";
+        assert_eq!(
+            lines(&[("src/a.rs", source)], "src/a.rs"),
+            ["src/a.rs:2", "src/a.rs:3", "src/a.rs:7", "src/a.rs:11"]
+        );
     }
 
     #[test]
-    fn unit_tests_may_compare_errors_as_they_like() {
-        let source = "fn a() {}\n#[cfg(test)]\nmod tests {\n    fn b() -> Result<(), String> { Ok(()) }\n}\n";
-        assert!(problems("src/a.rs", source).is_empty());
+    fn unit_tests_may_compare_errors_as_they_like_and_code_after_them_is_checked() {
+        let source = "fn a() {}\n#[cfg(test)]\nmod tests {\n    fn b() -> Result<(), String> { Ok(()) }\n}\n\
+                      fn c() -> Result<(), String> { Ok(()) }\n#[cfg(test)]\n#[path = \"a_tests.rs\"]\nmod split;\n";
+        let split = "fn d() -> Result<(), String> { Ok(()) }\n";
+        let files = [("src/a.rs", source), ("src/a_tests.rs", split)];
+        assert_eq!(lines(&files, "src/a.rs"), ["src/a.rs:6"]);
+        assert!(lines(&files, "src/a_tests.rs").is_empty());
+    }
+
+    #[test]
+    fn self_test_hooks_are_no_production() {
+        let source = "#[cfg(feature = \"selftest\")]\nmod probe;\n\
+                      #[cfg(feature = \"selftest\")]\nfn hook() -> Result<(), String> { Ok(()) }\n";
+        let probe = "pub fn p() -> Result<(), String> { Ok(()) }\n";
+        let files = [("src/a.rs", source), ("src/a/probe.rs", probe)];
+        assert!(lines(&files, "src/a.rs").is_empty());
+        assert!(lines(&files, "src/a/probe.rs").is_empty());
     }
 }

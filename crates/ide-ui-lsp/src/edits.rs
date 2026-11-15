@@ -2,15 +2,14 @@
 //! questions a server may ask the user.
 
 use ide_core::LockIgnoringPoison;
-use std::cell::RefCell;
 use std::ops::Range;
 use std::path::Path;
 
-use block2::RcBlock;
 use ide_lsp::Reply;
 use ide_lsp::lsp_types::{MessageActionItem, TextEdit, WorkspaceEdit};
+use ide_ui_common::alert::{Alert, Role};
 use objc2::MainThreadOnly;
-use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSModalResponse};
+use objc2_app_kit::NSAlertFirstButtonReturn;
 use objc2_foundation::{NSFileManager, NSRange, NSURL};
 use splat_i18n::t;
 
@@ -41,7 +40,7 @@ pub fn apply_text_edits(view: &dyn Editor, edits: Vec<(Range<usize>, String)>) -
 }
 
 /// `edits` of the protocol as ranges of `view`'s current text.
-pub fn ranges(view: &dyn Editor, edits: &[TextEdit]) -> Vec<(Range<usize>, String)> {
+pub(crate) fn ranges(view: &dyn Editor, edits: &[TextEdit]) -> Vec<(Range<usize>, String)> {
     let document = view.document();
     edits
         .iter()
@@ -51,6 +50,10 @@ pub fn ranges(view: &dyn Editor, edits: &[TextEdit]) -> Vec<(Range<usize>, Strin
 
 /// Applies `edit` to the files under `folder` and to every open editor (Review C1), on the disk lane, and tells `done`
 /// on the main thread.
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unreachable_pub, reason = "the self-test re-exports it")
+)]
 pub fn apply_workspace_edit(
     folder: &Path,
     edit: &WorkspaceEdit,
@@ -175,12 +178,21 @@ impl super::apply::Editors for OpenEditors {
 }
 
 /// Shows a server's question with its answers as a sheet of the window of `folder`; closing it answers none.
-pub fn ask(folder: &Path, message: &str, actions: Vec<MessageActionItem>, reply: Reply<Option<MessageActionItem>>) {
+pub(crate) fn ask(
+    folder: &Path,
+    message: &str,
+    actions: Vec<MessageActionItem>,
+    reply: Reply<Option<MessageActionItem>>,
+) {
     question(folder, message, actions, move |chosen| reply.send(chosen));
 }
 
 /// Shows `message` with up to three of `actions` as buttons in a sheet of the window of `folder`; `answered` hears the
 /// one chosen, or `None` when the sheet closed otherwise.
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unreachable_pub, reason = "the self-test re-exports it")
+)]
 pub fn question(
     folder: &Path,
     message: &str,
@@ -190,24 +202,18 @@ pub fn question(
     let Some(window) = Window::for_project(folder).and_then(Window::window) else {
         return;
     };
-    let alert = NSAlert::new(window.mtm());
-    alert.setMessageText(&ns(message));
+    let mut alert = Alert::new(window.mtm(), message);
     let shown = actions.len().min(3);
     for action in &actions[..shown] {
-        alert.addButtonWithTitle(&ns(&action.title));
+        alert = alert.button(&action.title, Role::Plain);
     }
-    alert.addButtonWithTitle(&ns(t("Schließen")));
-    let answered = RefCell::new(Some(answered));
-    let handler = RcBlock::new(move |response: NSModalResponse| {
-        guarded((), || {
+    alert
+        .button(t("Schließen"), Role::Plain)
+        .sheet(&window, move |response| {
             let chosen = usize::try_from(response - NSAlertFirstButtonReturn)
                 .ok()
                 .filter(|i| *i < shown)
                 .and_then(|i| actions.get(i).cloned());
-            if let Some(answered) = answered.borrow_mut().take() {
-                answered(chosen);
-            }
+            answered(chosen);
         });
-    });
-    alert.beginSheetModalForWindow_completionHandler(&window, Some(&handler));
 }

@@ -60,7 +60,7 @@ fn set_hidden(item: &NSToolbarItem, hidden: bool) {
 
 impl GitPanel {
     /// Puts the branch and the branch popup's choices into the toolbar items of the panel's window.
-    pub fn refresh_toolbar(&self) {
+    pub(crate) fn refresh_toolbar(&self) {
         let Some(controller) = self.controller() else { return };
         let shown: Vec<(Retained<NSToolbarItem>, Retained<NSPopUpButton>)> = {
             let state = crate::host::state();
@@ -80,8 +80,8 @@ impl GitPanel {
             let title = match &state.branch.head {
                 Some(head) => head.clone(),
                 None => {
-                    let short: String = state.branch.commit.as_deref().unwrap_or("").chars().take(8).collect();
-                    tf("Losgelöst bei {}", &[&short])
+                    let short = state.branch.commit.as_ref().map_or("", ide_git::CommitId::short);
+                    tf("Losgelöst bei {}", &[short])
                 }
             };
             (state.phase == Phase::Ready, title)

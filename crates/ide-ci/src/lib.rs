@@ -18,7 +18,7 @@
 //! [`Network`] in the app, [`Recorded`] answers in tests, which never touch the network or the keychain. The project's
 //! remote decides where requests go, so the app uses this crate only in folders the user trusts (E22).
 
-#![warn(missing_docs, unreachable_pub)]
+#![warn(missing_docs)]
 
 mod auth;
 mod client;

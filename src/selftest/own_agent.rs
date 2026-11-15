@@ -17,7 +17,7 @@ use objc2_app_kit::{NSAlertFirstButtonReturn, NSControlStateValueOn, NSMenu};
 use serde_json::{Value, json};
 
 use super::agent::{controller_of, picture, tab_of};
-use super::{check, finish, helpers};
+use super::{check, give_up, give_up_saying, helpers};
 use ide_ui_agent::AgentKey;
 use ide_ui_agent::own_agent::{self, ModelChoice};
 
@@ -110,17 +110,15 @@ fn soon(what: &'static str, ready: impl Fn() -> bool + 'static, then: impl FnOnc
         if ok {
             then();
         } else {
-            check(what, false, "waited in vain");
-            finish(NAME);
+            give_up_saying(NAME, what, "waited in vain");
         }
     });
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let Some(stub) = provider() else {
-        check("the stub provider starts", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the stub provider starts");
     };
     let url = stub.url();
     // The stub serves until the app quits.
@@ -134,8 +132,7 @@ pub fn run() {
         ],
     );
     let Ok(root) = made else {
-        check("the scenario's folder is made", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the scenario's folder is made");
     };
     crate::project::trust(&root);
     crate::settings::show_agent(mtm);
@@ -145,8 +142,7 @@ pub fn run() {
 /// The Agent settings show the endpoint, keep its key and load its models.
 fn settings(root: PathBuf, url: String) {
     let Some(tab) = crate::settings::agent_tab() else {
-        check("the settings have an Agent tab", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the settings have an Agent tab");
     };
     crate::settings::agent_selftest::add_endpoint(&tab, ProviderKind::AnthropicCompatible, "Stub", "ftp://stub");
     let refused = crate::settings::agent_selftest::shown(&tab).1;
@@ -158,8 +154,7 @@ fn settings(root: PathBuf, url: String) {
     crate::settings::agent_selftest::add_endpoint(&tab, ProviderKind::AnthropicCompatible, "Stub", &url);
     let rows = crate::settings::agent_selftest::rows(&tab, crate::settings::AgentList::Endpoints);
     let Some(row) = rows.iter().position(|r| r.first().map(String::as_str) == Some("Stub")) else {
-        check("the added endpoint is listed", false, format!("{rows:?}"));
-        return finish(NAME);
+        return give_up_saying(NAME, "the added endpoint is listed", format!("{rows:?}"));
     };
     check(
         "the services and the added endpoint are listed",
@@ -311,11 +306,10 @@ fn open(root: PathBuf) {
     crate::app::open_project(mtm, root.clone());
     helpers::wait_for_window(&root.clone(), move |controller| {
         let Some(controller) = controller else {
-            return finish(NAME);
+            return give_up(NAME, "the folder's window is open");
         };
         let Some(tab) = ide_ui_agent::open_own(&controller, None) else {
-            check("an own-agent tab opens", false, "");
-            return finish(NAME);
+            return give_up(NAME, "an own-agent tab opens");
         };
         let key = tab.key;
         soon(
@@ -327,7 +321,9 @@ fn open(root: PathBuf) {
 }
 
 fn send(root: PathBuf, key: AgentKey) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     let (model, mode, sandbox) = tab.pills();
     check(
         "the pills show the model, the approval mode and the sandbox",
@@ -348,7 +344,7 @@ fn send(root: PathBuf, key: AgentKey) {
 
 fn approve(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     let thread = tab.snapshot();
     let read = card(&thread, "r1");
@@ -359,7 +355,7 @@ fn approve(root: PathBuf, key: AgentKey) {
     );
     let request = thread.pending_requests().first().map(|e| (e.id.get(), e.kind.clone()));
     let Some((id, EntryKind::PermissionRequest(asked))) = request else {
-        return finish(NAME);
+        return give_up(NAME, "the agent asks for permission");
     };
     check(
         "the edit asks with allow once, always and deny",
@@ -384,7 +380,7 @@ fn card(thread: &ide_thread::Thread, id: &str) -> Option<(ToolStatus, Option<Too
 
 fn done(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     let thread = tab.snapshot();
     let lib = std::fs::read_to_string(root.join("src/lib.rs")).unwrap_or_default();
@@ -436,7 +432,9 @@ fn done(root: PathBuf, key: AgentKey) {
 
 /// The prompt's rewind menu takes the code back to before it (I6, E40), from the app's own checkpoint.
 fn code_rewind(root: PathBuf, key: AgentKey) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     let prompt = tab.snapshot().entries(&Lane::Main).iter().find_map(|e| match &e.kind {
         EntryKind::UserMessage(m) if m.message_id.as_deref().is_some_and(|id| id.starts_with("app-")) => {
             Some(e.id.get())
@@ -444,8 +442,7 @@ fn code_rewind(root: PathBuf, key: AgentKey) {
         _ => None,
     });
     let Some(prompt) = prompt else {
-        check("the prompt has the app's id", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the prompt has the app's id");
     };
     let choices = tab.rewind_titles(prompt);
     check(
@@ -511,7 +508,7 @@ fn set_notes(root: &PathBuf, text: &str) {
 
 fn close_and_reopen(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     let thread_id = tab.thread_id().clone();
     tab.pick_mode_id("edits");
@@ -532,7 +529,7 @@ fn close_and_reopen(root: PathBuf, key: AgentKey) {
 /// The closed thread opens again from its store and shows its conversation.
 fn reopen(root: PathBuf, thread_id: ide_thread::ThreadId) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let resume = ide_ui_agent::Resume {
         session: thread_id.as_str().to_string(),
@@ -541,14 +538,16 @@ fn reopen(root: PathBuf, thread_id: ide_thread::ThreadId) {
         transcript: None,
     };
     let Some(tab) = ide_ui_agent::open_agent(&controller, ide_ui_agent::Agent::Own, Some(resume)) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab opens");
     };
     let key = tab.key;
     soon(
         "the stored thread opens again",
         move || tab_of(key).is_some_and(|t| t.is_live() && !t.snapshot().entries(&Lane::Main).is_empty()),
         move || {
-            let Some(tab) = tab_of(key) else { return finish(NAME) };
+            let Some(tab) = tab_of(key) else {
+                return give_up(NAME, "the AI tab is open");
+            };
             let thread = tab.snapshot();
             let edits = card(&thread, "e1");
             check(
@@ -572,7 +571,9 @@ fn reopen(root: PathBuf, thread_id: ide_thread::ThreadId) {
 
 /// `/compact` summarizes the thread with the same model and says so in the timeline.
 fn compact(root: PathBuf, key: AgentKey) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     tab.type_and_send("/compact");
     soon(
         "the thread is compacted",

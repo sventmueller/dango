@@ -52,7 +52,7 @@ impl Line {
 }
 
 /// The address at `point`: the target of a link the program marked, else a URL written in the text.
-pub fn url_at(rows: &[Vec<Cell>], point: Point) -> Option<String> {
+pub(crate) fn url_at(rows: &[Vec<Cell>], point: Point) -> Option<String> {
     if let Some(link) = rows.get(point.line)?.get(point.column)?.hyperlink.clone() {
         return Some(link);
     }
@@ -120,16 +120,16 @@ fn trim_trailing(chars: &[char], start: usize, mut end: usize) -> usize {
 
 /// A file a program printed, with the line and column after it, as in `src/main.rs:12:5`.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FileAt {
-    pub path: String,
+pub(crate) struct FileAt {
+    pub(crate) path: String,
     /// The line, from 1.
-    pub line: Option<usize>,
+    pub(crate) line: Option<usize>,
     /// The column, from 1.
-    pub column: Option<usize>,
+    pub(crate) column: Option<usize>,
 }
 
 /// The word at `point` read as a path with an optional line and column.
-pub fn path_at(rows: &[Vec<Cell>], point: Point) -> Option<FileAt> {
+pub(crate) fn path_at(rows: &[Vec<Cell>], point: Point) -> Option<FileAt> {
     let line = Line::around(rows, point);
     let at = line.index_of(point)?;
     let breaks = |c: char| c.is_whitespace() || c.is_control() || "\"'`()<>[]{}|;".contains(c);

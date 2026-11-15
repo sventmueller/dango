@@ -4,7 +4,7 @@ use super::*;
 
 impl StatusLine {
     /// The texts the status line shows, for the self-test.
-    pub fn texts(&self) -> Vec<String> {
+    pub(crate) fn texts(&self) -> Vec<String> {
         [&self.context, &self.cost, &self.activity, &self.problem]
             .iter()
             .map(|l| l.stringValue().to_string())

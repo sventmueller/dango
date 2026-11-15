@@ -22,18 +22,18 @@ use crate::util::OnDrop;
 
 /// Whether editors use Vim's keys, as the user last chose; read from the settings once.
 #[derive(Default)]
-pub struct Enabled(Cell<Option<bool>>);
+pub(crate) struct Enabled(Cell<Option<bool>>);
 
 impl Enabled {
     /// Reads the setting again on next use.
-    pub fn forget(&self) {
+    pub(crate) fn forget(&self) {
         self.0.set(None);
     }
 }
 
 /// What Vim holds for one editor.
 #[derive(Default)]
-pub struct State {
+pub(crate) struct State {
     vim: Option<Vim>,
     /// Vim's own edits are being applied, which its copy already has.
     applying: bool,
@@ -54,7 +54,7 @@ fn context() -> Option<std::rc::Rc<crate::context::AppContext>> {
 }
 
 /// Whether editors use Vim's keys.
-pub fn enabled() -> bool {
+pub(crate) fn enabled() -> bool {
     let Some(cx) = context() else { return false };
     let cell = &cx.editor().vim.0;
     cell.get().unwrap_or_else(|| {
@@ -65,7 +65,7 @@ pub fn enabled() -> bool {
 }
 
 /// Turns the Vim mode on or off in every editor and remembers the choice.
-pub fn toggle() {
+pub(crate) fn toggle() {
     let value = !enabled();
     if let Some(cx) = context() {
         cx.editor().vim.0.set(Some(value));
@@ -80,7 +80,7 @@ pub fn toggle() {
 }
 
 /// Whether `item` is the menu item of the Vim mode, which then gets its check mark.
-pub fn validate(item: &NSMenuItem) -> Option<bool> {
+pub(crate) fn validate(item: &NSMenuItem) -> Option<bool> {
     if item.action() != Some(sel!(ideToggleVimMode:)) {
         return None;
     }
@@ -93,7 +93,7 @@ pub fn validate(item: &NSMenuItem) -> Option<bool> {
 }
 
 /// Gives `view` Vim's state while the mode is on, in Normal mode at its caret, or takes it away.
-pub fn attach(view: &EditorTextView) {
+pub(crate) fn attach(view: &EditorTextView) {
     close_group(view);
     let vim = enabled().then(|| {
         let text = view.document().text().to_string();
@@ -110,13 +110,13 @@ pub fn attach(view: &EditorTextView) {
 }
 
 /// The mode of `view`'s Vim, or `None` while the mode is off.
-pub fn mode(view: &EditorTextView) -> Option<Mode> {
+pub(crate) fn mode(view: &EditorTextView) -> Option<Mode> {
     view.ivars().vim.borrow().vim.as_ref().map(Vim::mode)
 }
 
 /// Text from the input context: Vim's in Normal and Visual mode, else the editor's, which Vim follows for `.`;
 /// whether Vim took it.
-pub fn insert_text(view: &EditorTextView, text: &AnyObject) -> bool {
+pub(crate) fn insert_text(view: &EditorTextView, text: &AnyObject) -> bool {
     let Some(mode) = mode(view) else { return false };
     let typed = if let Some(s) = text.downcast_ref::<NSString>() {
         s.to_string()
@@ -145,7 +145,7 @@ pub fn insert_text(view: &EditorTextView, text: &AnyObject) -> bool {
 /// A command of the input context, such as Esc or Return: Vim's outside Insert mode, and Esc there too; whether Vim
 /// took it. Esc closes the completion list, the signature window, the prediction, dictation and further carets first,
 /// which their own handlers before this one do.
-pub fn command(view: &EditorTextView, command: Sel) -> bool {
+pub(crate) fn command(view: &EditorTextView, command: Sel) -> bool {
     let Some(mode) = mode(view) else { return false };
     let key = if command == sel!(cancelOperation:) {
         "<Esc>"
@@ -200,7 +200,7 @@ fn shadowed() -> Vec<&'static str> {
 
 /// A key with ⌃ while the editor has the focus: Vim's in Normal and Visual mode, and ⌃O, ⌃R, ⌃W and ⌃U in Insert
 /// mode, before the menu bar sees it (A6); ⌃[ and ⌃C are Esc. Whether Vim took it.
-pub fn control_key(view: &EditorTextView, event: &NSEvent) -> bool {
+pub(crate) fn control_key(view: &EditorTextView, event: &NSEvent) -> bool {
     let Some(mode) = mode(view) else { return false };
     let flags = event.modifierFlags() & NSEventModifierFlags::DeviceIndependentFlagsMask;
     if !flags.contains(NSEventModifierFlags::Control) || flags.contains(NSEventModifierFlags::Command) {
@@ -248,7 +248,7 @@ pub fn control_key(view: &EditorTextView, event: &NSEvent) -> bool {
 
 /// The editor's text changed by something other than Vim, such as the agent, the file or the user typing in Insert
 /// mode: Vim's copy follows, but not keystroke by keystroke while it types along in Insert mode.
-pub fn changed(view: &EditorTextView) {
+pub(crate) fn changed(view: &EditorTextView) {
     let (applying, inserting) = {
         let state = view.ivars().vim.borrow();
         (
@@ -265,12 +265,12 @@ pub fn changed(view: &EditorTextView) {
 }
 
 /// The editor lost the focus or its document: an open insert pass ends as one undo step.
-pub fn focus_lost(view: &EditorTextView) {
+pub(crate) fn focus_lost(view: &EditorTextView) {
     close_group(view);
 }
 
 /// A change from outside, which `apply_model_changes` makes, never joins the undo step of an insert pass (E24).
-pub fn before_model_change(view: &EditorTextView) {
+pub(crate) fn before_model_change(view: &EditorTextView) {
     close_group(view);
 }
 
@@ -481,10 +481,9 @@ fn mode_name(mode: Mode) -> &'static str {
 }
 
 /// Adds the mode's label to the editor's status bar `stack`, hidden while the Vim mode is off.
-pub fn status_items(mtm: MainThreadMarker, view: &EditorTextView, stack: &objc2_app_kit::NSStackView) {
+pub(crate) fn status_items(mtm: MainThreadMarker, view: &EditorTextView, stack: &objc2_app_kit::NSStackView) {
     let label = crate::util::label(mtm, "");
-    // SAFETY: A constant AppKit defines, read on the main thread.
-    let weight = unsafe { objc2_app_kit::NSFontWeightSemibold };
+    let weight = crate::util::constant!(objc2_app_kit::NSFontWeightSemibold);
     label.setFont(Some(&objc2_app_kit::NSFont::monospacedSystemFontOfSize_weight(
         ide_ui_common::style::SMALL,
         weight,
@@ -496,7 +495,7 @@ pub fn status_items(mtm: MainThreadMarker, view: &EditorTextView, stack: &objc2_
 }
 
 /// Draws the block caret outside Insert mode, over the character under the caret.
-pub fn draw_block(view: &EditorTextView) -> Option<objc2_foundation::NSRect> {
+pub(crate) fn draw_block(view: &EditorTextView) -> Option<objc2_foundation::NSRect> {
     let rect = block(view)?;
     NSColor::textColor().colorWithAlphaComponent(0.45).setFill();
     objc2_app_kit::NSBezierPath::fillRect(rect);
@@ -504,7 +503,7 @@ pub fn draw_block(view: &EditorTextView) -> Option<objc2_foundation::NSRect> {
 }
 
 /// Where the block caret of `view` goes, in the editor's coordinates.
-pub fn block(view: &EditorTextView) -> Option<objc2_foundation::NSRect> {
+pub(crate) fn block(view: &EditorTextView) -> Option<objc2_foundation::NSRect> {
     if matches!(mode(view), None | Some(Mode::Insert)) {
         return None;
     }
@@ -619,4 +618,4 @@ mod tests {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

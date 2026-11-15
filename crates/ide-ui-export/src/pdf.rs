@@ -43,7 +43,7 @@ const BLOCKS_PER_TURN: usize = 20;
 const PICTURE_WAIT: Duration = Duration::from_secs(15);
 
 /// What a PDF export holds on the main thread while it sets the text.
-pub struct Work {
+pub(crate) struct Work {
     job: Job,
     laid: Layout,
     macros: Arc<str>,
@@ -57,14 +57,14 @@ pub struct Work {
 
 impl Work {
     /// A picture file the export asked for was read.
-    pub fn picture_read(&self, path: PathBuf, file: ImageFile) {
+    pub(crate) fn picture_read(&self, path: PathBuf, file: ImageFile) {
         self.pending.borrow_mut().remove(&path);
         self.images.borrow_mut().finish(path, file);
     }
 }
 
 /// Lays the document out on the export's thread, then goes on on the main thread.
-pub fn start(number: u64, job: Job) {
+pub(crate) fn start(number: u64, job: Job) {
     let text = job.source.text.clone();
     let spawned = ide_ui_common::util::spawn("export", move || {
         let doc = splat_markdown::reader::parse(&text);

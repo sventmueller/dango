@@ -21,7 +21,7 @@ const AGE_INTERVAL: Duration = Duration::from_secs(60);
 
 impl GitPanel {
     /// Builds the panel for `controller`'s folder, puts it on the Git page and starts reading the repository.
-    pub fn attach(controller: &Window) {
+    pub(crate) fn attach(controller: &Window) {
         let Some(root) = controller.project_root() else { return };
         let root = root.canonicalize().unwrap_or(root);
         crate::host::state().panels.detach(*controller);
@@ -46,7 +46,7 @@ impl GitPanel {
     }
 
     /// Reloads the commit rows, whose views compute their age when they are made.
-    pub fn refresh_ages(&self) {
+    pub(crate) fn refresh_ages(&self) {
         let page = &self.ui().page;
         let showing = page.window().is_some_and(|w| w.isVisible()) && !page.isHiddenOrHasHiddenAncestor();
         if !showing || self.read().model.commits.is_empty() {
@@ -58,7 +58,7 @@ impl GitPanel {
     }
 
     /// Reads git again once changes on disk have settled.
-    pub fn schedule_refresh(&self) {
+    pub(crate) fn schedule_refresh(&self) {
         if self.state().schedule_refresh() {
             let id = self.id();
             main_after(DEBOUNCE, move || with_panel(id, GitPanel::start_refresh));
@@ -66,7 +66,7 @@ impl GitPanel {
     }
 
     /// Reads git now, or right after the read that is running.
-    pub fn start_refresh(&self) {
+    pub(crate) fn start_refresh(&self) {
         let trusted = self.controller().is_some_and(|c| c.is_trusted());
         let start = self.state().start_refresh(trusted);
         let limit = match start {
@@ -107,7 +107,7 @@ impl GitPanel {
     }
 
     /// Puts every view in line with the state.
-    pub fn show_phase(&self) {
+    pub(crate) fn show_phase(&self) {
         let (phase, count) = {
             let state = self.read();
             (state.phase.clone(), state.model.changed_files())
@@ -127,7 +127,7 @@ impl GitPanel {
     }
 
     /// Shows `problem` above the list, or hides it.
-    pub fn set_problem(&self, problem: Option<Problem>) {
+    pub(crate) fn set_problem(&self, problem: Option<Problem>) {
         self.state().problem = problem;
         self.update_problem();
     }
@@ -137,7 +137,7 @@ impl GitPanel {
         self.ui().show_problem(problem.as_ref());
     }
 
-    pub fn report(&self, error: &ide_git::Error) {
+    pub(crate) fn report(&self, error: &ide_git::Error) {
         if matches!(error, ide_git::Error::Cancelled) {
             return;
         }

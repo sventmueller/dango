@@ -3,7 +3,7 @@
 use super::*;
 
 /// The hash of the commit selected in the Git panel of `controller`, for the self-test.
-pub fn selected_commit(controller: &(impl AsWindow + ?Sized)) -> Option<String> {
+pub fn selected_commit(controller: &(impl AsWindow + ?Sized)) -> Option<CommitId> {
     let controller = &controller.as_window();
     let panel = panel::of(controller)?;
     let outline = &panel.ui().outline;

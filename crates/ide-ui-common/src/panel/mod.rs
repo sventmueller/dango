@@ -1,7 +1,9 @@
 //! The parts every panel beside the activity bar shares: its title buttons, its page and source lists, lists that line
 //! up with its title, and announcements for VoiceOver.
 
+mod items;
 mod list;
+mod outline;
 
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
@@ -14,14 +16,16 @@ use objc2_foundation::{NSDictionary, NSNumber, NSPoint, NSRect, NSSize};
 
 use crate::constant;
 use crate::util::{ns, set_label, symbol_button};
+pub use items::{RowItem, RowItems};
 pub use list::*;
+pub use outline::{Nesting, PanelOutline};
 
 /// How far a title's buttons keep from the sidebar's trailing edge.
 pub const ACCESSORY_INSET: f64 = 6.0;
 /// The size of the symbols of every panel's title buttons.
-pub const HEADER_POINTS: f64 = 14.0;
+pub(crate) const HEADER_POINTS: f64 = 14.0;
 /// The room between a panel's title buttons.
-pub const HEADER_SPACING: f64 = 2.0;
+pub(crate) const HEADER_SPACING: f64 = 2.0;
 /// `NSAccessibilityPriorityHigh`, which interrupts what VoiceOver is reading.
 const HIGH_PRIORITY: i64 = 90;
 

@@ -10,12 +10,12 @@ use objc2_app_kit::{NSAttributedStringAttributeFixing, NSTextView};
 use objc2_foundation::{NSAttributedString, NSRange, NSURL};
 use serde_json::{Value, json};
 
-use super::{check, finish, helpers, snapshot};
+use super::{check, finish, give_up, helpers, snapshot};
 use ide_ui_agent::AgentTab;
 
 const NAME: &str = "agent-perf";
 
-pub fn run() {
+pub(crate) fn run() {
     helpers::open_project(NAME, "stream-project", &[], |controller| {
         let mut tabs = Vec::new();
         for entries in [1000, 10_000, 1000, 1000] {
@@ -225,8 +225,7 @@ fn begin_samples(bench: Bench) {
     let (tab, _, _) = current(&bench);
     tab.timeline().settle();
     let Some(view) = tab.timeline().streaming_text() else {
-        check("streaming answer has a text view", false, "");
-        return finish(NAME);
+        return give_up(NAME, "streaming answer has a text view");
     };
     view.setSelectedRange(NSRange::new(0, 3));
     {
@@ -351,11 +350,10 @@ fn finish_samples(bench: Bench) {
         bench.case == 4
     };
     helpers::after(TURN, move || {
-        if done {
-            finish_benchmark(&bench);
-        } else {
-            prepare_case(bench);
+        if !done {
+            return prepare_case(bench);
         }
+        finish_benchmark(&bench);
     });
 }
 

@@ -22,7 +22,7 @@ const QUIET: Duration = Duration::from_secs(2);
 const LONGEST: Duration = Duration::from_secs(10);
 
 /// The copies of unsaved text that are due and when the timer that writes them fires.
-pub struct RecoveryCopies {
+pub(crate) struct RecoveryCopies {
     due: RefCell<Debounce>,
     /// When the timer that writes the copies due fires, if one is set.
     timer: Cell<Option<Instant>>,
@@ -42,9 +42,9 @@ fn with_due<R>(f: impl FnOnce(&RefCell<Debounce>) -> R) -> R {
 }
 
 /// The view's text changed; its copy is written once the change is due.
-pub fn changed(view: &EditorTextView) {
+pub(crate) fn changed(view: &EditorTextView) {
     let now = Instant::now();
-    with_due(|due| due.borrow_mut().changed(&view.ivars().recovery, now));
+    with_due(|due| due.borrow_mut().changed(&view.ivars().file.recovery, now));
     arm();
 }
 
@@ -70,7 +70,7 @@ fn fire() {
     let due = with_due(|due| due.borrow_mut().due(Instant::now()));
     if !due.is_empty() {
         for view in super::open_editors() {
-            if due.contains(&view.ivars().recovery) {
+            if due.contains(&view.ivars().file.recovery) {
                 store(&view);
             }
         }
@@ -80,8 +80,8 @@ fn fire() {
 
 /// Writes a copy of the view's text if it has unsaved changes, else drops the copy; the writing happens on the copies'
 /// lane, in the order asked for.
-pub fn store(view: &EditorTextView) {
-    let id = view.ivars().recovery.clone();
+pub(crate) fn store(view: &EditorTextView) {
+    let id = view.ivars().file.recovery.clone();
     let document = view.document();
     if !document.is_dirty() {
         drop(document);
@@ -108,8 +108,8 @@ pub fn store(view: &EditorTextView) {
 }
 
 /// Drops the copy of a view that was saved or closed.
-pub fn discard(view: &EditorTextView) {
-    drop_copy(view.ivars().recovery.clone());
+pub(crate) fn discard(view: &EditorTextView) {
+    drop_copy(view.ivars().file.recovery.clone());
 }
 
 fn drop_copy(id: RecoveryId) {
@@ -132,10 +132,10 @@ fn drop_copy(id: RecoveryId) {
 /// At a quit the user agreed to: drops the copies of every open editor, whose text is saved or given up, and waits up
 /// to `limit` for the lane to have written and removed what it was asked to. Removals the lane has not reached by then
 /// are done here instead, since a copy left behind would come back at the next launch.
-pub fn quit(limit: Duration) {
+pub(crate) fn quit(limit: Duration) {
     let ids: Vec<RecoveryId> = super::open_editors()
         .iter()
-        .map(|view| view.ivars().recovery.clone())
+        .map(|view| view.ivars().file.recovery.clone())
         .collect();
     for id in &ids {
         drop_copy(id.clone());

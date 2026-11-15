@@ -32,7 +32,7 @@ pub struct Entry {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DeviceFile {
     /// The settings file's schema version of the app that wrote it.
-    pub schema: u64,
+    pub(crate) schema: u64,
     /// The Mac's id, which is also the file's name.
     pub device: String,
     /// The synced settings by name.

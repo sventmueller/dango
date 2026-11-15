@@ -10,13 +10,13 @@ use std::time::{Duration, Instant};
 use crate::sync::LockIgnoringPoison;
 
 /// Where reports go: what failed, then the detail.
-pub type Hook = Box<dyn Fn(&str, &str) + Send + Sync>;
+pub(crate) type Hook = Box<dyn Fn(&str, &str) + Send + Sync>;
 
 /// How many reports of one kind pass per window.
-pub const BURST: u32 = 5;
+pub(crate) const BURST: u32 = 5;
 
 /// The window over which [`BURST`] is counted.
-pub const WINDOW: Duration = Duration::from_secs(60);
+pub(crate) const WINDOW: Duration = Duration::from_secs(60);
 
 static HOOK: OnceLock<Hook> = OnceLock::new();
 static SEEN: OnceLock<Mutex<HashMap<String, Count>>> = OnceLock::new();

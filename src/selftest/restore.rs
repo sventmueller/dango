@@ -10,7 +10,7 @@ use objc2_foundation::{NSPoint, NSRect, NSSize};
 use serde::{Deserialize, Serialize};
 
 use super::helpers::{self, open_beside, wait_until, window_of};
-use super::{check, finish};
+use super::{check, finish, give_up};
 use crate::window::Panel;
 
 const SCENARIO: &str = "restore";
@@ -79,8 +79,7 @@ pub(super) fn run() {
 
 fn arrange(a: PathBuf, b: PathBuf) {
     let (Some(first), Some(second)) = (window_of(&a), window_of(&b)) else {
-        check("both folders get their windows", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "both folders get their windows");
     };
     first.open_file(&a.join("main.rs"));
     first.open_file(&a.join("notes.md"));
@@ -113,7 +112,7 @@ fn arrange(a: PathBuf, b: PathBuf) {
 
 fn quit(a: &Path, b: &Path) {
     let (Some(first), Some(second)) = (window_of(a), window_of(b)) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     for controller in [&first, &second] {
         if let Some(content) = controller.window().and_then(|w| w.contentView()) {
@@ -173,8 +172,7 @@ fn came_back(a: PathBuf, b: PathBuf, c: PathBuf, saved: Option<[f64; 4]>) {
         .ok()
         .and_then(|bytes| serde_json::from_slice(&bytes).ok());
     let (Some(before), Some(first), Some(second)) = (before, window_of(&a), window_of(&b)) else {
-        check("both folder windows come back", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "both folder windows come back");
     };
     check(
         "each folder window comes back with its tabs in their order, the Markdown file with its preview",

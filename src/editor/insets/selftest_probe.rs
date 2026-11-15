@@ -6,15 +6,15 @@
 )]
 use super::*;
 
-pub use super::draw::drawn_in;
+pub(crate) use super::draw::drawn_in;
 
-pub use super::rotor::rotor_items;
+pub(crate) use super::rotor::rotor_items;
 
-pub use super::rotor::rotor_step;
+pub(crate) use super::rotor::rotor_step;
 
 /// Whether editors draw as with increased contrast, for the self-test.
 #[derive(Default)]
-pub struct ForcedContrast {
+pub(crate) struct ForcedContrast {
     forced_contrast: std::cell::Cell<bool>,
 }
 
@@ -23,7 +23,7 @@ pub(super) fn with_forced_contrast<R>(f: impl FnOnce(&std::cell::Cell<bool>) -> 
 }
 
 /// Draws as with increased contrast, which AppKit gives a window only through the system setting, for the self-test.
-pub fn force_increased_contrast(on: bool) {
+pub(crate) fn force_increased_contrast(on: bool) {
     with_forced_contrast(|forced| forced.set(on));
 }
 
@@ -43,7 +43,7 @@ pub(super) fn kern_at(storage: &NSTextStorage, at: usize) -> Option<f64> {
 
 /// The contrast of an inset's text against its box on the editor's ground, in the appearance `view` has now, for the
 /// self-test.
-pub fn contrast(view: &EditorTextView) -> Option<f64> {
+pub(crate) fn contrast(view: &EditorTextView) -> Option<f64> {
     use objc2_app_kit::{NSAppearanceCustomization, NSColorSpace};
     let rgba = |color: &NSColor| {
         let found = std::cell::Cell::new(None);
@@ -83,7 +83,7 @@ pub fn contrast(view: &EditorTextView) -> Option<f64> {
 }
 
 /// The kern attributes in the text of `view`, as ranges with their values, for the self-test.
-pub fn kerns(view: &EditorTextView) -> Vec<(Range<usize>, f64)> {
+pub(crate) fn kerns(view: &EditorTextView) -> Vec<(Range<usize>, f64)> {
     let Some(storage) = view.storage() else {
         return Vec::new();
     };
@@ -97,7 +97,7 @@ pub fn kerns(view: &EditorTextView) -> Vec<(Range<usize>, f64)> {
 }
 
 /// The inlay hints `view` shows, as their offsets and texts and whether a click on one goes somewhere.
-pub fn inlay_shown(view: &EditorTextView) -> Vec<(usize, String, bool)> {
+pub(crate) fn inlay_shown(view: &EditorTextView) -> Vec<(usize, String, bool)> {
     of(view, Layer::Inlay)
         .into_iter()
         .map(|inset| (inset.at, inset.text, inset.action.is_some()))

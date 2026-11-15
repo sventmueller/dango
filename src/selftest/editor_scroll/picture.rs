@@ -8,7 +8,7 @@ use objc2_foundation::{NSPoint, NSRect, NSSize};
 use crate::editor::EditorTextView;
 
 /// A capture of one window, without its shadow.
-pub struct Picture {
+pub(crate) struct Picture {
     image: image::RgbaImage,
     /// Pixels per point.
     scale: f64,
@@ -18,13 +18,13 @@ pub struct Picture {
 
 /// How many pixels of a rectangle differ from the ground, out of how many.
 #[derive(Debug, Clone, Copy)]
-pub struct Count {
-    pub marked: usize,
-    pub all: usize,
+pub(crate) struct Count {
+    pub(crate) marked: usize,
+    pub(crate) all: usize,
 }
 
 impl Count {
-    pub fn share(self) -> f64 {
+    pub(crate) fn share(self) -> f64 {
         if self.all == 0 {
             0.0
         } else {
@@ -35,7 +35,7 @@ impl Count {
 
 impl Picture {
     /// Reads the capture at `path` of the window that shows `view`.
-    pub fn load(path: &Path, view: &EditorTextView) -> Result<Picture, String> {
+    pub(crate) fn load(path: &Path, view: &EditorTextView) -> Result<Picture, String> {
         let window = view.window().ok_or("no window")?;
         let frame = window.frame();
         let image = image::open(path).map_err(|e| e.to_string())?.to_rgba8();
@@ -80,7 +80,7 @@ impl Picture {
 
     /// The ground of `view` on the row of `point`: near the right edge of what shows, past the end of every line of
     /// the scenario's text, left of where an overlay scroller appears.
-    pub fn ground(&self, view: &EditorTextView, y: f64) -> [u8; 3] {
+    pub(crate) fn ground(&self, view: &EditorTextView, y: f64) -> [u8; 3] {
         let seen = view.visibleRect();
         let (x, y) = self.pixels(
             view,
@@ -96,7 +96,7 @@ impl Picture {
     }
 
     /// The pixels of `rect` of `view` that differ from the ground by more than `threshold` in some channel.
-    pub fn ink(&self, view: &EditorTextView, rect: NSRect, threshold: u8) -> Count {
+    pub(crate) fn ink(&self, view: &EditorTextView, rect: NSRect, threshold: u8) -> Count {
         let ground = self.ground(view, rect.origin.y + rect.size.height / 2.0);
         self.count(view, rect, |p| {
             p.iter().zip(ground).any(|(a, b)| a.abs_diff(b) > threshold)
@@ -104,7 +104,7 @@ impl Picture {
     }
 
     /// The pixels of `rect` of `view` tinted blue, as a selection is.
-    pub fn tint(&self, view: &EditorTextView, rect: NSRect) -> Count {
+    pub(crate) fn tint(&self, view: &EditorTextView, rect: NSRect) -> Count {
         self.count(view, rect, |p| i16::from(p[2]) - i16::from(p[0]) > 8)
     }
 

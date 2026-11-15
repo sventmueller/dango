@@ -10,10 +10,10 @@ use std::time::Duration;
 
 use ide_ui_export::{Kind, Outcome, Source};
 use objc2::MainThreadMarker;
-use objc2_app_kit::{NSApplication, NSModalResponseOK, NSSavePanel};
+use objc2_app_kit::{NSModalResponseOK, NSSavePanel};
 use splat_i18n::t;
 
-use super::helpers::{self, answer_alert, in_any_mode_after, wait_until, wait_within};
+use super::helpers::{self, answer_alert, wait_until, wait_within, when_alert_shows};
 use super::{check, finish};
 
 const SCENARIO: &str = "export";
@@ -77,7 +77,7 @@ fn source(root: &Path, title: &str, text: &str) -> Source {
     }
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let root = root();
     let out = root.join("out");
     let _ = std::fs::create_dir_all(&out);
@@ -239,7 +239,7 @@ fn cancelled(root: PathBuf, out: PathBuf) {
 fn save_panel(root: PathBuf) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let offered = Arc::new(Mutex::new(String::new()));
-    answer_save_panel(Arc::clone(&offered), 40);
+    answer_save_panel(Arc::clone(&offered));
     ide_ui_export::ask(mtm, None, source(&root, "gespeichert", "# Gespeichert\n"), Kind::Html);
     let target = root.join("gespeichert.html");
     let expected = target.to_string_lossy().into_owned();
@@ -259,19 +259,11 @@ fn save_panel(root: PathBuf) {
     );
 }
 
-/// Notes where the save panel in front offers to save and answers it with OK, looking again every half second until
-/// one is in front, `tries` times.
-fn answer_save_panel(offered: Arc<Mutex<String>>, tries: u32) {
-    in_any_mode_after(Duration::from_millis(500), move || {
-        let Some(mtm) = MainThreadMarker::new() else { return };
-        let panel = NSApplication::sharedApplication(mtm)
-            .modalWindow()
-            .and_then(|window| window.downcast::<NSSavePanel>().ok());
-        let Some(panel) = panel else {
-            if tries > 0 {
-                answer_save_panel(offered, tries - 1);
-            }
-            return;
+/// Notes where the save panel offers to save as soon as it shows and answers it with OK.
+fn answer_save_panel(offered: Arc<Mutex<String>>) {
+    when_alert_shows(None, move |window| {
+        let Some(panel) = window.downcast_ref::<NSSavePanel>() else {
+            return answer_alert(objc2_app_kit::NSModalResponseCancel);
         };
         let name = panel.nameFieldStringValue().to_string();
         let dir = panel

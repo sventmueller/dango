@@ -6,6 +6,8 @@ use objc2::sel;
 use objc2_app_kit::{NSColor, NSView};
 use splat_i18n::{t, tf};
 
+use ide_ui_common::util::{activate, pin_edges};
+
 use super::super::format;
 use super::super::markdown::Tone;
 use super::super::style;
@@ -17,7 +19,7 @@ const SHOWN_ENTRIES: usize = 40;
 /// How far a subagent's timeline is set in.
 const INDENT: f64 = 14.0;
 
-pub fn status_text(status: TaskStatus) -> &'static str {
+pub(super) fn status_text(status: TaskStatus) -> &'static str {
     match status {
         TaskStatus::Pending => t("Wartet"),
         TaskStatus::Running => t("Läuft"),
@@ -29,7 +31,7 @@ pub fn status_text(status: TaskStatus) -> &'static str {
 }
 
 /// The facts of a subagent on one line: status, running time, tokens, tool calls and the last tool.
-pub fn facts(ctx: &Ctx<'_>, sub: &Subagent) -> String {
+pub(super) fn facts(ctx: &Ctx<'_>, sub: &Subagent) -> String {
     let mut parts = vec![status_text(sub.status).to_string()];
     let elapsed = if sub.status == TaskStatus::Running {
         super::since(ctx, sub.started).max(sub.elapsed)
@@ -49,7 +51,7 @@ pub fn facts(ctx: &Ctx<'_>, sub: &Subagent) -> String {
     parts.join(" · ")
 }
 
-pub fn card(ctx: &Ctx<'_>, id: EntryId, call: &ToolCall) -> Retained<NSView> {
+pub(super) fn card(ctx: &Ctx<'_>, id: EntryId, call: &ToolCall) -> Retained<NSView> {
     let mtm = ctx.mtm;
     let ToolView::Agent {
         description,
@@ -203,18 +205,13 @@ fn nested(ctx: &Ctx<'_>, lane: &Lane) -> Retained<NSView> {
     line.setBoxType(objc2_app_kit::NSBoxType::Custom);
     line.setFillColor(&NSColor::separatorColor());
     line.setBorderWidth(0.0);
-    for constraint in [
-        bar.leadingAnchor().constraintEqualToAnchor(&holder.leadingAnchor()),
-        bar.trailingAnchor().constraintEqualToAnchor(&holder.trailingAnchor()),
-        bar.topAnchor().constraintEqualToAnchor(&holder.topAnchor()),
-        bar.bottomAnchor().constraintEqualToAnchor(&holder.bottomAnchor()),
+    pin_edges(&bar, &holder);
+    activate([
         line.leadingAnchor()
             .constraintEqualToAnchor_constant(&holder.leadingAnchor(), 3.0),
         line.widthAnchor().constraintEqualToConstant(2.0),
         line.topAnchor().constraintEqualToAnchor(&holder.topAnchor()),
         line.bottomAnchor().constraintEqualToAnchor(&holder.bottomAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     holder
 }

@@ -1,7 +1,10 @@
 //! Worker threads with a limit on waiting jobs, and code run so that a panic costs one result and not the app.
 
+use std::io;
 use std::sync::mpsc::{SyncSender, TrySendError};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex};
+
+use crate::sync::LockIgnoringPoison;
 
 type Job = Box<dyn FnOnce() + Send>;
 
@@ -11,12 +14,17 @@ pub struct Lane {
     workers: usize,
     capacity: usize,
     start: fn(),
-    jobs: OnceLock<SyncSender<Job>>,
+    jobs: Mutex<Option<SyncSender<Job>>>,
 }
 
-/// The lane already holds as many waiting jobs as it takes.
+/// Why a lane took no job.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Full;
+pub enum Refused {
+    /// The lane already holds as many waiting jobs as it takes.
+    Full,
+    /// No thread runs the lane's jobs, because the system had none to give; a later job tries again.
+    Stopped,
+}
 
 impl Lane {
     /// A lane of `workers` threads called `name` that holds up to `capacity` waiting jobs.
@@ -31,20 +39,17 @@ impl Lane {
             workers,
             capacity,
             start,
-            jobs: OnceLock::new(),
+            jobs: Mutex::new(None),
         }
     }
 
     /// Queues `job`; `Full` when `capacity` jobs are already waiting, so the caller can drop or merge work instead
-    /// of piling it up.
-    pub fn try_run(&self, job: impl FnOnce() + Send + 'static) -> Result<(), Full> {
-        match self.sender().try_send(Box::new(job)) {
-            Ok(()) => Ok(()),
-            Err(TrySendError::Full(_) | TrySendError::Disconnected(_)) => Err(Full),
-        }
+    /// of piling it up, and `Stopped` when no thread could be started for it.
+    pub fn try_run(&self, job: impl FnOnce() + Send + 'static) -> Result<(), Refused> {
+        self.try_run_with(Box::new(job), spawn)
     }
 
-    /// Runs `work` on the lane and hands its result, or `None` after a panic, to `answer` there; `Full` as `try_run`.
+    /// Runs `work` on the lane and hands its result, or `None` after a panic, to `answer` there; refused as `try_run`.
     ///
     /// ```
     /// use std::sync::mpsc::channel;
@@ -63,35 +68,58 @@ impl Lane {
         &self,
         work: impl FnOnce() -> T + Send + 'static,
         answer: impl FnOnce(Option<T>) + Send + 'static,
-    ) -> Result<(), Full> {
+    ) -> Result<(), Refused> {
         self.try_run(move || answer(contained(work)))
     }
 
-    fn sender(&self) -> &SyncSender<Job> {
-        self.jobs.get_or_init(|| {
-            let (tx, rx) = std::sync::mpsc::sync_channel::<Job>(self.capacity);
-            let rx = Arc::new(Mutex::new(rx));
-            for n in 0..self.workers.max(1) {
-                let rx = rx.clone();
-                let start = self.start;
-                let name = if self.workers <= 1 {
-                    self.name.to_string()
-                } else {
-                    format!("{}-{n}", self.name)
-                };
-                std::thread::Builder::new()
-                    .name(name)
-                    .spawn(move || {
-                        start();
-                        while let Ok(Ok(job)) = rx.lock().map(|rx| rx.recv()) {
-                            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(job));
-                        }
-                    })
-                    .expect("lane thread");
+    fn try_run_with(&self, job: Job, spawn: impl Fn(String, Job) -> io::Result<()>) -> Result<(), Refused> {
+        let mut jobs = self.jobs.lock_ignoring_poison();
+        if jobs.is_none() {
+            *jobs = self.start_workers(spawn);
+        }
+        let Some(sender) = jobs.as_ref() else {
+            return Err(Refused::Stopped);
+        };
+        match sender.try_send(job) {
+            Ok(()) => Ok(()),
+            Err(TrySendError::Full(_)) => Err(Refused::Full),
+            Err(TrySendError::Disconnected(_)) => {
+                *jobs = None;
+                Err(Refused::Stopped)
             }
-            tx
-        })
+        }
     }
+
+    /// The lane's queue with its threads running, or `None` when not one of them started.
+    fn start_workers(&self, spawn: impl Fn(String, Job) -> io::Result<()>) -> Option<SyncSender<Job>> {
+        let (tx, rx) = std::sync::mpsc::sync_channel::<Job>(self.capacity);
+        let rx = Arc::new(Mutex::new(rx));
+        let mut started = 0;
+        for n in 0..self.workers.max(1) {
+            let rx = rx.clone();
+            let start = self.start;
+            let name = if self.workers <= 1 {
+                self.name.to_string()
+            } else {
+                format!("{}-{n}", self.name)
+            };
+            let worker: Job = Box::new(move || {
+                start();
+                while let Ok(Ok(job)) = rx.lock().map(|rx| rx.recv()) {
+                    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(job));
+                }
+            });
+            match spawn(name, worker) {
+                Ok(()) => started += 1,
+                Err(error) => crate::diag::report(&format!("lane {}", self.name), &error),
+            }
+        }
+        (started > 0).then_some(tx)
+    }
+}
+
+fn spawn(name: String, worker: Job) -> io::Result<()> {
+    std::thread::Builder::new().name(name).spawn(worker).map(drop)
 }
 
 fn nothing() {}
@@ -129,6 +157,33 @@ mod tests {
         assert!(rx.recv_timeout(Duration::from_secs(5)).unwrap());
     }
 
+    fn refuse(_: String, _: Job) -> io::Result<()> {
+        Err(io::Error::from(io::ErrorKind::OutOfMemory))
+    }
+
+    #[test]
+    fn a_lane_without_threads_refuses_and_starts_them_with_a_later_job() {
+        static LANE: Lane = Lane::new("test-unstarted", 2, 4);
+        assert_eq!(LANE.try_run_with(Box::new(|| ()), refuse), Err(Refused::Stopped));
+        assert!(
+            LANE.jobs.lock_ignoring_poison().is_none(),
+            "nothing is kept of a start that failed"
+        );
+        let (tx, rx) = channel();
+        LANE.ask(|| 7, move |r| tx.send(r).unwrap()).unwrap();
+        assert_eq!(rx.recv_timeout(Duration::from_secs(5)).unwrap(), Some(7));
+    }
+
+    #[test]
+    fn a_lane_whose_threads_are_gone_says_so_instead_of_full() {
+        static LANE: Lane = Lane::new("test-gone", 1, 4);
+        let (tx, rx) = std::sync::mpsc::sync_channel::<Job>(4);
+        drop(rx);
+        *LANE.jobs.lock_ignoring_poison() = Some(tx);
+        assert_eq!(LANE.try_run(|| ()), Err(Refused::Stopped));
+        LANE.try_run(|| ()).unwrap();
+    }
+
     #[test]
     fn a_full_lane_refuses_instead_of_growing() {
         static LANE: Lane = Lane::new("test-full", 1, 2);
@@ -143,7 +198,7 @@ mod tests {
         running.recv_timeout(Duration::from_secs(5)).unwrap();
         LANE.try_run(|| ()).unwrap();
         LANE.try_run(|| ()).unwrap();
-        assert_eq!(LANE.try_run(|| ()), Err(Full));
+        assert_eq!(LANE.try_run(|| ()), Err(Refused::Full));
         gate.wait();
     }
 }

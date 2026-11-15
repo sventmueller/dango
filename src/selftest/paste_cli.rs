@@ -16,7 +16,7 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSArray, NSData};
 
-use super::{check, finish, helpers};
+use super::{check, finish, give_up, give_up_saying, helpers};
 
 mod forget;
 use crate::terminal::inspect;
@@ -125,7 +125,7 @@ struct Run {
     trusted: bool,
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let _ = helpers::make_project("paste-cli-project", &[]);
     let root = helpers::root("paste-cli-project");
     helpers::open_trusted(&root);
@@ -164,7 +164,7 @@ fn start(root: &Path, path: &str) {
         format!("present: {present:?}, missing: {missing:?}"),
     );
     let Some(controller) = controller_of(root).filter(|_| !present.is_empty()) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let restore = Restore {
         saved: Contents::read(),
@@ -407,12 +407,11 @@ fn cleaned(pids: Vec<u32>, gone: bool, root: PathBuf) {
             .map(|(_, value)| PathBuf::from(value))
     });
     let Some(home) = home.filter(|_| !alive) else {
-        check(
+        return give_up_saying(
+            NAME,
             "the CLIs end before their settings are cleaned",
-            false,
             format!("{pids:?}"),
         );
-        return finish(NAME);
     };
     forget_again(home, root, Vec::new(), 0);
 }

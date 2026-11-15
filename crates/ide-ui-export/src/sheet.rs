@@ -15,7 +15,7 @@ use splat_i18n::t;
 
 use ide_ui_common::util::{guarded, ns};
 
-pub struct SheetIvars {
+pub(crate) struct SheetIvars {
     /// The export the sheet belongs to.
     number: u64,
     /// The export failed: the button only closes the sheet.
@@ -42,7 +42,7 @@ define_class!(
 );
 
 /// A sheet on the window of an export.
-pub struct Sheet {
+pub(crate) struct Sheet {
     parent: Retained<NSWindow>,
     panel: Retained<NSWindow>,
     label: Retained<NSTextField>,
@@ -54,7 +54,7 @@ pub struct Sheet {
 
 impl Sheet {
     /// Shows a sheet on `parent` saying `what` runs, for the export `number`.
-    pub fn show(parent: &NSWindow, what: &str, number: u64) -> Sheet {
+    pub(crate) fn show(parent: &NSWindow, what: &str, number: u64) -> Sheet {
         let mtm = parent.mtm();
         let target = SheetTarget::alloc(mtm).set_ivars(SheetIvars {
             number,
@@ -102,13 +102,13 @@ impl Sheet {
         }
     }
 
-    pub fn close(&self) {
+    pub(crate) fn close(&self) {
         self.parent.endSheet(&self.panel);
         self.panel.orderOut(None);
     }
 
     /// Says why the export failed; the sheet stays until the user closes it with OK.
-    pub fn failed(&self, reason: &str) {
+    pub(crate) fn failed(&self, reason: &str) {
         self.target.ivars().failed.set(true);
         self.label.setStringValue(&ns(reason));
         // SAFETY: Stopping the animation the sheet started, with no sender.

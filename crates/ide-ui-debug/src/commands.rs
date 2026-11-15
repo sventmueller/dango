@@ -18,7 +18,7 @@ define_class!(
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEDebugCommands"]
-    pub struct DebugCommands;
+    pub(crate) struct DebugCommands;
 
     unsafe impl NSObjectProtocol for DebugCommands {}
 
@@ -126,7 +126,11 @@ fn validate(item: &NSMenuItem) -> bool {
 }
 
 /// The Debug menu, between the app's own menus and Window; `key` gives each command's shortcut.
-pub fn menu(mtm: MainThreadMarker, key: &dyn Fn(&str) -> String, commands: &DebugCommands) -> Retained<NSMenuItem> {
+pub(crate) fn menu(
+    mtm: MainThreadMarker,
+    key: &dyn Fn(&str) -> String,
+    commands: &DebugCommands,
+) -> Retained<NSMenuItem> {
     let entry = |title: &str, action: Sel, shortcut: &str| {
         let entry = item(mtm, title, Some(action), &key(shortcut));
         set_target(&entry, commands);
@@ -169,7 +173,7 @@ pub fn menu(mtm: MainThreadMarker, key: &dyn Fn(&str) -> String, commands: &Debu
 }
 
 /// The menu's target, which holds no state and aims at the window in front.
-pub fn target(mtm: MainThreadMarker) -> Retained<DebugCommands> {
+pub(crate) fn target(mtm: MainThreadMarker) -> Retained<DebugCommands> {
     // SAFETY: NSObject's initializer, called once on the newly allocated object.
     unsafe { msg_send![DebugCommands::alloc(mtm), init] }
 }

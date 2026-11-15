@@ -4,7 +4,7 @@ use std::ops::Range;
 
 /// Lines whose colours wait to be painted, as sorted ranges that neither overlap nor touch.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct Unpainted(Vec<Range<usize>>);
+pub(crate) struct Unpainted(Vec<Range<usize>>);
 
 impl Unpainted {
     pub(super) fn add(&mut self, lines: Range<usize>) {

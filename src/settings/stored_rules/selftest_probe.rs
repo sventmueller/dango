@@ -8,7 +8,7 @@ use super::*;
 
 impl StoredRules {
     /// Selects the row `row` and removes its rule, as the user does, for the self-test.
-    pub fn remove_row(&self, row: usize) {
+    pub(crate) fn remove_row(&self, row: usize) {
         if let Some(table) = self.ivars().table.get() {
             table.selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(row), false);
         }
@@ -16,7 +16,7 @@ impl StoredRules {
     }
 
     /// Scrolls the Agents tab to the section's last line, for the self-test's picture.
-    pub fn reveal_end(&self) {
+    pub(crate) fn reveal_end(&self) {
         if let Some(end) = self.ivars().end.get() {
             end.scrollRectToVisible(end.bounds());
         }

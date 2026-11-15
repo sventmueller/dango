@@ -18,7 +18,7 @@ use super::ui;
 use ide_ui_common::util::{ns, set_target};
 
 /// How a session stands, in words.
-pub fn phase_words(session: &Session) -> String {
+pub(crate) fn phase_words(session: &Session) -> String {
     match &session.phase {
         Phase::Starting if session.waiting => t("Wartet auf Freigabe durch macOS …").to_string(),
         Phase::Starting => t("Startet …").to_string(),
@@ -49,7 +49,7 @@ fn reason_words(reason: &str) -> String {
 }
 
 /// A place in words, such as `main.rs:12`, its line counted from 1.
-pub fn place(path: &std::path::Path, line: usize) -> String {
+pub(crate) fn place(path: &std::path::Path, line: usize) -> String {
     let name = path
         .file_name()
         .map_or_else(|| path.display().to_string(), |n| n.to_string_lossy().into_owned());
@@ -244,7 +244,7 @@ impl DebugPanel {
     }
 
     /// Return on row `row` of `view`: a frame shows its place, a breakpoint its line, other rows open or close.
-    pub fn activate_in(&self, view: &NSOutlineView, row: isize) {
+    pub(crate) fn activate_in(&self, view: &NSOutlineView, row: isize) {
         let Some(item) = (row >= 0).then(|| view.itemAtRow(row)).flatten() else {
             return;
         };
@@ -267,7 +267,7 @@ impl DebugPanel {
     }
 
     /// Delete on row `row` of `view`: removes a breakpoint or a watch expression; whether it did.
-    pub fn delete_in(&self, view: &NSOutlineView, row: isize) -> bool {
+    pub(crate) fn delete_in(&self, view: &NSOutlineView, row: isize) -> bool {
         let Some(item) = (row >= 0).then(|| view.itemAtRow(row)).flatten() else {
             return false;
         };
@@ -340,7 +340,7 @@ fn switch(panel: &DebugPanel, title: &str, on: bool, index: usize, action: objc2
 }
 
 /// How a breakpoint looks, said for VoiceOver.
-pub fn look_words(look: Look) -> &'static str {
+pub(crate) fn look_words(look: Look) -> &'static str {
     match look {
         Look::Enabled => t("Haltepunkt"),
         Look::Disabled => t("Haltepunkt, ausgeschaltet"),
@@ -351,7 +351,7 @@ pub fn look_words(look: Look) -> &'static str {
 }
 
 /// The place among its kind of the row a menu item or control acts on, from its tag.
-pub fn tag_of(sender: Option<&AnyObject>) -> Option<usize> {
+pub(crate) fn tag_of(sender: Option<&AnyObject>) -> Option<usize> {
     let sender = sender?;
     let tag = if let Some(item) = sender.downcast_ref::<NSMenuItem>() {
         item.tag()

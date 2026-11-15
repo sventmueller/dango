@@ -17,7 +17,7 @@ use crate::AgentKey;
 use ide_ui_common::util::{guarded, ns};
 
 #[derive(Default)]
-pub struct RingIvars {
+pub(crate) struct RingIvars {
     fraction: Cell<f64>,
 }
 
@@ -27,7 +27,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEAgentContextRing"]
     #[ivars = RingIvars]
-    pub struct ContextRing;
+    pub(crate) struct ContextRing;
 
     unsafe impl NSObjectProtocol for ContextRing {}
 
@@ -89,8 +89,8 @@ impl ContextRing {
     }
 }
 
-pub struct StatusLine {
-    pub view: Retained<NSStackView>,
+pub(crate) struct StatusLine {
+    pub(crate) view: Retained<NSStackView>,
     /// Opens the context's breakdown from the ring and its text.
     gauge: Retained<objc2_app_kit::NSButton>,
     ring: Retained<ContextRing>,
@@ -100,11 +100,11 @@ pub struct StatusLine {
     problem: Retained<NSTextField>,
     /// What dictation into the composer does.
     #[cfg(feature = "dictation")]
-    pub dictation: Retained<NSTextField>,
+    pub(crate) dictation: Retained<NSTextField>,
 }
 
 impl StatusLine {
-    pub fn new(mtm: MainThreadMarker, key: AgentKey) -> StatusLine {
+    pub(crate) fn new(mtm: MainThreadMarker, key: AgentKey) -> StatusLine {
         let ring = ContextRing::new(mtm);
         let small = |color: Retained<NSColor>| {
             let label = ui::label(mtm, "", &style::small(), &color);
@@ -140,7 +140,7 @@ impl StatusLine {
     }
 
     /// Shows the state of `thread`.
-    pub fn show(&self, thread: &Thread) {
+    pub(crate) fn show(&self, thread: &Thread) {
         let usage = thread.usage();
         match (usage.context_used, usage.context_size) {
             (Some(used), Some(size)) if size > 0 => {

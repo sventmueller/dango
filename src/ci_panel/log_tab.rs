@@ -20,10 +20,10 @@ use splat_i18n::{t, tf};
 
 use super::{text, work};
 use crate::context::Registry;
-use crate::util::{constant, guarded, label, ns, pin_edges, set_action, with_editing};
+use crate::util::{constant, guarded, label, ns, pin_edges, pin_sides, set_action, with_editing};
 use crate::window::{TabKind, WindowController};
 
-pub struct LogIvars {
+pub(crate) struct LogIvars {
     id: u64,
     controller: Weak<WindowController>,
     window_root: PathBuf,
@@ -35,9 +35,9 @@ pub struct LogIvars {
     loading: std::cell::Cell<bool>,
 }
 
-pub struct LogUi {
-    pub text: Retained<NSTextView>,
-    pub scroll: Retained<NSScrollView>,
+pub(crate) struct LogUi {
+    pub(crate) text: Retained<NSTextView>,
+    pub(crate) scroll: Retained<NSScrollView>,
     state: Retained<NSTextField>,
     agent: Retained<NSButton>,
 }
@@ -48,7 +48,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDECiLogTab"]
     #[ivars = LogIvars]
-    pub struct LogTab;
+    pub(crate) struct LogTab;
 
     unsafe impl NSObjectProtocol for LogTab {}
 
@@ -80,7 +80,7 @@ define_class!(
 
 /// The CI log tabs of every window by id.
 #[derive(Default)]
-pub struct LogTabs {
+pub(crate) struct LogTabs {
     tabs: Registry<Weak<LogTab>>,
 }
 
@@ -93,12 +93,12 @@ fn live_tabs() -> Vec<Retained<LogTab>> {
 }
 
 /// The key of the log tab of `job` on `host`.
-pub fn key(host: &str, job: &Job) -> String {
+pub(crate) fn key(host: &str, job: &Job) -> String {
     format!("ci-log:{host}:{}", job.id)
 }
 
 /// Shows the log of `job` in its tab, opening one if there is none.
-pub fn show(controller: &WindowController, window_root: &Path, client: Client, job: Job, run: String) {
+pub(crate) fn show(controller: &WindowController, window_root: &Path, client: Client, job: Job, run: String) {
     let key = key(&client.forge().host, &job);
     if controller.select_tab(&key) {
         return;
@@ -119,7 +119,7 @@ pub fn show(controller: &WindowController, window_root: &Path, client: Client, j
 }
 
 /// Takes the jobs of a read of the window that shows `window_root`; a tab whose job runs reads its log again.
-pub fn refresh_for(window_root: &Path, runs: &[ide_ci::panel::RunRow]) {
+pub(crate) fn refresh_for(window_root: &Path, runs: &[ide_ci::panel::RunRow]) {
     for tab in live_tabs() {
         if tab.ivars().window_root != window_root {
             continue;
@@ -166,7 +166,7 @@ impl LogTab {
         tab
     }
 
-    pub fn ui(&self) -> &LogUi {
+    pub(crate) fn ui(&self) -> &LogUi {
         self.ivars().ui.get().expect("the tab builds its views in `new`")
     }
 
@@ -185,7 +185,7 @@ impl LogTab {
     }
 
     /// Reads the log again.
-    pub fn reload(&self) {
+    pub(crate) fn reload(&self) {
         if self.ivars().loading.replace(true) {
             return;
         }
@@ -302,12 +302,7 @@ impl LogUi {
         stack.setSpacing(ide_ui_common::style::space::NONE);
         for view in [&*header as &NSView, &line, &scroll] {
             stack.addArrangedSubview(view);
-            view.leadingAnchor()
-                .constraintEqualToAnchor(&stack.leadingAnchor())
-                .setActive(true);
-            view.trailingAnchor()
-                .constraintEqualToAnchor(&stack.trailingAnchor())
-                .setActive(true);
+            pin_sides(view, &stack, 0.0);
         }
         scroll.setContentHuggingPriority_forOrientation(1.0, objc2_app_kit::NSLayoutConstraintOrientation::Vertical);
         tab.addSubview(&stack);
@@ -338,8 +333,7 @@ fn text_view(mtm: MainThreadMarker, job: &str) -> (Retained<NSScrollView>, Retai
     let size = ide_core::settings::Settings::load_user().get(&ide_core::settings::keys::FONT_SIZE);
     text.setFont(Some(&NSFont::monospacedSystemFontOfSize_weight(
         (size - 1.0).max(9.0),
-        // SAFETY: AppKit sets its font weight constants when it loads.
-        unsafe { objc2_app_kit::NSFontWeightRegular },
+        constant!(objc2_app_kit::NSFontWeightRegular),
     )));
     text.setTextContainerInset(NSSize::new(8.0, 8.0));
     text.setHorizontallyResizable(true);
@@ -360,4 +354,4 @@ fn text_view(mtm: MainThreadMarker, job: &str) -> (Retained<NSScrollView>, Retai
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

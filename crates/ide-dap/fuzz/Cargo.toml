@@ -15,6 +15,8 @@ members = ["."]
 [dependencies]
 libfuzzer-sys = "0.4.10"
 ide-dap = { path = "..", features = ["fuzzing"] }
+# Without it a number written and read again may differ in its last bit, which the round trips compare.
+serde_json = { version = "1.0.154", features = ["float_roundtrip"] }
 
 [[bin]]
 name = "dap_messages"

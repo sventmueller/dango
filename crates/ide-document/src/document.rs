@@ -11,7 +11,9 @@ use splat_file_state::{FileFormat, Fingerprint, Stamp};
 use crate::disk::{self, FileContent, ReadOnly};
 use crate::edit::{ByteEdit, Change, Edit, EditError, edits_between};
 use crate::merge::{self, Conflict, Reconciliation};
-use crate::syntax::{BracketPair, Fold, Language, Span, Styled, Syntax};
+#[cfg(test)]
+use crate::syntax::BracketPair;
+use crate::syntax::{Fold, Language, Span, Styled, Syntax};
 use crate::text::{PositionError, Text};
 
 /// A kind of line break.
@@ -43,7 +45,7 @@ pub struct LineEndings {
     /// The break most lines end in, which a new line gets; `Lf` in a text without breaks.
     pub dominant: LineEnding,
     /// Whether lines end in more than one kind of break.
-    pub mixed: bool,
+    pub(crate) mixed: bool,
 }
 
 impl LineEndings {
@@ -98,7 +100,7 @@ impl Revision {
 
     /// The revision after one more edit.
     #[must_use]
-    pub const fn next(self) -> Revision {
+    pub(crate) const fn next(self) -> Revision {
         Revision(self.0 + 1)
     }
 }
@@ -170,11 +172,15 @@ impl Snapshot {
     pub fn revision(&self) -> Revision {
         self.revision
     }
+}
 
-    /// The document's file, if it has one.
-    pub fn path(&self) -> Option<&Path> {
-        self.path.as_deref()
-    }
+/// What a save does when another program changed the file since the document last read or wrote it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChangedOnDisk {
+    /// Refuses to save.
+    Refuse,
+    /// Saves over the other program's change.
+    Overwrite,
 }
 
 /// Why a save did not happen.
@@ -433,7 +439,8 @@ impl Document {
 
     /// Makes the document read-only at the user's request, or editable again. A document whose text differs from
     /// its file's bytes stays read-only, and the reason is the error.
-    pub fn set_read_only(&mut self, read_only: bool) -> Result<(), ReadOnly> {
+    #[cfg(test)]
+    pub(crate) fn set_read_only(&mut self, read_only: bool) -> Result<(), ReadOnly> {
         match self.read_only {
             Some(why) if why.is_lossy() => Err(why),
             _ => {
@@ -583,9 +590,9 @@ impl Document {
         }
     }
 
-    /// Starts a save to the document's file. Unless `overwrite`, the save refuses if another program changed the
-    /// file since the document last read or wrote it.
-    pub fn begin_save(&self, overwrite: bool) -> Result<SaveJob, SaveError> {
+    /// Starts a save to the document's file, doing as `changed` says if another program changed the file since the
+    /// document last read or wrote it.
+    pub fn begin_save(&self, changed: ChangedOnDisk) -> Result<SaveJob, SaveError> {
         if let Some(why) = self.read_only {
             return Err(SaveError::ReadOnly(why));
         }
@@ -593,7 +600,7 @@ impl Document {
         let known = self
             .disk
             .as_ref()
-            .filter(|disk| !overwrite && !disk.removed)
+            .filter(|disk| changed == ChangedOnDisk::Refuse && !disk.removed)
             .map(|disk| (disk.stamp, disk.fingerprint));
         Ok(self.job(path, known))
     }
@@ -644,13 +651,14 @@ impl Document {
 
     /// Saves to the document's file and waits for it; see `begin_save`.
     pub fn save(&mut self) -> Result<(), SaveError> {
-        let saved = self.begin_save(false)?.run()?;
+        let saved = self.begin_save(ChangedOnDisk::Refuse)?.run()?;
         self.end_save(saved);
         Ok(())
     }
 
     /// Saves to `path`, which becomes the document's file, and waits for it.
-    pub fn save_as(&mut self, path: PathBuf) -> Result<(), SaveError> {
+    #[cfg(test)]
+    pub(crate) fn save_as(&mut self, path: PathBuf) -> Result<(), SaveError> {
         let saved = self.begin_save_as(path)?.run()?;
         self.end_save(saved);
         Ok(())
@@ -764,7 +772,8 @@ impl Document {
     }
 
     /// Lexes what the lines `lines` need, visible ones first, and returns the lines whose colours changed.
-    pub fn highlight(&mut self, lines: Range<usize>) -> Option<Range<usize>> {
+    #[cfg(test)]
+    pub(crate) fn highlight(&mut self, lines: Range<usize>) -> Option<Range<usize>> {
         self.syntax.highlight(&self.text, lines, None)
     }
 
@@ -795,7 +804,8 @@ impl Document {
     }
 
     /// The bracket at UTF-16 offset `offset` or right before it, outside strings and comments, with its partner.
-    pub fn matching_bracket(&mut self, offset: usize) -> Option<BracketPair> {
+    #[cfg(test)]
+    pub(crate) fn matching_bracket(&mut self, offset: usize) -> Option<BracketPair> {
         self.syntax.matching_bracket(&self.text, offset)
     }
 

@@ -83,7 +83,7 @@ pub(super) fn asked() -> bool {
 
 /// Calls `then` for each notification `name` of `center`, the app's own by default, for as long as the app runs. AppKit
 /// and NSWorkspace post these on the main thread, and without a queue the call is synchronous, which quitting needs.
-pub fn observe(name: &NSNotificationName, center: Option<&NSNotificationCenter>, then: fn(&NSNotification)) {
+pub(super) fn observe(name: &NSNotificationName, center: Option<&NSNotificationCenter>, then: fn(&NSNotification)) {
     let block = RcBlock::new(move |notification: NonNull<NSNotification>| {
         ide_ui_common::util::guarded((), || {
             // SAFETY: The center passes a valid notification for the duration of the call.
@@ -100,7 +100,7 @@ pub fn observe(name: &NSNotificationName, center: Option<&NSNotificationCenter>,
     with_fn(|f| f.borrow_mut().observers.push(observer));
 }
 
-pub fn launched() {
+pub(super) fn launched() {
     let lowspeak = NSRunningApplication::runningApplicationsWithBundleIdentifier(&ns(LOWSPEAK_APP));
     with_fn(|f| f.borrow_mut().lowspeak_runs = lowspeak.iter().any(|app| !app.isTerminated()));
     let workspace = NSWorkspace::sharedWorkspace().notificationCenter();
@@ -239,7 +239,7 @@ fn start() {
 }
 
 /// The recording of `target` ended some other way, such as its limit or a click on its button.
-pub fn ended(target: Target) {
+pub(super) fn ended(target: Target) {
     with_fn(|f| {
         let mut f = f.borrow_mut();
         if f.recording == Some(target) {
@@ -250,7 +250,7 @@ pub fn ended(target: Target) {
 }
 
 /// After the first dictation the app asks for the Accessibility permission that fn needs (E13), once.
-pub fn after_dictation() {
+pub(super) fn after_dictation() {
     if in_selftest() || !setting() || trusted() || asked() {
         return;
     }

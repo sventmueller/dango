@@ -26,7 +26,7 @@ const CANCEL_POLL: Duration = Duration::from_millis(100);
 
 /// What one line of `claude -p --output-format stream-json` says.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Event {
+pub(super) enum Event {
     /// A piece of the answer.
     Text(String),
     /// The end, with the whole answer.
@@ -57,7 +57,7 @@ fn arguments() -> Vec<&'static str> {
 }
 
 /// What `line` of the output says, if anything this module uses.
-pub fn parse(line: &str) -> Option<Event> {
+pub(super) fn parse(line: &str) -> Option<Event> {
     let value: Value = serde_json::from_str(line).ok()?;
     match value["type"].as_str()? {
         "stream_event" => {
@@ -76,7 +76,7 @@ pub fn parse(line: &str) -> Option<Event> {
 }
 
 /// Runs `program` on `text` with `environment` and hands each piece of the answer to `on`.
-pub fn run(
+pub(super) fn run(
     program: &Path,
     environment: &[(String, String)],
     text: &str,

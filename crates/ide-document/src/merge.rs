@@ -51,13 +51,13 @@ pub struct Conflict(Merge);
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Hunk {
     /// The lines of `base` both sides replaced.
-    pub base_lines: Range<usize>,
+    pub(crate) base_lines: Range<usize>,
     /// The lines of the document's text that replace them.
-    pub buffer_lines: Range<usize>,
+    pub(crate) buffer_lines: Range<usize>,
     /// The lines of the file's text that replace them.
-    pub disk_lines: Range<usize>,
+    pub(crate) disk_lines: Range<usize>,
     /// The text of `base_lines`.
-    pub base: String,
+    pub(crate) base: String,
     /// The text of `buffer_lines`.
     pub buffer: String,
     /// The text of `disk_lines`.
@@ -118,11 +118,11 @@ impl Conflict {
 }
 
 /// The marker line that opens a conflict `Conflict::with_markers` writes, up to the label.
-pub const MARK_BUFFER: &str = "<<<<<<<";
+pub(crate) const MARK_BUFFER: &str = "<<<<<<<";
 /// The marker line between the two sides of a conflict.
-pub const MARK_BETWEEN: &str = "=======";
+pub(crate) const MARK_BETWEEN: &str = "=======";
 /// The marker line that closes a conflict, up to the label.
-pub const MARK_DISK: &str = ">>>>>>>";
+pub(crate) const MARK_DISK: &str = ">>>>>>>";
 
 /// The byte offsets of the lines of `text` that open a conflict, as `Conflict::with_markers` writes them.
 pub fn conflict_markers(text: &str) -> Vec<usize> {

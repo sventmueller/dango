@@ -72,30 +72,28 @@ pub struct Capabilities {
     /// The CLI's version.
     pub version: Option<String>,
     /// The tools the model can call.
-    pub tools: Vec<String>,
+    pub(crate) tools: Vec<String>,
     /// The slash commands, by name.
     pub slash_commands: Vec<String>,
     /// The slash commands with descriptions, from `initialize`.
     pub commands: Vec<CommandInfo>,
     /// The subagent types.
-    pub agents: Vec<String>,
-    /// The skills.
-    pub skills: Vec<String>,
+    pub(crate) agents: Vec<String>,
+    pub(crate) skills: Vec<String>,
     /// The MCP servers with their state.
-    pub mcp_servers: Vec<(String, String)>,
+    pub(crate) mcp_servers: Vec<(String, String)>,
     /// The protocol capabilities, such as `interrupt_receipt_v1`.
-    pub protocol: Vec<String>,
+    pub(crate) protocol: Vec<String>,
     /// The models the session can use.
     pub models: Vec<ModelInfo>,
     /// The signed-in account.
     pub account: Option<Account>,
-    /// The output style.
-    pub output_style: Option<String>,
+    pub(crate) output_style: Option<String>,
 }
 
 impl Capabilities {
     /// Takes in what a `system/init` frame reports.
-    pub fn learn_init(&mut self, init: &Init) {
+    pub(crate) fn learn_init(&mut self, init: &Init) {
         if !init.claude_code_version.is_empty() {
             self.version = Some(init.claude_code_version.clone());
         }
@@ -115,7 +113,7 @@ impl Capabilities {
     }
 
     /// Takes in what the `initialize` answer reports.
-    pub fn learn_initialize(&mut self, result: &InitializeResult) {
+    pub(crate) fn learn_initialize(&mut self, result: &InitializeResult) {
         self.commands.clone_from(&result.commands);
         self.models.clone_from(&result.models);
         self.account = Some(result.account.clone());
@@ -128,12 +126,13 @@ impl Capabilities {
     }
 
     /// Whether the CLI announced the protocol capability `name`.
-    pub fn supports(&self, name: &str) -> bool {
+    pub(crate) fn supports(&self, name: &str) -> bool {
         self.protocol.iter().any(|c| c == name)
     }
 
     /// Whether the model can call `tool`.
-    pub fn has_tool(&self, tool: &str) -> bool {
+    #[cfg(test)]
+    pub(crate) fn has_tool(&self, tool: &str) -> bool {
         self.tools.iter().any(|t| t == tool)
     }
 
@@ -143,7 +142,8 @@ impl Capabilities {
     }
 
     /// Whether subagents can be started, as far as the tools tell.
-    pub fn subagents(&self) -> bool {
+    #[cfg(test)]
+    pub(crate) fn subagents(&self) -> bool {
         self.has_tool("Agent") || self.has_tool("Task")
     }
 }

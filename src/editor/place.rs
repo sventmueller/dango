@@ -6,20 +6,31 @@ use objc2_foundation::{NSPoint, NSRect};
 
 use super::{EditorTextView, highlight, insets, line_rect};
 
+impl EditorTextView {
+    /// The UTF-16 offset of the start of `line`.
+    pub(crate) fn line_start(&self, line: usize) -> Option<usize> {
+        let document = self.document();
+        let text = document.text();
+        text.offset(line, 0, ide_document::Unit::Utf16)
+            .ok()
+            .and_then(|byte| text.byte_to_utf16(byte).ok())
+    }
+}
+
 /// The byte offset where the first line on screen starts.
-pub fn top_byte(view: &EditorTextView) -> Option<usize> {
+pub(crate) fn top_byte(view: &EditorTextView) -> Option<usize> {
     let line = highlight::line_at(view, NSPoint::new(0.0, view.visibleRect().origin.y))?;
     view.document().text().offset(line, 0, ide_document::Unit::Utf16).ok()
 }
 
 /// The top of the line holding byte `byte`, in the view's coordinates.
-pub fn byte_y(view: &EditorTextView, byte: usize) -> Option<f64> {
+pub(crate) fn byte_y(view: &EditorTextView, byte: usize) -> Option<f64> {
     lay_out_whole(view, &*view.textLayoutManager()?, &*view.textContentStorage()?);
     byte_y_near(view, byte)
 }
 
 /// `byte_y` for a line beside those on screen, which TextKit 2 places as it placed them without laying out all text.
-pub fn byte_y_near(view: &EditorTextView, byte: usize) -> Option<f64> {
+pub(crate) fn byte_y_near(view: &EditorTextView, byte: usize) -> Option<f64> {
     let at = view.document().text().byte_to_utf16(byte).ok()?;
     let layout = view.textLayoutManager()?;
     let content = view.textContentStorage()?;
@@ -63,7 +74,7 @@ pub(super) fn ensure_paragraph(
 
 /// `line_rect` of a line that may lie outside what TextKit laid out, such as the paused line of a debugger, laying
 /// its paragraph out first.
-pub fn laid_out_line_rect(editor: &EditorTextView, line: usize) -> Option<NSRect> {
+pub(crate) fn laid_out_line_rect(editor: &EditorTextView, line: usize) -> Option<NSRect> {
     let at = editor.line_start(line)?;
     let (layout, content) = (editor.textLayoutManager()?, editor.textContentStorage()?);
     let start = objc2_app_kit::NSTextElementProvider::documentRange(&*content).location();

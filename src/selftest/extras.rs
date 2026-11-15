@@ -15,7 +15,7 @@ use objc2_foundation::NSRange;
 use splat_i18n::{t, tf};
 
 use super::helpers::{self, wait_until};
-use super::{check, finish, snapshot};
+use super::{check, finish, give_up, give_up_saying, snapshot};
 use crate::editor::{self, ChangeMark as Mark, EditorTextView};
 use crate::util::main_soon;
 use crate::window::{self, WindowController};
@@ -27,9 +27,9 @@ const PROJECT: &str = "extras-project";
 
 const LIB: &str = "src/lib.rs";
 const LIB_TEXT: &str = "pub fn one() -> u32 {\n    1\n}\n\npub fn two() -> u32 {\n    2\n}\n\n\
-                        pub fn three() -> u32 {\n    3\n}\n";
+                        pub(crate) fn three() -> u32 {\n    3\n}\n";
 const EDITED: &str = "pub fn one() -> u32 {\n    10\n}\n\npub fn two() -> u32 {\n    2\n    // note\t  \n}\n\n\
-                      pub fn three() -> u32 {\n}\n";
+                      pub(crate) fn three() -> u32 {\n}\n";
 const CONFIG: &str = "root = true\n\n[*.py]\nindent_style = space\nindent_size = 3\n\n[notes.txt]\n\
                       trim_trailing_whitespace = true\ninsert_final_newline = true\ncharset = utf-8-bom\n\n\
                       [fresh.txt]\nend_of_line = crlf\n";
@@ -105,15 +105,14 @@ fn commit_again(folder: &Path) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let folder = helpers::folder(PROJECT);
     std::thread::spawn(move || {
         let made = make_repository(&folder);
         main_soon(move || match made {
             Ok(()) => open(folder),
             Err(error) => {
-                check("a test repository is made", false, error);
-                finish(SCENARIO);
+                give_up_saying(SCENARIO, "a test repository is made", error);
             }
         });
     });
@@ -123,12 +122,11 @@ fn open(folder: PathBuf) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::app::open_project(mtm, folder);
     let Some(controller) = project_window() else {
-        check(
+        return give_up_saying(
+            SCENARIO,
             "the folder opens in a window",
-            false,
             format!("{:?}", window::open_projects()),
         );
-        return finish(SCENARIO);
     };
     let untrusted = !crate::project::is_trusted(&root());
     if let Some(window) = controller.window()
@@ -150,7 +148,9 @@ fn unchanged(ok: bool, untrusted: bool) {
         ok && untrusted && seen.as_ref().is_some_and(|s| s.hunks.is_empty()),
         format!("untrusted {untrusted}, {}", describe(seen.as_ref())),
     );
-    let Some(view) = view(LIB) else { return finish(SCENARIO) };
+    let Some(view) = view(LIB) else {
+        return give_up(SCENARIO, "the editor is open");
+    };
     let at = |needle: &str| LIB_TEXT.find(needle).unwrap_or(0);
     let one = at("    1\n");
     let two = at("    2\n") + "    2\n".len();
@@ -199,7 +199,9 @@ fn popover(clicked: bool) {
         clicked && seen.as_ref().is_some_and(|s| s.popover.as_deref() == Some("    1\n")),
         describe(seen.as_ref()),
     );
-    let Some(view) = view(LIB) else { return finish(SCENARIO) };
+    let Some(view) = view(LIB) else {
+        return give_up(SCENARIO, "the editor is open");
+    };
     let parts = editor::change_popover(&view);
     if let Some((window, _)) = &parts {
         snapshot(window, "extras-popover");
@@ -229,7 +231,9 @@ fn reverted_hunk(ok: bool) {
         ok,
         format!("{:?} / {}", text_of(LIB), describe(marks(LIB).as_ref())),
     );
-    let Some(view) = view(LIB) else { return finish(SCENARIO) };
+    let Some(view) = view(LIB) else {
+        return give_up(SCENARIO, "the editor is open");
+    };
     let undone = view.undoManager().map(|undo| {
         undo.undo();
         let undone = view.document().text().to_string();
@@ -292,7 +296,9 @@ fn whitespace(view: &EditorTextView) {
 }
 
 fn save_and_commit() {
-    let Some(view) = view(LIB) else { return finish(SCENARIO) };
+    let Some(view) = view(LIB) else {
+        return give_up(SCENARIO, "the editor is open");
+    };
     editor::save_view(&view);
     let folder = root();
     std::thread::spawn(move || {
@@ -303,8 +309,7 @@ fn save_and_commit() {
                 committed_marks,
             ),
             Err(error) => {
-                check("the change is committed", false, error);
-                finish(SCENARIO);
+                give_up_saying(SCENARIO, "the change is committed", error);
             }
         });
     });
@@ -317,7 +322,7 @@ fn committed_marks(ok: bool) {
         describe(marks(LIB).as_ref()),
     );
     let Some(controller) = project_window() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     for file in ["tabs.go", "two.yaml", "script.py"] {
         controller.open_file(&root().join(file));
@@ -357,7 +362,7 @@ fn indentation() {
         format!("{python:?}"),
     );
     let Some(view) = view("script.py") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "script.py opens in an editor");
     };
     let end = view.document().text().len_utf16();
     view.setSelectedRange(NSRange::new(end, 0));
@@ -396,11 +401,11 @@ fn choose(view: &EditorTextView, tag: isize) {
 /// A save trims line ends and adds the last break; a file with no break yet gets the configured one.
 fn tidy() {
     let Some(controller) = project_window() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     controller.open_file(&root().join("notes.txt"));
     let Some(notes) = view("notes.txt") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "notes.txt opens in an editor");
     };
     let warning = editor::indent_shown(&notes).1;
     check(
@@ -435,7 +440,7 @@ fn tidy() {
         controller.open_file(&root().join("fresh.txt"));
     }
     let Some(fresh) = view("fresh.txt") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "fresh.txt opens in an editor");
     };
     editor::type_text(&fresh, "a");
     editor::type_newline(&fresh);

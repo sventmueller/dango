@@ -2,7 +2,7 @@
 //! lists, which hand their events to the model (E98); `controller.rs` carries out what it returns.
 
 use std::cell::{Cell, OnceCell, RefCell};
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use objc2::rc::Retained;
@@ -12,12 +12,13 @@ use objc2_app_kit::{
     NSControl, NSControlTextEditingDelegate, NSMenu, NSMenuDelegate, NSOutlineView, NSOutlineViewDataSource,
     NSOutlineViewDelegate, NSTableColumn, NSTextField, NSTextFieldDelegate, NSTextView, NSView,
 };
-use objc2_foundation::{NSNotification, NSObjectProtocol, NSString};
+use objc2_foundation::{NSNotification, NSObjectProtocol};
 
 use super::model::Model;
 use super::model::rows::Key;
 use super::model::variables::Row;
 use super::ui::Ui;
+use ide_ui_common::panel::{RowItem, RowItems};
 use ide_ui_common::registry::WindowPart;
 use ide_ui_common::util::{guarded, ns};
 use ide_ui_common::window::{Inspector, Panels, Trust, Window};
@@ -28,12 +29,12 @@ pub struct PanelIvars {
     root: PathBuf,
     ui: OnceCell<Ui>,
     model: RefCell<Model>,
-    /// The objects that stand for the rows of both lists, the same one for a key as long as the panel lives.
-    items: RefCell<HashMap<String, Retained<NSString>>>,
+    /// The objects that stand for the rows of both lists, the same one for a key as long as its row exists.
+    items: RowItems<RowKey>,
     /// The panel itself opens and closes rows, so the user's folding is not touched.
-    pub unfolding: Cell<bool>,
+    pub(crate) unfolding: Cell<bool>,
     /// The running sessions and their consoles.
-    pub links: RefCell<super::controller::Links>,
+    pub(crate) links: RefCell<super::controller::Links>,
 }
 
 define_class!(
@@ -216,17 +217,17 @@ define_class!(
 );
 
 /// Runs `f` with the panel `id`, if its window is still open.
-pub fn with_panel(id: u64, f: impl FnOnce(&DebugPanel)) {
+pub(crate) fn with_panel(id: u64, f: impl FnOnce(&DebugPanel)) {
     crate::host::state().panels.with(id, f);
 }
 
 /// The panel of `window`.
-pub fn of(window: &Window) -> Option<Retained<DebugPanel>> {
+pub(crate) fn of(window: &Window) -> Option<Retained<DebugPanel>> {
     crate::host::state().panels.of(*window)
 }
 
 /// The panel of the window that shows `root`.
-pub fn for_root(root: &Path) -> Option<Retained<DebugPanel>> {
+pub(crate) fn for_root(root: &Path) -> Option<Retained<DebugPanel>> {
     crate::host::state().panels.for_root(root).into_iter().next()
 }
 
@@ -242,7 +243,7 @@ impl WindowPart for DebugPanel {
 
 impl DebugPanel {
     /// The debugger of `controller`'s window for the folder `root`, with what the project kept of debugging.
-    pub fn attach(controller: &Window, root: PathBuf) -> Retained<DebugPanel> {
+    pub(crate) fn attach(controller: &Window, root: PathBuf) -> Retained<DebugPanel> {
         let mtm = controller.mtm();
         if let Some(old) = of(controller) {
             old.end_all();
@@ -261,7 +262,7 @@ impl DebugPanel {
     }
 
     fn new(mtm: MainThreadMarker, controller: &Window, root: PathBuf) -> Retained<DebugPanel> {
-        let mut model = Model::new(ide_core::debugging::load(&root));
+        let mut model = Model::new(ide_dap::kept::load(&root));
         model.fit_filters(ide_dap::Languages::of(&root));
         let ivars = PanelIvars {
             id: crate::host::state().panels.next_id(),
@@ -269,7 +270,7 @@ impl DebugPanel {
             root,
             ui: OnceCell::new(),
             model: RefCell::new(model),
-            items: RefCell::new(HashMap::new()),
+            items: RowItems::default(),
             unfolding: Cell::new(false),
             links: RefCell::new(super::controller::Links::default()),
         };
@@ -279,24 +280,24 @@ impl DebugPanel {
         panel
     }
 
-    pub fn id(&self) -> u64 {
+    pub(crate) fn id(&self) -> u64 {
         self.ivars().id
     }
 
     /// The languages of the project, which decide the exception filters it offers.
-    pub fn languages(&self) -> ide_dap::Languages {
+    pub(crate) fn languages(&self) -> ide_dap::Languages {
         ide_dap::Languages::of(self.root())
     }
 
-    pub fn root(&self) -> &Path {
+    pub(crate) fn root(&self) -> &Path {
         &self.ivars().root
     }
 
-    pub fn ui(&self) -> &Ui {
+    pub(crate) fn ui(&self) -> &Ui {
         self.ivars().ui.get().expect("the panel builds its views in `new`")
     }
 
-    pub fn model(&self) -> std::cell::RefMut<'_, Model> {
+    pub(crate) fn model(&self) -> std::cell::RefMut<'_, Model> {
         self.ivars().model.borrow_mut()
     }
 
@@ -304,12 +305,12 @@ impl DebugPanel {
         self.ivars().model.borrow()
     }
 
-    pub fn controller(&self) -> Option<Window> {
+    pub(crate) fn controller(&self) -> Option<Window> {
         self.ivars().window.is_open().then_some(self.ivars().window)
     }
 
     /// Whether the views are built; the lists ask their data source already while they are.
-    pub fn is_built(&self) -> bool {
+    pub(crate) fn is_built(&self) -> bool {
         self.ivars().ui.get().is_some()
     }
 
@@ -321,28 +322,28 @@ impl DebugPanel {
             .is_some_and(|ui| std::ptr::eq(view, &*ui.inspector.outline))
     }
 
-    /// The keys of the rows below `item` in `view`, encoded.
-    fn child_keys(&self, view: &NSOutlineView, item: Option<&AnyObject>) -> Vec<String> {
+    /// The keys of the rows below `item` in `view`.
+    fn child_keys(&self, view: &NSOutlineView, item: Option<&AnyObject>) -> Vec<RowKey> {
         if !self.is_built() {
             return Vec::new();
         }
-        let text = item
-            .and_then(|item| item.downcast_ref::<NSString>())
-            .map(ToString::to_string);
+        let parent = item.map(RowItems::<RowKey>::key_of);
         if self.is_inspector(view) {
-            let row = text.as_deref().and_then(|t| t.strip_prefix('i')).and_then(Row::decode);
-            if item.is_some() && row.is_none() {
-                return Vec::new();
-            }
+            let row = match parent {
+                None => None,
+                Some(Some(RowKey::Inspector(row))) => Some(row),
+                Some(_) => return Vec::new(),
+            };
             let rows = self.read().variables.rows(row.as_ref());
-            rows.iter().map(|row| format!("i{}", row.encode())).collect()
+            rows.into_iter().map(RowKey::Inspector).collect()
         } else {
-            let key = text.as_deref().and_then(|t| t.strip_prefix('p')).and_then(Key::decode);
-            if item.is_some() && key.is_none() {
-                return Vec::new();
-            }
+            let key = match parent {
+                None => None,
+                Some(Some(RowKey::Panel(key))) => Some(key),
+                Some(_) => return Vec::new(),
+            };
             let rows = self.read().rows(key.as_ref());
-            rows.iter().map(|key| format!("p{}", key.encode())).collect()
+            rows.into_iter().map(RowKey::Panel).collect()
         }
     }
 
@@ -362,33 +363,58 @@ impl DebugPanel {
         }
     }
 
-    /// The object that stands for the encoded key `key`.
-    pub fn item_for(&self, key: &str) -> Retained<NSString> {
-        self.ivars()
-            .items
-            .borrow_mut()
-            .entry(key.to_string())
-            .or_insert_with_key(|text| ns(text))
-            .clone()
+    /// The object that stands for `key`, the same one for as long as the row exists.
+    pub(crate) fn item_for(&self, key: &RowKey) -> Retained<RowItem> {
+        self.ivars().items.item(self.mtm(), key)
     }
 
-    pub fn panel_item(&self, key: &Key) -> Retained<NSString> {
-        self.item_for(&format!("p{}", key.encode()))
+    pub(crate) fn panel_item(&self, key: &Key) -> Retained<RowItem> {
+        self.item_for(&RowKey::Panel(key.clone()))
     }
 
-    pub fn inspector_item(&self, row: &Row) -> Retained<NSString> {
-        self.item_for(&format!("i{}", row.encode()))
+    pub(crate) fn inspector_item(&self, row: &Row) -> Retained<RowItem> {
+        self.item_for(&RowKey::Inspector(row.clone()))
     }
+
+    /// Lets go of the items of rows neither list has any more, after both lists read their rows anew.
+    pub(super) fn forget_gone_items(&self) {
+        let model = self.read();
+        let mut live = HashSet::new();
+        let mut keys = model.rows(None);
+        while let Some(key) = keys.pop() {
+            keys.extend(model.rows(Some(&key)));
+            live.insert(RowKey::Panel(key));
+        }
+        let mut rows = model.variables.rows(None);
+        while let Some(row) = rows.pop() {
+            rows.extend(model.variables.rows(Some(&row)));
+            live.insert(RowKey::Inspector(row));
+        }
+        self.ivars().items.keep(|key| live.contains(key));
+    }
+}
+
+/// What a row of the panel's list or of the inspector stands for.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) enum RowKey {
+    /// A row of the panel's list.
+    Panel(Key),
+    /// A row of the inspector.
+    Inspector(Row),
 }
 
 /// The panel row `item` stands for.
-pub fn key_of(item: &AnyObject) -> Option<Key> {
-    let text = item.downcast_ref::<NSString>()?.to_string();
-    Key::decode(text.strip_prefix('p')?)
+pub(crate) fn key_of(item: &AnyObject) -> Option<Key> {
+    match RowItems::<RowKey>::key_of(item)? {
+        RowKey::Panel(key) => Some(key),
+        RowKey::Inspector(_) => None,
+    }
 }
 
 /// The inspector row `item` stands for.
-pub fn row_of(item: &AnyObject) -> Option<Row> {
-    let text = item.downcast_ref::<NSString>()?.to_string();
-    Row::decode(text.strip_prefix('i')?)
+pub(crate) fn row_of(item: &AnyObject) -> Option<Row> {
+    match RowItems::<RowKey>::key_of(item)? {
+        RowKey::Inspector(row) => Some(row),
+        RowKey::Panel(_) => None,
+    }
 }

@@ -10,7 +10,7 @@ use objc2::rc::Retained;
 use objc2_foundation::NSRange;
 
 use super::helpers::{self, wait_within};
-use super::{check, finish};
+use super::{check, finish, give_up};
 use crate::editor::{self, EditorTextView};
 use crate::window::{self, WindowController};
 
@@ -41,12 +41,12 @@ fn view(file: &str) -> Option<Retained<EditorTextView>> {
 static LATEST: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 /// The `companions-eslint-latest` scenario: ESLint's part of `companions` against its current major version (A11).
-pub fn run_latest() {
+pub(crate) fn run_latest() {
     LATEST.store(true, std::sync::atomic::Ordering::Relaxed);
     run();
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let eslint = if LATEST.load(std::sync::atomic::Ordering::Relaxed) {
         "latest"
     } else {
@@ -101,7 +101,7 @@ fn npm_install(controller: Retained<WindowController>) {
                 format!("{:?}", seen.borrow()),
             );
             if !installed {
-                return finish(scenario());
+                return give_up(scenario(), "the project gets ESLint with npm");
             }
             controller.open_file(&root().join(SCRIPT));
             servers_ready(SCRIPT, "ESLint", eslint_error);
@@ -137,7 +137,11 @@ fn servers_ready(file: &'static str, name: &'static str, then: fn()) {
                         running,
                         format!("{state:?}"),
                     );
-                    if running { then() } else { finish(scenario()) }
+                    if running {
+                        then()
+                    } else {
+                        give_up(scenario(), "the companion server runs")
+                    }
                 },
             );
         },
@@ -192,21 +196,26 @@ fn quick_fix() {
                 chosen && fixed,
                 titles.join(" | "),
             );
-            if LATEST.load(std::sync::atomic::Ordering::Relaxed) {
-                let _ = editor::save_all();
-                return finish(scenario());
+            if !LATEST.load(std::sync::atomic::Ordering::Relaxed) {
+                return to_emmet();
             }
-            if let Some(controller) = window::for_project(&root()) {
-                controller.open_file(&root().join(PAGE));
-            }
-            servers_ready(PAGE, "Emmet", emmet);
+            let _ = editor::save_all();
+            finish(scenario());
         },
     );
 }
 
+/// Goes on with Emmet, which `companions-eslint-latest` leaves out.
+fn to_emmet() {
+    if let Some(controller) = window::for_project(&root()) {
+        controller.open_file(&root().join(PAGE));
+    }
+    servers_ready(PAGE, "Emmet", emmet);
+}
+
 fn emmet() {
     let Some(view) = view(PAGE) else {
-        return finish(scenario());
+        return give_up(scenario(), "the editor is open");
     };
     let at = view.line_start(2).unwrap_or(0);
     view.setSelectedRange(NSRange::new(at, 0));

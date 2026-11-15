@@ -5,7 +5,7 @@
 use std::cell::{OnceCell, RefCell};
 use std::path::{Path, PathBuf};
 
-use ide_git::{Change, DiffSource, Error, FileDiff, FileState, LineKind, StatusOptions};
+use ide_git::{Change, CommitId, DiffSource, Error, FileDiff, FileState, LineKind, StatusOptions};
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::AnyObject;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
@@ -25,7 +25,7 @@ use ide_ui_common::window::{AsWindow, Files, TabKind, Tabs, Window};
 
 /// What a hunk button does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum HunkAction {
+pub(crate) enum HunkAction {
     Stage,
     Unstage,
     Discard,
@@ -33,24 +33,24 @@ pub enum HunkAction {
 
 /// A change that is done and only shows, never staged or discarded.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Fixed {
-    /// What a commit changed, by its hash.
-    Commit(String),
+pub(crate) enum Fixed {
+    /// What a commit changed.
+    Commit(CommitId),
     /// What a stash entry changed: its commit and its name, such as `stash@{0}`.
-    Stash(String, String),
+    Stash(CommitId, String),
 }
 
 #[derive(Default)]
-pub struct State {
-    pub diff: Option<FileDiff>,
-    pub rows: Vec<Row>,
+pub(crate) struct State {
+    pub(crate) diff: Option<FileDiff>,
+    pub(crate) rows: Vec<Row>,
     loading: bool,
     again: bool,
     busy: bool,
     loaded: bool,
 }
 
-pub struct DiffIvars {
+pub(crate) struct DiffIvars {
     id: u64,
     controller: Window,
     /// The window's folder, whose Git panel learns of changes made here.
@@ -61,7 +61,7 @@ pub struct DiffIvars {
     staged: bool,
     /// The commit a worktree's changes are shown against, which moves as its branch and the base do, and the thread's
     /// title; `None` for the index's sides.
-    since: Option<(RefCell<String>, String)>,
+    since: Option<(RefCell<CommitId>, String)>,
     /// The commit or stash entry whose change of the file shows.
     commit: Option<Fixed>,
     ui: OnceCell<Ui>,
@@ -74,7 +74,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEGitDiffTab"]
     #[ivars = DiffIvars]
-    pub struct DiffTab;
+    pub(crate) struct DiffTab;
 
     unsafe impl NSObjectProtocol for DiffTab {}
 
@@ -185,7 +185,7 @@ fn live_tabs() -> Vec<Retained<DiffTab>> {
 /// Keeps the worktree diff tabs of `controller`'s window in step with `trees` as the Git panel read them: a tab whose
 /// worktree is gone or whose file it no longer changes, as after taking its work over, closes; the others compare
 /// against where the branch and the base meet now.
-pub fn follow_trees(controller: &(impl AsWindow + ?Sized), trees: &[crate::worktrees::TreeState]) {
+pub(crate) fn follow_trees(controller: &(impl AsWindow + ?Sized), trees: &[crate::worktrees::TreeState]) {
     let controller = &controller.as_window();
     let mut gone = Vec::new();
     for tab in live_tabs() {
@@ -208,7 +208,7 @@ pub fn follow_trees(controller: &(impl AsWindow + ?Sized), trees: &[crate::workt
 }
 
 /// Reads the diffs of the tabs of the window that shows `window_root` again.
-pub fn refresh_for(window_root: &Path) {
+pub(crate) fn refresh_for(window_root: &Path) {
     for tab in live_tabs() {
         if tab.ivars().window_root == window_root {
             tab.reload();
@@ -217,13 +217,13 @@ pub fn refresh_for(window_root: &Path) {
 }
 
 /// The key of the tab that shows `path`'s staged or unstaged changes.
-pub fn key(path: &Path, staged: bool) -> String {
+pub(crate) fn key(path: &Path, staged: bool) -> String {
     format!("diff:{}:{}", if staged { "staged" } else { "unstaged" }, path.display())
 }
 
 /// Shows the diff of `path`, relative to `repo_root`, in its tab, opening one if there is none; `preview` opens it
 /// in the window's preview tab and leaves an open tab as it is, else an open preview tab is kept.
-pub fn show(controller: &(impl AsWindow + ?Sized), repo_root: &Path, path: &Path, staged: bool, preview: bool) {
+pub(crate) fn show(controller: &(impl AsWindow + ?Sized), repo_root: &Path, path: &Path, staged: bool, preview: bool) {
     let controller = &controller.as_window();
     let key = key(path, staged);
     if let Some(id) = controller.tab_with_key(&key) {
@@ -258,16 +258,16 @@ pub fn show(controller: &(impl AsWindow + ?Sized), repo_root: &Path, path: &Path
 }
 
 /// The key of the tab that shows what the worktree at `tree` changed in `path`.
-pub fn since_key(tree: &Path, path: &Path) -> String {
+pub(crate) fn since_key(tree: &Path, path: &Path) -> String {
     format!("diff:since:{}:{}", tree.display(), path.display())
 }
 
 /// Shows what the thread `title` changed in `path` of its worktree at `tree` since `base`, like [`show`].
-pub fn show_since(
+pub(crate) fn show_since(
     controller: &(impl AsWindow + ?Sized),
     tree: &Path,
     path: &Path,
-    base: &str,
+    base: &CommitId,
     title: &str,
     preview: bool,
 ) {
@@ -284,7 +284,7 @@ pub fn show_since(
         return;
     };
     let window_root = window_root.canonicalize().unwrap_or(window_root);
-    let since = Some((RefCell::new(base.to_string()), title.to_string()));
+    let since = Some((RefCell::new(base.clone()), title.to_string()));
     let tab = DiffTab::new(
         controller,
         window_root,
@@ -301,12 +301,18 @@ pub fn show_since(
 }
 
 /// The key of the tab that shows what the commit `hash` changed in `path`.
-pub fn commit_key(hash: &str, path: &Path) -> String {
+pub(crate) fn commit_key(hash: &CommitId, path: &Path) -> String {
     format!("diff:commit:{hash}:{}", path.display())
 }
 
 /// Shows what the commit `hash` changed in `path`, relative to `repo_root`, like [`show`].
-pub fn show_commit(controller: &(impl AsWindow + ?Sized), repo_root: &Path, hash: &str, path: &Path, preview: bool) {
+pub(crate) fn show_commit(
+    controller: &(impl AsWindow + ?Sized),
+    repo_root: &Path,
+    hash: &CommitId,
+    path: &Path,
+    preview: bool,
+) {
     let controller = &controller.as_window();
     let key = commit_key(hash, path);
     if let Some(id) = controller.tab_with_key(&key) {
@@ -327,25 +333,25 @@ pub fn show_commit(controller: &(impl AsWindow + ?Sized), repo_root: &Path, hash
         path.to_path_buf(),
         false,
         None,
-        Some(Fixed::Commit(hash.to_string())),
+        Some(Fixed::Commit(hash.clone())),
     );
     let name = path
         .file_name()
         .map_or_else(|| path.display().to_string(), |n| n.to_string_lossy().into_owned());
-    let short: String = hash.chars().take(7).collect();
+    let short: String = hash.as_str().chars().take(7).collect();
     place(controller, tab, key, &tf("{} ({})", &[&name, &short]), preview);
 }
 
 /// The key of the tab that shows what the stash entry `hash` changed in `path`.
-pub fn stash_key(hash: &str, path: &Path) -> String {
+pub(crate) fn stash_key(hash: &CommitId, path: &Path) -> String {
     format!("diff:stash:{hash}:{}", path.display())
 }
 
 /// Shows what the stash entry `hash`, called `name`, changed in `path`, relative to `repo_root`, like [`show`].
-pub fn show_stash(
+pub(crate) fn show_stash(
     controller: &(impl AsWindow + ?Sized),
     repo_root: &Path,
-    hash: &str,
+    hash: &CommitId,
     name: &str,
     path: &Path,
     preview: bool,
@@ -370,7 +376,7 @@ pub fn show_stash(
         path.to_path_buf(),
         false,
         None,
-        Some(Fixed::Stash(hash.to_string(), name.to_string())),
+        Some(Fixed::Stash(hash.clone(), name.to_string())),
     );
     let file = path
         .file_name()
@@ -395,7 +401,7 @@ impl DiffTab {
         repo_root: PathBuf,
         path: PathBuf,
         staged: bool,
-        since: Option<(RefCell<String>, String)>,
+        since: Option<(RefCell<CommitId>, String)>,
         commit: Option<Fixed>,
     ) -> Retained<DiffTab> {
         let mtm: MainThreadMarker = controller.mtm();
@@ -417,7 +423,7 @@ impl DiffTab {
             unsafe { msg_send![super(DiffTab::alloc(mtm).set_ivars(ivars)), initWithFrame: frame] };
         let ivars = tab.ivars();
         let side = match (&ivars.since, &ivars.commit) {
-            (_, Some(Fixed::Commit(hash))) => tf("Commit {}", &[&hash.chars().take(7).collect::<String>()]),
+            (_, Some(Fixed::Commit(hash))) => tf("Commit {}", &[&hash.as_str().chars().take(7).collect::<String>()]),
             (_, Some(Fixed::Stash(_, name))) => tf("Stash {}", &[name]),
             (Some((_, title)), None) => tf("Was der Thread „{}“ geändert hat", &[title]),
             (None, None) if ivars.staged => t("Vorgemerkte Änderungen").to_string(),
@@ -445,7 +451,7 @@ impl DiffTab {
     }
 
     /// Reads the diff again, or once more after the read that runs.
-    pub fn reload(&self) {
+    pub(crate) fn reload(&self) {
         {
             let mut state = self.ivars().state.borrow_mut();
             if state.loading {
@@ -524,7 +530,7 @@ impl DiffTab {
     }
 
     /// Stages, unstages or discards the hunk at `index` of the diff on view.
-    pub fn run_hunk(&self, action: HunkAction, index: usize) {
+    pub(crate) fn run_hunk(&self, action: HunkAction, index: usize) {
         let diff = {
             let mut state = self.ivars().state.borrow_mut();
             if state.busy {
@@ -629,17 +635,17 @@ fn load(root: &Path, path: &Path, staged: bool) -> Result<Option<FileDiff>, Prob
 }
 
 /// What the worktree at `root` changed in `path` since `base`; a file new to it shows as new.
-fn load_since(root: &Path, path: &Path, base: &str) -> Result<Option<FileDiff>, Problem> {
+fn load_since(root: &Path, path: &Path, base: &CommitId) -> Result<Option<FileDiff>, Problem> {
     let read = || -> ide_git::Result<Option<FileDiff>> {
         let repo = work::git().ok_or(Error::GitMissing)?.discover(root)?;
-        let diffs = repo.diff_since(base, &[root.join(path)])?;
+        let diffs = repo.diff_since(base.as_str(), &[root.join(path)])?;
         Ok(diffs.into_iter().find(|d| d.path() == path))
     };
     read().map_err(|error| problem(&error))
 }
 
 /// What the commit `hash` changed in `path`.
-fn load_commit(root: &Path, path: &Path, hash: &str) -> Result<Option<FileDiff>, Problem> {
+fn load_commit(root: &Path, path: &Path, hash: &CommitId) -> Result<Option<FileDiff>, Problem> {
     let read = || -> ide_git::Result<Option<FileDiff>> {
         let repo = work::git().ok_or(Error::GitMissing)?.discover(root)?;
         repo.diff_commit(hash, path)
@@ -648,7 +654,7 @@ fn load_commit(root: &Path, path: &Path, hash: &str) -> Result<Option<FileDiff>,
 }
 
 /// What the stash entry `hash` changed in `path`.
-fn load_stash(root: &Path, path: &Path, hash: &str) -> Result<Option<FileDiff>, Problem> {
+fn load_stash(root: &Path, path: &Path, hash: &CommitId) -> Result<Option<FileDiff>, Problem> {
     let read = || -> ide_git::Result<Option<FileDiff>> {
         let repo = work::git().ok_or(Error::GitMissing)?.discover(root)?;
         repo.diff_stash(hash, path)
@@ -657,20 +663,20 @@ fn load_stash(root: &Path, path: &Path, hash: &str) -> Result<Option<FileDiff>, 
 }
 
 /// Whether the unstaged side of `diff` can drop a hunk: a new file goes to the Trash as a whole instead.
-pub fn can_discard(diff: &FileDiff) -> bool {
+pub(crate) fn can_discard(diff: &FileDiff) -> bool {
     diff.change != Change::Added
 }
 
 #[cfg(feature = "selftest")]
 impl DiffTab {
     /// Rows and hunks on view.
-    pub fn counts(&self) -> (usize, usize) {
+    pub(crate) fn counts(&self) -> (usize, usize) {
         let state = self.ivars().state.borrow();
         (state.rows.len(), state.diff.as_ref().map_or(0, |d| d.hunks.len()))
     }
 
     /// Selects every row, as ⌘A in the table does.
-    pub fn select_all(&self) {
+    pub(crate) fn select_all(&self) {
         let table = &self.ui().table;
         let rows = objc2_foundation::NSRange::new(0, usize::try_from(table.numberOfRows()).unwrap_or(0));
         table.selectRowIndexes_byExtendingSelection(
@@ -683,4 +689,4 @@ impl DiffTab {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

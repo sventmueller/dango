@@ -2,8 +2,10 @@
 //! for a file means; the controller carries out the effects.
 
 use std::collections::HashMap;
+use std::io;
 use std::path::{Path, PathBuf};
 
+use ide_core::explain::Explain;
 use splat_i18n::{t, tf};
 
 use crate::tree::Entry;
@@ -76,8 +78,8 @@ pub enum Naming {
     Create {
         /// The folder it goes into.
         parent: PathBuf,
-        /// Whether it is a folder.
-        folder: bool,
+        /// A file or a folder.
+        kind: Kind,
     },
     /// A new name for `path`.
     Rename {
@@ -122,8 +124,8 @@ pub enum Effect {
     Create {
         /// Where it goes.
         path: PathBuf,
-        /// Whether it is a folder.
-        folder: bool,
+        /// A file or a folder.
+        kind: Kind,
     },
     /// Rename `from` to `to`.
     Rename {
@@ -232,7 +234,12 @@ impl Model {
             Command::OpenAsPreview => Effect::OpenAsPreview(path),
             Command::OpenInBrowserTab => Effect::OpenInBrowserTab(path),
             Command::NewFile | Command::NewFolder => {
-                return Some(create_in(&path, kind, command == Command::NewFolder));
+                let new = if command == Command::NewFolder {
+                    Kind::Folder
+                } else {
+                    Kind::File
+                };
+                return Some(create_in(&path, kind, new));
             }
             Command::Reveal => Effect::RevealInFinder(path),
             Command::CopyPath => Effect::Copy(path.to_string_lossy().into_owned()),
@@ -251,21 +258,21 @@ impl Model {
         })
     }
 
-    /// The folder the title row's buttons create in: the selected row's, the one a selected file is in, or the root
-    /// without a selection.
-    pub fn create_from_header(&self, selected: Option<&Path>, kind: Option<Kind>, folder: bool) -> Effect {
+    /// Asks for the name of a new `new` where the title row's buttons create it: in the selected row's folder, the
+    /// one a selected file is in, or the root without a selection.
+    pub fn create_from_header(&self, selected: Option<&Path>, kind: Option<Kind>, new: Kind) -> Effect {
         match selected {
-            Some(path) => create_in(path, kind, folder),
-            None => create_in(&self.root, Some(Kind::Folder), folder),
+            Some(path) => create_in(path, kind, new),
+            None => create_in(&self.root, Some(Kind::Folder), new),
         }
     }
 
     /// What follows the name the user typed for `naming`; `exists` says whether something has that name already.
     pub fn named(naming: &Naming, name: &str, exists: impl Fn(&Path) -> bool) -> Option<Effect> {
         match naming {
-            Naming::Create { parent, folder } => Some(Effect::Create {
+            Naming::Create { parent, kind } => Some(Effect::Create {
                 path: parent.join(name),
-                folder: *folder,
+                kind: *kind,
             }),
             Naming::Rename { path } => {
                 let current = file_name(path);
@@ -287,22 +294,22 @@ impl Model {
         }
     }
 
-    /// What follows creating `path`: a new file opens, a failure is said.
-    pub fn created(path: &Path, folder: bool, result: Result<(), String>) -> Option<Effect> {
+    /// What follows creating the `kind` at `path`: a new file opens, a failure is said.
+    pub fn created(path: &Path, kind: Kind, result: io::Result<()>) -> Option<Effect> {
         match result {
-            Ok(()) => (!folder).then(|| Effect::Open(path.to_path_buf())),
-            Err(detail) => Some(Effect::Fail {
+            Ok(()) => (kind == Kind::File).then(|| Effect::Open(path.to_path_buf())),
+            Err(error) => Some(Effect::Fail {
                 message: tf("„{}“ wurde nicht angelegt.", &[&file_name(path)]),
-                detail,
+                detail: error.explain(),
             }),
         }
     }
 
     /// What follows renaming `from`: only a failure is said.
-    pub fn renamed(from: &Path, result: Result<(), String>) -> Option<Effect> {
-        result.err().map(|detail| Effect::Fail {
+    pub fn renamed(from: &Path, result: io::Result<()>) -> Option<Effect> {
+        result.err().map(|error| Effect::Fail {
             message: tf("„{}“ wurde nicht umbenannt.", &[&file_name(from)]),
-            detail,
+            detail: error.explain(),
         })
     }
 }
@@ -313,16 +320,19 @@ pub fn valid_name(typed: &str) -> Option<String> {
     (!name.is_empty() && !name.contains('/')).then(|| name.to_string())
 }
 
-/// Asks for the name of a new file or folder in `at`, or beside it if it is a file.
-fn create_in(at: &Path, kind: Option<Kind>, folder: bool) -> Effect {
+/// Asks for the name of a new `new` in `at`, or beside it if it is a file.
+fn create_in(at: &Path, kind: Option<Kind>, new: Kind) -> Effect {
     let parent = if kind == Some(Kind::Folder) {
         at.to_path_buf()
     } else {
         at.parent().map_or_else(|| at.to_path_buf(), Path::to_path_buf)
     };
     Effect::AskName {
-        naming: Naming::Create { parent, folder },
-        title: if folder { t("Neuer Ordner") } else { t("Neue Datei") },
+        naming: Naming::Create { parent, kind: new },
+        title: match new {
+            Kind::Folder => t("Neuer Ordner"),
+            Kind::File => t("Neue Datei"),
+        },
         current: String::new(),
     }
 }
@@ -346,7 +356,7 @@ fn is_page(path: &Path) -> bool {
 }
 
 /// Whether `path` names an SVG drawing, which opens as a picture as well as as text.
-pub fn is_svg(path: &Path) -> bool {
+pub(crate) fn is_svg(path: &Path) -> bool {
     path.extension().is_some_and(|e| e.eq_ignore_ascii_case("svg"))
 }
 
@@ -502,7 +512,7 @@ mod tests {
             naming,
             Naming::Create {
                 parent: "/p/src".into(),
-                folder: false
+                kind: Kind::File
             }
         );
         model.open_menu(Some(Path::new("/p/src/main.rs")), Some(Kind::File));
@@ -513,28 +523,28 @@ mod tests {
             naming,
             Naming::Create {
                 parent: "/p/src".into(),
-                folder: true
+                kind: Kind::Folder
             }
         );
         assert_eq!(
             Model::named(&naming, "lib", |_| false),
             Some(Effect::Create {
                 path: "/p/src/lib".into(),
-                folder: true
+                kind: Kind::Folder
             })
         );
     }
 
     #[test]
     fn the_header_creates_in_the_root_without_a_selection() {
-        let Effect::AskName { naming, .. } = model().create_from_header(None, None, false) else {
+        let Effect::AskName { naming, .. } = model().create_from_header(None, None, Kind::File) else {
             panic!("no question for the name");
         };
         assert_eq!(
             naming,
             Naming::Create {
                 parent: "/p".into(),
-                folder: false
+                kind: Kind::File
             }
         );
     }
@@ -575,11 +585,16 @@ mod tests {
     #[test]
     fn a_created_file_opens_and_a_failure_is_said() {
         let path = Path::new("/p/a.rs");
-        assert_eq!(Model::created(path, false, Ok(())), Some(Effect::Open(path.into())));
-        assert_eq!(Model::created(path, true, Ok(())), None);
+        assert_eq!(
+            Model::created(path, Kind::File, Ok(())),
+            Some(Effect::Open(path.into()))
+        );
+        assert_eq!(Model::created(path, Kind::Folder, Ok(())), None);
+        let exists = io::Error::from(io::ErrorKind::AlreadyExists);
+        let said = exists.explain();
         assert!(matches!(
-            Model::created(path, false, Err("exists".into())),
-            Some(Effect::Fail { detail, .. }) if detail == "exists"
+            Model::created(path, Kind::File, Err(exists)),
+            Some(Effect::Fail { detail, .. }) if detail == said
         ));
         assert_eq!(Model::renamed(path, Ok(())), None);
     }

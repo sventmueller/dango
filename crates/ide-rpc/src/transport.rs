@@ -1,20 +1,17 @@
-//! The streams, the writer queue, the table of calls waiting for an answer, and the timer that expires them.
+//! The streams, the writer queue, and the table of calls waiting for an answer, which the shared timer expires.
 
 use std::collections::HashMap;
 use std::io::{self, BufReader, Read, Write};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::mpsc::{SyncSender, TrySendError, sync_channel};
-use std::sync::{Arc, Condvar, Mutex, MutexGuard};
-use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex, MutexGuard, Weak};
+use std::time::Duration;
 
-use ide_core::{IgnoringPoison, LockIgnoringPoison};
+use ide_core::LockIgnoringPoison;
 use ide_process::framing;
 
 /// Frames that may wait for the writer; more means the other side stopped reading.
 const QUEUE: usize = 4096;
-
-/// A deadline far enough away to mean none, for timeouts that overflow `Instant`.
-const NEVER: Duration = Duration::from_secs(365 * 24 * 3600);
 
 /// The number of a call or message of one transport, which its answer carries back; never reused while the transport
 /// runs.
@@ -34,7 +31,7 @@ impl RequestId {
 }
 
 /// What waits for an answer; exactly one of its ends happens: the receiver [`take`](Transport::take)s it, it
-/// expires, or the transport closes.
+/// expires, or the transport closes, which a failed write to the other side does too.
 pub trait Call: Send + Sized + 'static {
     /// The transport closed before an answer came.
     fn closed(self);
@@ -70,18 +67,13 @@ impl std::fmt::Display for SendError {
 
 impl std::error::Error for SendError {}
 
-struct Waiting<C> {
-    call: C,
-    deadline: Instant,
-}
-
 struct Pending<C> {
-    calls: HashMap<RequestId, Waiting<C>>,
+    calls: HashMap<RequestId, C>,
     closed: bool,
 }
 
 /// A frame the writer builds itself, in its turn; `None` writes nothing.
-pub type Build = Box<dyn FnOnce() -> Option<Vec<u8>> + Send>;
+pub(crate) type Build = Box<dyn FnOnce() -> Option<Vec<u8>> + Send>;
 
 enum Out {
     Frame(Vec<u8>),
@@ -95,8 +87,9 @@ pub struct Transport<C> {
     /// Set when the other side's input ends; the writer sees it even when the queue was too full for `EndOfInput`.
     ending: Arc<AtomicBool>,
     pending: Mutex<Pending<C>>,
-    wake: Condvar,
     next: AtomicI64,
+    /// The transport itself, for the timers of its calls, which must not keep it alive.
+    me: Weak<Transport<C>>,
 }
 
 impl<C: Call> Transport<C> {
@@ -112,26 +105,25 @@ impl<C: Call> Transport<C> {
         let (out, queue) = sync_channel(QUEUE);
         let ending = Arc::new(AtomicBool::new(false));
         let ends = Arc::clone(&ending);
-        let transport = Arc::new(Transport {
+        let transport = Arc::new_cyclic(|me| Transport {
             out,
             ending,
             pending: Mutex::new(Pending {
                 calls: HashMap::new(),
                 closed: false,
             }),
-            wake: Condvar::new(),
             next: AtomicI64::new(1),
+            me: me.clone(),
         });
         let writer_name = format!("{protocol}-write-{label}");
-        let writer = std::thread::Builder::new().name(writer_name.clone()).spawn(move || {
+        let failed = Weak::clone(&transport.me);
+        let started = std::thread::Builder::new().name(writer_name.clone()).spawn(move || {
             ide_process::priority::set_qos(ide_process::priority::Qos::UserInitiated);
-            write_all(output, &queue, &ends, &writer_name);
-        });
-        let timer = Arc::clone(&transport);
-        let started = writer.and_then(|_| {
-            std::thread::Builder::new()
-                .name(format!("{protocol}-timer-{label}"))
-                .spawn(move || timer.expire())
+            if write_all(output, &queue, &ends, &writer_name).is_err()
+                && let Some(transport) = failed.upgrade()
+            {
+                transport.close();
+            }
         });
         let reader = Arc::clone(&transport);
         let read_name = format!("{protocol}-read-{label}");
@@ -161,17 +153,19 @@ impl<C: Call> Transport<C> {
             if pending.closed {
                 return Err(SendError::Closed);
             }
-            let deadline = Instant::now()
-                .checked_add(timeout)
-                .unwrap_or_else(|| Instant::now() + NEVER);
-            pending.calls.insert(id, Waiting { call, deadline });
+            pending.calls.insert(id, call);
         }
-        self.wake.notify_all();
         if let Err(error) = self.send(frame)
             && self.lock().calls.remove(&id).is_some()
         {
             return Err(error);
         }
+        let transport = Weak::clone(&self.me);
+        ide_core::timer::after(timeout, move || {
+            if let Some(transport) = transport.upgrade() {
+                transport.expire(id);
+            }
+        });
         Ok(())
     }
 
@@ -199,7 +193,7 @@ impl<C: Call> Transport<C> {
 
     /// The call `id` off the table, to answer or cancel it; `None` when it already ended.
     pub fn take(&self, id: RequestId) -> Option<C> {
-        self.lock().calls.remove(&id).map(|waiting| waiting.call)
+        self.lock().calls.remove(&id)
     }
 
     /// Closes the other side's input once everything queued is written.
@@ -218,50 +212,18 @@ impl<C: Call> Transport<C> {
         let calls: Vec<C> = {
             let mut pending = self.lock();
             pending.closed = true;
-            pending.calls.drain().map(|(_, waiting)| waiting.call).collect()
+            pending.calls.drain().map(|(_, call)| call).collect()
         };
-        self.wake.notify_all();
         self.end_input();
         for call in calls {
             contained(|| call.closed());
         }
     }
 
-    /// Expires calls whose deadline passed, until the transport closes.
-    fn expire(&self) {
-        let mut pending = self.lock();
-        loop {
-            if pending.closed {
-                return;
-            }
-            let now = Instant::now();
-            let due: Vec<RequestId> = pending
-                .calls
-                .iter()
-                .filter(|(_, waiting)| waiting.deadline <= now)
-                .map(|(id, _)| *id)
-                .collect();
-            if !due.is_empty() {
-                let calls: Vec<(RequestId, C)> = due
-                    .into_iter()
-                    .filter_map(|id| pending.calls.remove(&id).map(|waiting| (id, waiting.call)))
-                    .collect();
-                drop(pending);
-                for (id, call) in calls {
-                    contained(|| call.expired(id, self));
-                }
-                pending = self.lock();
-                continue;
-            }
-            pending = match pending.calls.values().map(|waiting| waiting.deadline).min() {
-                Some(deadline) => {
-                    self.wake
-                        .wait_timeout(pending, deadline.saturating_duration_since(now))
-                        .ignoring_poison()
-                        .0
-                }
-                None => self.wake.wait(pending).ignoring_poison(),
-            };
+    /// Expires the call `id` when it still waits for its answer.
+    fn expire(&self, id: RequestId) {
+        if let Some(call) = self.take(id) {
+            contained(|| call.expired(id, self));
         }
     }
 
@@ -286,47 +248,55 @@ fn read_all<C: Call>(input: impl Read, transport: &Arc<Transport<C>>, receiver: 
     contained(|| receiver.ended());
 }
 
-fn write_all(mut output: impl Write, queue: &std::sync::mpsc::Receiver<Out>, ending: &AtomicBool, name: &str) {
+/// Writes what is queued until the input ends; an error when the output failed, so the transport closes.
+fn write_all(
+    mut output: impl Write,
+    queue: &std::sync::mpsc::Receiver<Out>,
+    ending: &AtomicBool,
+    name: &str,
+) -> io::Result<()> {
     while let Ok(out) = queue.recv() {
-        if !write_out(&mut output, out, name) {
-            return;
+        if !write_out(&mut output, out, name)? {
+            return Ok(());
         }
         // The flag is set before `EndOfInput` is offered, so a queue that was full for it still holds this frame.
         if ending.load(Ordering::Acquire) {
             while let Ok(out) = queue.try_recv() {
-                if !write_out(&mut output, out, name) {
-                    return;
+                if !write_out(&mut output, out, name)? {
+                    return Ok(());
                 }
             }
-            return;
+            return Ok(());
         }
     }
+    Ok(())
 }
 
 /// Writes one queued item; whether the writer goes on.
-fn write_out(output: &mut impl Write, out: Out, name: &str) -> bool {
+fn write_out(output: &mut impl Write, out: Out, name: &str) -> io::Result<bool> {
     match out {
-        Out::Frame(bytes) => write_frame(output, &bytes, name),
+        Out::Frame(bytes) => write_frame(output, &bytes, name).map(|()| true),
         Out::Built(build) => {
             let mut built = None;
             contained(|| built = build());
-            built.is_none_or(|bytes| write_frame(output, &bytes, name))
+            built
+                .map_or(Ok(()), |bytes| write_frame(output, &bytes, name))
+                .map(|()| true)
         }
-        Out::EndOfInput => false,
+        Out::EndOfInput => Ok(false),
     }
 }
 
-/// Writes one frame; whether the output still takes more.
-fn write_frame(output: &mut impl Write, bytes: &[u8], name: &str) -> bool {
-    match output.write_all(bytes).and_then(|()| output.flush()) {
-        Ok(()) => true,
-        Err(error) => {
+/// Writes one frame.
+fn write_frame(output: &mut impl Write, bytes: &[u8], name: &str) -> io::Result<()> {
+    output
+        .write_all(bytes)
+        .and_then(|()| output.flush())
+        .inspect_err(|error| {
             if error.kind() != io::ErrorKind::BrokenPipe {
                 ide_core::diag::report(name, error);
             }
-            false
-        }
-    }
+        })
 }
 
 /// Runs `f`; a panic in a caller's callback costs that callback, not the transport.
@@ -472,7 +442,7 @@ mod tests {
         assert!(out.try_send(Out::EndOfInput).is_err());
         let ending = AtomicBool::new(true);
         let mut written = Vec::new();
-        write_all(&mut written, &queue, &ending, "test");
+        write_all(&mut written, &queue, &ending, "test").unwrap();
         assert_eq!(written, b"ab");
     }
 
@@ -516,7 +486,7 @@ mod tests {
     }
 
     #[test]
-    fn an_output_that_fails_leaves_its_call_to_the_deadline_and_refuses_what_follows() {
+    fn an_output_that_fails_closes_its_call_at_once_and_refuses_what_follows() {
         let (input, to_us) = std::io::pipe().unwrap();
         let output = ide_core::testing::FailingWriter::after(0, io::ErrorKind::BrokenPipe);
         let (ended, _ends) = channel();
@@ -524,16 +494,38 @@ mod tests {
         let (tx, rx) = channel();
         let id = transport.next_id();
         transport
-            .call(id, framing::frame(b"lost"), Duration::from_millis(50), Probe(tx))
+            .call(id, framing::frame(b"lost"), Duration::from_secs(600), Probe(tx.clone()))
             .unwrap();
-        assert_eq!(rx.recv_timeout(WAIT).unwrap(), End::Expired(id));
-        let deadline = Instant::now() + WAIT;
-        while transport.send(framing::frame(b"next")) != Err(SendError::Closed) && Instant::now() < deadline {
-            std::thread::sleep(Duration::from_millis(5));
-        }
+        assert_eq!(rx.recv_timeout(WAIT).unwrap(), End::Closed);
+        assert!(!transport.is_open());
+        assert_eq!(
+            transport.call(transport.next_id(), framing::frame(b"next"), WAIT, Probe(tx)),
+            Err(SendError::Closed)
+        );
         assert_eq!(transport.send(framing::frame(b"next")), Err(SendError::Closed));
         assert!(output.taken().is_empty());
         drop(to_us);
+    }
+
+    #[test]
+    fn a_congested_writer_refuses_calls_at_once_and_keeps_the_transport() {
+        let (input, _to_us) = std::io::pipe().unwrap();
+        let (_unread, output) = std::io::pipe().unwrap();
+        let (ended, _ends) = channel();
+        let transport = Transport::start(input, output, Arc::new(ByFirstByte(ended)), "rpc", "test").unwrap();
+        let frame = framing::frame(&[b'x'; 1024]);
+        let mut sent = 0;
+        while transport.send(frame.clone()) == Ok(()) {
+            sent += 1;
+            assert!(sent < 100_000, "the queue never filled");
+        }
+        assert!(sent >= QUEUE);
+        let (tx, rx) = channel();
+        let id = transport.next_id();
+        assert_eq!(transport.call(id, frame, WAIT, Probe(tx)), Err(SendError::Congested));
+        assert!(transport.take(id).is_none());
+        assert!(rx.try_recv().is_err());
+        assert!(transport.is_open());
     }
 
     #[test]

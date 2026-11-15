@@ -19,7 +19,7 @@ const HEAD_DEBOUNCE: Duration = Duration::from_millis(1500);
 
 impl CiPanel {
     /// Builds the panel for `controller`'s folder, puts it on the CI page and starts reading.
-    pub fn attach(controller: &WindowController) {
+    pub(crate) fn attach(controller: &WindowController) {
         let Some(root) = controller.project_root() else { return };
         let root = root.canonicalize().unwrap_or(root);
         controller.context().ci_panels().panels.detach(controller.handle());
@@ -35,7 +35,7 @@ impl CiPanel {
     }
 
     /// Reads the service again now, or right after the read that runs; `fresh` starts the wait for running runs over.
-    pub fn refresh(&self, fresh: bool) {
+    pub(crate) fn refresh(&self, fresh: bool) {
         let trusted = self.controller().is_some_and(|c| c.is_trusted());
         let refresh = self.state().refresh(trusted, fresh);
         let (known, tab) = match refresh {
@@ -69,7 +69,7 @@ impl CiPanel {
     }
 
     /// Reads again after `wait`, unless another read was planned or started since.
-    pub fn plan(&self, wait: Duration) {
+    pub(crate) fn plan(&self, wait: Duration) {
         let planned = self.state().plan();
         let id = self.id();
         main_after(wait, move || {
@@ -82,7 +82,7 @@ impl CiPanel {
     }
 
     /// Something in the folder changed; reads again when HEAD moved.
-    pub fn changed(&self) {
+    pub(crate) fn changed(&self) {
         if self.state().changed() {
             let id = self.id();
             main_after(HEAD_DEBOUNCE, move || with_panel(id, CiPanel::check_head));
@@ -109,7 +109,7 @@ impl CiPanel {
     }
 
     /// Puts every view in line with the state and the activity bar's dot with the runs.
-    pub fn show(&self) {
+    pub(crate) fn show(&self) {
         let phase = self.read().phase.clone();
         self.ui().show_phase(self, &phase);
         if phase == Phase::Ready {
@@ -126,13 +126,13 @@ impl CiPanel {
         }
     }
 
-    pub fn set_problem(&self, problem: Option<String>) {
+    pub(crate) fn set_problem(&self, problem: Option<String>) {
         self.state().set_problem(problem);
         self.ui().show_problem(self.read().problem.as_deref());
     }
 
     /// Shows `tab` and reads what it lists.
-    pub fn choose_tab(&self, tab: Tab) {
+    pub(crate) fn choose_tab(&self, tab: Tab) {
         if self.state().choose_tab(tab) {
             self.show();
             self.refresh(true);

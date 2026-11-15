@@ -8,6 +8,7 @@ use std::path::PathBuf;
 
 use ide_lsp::lsp_types::{Range, SymbolKind};
 use ide_lsp::{HierarchyItem, Neighbour, Ticket};
+use ide_ui_common::panel::{RowItem, RowItems};
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
@@ -17,11 +18,11 @@ use objc2_app_kit::{
     NSOutlineViewDataSource, NSOutlineViewDelegate, NSPopUpButton, NSScrollView, NSSegmentSwitchTracking,
     NSSegmentedControl, NSStackView, NSTableColumn, NSUserInterfaceLayoutOrientation, NSView,
 };
-use objc2_foundation::{NSEdgeInsets, NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString};
+use objc2_foundation::{NSEdgeInsets, NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
 use super::SearchPanel;
-use crate::util::{guarded, label, ns, set_action, set_label, symbol};
+use crate::util::{activate, guarded, label, ns, pin_sides, set_action, set_label, symbol};
 use ide_ui_lsp::{Direction, Hierarchy, HierarchyKind};
 
 /// How many hierarchies the menu keeps.
@@ -29,7 +30,7 @@ const HISTORY: usize = 10;
 const SMALL_FONT: f64 = 11.0;
 
 /// The call and type hierarchy panels of every window and the id the next one gets.
-pub struct HierarchyPanels {
+pub(crate) struct HierarchyPanels {
     panels: RefCell<Vec<Weak<HierarchyPanel>>>,
     next_id: Cell<u64>,
 }
@@ -66,7 +67,14 @@ struct Node {
     /// `None` until the server was asked.
     children: Option<Vec<usize>>,
     asked: bool,
-    key: Retained<NSString>,
+}
+
+/// A node of one tree of an entry; unique across trees, since a new tree starts closed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct NodeKey {
+    entry: u64,
+    epoch: u64,
+    index: usize,
 }
 
 /// One hierarchy as shown, kept in the menu with its direction and what is open.
@@ -120,8 +128,6 @@ impl Entry {
             target,
             children: None,
             asked: false,
-            // Unique across trees: the outline remembers what is open by equal items, and a new tree starts closed.
-            key: ns(&format!("{}:{}:{index}", self.id, self.epoch)),
         });
         Some(index)
     }
@@ -167,12 +173,14 @@ struct Views {
     outline: Retained<NSOutlineView>,
 }
 
-pub struct HierarchyIvars {
+pub(crate) struct HierarchyIvars {
     id: u64,
     search: Weak<SearchPanel>,
     entries: RefCell<Vec<Entry>>,
     current: Cell<Option<usize>>,
     views: OnceCell<Views>,
+    /// The objects that stand for the nodes in the outline view, which keeps no reference of its own.
+    items: RowItems<NodeKey>,
 }
 
 define_class!(
@@ -181,7 +189,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEHierarchyPanel"]
     #[ivars = HierarchyIvars]
-    pub struct HierarchyPanel;
+    pub(crate) struct HierarchyPanel;
 
     unsafe impl NSObjectProtocol for HierarchyPanel {}
 
@@ -197,7 +205,7 @@ define_class!(
         fn child(&self, _view: &NSOutlineView, index: isize, item: Option<&AnyObject>) -> Retained<AnyObject> {
             let found = guarded(None, || {
                 let child = *self.children(item).get(usize::try_from(index).ok()?)?;
-                self.with_entry(|entry| entry.nodes.get(child).map(|n| n.key.clone())).flatten()
+                self.item(child)
             });
             found.map_or_else(|| ns("").into(), Into::into)
         }
@@ -262,12 +270,7 @@ define_class!(
 );
 
 fn index_of(item: &AnyObject) -> Option<usize> {
-    item.downcast_ref::<NSString>()?
-        .to_string()
-        .rsplit(':')
-        .next()?
-        .parse()
-        .ok()
+    RowItems::<NodeKey>::key_of(item).map(|key| key.index)
 }
 
 fn panel(id: u64) -> Option<Retained<HierarchyPanel>> {
@@ -286,6 +289,7 @@ impl HierarchyPanel {
             entries: RefCell::new(vec![]),
             current: Cell::new(None),
             views: OnceCell::new(),
+            items: RowItems::default(),
         };
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         let this: Retained<HierarchyPanel> =
@@ -330,6 +334,20 @@ impl HierarchyPanel {
         if let Some(views) = self.ivars().views.get() {
             views.page.setHidden(true);
         }
+    }
+
+    /// The object that stands for node `index` of the entry on show.
+    fn item(&self, index: usize) -> Option<Retained<RowItem>> {
+        let key = self
+            .with_entry(|entry| {
+                (index < entry.nodes.len()).then_some(NodeKey {
+                    entry: entry.id,
+                    epoch: entry.epoch,
+                    index,
+                })
+            })
+            .flatten()?;
+        Some(self.ivars().items.item(self.mtm(), &key))
     }
 
     fn with_entry<R>(&self, f: impl FnOnce(&Entry) -> R) -> Option<R> {
@@ -389,11 +407,17 @@ impl HierarchyPanel {
         views.outline.setAccessibilityLabel(Some(&ns(name)));
         views.page.setHidden(false);
         views.outline.reloadData();
+        let entries = self.ivars().entries.borrow();
+        self.ivars().items.keep(|key| {
+            entries
+                .iter()
+                .any(|e| e.id == key.entry && e.epoch == key.epoch && key.index < e.nodes.len())
+        });
+        drop(entries);
         views.outline.sizeLastColumnToFit();
         for index in expanded {
-            let key = self.with_entry(|e| e.nodes.get(index).map(|n| n.key.clone())).flatten();
-            if let Some(key) = key {
-                // SAFETY: The key is one the data source hands out, kept alive by its node.
+            if let Some(key) = self.item(index) {
+                // SAFETY: The key is one the data source hands out, kept alive in `items`.
                 unsafe { views.outline.expandItem(Some(&key)) };
             }
         }
@@ -469,16 +493,14 @@ impl HierarchyPanel {
         if !shown {
             return;
         }
-        let Some((key, open)) = self
-            .with_entry(|e| Some((e.nodes.get(index)?.key.clone(), e.expanded.contains(&index))))
-            .flatten()
-        else {
+        let open = self.with_entry(|e| e.expanded.contains(&index)).unwrap_or(false);
+        let Some(key) = self.item(index) else {
             return;
         };
-        // SAFETY: The key is one the data source hands out, kept alive by its node.
+        // SAFETY: The key is one the data source hands out, kept alive in `items`.
         unsafe { views.outline.reloadItem_reloadChildren(Some(&key), true) };
         if open {
-            // SAFETY: The key is the data source's own object for that node, which the node keeps alive.
+            // SAFETY: The key is the data source's own object for that node, kept alive in `items`.
             unsafe { views.outline.expandItem(Some(&key)) };
         }
     }
@@ -610,25 +632,15 @@ fn build(mtm: MainThreadMarker, panel: &HierarchyPanel) -> Views {
     page.addSubview(&bar);
     page.addSubview(&scroll);
     for view in [&*bar as &NSView, &scroll] {
-        view.setTranslatesAutoresizingMaskIntoConstraints(false);
-        view.leadingAnchor()
-            .constraintEqualToAnchor(&page.leadingAnchor())
-            .setActive(true);
-        view.trailingAnchor()
-            .constraintEqualToAnchor(&page.trailingAnchor())
-            .setActive(true);
+        pin_sides(view, &page, 0.0);
     }
-    bar.topAnchor()
-        .constraintEqualToAnchor(&page.topAnchor())
-        .setActive(true);
-    scroll
-        .topAnchor()
-        .constraintEqualToAnchor_constant(&bar.bottomAnchor(), 2.0)
-        .setActive(true);
-    scroll
-        .bottomAnchor()
-        .constraintEqualToAnchor(&page.bottomAnchor())
-        .setActive(true);
+    activate([
+        bar.topAnchor().constraintEqualToAnchor(&page.topAnchor()),
+        scroll
+            .topAnchor()
+            .constraintEqualToAnchor_constant(&bar.bottomAnchor(), 2.0),
+        scroll.bottomAnchor().constraintEqualToAnchor(&page.bottomAnchor()),
+    ]);
     page.setHidden(true);
     Views {
         page,
@@ -654,13 +666,13 @@ fn tree(mtm: MainThreadMarker, panel: &HierarchyPanel) -> (Retained<NSScrollView
 
 /// What the self-test reads from and does with the hierarchy, through the code its controls run.
 #[cfg(feature = "selftest")]
-pub mod selftest {
+pub(crate) mod selftest {
     use objc2::DefinedClass;
 
     use super::{HierarchyPanel, index_of};
 
     /// The rows on show, each with its level and name.
-    pub fn rows(panel: &HierarchyPanel) -> Vec<(isize, String)> {
+    pub(crate) fn rows(panel: &HierarchyPanel) -> Vec<(isize, String)> {
         let Some(views) = panel.ivars().views.get() else {
             return vec![];
         };
@@ -677,7 +689,7 @@ pub mod selftest {
     }
 
     /// Opens row `row` as its disclosure triangle does.
-    pub fn expand(panel: &HierarchyPanel, row: isize) {
+    pub(crate) fn expand(panel: &HierarchyPanel, row: isize) {
         if let Some(views) = panel.ivars().views.get()
             && let Some(item) = views.outline.itemAtRow(row)
         {
@@ -687,7 +699,7 @@ pub mod selftest {
     }
 
     /// Clicks segment `segment` of the direction switch.
-    pub fn choose_direction(panel: &HierarchyPanel, segment: isize) {
+    pub(crate) fn choose_direction(panel: &HierarchyPanel, segment: isize) {
         if let Some(views) = panel.ivars().views.get() {
             views.direction.setSelectedSegment(segment);
         }
@@ -695,14 +707,14 @@ pub mod selftest {
     }
 
     /// The titles of the menu of earlier searches.
-    pub fn history(panel: &HierarchyPanel) -> Vec<String> {
+    pub(crate) fn history(panel: &HierarchyPanel) -> Vec<String> {
         panel.ivars().views.get().map_or_else(Vec::new, |views| {
             views.history.itemTitles().iter().map(|t| t.to_string()).collect()
         })
     }
 
     /// Chooses item `index` of the menu of earlier searches.
-    pub fn choose_history(panel: &HierarchyPanel, index: isize) {
+    pub(crate) fn choose_history(panel: &HierarchyPanel, index: isize) {
         if let Some(views) = panel.ivars().views.get() {
             views.history.selectItemAtIndex(index);
         }
@@ -710,7 +722,7 @@ pub mod selftest {
     }
 
     /// Clicks row `row`, which opens its place.
-    pub fn click(panel: &HierarchyPanel, row: isize) {
+    pub(crate) fn click(panel: &HierarchyPanel, row: isize) {
         panel.open_row(row);
     }
 }

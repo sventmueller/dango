@@ -23,7 +23,7 @@ const CONTEXT: usize = 3;
 
 /// The text views of the open comparison tabs, by tab key.
 #[derive(Default)]
-pub struct Comparisons {
+pub(crate) struct Comparisons {
     shown: RefCell<Vec<(String, Weak<NSTextView>)>>,
 }
 
@@ -33,7 +33,7 @@ fn with_shown<R>(f: impl FnOnce(&RefCell<Vec<(String, Weak<NSTextView>)>>) -> R)
 
 /// Shows the differences between `disk`, the file's version, and `buffer`, the editor's text, in a tab of
 /// `controller`, the one it showed before for `path` if there is one.
-pub fn show(controller: &WindowController, path: &Path, disk: &str, buffer: &str) {
+pub(crate) fn show(controller: &WindowController, path: &Path, disk: &str, buffer: &str) {
     let mtm = controller.mtm();
     let key = format!("compare:{}", path.display());
     if let Some(id) = controller.tab_with_key(&key) {
@@ -71,8 +71,7 @@ pub fn show(controller: &WindowController, path: &Path, disk: &str, buffer: &str
 /// The comparison as text: a line naming each side, then each run of changes with its line numbers.
 fn styled(hunks: &[Vec<ComparedLine>]) -> Retained<NSMutableAttributedString> {
     let size = ide_core::settings::Settings::load_user().get(&ide_core::settings::keys::FONT_SIZE);
-    // SAFETY: AppKit sets its font weight constants when it loads.
-    let font = NSFont::monospacedSystemFontOfSize_weight(size, unsafe { objc2_app_kit::NSFontWeightRegular });
+    let font = NSFont::monospacedSystemFontOfSize_weight(size, constant!(objc2_app_kit::NSFontWeightRegular));
     let mut text = String::new();
     let mut quiet = Vec::new();
     let mut shaded = Vec::new();
@@ -159,4 +158,4 @@ mod tests {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

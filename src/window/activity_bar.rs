@@ -12,19 +12,19 @@ use objc2_foundation::NSEdgeInsets;
 use splat_i18n::{t, tf};
 
 use super::{Panel, WindowController};
-use crate::util::{ns, set_target, symbol_button, tagged};
+use crate::util::{activate, auto_layout, fixed_size, ns, set_target, symbol_button, tagged};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
 const BUTTON_SIZE: f64 = 32.0;
 
-pub struct ActivityBar {
+pub(crate) struct ActivityBar {
     view: Retained<NSView>,
     buttons: Vec<(Panel, Retained<NSButton>)>,
 }
 
 impl ActivityBar {
-    pub fn new(mtm: MainThreadMarker, target: &WindowController) -> ActivityBar {
+    pub(crate) fn new(mtm: MainThreadMarker, target: &WindowController) -> ActivityBar {
         let stack = NSStackView::new(mtm);
         stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         stack.setAlignment(NSLayoutAttribute::CenterX);
@@ -72,36 +72,33 @@ impl ActivityBar {
         unsafe { view.setMenu(Some(&menu)) };
         view.addSubview(&stack);
         view.addSubview(&settings);
-        stack.setTranslatesAutoresizingMaskIntoConstraints(false);
-        settings.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
+        auto_layout(&[&stack, &settings]);
+        activate([
             stack.topAnchor().constraintEqualToAnchor(&view.topAnchor()),
             stack.centerXAnchor().constraintEqualToAnchor(&view.centerXAnchor()),
             settings.centerXAnchor().constraintEqualToAnchor(&view.centerXAnchor()),
             settings
                 .bottomAnchor()
                 .constraintEqualToAnchor_constant(&view.bottomAnchor(), -10.0),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         let bar = ActivityBar { view, buttons };
         bar.leave_out(&hidden());
         bar
     }
 
     /// Hides the symbols of `hidden` and shows the others.
-    pub fn leave_out(&self, hidden: &[Panel]) {
+    pub(crate) fn leave_out(&self, hidden: &[Panel]) {
         for (panel, button) in &self.buttons {
             button.setHidden(hidden.contains(panel));
         }
     }
 
-    pub fn view(&self) -> &NSView {
+    pub(crate) fn view(&self) -> &NSView {
         &self.view
     }
 
     /// Marks `panel` as the one showing; `None` when the panel is closed.
-    pub fn select(&self, panel: Option<Panel>) {
+    pub(crate) fn select(&self, panel: Option<Panel>) {
         for (candidate, button) in &self.buttons {
             let selected = Some(*candidate) == panel;
             let color = if selected {
@@ -116,7 +113,7 @@ impl ActivityBar {
 
     /// Names `words`, such as a failed CI run, with the label and tooltip of `panel`'s symbol; `None` names only the
     /// panel.
-    pub fn set_status(&self, panel: Panel, words: Option<&str>) {
+    pub(crate) fn set_status(&self, panel: Panel, words: Option<&str>) {
         let description = match words {
             Some(words) => tf("{}: {}", &[panel.title(), words]),
             None => panel.title().to_string(),
@@ -125,7 +122,7 @@ impl ActivityBar {
     }
 
     /// Names `count` changes with the label and tooltip of `panel`'s symbol.
-    pub fn set_count(&self, panel: Panel, count: usize) {
+    pub(crate) fn set_count(&self, panel: Panel, count: usize) {
         let description = match count {
             0 => panel.title().to_string(),
             1 => tf("{}, 1 Änderung", &[panel.title()]),
@@ -143,7 +140,7 @@ impl ActivityBar {
 }
 
 /// The panels whose symbol the user hid, in the order of the bar.
-pub fn hidden() -> Vec<Panel> {
+pub(crate) fn hidden() -> Vec<Panel> {
     let ids = Settings::load_user().get(&keys::HIDDEN_PANELS);
     Panel::ALL
         .into_iter()
@@ -152,7 +149,7 @@ pub fn hidden() -> Vec<Panel> {
 }
 
 /// Remembers `hidden` as the panels whose symbol stays out.
-pub fn store_hidden(hidden: &[Panel]) {
+pub(crate) fn store_hidden(hidden: &[Panel]) {
     let ids: Vec<String> = hidden.iter().map(|panel| panel.id().to_string()).collect();
     if let Err(error) = Settings::load_user().set(&keys::HIDDEN_PANELS, &ids) {
         crate::diag::report("saving the hidden sidebar symbols", error);
@@ -172,12 +169,5 @@ fn symbols_menu(mtm: MainThreadMarker, target: &WindowController) -> Retained<NS
 
 fn sized(button: &NSButton) {
     button.setTranslatesAutoresizingMaskIntoConstraints(false);
-    button
-        .widthAnchor()
-        .constraintEqualToConstant(BUTTON_SIZE)
-        .setActive(true);
-    button
-        .heightAnchor()
-        .constraintEqualToConstant(BUTTON_SIZE)
-        .setActive(true);
+    fixed_size(button, BUTTON_SIZE, BUTTON_SIZE);
 }

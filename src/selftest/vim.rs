@@ -12,7 +12,7 @@ use objc2_app_kit::{NSEvent, NSEventModifierFlags, NSEventType, NSTextInputClien
 use objc2_foundation::{NSPoint, NSRange};
 
 use super::helpers::{self, wait_until};
-use super::{check, finish, snapshot};
+use super::{check, finish, give_up, snapshot};
 use crate::editor::{self, EditorTextView};
 use crate::util::ns;
 use crate::window;
@@ -86,7 +86,7 @@ fn picture(name: &str) {
     }
 }
 
-pub fn run() {
+pub(crate) fn run() {
     helpers::open_project(SCENARIO, PROJECT, &[(FILE, TEXT), (OTHER, "other\n")], |controller| {
         controller.open_file(&root().join(FILE));
         wait_until(|| editor_of(FILE).is_some(), |_| normal_mode());
@@ -95,8 +95,7 @@ pub fn run() {
 
 fn normal_mode() {
     let Some(view) = editor_of(FILE) else {
-        check("the file opens in an editor", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the file opens in an editor");
     };
     if let Some(window) = view.window() {
         window.makeFirstResponder(Some(&view));
@@ -182,7 +181,7 @@ fn control_keys(view: &EditorTextView) {
         controller.open_file_beside(&root().join(OTHER), crate::window::panes::Side::Right);
     }
     let Some(main) = editor_of(FILE) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the editor is open");
     };
     wait_until(
         || editor_of(OTHER).is_some(),

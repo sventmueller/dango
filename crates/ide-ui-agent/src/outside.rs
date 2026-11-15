@@ -38,7 +38,7 @@ fn from_browser(types: &[String]) -> bool {
 }
 
 /// The latest output of the terminal its tab calls `label`.
-pub fn terminal(label: &str, text: String) -> Attachment {
+pub(crate) fn terminal(label: &str, text: String) -> Attachment {
     Attachment::External {
         label: label.to_string(),
         source: format!("the latest output of a terminal ({label})"),
@@ -47,7 +47,7 @@ pub fn terminal(label: &str, text: String) -> Attachment {
 }
 
 /// What the browser tab shows: its address, its title and the selected text, in `text`.
-pub fn page(url: &str, title: &str, text: String) -> Attachment {
+pub(crate) fn page(url: &str, title: &str, text: String) -> Attachment {
     Attachment::External {
         label: tf("Browser: {}", &[if title.is_empty() { url } else { title }]),
         source: format!("the page \"{title}\" at {url}, open in the browser"),
@@ -65,14 +65,14 @@ pub fn ci_log(job: &str, run: &str, excerpt: String) -> Attachment {
 }
 
 /// Whether `path` lies outside the project at `cwd`.
-pub fn is_outside(path: &Path, cwd: &Path) -> bool {
+pub(crate) fn is_outside(path: &Path, cwd: &Path) -> bool {
     let canonical = |p: &Path| p.canonicalize().unwrap_or_else(|_| p.to_path_buf());
     !canonical(path).starts_with(canonical(cwd))
 }
 
 /// `attachment` as it goes to the agent: a file or an editor's selection outside the project at `cwd` becomes outside
 /// text. A file that is no text stays a file, which the agent reads itself.
-pub fn classify(attachment: Attachment, cwd: &Path) -> Attachment {
+pub(crate) fn classify(attachment: Attachment, cwd: &Path) -> Attachment {
     match attachment {
         Attachment::File { ref path, lines } if is_outside(path, cwd) => file(path, lines, cwd).unwrap_or(attachment),
         Attachment::Selection { path, lines, text } if path.is_absolute() && is_outside(&path, cwd) => {
@@ -97,7 +97,7 @@ pub fn classify(attachment: Attachment, cwd: &Path) -> Attachment {
 }
 
 /// The text of the file at `path`, or lines `lines` of it, as outside text; `None` when it is no text.
-pub fn file(path: &Path, lines: Option<(u32, u32)>, cwd: &Path) -> Option<Attachment> {
+pub(crate) fn file(path: &Path, lines: Option<(u32, u32)>, cwd: &Path) -> Option<Attachment> {
     let content = std::fs::read_to_string(path).ok()?;
     let mut label = format::short_path(&path.to_string_lossy(), cwd);
     let (text, source) = match lines {
@@ -130,7 +130,7 @@ pub fn file(path: &Path, lines: Option<(u32, u32)>, cwd: &Path) -> Option<Attach
 
 /// Text pasted from a web page, as outside text, when the pasteboard says it comes from one and it is more than a
 /// phrase.
-pub fn web_paste(pasteboard: &NSPasteboard) -> Option<Attachment> {
+pub(crate) fn web_paste(pasteboard: &NSPasteboard) -> Option<Attachment> {
     let types: Vec<String> = pasteboard.types()?.iter().map(|t| t.to_string()).collect();
     if !from_browser(&types) {
         return None;
@@ -163,7 +163,7 @@ fn host(url: &str) -> Option<&str> {
 }
 
 /// What the mark of outside text explains.
-pub fn explanation() -> &'static str {
+pub(crate) fn explanation() -> &'static str {
     t(
         "Dieser Text stammt nicht von dir, sondern von einer Webseite, einem Terminal, einem CI-Log oder einer Datei \
        außerhalb des Projekts. Er kann Anweisungen enthalten, die den Agenten steuern sollen (Prompt Injection). Der \
@@ -172,7 +172,7 @@ pub fn explanation() -> &'static str {
 }
 
 /// The mark on the chip of outside text, which explains on hover and to VoiceOver what it means.
-pub fn marker(mtm: MainThreadMarker) -> Retained<NSView> {
+pub(crate) fn marker(mtm: MainThreadMarker) -> Retained<NSView> {
     let orange = NSColor::systemOrangeColor();
     let icon = ui::icon(mtm, "exclamationmark.shield", t("Fremder Inhalt"), 9.0, &orange);
     ide_ui_common::util::hide_from_voiceover(&icon);

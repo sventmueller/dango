@@ -26,7 +26,7 @@ use ide_ui_common::util::{guarded, main_soon, ns};
 const AUTOSCROLL: f64 = 0.05;
 
 #[derive(Default)]
-pub struct MouseState {
+pub(crate) struct MouseState {
     drag: Cell<Option<Drag>>,
     /// The button the program was told is held.
     reported: Cell<Option<MouseButton>>,
@@ -50,7 +50,7 @@ pub struct MouseState {
 }
 
 impl MouseState {
-    pub fn stop_autoscroll(&self) {
+    pub(crate) fn stop_autoscroll(&self) {
         if let Some(timer) = self.autoscroll.borrow_mut().take() {
             timer.invalidate();
         }

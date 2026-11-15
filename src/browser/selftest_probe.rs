@@ -6,18 +6,18 @@
 )]
 use super::*;
 
-pub use ide_ui_browser::{Seen, answer_asking};
+pub(crate) use ide_ui_browser::{Seen, answer_asking};
 
 /// Presses "Trotzdem öffnen" on the first tab that offers it; whether one did.
-pub fn proceed(controller: &WindowController) -> bool {
+pub(crate) fn proceed(controller: &WindowController) -> bool {
     ide_ui_browser::proceed(controller.id())
 }
 
 /// Presses the key button of the browser tab in front, as the self-test's user.
-pub fn fill_login(controller: &WindowController) {
+pub(crate) fn fill_login(controller: &WindowController) {
     ide_ui_browser::fill_login(controller.id());
 }
 
-pub fn inspect(controller: &WindowController) -> Vec<Seen> {
+pub(crate) fn inspect(controller: &WindowController) -> Vec<Seen> {
     ide_ui_browser::inspect(controller.id())
 }

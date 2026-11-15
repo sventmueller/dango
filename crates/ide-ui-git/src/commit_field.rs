@@ -20,7 +20,7 @@ define_class!(
     #[unsafe(super(NSTextView))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEGitCommitTextView"]
-    pub struct CommitTextView;
+    pub(crate) struct CommitTextView;
 
     unsafe impl NSObjectProtocol for CommitTextView {}
 
@@ -72,7 +72,7 @@ define_class!(
 );
 
 impl CommitTextView {
-    pub fn new(mtm: MainThreadMarker, frame: NSRect) -> Retained<CommitTextView> {
+    pub(crate) fn new(mtm: MainThreadMarker, frame: NSRect) -> Retained<CommitTextView> {
         // SAFETY: NSTextView's designated initializer, called once on the newly allocated object.
         let view: Retained<CommitTextView> = unsafe { msg_send![CommitTextView::alloc(mtm), initWithFrame: frame] };
         view.setRichText(false);
@@ -104,7 +104,7 @@ impl CommitTextView {
         container.setExclusionPaths(&NSArray::from_retained_slice(&[corner]));
     }
 
-    pub fn text(&self) -> String {
+    pub(crate) fn text(&self) -> String {
         self.string().to_string()
     }
 

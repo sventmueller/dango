@@ -37,7 +37,7 @@ pub(super) fn paint(view: &EditorTextView, lines: Range<usize>) -> bool {
         .filter(|(whole, line)| !shown(&storage, *whole, document.styles(*line), size))
         .collect();
     if !stale.is_empty() {
-        view.ivars().styled.set(true);
+        view.ivars().paint.styled.set(true);
         with_editing(&storage, || {
             for (whole, line) in stale {
                 set(&storage, whole, document.styles(line), size);

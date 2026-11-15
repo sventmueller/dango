@@ -10,6 +10,7 @@ use super::{Event, Inner, Reach, Session, TerminalAnswer, start, stop};
 use crate::adapter::Adapter;
 use crate::connection::{Handler, Responder};
 use crate::convert;
+use crate::error::Refusal;
 use crate::launch::LaunchConfig;
 use crate::types::{Request, State, TerminalRequest, ThreadId};
 
@@ -34,12 +35,12 @@ impl Handler for Events {
 
     fn request(&self, command: &str, arguments: Value, responder: Responder) {
         let Some(inner) = self.inner.upgrade() else {
-            return responder.fail("the session has ended");
+            return responder.fail(Refusal::Ended);
         };
         match command {
             "runInTerminal" => run_in_terminal(&inner, &arguments, responder),
             "startDebugging" => start_child(&inner, &arguments, responder),
-            _ => responder.fail("not supported"),
+            _ => responder.fail(Refusal::Unsupported),
         }
     }
 
@@ -139,7 +140,7 @@ fn run_in_terminal(inner: &Arc<Inner>, arguments: &Value, responder: Responder) 
         .map(|args| args.iter().filter_map(Value::as_str).map(str::to_string).collect())
         .unwrap_or_default();
     if args.is_empty() {
-        return responder.fail("runInTerminal without a program");
+        return responder.fail(Refusal::NoProgram);
     }
     let env = arguments
         .get("env")
@@ -165,7 +166,7 @@ fn run_in_terminal(inner: &Arc<Inner>, arguments: &Value, responder: Responder) 
 fn start_child(inner: &Arc<Inner>, arguments: &Value, responder: Responder) {
     let port = match inner.lock().reach {
         Reach::Port(port) => port,
-        Reach::Single => return responder.fail("child sessions need an adapter that takes several connections"),
+        Reach::Single => return responder.fail(Refusal::SingleConnection),
     };
     let request = match arguments.get("request").and_then(Value::as_str) {
         Some("attach") => Request::Attach,
@@ -195,7 +196,7 @@ fn start_child(inner: &Arc<Inner>, arguments: &Value, responder: Responder) {
     };
     let stream = match start::dial(port, alive).and_then(|s| Ok((s.try_clone()?, s))) {
         Ok(streams) => streams,
-        Err(error) => return responder.fail(&error.to_string()),
+        Err(error) => return responder.fail(Refusal::Child(error)),
     };
     let adapter = Adapter::streams(inner.kind, &inner.label, stream.0, stream.1);
     let setup = inner.lock().setup.clone();
@@ -206,7 +207,7 @@ fn start_child(inner: &Arc<Inner>, arguments: &Value, responder: Responder) {
             inner.lock().children.push(child.clone());
             inner.emit(Event::Child(child));
         }
-        Err(error) => responder.fail(&error.to_string()),
+        Err(error) => responder.fail(Refusal::Child(error)),
     }
 }
 

@@ -129,19 +129,20 @@ struct Call {
     announced: bool,
 }
 
-/// What the stream has said so far.
-/// Takes `chunks` as a stream would and builds the message, for the fuzz target.
+/// Takes `chunks` as a stream would, for the fuzz target: what it told along the way, and the message it built.
 #[cfg(feature = "fuzzing")]
-pub(crate) fn read_all(chunks: &[Value]) {
+pub(crate) fn read_all(chunks: &[Value]) -> (Vec<Delta>, Message) {
     let mut answer = Answer::default();
+    let mut told = Vec::new();
     for chunk in chunks {
-        if answer.take(chunk, &mut |_| {}).is_err() {
+        if answer.take(chunk, &mut |delta| told.push(delta)).is_err() {
             break;
         }
     }
-    let _ = answer.message(true);
+    (told, answer.message(true))
 }
 
+/// What the stream has said so far.
 #[derive(Default)]
 struct Answer {
     text: String,

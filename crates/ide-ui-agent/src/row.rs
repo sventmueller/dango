@@ -10,24 +10,24 @@ use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize};
 use ide_ui_common::util::guarded;
 
 /// Where the line runs, counted from the leading edge.
-pub const LINE_X: f64 = 13.0;
+pub(crate) const LINE_X: f64 = 13.0;
 /// How far below the row's top the dot sits: in the middle of the first line of text.
-pub const DOT_Y: f64 = 13.0;
+pub(crate) const DOT_Y: f64 = 13.0;
 const DOT_RADIUS: f64 = 3.5;
 
 /// How a row is marked.
 #[derive(Clone, Default)]
-pub struct Mark {
+pub(crate) struct Mark {
     /// The dot's colour; no dot without one.
-    pub dot: Option<Retained<NSColor>>,
+    pub(crate) dot: Option<Retained<NSColor>>,
     /// Whether the line comes from the row above.
-    pub line_above: bool,
+    pub(crate) line_above: bool,
     /// Whether the line goes on to the row below.
-    pub line_below: bool,
+    pub(crate) line_below: bool,
 }
 
 #[derive(Default)]
-pub struct RowIvars {
+pub(crate) struct RowIvars {
     mark: RefCell<Mark>,
     rtl: Cell<bool>,
 }
@@ -38,7 +38,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEAgentTimelineRow"]
     #[ivars = RowIvars]
-    pub struct TimelineRow;
+    pub(crate) struct TimelineRow;
 
     unsafe impl NSObjectProtocol for TimelineRow {}
 
@@ -74,7 +74,7 @@ define_class!(
 );
 
 impl TimelineRow {
-    pub fn new(mtm: MainThreadMarker, mark: Mark) -> Retained<TimelineRow> {
+    pub(crate) fn new(mtm: MainThreadMarker, mark: Mark) -> Retained<TimelineRow> {
         let this = Self::alloc(mtm).set_ivars(RowIvars::default());
         // SAFETY: NSTableRowView's initializer, called once on the newly allocated object.
         let row: Retained<TimelineRow> = unsafe { msg_send![super(this), init] };
@@ -85,7 +85,7 @@ impl TimelineRow {
         row
     }
 
-    pub fn set_mark(&self, mark: Mark) {
+    pub(crate) fn set_mark(&self, mark: Mark) {
         *self.ivars().mark.borrow_mut() = mark;
         self.setNeedsDisplay(true);
     }

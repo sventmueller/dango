@@ -21,7 +21,7 @@ use ide_ui_git::message::source::{self, CLAUDE, CONSENT, MODEL};
 /// The width of the model field, as in the row for new threads.
 const MODEL_WIDTH: f64 = 260.0;
 
-pub struct Ivars {
+pub(crate) struct Ivars {
     endpoints: RefCell<Vec<Endpoint>>,
     views: OnceCell<Views>,
 }
@@ -39,7 +39,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDECommitMessageSettings"]
     #[ivars = Ivars]
-    pub struct CommitMessageSettings;
+    pub(crate) struct CommitMessageSettings;
 
     unsafe impl NSObjectProtocol for CommitMessageSettings {}
 
@@ -65,7 +65,7 @@ define_class!(
 );
 
 #[derive(Default)]
-pub struct CommitMessageShown {
+pub(crate) struct CommitMessageShown {
     /// The part on view, which its controls send their actions to.
     shown: RefCell<Option<Retained<CommitMessageSettings>>>,
 }
@@ -75,7 +75,7 @@ fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Retained<CommitMessageSettings>>
 }
 
 /// The heading, notes and controls of the part, for the Agent tab's column of views.
-pub fn views(mtm: MainThreadMarker) -> Vec<Retained<NSView>> {
+pub(crate) fn views(mtm: MainThreadMarker) -> Vec<Retained<NSView>> {
     let this = CommitMessageSettings::alloc(mtm).set_ivars(Ivars {
         endpoints: RefCell::new(Vec::new()),
         views: OnceCell::new(),
@@ -263,11 +263,11 @@ impl CommitMessageSettings {
 
 /// What the self-test reads from the part.
 #[cfg(feature = "selftest")]
-pub mod selftest {
+pub(crate) mod selftest {
     use objc2::DefinedClass;
 
     /// The line about consent and whether its button can take permissions back.
-    pub fn allowed() -> Option<(String, bool)> {
+    pub(crate) fn allowed() -> Option<(String, bool)> {
         let shown = super::with_shown(|shown| shown.borrow().clone())?;
         let views = shown.ivars().views.get()?;
         Some((views.allowed.stringValue().to_string(), views.revoke.isEnabled()))
@@ -275,7 +275,7 @@ pub mod selftest {
 
     /// How far right the part's controls reach past the left edge of the provider's menu, and the column's width;
     /// scrolls the part into view first.
-    pub fn reach() -> Option<(f64, f64)> {
+    pub(crate) fn reach() -> Option<(f64, f64)> {
         let shown = super::with_shown(|shown| shown.borrow().clone())?;
         let views = shown.ivars().views.get()?;
         views.revoke.scrollRectToVisible(views.revoke.bounds());
@@ -297,7 +297,7 @@ pub mod selftest {
     }
 
     /// Takes every permission back, as the button does.
-    pub fn revoke() {
+    pub(crate) fn revoke() {
         if let Some(shown) = super::with_shown(|shown| shown.borrow().clone()) {
             ide_ui_git::message::source::revoke_all();
             shown.fill();

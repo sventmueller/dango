@@ -71,10 +71,10 @@ pub struct Frame {
 
 /// A thread of the program.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Thread {
     /// The adapter's id for it.
     pub id: i64,
-    /// Its name.
     pub name: String,
     /// Its call stack while the session is paused, innermost first; `None` until the adapter told it.
     pub frames: Option<Vec<Frame>>,
@@ -138,12 +138,12 @@ impl Session {
     }
 
     /// The thread with `id`, to change.
-    pub fn thread_mut(&mut self, id: i64) -> Option<&mut Thread> {
+    pub(crate) fn thread_mut(&mut self, id: i64) -> Option<&mut Thread> {
         self.threads.iter_mut().find(|t| t.id == id)
     }
 
     /// Takes the threads the adapter listed, keeping the call stacks it already told of those that stay.
-    pub fn set_threads(&mut self, threads: Vec<(i64, String)>) {
+    pub(crate) fn set_threads(&mut self, threads: Vec<(i64, String)>) {
         let old = std::mem::take(&mut self.threads);
         self.threads = threads
             .into_iter()
@@ -156,7 +156,7 @@ impl Session {
     }
 
     /// Forgets every call stack, which the adapter's frame ids no longer reach once the program runs on.
-    pub fn forget_frames(&mut self) {
+    pub(crate) fn forget_frames(&mut self) {
         for thread in &mut self.threads {
             thread.frames = None;
         }

@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use ide_project::{Cancel, FileResult, SearchOptions};
+use ide_ui_common::alert::{Alert, Role, first};
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::Sel;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, msg_send, sel};
@@ -15,12 +16,12 @@ use splat_i18n::t;
 use super::model::{MenuCommand, Model, Outcome, Query, Started, Toggle, replaced_note};
 use super::panel::{SearchIvars, SearchPanel, spot_of};
 use super::{DEBOUNCE, FLUSH, REFRESH_DELAY, hierarchy, panel, replace, views, with_next_id, with_panels};
-use crate::util::{guarded, main_after, main_soon, ns};
+use crate::util::{main_after, main_soon, ns};
 use crate::window::WindowController;
 
 impl SearchPanel {
     /// The search of `controller`'s folder at `root`.
-    pub fn new(mtm: MainThreadMarker, controller: &WindowController, root: &Path) -> Retained<Self> {
+    pub(crate) fn new(mtm: MainThreadMarker, controller: &WindowController, root: &Path) -> Retained<Self> {
         let id = with_next_id(|next| {
             let id = next.get();
             next.set(id + 1);
@@ -41,7 +42,7 @@ impl SearchPanel {
     }
 
     /// Shows `hierarchy` in place of the text search, which keeps what it holds.
-    pub fn show_hierarchy(&self, hierarchy: ide_ui_lsp::Hierarchy) {
+    pub(crate) fn show_hierarchy(&self, hierarchy: ide_ui_lsp::Hierarchy) {
         if let Some(views) = self.ivars().views.get() {
             views.set_text_shown(false);
         }
@@ -61,7 +62,7 @@ impl SearchPanel {
     }
 
     /// Puts the keyboard focus into the field, with what it holds selected, leaving a hierarchy on show.
-    pub fn focus(&self) {
+    pub(crate) fn focus(&self) {
         if self.ivars().hierarchy.get().is_some_and(|h| h.showing()) {
             self.show_text();
         }
@@ -72,12 +73,12 @@ impl SearchPanel {
     }
 
     /// Ends a search that runs, for a window that closes or shows another folder.
-    pub fn stop(&self) {
+    pub(crate) fn stop(&self) {
         self.model().stop();
     }
 
     /// Empties the field, which clears the matches, and keeps the focus in the field.
-    pub fn clear(&self) {
+    pub(crate) fn clear(&self) {
         let Some(views) = self.ivars().views.get() else { return };
         views.field.setStringValue(&ns(""));
         self.schedule();
@@ -293,23 +294,19 @@ impl SearchPanel {
         }
         let with = views.replace.stringValue().to_string();
         let (question, detail) = self.read().replace_question(&with);
-        let alert = objc2_app_kit::NSAlert::new(self.mtm());
-        alert.setMessageText(&ns(&question));
-        alert.setInformativeText(&ns(&detail));
-        alert.addButtonWithTitle(&ns(t("Ersetzen")));
-        alert.addButtonWithTitle(&ns(t("Abbrechen")));
         let id = self.ivars().id;
-        let handler = block2::RcBlock::new(move |response: objc2_app_kit::NSModalResponse| {
-            guarded((), || {
-                if response == objc2_app_kit::NSAlertFirstButtonReturn
+        Alert::new(self.mtm(), &question)
+            .informative(&detail)
+            .button(t("Ersetzen"), Role::Plain)
+            .button(t("Abbrechen"), Role::Plain)
+            .sheet(&window, move |response| {
+                if first(response)
                     && let Some(panel) = panel(id)
                 {
                     let files = panel.read().files();
                     panel.replace(files, super::model::Only::All);
                 }
             });
-        });
-        alert.beginSheetModalForWindow_completionHandler(&window, Some(&handler));
     }
 
     /// Replaces the matches of the file or the line in `row`.
@@ -342,14 +339,13 @@ impl SearchPanel {
         {
             controller.show_notice(&note);
         }
-        if !done.problems.is_empty() {
-            let alert = objc2_app_kit::NSAlert::new(self.mtm());
-            alert.setAlertStyle(objc2_app_kit::NSAlertStyle::Warning);
-            alert.setMessageText(&ns(t("Nicht alle Treffer wurden ersetzt.")));
-            alert.setInformativeText(&ns(&done.problems.join("\n")));
-            if let Some(window) = self.ivars().views.get().and_then(|v| v.page.window()) {
-                alert.beginSheetModalForWindow_completionHandler(&window, None);
-            }
+        if !done.problems.is_empty()
+            && let Some(window) = self.ivars().views.get().and_then(|v| v.page.window())
+        {
+            Alert::new(self.mtm(), t("Nicht alle Treffer wurden ersetzt."))
+                .warning()
+                .informative(&done.problems.join("\n"))
+                .sheet(&window, |_| {});
         }
         let refresh = self.model().next_refresh();
         self.refresh(refresh);

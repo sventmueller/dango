@@ -11,9 +11,9 @@ use objc2::rc::Retained;
 use objc2::runtime::{Bool, Sel};
 use objc2::{AnyThread, MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSAccessibilityCustomAction, NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn,
-    NSAlertStyle, NSButton, NSColor, NSControlStateValueOff, NSControlStateValueOn, NSFont, NSLineBreakMode,
-    NSStackView, NSTableCellView, NSUserInterfaceLayoutOrientation, NSView,
+    NSAccessibility, NSAccessibilityCustomAction, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSButton,
+    NSColor, NSControlStateValueOff, NSControlStateValueOn, NSFont, NSLineBreakMode, NSStackView, NSTableCellView,
+    NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::NSArray;
 use splat_i18n::{t, tf};
@@ -24,10 +24,11 @@ use super::panel::{GitPanel, with_panel};
 use super::text::Problem;
 use super::{sheets, work};
 use crate::worktrees::{TakeOver, ThreadTree, TreeState};
-use ide_ui_common::util::{label, ns, symbol};
+use ide_ui_common::alert::{Alert, Role, first};
+use ide_ui_common::util::{activate, label, ns, symbol};
 
 /// The menu of a worktree row.
-pub fn menu(keys: &[RowKey]) -> Vec<(&'static str, Option<Sel>)> {
+pub(crate) fn menu(keys: &[RowKey]) -> Vec<(&'static str, Option<Sel>)> {
     match keys {
         [RowKey::Worktree(_)] => vec![
             (t("Übernehmen …"), Some(sel!(ideGitTakeOver:))),
@@ -76,7 +77,7 @@ fn summary(state: &TreeState) -> String {
 
 impl GitPanel {
     /// The row of a thread's worktree: its title, then its branch, ahead and behind, and its changed files.
-    pub fn tree_cell(&self, mtm: MainThreadMarker, state: &TreeState) -> Retained<NSView> {
+    pub(crate) fn tree_cell(&self, mtm: MainThreadMarker, state: &TreeState) -> Retained<NSView> {
         let cell = NSTableCellView::new(mtm);
         let icon = objc2_app_kit::NSImageView::new(mtm);
         if let Some(image) = symbol("arrow.triangle.branch", t("Worktree")) {
@@ -102,14 +103,12 @@ impl GitPanel {
         row.addArrangedSubview(&lines);
         cell.addSubview(&row);
         row.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
+        activate([
             row.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
             row.trailingAnchor()
                 .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
             row.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         let described = tf("Worktree-Thread „{}“: {}", &[&state.tree.title, &summary(state)]);
         cell.setToolTip(Some(&ns(&format!("{described}\n{}", state.tree.path.display()))));
         cell.setAccessibilityLabel(Some(&ns(&described)));
@@ -122,14 +121,19 @@ impl GitPanel {
     }
 
     /// The row of a file a thread's worktree changed.
-    pub fn tree_file_cell(&self, mtm: MainThreadMarker, tree: &Path, file: &Path, change: Change) -> Retained<NSView> {
+    pub(crate) fn tree_file_cell(
+        &self,
+        mtm: MainThreadMarker,
+        tree: &Path,
+        file: &Path,
+        change: Change,
+    ) -> Retained<NSView> {
         let cell = NSTableCellView::new(mtm);
         let mark = mark(change);
         let letter = label(mtm, mark.letter());
         letter.setFont(Some(&NSFont::monospacedSystemFontOfSize_weight(
             ide_ui_common::style::SMALL,
-            // SAFETY: AppKit sets its font weight constants when it loads.
-            unsafe { objc2_app_kit::NSFontWeightBold },
+            ide_ui_common::constant!(objc2_app_kit::NSFontWeightBold),
         )));
         letter.setTextColor(Some(&super::rows::mark_color(mark)));
         let name = label(
@@ -155,14 +159,12 @@ impl GitPanel {
         letter.widthAnchor().constraintEqualToConstant(12.0).setActive(true);
         cell.addSubview(&row);
         row.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
+        activate([
             row.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
             row.trailingAnchor()
                 .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
             row.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         let described = tf("{}, {}", &[&file.display().to_string(), mark.word()]);
         cell.setToolTip(Some(&ns(&format!("{described}\n{}", tree.join(file).display()))));
         cell.setAccessibilityLabel(Some(&ns(&described)));
@@ -202,7 +204,7 @@ impl GitPanel {
     }
 
     /// The thread worktree a row belongs to.
-    pub fn tree_of(&self, keys: &[RowKey]) -> Option<TreeState> {
+    pub(crate) fn tree_of(&self, keys: &[RowKey]) -> Option<TreeState> {
         let path = keys.iter().find_map(|key| match key {
             RowKey::Worktree(path) | RowKey::WorktreeFile(path, _) => Some(path.clone()),
             _ => None,
@@ -211,7 +213,7 @@ impl GitPanel {
     }
 
     /// Shows the diff of a worktree's file against where its branch left the base.
-    pub fn show_tree_diff(&self, tree: &Path, file: &Path, preview: bool) {
+    pub(crate) fn show_tree_diff(&self, tree: &Path, file: &Path, preview: bool) {
         let (Some(controller), Some(state)) = (self.controller(), self.read().model.tree(tree).cloned()) else {
             return;
         };
@@ -219,7 +221,7 @@ impl GitPanel {
     }
 
     /// Opens worktree files in the editor, which marks their tabs as the thread's copy.
-    pub fn open_tree_files(&self, keys: &[RowKey]) {
+    pub(crate) fn open_tree_files(&self, keys: &[RowKey]) {
         let Some(controller) = self.controller() else { return };
         for key in keys {
             if let RowKey::WorktreeFile(tree, file) = key {
@@ -232,7 +234,7 @@ impl GitPanel {
     }
 
     /// Selects the thread that works in the worktree, or starts a new one there.
-    pub fn open_thread(&self, keys: &[RowKey]) {
+    pub(crate) fn open_thread(&self, keys: &[RowKey]) {
         let (Some(controller), Some(state)) = (self.controller(), self.tree_of(keys)) else {
             return;
         };
@@ -243,35 +245,35 @@ impl GitPanel {
     }
 
     /// Asks how to take the thread's work over, then does it.
-    pub fn take_over(&self, keys: &[RowKey]) {
+    pub(crate) fn take_over(&self, keys: &[RowKey]) {
         let (Some(window), Some(state)) = (self.controller().and_then(|c| c.window()), self.tree_of(keys)) else {
             return;
         };
         let into = self.read().branch.head.clone().unwrap_or_else(|| "HEAD".into());
-        let alert = NSAlert::new(self.mtm());
-        alert.setMessageText(&ns(&tf("„{}“ übernehmen?", &[&state.tree.title])));
-        alert.setInformativeText(&ns(&tf(
+        let id = self.id();
+        let informative = tf(
             "Die Arbeit von {} kommt nach {}. Was der Thread nicht committet hat, committet die App vorher auf seinem Branch. Konflikte löst du danach wie bei jedem Merge.",
             &[&state.tree.branch, &into],
-        )));
-        alert.addButtonWithTitle(&ns(t("Zusammenführen")));
-        alert.addButtonWithTitle(&ns(t("Commits einzeln übernehmen")));
-        alert.addButtonWithTitle(&ns(t("Abbrechen")));
-        let id = self.id();
-        sheets::answer(&alert, &window, move |response| {
-            let how = if response == NSAlertFirstButtonReturn {
-                TakeOver::Merge
-            } else if response == NSAlertSecondButtonReturn {
-                TakeOver::CherryPick
-            } else {
-                return;
-            };
-            with_panel(id, |panel| panel.checked(state.tree, Step::TakeOver(how)));
-        });
+        );
+        Alert::new(self.mtm(), &tf("„{}“ übernehmen?", &[&state.tree.title]))
+            .informative(&informative)
+            .button(t("Zusammenführen"), Role::Plain)
+            .button(t("Commits einzeln übernehmen"), Role::Plain)
+            .button(t("Abbrechen"), Role::Plain)
+            .sheet(&window, move |response| {
+                let how = if response == NSAlertFirstButtonReturn {
+                    TakeOver::Merge
+                } else if response == NSAlertSecondButtonReturn {
+                    TakeOver::CherryPick
+                } else {
+                    return;
+                };
+                with_panel(id, |panel| panel.checked(state.tree, Step::TakeOver(how)));
+            });
     }
 
     /// Removes the worktree but keeps its branch, after committing what the thread left there.
-    pub fn keep_branch(&self, keys: &[RowKey]) {
+    pub(crate) fn keep_branch(&self, keys: &[RowKey]) {
         let Some(state) = self.tree_of(keys) else { return };
         if self.refuse_while_open(&state.tree) {
             return;
@@ -280,22 +282,13 @@ impl GitPanel {
     }
 
     /// Asks before removing the worktree and perhaps its branch (E27), then does it.
-    pub fn remove_tree(&self, keys: &[RowKey]) {
+    pub(crate) fn remove_tree(&self, keys: &[RowKey]) {
         let (Some(window), Some(state)) = (self.controller().and_then(|c| c.window()), self.tree_of(keys)) else {
             return;
         };
         if self.refuse_while_open(&state.tree) {
             return;
         }
-        let alert = NSAlert::new(self.mtm());
-        alert.setAlertStyle(NSAlertStyle::Warning);
-        alert.setMessageText(&ns(&tf("Worktree „{}“ entfernen?", &[&state.tree.title])));
-        alert.setInformativeText(&ns(t(
-            "Der Ordner des Worktrees wird gelöscht, mit allem, was der Thread darin nicht committet hat. Das lässt sich nicht widerrufen.",
-        )));
-        let remove = alert.addButtonWithTitle(&ns(t("Entfernen")));
-        remove.setHasDestructiveAction(true);
-        alert.addButtonWithTitle(&ns(t("Abbrechen")));
         // SAFETY: A checkbox without target and action only keeps its state, which the sheet reads at the end.
         let branch = unsafe {
             NSButton::checkboxWithTitle_target_action(
@@ -311,14 +304,22 @@ impl GitPanel {
         } else {
             NSControlStateValueOff
         });
-        alert.setAccessoryView(Some(&branch));
         let id = self.id();
-        sheets::answer(&alert, &window, move |response| {
-            if response == NSAlertFirstButtonReturn {
-                let delete = branch.state() == NSControlStateValueOn;
-                with_panel(id, |panel| panel.removal_confirmed(state.tree, delete));
-            }
-        });
+        let informative = t(
+            "Der Ordner des Worktrees wird gelöscht, mit allem, was der Thread darin nicht committet hat. Das lässt sich nicht widerrufen.",
+        );
+        Alert::new(self.mtm(), &tf("Worktree „{}“ entfernen?", &[&state.tree.title]))
+            .warning()
+            .informative(informative)
+            .button(t("Entfernen"), Role::Destructive)
+            .button(t("Abbrechen"), Role::Plain)
+            .accessory(&branch)
+            .sheet(&window, move |response| {
+                if first(response) {
+                    let delete = branch.state() == NSControlStateValueOn;
+                    with_panel(id, |panel| panel.removal_confirmed(state.tree, delete));
+                }
+            });
     }
 
     /// Refuses to take a worktree away from a thread that still works there; once it is closed, the refusal goes.
@@ -400,7 +401,7 @@ impl GitPanel {
     }
 
     /// Makes a worktree for a thread of `agent` titled `title` and opens the thread there.
-    pub fn create_tree(&self, title: String, agent: String) {
+    pub(crate) fn create_tree(&self, title: String, agent: String) {
         let Some(repo) = self.repo() else { return };
         let root = self.root().to_path_buf();
         let id = self.id();

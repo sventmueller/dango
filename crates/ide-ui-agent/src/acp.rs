@@ -32,15 +32,15 @@ pub use selftest_probe::*;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AcpAgent {
     /// The register's id, which threads name as their agent.
-    pub id: String,
+    pub(crate) id: String,
     /// The name shown.
-    pub name: String,
+    pub(crate) name: String,
     /// Its colour as `#RRGGBB`, where it has one.
-    pub colour: Option<String>,
+    pub(crate) colour: Option<String>,
     /// How its sandbox is switched on.
-    pub sandbox: Sandbox,
+    pub(crate) sandbox: Sandbox,
     /// What its sandbox limits.
-    pub effect: Effect,
+    pub(crate) effect: Effect,
 }
 
 impl AcpAgent {
@@ -146,11 +146,11 @@ impl Agent {
     }
 
     /// The colours of its mark's left, top, right and bottom point in the tab bar, for an agent that shows four.
-    pub fn four_colours(&self) -> Option<[Retained<NSColor>; 4]> {
+    pub(crate) fn four_colours(&self) -> Option<[Retained<NSColor>; 4]> {
         four_colours_of(self.id())
     }
 
-    pub fn is_acp(&self) -> bool {
+    pub(crate) fn is_acp(&self) -> bool {
         matches!(self, Agent::Acp(_))
     }
 
@@ -330,7 +330,7 @@ impl AgentTab {
 
     /// Signs in with method `index` of the agent: one the agent runs itself goes through the session; one in a
     /// terminal opens a terminal with the command on the pasteboard.
-    pub fn acp_sign_in(&self, index: usize) {
+    pub(crate) fn acp_sign_in(&self, index: usize) {
         let caps = self.state.borrow().acp_caps().cloned().unwrap_or_default();
         let Some(method) = caps.auth_methods.get(index) else {
             return;
@@ -618,7 +618,7 @@ fn ended_problem(opened: bool, stderr: &str) -> Problem {
 }
 
 /// What switching the sandbox on limits for an agent with `effect`.
-pub fn effect_text(effect: Effect) -> String {
+pub(crate) fn effect_text(effect: Effect) -> String {
     match effect {
         Effect::ShellCommands => t("Shell-Befehle laufen abgeschirmt; Datei- und Webwerkzeuge nicht").to_string(),
         Effect::WorkspaceWrite => t("Befehle und Änderungen schreiben nur im Projekt, ohne Netzwerk").to_string(),

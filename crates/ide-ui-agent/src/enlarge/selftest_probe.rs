@@ -3,7 +3,7 @@
 use super::*;
 
 /// The size the open picture takes, for the self-test.
-pub fn shown() -> Option<NSSize> {
+pub(crate) fn shown() -> Option<NSSize> {
     with_shown(|shown| {
         let shade = shown.borrow().clone()?;
         // SAFETY: Asking for the superview only reads.

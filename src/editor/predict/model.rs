@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 /// Which provider proposes edits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum Choice {
+pub(crate) enum Choice {
     #[default]
     Off,
     Copilot,
@@ -23,49 +23,54 @@ pub enum Choice {
 
 impl Choice {
     /// Every choice, in the order the settings list them.
-    pub const ALL: [Choice; 4] = [Choice::Off, Choice::Copilot, Choice::Ollama, Choice::LmStudio];
+    pub(crate) const ALL: [Choice; 4] = [Choice::Off, Choice::Copilot, Choice::Ollama, Choice::LmStudio];
 }
 
 /// A model of a local server: where the server listens and which model fills in the middle.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Local {
-    pub url: String,
-    pub model: String,
+pub(crate) struct Local {
+    pub(crate) url: String,
+    pub(crate) model: String,
 }
 
 /// The provider the user chose.
-pub const PROVIDER: Key<Choice> = Key::user("editPrediction", ide_core::settings::Sharing::Shared, Choice::default);
+pub(crate) const PROVIDER: Key<Choice> =
+    Key::user("editPrediction", ide_core::settings::Sharing::Shared, Choice::default);
 /// The languages, by language id, that get no proposals.
-pub const OFF_FOR: Key<Vec<String>> = Key::user("editPredictionOffFor", ide_core::settings::Sharing::Shared, Vec::new);
+pub(crate) const OFF_FOR: Key<Vec<String>> =
+    Key::user("editPredictionOffFor", ide_core::settings::Sharing::Shared, Vec::new);
 /// Patterns of file names that never go to a provider.
-pub const EXCLUDE: Key<Vec<String>> = Key::user(
+pub(crate) const EXCLUDE: Key<Vec<String>> = Key::user(
     "editPredictionExclude",
     ide_core::settings::Sharing::Shared,
     default_exclusions,
 );
 /// Ollama's address and model.
-pub const OLLAMA: Key<Local> = Key::user("editPredictionOllama", ide_core::settings::Sharing::PerMac, || Local {
-    url: ide_predict::fim::OLLAMA_BASE.to_string(),
-    model: String::new(),
-});
-/// LM Studio's address and model.
-pub const LM_STUDIO: Key<Local> = Key::user("editPredictionLmStudio", ide_core::settings::Sharing::PerMac, || {
-    Local {
-        url: ide_predict::fim::LMSTUDIO_BASE.to_string(),
+pub(crate) const OLLAMA: Key<Local> =
+    Key::user("editPredictionOllama", ide_core::settings::Sharing::PerMac, || Local {
+        url: ide_predict::fim::OLLAMA_BASE.to_string(),
         model: String::new(),
-    }
-});
+    });
+/// LM Studio's address and model.
+pub(crate) const LM_STUDIO: Key<Local> =
+    Key::user("editPredictionLmStudio", ide_core::settings::Sharing::PerMac, || {
+        Local {
+            url: ide_predict::fim::LMSTUDIO_BASE.to_string(),
+            model: String::new(),
+        }
+    });
 /// The providers outside the Mac the user allowed to get the text, by [`consent_id`].
-pub const CONSENT: Key<Vec<String>> = Key::user("editPredictionConsent", ide_core::settings::Sharing::PerMac, Vec::new);
+pub(crate) const CONSENT: Key<Vec<String>> =
+    Key::user("editPredictionConsent", ide_core::settings::Sharing::PerMac, Vec::new);
 
 /// The patterns no file matching goes to a provider by, unless the user changes them: secrets and keys.
-pub fn default_exclusions() -> Vec<String> {
+pub(crate) fn default_exclusions() -> Vec<String> {
     [".env*", "*.pem", "*.key", "id_*"].map(String::from).to_vec()
 }
 
 /// Whether `path` matches one of `patterns`: a pattern without `/` is matched against the file's name, one with `/`
 /// against as many of the path's last components; `*` stands for any run of characters, `?` for one.
-pub fn excluded(path: &Path, patterns: &[String]) -> bool {
+pub(crate) fn excluded(path: &Path, patterns: &[String]) -> bool {
     let components: Vec<String> = path
         .components()
         .map(|c| c.as_os_str().to_string_lossy().into_owned())
@@ -110,7 +115,7 @@ fn glob(pattern: &str, text: &str) -> bool {
 }
 
 /// Whether `url` names this Mac: localhost or a loopback address.
-pub fn loopback(url: &str) -> bool {
+pub(crate) fn loopback(url: &str) -> bool {
     let rest = url.split_once("://").map_or(url, |(_, rest)| rest);
     let authority = rest.split('/').next().unwrap_or("");
     let authority = authority.rsplit_once('@').map_or(authority, |(_, host)| host);
@@ -125,7 +130,7 @@ pub fn loopback(url: &str) -> bool {
 }
 
 /// The name a provider's consent is kept under; `None` for a model on this Mac, which needs none (E101).
-pub fn consent_id(choice: Choice, local: Option<&Local>) -> Option<String> {
+pub(crate) fn consent_id(choice: Choice, local: Option<&Local>) -> Option<String> {
     match (choice, local) {
         (Choice::Off, _) => None,
         (Choice::Copilot, _) => Some("copilot".to_string()),
@@ -137,7 +142,7 @@ pub fn consent_id(choice: Choice, local: Option<&Local>) -> Option<String> {
 
 /// How a proposal shows.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Kind {
+pub(crate) enum Kind {
     /// Text to put in at the caret: `first` goes on the caret's line, `rest` holds the lines below, if any.
     Insert { first: String, rest: Option<String> },
     /// Text near the caret to replace or delete, shown as before and after.
@@ -148,20 +153,20 @@ pub enum Kind {
 
 /// A provider's proposal, bound to the text it was made for.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Proposal {
+pub(crate) struct Proposal {
     /// The revision of the document the text belongs to (E24).
-    pub revision: Revision,
+    pub(crate) revision: Revision,
     /// The selection it was made for, in bytes.
-    pub selection: Range<usize>,
+    pub(crate) selection: Range<usize>,
     /// The bytes it replaces, without what the provider repeated of the text around them.
-    pub range: Range<usize>,
+    pub(crate) range: Range<usize>,
     /// What `range` holds.
-    pub old: String,
+    pub(crate) old: String,
     /// What it puts there.
-    pub text: String,
-    pub kind: Kind,
+    pub(crate) text: String,
+    pub(crate) kind: Kind,
     /// As the provider sent it, for its feedback once taken.
-    pub prediction: Prediction,
+    pub(crate) prediction: Prediction,
 }
 
 /// The line of byte `at` in `text`, counted from 0.
@@ -174,7 +179,7 @@ fn line_of(text: &str, at: usize) -> usize {
 
 /// The range of `prediction` and its text in `text`, less the start and end they share with what the range holds;
 /// `None` when it is out of bounds, not on character boundaries, or changes nothing.
-pub fn normalize(text: &str, prediction: &Prediction) -> Option<(Range<usize>, String)> {
+pub(crate) fn normalize(text: &str, prediction: &Prediction) -> Option<(Range<usize>, String)> {
     let range = prediction.range.clone();
     let old = text.get(range.clone())?;
     let new = prediction.text.as_str();
@@ -198,7 +203,7 @@ pub fn normalize(text: &str, prediction: &Prediction) -> Option<(Range<usize>, S
 }
 
 /// How a change of `range` to `new` in `text` shows with the caret or selection at `selection`.
-pub fn kind(text: &str, selection: &Range<usize>, range: &Range<usize>, new: &str) -> Kind {
+pub(crate) fn kind(text: &str, selection: &Range<usize>, range: &Range<usize>, new: &str) -> Kind {
     if range.is_empty() && selection.is_empty() && range.start == selection.start {
         return match new.split_once('\n') {
             Some((first, rest)) => Kind::Insert {
@@ -223,7 +228,7 @@ pub fn kind(text: &str, selection: &Range<usize>, range: &Range<usize>, new: &st
 
 impl Proposal {
     /// The first of `predictions` that changes something in `text`, as asked at `revision` with `selection`.
-    pub fn first(
+    pub(crate) fn first(
         text: &str,
         revision: Revision,
         selection: Range<usize>,
@@ -244,12 +249,12 @@ impl Proposal {
     }
 
     /// Whether it still fits the document: the same revision and selection, and its range holding what it held.
-    pub fn holds(&self, revision: Revision, selection: &Range<usize>, text: &str) -> bool {
+    pub(crate) fn holds(&self, revision: Revision, selection: &Range<usize>, text: &str) -> bool {
         self.revision == revision && self.selection == *selection && text.get(self.range.clone()) == Some(&self.old)
     }
 
     /// The same proposal after the caret went to it on purpose, as the first Tab does: bound to `selection` now.
-    pub fn moved(&self, text: &str, selection: Range<usize>) -> Proposal {
+    pub(crate) fn moved(&self, text: &str, selection: Range<usize>) -> Proposal {
         Proposal {
             kind: kind(text, &selection, &self.range, &self.text),
             selection,
@@ -258,13 +263,13 @@ impl Proposal {
     }
 
     /// The first word of an insertion, which ⌥→ takes; `None` for anything but a pure insertion at the caret.
-    pub fn word(&self) -> Option<&str> {
+    pub(crate) fn word(&self) -> Option<&str> {
         matches!(self.kind, Kind::Insert { .. }).then(|| first_word(&self.text))
     }
 
     /// What is left of an insertion after its first `taken` bytes went into the text, which made `text` of revision
     /// `revision`; `None` when nothing is left.
-    pub fn rest(&self, taken: usize, text: &str, revision: Revision) -> Option<Proposal> {
+    pub(crate) fn rest(&self, taken: usize, text: &str, revision: Revision) -> Option<Proposal> {
         let left = self.text.get(taken..).filter(|rest| !rest.is_empty())?;
         let at = self.range.start + taken;
         let selection = at..at;
@@ -281,7 +286,7 @@ impl Proposal {
 }
 
 /// The first word of `text` with the blanks before it; a single other character where no word follows them.
-pub fn first_word(text: &str) -> &str {
+pub(crate) fn first_word(text: &str) -> &str {
     let blanks = text.len() - text.trim_start_matches([' ', '\t']).len();
     let rest = &text[blanks..];
     let word = rest

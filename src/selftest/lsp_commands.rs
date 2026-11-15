@@ -17,11 +17,12 @@ use objc2_app_kit::{
 use objc2_foundation::NSPoint;
 use splat_i18n::t;
 
-use super::check;
 use super::helpers::{answer_alert_saying, in_any_mode_after, wait_until};
+use super::lsp::SCENARIO;
 use super::lsp::{
     ANSWER, WAIT, Waited, ask, done, has_mark, main_view, offset_of, poll, project_window, put_cursor, root,
 };
+use super::{check, give_up, give_up_saying};
 use crate::editor::EditorTextView;
 
 const MAIN: &str = "src/main.rs";
@@ -67,12 +68,14 @@ fn twice(view: &EditorTextView) -> Option<usize> {
     offset_of(view, "twice", 0, 2)
 }
 
-pub fn run() {
+pub(crate) fn run() {
     poll(WAIT, has_mark("E0308"), problems);
 }
 
 fn problems(waited: Waited) {
-    let Some(view) = main_view() else { return done() };
+    let Some(view) = main_view() else {
+        return give_up(SCENARIO, "main.rs opens in an editor");
+    };
     put_cursor(&view, 0);
     send(&view, sel!(ideNextProblem:), None);
     let marks = ide_ui_lsp::marks_of(&*view);
@@ -89,7 +92,7 @@ fn problems(waited: Waited) {
     );
     ide_ui_lsp::dismiss_hover(&*view);
     let (Some(at), Some(event)) = (twice(&view), mouse(&view, NSEventType::MouseMoved, twice(&view))) else {
-        return done();
+        return give_up(SCENARIO, "main.rs calls twice");
     };
     put_cursor(&view, at);
     ide_ui_lsp::mouse_moved(&*view, &event);
@@ -109,7 +112,9 @@ fn problems(waited: Waited) {
 }
 
 fn hovered(waited: Waited) {
-    let Some(view) = main_view() else { return done() };
+    let Some(view) = main_view() else {
+        return give_up(SCENARIO, "main.rs opens in an editor");
+    };
     let shown = ide_ui_lsp::hover_text(&*view);
     if let Some(away) = mouse(&view, NSEventType::MouseMoved, None) {
         ide_ui_lsp::mouse_moved(&*view, &away);
@@ -160,7 +165,9 @@ fn hovered(waited: Waited) {
 }
 
 fn symbols(waited: Waited) {
-    let Some(view) = main_view() else { return done() };
+    let Some(view) = main_view() else {
+        return give_up(SCENARIO, "main.rs opens in an editor");
+    };
     let menu: Option<Retained<NSMenu>> = ide_ui_lsp::shown_symbols();
     let titles: Vec<String> = menu
         .iter()
@@ -188,7 +195,9 @@ fn symbols(waited: Waited) {
             view.selectedRange().location
         ),
     );
-    let Some(at) = twice(&view) else { return done() };
+    let Some(at) = twice(&view) else {
+        return give_up(SCENARIO, "main.rs calls twice");
+    };
     ask(
         move || {
             if let Some(view) = main_view() {
@@ -243,7 +252,9 @@ fn set_format_on_save(on: bool) {
 
 /// With "Beim Sichern formatieren" on, ⌘S formats first and then saves.
 fn format_on_save() {
-    let Some(view) = main_view() else { return done() };
+    let Some(view) = main_view() else {
+        return give_up(SCENARIO, "main.rs opens in an editor");
+    };
     set_format_on_save(true);
     let end = view.document().text().len_utf16();
     ide_ui_lsp::apply_text_edits(&*view, vec![(end..end, "fn  late( )  { }\n".to_string())]);
@@ -272,9 +283,11 @@ fn saved(waited: Waited) {
         waited.ok,
         format!("{waited}: {}", disk.lines().last().unwrap_or_default()),
     );
-    let Some(view) = main_view() else { return done() };
+    let Some(view) = main_view() else {
+        return give_up(SCENARIO, "main.rs opens in an editor");
+    };
     let Some(at) = offset_of(&view, "\"text\"", 0, 1) else {
-        return done();
+        return give_up(SCENARIO, "main.rs holds the string literal to fix");
     };
     ide_ui_lsp::code_action_menu::forget();
     ask(
@@ -327,20 +340,21 @@ fn bulb(waited: Waited) {
 
 /// A code action chosen after the text changed is not applied, and the user is told.
 fn stale_action(waited: Waited) {
-    let Some(view) = main_view() else { return done() };
+    let Some(view) = main_view() else {
+        return give_up(SCENARIO, "main.rs opens in an editor");
+    };
     let titles = ide_ui_lsp::code_action_menu::shown(&*view).unwrap_or_default();
     let Some(first) = titles.first().cloned() else {
-        check("the quick fixes of a type error are listed", false, waited.to_string());
-        return done();
+        return give_up_saying(
+            SCENARIO,
+            "the quick fixes of a type error are listed",
+            waited.to_string(),
+        );
     };
     let before = view.document().text().to_string();
     let end = view.document().text().len_utf16();
     ide_ui_lsp::apply_text_edits(&*view, vec![(end..end, "\n".to_string())]);
-    let told = answer_alert_saying(
-        SETTLE,
-        t("Änderung nicht angewandt").to_string(),
-        NSAlertFirstButtonReturn,
-    );
+    let told = answer_alert_saying(t("Änderung nicht angewandt").to_string(), NSAlertFirstButtonReturn);
     let chosen = ide_ui_lsp::code_action_menu::click(&first);
     in_any_mode_after(SETTLE * 3, move || {
         let unchanged = main_view().is_some_and(|v| v.document().text().to_string() == format!("{before}\n"));

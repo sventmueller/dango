@@ -7,8 +7,8 @@ use ide_claude::PlanAnswer;
 use ide_claude::replay::Replay;
 use ide_thread::{
     Activity, BackgroundKind, ContextGroup, ContextKind, Decision, EntryKind, ErrorKind, HookOutcome, Lane,
-    LimitStatus, Notice, PermissionOption, RequestState, Status, TaskStatus, Thread, ThreadId, TodoStatus, Tokens,
-    ToolCall, ToolOutput, ToolStatus, ToolView, TurnUsage,
+    LimitStatus, Notice, PermissionOption, RequestState, RuleScope, Status, TaskStatus, Thread, ThreadId, TodoStatus,
+    Tokens, ToolCall, ToolOutput, ToolStatus, ToolView, TurnUsage,
 };
 
 const STEP: Duration = Duration::from_millis(100);
@@ -158,12 +158,12 @@ fn a_bash_permission_is_answered_with_an_edited_command() {
     assert!(request.options.contains(&PermissionOption::AllowAlways {
         suggestion: 0,
         rule: "Bash(touch marker.txt && echo created)".into(),
-        scope: "localSettings".into(),
+        scope: RuleScope::ProjectLocal,
     }));
     assert!(request.options.contains(&PermissionOption::AllowAlways {
         suggestion: 2,
         rule: "mode acceptEdits".into(),
-        scope: "session".into(),
+        scope: RuleScope::Session,
     }));
     let call = tool(&thread, "toolu_01SLWVHmA2vx9w1ZrETd52UH");
     assert_eq!(call.status, ToolStatus::Completed);

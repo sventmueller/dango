@@ -1,85 +1,57 @@
 //! The sheets of the Git panel and the diff tab: confirmations, git's output, findings of the secrets check and the
 //! name of a new branch.
 
-use std::cell::Cell;
-
-use block2::RcBlock;
 use ide_git::{Finding, PullMode};
+use ide_ui_common::alert::{Alert, Role, first};
 use objc2::MainThreadOnly;
 use objc2::rc::Retained;
 use objc2_app_kit::{
-    NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSAlertStyle, NSFont, NSModalResponse, NSScrollView,
-    NSTextField, NSTextView, NSWindow,
+    NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSFont, NSScrollView, NSTextField, NSTextView, NSWindow,
 };
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
-use ide_ui_common::util::{guarded, ns};
+use ide_ui_common::util::ns;
 
 /// Asks before something that cannot be undone; `then` runs when the user agrees.
-pub fn confirm(window: &NSWindow, message: &str, info: &str, action: &str, then: impl FnOnce() + 'static) {
-    let alert = NSAlert::new(window.mtm());
-    alert.setAlertStyle(NSAlertStyle::Warning);
-    alert.setMessageText(&ns(message));
-    alert.setInformativeText(&ns(info));
-    let button = alert.addButtonWithTitle(&ns(action));
-    button.setHasDestructiveAction(true);
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
-    begin(&alert, window, move |agreed| {
-        if agreed {
-            then();
-        }
-    });
+pub(crate) fn confirm(window: &NSWindow, message: &str, info: &str, action: &str, then: impl FnOnce() + 'static) {
+    Alert::new(window.mtm(), message)
+        .warning()
+        .informative(info)
+        .button(action, Role::Destructive)
+        .button(t("Abbrechen"), Role::Plain)
+        .sheet(window, agreed(then));
 }
 
 /// Asks before something is deleted for good; the destructive button is not the default, Return cancels (E101).
 pub fn confirm_delete(window: &NSWindow, message: &str, info: &str, action: &str, then: impl FnOnce() + 'static) {
-    let alert = NSAlert::new(window.mtm());
-    alert.setAlertStyle(NSAlertStyle::Warning);
-    alert.setMessageText(&ns(message));
-    alert.setInformativeText(&ns(info));
-    let delete = alert.addButtonWithTitle(&ns(action));
-    delete.setHasDestructiveAction(true);
-    let cancel = alert.addButtonWithTitle(&ns(t("Abbrechen")));
-    cancel.setKeyEquivalent(&ns("\r"));
-    delete.setKeyEquivalent(&ns(""));
-    begin(&alert, window, move |agreed| {
-        if agreed {
-            then();
-        }
-    });
+    Alert::new(window.mtm(), message)
+        .warning()
+        .informative(info)
+        .button(action, Role::Destructive)
+        .button(t("Abbrechen"), Role::CancelOnReturn)
+        .sheet(window, agreed(then));
 }
 
 /// Offers to save the open documents `names` before a stash action, which sees only the files on disk; `then` runs
 /// when the user chooses to save.
-pub fn save_first(window: &NSWindow, names: &[String], then: impl FnOnce() + 'static) {
-    let alert = NSAlert::new(window.mtm());
-    alert.setMessageText(&ns(&match names {
+pub(crate) fn save_first(window: &NSWindow, names: &[String], then: impl FnOnce() + 'static) {
+    let message = match names {
         [one] => tf("„{}“ hat ungesicherte Änderungen.", &[one]),
         many => tf("{} Dateien haben ungesicherte Änderungen.", &[&many.len().to_string()]),
-    }));
-    alert.setInformativeText(&ns(t(
-        "Der Stash sieht nur, was auf der Platte steht. Sichere zuerst, damit deine Änderungen dabei sind.",
-    )));
-    alert.addButtonWithTitle(&ns(t("Sichern")));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
-    begin(&alert, window, move |agreed| {
-        if agreed {
-            then();
-        }
-    });
+    };
+    Alert::new(window.mtm(), &message)
+        .informative(t(
+            "Der Stash sieht nur, was auf der Platte steht. Sichere zuerst, damit deine Änderungen dabei sind.",
+        ))
+        .button(t("Sichern"), Role::Plain)
+        .button(t("Abbrechen"), Role::Plain)
+        .sheet(window, agreed(then));
 }
 
 /// Asks for the message of a new stash entry and whether untracked files go along; `then` gets both.
-pub fn stash_options(window: &NSWindow, then: impl FnOnce(String, bool) + 'static) {
+pub(crate) fn stash_options(window: &NSWindow, then: impl FnOnce(String, bool) + 'static) {
     let mtm = window.mtm();
-    let alert = NSAlert::new(mtm);
-    alert.setMessageText(&ns(t("Änderungen stashen")));
-    alert.setInformativeText(&ns(t(
-        "Die Änderungen verlassen die Arbeitskopie und lassen sich später wieder anwenden.",
-    )));
-    alert.addButtonWithTitle(&ns(t("Stashen")));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
     let field = NSTextField::textFieldWithString(&ns(""), mtm);
     field.setPlaceholderString(Some(&ns(t("Nachricht (freiwillig)"))));
     ide_ui_common::util::set_label(&field, Some(t("Nachricht (freiwillig)")));
@@ -100,11 +72,17 @@ pub fn stash_options(window: &NSWindow, then: impl FnOnce(String, bool) + 'stati
     stack.addArrangedSubview(&untracked);
     field.widthAnchor().constraintEqualToConstant(260.0).setActive(true);
     stack.setFrame(NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(260.0, 54.0)));
-    alert.setAccessoryView(Some(&stack));
-    alert.window().setInitialFirstResponder(Some(&field));
+    let alert = Alert::new(mtm, t("Änderungen stashen"))
+        .informative(t(
+            "Die Änderungen verlassen die Arbeitskopie und lassen sich später wieder anwenden.",
+        ))
+        .button(t("Stashen"), Role::Plain)
+        .button(t("Abbrechen"), Role::Plain)
+        .accessory(&stack)
+        .focus(&field);
     let typed = field.clone();
-    begin(&alert, window, move |agreed| {
-        if agreed {
+    alert.sheet(window, move |response| {
+        if first(response) {
             let with = untracked.state() == objc2_app_kit::NSControlStateValueOn;
             then(typed.stringValue().to_string().trim().to_string(), with);
         }
@@ -113,80 +91,69 @@ pub fn stash_options(window: &NSWindow, then: impl FnOnce(String, bool) + 'stati
 
 /// Asks once whether `provider`, which is not on this Mac, may get the request for a commit message, and says what
 /// goes there (E101); `then` runs when the user allows it.
-pub fn consent(window: &NSWindow, provider: &str, then: impl FnOnce() + 'static) {
-    let alert = NSAlert::new(window.mtm());
-    alert.setMessageText(&ns(&tf("Änderungen an {} senden?", &[provider])));
-    alert.setInformativeText(&ns(&tf(
-        "Für die Commit-Nachricht gehen an {}: der vorgemerkte Diff, ohne Vorgemerktes alle Änderungen, der Name des Branches und die letzten zehn Betreffzeilen. Vorher prüft gitleaks diesen Text auf Secrets; bei einem Fund geht nichts hinaus. Die Erlaubnis lässt sich in den Einstellungen unter „Agent“ zurücknehmen.",
-        &[provider],
-    )));
-    alert.addButtonWithTitle(&ns(t("Erlauben")));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
-    begin(&alert, window, move |agreed| {
-        if agreed {
-            then();
-        }
-    });
+pub(crate) fn consent(window: &NSWindow, provider: &str, then: impl FnOnce() + 'static) {
+    Alert::new(window.mtm(), &tf("Änderungen an {} senden?", &[provider]))
+        .informative(&tf(
+            "Für die Commit-Nachricht gehen an {}: der vorgemerkte Diff, ohne Vorgemerktes alle Änderungen, der Name des Branches und die letzten zehn Betreffzeilen. Vorher prüft gitleaks diesen Text auf Secrets; bei einem Fund geht nichts hinaus. Die Erlaubnis lässt sich in den Einstellungen unter „Agent“ zurücknehmen.",
+            &[provider],
+        ))
+        .button(t("Erlauben"), Role::Plain)
+        .button(t("Abbrechen"), Role::Plain)
+        .sheet(window, agreed(then));
 }
 
 /// Shows what git or a hook printed.
-pub fn output(window: &NSWindow, message: &str, text: &str) {
-    let alert = NSAlert::new(window.mtm());
-    alert.setMessageText(&ns(message));
-    alert.addButtonWithTitle(&ns(t("OK")));
-    alert.setAccessoryView(Some(&text_box(window, text)));
-    begin(&alert, window, |_| {});
+pub(crate) fn output(window: &NSWindow, message: &str, text: &str) {
+    Alert::new(window.mtm(), message)
+        .button(t("OK"), Role::Plain)
+        .accessory(&text_box(window, text))
+        .sheet(window, |_| {});
 }
 
 /// Lists possible secrets before a commit or push; `then` learns whether the user goes on anyway.
-pub fn secrets(window: &NSWindow, findings: &[Finding], action: &str, then: impl FnOnce(bool) + 'static) {
+pub(crate) fn secrets(window: &NSWindow, findings: &[Finding], action: &str, then: impl FnOnce(bool) + 'static) {
     let lines: Vec<String> = findings
         .iter()
         .map(|f| {
             let place = match &f.commit {
                 Some(commit) => tf(
                     "{}:{} in {}",
-                    &[
-                        &f.file.display().to_string(),
-                        &f.line.to_string(),
-                        &commit.chars().take(8).collect::<String>(),
-                    ],
+                    &[&f.file.display().to_string(), &f.line.to_string(), commit.short()],
                 ),
                 None => format!("{}:{}", f.file.display(), f.line),
             };
             format!("{place}\n    {} — {}", f.rule, f.description)
         })
         .collect();
-    let alert = NSAlert::new(window.mtm());
-    alert.setAlertStyle(NSAlertStyle::Critical);
-    alert.setMessageText(&ns(&match findings.len() {
+    let message = match findings.len() {
         1 => t("Möglicherweise ein Secret gefunden").to_string(),
         n => tf("Möglicherweise {} Secrets gefunden", &[&n.to_string()]),
-    }));
-    alert.setInformativeText(&ns(t(
-        "gitleaks hält diese Stellen für Zugangsdaten. Prüf sie, bevor sie das Repository verlassen.",
-    )));
-    alert.setAccessoryView(Some(&text_box(window, &lines.join("\n"))));
-    let anyway = alert.addButtonWithTitle(&ns(action));
-    anyway.setHasDestructiveAction(true);
-    let cancel = alert.addButtonWithTitle(&ns(t("Abbrechen")));
-    cancel.setKeyEquivalent(&ns("\r"));
-    anyway.setKeyEquivalent(&ns(""));
-    begin(&alert, window, then);
+    };
+    Alert::new(window.mtm(), &message)
+        .critical()
+        .informative(t(
+            "gitleaks hält diese Stellen für Zugangsdaten. Prüf sie, bevor sie das Repository verlassen.",
+        ))
+        .accessory(&text_box(window, &lines.join("\n")))
+        .button(action, Role::Destructive)
+        .button(t("Abbrechen"), Role::CancelOnReturn)
+        .sheet(window, move |response| then(first(response)));
 }
 
 /// Asks how to join a branch that diverged from its upstream; `then` gets the choice, `None` when the user cancels.
-pub fn pull_mode(window: &NSWindow, then: impl FnOnce(Option<PullMode>) + 'static) {
-    let alert = NSAlert::new(window.mtm());
-    alert.setMessageText(&ns(t("Lokaler und entfernter Branch sind auseinandergelaufen")));
-    alert.setInformativeText(&ns(t(
+pub(crate) fn pull_mode(window: &NSWindow, then: impl FnOnce(Option<PullMode>) + 'static) {
+    Alert::new(
+        window.mtm(),
+        t("Lokaler und entfernter Branch sind auseinandergelaufen"),
+    )
+    .informative(t(
         "Zusammenführen legt einen Merge-Commit an; Rebase setzt deine Commits auf die neuen des Remotes. \
-         Beides verwirft nichts.",
-    )));
-    alert.addButtonWithTitle(&ns(t("Zusammenführen")));
-    alert.addButtonWithTitle(&ns(t("Rebase")));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
-    answer(&alert, window, move |response| {
+             Beides verwirft nichts.",
+    ))
+    .button(t("Zusammenführen"), Role::Plain)
+    .button(t("Rebase"), Role::Plain)
+    .button(t("Abbrechen"), Role::Plain)
+    .sheet(window, move |response| {
         then(match response {
             r if r == NSAlertFirstButtonReturn => Some(PullMode::Merge),
             r if r == NSAlertSecondButtonReturn => Some(PullMode::Rebase),
@@ -197,45 +164,33 @@ pub fn pull_mode(window: &NSWindow, then: impl FnOnce(Option<PullMode>) + 'stati
 
 /// Asks for the name of a new branch that starts where `info` says; `then` gets it unless the user cancels or leaves
 /// it empty.
-pub fn branch_name(window: &NSWindow, info: &str, then: impl FnOnce(String) + 'static) {
+pub(crate) fn branch_name(window: &NSWindow, info: &str, then: impl FnOnce(String) + 'static) {
     let mtm = window.mtm();
-    let alert = NSAlert::new(mtm);
-    alert.setMessageText(&ns(t("Neuer Branch")));
-    alert.setInformativeText(&ns(info));
-    alert.addButtonWithTitle(&ns(t("Anlegen")));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
     let field = NSTextField::textFieldWithString(&ns(""), mtm);
     field.setFrame(NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(260.0, 24.0)));
     field.setPlaceholderString(Some(&ns(t("feature/name"))));
-    alert.setAccessoryView(Some(&field));
-    alert.window().setInitialFirstResponder(Some(&field));
+    let alert = Alert::new(mtm, t("Neuer Branch"))
+        .informative(info)
+        .button(t("Anlegen"), Role::Plain)
+        .button(t("Abbrechen"), Role::Plain)
+        .accessory(&field)
+        .focus(&field);
     let typed = field.clone();
-    begin(&alert, window, move |agreed| {
+    alert.sheet(window, move |response| {
         let name = typed.stringValue().to_string().trim().to_string();
-        if agreed && !name.is_empty() {
+        if first(response) && !name.is_empty() {
             then(name);
         }
     });
 }
 
-/// Shows `alert` as a sheet on `window`; `then` learns whether the first button ended it.
-fn begin(alert: &NSAlert, window: &NSWindow, then: impl FnOnce(bool) + 'static) {
-    answer(alert, window, move |response| {
-        then(response == NSAlertFirstButtonReturn)
-    });
-}
-
-/// Shows `alert` as a sheet on `window`; `then` gets the button that ended it.
-pub fn answer(alert: &NSAlert, window: &NSWindow, then: impl FnOnce(NSModalResponse) + 'static) {
-    let then = Cell::new(Some(then));
-    let handler = RcBlock::new(move |response: NSModalResponse| {
-        guarded((), || {
-            if let Some(then) = then.take() {
-                then(response);
-            }
-        });
-    });
-    alert.beginSheetModalForWindow_completionHandler(window, Some(&handler));
+/// The completion of a sheet that runs `then` when its first button ended it.
+fn agreed(then: impl FnOnce() + 'static) -> impl FnOnce(objc2_app_kit::NSModalResponse) + 'static {
+    move |response| {
+        if first(response) {
+            then();
+        }
+    }
 }
 
 /// A scrolling box of monospaced text that can be selected and copied.
@@ -252,8 +207,7 @@ fn text_box(window: &NSWindow, text: &str) -> Retained<NSScrollView> {
     view.setRichText(false);
     view.setFont(Some(&NSFont::monospacedSystemFontOfSize_weight(
         ide_ui_common::style::SMALL,
-        // SAFETY: AppKit sets its font weight constants when it loads.
-        unsafe { objc2_app_kit::NSFontWeightRegular },
+        ide_ui_common::constant!(objc2_app_kit::NSFontWeightRegular),
     )));
     view.setString(&ns(text));
     view.setHorizontallyResizable(true);

@@ -31,7 +31,7 @@ thread_local! {
 
 /// Where the inlay hint requests of the editors stand.
 #[derive(Default)]
-pub struct InlayRequests {
+pub(crate) struct InlayRequests {
     /// The last question of each editor by serial, so that the answer to an older one is dropped.
     asked: RefCell<HashMap<crate::EditorSerial, u64>>,
     next: Cell<u64>,
@@ -75,7 +75,7 @@ pub fn enabled_for(language: &str) -> bool {
 }
 
 /// The settings changed elsewhere, as in the settings window: every editor follows them.
-pub fn settings_changed() {
+pub(crate) fn settings_changed() {
     CHOSEN.with(|chosen| chosen.borrow_mut().take());
     for view in editor::all_editors() {
         request(&*view);
@@ -178,14 +178,14 @@ pub fn request(view: &dyn Editor) {
 }
 
 /// The view of `view` scrolled: the hints follow once it rests.
-pub fn scrolled(view: &dyn Editor) {
+pub(crate) fn scrolled(view: &dyn Editor) {
     if shows(view) {
         view.later(sel!(ideInlayHints), SCROLL_DELAY);
     }
 }
 
 /// The server's hints of `view` may have changed everywhere: the next answer replaces them all.
-pub fn forget(view: &dyn Editor) {
+pub(crate) fn forget(view: &dyn Editor) {
     let serial = view.lsp().borrow().serial;
     with_shown(|shown| shown.borrow_mut().remove(&serial));
 }

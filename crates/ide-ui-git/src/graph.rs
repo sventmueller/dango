@@ -14,11 +14,11 @@ use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize};
 use ide_ui_common::util::guarded;
 
 /// The width of one lane.
-pub const LANE: f64 = 12.0;
+pub(crate) const LANE: f64 = 12.0;
 const DOT_RADIUS: f64 = 3.5;
 const LINE_WIDTH: f64 = 1.5;
 
-pub use ide_git::panel::GraphRow;
+pub(crate) use ide_git::panel::GraphRow;
 
 /// The colour of lane colour `index`: the accent colour first, then system colours that keep their contrast in
 /// light and dark mode (E66).
@@ -42,7 +42,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEGitGraphView"]
     #[ivars = RefCell<GraphRow>]
-    pub struct GraphView;
+    pub(crate) struct GraphView;
 
     unsafe impl NSObjectProtocol for GraphView {}
 
@@ -60,7 +60,7 @@ define_class!(
 );
 
 impl GraphView {
-    pub fn new(mtm: MainThreadMarker, row: GraphRow) -> Retained<GraphView> {
+    pub(crate) fn new(mtm: MainThreadMarker, row: GraphRow) -> Retained<GraphView> {
         let this = Self::alloc(mtm).set_ivars(RefCell::new(row));
         // SAFETY: NSView's designated initializer, called once on the newly allocated object.
         let view: Retained<GraphView> = unsafe { msg_send![super(this), initWithFrame: NSRect::ZERO] };
@@ -69,7 +69,7 @@ impl GraphView {
     }
 
     /// The width the row's lanes take.
-    pub fn width(row: &GraphRow) -> f64 {
+    pub(crate) fn width(row: &GraphRow) -> f64 {
         row.width.max(1) as f64 * LANE
     }
 
@@ -141,7 +141,7 @@ define_class!(
     #[unsafe(super(NSTableRowView))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEGitGraphRowView"]
-    pub struct GraphRowView;
+    pub(crate) struct GraphRowView;
 
     unsafe impl NSObjectProtocol for GraphRowView {}
 
@@ -189,7 +189,7 @@ define_class!(
 );
 
 impl GraphRowView {
-    pub fn new(mtm: MainThreadMarker) -> Retained<GraphRowView> {
+    pub(crate) fn new(mtm: MainThreadMarker) -> Retained<GraphRowView> {
         // SAFETY: NSView's designated initializer, called once on the newly allocated object.
         unsafe { msg_send![GraphRowView::alloc(mtm), initWithFrame: NSRect::ZERO] }
     }

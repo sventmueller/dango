@@ -16,39 +16,41 @@ use splat_i18n::{t, tf};
 use super::model::{Phase, Tab};
 use super::panel::CiPanel;
 use super::text;
-use crate::util::{borderless_button, item, ns, pin_edges, set_action, set_target, symbol, symbol_button};
+use crate::util::{
+    activate, borderless_button, item, ns, pin_edges, pin_sides, set_action, set_target, symbol, symbol_button,
+};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
 /// How far the panel's content keeps from the sidebar's edges: as far as the panel's title.
 const MARGIN: f64 = 8.0;
 
-pub struct Ui {
-    pub page: Retained<NSView>,
+pub(crate) struct Ui {
+    pub(crate) page: Retained<NSView>,
     empty: Retained<NSView>,
     content: Retained<NSStackView>,
     /// The buttons for the panel's title row.
-    pub header: Retained<NSStackView>,
-    pub buttons: Buttons,
-    pub tabs: Retained<NSSegmentedControl>,
+    pub(crate) header: Retained<NSStackView>,
+    pub(crate) buttons: Buttons,
+    pub(crate) tabs: Retained<NSSegmentedControl>,
     problem_row: Retained<NSStackView>,
     problem_label: Retained<NSTextField>,
-    pub outline: Retained<objc2_app_kit::NSOutlineView>,
+    pub(crate) outline: Retained<objc2_app_kit::NSOutlineView>,
     no_runs: Retained<NSTextField>,
     /// Whether the empty state offers the browser login, and whether it can be pressed.
     browser: Cell<Option<bool>>,
 }
 
 /// The title row's buttons that depend on the tab and the runs.
-pub struct Buttons {
-    pub start: Retained<NSButton>,
-    pub rerun: Retained<NSButton>,
-    pub cancel: Retained<NSButton>,
-    pub add: Retained<NSButton>,
+pub(crate) struct Buttons {
+    pub(crate) start: Retained<NSButton>,
+    pub(crate) rerun: Retained<NSButton>,
+    pub(crate) cancel: Retained<NSButton>,
+    pub(crate) add: Retained<NSButton>,
 }
 
 impl Ui {
-    pub fn new(mtm: MainThreadMarker, panel: &CiPanel) -> Ui {
+    pub(crate) fn new(mtm: MainThreadMarker, panel: &CiPanel) -> Ui {
         let page = NSView::new(mtm);
         let empty = NSView::new(mtm);
         let content = NSStackView::new(mtm);
@@ -74,12 +76,7 @@ impl Ui {
             (&list, 0.0),
         ] {
             content.addArrangedSubview(view);
-            view.leadingAnchor()
-                .constraintEqualToAnchor_constant(&content.leadingAnchor(), inset)
-                .setActive(true);
-            view.trailingAnchor()
-                .constraintEqualToAnchor_constant(&content.trailingAnchor(), -inset)
-                .setActive(true);
+            pin_sides(view, &content, inset);
             view.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Vertical);
         }
         list.setContentHuggingPriority_forOrientation(1.0, NSLayoutConstraintOrientation::Vertical);
@@ -102,7 +99,7 @@ impl Ui {
     }
 
     /// Shows the runs when the service answered, else why not and what helps.
-    pub fn show_phase(&self, panel: &CiPanel, phase: &Phase) {
+    pub(crate) fn show_phase(&self, panel: &CiPanel, phase: &Phase) {
         let mtm = panel.mtm();
         self.content.setHidden(*phase != Phase::Ready);
         self.header.setHidden(*phase != Phase::Ready);
@@ -265,7 +262,7 @@ impl Ui {
     fn place_empty(&self, state: &NSStackView) {
         self.empty.addSubview(state);
         state.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
+        activate([
             state
                 .centerXAnchor()
                 .constraintEqualToAnchor(&self.empty.centerXAnchor()),
@@ -278,18 +275,16 @@ impl Ui {
             state
                 .trailingAnchor()
                 .constraintLessThanOrEqualToAnchor_constant(&self.empty.trailingAnchor(), -16.0),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
     }
 
     /// Which buttons apply, once the service answered.
-    pub fn show_ready(&self, panel: &CiPanel) {
+    pub(crate) fn show_ready(&self, panel: &CiPanel) {
         self.show_tab(panel);
     }
 
     /// The menu of the account button: the repository and the account, and signing in or out.
-    pub fn account_menu(&self, panel: &CiPanel) -> Retained<NSMenu> {
+    pub(crate) fn account_menu(&self, panel: &CiPanel) -> Retained<NSMenu> {
         let mtm = panel.mtm();
         let state = panel.read();
         let keychain = state.source == Some(ide_ci::Source::Keychain);
@@ -378,7 +373,7 @@ impl Ui {
     }
 
     /// Says why the list is empty, or hides the note when it is not.
-    pub fn show_empty_list(&self, panel: &CiPanel) {
+    pub(crate) fn show_empty_list(&self, panel: &CiPanel) {
         let state = panel.read();
         let github = panel.is_github();
         let note = match state.tab {
@@ -394,7 +389,7 @@ impl Ui {
         self.no_runs.setHidden(note.is_none());
     }
 
-    pub fn show_problem(&self, problem: Option<&str>) {
+    pub(crate) fn show_problem(&self, problem: Option<&str>) {
         let Some(problem) = problem else {
             self.problem_row.setHidden(true);
             return;

@@ -13,7 +13,7 @@ pub struct Span {
 
 impl Span {
     /// The stretch from `start` to `end`.
-    pub fn new(start: u32, end: u32) -> Span {
+    pub(crate) fn new(start: u32, end: u32) -> Span {
         Span { start, end }
     }
 }
@@ -22,11 +22,11 @@ impl Span {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tabstop {
     /// Its number; tab stops are visited 1, 2, … and 0 last.
-    pub index: u32,
+    pub(crate) index: u32,
     /// Where it is; more than one span when the snippet repeats the number, and the edits mirror each other.
     pub spans: Vec<Span>,
     /// The values offered to choose from, if the snippet gives a choice.
-    pub choices: Vec<String>,
+    pub(crate) choices: Vec<String>,
 }
 
 /// A parsed snippet.
@@ -39,7 +39,7 @@ pub struct Snippet {
 }
 
 /// The text and tab stops of `snippet`; what is not valid snippet syntax is taken literally.
-pub fn parse(snippet: &str) -> Snippet {
+pub(crate) fn parse(snippet: &str) -> Snippet {
     let mut parser = Parser {
         chars: snippet.chars().collect(),
         at: 0,

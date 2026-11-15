@@ -6,9 +6,9 @@
 //! word of an insertion, Esc drops it; an open completion list and a snippet's tab stops come first. Only in trusted
 //! folders, never for files on the exclusion list, and off per language from the status bar.
 
-pub use ide_predict::guard;
-pub mod model;
-pub mod provider;
+pub(crate) use ide_predict::guard;
+pub(crate) mod model;
+pub(crate) mod provider;
 mod shown;
 
 use std::ops::Range;
@@ -28,12 +28,12 @@ use crate::util::{OnDrop, main_soon, ns};
 use model::{Kind, Proposal};
 use provider::Blocked;
 
-pub use provider::{Predictions, chosen, settings_changed};
-pub use shown::{ask_consent, sign_in_sheet};
+pub(crate) use provider::{Predictions, chosen, settings_changed};
+pub(crate) use shown::{ask_consent, sign_in_sheet};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;
 
 /// How long typing pauses before the provider is asked.
 const PAUSE: f64 = 0.25;
@@ -47,7 +47,7 @@ const STATUS: isize = 5;
 
 /// What edit prediction knows about one editor.
 #[derive(Default)]
-pub struct State {
+pub(crate) struct State {
     /// The proposal on view, with the provider that made it.
     shown: Option<(Proposal, Arc<dyn Provider>)>,
     /// The question under way: its id and how to stop it.
@@ -135,7 +135,7 @@ fn quietly<R>(view: &EditorTextView, f: impl FnOnce() -> R) -> R {
 }
 
 /// Takes the proposal away and stops the question under way.
-fn forget(view: &EditorTextView) {
+pub(super) fn forget(view: &EditorTextView) {
     let (had, asking) = {
         let mut state = view.ivars().predict.borrow_mut();
         (state.shown.take().is_some(), state.asking.take())
@@ -149,7 +149,7 @@ fn forget(view: &EditorTextView) {
 }
 
 /// The document of `view` changed: the proposal goes, and once typing pauses the provider is asked.
-pub fn changed(view: &EditorTextView) {
+pub(crate) fn changed(view: &EditorTextView) {
     let (had, asking) = match view.ivars().predict.try_borrow_mut() {
         Ok(mut state) if !state.quiet => {
             state.warning = None;
@@ -178,7 +178,7 @@ pub fn changed(view: &EditorTextView) {
 
 /// Text is about to go into `view`: the proposal goes first. Typing after the kerned character of a gap costs AppKit
 /// several milliseconds more than after a plain one, which the edit would otherwise pay before the proposal goes.
-pub fn before_edit(view: &EditorTextView) {
+pub(crate) fn before_edit(view: &EditorTextView) {
     if view
         .ivars()
         .predict
@@ -191,7 +191,7 @@ pub fn before_edit(view: &EditorTextView) {
 
 /// A command of the keyboard that no one took is about to run in `view`: one that deletes or inserts text drops the
 /// proposal first, as typing does.
-pub fn before_command(view: &EditorTextView, command: Sel) {
+pub(crate) fn before_command(view: &EditorTextView, command: Sel) {
     let name = command.name().to_str().unwrap_or_default();
     if name.starts_with("delete") || name.starts_with("insert") {
         before_edit(view);
@@ -199,7 +199,7 @@ pub fn before_command(view: &EditorTextView, command: Sel) {
 }
 
 /// The selection of `view` moved: a proposal made for another selection goes.
-pub fn moved(view: &EditorTextView) {
+pub(crate) fn moved(view: &EditorTextView) {
     let stale = view.ivars().predict.try_borrow().is_ok_and(|state| {
         !state.quiet
             && state
@@ -213,7 +213,7 @@ pub fn moved(view: &EditorTextView) {
 }
 
 /// Asks the provider about `view` once typing paused.
-pub fn request(view: &EditorTextView) {
+pub(crate) fn request(view: &EditorTextView) {
     if view.hasMarkedText() {
         view.later(sel!(idePredict), PAUSE);
         return;
@@ -354,7 +354,7 @@ fn current(view: &EditorTextView) -> Option<(Proposal, Arc<dyn Provider>)> {
 }
 
 /// A command of the keyboard reached `view`: Tab, ⌥→ and Esc act on a proposal; whether one took it.
-pub fn command(view: &EditorTextView, command: Sel) -> bool {
+pub(crate) fn command(view: &EditorTextView, command: Sel) -> bool {
     let (tab, word, escape) = (
         command == sel!(insertTab:),
         command == sel!(moveWordRight:),
@@ -458,7 +458,7 @@ fn ask_from_editor(view: &EditorTextView) {
 }
 
 /// The settings or a provider's state changed: proposals that may no longer show go, and the status bars follow.
-pub fn follow_settings() {
+pub(crate) fn follow_settings() {
     for view in super::all_editors() {
         if !matches!(gate(&view), Gate::Ready(..)) {
             forget(&view);
@@ -468,7 +468,7 @@ pub fn follow_settings() {
 }
 
 /// Copilot became ready for `root`: its editors ask once more.
-pub fn ask_again(root: &Path) {
+pub(crate) fn ask_again(root: &Path) {
     for view in super::all_editors() {
         if view.document().path().is_some_and(|p| p.starts_with(root)) {
             view.later(sel!(idePredict), PAUSE);
@@ -477,7 +477,7 @@ pub fn ask_again(root: &Path) {
 }
 
 /// Turns proposals on or off for the language with id `id`.
-pub fn toggle_language(id: &str) {
+pub(crate) fn toggle_language(id: &str) {
     let mut off = chosen().off_for;
     if off.iter().any(|l| l == id) {
         off.retain(|l| l != id);
@@ -494,7 +494,7 @@ pub fn toggle_language(id: &str) {
 }
 
 /// A menu item or the status bar's button with `idePrediction:` was used.
-pub fn perform(view: &EditorTextView, sender: Option<&AnyObject>) {
+pub(crate) fn perform(view: &EditorTextView, sender: Option<&AnyObject>) {
     let tag = sender
         .and_then(|s| s.downcast_ref::<NSMenuItem>().map(NSMenuItem::tag))
         .or_else(|| sender.and_then(|s| s.downcast_ref::<objc2_app_kit::NSControl>().map(|c| c.tag())))
@@ -532,7 +532,7 @@ fn status_pressed(view: &EditorTextView) {
 
 /// The menu items of edit prediction: greyed out without a proposal, the language's named after it and ticked while
 /// proposals come for it; `None` for every other item.
-pub fn validate(view: &EditorTextView, item: &NSMenuItem) -> Option<bool> {
+pub(crate) fn validate(view: &EditorTextView, item: &NSMenuItem) -> Option<bool> {
     if item.action()? != sel!(idePrediction:) {
         return None;
     }
@@ -556,7 +556,7 @@ pub fn validate(view: &EditorTextView, item: &NSMenuItem) -> Option<bool> {
 }
 
 /// Adds edit prediction's commands to the Editor menu.
-pub fn with_menu_items(mtm: MainThreadMarker, code_menu: Retained<NSMenuItem>) -> Retained<NSMenuItem> {
+pub(crate) fn with_menu_items(mtm: MainThreadMarker, code_menu: Retained<NSMenuItem>) -> Retained<NSMenuItem> {
     let Some(menu) = code_menu.submenu() else {
         return code_menu;
     };
@@ -574,7 +574,7 @@ pub fn with_menu_items(mtm: MainThreadMarker, code_menu: Retained<NSMenuItem>) -
 }
 
 /// Adds the switch of edit prediction to the status bar's `stack` of `view`.
-pub fn status_items(mtm: MainThreadMarker, view: &EditorTextView, stack: &objc2_app_kit::NSStackView) {
+pub(crate) fn status_items(mtm: MainThreadMarker, view: &EditorTextView, stack: &objc2_app_kit::NSStackView) {
     shown::status_item(mtm, view, stack, STATUS);
     refresh_status(view);
 }

@@ -66,7 +66,7 @@ struct Lease {
 
 /// The language servers lent to the project symbol search, by folder.
 #[derive(Default)]
-pub struct Leases {
+pub(crate) struct Leases {
     leases: RefCell<HashMap<PathBuf, Lease>>,
 }
 

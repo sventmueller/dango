@@ -50,7 +50,7 @@ pub fn logs_dir() -> PathBuf {
 }
 
 /// The folder of a project's own settings, at its current name or, if only that exists, an earlier one.
-pub fn project_dir(root: &std::path::Path) -> PathBuf {
+pub(crate) fn project_dir(root: &std::path::Path) -> PathBuf {
     let current = root.join(ide_product::PROJECT_DIR);
     if current.exists() {
         return current;

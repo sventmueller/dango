@@ -72,7 +72,7 @@ pub struct ToolCall {
     /// The tool call that started the subagent this call belongs to.
     pub parent: Option<String>,
     /// A one-line summary of the group of calls this one belongs to.
-    pub summary: Option<String>,
+    pub(crate) summary: Option<String>,
     /// The background task it became, when it runs in the background.
     pub background_task: Option<String>,
 }

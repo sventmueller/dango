@@ -11,7 +11,7 @@ use objc2::rc::Retained;
 use splat_i18n::t;
 
 use super::helpers::{self, wait_within};
-use super::{check, finish, first_window, snapshot};
+use super::{check, finish, first_window, give_up, give_up_saying, snapshot};
 use crate::window;
 
 /// The port of the page server of the browser scenario.
@@ -74,16 +74,12 @@ pub(super) fn page_url(path: &str) -> String {
 /// A browser tab at a page of a local server: its title, one tab per server, the reload, the native error page.
 pub(super) fn run() {
     let Some(controller) = first_window() else {
-        check("a window opens", false, "");
-        finish("browser");
-        return;
+        return give_up("browser", "a window opens");
     };
     match serve_page() {
         Ok(port) => PAGE_PORT.store(port, Ordering::SeqCst),
         Err(error) => {
-            check("the page server starts", false, error.to_string());
-            finish("browser");
-            return;
+            return give_up_saying("browser", "the page server starts", error.to_string());
         }
     }
     let before = controller.tab_count();
@@ -289,14 +285,12 @@ fn browser_project_file() {
         ],
     );
     let Ok(root) = made else {
-        check("the folder is made", false, "");
-        return finish("browser");
+        return give_up("browser", "the folder is made");
     };
     crate::app::open_project(mtm, root.clone());
     helpers::wait_for_window(&root.clone(), move |controller| {
         let Some(controller) = controller else {
-            check("the folder gets its window", false, "");
-            return finish("browser");
+            return give_up("browser", "the folder gets its window");
         };
         open_project_file(&controller, &root);
     });

@@ -1,11 +1,11 @@
 //! The register of running processes: who started them, how to end them, and who wants to hear when that changes.
 
 use ide_core::{IgnoringPoison, LockIgnoringPoison};
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::io;
-use std::os::unix::process::{CommandExt, ExitStatusExt};
-use std::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command};
-use std::sync::{Arc, Condvar, Mutex, OnceLock};
+use std::os::unix::process::CommandExt;
+use std::process::{ChildStderr, ChildStdin, ChildStdout, Command};
+use std::sync::{Arc, Condvar, Mutex, OnceLock, Weak};
 use std::time::{Duration, Instant, SystemTime};
 
 /// What a process is there for.
@@ -33,7 +33,7 @@ pub enum Kind {
 
 /// How the supervisor knows a process.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Origin {
+pub(crate) enum Origin {
     /// Started by the supervisor, which waits for its end.
     Started,
     /// Started elsewhere, such as a terminal's shell, and reported by its owner.
@@ -46,8 +46,8 @@ pub struct ProcessId(u64);
 
 /// A running process as the activity view shows it.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct ProcessInfo {
-    /// The supervisor's number.
     pub id: ProcessId,
     /// The system's process number, which is also the number of its process group.
     pub pid: u32,
@@ -58,7 +58,7 @@ pub struct ProcessInfo {
     /// When it started.
     pub started: SystemTime,
     /// How the supervisor knows it.
-    pub origin: Origin,
+    pub(crate) origin: Origin,
 }
 
 /// How a process ended.
@@ -87,14 +87,11 @@ pub enum Event {
 }
 
 /// The pipes of a started process; what the command did not ask for is `None`.
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Spawned {
-    /// The supervisor's number for it.
     pub id: ProcessId,
-    /// Its standard input.
     pub stdin: Option<ChildStdin>,
-    /// Its standard output.
     pub stdout: Option<ChildStdout>,
-    /// Its standard error.
     pub stderr: Option<ChildStderr>,
 }
 
@@ -106,6 +103,15 @@ struct Entry {
     graceful: Option<GracefulStop>,
 }
 
+/// How far a started process was announced, so that its end is never announced before its start.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Announced {
+    Not,
+    /// It ended before its start was announced, and its end waits for that.
+    EndedBefore(Ending),
+    Started,
+}
+
 /// How many endings `wait` can still report after the process is gone.
 const ENDINGS_KEPT: usize = 256;
 
@@ -113,10 +119,50 @@ const ENDINGS_KEPT: usize = 256;
 struct Register {
     next: u64,
     entries: BTreeMap<ProcessId, Entry>,
-    listeners: Vec<Listener>,
+    next_listener: u64,
+    listeners: Vec<(u64, Listener)>,
     ended: VecDeque<(ProcessId, Ending)>,
+    /// Processes whose caller waits for their end, which is kept beyond `ENDINGS_KEPT` until `wait` reports it.
+    awaited: HashSet<ProcessId>,
+    kept: HashMap<ProcessId, Ending>,
     /// Whether a thread lowers the commands agents run.
     governed: bool,
+}
+
+type Shared = (Mutex<Register>, Condvar);
+
+/// A listener on a supervisor, which hears no more once this is dropped.
+#[must_use = "dropping the subscription ends it at once"]
+pub struct Subscription {
+    register: Weak<Shared>,
+    id: u64,
+}
+
+impl Subscription {
+    /// Lets the listener hear for as long as the supervisor lives, for one that the app sets up once.
+    pub fn keep(self) {
+        std::mem::forget(self);
+    }
+}
+
+impl Drop for Subscription {
+    fn drop(&mut self) {
+        if let Some(register) = self.register.upgrade() {
+            register
+                .0
+                .lock_ignoring_poison()
+                .listeners
+                .retain(|(id, _)| *id != self.id);
+        }
+    }
+}
+
+impl std::fmt::Debug for Subscription {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Subscription")
+            .field("id", &self.id)
+            .finish_non_exhaustive()
+    }
 }
 
 /// How often the commands agents started are looked for.
@@ -141,7 +187,7 @@ const GOVERN_EVERY: Duration = Duration::from_secs(1);
 /// ```
 #[derive(Clone, Default)]
 pub struct Supervisor {
-    register: Arc<(Mutex<Register>, Condvar)>,
+    register: Arc<Shared>,
 }
 
 impl Supervisor {
@@ -157,7 +203,25 @@ impl Supervisor {
     }
 
     /// Starts `command` in a new process group and keeps it until it ends.
-    pub fn spawn(&self, mut command: Command, kind: Kind, label: impl Into<String>) -> io::Result<Spawned> {
+    pub fn spawn(&self, command: Command, kind: Kind, label: impl Into<String>) -> io::Result<Spawned> {
+        self.start(command, kind, label.into(), false)
+    }
+
+    /// Starts `command` as `spawn` does, for a caller that will `wait` for its end: that end is kept until `wait`
+    /// reports it or `release` gives it up, however many other processes end first.
+    pub fn spawn_awaited(&self, command: Command, kind: Kind, label: impl Into<String>) -> io::Result<Spawned> {
+        self.start(command, kind, label.into(), true)
+    }
+
+    /// Stops keeping the end of `id` from `spawn_awaited`, for a caller that no longer waits for it.
+    pub fn release(&self, id: ProcessId) {
+        let (lock, _) = &*self.register;
+        let mut register = lock.lock_ignoring_poison();
+        register.awaited.remove(&id);
+        register.kept.remove(&id);
+    }
+
+    fn start(&self, mut command: Command, kind: Kind, label: String, awaited: bool) -> io::Result<Spawned> {
         command.process_group(0);
         let mut child = command.spawn()?;
         let (stdin, stdout, stderr) = (child.stdin.take(), child.stdout.take(), child.stderr.take());
@@ -165,17 +229,40 @@ impl Supervisor {
         if let Some(nice) = crate::priority::nice(kind) {
             crate::priority::lower(pid, nice);
         }
-        let info = self.add(pid, kind, label.into(), Origin::Started);
+        let info = self.add(pid, kind, label, Origin::Started);
         let id = info.id;
-        let supervisor = self.clone();
-        if let Err(error) = std::thread::Builder::new().name(format!("wait-{pid}")).spawn(move || {
-            crate::priority::set_qos(crate::priority::Qos::Utility);
-            supervisor.wait_for(id, child);
-        }) {
-            self.abandon(id, pid);
-            return Err(error);
+        if awaited {
+            self.register.0.lock_ignoring_poison().awaited.insert(id);
         }
-        self.announce(&Event::Started(info));
+        let supervisor = self.clone();
+        let announced = Arc::new(Mutex::new(Announced::Not));
+        let gate = announced.clone();
+        let reaped = crate::reaper::reap(child, move |ending| {
+            let mut gate = gate.lock_ignoring_poison();
+            if *gate == Announced::Not {
+                *gate = Announced::EndedBefore(ending);
+                return;
+            }
+            drop(gate);
+            supervisor.remove(id, ending);
+        });
+        match reaped {
+            Err(error) => {
+                self.abandon(id, pid);
+                return Err(error);
+            }
+            Ok(ended) => {
+                self.announce(&Event::Started(info));
+                let early = std::mem::replace(&mut *announced.lock_ignoring_poison(), Announced::Started);
+                let early = match early {
+                    Announced::EndedBefore(ending) => Some(ending),
+                    Announced::Not | Announced::Started => None,
+                };
+                if let Some(ending) = ended.or(early) {
+                    self.remove(id, ending);
+                }
+            }
+        }
         Ok(Spawned {
             id,
             stdin,
@@ -205,10 +292,18 @@ impl Supervisor {
         }
     }
 
-    /// Calls `listener` with every change from now on, on whichever thread makes it.
-    pub fn subscribe(&self, listener: impl Fn(&Event) + Send + Sync + 'static) {
+    /// Calls `listener` with every change from now on, on whichever thread makes it, until the subscription is
+    /// dropped.
+    pub fn subscribe(&self, listener: impl Fn(&Event) + Send + Sync + 'static) -> Subscription {
         let (lock, _) = &*self.register;
-        lock.lock_ignoring_poison().listeners.push(Arc::new(listener));
+        let mut register = lock.lock_ignoring_poison();
+        register.next_listener += 1;
+        let id = register.next_listener;
+        register.listeners.push((id, Arc::new(listener)));
+        Subscription {
+            register: Arc::downgrade(&self.register),
+            id,
+        }
     }
 
     /// How `id` ended, waiting up to `timeout` for it; `None` while it still runs.
@@ -217,6 +312,9 @@ impl Supervisor {
         let (lock, changed) = &*self.register;
         let mut register = lock.lock_ignoring_poison();
         loop {
+            if let Some(ending) = register.kept.remove(&id) {
+                return Some(ending);
+            }
             if let Some((_, ending)) = register.ended.iter().find(|(ended, _)| *ended == id) {
                 return Some(*ending);
             }
@@ -296,23 +394,29 @@ impl Supervisor {
 
     /// Whether all of `ids` ended and nothing is left in `groups` within `timeout`.
     fn wait_until_gone(&self, ids: &[ProcessId], groups: &[libc::pid_t], timeout: Duration) -> bool {
-        let deadline = Instant::now() + timeout;
-        let (lock, changed) = &*self.register;
-        loop {
+        let (lock, _) = &*self.register;
+        let watched = || {
+            let registered: Vec<i32> = {
+                let register = lock.lock_ignoring_poison();
+                ids.iter()
+                    .filter_map(|id| register.entries.get(id))
+                    .filter(|e| e.info.origin == Origin::Registered)
+                    .filter_map(|e| i32::try_from(e.info.pid).ok())
+                    .collect()
+            };
+            let mut pids: Vec<i32> = groups.iter().flat_map(|&g| crate::system::group_members(g)).collect();
+            pids.extend(registered);
+            pids.sort_unstable();
+            pids.dedup();
+            pids
+        };
+        let gone = || {
             self.prune_registered();
             let register = lock.lock_ignoring_poison();
-            if ids.iter().all(|id| !register.entries.contains_key(id)) && !groups.iter().any(|g| group_exists(*g)) {
-                return true;
-            }
-            let now = Instant::now();
-            if now >= deadline {
-                return false;
-            }
-            // Registered processes and the rest of a group end without a notice to the supervisor, so it looks again
-            // now and then.
-            let wait = (deadline - now).min(Duration::from_millis(50));
-            drop(changed.wait_timeout(register, wait));
-        }
+            ids.iter().all(|id| !register.entries.contains_key(id))
+                && !groups.iter().any(|&g| crate::system::group_exists(g))
+        };
+        crate::reaper::wait_until(timeout, watched, gone)
     }
 
     /// Drops registered processes that no longer exist.
@@ -323,7 +427,7 @@ impl Supervisor {
             let gone: Vec<ProcessId> = register
                 .entries
                 .values()
-                .filter(|e| e.info.origin == Origin::Registered && !exists(e.info.pid))
+                .filter(|e| e.info.origin == Origin::Registered && !crate::system::exists(e.info.pid))
                 .map(|e| e.info.id)
                 .collect();
             for id in &gone {
@@ -409,20 +513,11 @@ impl Supervisor {
             }
         }
         let (lock, changed) = &*self.register;
-        lock.lock_ignoring_poison().entries.remove(&id);
+        let mut register = lock.lock_ignoring_poison();
+        register.entries.remove(&id);
+        register.awaited.remove(&id);
+        drop(register);
         changed.notify_all();
-    }
-
-    fn wait_for(&self, id: ProcessId, mut child: Child) {
-        let ending = match child.wait() {
-            Ok(status) => match (status.code(), status.signal()) {
-                (Some(code), _) => Ending::Code(code),
-                (None, Some(signal)) => Ending::Signal(signal),
-                (None, None) => Ending::Unknown,
-            },
-            Err(_) => Ending::Unknown,
-        };
-        self.remove(id, ending);
     }
 
     fn remove(&self, id: ProcessId, ending: Ending) {
@@ -435,6 +530,9 @@ impl Supervisor {
                     register.ended.pop_front();
                 }
                 register.ended.push_back((id, ending));
+                if register.awaited.remove(&id) {
+                    register.kept.insert(id, ending);
+                }
             }
             removed
         };
@@ -446,29 +544,22 @@ impl Supervisor {
 
     fn announce(&self, event: &Event) {
         let (lock, _) = &*self.register;
-        let listeners = lock.lock_ignoring_poison().listeners.clone();
+        let listeners: Vec<Listener> = lock
+            .lock_ignoring_poison()
+            .listeners
+            .iter()
+            .map(|(_, listener)| listener.clone())
+            .collect();
         for listener in listeners {
             let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| listener(event)));
         }
     }
 }
 
-/// Whether a process numbered `pid` exists.
-fn exists(pid: u32) -> bool {
-    // SAFETY: Signal 0 only asks whether the process exists; nothing is delivered.
-    libc::pid_t::try_from(pid).is_ok_and(|pid| unsafe { libc::kill(pid, 0) } == 0)
-}
-
-/// Whether any process is left in the group numbered `group`.
-fn group_exists(group: libc::pid_t) -> bool {
-    // SAFETY: Signal 0 to a group only asks whether it has members; nothing is delivered.
-    group > 0 && unsafe { libc::kill(-group, 0) } == 0
-}
-
 /// Sends `signal` to each of `groups` that still has members, whether or not its leader is still there.
 fn signal_groups(groups: &[libc::pid_t], signal: i32) {
     for &group in groups {
-        if group_exists(group) {
+        if crate::system::group_exists(group) {
             // SAFETY: kill only sends a signal. The system reuses no number while a group of that number has members,
             // so a group found just now is the one the process led, unless it emptied and its number was taken
             // again in the moment since, which needs the whole range of process numbers to wrap around.
@@ -484,6 +575,7 @@ mod tests {
     use std::sync::mpsc::channel;
 
     use super::*;
+    use crate::system::{exists, group_exists};
 
     const GRACE: Duration = Duration::from_secs(2);
 
@@ -497,7 +589,7 @@ mod tests {
     fn a_process_is_listed_until_it_exits_and_its_code_is_reported() {
         let supervisor = Supervisor::new();
         let (tx, rx) = channel();
-        supervisor.subscribe(move |event| tx.send(event.clone()).unwrap());
+        let _listening = supervisor.subscribe(move |event| tx.send(event.clone()).unwrap());
         let mut command = Command::new("/bin/sh");
         command.args(["-c", "exit 3"]);
         let spawned = supervisor.spawn(command, Kind::Tool, "sh").unwrap();
@@ -512,6 +604,90 @@ mod tests {
             }
         );
         assert!(supervisor.running().is_empty());
+    }
+
+    #[test]
+    fn a_process_that_ends_at_once_is_announced_as_started_before_it_is_announced_as_ended() {
+        let supervisor = Supervisor::new();
+        let heard = Arc::new(Mutex::new(Vec::new()));
+        let hearing = heard.clone();
+        let _listening = supervisor.subscribe(move |event| {
+            if matches!(event, Event::Started(_)) {
+                std::thread::sleep(Duration::from_millis(200));
+            }
+            hearing.lock_ignoring_poison().push(event.clone());
+        });
+        let mut command = Command::new("/bin/sh");
+        command.args(["-c", "exit 5"]);
+        let spawned = supervisor.spawn(command, Kind::Tool, "sh").unwrap();
+        let deadline = Instant::now() + GRACE;
+        while heard.lock_ignoring_poison().len() < 2 && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        let heard = heard.lock_ignoring_poison();
+        assert!(
+            matches!(
+                heard.as_slice(),
+                [Event::Started(info), Event::Ended { id, ending: Ending::Code(5) }]
+                    if info.id == spawned.id && *id == spawned.id
+            ),
+            "{heard:?}"
+        );
+        assert_eq!(supervisor.wait(spawned.id, GRACE), Some(Ending::Code(5)));
+    }
+
+    #[test]
+    fn a_dropped_subscription_hears_no_more() {
+        let supervisor = Supervisor::new();
+        let (tx, rx) = channel();
+        let kept = tx.clone();
+        let listening = supervisor.subscribe(move |event| tx.send(event.clone()).unwrap());
+        let _kept = supervisor.subscribe(move |event| kept.send(event.clone()).unwrap());
+        drop(listening);
+        let spawned = supervisor.spawn(sleeper(0), Kind::Tool, "sleep").unwrap();
+        assert_eq!(supervisor.wait(spawned.id, GRACE), Some(Ending::Code(0)));
+        let heard: Vec<Event> = std::iter::from_fn(|| rx.recv_timeout(Duration::from_millis(200)).ok()).collect();
+        assert_eq!(heard.len(), 2, "only the kept listener heard the start and the end");
+        assert_eq!(supervisor.register.0.lock_ignoring_poison().listeners.len(), 1);
+    }
+
+    #[test]
+    fn an_awaited_end_outlasts_many_others_until_it_is_reported() {
+        let supervisor = Supervisor::new();
+        let mut command = Command::new("/bin/sh");
+        command.args(["-c", "exit 5"]);
+        let awaited = supervisor.spawn_awaited(command, Kind::Git, "git").unwrap();
+        let deadline = Instant::now() + GRACE;
+        while supervisor.running().iter().any(|p| p.id == awaited.id) && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        let mut last = None;
+        for _ in 0..ENDINGS_KEPT + 10 {
+            let id = supervisor.spawn(sleeper(0), Kind::Tool, "sleep").unwrap().id;
+            supervisor.wait(id, GRACE).unwrap();
+            last = Some(id);
+        }
+        assert!(supervisor.wait(last.unwrap(), Duration::ZERO).is_some());
+        assert_eq!(supervisor.wait(awaited.id, GRACE), Some(Ending::Code(5)));
+        assert!(supervisor.register.0.lock_ignoring_poison().kept.is_empty());
+        assert_eq!(
+            supervisor.wait(awaited.id, Duration::ZERO),
+            Some(Ending::Unknown),
+            "once reported it is kept no longer than any other"
+        );
+    }
+
+    #[test]
+    fn a_released_end_is_not_kept() {
+        let supervisor = Supervisor::new();
+        let awaited = supervisor.spawn_awaited(sleeper(0), Kind::Git, "git").unwrap();
+        supervisor.release(awaited.id);
+        let deadline = Instant::now() + GRACE;
+        while !supervisor.running().is_empty() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        let register = supervisor.register.0.lock_ignoring_poison();
+        assert!(register.kept.is_empty() && register.awaited.is_empty());
     }
 
     #[test]
@@ -552,7 +728,7 @@ mod tests {
         let spawned = supervisor.spawn(command, Kind::LanguageServer, "cat").unwrap();
         let stdin = Mutex::new(spawned.stdin);
         let (tx, rx) = channel();
-        supervisor.subscribe(move |event| {
+        let _listening = supervisor.subscribe(move |event| {
             if let Event::Ended { ending, .. } = event {
                 tx.send(*ending).unwrap();
             }

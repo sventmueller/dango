@@ -9,8 +9,9 @@ use ide_thread::Status;
 use objc2_app_kit::{NSAlertSecondButtonReturn, NSControlStateValueOn};
 
 use super::agent::{controller_of, tab_of};
-use super::agent_actions::{answer_when_shown, answered, index_of, titles};
-use super::{check, finish, helpers};
+use super::agent_actions::{index_of, titles};
+use super::helpers::{answer_when_shown, answered};
+use super::{check, finish, give_up, give_up_saying, helpers};
 use ide_ui_agent::{AgentKey, TabMenu};
 
 const NAME: &str = "acp-actions";
@@ -44,13 +45,12 @@ fn soon(what: &'static str, ready: impl Fn() -> bool + 'static, then: impl FnOnc
         if ok {
             then();
         } else {
-            check(what, false, "waited in vain");
-            finish(NAME);
+            give_up_saying(NAME, what, "waited in vain");
         }
     });
 }
 
-pub fn run() {
+pub(crate) fn run() {
     if let Ok(register) = ide_acp::Register::parse(REGISTRY) {
         ide_ui_agent::set_test_register(register);
     }
@@ -59,7 +59,7 @@ pub fn run() {
     helpers::open_project(NAME, PROJECT, &[], |controller| {
         let root = helpers::root(PROJECT);
         let Some(tab) = ide_ui_agent::open_preset(&controller, GEMINI) else {
-            return finish(NAME);
+            return give_up(NAME, "the AI tab opens");
         };
         let key = tab.key;
         soon(
@@ -78,7 +78,9 @@ pub fn run() {
 
 /// The slash, model and mode menus list what the agent offers; picking from them switches the agent.
 fn menus(root: PathBuf, key: AgentKey) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     let slash = tab.menu(TabMenu::Slash);
     let tip = slash.itemAtIndex(0).and_then(|i| i.toolTip()).map(|t| t.to_string());
     slash.performActionForItemAtIndex(0);
@@ -120,16 +122,22 @@ fn menus(root: PathBuf, key: AgentKey) {
 
 /// The agent's own rule allows the command for good.
 fn permission(root: PathBuf, key: AgentKey) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     tab.type_and_send("list the files");
     soon(
         "the agent asks for permission",
         move || tab_of(key).is_some_and(|t| t.snapshot().pending_requests().len() == 1),
         move || {
-            let Some(tab) = tab_of(key) else { return finish(NAME) };
+            let Some(tab) = tab_of(key) else {
+                return give_up(NAME, "the AI tab is open");
+            };
             tab.timeline().scroll_to_end();
             helpers::after(SCROLL_SETTLE, move || {
-                let Some(tab) = tab_of(key) else { return finish(NAME) };
+                let Some(tab) = tab_of(key) else {
+                    return give_up(NAME, "the AI tab is open");
+                };
                 let pressed = tab.timeline().press_last("Immer erlauben", 0);
                 soon(
                     "the turn ends after the rule",
@@ -151,19 +159,21 @@ fn permission(root: PathBuf, key: AgentKey) {
 /// A missing agent offers its installation; declining downloads nothing, and once it is there it starts again.
 fn missing(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     ide_ui_agent::set_test_launch(None);
     register_agents(&root);
     let Some(tab) = ide_ui_agent::open_preset(&controller, OPENCODE) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab opens");
     };
     let key = tab.key;
     soon(
         "the missing agent says so",
         move || tab_of(key).is_some_and(|t| t.problem_name() == Some("missing")),
         move || {
-            let Some(tab) = tab_of(key) else { return finish(NAME) };
+            let Some(tab) = tab_of(key) else {
+                return give_up(NAME, "the AI tab is open");
+            };
             answer_when_shown(NSAlertSecondButtonReturn, None);
             tab.install_agent();
             check(
@@ -189,13 +199,17 @@ fn missing(root: PathBuf) {
 /// The agent crashes mid-turn: the tab says it was ended with its last words, a prompt typed meanwhile waits, and
 /// starting it again sends that prompt.
 fn crashed(root: PathBuf, key: AgentKey) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     tab.type_and_send("please crash");
     soon(
         "the crashed agent shows as ended",
         move || tab_of(key).is_some_and(|t| t.problem_name() == Some("exited")),
         move || {
-            let Some(tab) = tab_of(key) else { return finish(NAME) };
+            let Some(tab) = tab_of(key) else {
+                return give_up(NAME, "the AI tab is open");
+            };
             let shown = tab.problem_texts();
             check(
                 "an agent that crashes says it was ended, with what it wrote last, and offers to start again",
@@ -234,7 +248,9 @@ fn crashed(root: PathBuf, key: AgentKey) {
 
 /// The agent ends on its own after a turn, without a word: the tab says so instead of looking busy.
 fn quit(root: PathBuf, key: AgentKey) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     tab.timeline().press_last("Ablehnen", 0);
     tab.type_and_send("quit now");
     soon(
@@ -255,7 +271,7 @@ fn quit(root: PathBuf, key: AgentKey) {
 /// An agent that dies while it starts says why in the interface language, with its last line.
 fn dead_start(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     ide_ui_agent::set_test_launch(Some(ide_acp::Launch::new(
         "test",
@@ -266,7 +282,7 @@ fn dead_start(root: PathBuf) {
         &root,
     )));
     let Some(tab) = ide_ui_agent::open_preset(&controller, GEMINI) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab opens");
     };
     let key = tab.key;
     soon(

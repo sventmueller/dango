@@ -20,7 +20,7 @@ use ide_ui_common::util::{ns, set_action, symbol};
 const REWIND_WIDTH: f64 = 18.0;
 
 /// The user's message in a framed box, with its time above and its attachments below.
-pub fn user(ctx: &Ctx<'_>, entry: &Entry, message: &UserMessage) -> Retained<NSView> {
+pub(super) fn user(ctx: &Ctx<'_>, entry: &Entry, message: &UserMessage) -> Retained<NSView> {
     let mtm = ctx.mtm;
     if ctx.nested {
         let text = tf("Auftrag: {}", &[&format::first_line(&message.text, 400)]);
@@ -146,7 +146,7 @@ fn outside_chip(ctx: &Ctx<'_>, text: &str) -> Retained<NSView> {
 }
 
 /// A small framed label with a symbol, as attachments show.
-pub fn chip(ctx: &Ctx<'_>, symbol_name: &str, text: &str) -> Retained<NSView> {
+pub(super) fn chip(ctx: &Ctx<'_>, symbol_name: &str, text: &str) -> Retained<NSView> {
     let icon = ui::icon(ctx.mtm, symbol_name, text, 10.0, &NSColor::secondaryLabelColor());
     let label = ui::label(ctx.mtm, text, &style::small(), &NSColor::secondaryLabelColor());
     let line = ui::row(ctx.mtm, 3.0, &[&icon, &label]);
@@ -165,7 +165,7 @@ pub fn chip(ctx: &Ctx<'_>, symbol_name: &str, text: &str) -> Retained<NSView> {
 const COPY_WIDTH: f64 = 18.0;
 
 /// The agent's answer as rendered markdown, with a button that copies it once it is complete.
-pub fn answer(ctx: &Ctx<'_>, id: EntryId, markdown: &str, streaming: bool) -> Retained<NSView> {
+pub(super) fn answer(ctx: &Ctx<'_>, id: EntryId, markdown: &str, streaming: bool) -> Retained<NSView> {
     if markdown.trim().is_empty() && streaming {
         return ui::view(&ui::label(
             ctx.mtm,
@@ -197,7 +197,7 @@ pub fn answer(ctx: &Ctx<'_>, id: EntryId, markdown: &str, streaming: bool) -> Re
 }
 
 /// "Thinking", closed, with its duration; opens to the thought itself.
-pub fn thought(ctx: &Ctx<'_>, id: EntryId, thought: &Thought) -> Retained<NSView> {
+pub(super) fn thought(ctx: &Ctx<'_>, id: EntryId, thought: &Thought) -> Retained<NSView> {
     let mtm = ctx.mtm;
     let title = match (thought.streaming, thought.duration) {
         (true, _) => t("Denkt …").to_string(),
@@ -231,7 +231,7 @@ pub fn thought(ctx: &Ctx<'_>, id: EntryId, thought: &Thought) -> Retained<NSView
 }
 
 /// The agent's to-do list with a check for each done item.
-pub fn todos(ctx: &Ctx<'_>, todos: &[Todo]) -> Retained<NSView> {
+pub(super) fn todos(ctx: &Ctx<'_>, todos: &[Todo]) -> Retained<NSView> {
     let mtm = ctx.mtm;
     let done = todos.iter().filter(|t| t.status == TodoStatus::Completed).count();
     let progress = tf("{} von {} erledigt", &[&done.to_string(), &todos.len().to_string()]);

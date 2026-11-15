@@ -30,7 +30,7 @@ pub enum Stop {
 
 impl Stop {
     /// What the notice at the window's foot says.
-    pub fn notice(self) -> &'static str {
+    pub(crate) fn notice(self) -> &'static str {
         match self {
             Stop::Key => t("Gestoppt mit Esc"),
             Stop::Button => t("Gestoppt mit dem Stopp-Knopf"),
@@ -41,7 +41,7 @@ impl Stop {
 
 /// Writes down that `by` stopped the turn of the tab `title` in `~/Library/Logs`, as the window's notice fades and the
 /// system log keeps the app's lines only a short while; a stop that ends work nobody meant to end can be traced then.
-pub fn record(by: Stop, title: &str) {
+pub(crate) fn record(by: Stop, title: &str) {
     let seconds = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |since| since.as_secs());
@@ -66,7 +66,7 @@ pub fn record(by: Stop, title: &str) {
 }
 
 /// Whether a key with `code` pressed with `flags` means stop: Esc on its own, or ⌘.
-pub fn is_stop_key(code: u16, flags: NSEventModifierFlags) -> bool {
+pub(crate) fn is_stop_key(code: u16, flags: NSEventModifierFlags) -> bool {
     let held = flags
         & (NSEventModifierFlags::Command
             | NSEventModifierFlags::Option
@@ -76,7 +76,7 @@ pub fn is_stop_key(code: u16, flags: NSEventModifierFlags) -> bool {
 }
 
 /// Whether the event the app handles now is a press of a key that means stop.
-pub fn stop_key_pressed(mtm: MainThreadMarker) -> bool {
+pub(crate) fn stop_key_pressed(mtm: MainThreadMarker) -> bool {
     NSApplication::sharedApplication(mtm)
         .currentEvent()
         .is_some_and(|event| {
@@ -85,7 +85,7 @@ pub fn stop_key_pressed(mtm: MainThreadMarker) -> bool {
 }
 
 /// Whether a click of the stop button at `now` comes too soon after the message sent at `sent` to mean stop.
-pub fn too_soon_after_send(sent: Option<Instant>, now: Instant) -> bool {
+pub(crate) fn too_soon_after_send(sent: Option<Instant>, now: Instant) -> bool {
     sent.is_some_and(|sent| now.saturating_duration_since(sent) < AFTER_SEND)
 }
 

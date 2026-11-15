@@ -25,11 +25,11 @@ use ide_ui_agent::{AgentKey, AgentTab};
 
 mod session;
 
-pub use session::Part;
+pub(crate) use session::Part;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;
 
 const ID: &str = "ide.activity";
 const WIDTH: f64 = 420.0;
@@ -51,7 +51,7 @@ enum Action {
     StopDebug(u64),
 }
 
-pub struct ActivityIvars {
+pub(crate) struct ActivityIvars {
     controller: Weak<WindowController>,
     /// The item in the toolbar of each of the window's tabs.
     items: RefCell<Vec<Weak<NSToolbarItem>>>,
@@ -70,7 +70,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEActivity"]
     #[ivars = ActivityIvars]
-    pub struct Activity;
+    pub(crate) struct Activity;
 
     unsafe impl NSObjectProtocol for Activity {}
 
@@ -95,7 +95,7 @@ define_class!(
 
 /// The activity items of every window.
 #[derive(Default)]
-pub struct Activities {
+pub(crate) struct Activities {
     activities: RefCell<Vec<Retained<Activity>>>,
 }
 
@@ -118,7 +118,7 @@ fn of(controller: &WindowController) -> Option<Retained<Activity>> {
 }
 
 /// The toolbar item of `controller`'s window.
-pub fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarItem> {
+pub(crate) fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarItem> {
     let mtm = controller.mtm();
     watch_supervisor();
     let activity = of(controller).unwrap_or_else(|| {
@@ -155,26 +155,28 @@ pub fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarItem> {
 fn watch_supervisor() {
     static WATCH: Once = Once::new();
     WATCH.call_once(|| {
-        Supervisor::global().subscribe(|_| {
-            main_soon(|| {
-                let all: Vec<Retained<Activity>> = with_activities(|a| a.borrow().clone());
-                for activity in all {
-                    activity.changed();
-                }
-            });
-        });
+        Supervisor::global()
+            .subscribe(|_| {
+                main_soon(|| {
+                    let all: Vec<Retained<Activity>> = with_activities(|a| a.borrow().clone());
+                    for activity in all {
+                        activity.changed();
+                    }
+                });
+            })
+            .keep();
     });
 }
 
 /// Tells the activity view of `controller`'s window that something changed.
-pub fn refresh(controller: &WindowController) {
+pub(crate) fn refresh(controller: &WindowController) {
     if let Some(activity) = of(controller) {
         activity.changed();
     }
 }
 
 /// How a session stands, as the activity view and the AI panel say it.
-pub fn session_status(status: Status) -> &'static str {
+pub(crate) fn session_status(status: Status) -> &'static str {
     match status {
         Status::Idle => t("Bereit"),
         Status::Running => t("Arbeitet"),
@@ -183,7 +185,7 @@ pub fn session_status(status: Status) -> &'static str {
 }
 
 /// How a task stands.
-pub fn task_status(status: TaskStatus) -> &'static str {
+pub(crate) fn task_status(status: TaskStatus) -> &'static str {
     match status {
         TaskStatus::Pending => t("Wartet"),
         TaskStatus::Running => t("Läuft"),
@@ -194,7 +196,7 @@ pub fn task_status(status: TaskStatus) -> &'static str {
     }
 }
 
-pub fn background_symbol(kind: &BackgroundKind) -> &'static str {
+pub(crate) fn background_symbol(kind: &BackgroundKind) -> &'static str {
     match kind {
         BackgroundKind::Shell => "terminal",
         BackgroundKind::Monitor => "eye",
@@ -497,7 +499,7 @@ impl Activity {
 
     /// Opens the popover below the toolbar item.
     /// Opens the popover with everything that runs, below the toolbar item.
-    pub fn show(&self) {
+    pub(crate) fn show(&self) {
         self.ivars().only.set(None);
         self.open(None);
     }
@@ -806,7 +808,7 @@ impl Activity {
 }
 
 /// Opens the list of `part` of the AI tab `key`'s session below `anchor`.
-pub fn show_tab(controller: &WindowController, key: AgentKey, part: Part, anchor: &NSView) {
+pub(crate) fn show_tab(controller: &WindowController, key: AgentKey, part: Part, anchor: &NSView) {
     if let Some(activity) = of(controller) {
         activity.ivars().only.set(Some((key, part)));
         activity.open(Some(anchor));

@@ -12,7 +12,7 @@ const RULE_FILES: [&str; 3] = ["AGENTS.md", "CLAUDE.md", ".claude/CLAUDE.md"];
 const MAX_RULES: usize = 60_000;
 
 /// The project's rules files that exist, with their text.
-pub fn project_rules(root: &Path) -> Vec<(String, String)> {
+pub(crate) fn project_rules(root: &Path) -> Vec<(String, String)> {
     RULE_FILES
         .iter()
         .filter_map(|name| {
@@ -24,7 +24,7 @@ pub fn project_rules(root: &Path) -> Vec<(String, String)> {
 }
 
 /// The system prompt of a thread in `root`.
-pub fn system(root: &Path, profile: Profile, sandbox: bool, rules: &[(String, String)]) -> String {
+pub(crate) fn system(root: &Path, profile: Profile, sandbox: bool, rules: &[(String, String)]) -> String {
     let mut prompt = format!(
         "You are a coding agent inside a code editor on macOS, working in the user's project at {}. Answer in the \
          language the user writes in.\n\n\

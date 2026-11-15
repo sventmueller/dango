@@ -7,24 +7,24 @@
 use super::*;
 
 impl Document {
-    pub fn is_dirty(&self) -> bool {
+    pub(crate) fn is_dirty(&self) -> bool {
         self.dirty.get()
     }
 }
 
 impl TabWindow {
     /// The share of the first of two parts side by side.
-    pub fn share(&self) -> Option<f64> {
+    pub(crate) fn share(&self) -> Option<f64> {
         self.panes.first_share()
     }
 
     /// Gives the first of two parts side by side `share` of the width, which it keeps as the tab changes size.
-    pub fn set_share(&self, share: f64) {
+    pub(crate) fn set_share(&self, share: f64) {
         self.panes.set_first_share(share);
     }
 
     /// What the documents' badges say, left to right: the name and the close button's label of those that show.
-    pub fn badges(&self) -> Vec<Option<(String, String)>> {
+    pub(crate) fn badges(&self) -> Vec<Option<(String, String)>> {
         use objc2_app_kit::NSAccessibility;
         self.documents()
             .iter()
@@ -42,13 +42,13 @@ impl TabWindow {
     }
 
     /// The close button on the badge of the document `id`.
-    pub fn badge_close(&self, id: super::TabId) -> Option<Retained<NSButton>> {
+    pub(crate) fn badge_close(&self, id: super::TabId) -> Option<Retained<NSButton>> {
         self.document(id).map(|doc| doc.close.clone())
     }
 
     /// Drags the divider to `share` with the mouse: the drag and the release wait in the event queue, which the split
     /// view's tracking of the press reads.
-    pub fn drag_share(&self, share: f64) {
+    pub(crate) fn drag_share(&self, share: f64) {
         use objc2_app_kit::{NSApplication, NSEvent, NSEventModifierFlags, NSEventType};
 
         let Some(area) = self.panes.root_area() else { return };
@@ -88,18 +88,18 @@ impl TabWindow {
     }
 
     /// The narrowest and widest the user may drag the sidebar to now.
-    pub fn sidebar_range(&self) -> (f64, f64) {
+    pub(crate) fn sidebar_range(&self) -> (f64, f64) {
         (self.sidebar.minimumThickness(), self.sidebar.maximumThickness())
     }
 
     /// Folds the sidebar away or back, as the menu's command does.
-    pub fn toggle_sidebar(&self) {
+    pub(crate) fn toggle_sidebar(&self) {
         // SAFETY: The action takes no sender.
         unsafe { self.split.toggleSidebar(None) };
     }
 
     /// Whether the tab shows the picture of the sidebar.
-    pub fn shows_picture(&self) -> bool {
+    pub(crate) fn shows_picture(&self) -> bool {
         !self.picture.isHidden()
     }
 }

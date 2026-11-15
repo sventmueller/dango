@@ -2,6 +2,7 @@
 
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::time::Duration;
 
 use ide_thread::Rewind;
 
@@ -23,7 +24,7 @@ pub enum Thinking {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Launch {
     /// The `claude` executable.
-    pub executable: PathBuf,
+    pub(crate) executable: PathBuf,
     /// The login shell's environment, which the process gets instead of the app's.
     pub env: Vec<(String, String)>,
     /// The folder the agent works in.
@@ -37,22 +38,21 @@ pub struct Launch {
     /// How much the model thinks.
     pub thinking: Thinking,
     /// How thinking is shown: `summarized` or `omitted`.
-    pub thinking_display: Option<String>,
+    pub(crate) thinking_display: Option<String>,
     /// The session to resume, by id.
     pub resume: Option<String>,
     /// The message of the resumed session up to which it is resumed, by uuid; only with `resume`.
-    pub resume_at: Option<String>,
+    pub(crate) resume_at: Option<String>,
     /// The prompt whose turn resuming at `resume_at` drops; the CLI refuses to resume when more would be dropped. Only
     /// with `resume` and `resume_at`.
-    pub resume_drops_turn: Option<String>,
+    pub(crate) resume_drops_turn: Option<String>,
     /// Whether the resumed session continues under a new session id, as a branch; only with `resume`.
-    pub fork_session: bool,
+    pub(crate) fork_session: bool,
     /// Tools allowed without asking, as permission rules such as `Bash(git status:*)`.
-    pub allowed_tools: Vec<String>,
-    /// Tools never allowed.
-    pub disallowed_tools: Vec<String>,
+    pub(crate) allowed_tools: Vec<String>,
+    pub(crate) disallowed_tools: Vec<String>,
     /// More folders the tools may use.
-    pub add_dirs: Vec<PathBuf>,
+    pub(crate) add_dirs: Vec<PathBuf>,
     /// Whether the session may switch to `bypassPermissions` while it runs, which the CLI refuses unless told so at
     /// launch; it does not start in that mode for it.
     pub allow_bypass: bool,
@@ -63,11 +63,14 @@ pub struct Launch {
     /// Whether the CLI keeps file backups so that `rewind_files` works.
     pub file_checkpoints: bool,
     /// Whether subagents report a one-line summary of their progress.
-    pub progress_summaries: bool,
+    pub(crate) progress_summaries: bool,
     /// Whether the text and thinking of subagents are forwarded, not only their tool calls.
-    pub forward_subagent_text: bool,
+    pub(crate) forward_subagent_text: bool,
     /// Whether the session connects to Remote Control as it starts; `None` follows the user's Claude settings.
     pub remote_control: Option<bool>,
+    /// The longest a control request waits for its answer, where that is shorter than the request's own timeout
+    /// (`control::Request::timeout`); for tests of a CLI that does not answer.
+    pub control_timeout: Option<Duration>,
 }
 
 /// The variable the CLI reads to know who started it; it is left for the CLI to choose, so the app never passes
@@ -100,6 +103,7 @@ impl Launch {
             progress_summaries: true,
             forward_subagent_text: true,
             remote_control: None,
+            control_timeout: None,
         }
     }
 
@@ -112,8 +116,7 @@ impl Launch {
         self.fork_session = true;
     }
 
-    /// The command-line arguments.
-    pub fn arguments(&self) -> Vec<String> {
+    pub(crate) fn arguments(&self) -> Vec<String> {
         let mut args: Vec<String> = [
             "--print",
             "--input-format=stream-json",
@@ -186,7 +189,7 @@ impl Launch {
     }
 
     /// The environment: the login shell's, without a client name, with file backups when asked for.
-    pub fn environment(&self) -> Vec<(String, String)> {
+    pub(crate) fn environment(&self) -> Vec<(String, String)> {
         let mut env: Vec<(String, String)> = self
             .env
             .iter()
@@ -200,7 +203,7 @@ impl Launch {
     }
 
     /// The command, with all three pipes, ready for the supervisor.
-    pub fn command(&self) -> Command {
+    pub(crate) fn command(&self) -> Command {
         let mut command = Command::new(&self.executable);
         command
             .args(self.arguments())

@@ -10,7 +10,7 @@ use objc2::MainThreadMarker;
 use objc2_app_kit::NSApplication;
 
 use super::snappy::{measure, measured};
-use super::{check, finish, helpers};
+use super::{check, finish, give_up, give_up_saying, helpers};
 use crate::window::{self, Panel, TabId, WindowController};
 
 /// The pause between two steps, about a frame.
@@ -69,7 +69,7 @@ const DRAG: usize = 40;
 
 /// `snappy-resize`: the sidebar, the inspector and the divider between two documents are dragged in 40 steps each,
 /// first beside a Markdown file and its preview, then beside an AI tab and a terminal.
-pub fn resize() {
+pub(crate) fn resize() {
     let notes: String = (1..=200)
         .map(|n| format!("## Part {n}\n\nA paragraph of the notes, long enough to wrap in a narrow column.\n\n"))
         .collect();
@@ -100,7 +100,7 @@ pub fn resize() {
 
 fn drag_beside_preview(root: PathBuf, agent: Option<TabId>) {
     let Some(controller) = window::for_project(&root) else {
-        return finish(RESIZE);
+        return give_up(RESIZE, "the folder's window is open");
     };
     let notes = controller.tab_with_key(&root.join(NOTES).to_string_lossy());
     measure();
@@ -110,14 +110,14 @@ fn drag_beside_preview(root: PathBuf, agent: Option<TabId>) {
             &spread(&times),
         );
         let Some(controller) = window::for_project(&root) else {
-            return finish(RESIZE);
+            return give_up(RESIZE, "the folder's window is open");
         };
         if let Some(agent) = agent {
             controller.select_tab_by_id(agent);
         }
         helpers::after(SETTLE, move || {
             let Some(controller) = window::for_project(&root) else {
-                return finish(RESIZE);
+                return give_up(RESIZE, "the folder's window is open");
             };
             measure();
             drags(&controller, agent, |times| {
@@ -174,7 +174,7 @@ const LARGE_LINE: usize = 30_000;
 
 /// `snappy-tabs`: 20 tabs are switched through and moved around one by one; then a file of more than 1 MB opens
 /// with the caret on one of its last lines.
-pub fn tabs() {
+pub(crate) fn tabs() {
     let files: Vec<(String, String)> = (0..TAB_COUNT)
         .map(|n| (format!("tab{n}.rs"), format!("// tab {n}\nfn main() {{}}\n")))
         .collect();
@@ -197,7 +197,7 @@ pub fn tabs() {
 
 fn switch_tabs(root: PathBuf) {
     let Some(controller) = window::for_project(&root) else {
-        return finish(TABS);
+        return give_up(TABS, "the folder's window is open");
     };
     let window = controller.id();
     let with = move |f: &dyn Fn(&WindowController)| {
@@ -255,11 +255,10 @@ fn open_large(root: PathBuf) {
         .map(|n| format!("line {n:05} of a file larger than the main thread reads itself\n"))
         .collect();
     if let Err(error) = std::fs::write(&path, text) {
-        check("the large file is written", false, error.to_string());
-        return finish(TABS);
+        return give_up_saying(TABS, "the large file is written", error.to_string());
     }
     let Some(controller) = window::for_project(&root) else {
-        return finish(TABS);
+        return give_up(TABS, "the folder's window is open");
     };
     crate::editor::reveal_position(&controller, &path, LARGE_LINE, 1);
     let probe = (root.clone(), path.clone());
@@ -296,7 +295,7 @@ const RUN: Duration = Duration::from_secs(180);
 const MANY: &str = "package many\n\nimport (\n\t\"fmt\"\n\t\"testing\"\n\t\"time\"\n)\n\nfunc TestMany(t *testing.T) {\n\tfor i := 0; i < 3000; i++ {\n\t\tt.Run(fmt.Sprintf(\"case_%04d\", i), func(t *testing.T) {\n\t\t\ttime.Sleep(time.Millisecond)\n\t\t})\n\t}\n}\n";
 
 /// `snappy-tests`: the Tests panel follows a run of 3 000 tests while it polls the tool's output.
-pub fn tests() {
+pub(crate) fn tests() {
     helpers::open_project(
         TESTS,
         TESTS_PROJECT,
@@ -329,7 +328,7 @@ fn rows(root: &Path) -> Vec<(usize, String, ide_test::State)> {
 
 fn run_many(root: PathBuf) {
     let Some(controller) = window::for_project(&root) else {
-        return finish(TESTS);
+        return give_up(TESTS, "the folder's window is open");
     };
     measure();
     crate::tests_panel::run_all(&controller);

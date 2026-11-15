@@ -123,13 +123,16 @@ impl Inner {
             self.gone(generation);
             return;
         };
+        let unreadable;
         {
             let mut state = self.lock();
             if state.generation != generation || state.status != Status::Starting {
                 return;
             }
             let raw = result.get("capabilities").cloned().unwrap_or(Value::Null);
-            state.capabilities = serde_json::from_value(raw.clone()).ok().map(Arc::new);
+            let read = capabilities::read(&raw);
+            state.capabilities = read.capabilities.map(Arc::new);
+            unreadable = read.unreadable;
             state.encoding = Encoding::from_kind(
                 raw.get("positionEncoding")
                     .and_then(Value::as_str)
@@ -151,7 +154,28 @@ impl Inner {
                 state.flush(&uri);
             }
         }
+        if !unreadable.is_empty() {
+            self.unreadable_capabilities(&unreadable);
+        }
         self.emit(Event::Status(Status::Running));
+    }
+
+    /// Says which of the server's capabilities `lsp_types` could not read: the editor treats them as not offered.
+    fn unreadable_capabilities(&self, unreadable: &[(String, serde_json::Error)]) {
+        let detail = unreadable
+            .iter()
+            .map(|(key, error)| format!("{key}: {error}"))
+            .collect::<Vec<_>>()
+            .join("; ");
+        let message = format!(
+            "{}: capabilities not read, treated as not offered: {detail}",
+            self.config.label
+        );
+        ide_core::diag::report("lsp: unreadable server capabilities", &message);
+        self.emit(Event::Log {
+            level: lsp_types::MessageType::WARNING,
+            message,
+        });
     }
 
     /// The process of `generation` ended, or never got going: stopped as asked, or crashed.
@@ -208,7 +232,7 @@ impl Inner {
         let grace = self.config.stop_grace;
         let ending = process.and_then(|id| {
             self.supervisor.stop(id, grace);
-            self.exits.wait(id, grace * 3 + Duration::from_millis(500))
+            self.supervisor.wait(id, grace * 3 + Duration::from_millis(500))
         });
         let stderr = stderr.lock_ignoring_poison().text();
         self.emit(Event::Crashed {
@@ -296,7 +320,7 @@ impl Inner {
             if let Some(id) = process {
                 inner.supervisor.stop(id, inner.config.stop_grace);
                 inner
-                    .exits
+                    .supervisor
                     .wait(id, inner.config.stop_grace * 3 + Duration::from_millis(500));
             }
             let current = inner.lock();

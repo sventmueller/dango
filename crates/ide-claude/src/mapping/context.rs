@@ -5,16 +5,15 @@ use std::time::SystemTime;
 use ide_thread::{ContextBreakdown, ContextGroup, ContextKind, ContextPart, ContextRow, Update, UsagePatch};
 
 use super::Mapper;
-use crate::control::ContextUsage;
+use crate::control::{CategoryKind, ContextCount, ContextUsage};
 
 impl Mapper {
-    /// The updates for the context usage that `get_context_usage` returned at `now`; `exact` when it counted every
-    /// category rather than estimating.
-    pub fn context(&self, usage: &ContextUsage, exact: bool, now: SystemTime) -> Vec<Update> {
+    /// The updates for the context usage that `get_context_usage` returned at `now`, counted as `count` says.
+    pub(crate) fn context(&self, usage: &ContextUsage, count: ContextCount, now: SystemTime) -> Vec<Update> {
         vec![Update::Usage(UsagePatch {
             context_used: Some(usage.total_tokens),
             context_size: (usage.raw_max_tokens > 0).then_some(usage.raw_max_tokens),
-            breakdown: Some(breakdown(usage, exact, now)),
+            breakdown: Some(breakdown(usage, count == ContextCount::Exact, now)),
             ..UsagePatch::default()
         })]
     }
@@ -29,11 +28,11 @@ fn breakdown(usage: &ContextUsage, exact: bool, now: SystemTime) -> ContextBreak
             id: c.id.clone(),
             name: c.name.clone(),
             tokens: c.tokens,
-            kind: match c.kind.as_str() {
-                "free" => ContextKind::Free,
-                "buffer" => ContextKind::Buffer,
-                "deferred" => ContextKind::Deferred,
-                _ => ContextKind::Used,
+            kind: match c.kind {
+                CategoryKind::Free => ContextKind::Free,
+                CategoryKind::Buffer => ContextKind::Buffer,
+                CategoryKind::Deferred => ContextKind::Deferred,
+                CategoryKind::Used => ContextKind::Used,
             },
         })
         .collect();

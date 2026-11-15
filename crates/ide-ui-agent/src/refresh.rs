@@ -4,14 +4,14 @@ use ide_thread::{Change, EntryKind, Field, Lane, Thread};
 
 #[derive(Default)]
 pub(super) struct Refresh {
-    pub controls: bool,
-    pub status: bool,
-    pub plans: bool,
-    pub overview: bool,
+    pub(crate) controls: bool,
+    pub(crate) status: bool,
+    pub(crate) plans: bool,
+    pub(crate) overview: bool,
 }
 
 impl Refresh {
-    pub fn of(thread: &Thread, changes: &[Change]) -> Refresh {
+    pub(crate) fn of(thread: &Thread, changes: &[Change]) -> Refresh {
         let mut refresh = Refresh::default();
         for change in changes {
             match change {

@@ -3,7 +3,7 @@
 use super::*;
 
 /// The mode label of `view`'s status bar and whether the system caret is hidden for the block, for the self-test.
-pub fn shown(view: &EditorTextView) -> (String, bool) {
+pub(crate) fn shown(view: &EditorTextView) -> (String, bool) {
     let label = view
         .ivars()
         .vim

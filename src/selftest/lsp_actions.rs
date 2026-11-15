@@ -12,7 +12,7 @@ use objc2::rc::Retained;
 use objc2::sel;
 use objc2_foundation::NSRange;
 
-use super::{check, finish, helpers, snapshot};
+use super::{check, finish, give_up, give_up_saying, helpers, skip, snapshot};
 use crate::editor::{self, EditorTextView};
 use crate::window::{self, WindowController};
 
@@ -150,11 +150,11 @@ fn done() {
     finish(case().scenario);
 }
 
-pub fn run_rust() {
+pub(crate) fn run_rust() {
     run(&RUST);
 }
 
-pub fn run_go() {
+pub(crate) fn run_go() {
     run(&GO);
 }
 
@@ -176,22 +176,22 @@ fn opened(controller: Retained<WindowController>) {
 
 fn started() {
     let Some(view) = main_view() else {
-        check("the file opens in an editor", false, "");
-        finish(case().scenario);
-        return;
+        return give_up(case().scenario, "the file opens in an editor");
     };
     match ide_ui_lsp::server_running(&*view) {
         Err(why) if why == "missing" => {
-            check("skipped: the language server is missing", true, case().server);
-            done();
+            skip(
+                case().scenario,
+                "the language server is there",
+                format!("{} is missing", case().server),
+            );
         }
         Ok(true) => {
             check("the language server starts", true, case().server);
             END.poll(WAIT, quiet, |_, took| rest_on_name(took));
         }
         other => {
-            check("the language server starts", false, format!("{other:?}"));
-            done();
+            give_up_saying(case().scenario, "the language server starts", format!("{other:?}"));
         }
     }
 }
@@ -200,9 +200,7 @@ fn started() {
 fn rest_on_name(settled: Duration) {
     let Some(view) = main_view() else { return };
     let Some(at) = offset_of(&view, case().unresolved, 2) else {
-        check("the unresolved name is in the file", false, "");
-        done();
-        return;
+        return give_up(case().scenario, "the unresolved name is in the file");
     };
     put_cursor(&view, at - 1);
     put_cursor(&view, at);
@@ -318,9 +316,7 @@ fn listed(ok: bool, took: Duration) {
 fn call() {
     let Some(view) = main_view() else { return };
     let Some(end) = offset_of(&view, case().call_after, case().call_after.encode_utf16().count()) else {
-        check("the line for the call is in the file", false, "");
-        done();
-        return;
+        return give_up(case().scenario, "the line for the call is in the file");
     };
     put_cursor(&view, end);
     editor::type_newline(&view);

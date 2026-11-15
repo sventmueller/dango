@@ -15,7 +15,7 @@ members = ["."]
 [dependencies]
 libfuzzer-sys = "0.4.10"
 ide-acp = { path = ".." }
-ide-thread = { path = "../../ide-thread" }
+ide-thread = { path = "../../ide-thread", features = ["fuzzing"] }
 serde_json = "1.0.154"
 
 [[bin]]

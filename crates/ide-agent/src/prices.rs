@@ -19,23 +19,23 @@ pub struct Price {
     /// Output tokens, reasoning included.
     pub output: f64,
     /// Input tokens read from the prompt cache.
-    pub cache_read: f64,
+    pub(crate) cache_read: f64,
     /// Input tokens written to the prompt cache.
-    pub cache_write: f64,
+    pub(crate) cache_write: f64,
     /// Higher prices for prompts above a size, where the model has them.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub long: Option<LongPrompt>,
+    pub(crate) long: Option<LongPrompt>,
 }
 
 /// The prices of prompts above a size.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct LongPrompt {
+pub(crate) struct LongPrompt {
     /// Prompts above this many tokens cost these prices.
-    pub above: u64,
+    pub(crate) above: u64,
     /// Input tokens.
-    pub input: f64,
+    pub(crate) input: f64,
     /// Output tokens.
-    pub output: f64,
+    pub(crate) output: f64,
 }
 
 impl Price {
@@ -52,7 +52,7 @@ impl Price {
     }
 
     /// Nothing, for models on the user's own hardware.
-    pub fn free() -> Price {
+    pub(crate) fn free() -> Price {
         Price {
             input: 0.0,
             output: 0.0,
@@ -74,7 +74,7 @@ impl Price {
 
     /// What `usage` costs, in US dollars.
     #[expect(clippy::cast_precision_loss, reason = "token counts far below 2^52")]
-    pub fn cost(&self, usage: &TurnUsage) -> f64 {
+    pub(crate) fn cost(&self, usage: &TurnUsage) -> f64 {
         let (input, output, read, write) = match self.long {
             Some(long) if usage.prompt() > long.above => (
                 long.input,
@@ -93,7 +93,7 @@ impl Price {
 }
 
 /// Anthropic's list prices, as published on 2026-10-06; a dated model id takes the price of its family.
-pub fn anthropic(model: &str) -> Option<Price> {
+pub(crate) fn anthropic(model: &str) -> Option<Price> {
     let table: [(&str, Price); 13] = [
         ("claude-fable-5-1", Price::new(10.0, 50.0).cache_read_at(0.25)),
         ("claude-mythos-5-1", Price::new(10.0, 50.0).cache_read_at(0.25)),
@@ -130,7 +130,7 @@ pub struct PriceTable {
 impl PriceTable {
     /// The price of `model` at a provider of `kind`: the user's, else the one its list gives, else Anthropic's list
     /// price at Anthropic, else nothing for a model on the user's hardware.
-    pub fn price(&self, kind: ProviderKind, model: &str, listed: Option<Price>) -> Option<Price> {
+    pub(crate) fn price(&self, kind: ProviderKind, model: &str, listed: Option<Price>) -> Option<Price> {
         if let Some(price) = self.models.get(model) {
             return Some(*price);
         }
@@ -146,7 +146,7 @@ impl PriceTable {
 }
 
 /// What a request cost: what the provider said, else what the price makes of its tokens.
-pub fn cost(usage: &TurnUsage, price: Option<&Price>) -> Option<f64> {
+pub(crate) fn cost(usage: &TurnUsage, price: Option<&Price>) -> Option<f64> {
     usage.cost_usd.or_else(|| price.map(|p| p.cost(usage)))
 }
 

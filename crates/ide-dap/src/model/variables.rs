@@ -3,17 +3,17 @@
 
 /// A scope, a variable or the value of a watch expression, with its children once the adapter sent them.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Node {
-    /// Its name.
     pub name: String,
     /// Its value as the adapter shows it.
     pub value: String,
     /// Its type, if the adapter says.
     pub kind: Option<String>,
     /// The adapter's handle for its children; 0 for none.
-    pub reference: i64,
+    pub(crate) reference: i64,
     /// Its children, `None` until they were asked for and came.
-    pub children: Option<Vec<Node>>,
+    pub(crate) children: Option<Vec<Node>>,
 }
 
 impl Node {
@@ -29,22 +29,19 @@ impl Node {
     }
 
     /// Whether the adapter can send children for it.
-    pub fn has_children(&self) -> bool {
+    pub(crate) fn has_children(&self) -> bool {
         self.reference > 0
     }
 }
 
 /// A watch expression and what it came to in the selected frame.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Watch {
-    /// The expression.
     pub expression: String,
     /// Its value, or the adapter's error, once evaluated; `None` while nothing is paused.
     pub value: Option<Result<Node, String>>,
 }
-
-/// Separates the names of a row's path.
-const SEPARATOR: char = '\u{1f}';
 
 /// Where a row of the inspector is: a scope with the names below it, or a watch expression by its place.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -56,36 +53,8 @@ pub enum Path {
 }
 
 impl Path {
-    /// The path as text, for the outline view.
-    pub fn encode(&self) -> String {
-        match self {
-            Path::Scope(names) => format!("s{SEPARATOR}{}", names.join(&SEPARATOR.to_string())),
-            Path::Watch(index, names) => {
-                let mut text = format!("w{SEPARATOR}{index}");
-                for name in names {
-                    text.push(SEPARATOR);
-                    text.push_str(name);
-                }
-                text
-            }
-        }
-    }
-
-    /// The path from its text.
-    pub fn decode(text: &str) -> Option<Path> {
-        let mut parts = text.split(SEPARATOR);
-        match parts.next()? {
-            "s" => Some(Path::Scope(parts.map(str::to_string).collect())),
-            "w" => {
-                let index = parts.next()?.parse().ok()?;
-                Some(Path::Watch(index, parts.map(str::to_string).collect()))
-            }
-            _ => None,
-        }
-    }
-
     /// The path of the child `name` of this row.
-    pub fn child(&self, name: &str) -> Path {
+    pub(crate) fn child(&self, name: &str) -> Path {
         let mut path = self.clone();
         match &mut path {
             Path::Scope(names) | Path::Watch(_, names) => names.push(name.to_string()),
@@ -98,7 +67,7 @@ impl Path {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Variables {
     /// Counts the frames shown, so an answer about an earlier one is dropped.
-    pub generation: u64,
+    pub(crate) generation: u64,
     /// The session and frame they belong to.
     pub frame: Option<(u64, i64)>,
     /// The frame's scopes, `None` until the adapter sent them.
@@ -109,7 +78,7 @@ pub struct Variables {
 
 impl Variables {
     /// An inspector with `watches` and nothing shown.
-    pub fn new(watches: Vec<String>) -> Variables {
+    pub(crate) fn new(watches: Vec<String>) -> Variables {
         Variables {
             watches: watches
                 .into_iter()
@@ -123,7 +92,7 @@ impl Variables {
     }
 
     /// Starts over for `frame`, or for none when nothing is paused; the new generation.
-    pub fn show(&mut self, frame: Option<(u64, i64)>) -> u64 {
+    pub(crate) fn show(&mut self, frame: Option<(u64, i64)>) -> u64 {
         self.generation += 1;
         self.frame = frame;
         self.scopes = None;
@@ -134,12 +103,12 @@ impl Variables {
     }
 
     /// The watch expressions, as kept.
-    pub fn expressions(&self) -> Vec<String> {
+    pub(crate) fn expressions(&self) -> Vec<String> {
         self.watches.iter().map(|w| w.expression.clone()).collect()
     }
 
     /// Adds a watch expression; its place, or `None` for an empty or repeated one.
-    pub fn add_watch(&mut self, expression: &str) -> Option<usize> {
+    pub(crate) fn add_watch(&mut self, expression: &str) -> Option<usize> {
         let expression = expression.trim();
         if expression.is_empty() || self.watches.iter().any(|w| w.expression == expression) {
             return None;
@@ -152,7 +121,7 @@ impl Variables {
     }
 
     /// Removes the watch at `index`; whether there was one.
-    pub fn remove_watch(&mut self, index: usize) -> bool {
+    pub(crate) fn remove_watch(&mut self, index: usize) -> bool {
         if index < self.watches.len() {
             self.watches.remove(index);
             true
@@ -208,13 +177,13 @@ impl Variables {
     }
 
     /// The reference to ask the adapter for when the row at `path` opens, if its children are not there yet.
-    pub fn wanted(&self, path: &Path) -> Option<i64> {
+    pub(crate) fn wanted(&self, path: &Path) -> Option<i64> {
         let node = self.node(path)?;
         (node.has_children() && node.children.is_none()).then_some(node.reference)
     }
 
     /// Takes the scopes of `generation`'s frame; whether they were still wanted.
-    pub fn set_scopes(&mut self, generation: u64, scopes: Vec<Node>) -> bool {
+    pub(crate) fn set_scopes(&mut self, generation: u64, scopes: Vec<Node>) -> bool {
         if generation != self.generation {
             return false;
         }
@@ -279,35 +248,6 @@ pub enum Row {
     Empty(Part),
     /// A variable or watch.
     Node(Path),
-}
-
-impl Row {
-    /// The row as text, for the outline view.
-    pub fn encode(&self) -> String {
-        match self {
-            Row::Part(Part::Variables) => "P:variables".into(),
-            Row::Part(Part::Watches) => "P:watches".into(),
-            Row::Empty(Part::Variables) => "E:variables".into(),
-            Row::Empty(Part::Watches) => "E:watches".into(),
-            Row::Node(path) => format!("N:{}", path.encode()),
-        }
-    }
-
-    /// The row from its text.
-    pub fn decode(text: &str) -> Option<Row> {
-        let (kind, rest) = text.split_once(':')?;
-        let part = || match rest {
-            "variables" => Some(Part::Variables),
-            "watches" => Some(Part::Watches),
-            _ => None,
-        };
-        match kind {
-            "P" => part().map(Row::Part),
-            "E" => part().map(Row::Empty),
-            "N" => Path::decode(rest).map(Row::Node),
-            _ => None,
-        }
-    }
 }
 
 impl Variables {
@@ -467,24 +407,5 @@ mod tests {
             !variables.opens(&Row::Node(Path::Watch(0, vec![]))),
             "not evaluated yet"
         );
-        for row in [
-            Row::Part(Part::Watches),
-            Row::Empty(Part::Variables),
-            Row::Node(Path::Watch(2, vec![])),
-        ] {
-            assert_eq!(Row::decode(&row.encode()), Some(row));
-        }
-    }
-
-    #[test]
-    fn paths_survive_their_text() {
-        for path in [
-            Path::Scope(vec!["Locals".into(), "a b".into(), "[0]".into()]),
-            Path::Watch(3, vec![]),
-            Path::Watch(0, vec!["x".into()]),
-        ] {
-            assert_eq!(Path::decode(&path.encode()), Some(path));
-        }
-        assert_eq!(Path::decode("nonsense"), None);
     }
 }

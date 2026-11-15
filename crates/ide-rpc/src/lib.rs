@@ -1,9 +1,10 @@
 //! The transport language servers and debug adapters share: `Content-Length` frames over a pair of byte streams,
 //! calls that wait for an answer until a deadline, and requests from the other side that are always answered.
 //!
-//! Three threads per transport: one reads and hands each frame's body to a [`Receiver`], one writes from a bounded
-//! queue so a caller never waits on a full pipe, one expires calls whose deadline passed. What a body means — JSON-RPC
-//! for `ide-lsp`, the Debug Adapter Protocol for `ide-dap` — is the receiver's business.
+//! Two threads per transport: one reads and hands each frame's body to a [`Receiver`], one writes from a bounded
+//! queue so a caller never waits on a full pipe; a write that fails closes the transport. Calls whose deadline passed
+//! expire on the app's one timer thread (`ide_core::timer`). What a body means — JSON-RPC for `ide-lsp`, the Debug
+//! Adapter Protocol for `ide-dap` — is the receiver's business.
 //!
 //! ```
 //! use std::io::Write;
@@ -47,10 +48,10 @@
 //! ```
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs, unreachable_pub)]
+#![warn(missing_docs)]
 
 mod responder;
 mod transport;
 
 pub use responder::Responder;
-pub use transport::{Build, Call, Receiver, RequestId, SendError, Transport, contained};
+pub use transport::{Call, Receiver, RequestId, SendError, Transport, contained};

@@ -8,7 +8,7 @@ use objc2_app_kit::NSAlertFirstButtonReturn;
 use splat_i18n::t;
 
 use super::super::git::{answer_sheet, pictures, wait_for, window_of};
-use super::super::{check, finish};
+use super::super::{check, give_up};
 use super::{SCENARIO, describe, posted_to, stubs};
 use crate::ci_panel::selftest::{self as panel, Key, Tab};
 use crate::window::WindowController;
@@ -24,7 +24,7 @@ fn github_posted(path: &'static str) -> impl Fn(&WindowController) -> bool {
 /// Starts with the GitHub repository's failed job 72 of run 9001.
 pub(super) fn github(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let menu = panel::menu_of_job(&controller, 9001, 72);
     check(
@@ -59,7 +59,7 @@ pub(super) fn github(root: PathBuf) {
 
 fn job_retried(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check("a single GitHub job starts again", ok, "");
     panel::choose_in_menu(&controller, Key::Run(9001), sel!(ideCiRerunAll:));
@@ -72,7 +72,7 @@ fn job_retried(root: PathBuf, ok: bool) {
 
 fn run_rerun(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check("every job of a GitHub run starts again", ok, "");
     let workflows = panel::seen(&controller).map(|s| s.workflows).unwrap_or_default();
@@ -87,8 +87,7 @@ fn run_rerun(root: PathBuf, ok: bool) {
 
 fn workflow_sheet(root: PathBuf, ok: bool) {
     if !ok || !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
-        check("starting a workflow asks which one first", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "starting a workflow asks which one first");
     }
     wait_for(
         root,
@@ -99,7 +98,7 @@ fn workflow_sheet(root: PathBuf, ok: bool) {
 
 fn workflow_started(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let body = stubs()
         .github
@@ -123,7 +122,7 @@ fn workflow_started(root: PathBuf, ok: bool) {
 
 fn pulls_listed(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let seen = panel::seen(&controller);
     let numbers: Vec<u64> = seen
@@ -168,7 +167,7 @@ fn pulls_listed(root: PathBuf, ok: bool) {
 
 fn github_issues_listed(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let items = panel::seen(&controller).map(|s| s.items).unwrap_or_default();
     check(
@@ -191,7 +190,7 @@ fn gitlab_posted(path: &'static str) -> impl Fn(&WindowController) -> bool {
 /// Starts with the GitLab pipeline 501, whose job 3002 failed and whose job 3004 waits to be started by hand.
 pub(super) fn gitlab(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let menu = panel::menu_of_job(&controller, 501, 3004);
     check(
@@ -216,7 +215,7 @@ pub(super) fn gitlab(root: PathBuf) {
 
 fn gitlab_retried(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check("a single GitLab job starts again", ok, "");
     panel::choose_in_menu(&controller, Key::Job(501, 3004), sel!(ideCiStartJob:));
@@ -225,7 +224,7 @@ fn gitlab_retried(root: PathBuf, ok: bool) {
 
 fn played(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check("a manual GitLab job starts", ok, "");
     panel::start_run(&controller);
@@ -234,15 +233,14 @@ fn played(root: PathBuf, ok: bool) {
 
 fn pipeline_sheet(root: PathBuf, ok: bool) {
     if !ok || !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
-        check("starting a pipeline asks first", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "starting a pipeline asks first");
     }
     wait_for(root, |c| gitlab_posted("/pipeline?ref=")(c), pipeline_started);
 }
 
 fn pipeline_started(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check("a new GitLab pipeline starts for the branch", ok, "");
     panel::choose_tab(&controller, Tab::Changes);
@@ -255,7 +253,7 @@ fn pipeline_started(root: PathBuf, ok: bool) {
 
 fn merge_requests_listed(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let items = panel::seen(&controller).map(|s| s.items).unwrap_or_default();
     check(

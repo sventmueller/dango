@@ -28,7 +28,7 @@ mod ui;
 
 use std::path::Path;
 
-use ide_core::debugging::ConsoleLine;
+use ide_dap::kept::ConsoleLine;
 use ide_ui_common::window::{Panel, Panels, TabId, Window};
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;

@@ -7,6 +7,7 @@ use std::path::Path;
 use crate::branch::{Commit, parse_commit};
 use crate::diff::{FileDiff, diff_args, literal_args, parse};
 use crate::error::Result;
+use crate::id::CommitId;
 use crate::integrate::{ChangedFile, name_status};
 use crate::path::nul_fields;
 use crate::remote::word;
@@ -48,7 +49,7 @@ impl Repository {
         if let Some(other) = also
             && let Some(commit) = self.resolve(word(other)?)?
         {
-            args.push(commit.into());
+            args.push(commit.as_str().into());
         }
         args.push("--".into());
         let output = self.git().ok(self.call(args))?;
@@ -56,9 +57,9 @@ impl Repository {
     }
 
     /// The files `commit` changed and how many lines.
-    pub fn commit_changes(&self, commit: &str) -> Result<CommitChanges> {
+    pub fn commit_changes(&self, commit: &CommitId) -> Result<CommitChanges> {
         let base = self.base_of(commit)?;
-        let commit = word(commit)?;
+        let commit = commit.as_str();
         let names = self.git().ok(self.call([
             "diff",
             "--name-status",
@@ -90,13 +91,13 @@ impl Repository {
     }
 
     /// The diff of `path`, relative to the root, as `commit` changed it; `None` when it did not touch the file.
-    pub fn diff_commit(&self, commit: &str, path: &Path) -> Result<Option<FileDiff>> {
+    pub fn diff_commit(&self, commit: &CommitId, path: &Path) -> Result<Option<FileDiff>> {
         let base = self.base_of(commit)?;
         let mut args = diff_args();
         args.extend([
             OsString::from("-M"),
             base.into(),
-            word(commit)?.into(),
+            commit.as_str().into(),
             OsString::from("--"),
         ]);
         args.extend(literal_args(&[path.to_path_buf()]));
@@ -105,10 +106,10 @@ impl Repository {
     }
 
     /// The first parent of `commit`, or the empty tree for a root commit.
-    fn base_of(&self, commit: &str) -> Result<String> {
+    fn base_of(&self, commit: &CommitId) -> Result<String> {
         let output = self
             .git()
-            .ok(self.call(["rev-list", "--parents", "--max-count=1", word(commit)?, "--"]))?;
+            .ok(self.call(["rev-list", "--parents", "--max-count=1", commit.as_str(), "--"]))?;
         match output.text().split_whitespace().nth(1) {
             Some(parent) => Ok(parent.to_string()),
             None => self.empty_tree(),

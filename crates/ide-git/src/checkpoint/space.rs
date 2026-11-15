@@ -7,6 +7,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::diff::{FileDiff, diff_args, parse};
 use crate::error::{Error, Result};
+use crate::id::CommitId;
 use crate::path::{bytes, from_bytes, nul_fields, relative};
 use crate::run::{Call, Git, Output};
 
@@ -280,14 +281,14 @@ impl Space {
     }
 
     /// The commit HEAD points at, in a repository.
-    pub(super) fn head(&self) -> Result<Option<String>> {
+    pub(super) fn head(&self) -> Result<Option<CommitId>> {
         if !self.repository {
             return Ok(None);
         }
         let output = self
             .git
             .run(self.call(["rev-parse", "--verify", "--quiet", "HEAD^{commit}"]))?;
-        Ok((output.code == 0).then(|| output.text()))
+        Ok((output.code == 0).then(|| CommitId::from_git(output.text())))
     }
 
     /// Writes `paths` as they are in `tree` into the working tree, with the filters and modes git would use.

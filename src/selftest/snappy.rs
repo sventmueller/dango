@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use ide_ui_common::util::stall;
 
-use super::{check, finish, helpers};
+use super::{check, finish, give_up, helpers};
 use crate::window::{self, Panel};
 
 /// The longest a main thread step of a measured part may take.
@@ -39,7 +39,7 @@ const TREE_PROJECT: &str = "snappy-tree-project";
 const WIDE: isize = 5_000;
 
 /// `snappy-tree`: a folder of 5 000 entries opens, scrolls to its end and closes.
-pub fn tree() {
+pub(crate) fn tree() {
     let wide = helpers::folder(TREE_PROJECT).join("wide");
     let _ = std::fs::create_dir_all(&wide);
     for n in 0..WIDE {
@@ -55,7 +55,7 @@ pub fn tree() {
 
 fn tree_opens(root: PathBuf) {
     let Some(controller) = window::for_project(&root) else {
-        return finish(TREE);
+        return give_up(TREE, "the folder's window is open");
     };
     measure();
     controller.click_in_tree(&root.join("wide"), false);

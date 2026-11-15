@@ -26,7 +26,7 @@ define_class!(
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEGitCommands"]
-    pub struct GitCommands;
+    pub(crate) struct GitCommands;
 
     unsafe impl NSObjectProtocol for GitCommands {}
 
@@ -43,12 +43,12 @@ define_class!(
 
         #[unsafe(method(ideGitApplyStash:))]
         fn apply(&self, _sender: Option<&AnyObject>) {
-            guarded((), || front(|panel| panel.apply_stash(&panel.selected_keys(), false)));
+            guarded((), || front(|panel| panel.apply_stash(&panel.selected_keys(), ide_git::Unstash::Apply)));
         }
 
         #[unsafe(method(ideGitPopStash:))]
         fn pop(&self, _sender: Option<&AnyObject>) {
-            guarded((), || front(|panel| panel.apply_stash(&panel.selected_keys(), true)));
+            guarded((), || front(|panel| panel.apply_stash(&panel.selected_keys(), ide_git::Unstash::Pop)));
         }
 
         #[unsafe(method(ideGitDropStash:))]
@@ -142,7 +142,7 @@ fn front(f: impl FnOnce(&GitPanel)) {
 
 impl GitPanel {
     /// Whether the command `action` can run now, a stash entry's on `keys`.
-    pub fn can(&self, action: Sel, keys: &[RowKey]) -> bool {
+    pub(crate) fn can(&self, action: Sel, keys: &[RowKey]) -> bool {
         let state = self.read();
         let ready = state.phase == Phase::Ready && state.busy.is_none();
         let changed = !state.model.staged.is_empty() || !state.model.changes.is_empty();

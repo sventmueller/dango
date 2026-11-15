@@ -14,6 +14,10 @@ use super::super::ui;
 use super::{Ctx, Part, disclosure, is_auth, mono_text, notice_color, pack};
 
 /// The window of a plan limit as the user reads it.
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unreachable_pub, reason = "the self-test re-exports it")
+)]
 pub fn window_name(window: &str) -> String {
     match window {
         "five_hour" => t("5-Stundenlimit").to_string(),
@@ -30,6 +34,10 @@ fn reset(at: Option<SystemTime>) -> String {
 }
 
 /// What a notice says, on one line.
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unreachable_pub, reason = "the self-test re-exports it")
+)]
 pub fn text(notice: &Notice) -> String {
     match notice {
         Notice::Compaction {
@@ -89,7 +97,7 @@ pub fn text(notice: &Notice) -> String {
     }
 }
 
-pub fn limit_text(limit: &RateLimit) -> String {
+pub(super) fn limit_text(limit: &RateLimit) -> String {
     let used = limit
         .utilization
         .map(|u| format!(" {} %", (u * 100.0).round()))
@@ -120,7 +128,7 @@ fn symbol(notice: &Notice) -> &'static str {
 }
 
 /// The hooks that ran fine in the turn of `entry`.
-pub fn turn_hooks<'a>(thread: &'a Thread, entry: &Entry) -> Vec<&'a Notice> {
+pub(super) fn turn_hooks<'a>(thread: &'a Thread, entry: &Entry) -> Vec<&'a Notice> {
     let main = thread.entries(&Lane::Main);
     let at = main.iter().position(|e| e.id == entry.id).unwrap_or(0);
     let start = main[..at]
@@ -147,12 +155,12 @@ pub fn turn_hooks<'a>(thread: &'a Thread, entry: &Entry) -> Vec<&'a Notice> {
 }
 
 /// The line that counts the hooks of a turn that ran fine.
-pub fn hook_group_text(thread: &Thread, entry: &Entry) -> String {
+pub(super) fn hook_group_text(thread: &Thread, entry: &Entry) -> String {
     tf("Hooks: {} erfolgreich", &[&turn_hooks(thread, entry).len().to_string()])
 }
 
 /// The hooks of `entry`'s turn that ran fine, as one quiet line that opens to each run.
-pub fn hook_group(ctx: &Ctx<'_>, entry: &Entry) -> Retained<NSView> {
+pub(super) fn hook_group(ctx: &Ctx<'_>, entry: &Entry) -> Retained<NSView> {
     let mtm = ctx.mtm;
     let runs = turn_hooks(ctx.thread, entry);
     let title = hook_group_text(ctx.thread, entry);
@@ -191,7 +199,7 @@ pub fn hook_group(ctx: &Ctx<'_>, entry: &Entry) -> Retained<NSView> {
     ui::view(&ui::column(mtm, 3.0, &refs))
 }
 
-pub fn card(ctx: &Ctx<'_>, id: EntryId, notice: &Notice) -> Retained<NSView> {
+pub(super) fn card(ctx: &Ctx<'_>, id: EntryId, notice: &Notice) -> Retained<NSView> {
     let mtm = ctx.mtm;
     let color = notice_color(notice);
     let line_text = text(notice);

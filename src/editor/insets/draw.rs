@@ -18,7 +18,7 @@ use crate::util::{constant, ns};
 
 /// Draws the insets of `view` in `dirty`, as the overlay asks. While scrolling, AppKit draws ahead of the visible
 /// part, and what it drew there is shown later without drawing again, so `dirty` decides, not the visible part.
-pub fn draw(view: &EditorTextView, dirty: NSRect) {
+pub(crate) fn draw(view: &EditorTextView, dirty: NSRect) {
     let seen = view.visibleRect();
     let top = dirty.origin.y.min(seen.origin.y);
     let bottom = (dirty.origin.y + dirty.size.height).max(seen.origin.y + seen.size.height);
@@ -72,7 +72,7 @@ fn fragment_insets(
 
 /// Draws the insets of the paragraph `fragment` lays out after its text, at `point` in `context`, as the fragment
 /// draws itself: with the text, so that they scroll and show with it.
-pub fn draw_fragment(
+pub(crate) fn draw_fragment(
     view: &EditorTextView,
     fragment: &objc2_app_kit::NSTextLayoutFragment,
     point: NSPoint,
@@ -113,7 +113,7 @@ pub fn draw_fragment(
 
 /// How much wider than its text the paragraph `fragment` lays out draws, for the insets at the end of its lines. TextKit
 /// asks for every fragment on screen at every keystroke, so this adds up widths instead of laying the insets out.
-pub fn width_after_text(view: &EditorTextView, fragment: &objc2_app_kit::NSTextLayoutFragment) -> f64 {
+pub(crate) fn width_after_text(view: &EditorTextView, fragment: &objc2_app_kit::NSTextLayoutFragment) -> f64 {
     let (Some(range), Ok(state)) = (fragment_range(view, fragment), view.ivars().insets.try_borrow()) else {
         return 0.0;
     };
@@ -352,7 +352,7 @@ fn fit(text: &str, attributes: &NSDictionary<NSString, AnyObject>, room: f64) ->
 }
 
 /// Where the insets of `view` were drawn last.
-pub fn shown(view: &EditorTextView) -> Vec<Shown> {
+pub(crate) fn shown(view: &EditorTextView) -> Vec<Shown> {
     view.ivars()
         .insets
         .try_borrow()
@@ -361,7 +361,7 @@ pub fn shown(view: &EditorTextView) -> Vec<Shown> {
 }
 
 /// Where each inset was drawn last, with whether it has a tooltip and whether a click on it does something.
-pub fn offers(view: &EditorTextView) -> Vec<(NSRect, bool, bool)> {
+pub(crate) fn offers(view: &EditorTextView) -> Vec<(NSRect, bool, bool)> {
     let Ok(state) = view.ivars().insets.try_borrow() else {
         return Vec::new();
     };
@@ -391,12 +391,12 @@ fn under(view: &EditorTextView, point: NSPoint) -> Option<(Shown, Inset)> {
 }
 
 /// Whether a click at `point` of the editor lands on an inset that does something; everything else goes to the text.
-pub fn hits(view: &EditorTextView, point: NSPoint) -> bool {
+pub(crate) fn hits(view: &EditorTextView, point: NSPoint) -> bool {
     under(view, point).is_some_and(|(_, inset)| inset.action.is_some())
 }
 
 /// Runs what the inset under `point` does; whether there was one.
-pub fn click(view: &EditorTextView, point: NSPoint) -> bool {
+pub(crate) fn click(view: &EditorTextView, point: NSPoint) -> bool {
     let Some(action) = under(view, point).and_then(|(_, inset)| inset.action) else {
         return false;
     };
@@ -405,7 +405,7 @@ pub fn click(view: &EditorTextView, point: NSPoint) -> bool {
 }
 
 /// The tooltip of the inset under `point`.
-pub fn tooltip(view: &EditorTextView, point: NSPoint) -> Option<String> {
+pub(crate) fn tooltip(view: &EditorTextView, point: NSPoint) -> Option<String> {
     under(view, point).and_then(|(_, inset)| inset.tooltip)
 }
 
@@ -439,7 +439,7 @@ fn gap_under(view: &EditorTextView, point: NSPoint) -> Option<(usize, f64)> {
 
 /// A plain click in a gap, or on the left half of the character after it, puts the caret right of the gap; whether
 /// it was one.
-pub fn click_gap(view: &EditorTextView, event: &NSEvent) -> bool {
+pub(crate) fn click_gap(view: &EditorTextView, event: &NSEvent) -> bool {
     let plain = (event.modifierFlags() & objc2_app_kit::NSEventModifierFlags::DeviceIndependentFlagsMask).is_empty();
     if !plain || event.clickCount() != 1 {
         return false;
@@ -457,7 +457,7 @@ pub fn click_gap(view: &EditorTextView, event: &NSEvent) -> bool {
 
 /// Any other click in a gap goes to the text where TextKit's hit test finds the caret right of the gap, so a drag or a
 /// ⇧-click starts or ends there.
-pub fn retarget(view: &EditorTextView, event: &NSEvent) -> Option<Retained<NSEvent>> {
+pub(crate) fn retarget(view: &EditorTextView, event: &NSEvent) -> Option<Retained<NSEvent>> {
     let point = view.convertPoint_fromView(event.locationInWindow(), None);
     let (_, middle) = gap_under(view, point)?;
     let target = view.convertPoint_toView(NSPoint::new(middle, point.y), None);
@@ -477,7 +477,7 @@ pub fn retarget(view: &EditorTextView, event: &NSEvent) -> Option<Retained<NSEve
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;
 
 /// The line fragments of `fragment`; none before TextKit laid it out, when it answers nil although its header says it
 /// never does.

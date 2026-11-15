@@ -6,14 +6,14 @@ use std::rc::Rc;
 
 use objc2_app_kit::NSWindowOrderingMode;
 
-use super::WindowController;
-use super::panes::{Place, Side};
-use super::tabs::TabWindow;
+use crate::window::panes::{Place, Side};
+use crate::window::tabs::TabWindow;
+use crate::window::{TabId, WindowController};
 
 impl WindowController {
     /// Brings the window in line with the panes of the tab in front: a split takes in the documents of the other tabs
     /// and hides the window's tab bar; a tab no longer split gives each of its documents a tab again and shows it.
-    pub(super) fn settle_split(&self) {
+    pub(in crate::window) fn settle_split(&self) {
         let Some(tab) = self.current_tab() else { return };
         if tab.panes.is_split() {
             self.take_in_tabs(&tab);
@@ -26,7 +26,7 @@ impl WindowController {
 
     /// Settles the tabs a layout opened: a split one comes to the front and takes in the others, as an older layout
     /// may keep tabs beside it; without one, every document of a tab gets a tab of its own.
-    pub(super) fn settle_restored(&self) {
+    pub(in crate::window) fn settle_restored(&self) {
         let tabs = self.ordered_tabs();
         match tabs.iter().find(|tab| tab.panes.is_split()) {
             Some(split) => {
@@ -46,7 +46,7 @@ impl WindowController {
 
     /// Shows the window's tab bar while `tab` is not split, which then shows every document as a tab (E60), and hides
     /// it while the panes' bars take its place.
-    pub(super) fn sync_tab_bar(&self, tab: &TabWindow) {
+    pub(in crate::window) fn sync_tab_bar(&self, tab: &TabWindow) {
         let visible = !tab.panes.is_split();
         if tab
             .window
@@ -66,7 +66,7 @@ impl WindowController {
         }
         let own = ordered.iter().position(|other| Rc::ptr_eq(other, tab)).unwrap_or(0);
         let main = tab.panes.main();
-        let front = main.front().map(|doc| doc.id);
+        let front = tab.panes.front(main).map(|doc| doc.id);
         let mut before = 0;
         for (index, other) in ordered.iter().enumerate() {
             if Rc::ptr_eq(other, tab) {
@@ -76,7 +76,7 @@ impl WindowController {
                 let preview = other
                     .panes
                     .of_document(document.id)
-                    .is_some_and(|pane| pane.companion_of.get().is_some());
+                    .is_some_and(|pane| other.panes.is_companion(pane));
                 if preview {
                     continue;
                 }
@@ -87,58 +87,54 @@ impl WindowController {
                     before += 1;
                     before - 1
                 } else {
-                    main.count()
+                    tab.panes.count(main)
                 };
-                main.insert(document, Some(at));
+                tab.panes.insert(document, Place::Into(main, Some(at)));
             }
             other.window.close();
         }
         if let Some(front) = front {
-            main.select(front);
+            tab.panes.select(front);
         }
     }
 
     /// Gives each document of the one pane of `tab` but the one in front a native tab of its own, in the pane's order
     /// around it, its preview with it.
     fn spread_out(&self, tab: &Rc<TabWindow>) {
-        let main = tab.panes.main();
-        let documents = main.documents();
-        let Some(front) = main.front() else { return };
-        if documents.len() < 2 {
-            return;
-        }
-        let at_front = documents.iter().position(|doc| doc.id == front.id).unwrap_or(0);
-        let mut last = tab.clone();
-        for (index, document) in documents.iter().enumerate() {
-            if index == at_front {
-                continue;
-            }
-            let preview = tab
-                .panes
-                .companion_of(document.id)
-                .and_then(|pane| pane.front())
-                .map(|doc| doc.id);
-            let Some(moved) = tab.remove(document.id) else { continue };
-            let own = self.new_tab_window();
-            own.insert(moved, Place::Active);
-            if let Some(preview) = preview.and_then(|id| tab.remove(id)) {
-                let beside = Place::Beside {
-                    anchor: document.id,
-                    side: Side::Right,
-                    companion: true,
-                };
-                own.insert(preview, beside);
-            }
-            if index < at_front {
+        let Some(spread) = tab.panes.spread() else { return };
+        for (document, preview) in spread.before {
+            if let Some(own) = self.tab_of_its_own(tab, document, preview) {
                 tab.window
                     .addTabbedWindow_ordered(&own.window, NSWindowOrderingMode::Below);
-            } else {
+                own.refresh();
+            }
+        }
+        let mut last = tab.clone();
+        for (document, preview) in spread.after {
+            if let Some(own) = self.tab_of_its_own(tab, document, preview) {
                 last.window
                     .addTabbedWindow_ordered(&own.window, NSWindowOrderingMode::Above);
-                last = own.clone();
+                own.refresh();
+                last = own;
             }
-            own.refresh();
         }
-        main.select(front.id);
+        tab.panes.select(spread.front);
+    }
+
+    /// Moves the document `document` of `tab` into a new window tab of its own, with `preview` beside it; that tab,
+    /// not yet in the tab group.
+    fn tab_of_its_own(&self, tab: &TabWindow, document: TabId, preview: Option<TabId>) -> Option<Rc<TabWindow>> {
+        let moved = tab.remove(document)?;
+        let own = self.new_tab_window();
+        own.insert(moved, Place::Active);
+        if let Some(preview) = preview.and_then(|id| tab.remove(id)) {
+            let beside = Place::Beside {
+                anchor: document,
+                side: Side::Right,
+                companion: true,
+            };
+            own.insert(preview, beside);
+        }
+        Some(own)
     }
 }

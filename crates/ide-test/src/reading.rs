@@ -120,7 +120,7 @@ impl Reading {
     }
 
     /// Every report so far, in the order the tests first appeared.
-    pub fn reports(&self) -> Vec<Report> {
+    pub(crate) fn reports(&self) -> Vec<Report> {
         self.out.iter().map(|r| self.shown(r)).collect()
     }
 }

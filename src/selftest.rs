@@ -19,7 +19,7 @@ mod agent_sessions;
 mod agent_stand_in;
 mod app_context;
 mod app_menus;
-pub mod application;
+pub(crate) mod application;
 mod blame;
 mod browser;
 mod browser_dev;
@@ -119,12 +119,32 @@ struct Check {
     detail: String,
 }
 
+/// How a scenario's run ended, as its report tells the runner.
+enum Ending {
+    Ran,
+    /// Ended on purpose before its end, for the reason given, such as a tool this Mac lacks.
+    Skipped(String),
+    /// Ended before its end because something it needed was missing, which a failed check names.
+    GaveUp(String),
+}
+
+/// The checks of the run and how it ended; a give-up stays, whatever ends the run after it.
+struct Record {
+    checks: Vec<Check>,
+    ending: Ending,
+}
+
 thread_local! {
-    static CHECKS: RefCell<Vec<Check>> = const { RefCell::new(Vec::new()) };
+    static CHECKS: RefCell<Record> = const {
+        RefCell::new(Record {
+            checks: Vec::new(),
+            ending: Ending::Ran,
+        })
+    };
 }
 
 /// Opens an AI tab that plays the start of the session `session`, where the app would resume it with `claude`.
-pub fn replay_agent(controller: &window::WindowController, session: &str) -> bool {
+pub(crate) fn replay_agent(controller: &window::WindowController, session: &str) -> bool {
     panels::replay_agent(controller, session)
 }
 
@@ -133,7 +153,7 @@ const LIST_SCENARIOS: &str = "--list-scenarios";
 
 /// Prints the scenarios with `--list-scenarios` and ends; else moves the app's data and its defaults under
 /// `IDE_SELFTEST_HOME`, before anything reads them.
-pub fn prepare() {
+pub(crate) fn prepare() {
     if std::env::args().any(|arg| arg == LIST_SCENARIOS) {
         println!("{}", scenarios::listing());
         std::process::exit(0);
@@ -178,16 +198,13 @@ fn own_defaults(home: &Path) -> Option<()> {
 /// wait for.
 const LAUNCH_SETTLE: Duration = Duration::from_millis(400);
 
-pub fn after_launch(_mtm: MainThreadMarker) {
+pub(crate) fn after_launch(_mtm: MainThreadMarker) {
     let Ok(scenario) = std::env::var("IDE_SELFTEST") else {
         return;
     };
     main_after(LAUNCH_SETTLE, move || match scenarios::named(&scenario) {
         Some(found) => (found.run)(),
-        None => {
-            check("the scenario exists", false, format!("unknown scenario {scenario}"));
-            finish(&scenario);
-        }
+        None => give_up_saying(&scenario, "the scenario exists", format!("unknown scenario {scenario}")),
     });
 }
 
@@ -217,6 +234,7 @@ fn show() {
     if let Some(path) = std::env::var_os("IDE_SELFTEST_REPORT") {
         let checks = CHECKS.with(|c| {
             c.borrow()
+                .checks
                 .iter()
                 .map(|c| c.detail.clone())
                 .collect::<Vec<_>>()
@@ -227,13 +245,58 @@ fn show() {
 }
 
 pub(crate) fn check(name: &'static str, ok: bool, detail: impl Into<String>) {
-    CHECKS.with(|checks| {
-        checks.borrow_mut().push(Check {
+    CHECKS.with(|record| {
+        record.borrow_mut().checks.push(Check {
             name,
             ok,
             detail: detail.into(),
         })
     });
+}
+
+/// Ends `scenario` before its end as the failed check `missing`, which names what it needed to go on; the runner
+/// fails a run that gave up. `cargo xtask rules` allows no other early end than this and `skip`.
+#[track_caller]
+pub(crate) fn give_up(scenario: &str, missing: &'static str) {
+    give_up_saying(scenario, missing, "");
+}
+
+/// `give_up` with what was found instead.
+#[track_caller]
+pub(crate) fn give_up_saying(scenario: &str, missing: &'static str, detail: impl Into<String>) {
+    let at = std::panic::Location::caller();
+    let detail = detail.into();
+    let place = format!("gave up at {}:{}", at.file(), at.line());
+    check(
+        missing,
+        false,
+        if detail.is_empty() {
+            place.clone()
+        } else {
+            format!("{detail}; {place}")
+        },
+    );
+    CHECKS.with(|record| {
+        let mut record = record.borrow_mut();
+        if !matches!(record.ending, Ending::GaveUp(_)) {
+            record.ending = Ending::GaveUp(format!("{missing} ({place})"));
+        }
+    });
+    finish(scenario);
+}
+
+/// Ends `scenario` before its end on purpose, as the passed check `what` that says `why`, such as a tool this Mac
+/// lacks.
+pub(crate) fn skip(scenario: &str, what: &'static str, why: impl Into<String>) {
+    let why = why.into();
+    check(what, true, format!("skipped: {why}"));
+    CHECKS.with(|record| {
+        let mut record = record.borrow_mut();
+        if matches!(record.ending, Ending::Ran) {
+            record.ending = Ending::Skipped(why);
+        }
+    });
+    finish(scenario);
 }
 
 fn probe() {
@@ -245,7 +308,7 @@ fn probe() {
         format!("{} windows", windows.len()),
     );
     let Some(controller) = windows.first().cloned() else {
-        finish("probe");
+        give_up("probe", "a window opens");
         return;
     };
     probe_window(&controller);
@@ -443,7 +506,7 @@ fn probe_app(mtm: MainThreadMarker) {
         .into_iter()
         .find(|w| w.project().as_ref() == Some(&canonical))
     else {
-        finish("probe");
+        give_up("probe", "the opened folder has its window");
         return;
     };
     check("an untrusted folder asks for trust", controller.has_sheet(), "");
@@ -523,7 +586,7 @@ fn probe_project(root: PathBuf, rows_before: isize) {
         .into_iter()
         .find(|w| w.project().as_ref() == Some(&root))
     else {
-        finish("probe");
+        give_up("probe", "the folder's window is open");
         return;
     };
     let rows = controller.tree_rows();
@@ -589,13 +652,11 @@ fn probe_editor(root: PathBuf, file: PathBuf) {
         .into_iter()
         .find(|w| w.project().as_ref() == Some(&root))
     else {
-        finish("probe");
+        give_up("probe", "the folder's window is open");
         return;
     };
     let Some(editor) = crate::editor::editor_of(&controller, &file) else {
-        check("the editor of the opened file is found", false, "");
-        finish("probe");
-        return;
+        return give_up("probe", "the editor of the opened file is found");
     };
     let text = editor.document().text().to_string();
     check(
@@ -860,9 +921,10 @@ pub(crate) fn finish(scenario: &str) {
 
 /// Writes the checks so far to `IDE_SELFTEST_REPORT`, whole or not at all.
 fn write_report(scenario: &str) {
-    let checks = CHECKS.with(|checks| {
-        checks
-            .borrow()
+    let (checks, ending) = CHECKS.with(|record| {
+        let record = record.borrow();
+        let checks = record
+            .checks
             .iter()
             .map(|c| {
                 format!(
@@ -873,10 +935,16 @@ fn write_report(scenario: &str) {
                 )
             })
             .collect::<Vec<_>>()
-            .join(", ")
+            .join(", ");
+        let ending = match &record.ending {
+            Ending::Ran => quote("ran"),
+            Ending::Skipped(why) => format!(r#"{{"skipped": {}}}"#, quote(why)),
+            Ending::GaveUp(why) => format!(r#"{{"gave_up": {}}}"#, quote(why)),
+        };
+        (checks, ending)
     });
     let report = format!(
-        r#"{{"scenario": {}, "appearance": "{}", "checks": [{checks}]}}"#,
+        r#"{{"scenario": {}, "appearance": "{}", "ending": {ending}, "checks": [{checks}]}}"#,
         quote(scenario),
         appearance()
     );

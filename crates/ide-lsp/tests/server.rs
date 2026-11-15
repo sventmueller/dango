@@ -397,7 +397,7 @@ fn stopping_asks_for_shutdown_then_exit_and_the_server_ends_by_itself() {
     let f = start("stop", &[("FAKE_LOG", log.to_str().unwrap())], |_| {});
     let (tx, rx) = channel();
     let tx = Mutex::new(tx);
-    f.supervisor.subscribe(move |event| {
+    let _listening = f.supervisor.subscribe(move |event| {
         if let ide_process::Event::Ended { ending, .. } = event {
             let _ = tx.lock().unwrap().send(*ending);
         }

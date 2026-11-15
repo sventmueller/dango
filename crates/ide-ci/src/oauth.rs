@@ -128,14 +128,14 @@ fn answer(response: &Response) -> Result<TokenAnswer, LoginError> {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct DeviceCode {
     /// The code the app polls with.
-    pub device_code: String,
+    pub(crate) device_code: String,
     /// The code the user types in the browser, such as `WDJB-MJHT`.
     pub user_code: String,
     /// Where the user types it.
     pub verification_uri: String,
     /// How many seconds both codes stay valid.
     #[serde(default = "default_expiry")]
-    pub expires_in: u64,
+    pub(crate) expires_in: u64,
     /// How many seconds to wait between polls at least.
     #[serde(default = "default_interval")]
     pub interval: u64,
@@ -214,9 +214,9 @@ pub fn device_token(
 #[derive(Clone, PartialEq, Eq)]
 pub struct Pkce {
     /// The verifier, sent only with the code exchange.
-    pub verifier: String,
+    pub(crate) verifier: String,
     /// Its S256 challenge, sent with the authorization.
-    pub challenge: String,
+    pub(crate) challenge: String,
     /// What the browser must bring back.
     pub state: String,
 }

@@ -37,7 +37,6 @@ use splat_i18n::{t, tf};
 
 pub use controls::Mic;
 use desk::{Act, Desk, Phase};
-pub use engine::LOWSPEAK_APP;
 pub use fn_key::{FnState, ask_permission as ask_fn_permission, fn_state, setting_changed as fn_setting_changed};
 pub use keys::PROVIDERS;
 pub use models::{cancel_download, download, download_failed, downloading, installed};
@@ -45,6 +44,13 @@ pub use models::{cancel_download, download, download_failed, downloading, instal
 use crate::{DictationField, written_shortcut};
 use ide_ui_common::constant;
 use ide_ui_common::util::{guarded, main_after, main_soon, ns};
+
+/// The settings this crate declares, for the app's registry of every setting.
+pub const SETTINGS: &[ide_core::settings::Declared] = &[
+    choices::DICTATION.declared(),
+    choices::LOWSPEAK_OFFERED.declared(),
+    DICTATE_WITH_FN.declared(),
+];
 
 /// Dictating with fn while Lowspeak does not run (E13); macOS's Accessibility permission is asked for only after the
 /// first dictation.
@@ -209,7 +215,7 @@ define_class!(
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEDictationTarget"]
-    pub struct DictationTarget;
+    pub(crate) struct DictationTarget;
 
     unsafe impl NSObjectProtocol for DictationTarget {}
 

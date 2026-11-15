@@ -14,7 +14,7 @@ use ide_ui_common::util::ns;
 use ide_ui_common::window::AsWindow;
 
 /// A stash entry as its row shows it: commit, message.
-pub type StashSeen = (String, String);
+pub(crate) type StashSeen = (ide_git::CommitId, String);
 
 /// The stash entries the panel lists, newest first.
 pub fn stashes(controller: &(impl AsWindow + ?Sized)) -> Vec<StashSeen> {
@@ -89,7 +89,7 @@ pub enum StashAction {
 }
 
 /// Runs `action` on the stash entry `hash`, as its button does.
-pub fn stash_action(controller: &(impl AsWindow + ?Sized), hash: &str, action: StashAction) {
+pub fn stash_action(controller: &(impl AsWindow + ?Sized), hash: &ide_git::CommitId, action: StashAction) {
     let controller = &controller.as_window();
     let selector = match action {
         StashAction::Apply => sel!(ideGitApplyStash:),
@@ -97,7 +97,7 @@ pub fn stash_action(controller: &(impl AsWindow + ?Sized), hash: &str, action: S
         StashAction::Drop => sel!(ideGitDropStash:),
     };
     if let Some(panel) = panel::of(controller) {
-        panel.run_row_action(selector, vec![RowKey::Stash(hash.to_string())]);
+        panel.run_row_action(selector, vec![RowKey::Stash(hash.clone())]);
     }
 }
 
@@ -114,29 +114,29 @@ pub fn end_conflict(controller: &(impl AsWindow + ?Sized), finish: bool) {
 }
 
 /// Opens the row of the stash entry `hash`, as a click on it does.
-pub fn open_stash(controller: &(impl AsWindow + ?Sized), hash: &str) {
+pub fn open_stash(controller: &(impl AsWindow + ?Sized), hash: &ide_git::CommitId) {
     let controller = &controller.as_window();
     let Some(panel) = panel::of(controller) else { return };
-    let item = panel.item_for(&RowKey::Stash(hash.to_string()));
+    let item = panel.item_for(&RowKey::Stash(hash.clone()));
     // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
     let row = unsafe { panel.ui().outline.rowForItem(Some(&item)) };
     panel.preview_row(row);
 }
 
 /// Selects the row of the stash entry `hash`, and only it.
-pub fn select_stash(controller: &(impl AsWindow + ?Sized), hash: &str) {
+pub fn select_stash(controller: &(impl AsWindow + ?Sized), hash: &ide_git::CommitId) {
     let controller = &controller.as_window();
     let Some(panel) = panel::of(controller) else { return };
     let outline = &panel.ui().outline;
     // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
-    let row = unsafe { outline.rowForItem(Some(&panel.item_for(&RowKey::Stash(hash.to_string())))) };
+    let row = unsafe { outline.rowForItem(Some(&panel.item_for(&RowKey::Stash(hash.clone())))) };
     if let Ok(row) = usize::try_from(row) {
         outline.selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(row), false);
     }
 }
 
 /// The files the list shows below the stash entry `hash`.
-pub fn stash_rows(controller: &(impl AsWindow + ?Sized), hash: &str) -> Vec<PathBuf> {
+pub fn stash_rows(controller: &(impl AsWindow + ?Sized), hash: &ide_git::CommitId) -> Vec<PathBuf> {
     let controller = &controller.as_window();
     let Some(panel) = panel::of(controller) else {
         return Vec::new();
@@ -145,22 +145,26 @@ pub fn stash_rows(controller: &(impl AsWindow + ?Sized), hash: &str) -> Vec<Path
     (0..outline.numberOfRows())
         .filter_map(|row| outline.itemAtRow(row))
         .filter_map(|item| match panel::key_of(&item)? {
-            RowKey::StashFile(at, file) if at == hash => Some(file),
+            RowKey::StashFile(at, file) if at == *hash => Some(file),
             _ => None,
         })
         .collect()
 }
 
 /// Shows what the stash entry `hash` changed in `file`, as a double click on the file's row does.
-pub fn show_stash_diff(controller: &(impl AsWindow + ?Sized), hash: &str, file: &Path) {
+pub fn show_stash_diff(controller: &(impl AsWindow + ?Sized), hash: &ide_git::CommitId, file: &Path) {
     let controller = &controller.as_window();
     if let Some(panel) = panel::of(controller) {
-        panel.show_diff(&RowKey::StashFile(hash.to_string(), file.to_path_buf()), false);
+        panel.show_diff(&RowKey::StashFile(hash.clone(), file.to_path_buf()), false);
     }
 }
 
 /// Rows and hunks of the diff tab of what the stash entry `hash` changed in `file`.
-pub fn stash_diff_counts(controller: &(impl AsWindow + ?Sized), hash: &str, file: &Path) -> Option<(usize, usize)> {
+pub fn stash_diff_counts(
+    controller: &(impl AsWindow + ?Sized),
+    hash: &ide_git::CommitId,
+    file: &Path,
+) -> Option<(usize, usize)> {
     let controller = &controller.as_window();
     super::diff::find(controller, &super::diff::stash_key(hash, file)).map(|tab| tab.counts())
 }

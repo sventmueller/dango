@@ -111,6 +111,7 @@ impl std::error::Error for SessionError {}
 pub(crate) struct State {
     pub(crate) thread: Thread,
     pub(crate) conversation: Vec<Message>,
+    /// Over connections the turn has to itself, which cancelling closes.
     pub(crate) provider: Provider,
     pub(crate) model: String,
     pub(crate) effort: Option<String>,
@@ -218,7 +219,7 @@ impl Session {
         let state = State {
             thread,
             conversation: Vec::new(),
-            provider: config.provider,
+            provider: config.provider.separate(),
             model: config.model.clone(),
             effort: config.effort.clone(),
             policy: config.policy,
@@ -348,6 +349,7 @@ impl Session {
         }
         state.running = true;
         state.cancel = Cancel::new();
+        state.provider = state.provider.separate();
         Ok(state.cancel.clone())
     }
 
@@ -361,9 +363,12 @@ impl Session {
         }
     }
 
-    /// Stops the running turn: the stream ends, a waiting request is withdrawn, a command is stopped.
+    /// Stops the running turn: the stream ends at once, as its connection is closed, a waiting request is withdrawn,
+    /// a command is stopped.
     pub fn cancel(&self) {
-        self.shared.lock().cancel.cancel();
+        let state = self.shared.lock();
+        state.cancel.cancel();
+        state.provider.close();
     }
 
     /// Answers the permission request `request` with `choice`.
@@ -415,6 +420,7 @@ impl Session {
         let mut state = self.shared.lock();
         state.closed = true;
         state.cancel.cancel();
+        state.provider.close();
         state.asks.clear();
     }
 }

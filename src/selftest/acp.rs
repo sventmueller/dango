@@ -13,7 +13,7 @@ use ide_ui_agent::AgentKey;
 use splat_i18n::t;
 
 use super::agent::{appearance, controller_of, picture, tab_of, view_picture};
-use super::{check, finish, helpers};
+use super::{check, finish, give_up, give_up_saying, helpers};
 use crate::util::constant;
 use crate::window::Panel;
 
@@ -50,8 +50,7 @@ fn wait(what: &'static str, limit: Duration, ready: impl Fn() -> bool + 'static,
         if ok {
             then();
         } else {
-            check(what, false, "waited in vain");
-            finish(NAME);
+            give_up_saying(NAME, what, "waited in vain");
         }
     });
 }
@@ -60,7 +59,7 @@ fn soon(what: &'static str, ready: impl Fn() -> bool + 'static, then: impl FnOnc
     wait(what, Duration::from_secs(15), ready, then);
 }
 
-pub fn run() {
+pub(crate) fn run() {
     if let Ok(register) = ide_acp::Register::parse(REGISTRY) {
         ide_ui_agent::set_test_register(register);
     }
@@ -75,7 +74,7 @@ pub fn run() {
             names.join(", "),
         );
         let Some(tab) = ide_ui_agent::open_preset(&controller, GEMINI) else {
-            return finish(NAME);
+            return give_up(NAME, "the AI tab opens");
         };
         let key = tab.key;
         soon(
@@ -91,7 +90,7 @@ pub fn run() {
 /// The session is open: what the agent offers shows in the composer.
 fn ready(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     check(
         "the tab runs the agent it was opened with",
@@ -140,13 +139,12 @@ fn ready(root: PathBuf, key: AgentKey) {
 
 fn permission(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     let thread = tab.snapshot();
     let request = thread.pending_requests().first().map(|e| (e.id.get(), e.kind.clone()));
     let Some((id, EntryKind::PermissionRequest(asked))) = request else {
-        check("the request is a permission", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the request is a permission");
     };
     check(
         "the permission card offers the agent's options",
@@ -155,7 +153,7 @@ fn permission(root: PathBuf, key: AgentKey) {
     );
     helpers::after(SETTLE, move || {
         let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-            return finish(NAME);
+            return give_up(NAME, "the folder's window and the AI tab are open");
         };
         picture(&controller, "acp-permission");
         tab.permission(id, ide_ui_agent::ALLOW_ONCE, None);
@@ -183,7 +181,7 @@ fn tool_status(tab: &ide_ui_agent::AgentTab, id: &str) -> Option<(ToolStatus, Op
 /// The turn is over: its cards, the to-dos, the usage and the title.
 fn done(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     let ls = tool_status(&tab, "call-1");
     check(
@@ -213,13 +211,13 @@ fn done(root: PathBuf, key: AgentKey) {
     tab.timeline().scroll_to_end();
     helpers::after(SETTLE, move || {
         let Some(controller) = controller_of(&root) else {
-            return finish(NAME);
+            return give_up(NAME, "the folder's window is open");
         };
         picture(&controller, "acp-done");
         appearance(&controller, constant!(NSAppearanceNameDarkAqua));
         helpers::after(SETTLE, move || {
             let Some(controller) = controller_of(&root) else {
-                return finish(NAME);
+                return give_up(NAME, "the folder's window is open");
             };
             picture(&controller, "acp-dark");
             appearance(&controller, constant!(NSAppearanceNameAqua));
@@ -232,7 +230,9 @@ fn done(root: PathBuf, key: AgentKey) {
 /// Taking the code back to before an ACP prompt (I6): the app's own checkpoint, with the question about the user's
 /// own changes since.
 fn code_rewind(root: PathBuf, key: AgentKey) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     let edited = root.join(ide_acp::test_agent::EDITED.0);
     check(
         "a checkpoint was taken before the ACP prompt",
@@ -249,8 +249,7 @@ fn code_rewind(root: PathBuf, key: AgentKey) {
         _ => None,
     });
     let Some(prompt) = prompt else {
-        check("the ACP prompt has the app's id", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the ACP prompt has the app's id");
     };
     let choices = tab.rewind_titles(prompt);
     check(
@@ -290,7 +289,9 @@ fn code_rewind(root: PathBuf, key: AgentKey) {
 
 /// Model, mode and the sandbox, as the composer's pills change them.
 fn options(root: PathBuf, key: AgentKey) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     tab.choose_option("model", "deep");
     tab.choose_mode("code");
     soon(
@@ -298,7 +299,9 @@ fn options(root: PathBuf, key: AgentKey) {
         move || tab_of(key).is_some_and(|t| t.pills().0 == "Deep" && t.pills().1 == "Code"),
         move || {
             check("the pills follow the agent's model and mode", true, "");
-            let Some(tab) = tab_of(key) else { return finish(NAME) };
+            let Some(tab) = tab_of(key) else {
+                return give_up(NAME, "the AI tab is open");
+            };
             tab.toggle_sandbox();
             soon(
                 "the session starts again with the sandbox",
@@ -315,10 +318,10 @@ fn options(root: PathBuf, key: AgentKey) {
 /// A new session of the agent starts with the model and mode picked in the first.
 fn remembered(root: PathBuf, key: AgentKey) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let Some(second) = ide_ui_agent::open_preset(&controller, GEMINI) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab opens");
     };
     let other = second.key;
     soon(
@@ -341,7 +344,9 @@ fn remembered(root: PathBuf, key: AgentKey) {
 }
 
 fn cancel(root: PathBuf, key: AgentKey) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     tab.type_and_send("go slow");
     soon(
         "the slow turn streams",
@@ -380,7 +385,7 @@ fn cancel(root: PathBuf, key: AgentKey) {
 /// every agent's state and the registry (E58).
 fn panel(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     controller.activate_panel(Panel::Agents);
     let seen = ide_ui_agent::agent_panel::inspect(&controller);
@@ -400,7 +405,7 @@ fn panel(root: PathBuf) {
     );
     helpers::after(SETTLE, move || {
         let Some(controller) = controller_of(&root) else {
-            return finish(NAME);
+            return give_up(NAME, "the folder's window is open");
         };
         picture(&controller, "acp-panel");
         crate::settings::show_agents(MainThreadMarker::from(&*controller));
@@ -455,11 +460,11 @@ fn registry(root: PathBuf) {
 /// An agent that wants a sign-in first opens its session after it.
 fn sign_in(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     ide_ui_agent::set_test_launch(test_launch("auth", &root));
     let Some(tab) = ide_ui_agent::open_preset(&controller, CODEX) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab opens");
     };
     let key = tab.key;
     soon(
@@ -467,7 +472,7 @@ fn sign_in(root: PathBuf) {
         move || tab_of(key).is_some_and(|t| t.problem_name() == Some("sign in")),
         move || {
             let Some(controller) = controller_of(&root) else {
-                return finish(NAME);
+                return give_up(NAME, "the folder's window is open");
             };
             picture(&controller, "acp-sign-in");
             if let Some(tab) = tab_of(key) {
@@ -492,11 +497,11 @@ fn usage(root: PathBuf, index: usize) {
         return missing(root);
     };
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     ide_ui_agent::set_test_launch(test_launch(scenario, &root));
     let Some(tab) = ide_ui_agent::open_preset(&controller, CODEX) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab opens");
     };
     let key = tab.key;
     soon(
@@ -510,7 +515,9 @@ fn usage(root: PathBuf, index: usize) {
                 "the usage response arrives",
                 move || tab_of(key).is_some_and(|t| t.snapshot().usage().reported_tokens.is_some()),
                 move || {
-                    let Some(tab) = tab_of(key) else { return finish(NAME) };
+                    let Some(tab) = tab_of(key) else {
+                        return give_up(NAME, "the AI tab is open");
+                    };
                     let status = tab.inspect().status.join(" | ");
                     let credit = index == 2;
                     check(
@@ -545,18 +552,20 @@ fn usage(root: PathBuf, index: usize) {
 /// An agent that is neither on the PATH nor installed offers its installation.
 fn missing(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     ide_ui_agent::set_test_launch(None);
     let Some(tab) = ide_ui_agent::open_preset(&controller, OPENCODE) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab opens");
     };
     let key = tab.key;
     soon(
         "a missing agent says so",
         move || tab_of(key).is_some_and(|t| t.problem_name() == Some("missing")),
         move || {
-            let Some(tab) = tab_of(key) else { return finish(NAME) };
+            let Some(tab) = tab_of(key) else {
+                return give_up(NAME, "the AI tab is open");
+            };
             let (_, _, sandbox) = tab.pills();
             check(
                 "an agent without a sandbox says so",
@@ -565,7 +574,7 @@ fn missing(root: PathBuf) {
             );
             helpers::after(SETTLE, move || {
                 let Some(controller) = controller_of(&root) else {
-                    return finish(NAME);
+                    return give_up(NAME, "the folder's window is open");
                 };
                 picture(&controller, "acp-missing");
                 ide_ui_agent::window_closed(&controller);

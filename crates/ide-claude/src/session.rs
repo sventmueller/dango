@@ -1,19 +1,23 @@
 //! A running `claude` process: frames in, frames out, the thread it fills and the requests either side waits on.
 //!
 //! Everything that reads or writes the pipes runs on threads of its own; the methods only queue a line or take a
-//! short lock, so the UI never waits for the CLI.
+//! short lock, so the UI never waits for the CLI. Control requests the app sends expire on the app's timer thread
+//! (`ide_core::timer`) when the CLI does not answer in time.
+
+mod reply;
 
 use ide_core::LockIgnoringPoison;
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, Read, Write};
-use std::marker::PhantomData;
+use std::io::{BufReader, Read, Write};
 use std::path::PathBuf;
 use std::process::{ChildStdin, ChildStdout};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, TrySendError, channel, sync_channel};
-use std::sync::{Arc, Mutex, MutexGuard, Weak};
-use std::time::{Duration, Instant, SystemTime};
+use std::sync::mpsc::{Receiver, SyncSender, TrySendError, sync_channel};
+use std::sync::{Arc, Mutex, MutexGuard};
+use std::time::{Duration, SystemTime};
 
+use ide_core::explain::Explain;
+use ide_process::framing::{self, Line};
 use ide_process::tail::{self, Tail};
 use ide_process::{Kind, ProcessId, Supervisor};
 use ide_thread::{
@@ -23,17 +27,23 @@ use serde_json::{Value, json};
 
 use crate::capabilities::Capabilities;
 use crate::control::{
-    self, Answer, ContextUsage, ControlError, Incoming, InitializeResult, InterruptResult, PermissionAnswer,
-    PermissionAsk, PlanAnswer, RemoteControlResult, Request, RewindResult, TaskOutput, UsageReport,
+    self, Answer, Backgrounded, ContextCount, ContextUsage, ControlError, Incoming, InitializeResult, InterruptResult,
+    PermissionAnswer, PermissionAsk, PlanAnswer, RemoteControlResult, Request, RewindResult, TaskOutput, UsageReport,
 };
 use crate::input;
 use crate::launch::Launch;
 use crate::mapping::{self, Mapper};
 use crate::modes::{Effort, PermissionMode};
-use crate::protocol::{self, ControlResponse, Message, System};
+use crate::protocol::{self, ControlResponse, Message, Outcome, System};
+
+pub use reply::Reply;
 
 /// What the stderr tail keeps.
 const STDERR_LIMIT: usize = 64 * 1024;
+
+/// The longest line of the CLI's output that is read; a longer one is skipped, so that it costs neither the memory
+/// nor the session. Frames with pictures stay well below it.
+const LINE_LIMIT: usize = 64 * 1024 * 1024;
 
 /// Words in the CLI's output that mean it has no usable sign-in.
 const SIGN_IN_HINTS: [&str; 3] = ["Not logged in", "Please run /login", "Invalid API key"];
@@ -135,7 +145,7 @@ type After = Box<dyn FnOnce(&Value, &mut State) -> Vec<Update> + Send>;
 type Sink = Box<dyn Fn(Event) + Send + Sync>;
 
 struct Pending {
-    reply: Sender<Result<Value, ControlError>>,
+    reply: reply::Answering,
     after: Option<After>,
 }
 
@@ -170,54 +180,14 @@ struct Shared {
     sign_in_reported: AtomicBool,
     /// Events that wait until the state lock is released.
     later: Mutex<Vec<Event>>,
+    /// The longest any control request waits for its answer, in place of its own timeout.
+    control_timeout: Option<Duration>,
 }
 
 /// A running Claude session; clones share it. It runs until `stop`, `close_input` or the supervisor ends it.
 #[derive(Clone)]
 pub struct Session {
     shared: Arc<Shared>,
-}
-
-/// The answer to a control request, once it comes; dropping it leaves the request running.
-pub struct Reply<T> {
-    rx: Receiver<Result<Value, ControlError>>,
-    id: String,
-    deadline: Instant,
-    shared: Weak<Shared>,
-    answer: PhantomData<fn() -> T>,
-}
-
-impl<T: Answer> Reply<T> {
-    /// Waits for the answer, at most until the request's timeout; a timed-out request is withdrawn.
-    pub fn wait(self) -> Result<T, ControlError> {
-        let left = self.deadline.saturating_duration_since(Instant::now());
-        match self.rx.recv_timeout(left) {
-            Ok(Ok(payload)) => T::read(payload),
-            Ok(Err(error)) => Err(error),
-            Err(RecvTimeoutError::Timeout) => {
-                if let Some(shared) = self.shared.upgrade() {
-                    shared.withdraw(&self.id);
-                }
-                Err(ControlError::Timeout)
-            }
-            Err(RecvTimeoutError::Disconnected) => Err(ControlError::Closed),
-        }
-    }
-
-    /// Waits on a thread of its own and hands the answer to `f` there; without a thread, `f` hears that at once.
-    pub fn then(self, f: impl FnOnce(Result<T, ControlError>) + Send + 'static) {
-        ide_core::thread::detach_answering(
-            "claude-reply",
-            f,
-            move |f| f(self.wait()),
-            |f, error| f(Err(ControlError::Unwaited(error.to_string()))),
-        );
-    }
-
-    /// The request's id on the wire.
-    pub fn id(&self) -> &str {
-        &self.id
-    }
 }
 
 impl Session {
@@ -268,6 +238,7 @@ impl Session {
             end_expected: AtomicBool::new(false),
             sign_in_reported: AtomicBool::new(false),
             later: Mutex::new(Vec::new()),
+            control_timeout: launch.control_timeout,
         });
         let weak = Arc::downgrade(&shared);
         supervisor.on_stop(spawned.id, move || {
@@ -320,7 +291,12 @@ impl Session {
                 vec![result.billing()]
             })),
         );
-        drop(reply);
+        let weak = Arc::downgrade(&self.shared);
+        reply.then(move |result| {
+            if let (Err(ControlError::Timeout), Some(shared)) = (result, weak.upgrade()) {
+                shared.emit(Event::Failed(SessionError::Start(ControlError::Timeout.explain())));
+            }
+        });
     }
 
     /// Sends `message` as a new prompt and returns the CLI's id for it, which rewinding names.
@@ -438,7 +414,7 @@ impl Session {
     }
 
     /// Moves the foreground task of `tool_use_id`, or all of them, to the background; tells whether any moved.
-    pub fn background(&self, tool_use_id: Option<&str>) -> Reply<bool> {
+    pub fn background(&self, tool_use_id: Option<&str>) -> Reply<Backgrounded> {
         self.request(Request::BackgroundTasks(tool_use_id.map(str::to_string)), None)
     }
 
@@ -473,10 +449,10 @@ impl Session {
         )
     }
 
-    /// Reads what fills the context window and keeps it on the thread as its breakdown; `full` counts every
-    /// category exactly, which costs token-count calls. The session asks without `full` after every turn itself.
-    pub fn context_usage(&self, full: bool) -> Reply<ContextUsage> {
-        self.request(Request::GetContextUsage { full }, Some(context_after(full)))
+    /// Reads what fills the context window, counted as `count` says, and keeps it on the thread as its breakdown.
+    /// The session asks for an estimate after every turn itself.
+    pub fn context_usage(&self, count: ContextCount) -> Reply<ContextUsage> {
+        self.request(Request::GetContextUsage { count }, Some(context_after(count)))
     }
 
     /// Reads the session's cost and the plan's usage windows; experimental in the CLI. The session's totals in the
@@ -496,10 +472,20 @@ impl Session {
 
     /// Restores the files the file tools changed since the user message `user_message_id`; experimental in the CLI
     /// and only with `Launch::file_checkpoints`.
-    pub fn rewind_files(&self, user_message_id: &str, dry_run: bool) -> Reply<RewindResult> {
+    pub fn rewind_files(&self, user_message_id: &str) -> Reply<RewindResult> {
+        self.rewind(user_message_id, false)
+    }
+
+    /// What [`Session::rewind_files`] would restore, without restoring it.
+    pub fn preview_rewind(&self, user_message_id: &str) -> Reply<RewindResult> {
+        self.rewind(user_message_id, true)
+    }
+
+    fn rewind(&self, user_message_id: &str, dry_run: bool) -> Reply<RewindResult> {
+        let user_message_id = user_message_id.to_string();
         self.request(
             Request::RewindFiles {
-                user_message_id: user_message_id.to_string(),
+                user_message_id,
                 dry_run,
             },
             None,
@@ -523,11 +509,6 @@ impl Session {
     /// What the CLI reported about itself so far.
     pub fn capabilities(&self) -> Capabilities {
         self.shared.lock_state().capabilities.clone()
-    }
-
-    /// The supervisor's number for the process.
-    pub fn process(&self) -> ProcessId {
-        self.shared.process
     }
 
     /// Whether the process has ended.
@@ -601,35 +582,49 @@ fn mapper_for(launch: &Launch) -> Mapper {
 }
 
 /// Keeps a `get_context_usage` answer on the thread.
-fn context_after(full: bool) -> After {
+fn context_after(count: ContextCount) -> After {
     Box::new(move |payload, state| match ContextUsage::read(payload.clone()) {
-        Ok(usage) => state.mapper.context(&usage, full, SystemTime::now()),
+        Ok(usage) => state.mapper.context(&usage, count, SystemTime::now()),
         Err(_) => Vec::new(),
     })
 }
 
 impl Shared {
+    /// Sends `request`; its answer, the refusal, the timeout or the end of the session reaches the reply once.
     fn request<T: Answer>(self: &Arc<Self>, request: Request, after: Option<After>) -> Reply<T> {
         let id = format!("req-{}", self.next.fetch_add(1, Ordering::Relaxed));
-        let (tx, rx) = channel();
-        let deadline = Instant::now() + request.timeout();
+        let (answering, reply) = reply::pair();
         if self.closed.load(Ordering::SeqCst) {
-            let _ = tx.send(Err(ControlError::Closed));
-        } else {
-            self.lock_pending().insert(id.clone(), Pending { reply: tx, after });
-            if self.write(&request.frame(&id)).is_err()
-                && let Some(pending) = self.lock_pending().remove(&id)
-            {
-                let _ = pending.reply.send(Err(ControlError::Closed));
+            answering.answer(Err(ControlError::Closed));
+            return reply;
+        }
+        self.lock_pending().insert(
+            id.clone(),
+            Pending {
+                reply: answering,
+                after,
+            },
+        );
+        if let Err(error) = self.write(&request.frame(&id)) {
+            let pending = self.lock_pending().remove(&id);
+            if let Some(pending) = pending {
+                pending.reply.answer(Err(match error {
+                    SessionError::Congested => ControlError::Congested,
+                    _ => ControlError::Closed,
+                }));
             }
+            return reply;
         }
-        Reply {
-            rx,
-            id,
-            deadline,
-            shared: Arc::downgrade(self),
-            answer: PhantomData,
-        }
+        let timeout = self
+            .control_timeout
+            .map_or(request.timeout(), |most| most.min(request.timeout()));
+        let shared = Arc::downgrade(self);
+        ide_core::timer::after(timeout, move || {
+            if let Some(shared) = shared.upgrade() {
+                shared.expire(&id);
+            }
+        });
+        reply
     }
 
     /// Asks after a turn how full the context window is, unless the CLI refused before or the session ends.
@@ -640,8 +635,8 @@ impl Shared {
         {
             return;
         }
-        let reply: Reply<ContextUsage> =
-            self.request(Request::GetContextUsage { full: false }, Some(context_after(false)));
+        let count = ContextCount::Estimated;
+        let reply: Reply<ContextUsage> = self.request(Request::GetContextUsage { count }, Some(context_after(count)));
         let weak = Arc::downgrade(self);
         reply.then(move |result| {
             if let (Err(ControlError::Refused(_)), Some(shared)) = (result, weak.upgrade()) {
@@ -729,7 +724,7 @@ impl Shared {
     }
 
     fn write(&self, frame: &Value) -> Result<(), SessionError> {
-        let line = serde_json::to_string(frame).map_err(|e| SessionError::Start(e.to_string()))?;
+        let line = frame.to_string();
         match self.lock_writer().as_ref() {
             Some(writer) => writer.try_send(Outgoing::Line(line)).map_err(|error| match error {
                 TrySendError::Full(_) => SessionError::Congested,
@@ -767,9 +762,12 @@ impl Shared {
         }
     }
 
-    fn withdraw(&self, id: &str) {
-        if self.lock_pending().remove(id).is_some() {
+    /// Withdraws the request `id` when it still waits for its answer, and tells its reply so.
+    fn expire(&self, id: &str) {
+        let pending = self.lock_pending().remove(id);
+        if let Some(pending) = pending {
             let _ = self.write(&control::cancel_frame(id));
+            pending.reply.answer(Err(ControlError::Timeout));
         }
     }
 
@@ -777,14 +775,17 @@ impl Shared {
         let mut reader = BufReader::with_capacity(256 * 1024, stdout);
         let mut line = Vec::new();
         loop {
-            line.clear();
-            match reader.read_until(b'\n', &mut line) {
-                Ok(0) => break,
+            match framing::read_line(&mut reader, &mut line, LINE_LIMIT) {
+                Ok(Line::End) => break,
                 Err(error) => {
                     ide_core::diag::report("claude: reading from the CLI", error);
                     break;
                 }
-                Ok(_) => {
+                Ok(Line::TooLong) => ide_core::diag::report(
+                    "claude: a line of the CLI was skipped",
+                    format_args!("it is longer than {} MiB", LINE_LIMIT >> 20),
+                ),
+                Ok(Line::Read) => {
                     let text = String::from_utf8_lossy(&line);
                     match protocol::parse(text.trim_end()) {
                         Ok(Message::Malformed(frame)) => {
@@ -874,9 +875,9 @@ impl Shared {
         let Some(pending) = self.lock_pending().remove(&response.request_id) else {
             return;
         };
-        if response.subtype != "success" {
-            let why = response.error.unwrap_or_else(|| response.subtype.clone());
-            let _ = pending.reply.send(Err(ControlError::Refused(why)));
+        if response.subtype != Outcome::Success {
+            let why = response.error.unwrap_or_else(|| response.subtype.as_str().to_string());
+            pending.reply.answer(Err(ControlError::Refused(why)));
             return;
         }
         let payload = response.response.unwrap_or_else(|| json!({}));
@@ -888,7 +889,7 @@ impl Shared {
             };
             self.emit_changes(changes);
         }
-        let _ = pending.reply.send(Ok(payload));
+        pending.reply.answer(Ok(payload));
     }
 
     fn incoming(&self, request_id: &str, body: &Value) {
@@ -924,8 +925,9 @@ impl Shared {
         if let Some(writer) = self.lock_writer().take() {
             let _ = writer.try_send(Outgoing::Close);
         }
-        for (_, pending) in self.lock_pending().drain() {
-            let _ = pending.reply.send(Err(ControlError::Closed));
+        let pending: Vec<Pending> = self.lock_pending().drain().map(|(_, pending)| pending).collect();
+        for pending in pending {
+            pending.reply.answer(Err(ControlError::Closed));
         }
         self.await_stderr();
         let stderr = self.stderr.lock_ignoring_poison().text();

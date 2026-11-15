@@ -43,7 +43,7 @@ pub enum Message {
 
 /// What is wrong with a message body.
 #[derive(Debug)]
-pub enum ParseError {
+pub(crate) enum ParseError {
     /// It is not JSON.
     Json(serde_json::Error),
     /// It is JSON, but not an object.
@@ -84,7 +84,7 @@ fn missing(kind: &'static str, field: &'static str) -> ParseError {
 }
 
 /// Reads one message body; an error says what is wrong with it.
-pub fn parse(body: &[u8]) -> Result<Message, ParseError> {
+pub(crate) fn parse(body: &[u8]) -> Result<Message, ParseError> {
     let Value::Object(mut object) = serde_json::from_slice::<Value>(body).map_err(ParseError::Json)? else {
         return Err(ParseError::NotAnObject);
     };
@@ -118,7 +118,7 @@ pub fn parse(body: &[u8]) -> Result<Message, ParseError> {
 
 impl Message {
     /// The message as JSON, ready to frame.
-    pub fn to_json(&self) -> Value {
+    pub(crate) fn to_json(&self) -> Value {
         match self {
             Message::Request {
                 seq,
@@ -160,7 +160,7 @@ impl Message {
     }
 
     /// The message framed for the wire.
-    pub fn to_frame(&self) -> Vec<u8> {
+    pub(crate) fn to_frame(&self) -> Vec<u8> {
         let body = serde_json::to_vec(&self.to_json()).unwrap_or_default();
         ide_process::framing::frame(&body)
     }

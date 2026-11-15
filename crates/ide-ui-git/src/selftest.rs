@@ -209,7 +209,7 @@ pub fn diff_counts(controller: &(impl AsWindow + ?Sized), path: &Path, staged: b
 }
 
 /// A thread worktree as its row shows it: folder, branch, ahead, behind and the files it changed.
-pub type TreeSeen = (PathBuf, String, usize, usize, Vec<PathBuf>);
+pub(crate) type TreeSeen = (PathBuf, String, usize, usize, Vec<PathBuf>);
 
 /// The thread worktrees the panel lists.
 pub fn worktrees(controller: &(impl AsWindow + ?Sized)) -> Vec<TreeSeen> {
@@ -295,7 +295,7 @@ pub fn tree_diff_counts(controller: &(impl AsWindow + ?Sized), tree: &Path, file
 }
 
 /// The hash of the commit titled `subject` in the graph.
-fn commit_hash(controller: &Window, subject: &str) -> Option<String> {
+fn commit_hash(controller: &Window, subject: &str) -> Option<ide_git::CommitId> {
     let panel = panel::of(controller)?;
     let state = panel.read();
     state
@@ -307,9 +307,9 @@ fn commit_hash(controller: &Window, subject: &str) -> Option<String> {
 }
 
 /// Chooses `action` in the context menu of the commit `hash`'s row, as a click on its item does.
-pub fn commit_action(controller: &(impl AsWindow + ?Sized), hash: &str, action: objc2::runtime::Sel) {
+pub fn commit_action(controller: &(impl AsWindow + ?Sized), hash: &ide_git::CommitId, action: objc2::runtime::Sel) {
     let controller = &controller.as_window();
-    menu_action(controller, RowKey::Commit(hash.to_string()), action);
+    menu_action(controller, RowKey::Commit(hash.clone()), action);
 }
 
 /// Chooses `action` in the context menu of the staged file `path`'s row, as a click on its item does.

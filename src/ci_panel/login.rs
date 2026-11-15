@@ -10,34 +10,31 @@ use std::time::Duration;
 use ide_ci::oauth::{self, LoginError};
 use ide_ci::{Client, Forge, Kind};
 use ide_core::settings::{Key, Settings};
+use ide_ui_common::alert::{Alert, Role, first};
 use objc2::MainThreadOnly;
-use objc2_app_kit::{
-    NSAlert, NSAlertFirstButtonReturn, NSFont, NSPasteboard, NSPasteboardTypeString, NSTextAlignment, NSTextField,
-    NSWorkspace,
-};
+use objc2_app_kit::{NSFont, NSPasteboard, NSPasteboardTypeString, NSTextAlignment, NSTextField, NSWorkspace};
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSURL};
 use splat_i18n::{t, tf};
 
-use super::ops::sheet;
 use super::panel::{CiPanel, with_panel};
 use super::{text, work};
 use crate::util::{constant, ns};
 
 /// OAuth apps the user registered on hosts other than github.com and gitlab.com, as `host=id`. Only the user sets
 /// them, like the host rules.
-pub const CI_OAUTH_CLIENTS: Key<Vec<String>> =
+pub(crate) const CI_OAUTH_CLIENTS: Key<Vec<String>> =
     Key::user("ciOAuthClients", ide_core::settings::Sharing::Shared, Vec::new);
 
 /// A login that waits for the browser.
-pub struct Login {
-    pub ticket: Ticket,
+pub(crate) struct Login {
+    pub(crate) ticket: Ticket,
     /// The code the user types on GitHub; `None` for GitLab.
-    pub code: Option<String>,
+    pub(crate) code: Option<String>,
 }
 
 /// Names one login, so what an earlier, stopped one finds later changes nothing, and stops it.
 #[derive(Clone)]
-pub struct Ticket {
+pub(crate) struct Ticket {
     serial: u64,
     cancel: Arc<AtomicBool>,
 }
@@ -60,7 +57,7 @@ impl Ticket {
 static CALLBACK_PORT: Mutex<()> = Mutex::new(());
 
 /// Whether the browser login can start for `forge`; else the note that says why not.
-pub fn availability(forge: &Forge) -> Result<(), &'static str> {
+pub(crate) fn availability(forge: &Forge) -> Result<(), &'static str> {
     if ide_ci::is_public_host(forge) && ide_ci::product_client(forge).is_none() {
         return Err(t("Browser-Anmeldung noch nicht eingerichtet"));
     }
@@ -171,7 +168,7 @@ fn keep(forge: &Forge, client: &str, grant: &oauth::Grant) -> Result<(), LoginEr
 
 impl CiPanel {
     /// Starts signing in through the browser, asking first for the OAuth app of a host other than the public ones.
-    pub fn browser_login(&self) {
+    pub(crate) fn browser_login(&self) {
         let Some(forge) = self.read().forge.clone() else { return };
         if self.read().login.is_some() {
             return;
@@ -188,7 +185,7 @@ impl CiPanel {
     }
 
     /// Stops a login that waits for the browser.
-    pub fn cancel_login(&self) {
+    pub(crate) fn cancel_login(&self) {
         if let Some(login) = self.state().login.take() {
             login.ticket.cancel.store(true, Ordering::Relaxed);
         }
@@ -221,9 +218,7 @@ impl CiPanel {
             return;
         };
         let mtm = self.mtm();
-        let alert = NSAlert::new(mtm);
-        alert.setMessageText(&ns(&tf("OAuth-App auf {}", &[&forge.host])));
-        alert.setInformativeText(&ns(&match forge.kind {
+        let informative = match forge.kind {
             Kind::GitHub => t(
                 "Trag die Client-ID einer OAuth-App ein, die auf diesem Host registriert ist und den Device Flow erlaubt.",
             )
@@ -232,21 +227,23 @@ impl CiPanel {
                 "Trag die Application-ID einer Anwendung ein, die auf diesem Host registriert ist: nicht vertraulich, Bereich api, Redirect-URI {}.",
                 &[&oauth::redirect_uri(oauth::CALLBACK_PORT)],
             ),
-        }));
-        alert.addButtonWithTitle(&ns(t("Weiter")));
-        alert.addButtonWithTitle(&ns(t("Abbrechen")));
+        };
         let field = NSTextField::textFieldWithString(&ns(""), mtm);
         field.setFrame(NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(300.0, 24.0)));
-        alert.setAccessoryView(Some(&field));
-        alert.window().setInitialFirstResponder(Some(&field));
         let id = self.id();
-        sheet(&alert, &window, move |response| {
-            let client = field.stringValue().to_string().trim().to_string();
-            if response == NSAlertFirstButtonReturn && !client.is_empty() {
-                remember_client(&forge.host, &client);
-                with_panel(id, |panel| panel.start_login(forge, client));
-            }
-        });
+        Alert::new(mtm, &tf("OAuth-App auf {}", &[&forge.host]))
+            .informative(&informative)
+            .button(t("Weiter"), Role::Plain)
+            .button(t("Abbrechen"), Role::Plain)
+            .accessory(&field)
+            .focus(&field)
+            .sheet(&window, move |response| {
+                let client = field.stringValue().to_string().trim().to_string();
+                if first(response) && !client.is_empty() {
+                    remember_client(&forge.host, &client);
+                    with_panel(id, |panel| panel.start_login(forge, client));
+                }
+            });
     }
 
     fn start_login(&self, forge: Forge, client: String) {
@@ -290,39 +287,37 @@ impl CiPanel {
         }
         self.show();
         let mtm = self.mtm();
-        let alert = NSAlert::new(mtm);
-        alert.setMessageText(&ns(&tf("Bei {} anmelden", &[&forge.host])));
-        alert.setInformativeText(&ns(&tf(
-            "Gib auf {} diesen Code ein. Danach holt die App den Token von selbst.",
-            &[&code.verification_uri],
-        )));
         let shown = NSTextField::labelWithString(&ns(&code.user_code), mtm);
         shown.setFont(Some(&NSFont::monospacedSystemFontOfSize_weight(
             ide_ui_common::style::LOGIN_CODE,
-            // SAFETY: AppKit sets its font weight constants when it loads.
-            unsafe { objc2_app_kit::NSFontWeightSemibold },
+            constant!(objc2_app_kit::NSFontWeightSemibold),
         )));
         shown.setSelectable(true);
         shown.setAlignment(NSTextAlignment::Center);
         shown.setFrame(NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(300.0, 34.0)));
-        alert.setAccessoryView(Some(&shown));
-        alert.addButtonWithTitle(&ns(&tf("Code kopieren und {} öffnen", &[&forge.host])));
-        alert.addButtonWithTitle(&ns(t("Abbrechen")));
         let id = self.id();
-        sheet(&alert, &window, move |response| {
-            with_panel(id, |panel| {
-                if !panel.current(&ticket) {
-                    return;
-                }
-                if response != NSAlertFirstButtonReturn {
-                    panel.cancel_login();
-                    return;
-                }
-                copy(&code.user_code);
-                open_url(&code.verification_uri);
-                panel.poll_device(forge, client, code, ticket);
+        Alert::new(mtm, &tf("Bei {} anmelden", &[&forge.host]))
+            .informative(&tf(
+                "Gib auf {} diesen Code ein. Danach holt die App den Token von selbst.",
+                &[&code.verification_uri],
+            ))
+            .accessory(&shown)
+            .button(&tf("Code kopieren und {} öffnen", &[&forge.host]), Role::Plain)
+            .button(t("Abbrechen"), Role::Plain)
+            .sheet(&window, move |response| {
+                with_panel(id, |panel| {
+                    if !panel.current(&ticket) {
+                        return;
+                    }
+                    if !first(response) {
+                        panel.cancel_login();
+                        return;
+                    }
+                    copy(&code.user_code);
+                    open_url(&code.verification_uri);
+                    panel.poll_device(forge, client, code, ticket);
+                });
             });
-        });
     }
 
     fn poll_device(&self, forge: Forge, client: String, code: oauth::DeviceCode, ticket: Ticket) {
@@ -452,4 +447,4 @@ mod tests {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

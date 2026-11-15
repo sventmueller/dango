@@ -4,23 +4,22 @@
 
 use std::path::{Path, PathBuf};
 
+use ide_ui_common::alert::{Alert, Role, first};
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2::{MainThreadOnly, sel};
-use objc2_app_kit::{
-    NSAccessibility, NSAlert, NSAlertFirstButtonReturn, NSBezierPath, NSColor, NSMenu, NSMenuItem, NSTextField,
-};
+use objc2_app_kit::{NSAccessibility, NSBezierPath, NSColor, NSMenu, NSMenuItem, NSTextField};
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSString};
 use splat_i18n::{t, tf};
 
 use super::model::breakpoints::{Edit, Look};
 use super::panel::DebugPanel;
-use ide_ui_common::util::{guarded, item, ns, separator, set_target};
+use ide_ui_common::util::{item, ns, separator, set_target};
 use ide_ui_common::window::Window;
 
 /// What a menu item of a breakpoint changes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum What {
+pub(crate) enum What {
     Switch,
     Condition,
     HitCondition,
@@ -72,7 +71,7 @@ fn entry(panel: &DebugPanel, title: &str, what: What, path: &Path, line: usize, 
 }
 
 /// What a breakpoint's menu item acts on.
-pub fn menu_target(sender: Option<&AnyObject>) -> Option<(What, PathBuf, usize)> {
+pub(crate) fn menu_target(sender: Option<&AnyObject>) -> Option<(What, PathBuf, usize)> {
     let item = sender?.downcast_ref::<NSMenuItem>()?;
     let text = item.representedObject()?.downcast::<NSString>().ok()?.to_string();
     let mut parts = text.splitn(3, SEPARATOR);
@@ -84,7 +83,7 @@ pub fn menu_target(sender: Option<&AnyObject>) -> Option<(What, PathBuf, usize)>
 
 /// The menu items for the breakpoint at `line` of `path`, or for setting one there; greyed out what the running
 /// session's adapter cannot do.
-pub fn breakpoint_items(panel: &DebugPanel, path: &Path, line: usize) -> Vec<Retained<NSMenuItem>> {
+pub(crate) fn breakpoint_items(panel: &DebugPanel, path: &Path, line: usize) -> Vec<Retained<NSMenuItem>> {
     let model = panel.read();
     let caps = model.current().filter(|s| !s.is_over()).map(|s| s.caps.clone());
     let can = |flag: fn(&super::model::session::Caps) -> bool| caps.as_ref().is_none_or(flag);
@@ -115,7 +114,7 @@ pub fn breakpoint_items(panel: &DebugPanel, path: &Path, line: usize) -> Vec<Ret
 }
 
 /// Carries out a breakpoint's menu item: switches it, sets it, or asks for its condition, hit count or log message.
-pub fn edit(panel: &DebugPanel, what: What, path: &Path, line: usize) {
+pub(crate) fn edit(panel: &DebugPanel, what: What, path: &Path, line: usize) {
     let existing = panel.read().breakpoints.at(path, line).cloned();
     let (title, info, current) = match what {
         What::Switch => {
@@ -169,27 +168,20 @@ pub fn edit(panel: &DebugPanel, what: What, path: &Path, line: usize) {
 /// Asks in a sheet for a line of text, prefilled with `current`; `then` gets it, also empty, unless the user cancels.
 fn ask(window: &objc2_app_kit::NSWindow, title: &str, info: &str, current: &str, then: impl FnOnce(String) + 'static) {
     let mtm = window.mtm();
-    let alert = NSAlert::new(mtm);
-    alert.setMessageText(&ns(title));
-    alert.setInformativeText(&ns(info));
-    alert.addButtonWithTitle(&ns(t("OK")));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
     let field = NSTextField::textFieldWithString(&ns(current), mtm);
     field.setFrame(NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(300.0, 24.0)));
     field.setAccessibilityLabel(Some(&ns(title)));
-    alert.setAccessoryView(Some(&field));
-    alert.window().setInitialFirstResponder(Some(&field));
-    let then = std::cell::Cell::new(Some(then));
-    let handler = block2::RcBlock::new(move |response: objc2_app_kit::NSModalResponse| {
-        guarded((), || {
-            if response == NSAlertFirstButtonReturn
-                && let Some(then) = then.take()
-            {
+    Alert::new(mtm, title)
+        .informative(info)
+        .button(t("OK"), Role::Plain)
+        .button(t("Abbrechen"), Role::Plain)
+        .accessory(&field)
+        .focus(&field)
+        .sheet(window, move |response| {
+            if first(response) {
                 then(field.stringValue().to_string());
             }
         });
-    });
-    alert.beginSheetModalForWindow_completionHandler(window, Some(&handler));
 }
 
 /// A click on the line numbers at `line` of `path` in `window`: sets or clears a breakpoint there; whether the window

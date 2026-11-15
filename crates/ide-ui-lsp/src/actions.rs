@@ -70,7 +70,7 @@ struct Found {
 
 /// What the code actions of one editor are doing.
 #[derive(Default)]
-pub struct State {
+pub(crate) struct State {
     /// Counts cursor moves and edits, so that an answer to an older question is dropped.
     asked: u64,
     tickets: Vec<Ticket>,
@@ -92,7 +92,7 @@ struct Shown {
 
 /// The code actions on view and the menu that offers them.
 #[derive(Default)]
-pub struct CodeActions {
+pub(crate) struct CodeActions {
     shown: RefCell<Option<Shown>>,
     chooser: RefCell<Option<Retained<Chooser>>>,
 }
@@ -110,7 +110,7 @@ define_class!(
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDECodeActionChooser"]
-    pub struct Chooser;
+    pub(crate) struct Chooser;
 
     unsafe impl NSObjectProtocol for Chooser {}
 
@@ -166,7 +166,7 @@ fn place(view: &dyn Editor) -> (Range<usize>, usize) {
 
 /// The cursor moved or the text changed: questions under way end, the bulb goes unless it is still for the place,
 /// and a rest asks again.
-pub fn moved(view: &dyn Editor) {
+pub(crate) fn moved(view: &dyn Editor) {
     let (_, line) = place(view);
     let revision = view.document().revision();
     let (serial, waiting, gone) = {
@@ -362,7 +362,7 @@ fn arrived(
 }
 
 /// Lists the actions of `kind` at the cursor in a menu there, as ⌥⌘A, the menu items and the bulb do.
-pub fn open(view: &dyn Editor, kind: Kind) {
+pub(crate) fn open(view: &dyn Editor, kind: Kind) {
     let (range, _) = place(view);
     let revision = view.document().revision();
     let known = {
@@ -563,17 +563,17 @@ fn execute(view: &dyn Editor, origin: u64, command: &Command) {
 }
 
 /// Tells the user that a server's change was not applied, and why.
-pub fn failed(message: String) {
+pub(crate) fn failed(message: String) {
     ide_ui_common::diag::report("code action", &message);
     main_on_run_loop(move || {
         if let Some(mtm) = MainThreadMarker::new() {
-            editor::show_alert(mtm, t("Änderung nicht angewandt"), &message);
+            ide_ui_common::alert::warn(mtm, t("Änderung nicht angewandt"), &message);
         }
     });
 }
 
 /// Whether the menu command `action` can run in `view`, for the code action commands; `None` for every other one.
-pub fn validate(view: &dyn Editor, action: objc2::runtime::Sel) -> Option<bool> {
+pub(crate) fn validate(view: &dyn Editor, action: objc2::runtime::Sel) -> Option<bool> {
     [sel!(ideQuickFix:), sel!(ideRefactor:), sel!(ideSourceActions:)]
         .contains(&action)
         .then(|| {

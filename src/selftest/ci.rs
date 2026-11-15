@@ -21,7 +21,7 @@ use ide_core::settings::Settings;
 use objc2_app_kit::NSAlertFirstButtonReturn;
 
 use super::git::{answer_sheet, append, fixture_git, pictures, wait_for, window_of, write};
-use super::{check, finish};
+use super::{check, finish, give_up, give_up_saying, skip};
 use crate::ci_panel::selftest as panel;
 use crate::util::main_soon;
 use crate::window::{Panel, WindowController};
@@ -44,15 +44,15 @@ fn stubs() -> &'static Stubs {
     STUBS.get().expect("the scenario starts the stubs first")
 }
 
-pub fn run() {
+pub(crate) fn run() {
     begin(SCENARIO, |stubs| stubs.github_root.clone(), github_listed);
 }
 
-pub fn login() {
+pub(crate) fn login() {
     begin(login::SCENARIO, |stubs| stubs.gitlab_root.clone(), login::start);
 }
 
-pub fn hosts() {
+pub(crate) fn hosts() {
     begin(hosts::SCENARIO, |stubs| stubs.gitlab_root.clone(), hosts::start);
 }
 
@@ -66,8 +66,7 @@ fn begin(scenario: &'static str, first: fn(&Stubs) -> PathBuf, then: fn(PathBuf,
                 open(first(stubs()), then);
             }
             Err(error) => {
-                check("the stub servers and test repositories are made", false, error);
-                finish(scenario);
+                give_up_saying(scenario, "the stub servers and test repositories are made", error);
             }
         });
     });
@@ -129,7 +128,11 @@ fn repository(folder: &Path, url: &str, stub: &Stub) -> Result<PathBuf, String> 
     repo.stage_all().map_err(|e| e.to_string())?;
     repo.commit("First state", ide_git::CommitOptions::default())
         .map_err(|e| e.to_string())?;
-    let sha = repo.head().map_err(|e| e.to_string())?.unwrap_or_default();
+    let sha = repo
+        .head()
+        .map_err(|e| e.to_string())?
+        .map(|h| h.to_string())
+        .unwrap_or_default();
     let branch = repo.current_branch().map_err(|e| e.to_string())?.unwrap_or_default();
     stub.set_head(&sha, &branch);
     Ok(folder.canonicalize().unwrap_or(folder.to_path_buf()))
@@ -175,7 +178,7 @@ fn describe(controller: &WindowController) -> String {
 
 fn github_listed(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let seen = panel::seen(&controller);
     let runs = seen.as_ref().map(|s| s.runs.clone()).unwrap_or_default();
@@ -214,7 +217,7 @@ fn lint_done(controller: &WindowController) -> bool {
 
 fn lint_finished(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check("a running run is read again until it ends", ok, describe(&controller));
     panel::press_return_on(&controller, 9001, 72);
@@ -227,7 +230,7 @@ fn lint_finished(root: PathBuf, ok: bool) {
 
 fn log_shown(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let (lines, found) = panel::log(&controller, 72, true).unwrap_or_default();
     let text = ide_ci::log::text(&lines);
@@ -261,7 +264,7 @@ fn posted_to(stub: &Stub, path: &str) -> bool {
 
 fn rerun_sent(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check("re-running asks the service to start the failed jobs again", ok, "");
     drop(controller);
@@ -271,7 +274,7 @@ fn rerun_sent(root: PathBuf, ok: bool) {
 /// Goes on after the GitHub actions with handing a failure to an agent.
 fn hand_to_agent(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     panel::send_to_agent(&controller, 9001, 72);
     wait_for(
@@ -283,7 +286,7 @@ fn hand_to_agent(root: PathBuf) {
 
 fn drafted(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let draft = panel::agent_draft(&controller).unwrap_or_default();
     let marked = panel::agent_has_outside(&controller);
@@ -297,7 +300,7 @@ fn drafted(root: PathBuf, ok: bool) {
 
 fn gitlab_asks(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let phase = panel::seen(&controller).map(|s| s.phase).unwrap_or_default();
     check(
@@ -315,8 +318,7 @@ fn gitlab_asks(root: PathBuf, ok: bool) {
 
 fn token_sheet(root: PathBuf, ok: bool) {
     if !ok || !answer_sheet(&root, NSAlertFirstButtonReturn, Some(TOKEN)) {
-        check("the token sheet opens", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the token sheet opens");
     }
     wait_for(
         root,
@@ -327,7 +329,7 @@ fn token_sheet(root: PathBuf, ok: bool) {
 
 fn gitlab_listed(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let seen = panel::seen(&controller);
     let jobs: Vec<String> = seen
@@ -391,8 +393,11 @@ fn ask_to_cancel(root: PathBuf) {
 
 fn cancel_sheet(root: PathBuf, ok: bool) {
     check("cancelling a run asks first", ok, "");
-    if !ok || !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
-        return finish(SCENARIO);
+    if !ok {
+        return give_up(SCENARIO, "cancelling a run asks first");
+    }
+    if !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
+        return give_up(SCENARIO, "the sheet is there to answer");
     }
     wait_for(
         root,
@@ -403,7 +408,7 @@ fn cancel_sheet(root: PathBuf, ok: bool) {
 
 fn cancelled(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check("a cancelled pipeline shows as cancelled", ok, describe(&controller));
     finish(SCENARIO);
@@ -417,14 +422,13 @@ fn live_repository() -> Option<PathBuf> {
     path.join(".git").exists().then(|| path.canonicalize().unwrap_or(path))
 }
 
-pub fn live() {
+pub(crate) fn live() {
     let Some(root) = live_repository() else {
-        check(
+        return skip(
+            LIVE,
             "reading a real repository's runs",
-            true,
-            "skipped: no repository at IDE_CI_LIVE_REPO or ~/Repos/splat",
+            "no repository at IDE_CI_LIVE_REPO or ~/Repos/splat",
         );
-        return finish(LIVE);
     };
     let root = super::helpers::open_trusted(&root);
     if let Some(controller) = window_of(&root) {
@@ -440,7 +444,7 @@ pub fn live() {
 
 fn live_read(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(LIVE);
+        return give_up(LIVE, "the folder's window is open");
     };
     let seen = panel::seen(&controller);
     let phase = seen.as_ref().map(|s| s.phase.clone()).unwrap_or_default();

@@ -24,6 +24,7 @@ pub use server::serve;
 /// What the pretend program does.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Script {
     /// The file it runs through.
     pub path: PathBuf,
@@ -39,7 +40,6 @@ pub struct Script {
     pub output: Vec<String>,
     /// Whether launching asks the app to run the program in a terminal tab (`runInTerminal`).
     pub run_in_terminal: bool,
-    /// Its exit code.
     pub exit_code: i32,
     /// How long the answer to `launch` or `attach` is held back, as when macOS asks for a password first.
     pub launch_delay_ms: u64,

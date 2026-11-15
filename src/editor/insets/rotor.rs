@@ -15,7 +15,7 @@ use splat_i18n::{t, tf};
 use crate::editor::EditorTextView;
 use crate::util::{guarded, ns};
 
-pub struct RotorIvars {
+pub(crate) struct RotorIvars {
     editor: Weak<EditorTextView>,
 }
 
@@ -25,7 +25,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEInsetRotor"]
     #[ivars = RotorIvars]
-    pub struct Rotor;
+    pub(crate) struct Rotor;
 
     unsafe impl NSObjectProtocol for Rotor {}
 
@@ -43,13 +43,13 @@ define_class!(
 
 /// One entry of the rotor: where it is, and what VoiceOver reads.
 #[derive(Debug, Clone, PartialEq)]
-pub struct RotorItem {
-    pub at: usize,
-    pub label: String,
+pub(crate) struct RotorItem {
+    pub(crate) at: usize,
+    pub(crate) label: String,
 }
 
 /// The rotor's entries for `view`: every inset, those at one place together, with their line.
-pub fn rotor_items(view: &EditorTextView) -> Vec<RotorItem> {
+pub(crate) fn rotor_items(view: &EditorTextView) -> Vec<RotorItem> {
     let Ok(state) = view.ivars().insets.try_borrow() else {
         return Vec::new();
     };
@@ -132,7 +132,7 @@ impl Rotor {
 }
 
 /// Gives `view` the rotor "Hinweise", beside the rotors it has.
-pub fn attach(view: &EditorTextView) {
+pub(crate) fn attach(view: &EditorTextView) {
     let delegate = Rotor::alloc(view.mtm()).set_ivars(RotorIvars {
         editor: Weak::from(view),
     });
@@ -188,4 +188,4 @@ mod tests {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

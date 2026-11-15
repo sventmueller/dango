@@ -22,22 +22,22 @@ use ide_ui_common::util::{OnDrop, main_soon, ns};
 
 /// The panel's part of the commit message a model writes.
 #[derive(Default)]
-pub struct MessageState {
+pub(crate) struct MessageState {
     /// The checked request that went out last, and to whom.
-    pub sent: Option<(String, String)>,
+    pub(crate) sent: Option<(String, String)>,
     /// The message the model wrote, until the user changes it.
-    pub written: Option<String>,
-    pub running: Option<Running>,
+    pub(crate) written: Option<String>,
+    pub(crate) running: Option<Running>,
     /// Why the last attempt sent nothing, which the button says until the next one.
-    pub blocked: Option<String>,
+    pub(crate) blocked: Option<String>,
     /// The panel sets the text itself, which is no change of the user's.
     applying: bool,
     /// What the progress row says while it runs.
-    pub progress: String,
+    pub(crate) progress: String,
 }
 
 /// A request on its way.
-pub struct Running {
+pub(crate) struct Running {
     id: u64,
     /// The message before, which undo brings back.
     before: String,
@@ -50,7 +50,7 @@ pub const INSTALL_GITLEAKS: &str = "brew install gitleaks";
 
 impl GitPanel {
     /// Why the button cannot ask a model now, if it cannot.
-    pub fn message_unavailable(&self) -> Option<String> {
+    pub(crate) fn message_unavailable(&self) -> Option<String> {
         let state = self.read();
         if state.phase != Phase::Ready {
             return Some(t("Git ist noch nicht bereit.").to_string());
@@ -63,7 +63,7 @@ impl GitPanel {
     }
 
     /// Asks the model for the commit message, after asking the user once for a provider outside the Mac.
-    pub fn generate_message(&self) {
+    pub(crate) fn generate_message(&self) {
         if let Some(why) = self.message_unavailable() {
             self.set_problem(Some(Problem::plain(why)));
             return;
@@ -242,14 +242,14 @@ impl GitPanel {
     }
 
     /// Stops the request on its way.
-    pub fn cancel_message(&self) {
+    pub(crate) fn cancel_message(&self) {
         if let Some(running) = self.read().message.running.as_ref() {
             running.cancel.cancel();
         }
     }
 
     /// The text changed: a change of the user's ends the note that AI wrote it.
-    pub fn message_edited(&self) {
+    pub(crate) fn message_edited(&self) {
         let ended = {
             let mut state = self.state();
             !state.message.applying && state.message.written.take().is_some()
@@ -260,7 +260,7 @@ impl GitPanel {
     }
 
     /// Takes the last change of the message back, a message the model wrote as a whole.
-    pub fn undo_message(&self) {
+    pub(crate) fn undo_message(&self) {
         let undo = self.message_undo();
         if undo.canUndo() {
             undo.undo();
@@ -268,7 +268,7 @@ impl GitPanel {
     }
 
     /// Shows the text that went out, exactly as gitleaks checked it.
-    pub fn show_sent(&self) {
+    pub(crate) fn show_sent(&self) {
         let Some((text, to)) = self.read().message.sent.clone() else {
             return;
         };
@@ -283,7 +283,7 @@ impl GitPanel {
     }
 
     /// The button, its tooltip and the note under the message, as the state is.
-    pub fn update_message_controls(&self) {
+    pub(crate) fn update_message_controls(&self) {
         let ui = self.ui();
         let (running, written, sent, blocked) = {
             let state = self.read();

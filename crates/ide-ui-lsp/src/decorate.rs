@@ -79,14 +79,14 @@ impl Severity {
 
 /// A diagnostic where it is in the document now, in UTF-16 code units.
 #[derive(Debug, Clone)]
-pub struct Mark {
-    pub range: Range<usize>,
-    pub severity: Severity,
-    pub message: String,
+pub(crate) struct Mark {
+    pub(crate) range: Range<usize>,
+    pub(crate) severity: Severity,
+    pub(crate) message: String,
     /// As the server sent it, for the code actions of its place.
-    pub diagnostic: Diagnostic,
+    pub(crate) diagnostic: Diagnostic,
     /// The slot of the server that sent it, which replaces only its own (E140).
-    pub source: u64,
+    pub(crate) source: u64,
 }
 
 /// A stretch the server gave a colour of its own.
@@ -131,12 +131,12 @@ pub fn follow(range: &mut Range<usize>, change: &Change) -> bool {
 
 /// What of the colours on screen edits and scrolling left stale since they were last painted.
 #[derive(Debug, Default)]
-pub struct Repaint {
+pub(crate) struct Repaint {
     /// The text the edits touched, with the tokens they took from it. TextKit 2 moves the rendering attributes around
     /// it with the text, so the rest stays right.
     edited: Option<Range<usize>>,
     /// Other lines came on screen.
-    pub screen: bool,
+    pub(crate) screen: bool,
 }
 
 /// `a` and `b` together, with what lies between them.
@@ -145,7 +145,7 @@ fn union(a: Option<Range<usize>>, b: Range<usize>) -> Range<usize> {
 }
 
 /// Keeps diagnostics and colours on their text while the user types, until the server sends new ones.
-pub fn shift(state: &mut ViewState, change: &Change) {
+pub(crate) fn shift(state: &mut ViewState, change: &Change) {
     for mark in &mut state.marks {
         follow(&mut mark.range, change);
     }
@@ -176,7 +176,7 @@ fn overlapping<'a>(tokens: &'a [Painted], range: &Range<usize>) -> &'a [Painted]
 
 /// Shows `diagnostics` of the server of slot `source` in `view`, in place of what that server sent before; the other
 /// servers' stay.
-pub fn set_diagnostics_from(view: &dyn Editor, source: u64, diagnostics: &[Diagnostic]) {
+pub(crate) fn set_diagnostics_from(view: &dyn Editor, source: u64, diagnostics: &[Diagnostic]) {
     let mut marks: Vec<Mark> = {
         let document = view.document();
         diagnostics
@@ -211,7 +211,7 @@ pub fn set_diagnostics_from(view: &dyn Editor, source: u64, diagnostics: &[Diagn
     super::status::refresh(view);
 }
 
-pub fn set_tokens(view: &dyn Editor, tokens: &SemanticTokens) {
+pub(crate) fn set_tokens(view: &dyn Editor, tokens: &SemanticTokens) {
     let painted: Vec<Painted> = {
         let document = view.document();
         let text = document.text();
@@ -273,7 +273,7 @@ pub fn line_messages(view: &dyn Editor) -> BTreeMap<usize, (usize, Vec<(Severity
 
 /// The diagnostics of at least `Info` by the line they start on, with the most serious one's severity and every
 /// message.
-pub type LineMarks = BTreeMap<usize, (Severity, String)>;
+pub(crate) type LineMarks = BTreeMap<usize, (Severity, String)>;
 
 /// The diagnostics by the line they start on, the most serious first, for the line number column and the minimap;
 /// found once per revision of the document and set of diagnostics.
@@ -385,7 +385,7 @@ pub fn follow_squiggles(view: &dyn Editor) {
     }
 }
 
-pub struct SquiggleIvars {
+pub(crate) struct SquiggleIvars {
     /// The editor it covers, by its serial.
     editor: crate::EditorSerial,
 }
@@ -396,7 +396,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDESquiggles"]
     #[ivars = SquiggleIvars]
-    pub struct Squiggles;
+    pub(crate) struct Squiggles;
 
     unsafe impl NSObjectProtocol for Squiggles {}
 
@@ -420,7 +420,7 @@ define_class!(
 
 impl Squiggles {
     /// The overlay of `editor`, covering the part on screen, which keeps its layer small in a long text.
-    pub fn attach(editor: &dyn Editor) {
+    pub(crate) fn attach(editor: &dyn Editor) {
         let this = Squiggles::alloc(crate::editor::marker(editor)).set_ivars(SquiggleIvars {
             editor: editor.serial(),
         });
@@ -631,4 +631,4 @@ mod tests {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

@@ -19,7 +19,7 @@ use objc2::rc::Retained;
 use objc2::{MainThreadMarker, Message};
 use objc2_app_kit::{NSAppearance, NSApplication, NSButton, NSModalResponse, NSTextField, NSTextView, NSView};
 
-use super::{check, finish, snapshot};
+use super::{check, finish, give_up, give_up_saying, snapshot};
 use crate::util::{main_soon, ns};
 use crate::window::{self, Panel, WindowController};
 use ide_ui_git::selftest as panel;
@@ -33,15 +33,14 @@ const README: &str = "README.md";
 const LIBRARY: &str = "src/lib.rs";
 const NOTES: &str = "notes.txt";
 
-pub fn run() {
+pub(crate) fn run() {
     let folder = crate::selftest::helpers::folder("git-project");
     std::thread::spawn(move || {
         let made = make_repository(&folder);
         main_soon(move || match made {
             Ok(()) => open(folder),
             Err(error) => {
-                check("a test repository is made", false, error);
-                finish(SCENARIO);
+                give_up_saying(SCENARIO, "a test repository is made", error);
             }
         });
     });
@@ -98,7 +97,7 @@ fn make_repository(folder: &Path) -> Result<(), String> {
         .current_branch()
         .map_err(|e| e.to_string())?
         .ok_or("no branch after the first commit")?;
-    repo.create_branch("topic", None, true).map_err(|e| e.to_string())?;
+    repo.switch_to_new_branch("topic", None).map_err(|e| e.to_string())?;
     write(folder, "topic.txt", "topic\n")?;
     repo.stage_all().map_err(|e| e.to_string())?;
     repo.commit("Topic work", CommitOptions::default())
@@ -140,8 +139,7 @@ pub(super) fn in_background(root: PathBuf, job: fn(&Path) -> Result<(), String>,
             match done {
                 Ok(()) => then(root),
                 Err(error) => {
-                    check("a step of the test repository works", false, error);
-                    finish(SCENARIO);
+                    give_up_saying(SCENARIO, "a step of the test repository works", error);
                 }
             }
         });
@@ -159,12 +157,11 @@ fn open(folder: PathBuf) {
 pub(super) fn open_repository(folder: &Path, scenario: &'static str) -> Option<(PathBuf, Retained<WindowController>)> {
     let root = super::helpers::open_trusted(folder);
     let Some(controller) = window_of(&root) else {
-        check(
+        give_up_saying(
+            scenario,
             "the repository opens in a window",
-            false,
             format!("{:?}", window::open_projects()),
         );
-        finish(scenario);
         return None;
     };
     controller.activate_panel(Panel::Git);
@@ -325,7 +322,7 @@ fn title_row(controller: &WindowController) {
 
 fn listed(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let seen = panel::seen(&controller);
     check(
@@ -356,7 +353,7 @@ fn listed(root: PathBuf, ok: bool) {
         snapshot(&window, "git-changes");
     }
     if !ok {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the Git panel lists the changed files");
     }
     let tabs = controller.tab_count();
     panel::preview_diff(&controller, Path::new(README), false);
@@ -383,7 +380,7 @@ fn readme_staged(controller: &WindowController) -> bool {
 
 fn staged(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let seen = panel::seen(&controller);
     check(
@@ -413,7 +410,7 @@ fn readme_diff_read(controller: &WindowController) -> bool {
 
 fn readme_diff(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let counts = panel::diff_counts(&controller, Path::new(README), true);
     check(
@@ -449,7 +446,7 @@ fn library_diff_read(controller: &WindowController) -> bool {
 
 fn library_diff(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let counts = panel::diff_counts(&controller, Path::new(LIBRARY), false);
     check(
@@ -458,7 +455,7 @@ fn library_diff(root: PathBuf, ok: bool) {
         format!("{counts:?} (rows, hunks)"),
     );
     if !ok {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "a file with two changed regions shows two hunks");
     }
     panel::stage_hunk(&controller, Path::new(LIBRARY), 0);
     wait_for(root, one_hunk_staged, hunk_staged);
@@ -471,7 +468,7 @@ fn one_hunk_staged(controller: &WindowController) -> bool {
 
 fn hunk_staged(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let counts = panel::diff_counts(&controller, Path::new(LIBRARY), false);
     check(
@@ -485,8 +482,11 @@ fn hunk_staged(root: PathBuf, ok: bool) {
     panel::discard(&controller, Path::new(LIBRARY));
     let asked = controller.has_sheet();
     check("discarding asks first", asked, "");
-    if !asked || !answer_sheet(&root, objc2_app_kit::NSAlertFirstButtonReturn, None) {
-        return finish(SCENARIO);
+    if !asked {
+        return give_up(SCENARIO, "discarding asks first");
+    }
+    if !answer_sheet(&root, objc2_app_kit::NSAlertFirstButtonReturn, None) {
+        return give_up(SCENARIO, "the sheet is there to answer");
     }
     wait_for(root, library_discarded, discarded);
 }
@@ -497,7 +497,7 @@ fn library_discarded(controller: &WindowController) -> bool {
 
 fn discarded(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let text = std::fs::read_to_string(root.join(LIBRARY)).unwrap_or_default();
     check(
@@ -526,7 +526,7 @@ fn committed_twice(controller: &WindowController) -> bool {
 
 fn committed(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let seen = panel::seen(&controller);
     check(
@@ -550,7 +550,7 @@ fn committed(root: PathBuf, ok: bool) {
         format!("{rows} then {after}"),
     );
     if !ok {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "a commit after the secrets check lands in the history");
     }
     panel::open_commit(&controller, TOPIC_WORK);
     wait_for(root, |c| !panel::commit_rows(c, TOPIC_WORK).is_empty(), commit_opened);
@@ -561,7 +561,7 @@ const TOPIC_WORK: &str = "Topic work";
 
 fn commit_opened(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let rows = panel::commit_rows(&controller, TOPIC_WORK);
     check(
@@ -579,7 +579,7 @@ fn commit_opened(root: PathBuf, ok: bool) {
 
 fn commit_diff(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let counts = panel::commit_diff_counts(&controller, TOPIC_WORK, Path::new("topic.txt"));
     check(
@@ -602,7 +602,7 @@ fn idle_with_upstream(controller: &WindowController) -> bool {
 
 fn pushed(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let seen = panel::seen(&controller);
     check(
@@ -619,7 +619,7 @@ fn pushed(root: PathBuf, ok: bool) {
 
 fn fetched(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let problem = panel::seen(&controller).and_then(|s| s.problem);
     check(
@@ -649,7 +649,7 @@ fn phase_is(controller: &WindowController, phase: &str) -> bool {
 
 fn untrusted(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     controller.activate_panel(Panel::Git);
     check("an untrusted folder runs no git and says why", ok, "");
@@ -675,7 +675,7 @@ fn untrusted(root: PathBuf, ok: bool) {
 
 fn not_a_repository(root: PathBuf, ok: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     check("a trusted folder without git offers to make a repository", ok, "");
     if let Some(window) = controller.window() {

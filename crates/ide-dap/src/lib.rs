@@ -24,8 +24,9 @@
 //!
 //! [`model`] is what the app's debugger panel decides without a window (E98): its sessions, the selected frame,
 //! breakpoints, the inspector, consoles and which commands can run, with the effects the controller carries out.
+//! [`kept`] is what a project keeps of it between launches, in its layout file beside the window tabs.
 
-#![warn(missing_docs, unreachable_pub)]
+#![warn(missing_docs)]
 
 mod adapter;
 mod connection;
@@ -40,9 +41,9 @@ mod filters;
 #[cfg(feature = "fuzzing")]
 #[doc(hidden)]
 pub mod fuzzing;
-mod helper;
 mod install;
 mod jsonc;
+pub mod kept;
 mod launch;
 pub mod model;
 mod ownership;
@@ -56,17 +57,19 @@ mod stub_tests;
 mod types;
 
 pub use adapter::{Adapter, AdapterKind, free_port};
-pub use current::{CurrentError, TestProgram, current_program, test_program};
+pub(crate) use current::CurrentError;
+pub use current::{TestProgram, current_program, test_program};
 pub use discover::{Adapters, Install, Missing};
-pub use error::Error;
-pub use filters::{Languages, RUST_PANIC, offered as offered_filters, rust_panic};
-pub use install::{JS_DEBUG, Pinned};
-pub use launch::{ConfigError, Entry, LaunchConfig, LaunchError, Variables, launch_configs, parse_launch_json};
+pub use error::{Error, Refusal};
+pub use filters::{Languages, offered as offered_filters};
+pub(crate) use filters::{RUST_PANIC, rust_panic};
+pub use launch::{ConfigError, Entry, LaunchConfig, LaunchError, Variables, launch_configs};
 pub use prepare::{StartError, prepare, start};
 pub use processes::{Process, processes};
 pub use session::{Event, Session, Setup, TerminalAnswer, stop_all, wait};
+pub(crate) use types::Breakpoint;
 pub use types::{
-    Breakpoint, Capabilities, End, EndReason, EvaluateContext, Evaluation, ExceptionFilter, FrameId, Output,
-    OutputCategory, Program, Reply, Request, Scope, SessionId, Source, SourceBreakpoint, StackFrame, StartMethod,
-    State, Stop, StopReason, TerminalRequest, Thread, ThreadId, Variable, VariablesRef,
+    Capabilities, End, EndReason, EvaluateContext, Evaluation, ExceptionFilter, FrameId, Output, OutputCategory,
+    Program, Reply, Request, Scope, SessionId, Source, SourceBreakpoint, StackFrame, State, Stop, StopReason,
+    TerminalRequest, Thread, ThreadId, Variable, VariablesRef,
 };

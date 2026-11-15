@@ -1,7 +1,7 @@
 //! Which of the window's menu commands work right now; unavailable ones show greyed out (E101).
 
 use objc2::runtime::Sel;
-use objc2::{DefinedClass, sel};
+use objc2::sel;
 use objc2_app_kit::{NSControlStateValueOff, NSControlStateValueOn, NSMenuItem};
 
 use super::{Panel, WindowController, activity_bar, browser_commands};
@@ -9,7 +9,6 @@ use super::{Panel, WindowController, activity_bar, browser_commands};
 impl WindowController {
     pub(super) fn validate(&self, item: &NSMenuItem) -> bool {
         let action = item.action();
-        let ivars = self.ivars();
         if action == Some(sel!(idePlanComment:)) {
             return ide_ui_agent::plan::keyboard_target(self).is_some();
         }
@@ -23,7 +22,7 @@ impl WindowController {
             return ide_ui_agent::can_show_work(self, crate::activity::Part::Background);
         }
         if action == Some(sel!(ideShowPanel:)) {
-            let current = ivars.panel_open.get().then(|| ivars.panel.get()).flatten();
+            let current = self.shown_panel();
             let on = Panel::from_tag(item.tag()) == current && current.is_some();
             item.setState(if on {
                 NSControlStateValueOn
@@ -43,7 +42,7 @@ impl WindowController {
             return !shown || hidden.len() + 1 < Panel::ALL.len();
         }
         if action == Some(sel!(ideQuickOpen:)) || action == Some(sel!(ideSearchProject:)) {
-            return ivars.workspace.borrow().is_some();
+            return self.has_workspace();
         }
         if action == Some(sel!(ideProjectSymbols:)) {
             return self

@@ -17,7 +17,7 @@ use ide_ui_lsp::ViewState;
 use ide_ui_lsp::editor::{Editor, Hint};
 
 /// `view` as a language server's editor that it holds on to.
-pub fn lsp_editor(view: Retained<EditorTextView>) -> Box<dyn Editor> {
+pub(crate) fn lsp_editor(view: Retained<EditorTextView>) -> Box<dyn Editor> {
     Box::new(Held(view))
 }
 

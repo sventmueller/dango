@@ -4,6 +4,7 @@ use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
 use crate::error::{Error, Result};
+use crate::id::CommitId;
 use crate::run::{Call, Git};
 
 /// A git repository with a working tree, as seen from one of its worktrees.
@@ -107,22 +108,22 @@ impl Repository {
     }
 
     /// The git this repository runs.
-    pub fn git(&self) -> &Git {
+    pub(crate) fn git(&self) -> &Git {
         &self.git
     }
 
     /// The commit HEAD points at; `None` on a branch without commits.
-    pub fn head(&self) -> Result<Option<String>> {
+    pub fn head(&self) -> Result<Option<CommitId>> {
         self.resolve("HEAD")
     }
 
     /// The commit `revision` names, or `None` when it names none.
-    pub fn resolve(&self, revision: &str) -> Result<Option<String>> {
+    pub fn resolve(&self, revision: &str) -> Result<Option<CommitId>> {
         let spec = format!("{revision}^{{commit}}");
         let output = self
             .git
             .run(self.call(["rev-parse", "--verify", "--quiet", "--end-of-options", &spec]))?;
-        Ok((output.code == 0).then(|| output.text()))
+        Ok((output.code == 0).then(|| CommitId::from_git(output.text())))
     }
 
     /// The tree without entries, whose name depends on the repository's hash.

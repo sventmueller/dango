@@ -18,7 +18,7 @@ use objc2_core_graphics::{CGEvent, CGEventField, CGEventType, CGMouseButton, CGS
 use objc2_foundation::{NSArray, NSData, NSPoint, NSRange, NSRect, NSString, NSURL};
 use splat_i18n::t;
 
-use super::{check, finish, helpers};
+use super::{check, finish, give_up, helpers};
 use crate::terminal::{TerminalView, inspect};
 use crate::util::constant;
 use crate::window::WindowController;
@@ -33,7 +33,7 @@ const COPIED: &str = "tv-copied";
 
 type Next = fn(u64, PathBuf);
 
-pub fn run() {
+pub(crate) fn run() {
     let _ = std::fs::write(ide_core::paths::home().join("tv-note.txt"), "a note\n");
     helpers::open_project(
         NAME,
@@ -47,8 +47,7 @@ fn opened(controller: Retained<WindowController>) {
     let root = helpers::root(PROJECT);
     crate::terminal::open_tab(&controller, None);
     let Some((id, _)) = inspect::latest() else {
-        check("a terminal opens", false, "");
-        return finish(NAME);
+        return give_up(NAME, "a terminal opens");
     };
     wait(
         id,
@@ -109,7 +108,7 @@ fn perform(view: &TerminalView, action: Sel) -> bool {
 /// A title, a bell and text for the pasteboard, all sent by a program as escape sequences.
 fn program_reports(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     let before = view.prompts();
     view.type_text("printf '\\033]0;tv-title\\007\\a\\033]52;c;dHYtY29waWVk\\007'; sleep 2\r");
@@ -166,7 +165,7 @@ fn menu_state(view: &TerminalView) -> Vec<(String, bool)> {
 
 fn menu_and_paste(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     let items = menu_state(&view);
     let expected = [
@@ -199,7 +198,7 @@ fn menu_and_paste(id: u64, root: PathBuf) {
 /// What VoiceOver asks a text area: lines, ranges, the insertion point and the frame of a line.
 fn accessibility(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     let line = view.visible_lines().iter().position(|line| line == COPIED);
     let index = line.and_then(|line| isize::try_from(line).ok()).unwrap_or(-1);
@@ -241,7 +240,7 @@ fn accessibility(id: u64, root: PathBuf) {
 
 fn select_copy_clear(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     perform(&view, sel!(selectAll:));
     let selected = view.selection().unwrap_or_default();
@@ -277,7 +276,7 @@ fn drawn_has(view: &TerminalView, line: &str) -> bool {
 /// Output that arrives while the view is hidden waits for it to show; shown again it takes the focus nobody has.
 fn hidden_output(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     view.setHidden(true);
     view.type_text("echo tv-hidden\r");
@@ -287,7 +286,7 @@ fn hidden_output(id: u64, root: PathBuf) {
         |view| has_line(view, "tv-hidden"),
         move |arrived| {
             let Some(view) = inspect::view(id) else {
-                return finish(NAME);
+                return give_up(NAME, "the terminal is open");
             };
             let drawn_hidden = drawn_has(&view, "tv-hidden");
             if let Some(window) = view.window() {
@@ -315,7 +314,7 @@ fn hidden_output(id: u64, root: PathBuf) {
 /// A command from the text system outside a key press, a composition given up, and a key let go.
 fn text_commands(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     let before = view.prompts();
     view.type_text("echo tv-command");
@@ -440,7 +439,7 @@ fn wheel(view: &TerminalView, lines: i32, at: NSPoint, flags: NSEventModifierFla
 
 fn mouse_program(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     view.type_text("sh mouse.sh\r");
     wait(
@@ -449,7 +448,7 @@ fn mouse_program(id: u64, root: PathBuf) {
         |view| has_line(view, "tv-mouse-ready"),
         move |ready| {
             let Some(view) = inspect::view(id) else {
-                return finish(NAME);
+                return give_up(NAME, "the terminal is open");
             };
             let at = |line, column| view.cell_center(ide_terminal::Point { line, column });
             press_button(&view, 1, at(1, 3));
@@ -470,7 +469,7 @@ fn mouse_program(id: u64, root: PathBuf) {
                     screen(id),
                 );
                 let Some(view) = inspect::view(id) else {
-                    return finish(NAME);
+                    return give_up(NAME, "the terminal is open");
                 };
                 let before = view.prompts();
                 view.press(0x08, "\u{3}", "c", NSEventModifierFlags::Control);
@@ -483,7 +482,7 @@ fn mouse_program(id: u64, root: PathBuf) {
 /// The wheel scrolls the history, ⌥ with it too, and typing goes back to the end.
 fn history_wheel(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     view.type_text("seq 1 200\r");
     wait(
@@ -492,7 +491,7 @@ fn history_wheel(id: u64, root: PathBuf) {
         |view| has_line(view, "200"),
         move |_| {
             let Some(view) = inspect::view(id) else {
-                return finish(NAME);
+                return give_up(NAME, "the terminal is open");
             };
             let at = view.cell_center(ide_terminal::Point { line: 3, column: 3 });
             wheel(&view, 6, at, NSEventModifierFlags::empty());
@@ -506,7 +505,7 @@ fn history_wheel(id: u64, root: PathBuf) {
                 |view| view.scrolled_back() == 0,
                 move |typed| {
                     let Some(view) = inspect::view(id) else {
-                        return finish(NAME);
+                        return give_up(NAME, "the terminal is open");
                     };
                     wheel(&view, 6, at, NSEventModifierFlags::empty());
                     let again = view.scrolled_back();
@@ -566,7 +565,7 @@ fn click(view: &TerminalView, at: NSPoint, flags: NSEventModifierFlags, count: i
 /// A double click takes a word, a ⇧-click carries the selection on to where it lands.
 fn select_words(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     view.type_text("echo tv-word other-word\r");
     wait(
@@ -575,7 +574,7 @@ fn select_words(id: u64, root: PathBuf) {
         |view| has_line(view, "tv-word other-word"),
         move |_| {
             let Some(view) = inspect::view(id) else {
-                return finish(NAME);
+                return give_up(NAME, "the terminal is open");
             };
             let line = view
                 .visible_lines()
@@ -603,7 +602,7 @@ fn select_words(id: u64, root: PathBuf) {
 
 fn drops(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     let pasteboard = NSPasteboard::pasteboardWithUniqueName();
     pasteboard.clearContents();
@@ -652,7 +651,7 @@ fn drops(id: u64, root: PathBuf) {
 /// ⌘-click opens a web address in a browser tab and a file under the home folder in an editor.
 fn links(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     let printed = "http://127.0.0.1:9/tv-link ~/tv-note.txt";
     view.type_text(&format!("echo '{printed}'\r"));
@@ -662,7 +661,7 @@ fn links(id: u64, root: PathBuf) {
         move |view| has_line(view, printed),
         move |_| {
             let (Some(view), Some(controller)) = (inspect::view(id), controller_of(&root)) else {
-                return finish(NAME);
+                return give_up(NAME, "the terminal and the folder's window are open");
             };
             let line = view
                 .visible_lines()
@@ -696,7 +695,7 @@ fn links(id: u64, root: PathBuf) {
 /// The banner's close button hides it; its button opens the address in a browser tab.
 fn dev_server(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal is open");
     };
     view.type_text("printf '  ➜  Local:   http://127.0.0.1:41001/\\n'\r");
     wait(
@@ -705,7 +704,7 @@ fn dev_server(id: u64, root: PathBuf) {
         |view| view.dev_server_banner().is_some(),
         move |raised| {
             let Some(view) = inspect::view(id) else {
-                return finish(NAME);
+                return give_up(NAME, "the terminal is open");
             };
             perform(&view, sel!(ideDismissDevServer:));
             let dismissed = view.dev_server_banner().is_none();
@@ -716,7 +715,7 @@ fn dev_server(id: u64, root: PathBuf) {
                 |view| view.dev_server_banner().is_some_and(|b| b.contains("41002")),
                 move |again| {
                     let Some(view) = inspect::view(id) else {
-                        return finish(NAME);
+                        return give_up(NAME, "the terminal is open");
                     };
                     perform(&view, sel!(ideOpenDevServer:));
                     let opened = ide_ui_browser::inspect(view.window_id()).iter().any(|tab| {
@@ -737,7 +736,7 @@ fn dev_server(id: u64, root: PathBuf) {
 /// "Neues Terminal hier" opens a terminal in the same folder.
 fn beside(id: u64, root: PathBuf) {
     let (Some(view), Some(controller)) = (inspect::view(id), controller_of(&root)) else {
-        return finish(NAME);
+        return give_up(NAME, "the terminal and the folder's window are open");
     };
     let tabs = controller.tab_count();
     perform(&view, sel!(ideNewTerminalHere:));

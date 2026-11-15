@@ -27,7 +27,7 @@ const MAX_QUOTE: usize = 400;
 
 /// The plans' documents, comments and questions on view.
 #[derive(Default)]
-pub struct PlanState {
+pub(crate) struct PlanState {
     notes: PlanNotes,
     docs: doc::PlanDocs,
     ask: ask::PlanAsk,
@@ -35,7 +35,7 @@ pub struct PlanState {
 
 /// The id the last comment on a plan got.
 #[derive(Default)]
-pub struct PlanNotes {
+pub(crate) struct PlanNotes {
     last_note: std::cell::Cell<u64>,
 }
 
@@ -56,7 +56,7 @@ fn next_note() -> u64 {
 pub struct PlanNote {
     pub id: u64,
     /// Where the passage starts in the plan's rendered text, in UTF-16 units, which tells repeated passages apart.
-    pub location: usize,
+    pub(crate) location: usize,
     /// The passage.
     pub quote: String,
     /// What the user says about it.
@@ -95,7 +95,7 @@ fn quoted(quote: &str) -> String {
 
 /// What "Mit Kommentaren überarbeiten lassen" tells the agent: each passage quoted with its comment below, then the
 /// comments on the whole plan and `general`, what the user typed into the card.
-pub fn feedback(notes: &[PlanNote], general: Option<&str>) -> Option<String> {
+pub(crate) fn feedback(notes: &[PlanNote], general: Option<&str>) -> Option<String> {
     let mut notes = notes.to_vec();
     sort(&mut notes);
     let mut parts: Vec<String> = notes
@@ -115,7 +115,7 @@ pub fn feedback(notes: &[PlanNote], general: Option<&str>) -> Option<String> {
 
 /// Where `note`'s passage is in `text`, as UTF-16 start and length: at its place when the text there still reads
 /// the same, else where the passage first is.
-pub fn locate(text: &[u16], note: &PlanNote) -> Option<(usize, usize)> {
+pub(crate) fn locate(text: &[u16], note: &PlanNote) -> Option<(usize, usize)> {
     let quote: Vec<u16> = note.quote.encode_utf16().collect();
     if note.is_general() || quote.len() > text.len() {
         return None;
@@ -129,7 +129,7 @@ pub fn locate(text: &[u16], note: &PlanNote) -> Option<(usize, usize)> {
 }
 
 /// `text` with the passages of `notes` marked, each showing its comment when the pointer rests on it.
-pub fn marked(text: &NSAttributedString, notes: &[PlanNote]) -> Retained<NSMutableAttributedString> {
+pub(crate) fn marked(text: &NSAttributedString, notes: &[PlanNote]) -> Retained<NSMutableAttributedString> {
     let out = NSMutableAttributedString::from_attributed_nsstring(text);
     let units: Vec<u16> = out.string().to_string().encode_utf16().collect();
     let mark = Attribute::background(&NSColor::systemYellowColor().colorWithAlphaComponent(0.32));
@@ -152,7 +152,7 @@ fn entry_tag(entry: u64, what: u8) -> isize {
 
 /// `notes` as boxes `width` points wide, each with the passage it quotes, the comment, and what can be done with it:
 /// edited and removed while the plan waits (`editable`), its passage shown in the document (`in_doc`).
-pub fn note_list(
+pub(crate) fn note_list(
     mtm: MainThreadMarker,
     target: &AnyObject,
     notes: &[PlanNote],
@@ -310,7 +310,7 @@ impl AgentTab {
 
     /// Comments `comment` on the passage `quote` at `location` of plan `id`, or on the whole plan when `quote` is
     /// empty.
-    pub fn add_plan_note(&self, id: u64, location: usize, quote: &str, comment: &str) {
+    pub(crate) fn add_plan_note(&self, id: u64, location: usize, quote: &str, comment: &str) {
         if comment.trim().is_empty() || self.plan_of(id).is_none() {
             return;
         }
@@ -330,7 +330,7 @@ impl AgentTab {
     }
 
     /// Gives the comment `note` the text `comment`; an empty one removes it.
-    pub fn edit_plan_note(&self, note: u64, comment: &str) {
+    pub(crate) fn edit_plan_note(&self, note: u64, comment: &str) {
         if comment.trim().is_empty() {
             return self.plan_remove_note(note);
         }
@@ -357,7 +357,7 @@ impl AgentTab {
     }
 
     /// Selects and shows the passage of the comment `note` in its plan's document.
-    pub fn plan_show_note(&self, note: u64) {
+    pub(crate) fn plan_show_note(&self, note: u64) {
         if let Some((id, note)) = self.find_note(note) {
             doc::reveal(self.key, id, &note);
         }
@@ -436,8 +436,8 @@ pub fn comment_from_keyboard(controller: &(impl AsWindow + ?Sized)) {
     }
 }
 
-pub use ask::close as close_comment;
-pub use doc::close_all as close_docs;
+pub(crate) use ask::close as close_comment;
+pub(crate) use doc::close_all as close_docs;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]

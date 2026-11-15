@@ -15,15 +15,16 @@ pub enum Scope {
     Project,
 }
 
-impl Scope {
-    /// Claude's name for it, as in a permission suggestion's `destination`.
-    pub fn destination(self) -> &'static str {
-        match self {
-            Scope::Local => "localSettings",
-            Scope::Project => "projectSettings",
+impl From<Scope> for ide_thread::RuleScope {
+    fn from(scope: Scope) -> ide_thread::RuleScope {
+        match scope {
+            Scope::Local => ide_thread::RuleScope::ProjectLocal,
+            Scope::Project => ide_thread::RuleScope::Project,
         }
     }
+}
 
+impl Scope {
     /// The file in `project` that holds rules of this scope.
     pub fn file(self, project: &Path) -> PathBuf {
         project.join(".claude").join(match self {

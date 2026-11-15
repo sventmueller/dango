@@ -28,9 +28,11 @@ pub fn main_after(delay: std::time::Duration, f: impl FnOnce() + Send + 'static)
 pub fn main_on_run_loop(f: impl FnOnce() + Send + 'static) {
     let f = std::cell::Cell::new(Some(f));
     let block = block2::RcBlock::new(move || {
-        if let Some(f) = f.take() {
-            contained(f);
-        }
+        contained(|| {
+            if let Some(f) = f.take() {
+                f();
+            }
+        });
     });
     // SAFETY: The block holds only what may go to another thread, and the main run loop calls it on the main thread.
     unsafe { objc2_foundation::NSRunLoop::mainRunLoop().performBlock(&block) };

@@ -4,7 +4,7 @@
 use ide_ui_common::window::Files;
 use std::path::Path;
 
-use ide_git::{Commit, CommitChanges};
+use ide_git::{Commit, CommitChanges, CommitId};
 use objc2::rc::Retained;
 use objc2::runtime::Sel;
 use objc2::{MainThreadMarker, sel};
@@ -22,7 +22,7 @@ use super::panel::{GitPanel, with_panel};
 use super::rows::{HoverCell, file_text, letter_label, pill_with};
 use super::{sheets, work};
 use ide_ui_common::constant;
-use ide_ui_common::util::{label, ns};
+use ide_ui_common::util::{activate, center_y, label, ns};
 
 /// How far a row's text keeps from the graph.
 const AFTER_GRAPH: f64 = 4.0;
@@ -32,7 +32,7 @@ const FILE_INDENT: f64 = 10.0;
 const MAX_BADGES: usize = 3;
 
 /// The menu of a commit or of a file below one.
-pub fn menu(keys: &[RowKey]) -> Vec<(&'static str, Option<Sel>)> {
+pub(crate) fn menu(keys: &[RowKey]) -> Vec<(&'static str, Option<Sel>)> {
     match keys {
         [RowKey::Commit(_)] => vec![
             (t("Commit-ID kopieren"), Some(sel!(ideGitCopyHash:))),
@@ -150,7 +150,7 @@ fn details(commit: &Commit, names: &[(Badge, String)], changes: Option<&CommitCh
         text.push_str(&all.join(", "));
     }
     text.push_str("\n\n");
-    text.push_str(&commit.hash.chars().take(8).collect::<String>());
+    text.push_str(commit.hash.short());
     text
 }
 
@@ -167,20 +167,18 @@ fn add_graph(mtm: MainThreadMarker, cell: &NSView, graph: GraphRow) -> Retained<
     let view = GraphView::new(mtm, graph);
     cell.addSubview(&view);
     view.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
+    activate([
         view.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
         view.topAnchor().constraintEqualToAnchor(&cell.topAnchor()),
         view.bottomAnchor().constraintEqualToAnchor(&cell.bottomAnchor()),
         view.widthAnchor().constraintEqualToConstant(width),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     view
 }
 
 impl GitPanel {
     /// The row of the commit `hash`.
-    pub fn commit_cell(&self, mtm: MainThreadMarker, hash: &str) -> Option<Retained<NSView>> {
+    pub(crate) fn commit_cell(&self, mtm: MainThreadMarker, hash: &CommitId) -> Option<Retained<NSView>> {
         let state = self.read();
         let (commit, graph) = state.model.commit_row(hash)?;
         let (commit, graph) = (commit.clone(), graph.clone());
@@ -221,26 +219,21 @@ impl GitPanel {
         }
         for view in [&*text as &NSView, &pills] {
             cell.addSubview(view);
-            view.setTranslatesAutoresizingMaskIntoConstraints(false);
-            view.centerYAnchor()
-                .constraintEqualToAnchor(&cell.centerYAnchor())
-                .setActive(true);
+            center_y(view, &cell);
         }
-        for constraint in [
+        activate([
             text.leadingAnchor()
                 .constraintEqualToAnchor_constant(&graph_view.trailingAnchor(), AFTER_GRAPH),
             pills.trailingAnchor().constraintEqualToAnchor(&cell.trailingAnchor()),
             text.trailingAnchor()
                 .constraintLessThanOrEqualToAnchor_constant(&pills.leadingAnchor(), -6.0),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         cell.setToolTip(Some(&ns(&details(&commit, &names, changes.as_ref()))));
-        let short: String = commit.hash.chars().take(8).collect();
+        let short = commit.hash.short();
         let age = super::text::ago(now() - commit.author_time);
         cell.setAccessibilityLabel(Some(&ns(&tf(
             "Commit {}: {}, von {}, {}",
-            &[&short, &commit.subject, &commit.author_name, &age],
+            &[short, &commit.subject, &commit.author_name, &age],
         ))));
         let key = RowKey::Commit(commit.hash.clone());
         let custom = self.custom_actions(&key, &menu(std::slice::from_ref(&key)));
@@ -254,7 +247,12 @@ impl GitPanel {
     }
 
     /// The row of a file the commit `hash` changed.
-    pub fn commit_file_cell(&self, mtm: MainThreadMarker, hash: &str, path: &Path) -> Option<Retained<NSView>> {
+    pub(crate) fn commit_file_cell(
+        &self,
+        mtm: MainThreadMarker,
+        hash: &CommitId,
+        path: &Path,
+    ) -> Option<Retained<NSView>> {
         let state = self.read();
         let lanes = state.model.commit_row(hash)?.1.through();
         let change = state
@@ -272,24 +270,19 @@ impl GitPanel {
         let letter = letter_label(mtm, mark);
         for view in [&*text as &NSView, &letter] {
             cell.addSubview(view);
-            view.setTranslatesAutoresizingMaskIntoConstraints(false);
-            view.centerYAnchor()
-                .constraintEqualToAnchor(&cell.centerYAnchor())
-                .setActive(true);
+            center_y(view, &cell);
         }
-        for constraint in [
+        activate([
             text.leadingAnchor()
                 .constraintEqualToAnchor_constant(&graph_view.trailingAnchor(), FILE_INDENT),
             letter.trailingAnchor().constraintEqualToAnchor(&cell.trailingAnchor()),
             text.trailingAnchor()
                 .constraintLessThanOrEqualToAnchor_constant(&letter.leadingAnchor(), -4.0),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         let described = tf("{}, {}", &[&path.display().to_string(), mark.word()]);
         cell.setToolTip(Some(&ns(&described)));
         cell.setAccessibilityLabel(Some(&ns(&described)));
-        let key = RowKey::CommitFile(hash.to_string(), path.to_path_buf());
+        let key = RowKey::CommitFile(hash.clone(), path.to_path_buf());
         let custom = self.custom_actions(&key, &menu(std::slice::from_ref(&key)));
         cell.setAccessibilityCustomActions(Some(&NSArray::from_retained_slice(&custom)));
         // SAFETY: The label is a subview of the cell, which keeps it.
@@ -298,7 +291,7 @@ impl GitPanel {
     }
 
     /// The row at the end of the graph that reads more of the history.
-    pub fn more_cell(&self, mtm: MainThreadMarker, lanes: GraphRow) -> Retained<NSView> {
+    pub(crate) fn more_cell(&self, mtm: MainThreadMarker, lanes: GraphRow) -> Retained<NSView> {
         let cell = NSTableCellView::new(mtm);
         let graph_view = add_graph(mtm, &cell, lanes);
         let more = label(mtm, &tf("{} weitere laden …", &[&HISTORY_PAGE.to_string()]));
@@ -306,12 +299,11 @@ impl GitPanel {
         more.setFont(Some(&ide_ui_common::style::small_system()));
         cell.addSubview(&more);
         more.setTranslatesAutoresizingMaskIntoConstraints(false);
-        more.leadingAnchor()
-            .constraintEqualToAnchor_constant(&graph_view.trailingAnchor(), AFTER_GRAPH)
-            .setActive(true);
-        more.centerYAnchor()
-            .constraintEqualToAnchor(&cell.centerYAnchor())
-            .setActive(true);
+        activate([
+            more.leadingAnchor()
+                .constraintEqualToAnchor_constant(&graph_view.trailingAnchor(), AFTER_GRAPH),
+            more.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
+        ]);
         // SAFETY: The label is a subview of the cell, which keeps it.
         unsafe { cell.setTextField(Some(&more)) };
         cell.into_super()
@@ -319,10 +311,10 @@ impl GitPanel {
 
     /// Reads what the commit `hash` changed, once; the commit's row then names it on hover, and an open row lists the
     /// files.
-    pub fn read_changes(&self, hash: &str) {
+    pub(crate) fn read_changes(&self, hash: &CommitId) {
         {
             let mut state = self.state();
-            if state.commit_changes.contains_key(hash) || !state.reading_changes.insert(hash.to_string()) {
+            if state.commit_changes.contains_key(hash) || !state.reading_changes.insert(hash.clone()) {
                 return;
             }
         }
@@ -331,8 +323,8 @@ impl GitPanel {
             return;
         };
         let id = self.id();
-        let theirs = hash.to_string();
-        let mine = hash.to_string();
+        let theirs = hash.clone();
+        let mine = hash.clone();
         let queued = work::local(
             move || repo.commit_changes(&theirs),
             move |result| with_panel(id, |panel| panel.changes_read(&mine, result)),
@@ -342,15 +334,15 @@ impl GitPanel {
         }
     }
 
-    fn changes_read(&self, hash: &str, result: Option<ide_git::Result<CommitChanges>>) {
+    fn changes_read(&self, hash: &CommitId, result: Option<ide_git::Result<CommitChanges>>) {
         self.state().reading_changes.remove(hash);
         let changes = match result {
             Some(Ok(changes)) => changes,
             Some(Err(error)) => return self.report(&error),
             None => return,
         };
-        self.state().commit_changes.insert(hash.to_string(), changes);
-        let item = self.item_for(&RowKey::Commit(hash.to_string()));
+        self.state().commit_changes.insert(hash.clone(), changes);
+        let item = self.item_for(&RowKey::Commit(hash.clone()));
         let outline = &self.ui().outline;
         // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
         let row = unsafe { outline.rowForItem(Some(&item)) };
@@ -366,12 +358,12 @@ impl GitPanel {
     }
 
     /// Reads the next page of the history.
-    pub fn read_more(&self) {
+    pub(crate) fn read_more(&self) {
         self.state().more_pages += 1;
         self.start_refresh();
     }
 
-    pub fn show_commit_diff(&self, hash: &str, file: &Path, preview: bool) {
+    pub(crate) fn show_commit_diff(&self, hash: &CommitId, file: &Path, preview: bool) {
         let (Some(controller), Some(repo)) = (self.controller(), self.repo()) else {
             return;
         };
@@ -379,7 +371,7 @@ impl GitPanel {
     }
 
     /// Opens the files below commits as they are now, if they still exist.
-    pub fn open_commit_files(&self, keys: &[RowKey]) {
+    pub(crate) fn open_commit_files(&self, keys: &[RowKey]) {
         let (Some(controller), Some(repo)) = (self.controller(), self.repo()) else {
             return;
         };
@@ -394,7 +386,7 @@ impl GitPanel {
     }
 
     /// Runs a menu action of the graph on `keys`.
-    pub fn run_history_action(&self, action: Sel, keys: &[RowKey]) {
+    pub(crate) fn run_history_action(&self, action: Sel, keys: &[RowKey]) {
         let Some(hash) = keys.iter().find_map(|key| match key {
             RowKey::Commit(hash) => Some(hash.clone()),
             _ => None,
@@ -402,7 +394,7 @@ impl GitPanel {
             return;
         };
         if action == sel!(ideGitCopyHash:) {
-            copy(&hash);
+            copy(hash.as_str());
         } else if action == sel!(ideGitCopyMessage:) {
             let message = self.read().model.commit(&hash).map(|c| {
                 if c.body.is_empty() {
@@ -420,12 +412,14 @@ impl GitPanel {
     }
 
     /// Asks for a name and makes a branch at the commit `hash`, then switches to it.
-    fn branch_at(&self, hash: String) {
+    fn branch_at(&self, hash: CommitId) {
         let Some(window) = self.controller().and_then(|c| c.window()) else {
             return;
         };
-        let short: String = hash.chars().take(8).collect();
-        let info = tf("Er beginnt bei Commit {}, und Git wechselt gleich zu ihm.", &[&short]);
+        let info = tf(
+            "Er beginnt bei Commit {}, und Git wechselt gleich zu ihm.",
+            &[hash.short()],
+        );
         let id = self.id();
         sheets::branch_name(&window, &info, move |name| {
             with_panel(id, |panel| {
@@ -434,7 +428,7 @@ impl GitPanel {
                     return;
                 }
                 work::long(
-                    move || repo.create_branch(&name, Some(&hash), true),
+                    move || repo.switch_to_new_branch(&name, Some(hash.as_str())),
                     move |result| with_panel(id, |panel| panel.branch_made(result)),
                 );
             });
@@ -464,7 +458,7 @@ mod tests {
     #[test]
     fn badges_tell_branches_remotes_and_tags_apart_and_put_the_current_branch_first() {
         let commit = Commit {
-            hash: "abc".into(),
+            hash: CommitId::parse(&"a".repeat(40)).unwrap(),
             parents: vec![],
             subject: String::new(),
             body: String::new(),

@@ -11,21 +11,22 @@ use crate::model::{Status, ThreadId};
 use crate::thread::Thread;
 
 const FILE: &str = "index.json";
+/// The file whose lock lets one index at a time read and write the index file.
+const LOCK: &str = "index.lock";
 const VERSION: u64 = 1;
 
 /// One thread as the session manager lists it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct IndexEntry {
     /// The app's id for the thread.
     pub id: ThreadId,
-    /// Its title.
     pub title: String,
     /// The agent's id in the register.
     pub agent: String,
     /// The group the user dragged it into.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub group: Option<String>,
-    /// Whether it is archived.
     #[serde(default)]
     pub archived: bool,
     /// When something last happened in it.
@@ -92,21 +93,7 @@ impl ThreadIndex {
     /// The index in `dir`; empty if there is none yet.
     pub fn open(dir: &Path) -> ThreadIndex {
         let path = dir.join(FILE);
-        let (entries, read_only) = match std::fs::read(&path) {
-            Err(_) => (Vec::new(), false),
-            Ok(bytes) => match serde_json::from_slice::<Value>(&bytes) {
-                Ok(Value::Object(map)) => {
-                    let newer = map.get("version").and_then(Value::as_u64).is_some_and(|v| v > VERSION);
-                    let entries = map
-                        .get("threads")
-                        .and_then(Value::as_array)
-                        .map(|list| list.iter().filter_map(|v| IndexEntry::deserialize(v).ok()).collect())
-                        .unwrap_or_default();
-                    (entries, newer)
-                }
-                _ => (Vec::new(), true),
-            },
-        };
+        let (entries, read_only) = read(&path);
         ThreadIndex {
             path,
             entries,
@@ -115,7 +102,8 @@ impl ThreadIndex {
     }
 
     /// Whether changes stay in memory because the file must not be overwritten.
-    pub fn is_read_only(&self) -> bool {
+    #[cfg(test)]
+    pub(crate) fn is_read_only(&self) -> bool {
         self.read_only
     }
 
@@ -142,7 +130,8 @@ impl ThreadIndex {
     }
 
     /// The groups in use, sorted.
-    pub fn groups(&self) -> Vec<String> {
+    #[cfg(test)]
+    pub(crate) fn groups(&self) -> Vec<String> {
         let mut groups: Vec<String> = self.entries.iter().filter_map(|e| e.group.clone()).collect();
         groups.sort();
         groups.dedup();
@@ -156,26 +145,28 @@ impl ThreadIndex {
 
     /// `record` for the entry a thread made, on a subscription or not, so the thread itself need not come along.
     pub fn record_entry(&mut self, mut entry: IndexEntry, subscription: bool) -> io::Result<()> {
-        if let Some(known) = self.get(&entry.id) {
-            entry.group.clone_from(&known.group);
-            entry.archived = known.archived;
-            if entry.title.is_empty() {
-                entry.title.clone_from(&known.title);
+        self.update(|entries| {
+            if let Some(known) = entries.iter().find(|e| e.id == entry.id) {
+                entry.group.clone_from(&known.group);
+                entry.archived = known.archived;
+                if entry.title.is_empty() {
+                    entry.title.clone_from(&known.title);
+                }
+                if entry.cost_usd.is_none() && !subscription {
+                    entry.cost_usd = known.cost_usd;
+                }
             }
-            if entry.cost_usd.is_none() && !subscription {
-                entry.cost_usd = known.cost_usd;
-            }
-        }
-        self.upsert(entry)
+            put(entries, entry);
+            Ok(true)
+        })
     }
 
     /// Adds `entry` or replaces the one with its id, and writes the file.
     pub fn upsert(&mut self, entry: IndexEntry) -> io::Result<()> {
-        match self.entries.iter_mut().find(|e| e.id == entry.id) {
-            Some(known) => *known = entry,
-            None => self.entries.push(entry),
-        }
-        self.save()
+        self.update(|entries| {
+            put(entries, entry);
+            Ok(true)
+        })
     }
 
     /// Renames the thread `id`.
@@ -184,7 +175,8 @@ impl ThreadIndex {
     }
 
     /// Moves the thread `id` into `group`, or out of any.
-    pub fn set_group(&mut self, id: &ThreadId, group: Option<&str>) -> io::Result<()> {
+    #[cfg(test)]
+    pub(crate) fn set_group(&mut self, id: &ThreadId, group: Option<&str>) -> io::Result<()> {
         self.change(id, |e| e.group = group.map(str::to_string))
     }
 
@@ -195,36 +187,89 @@ impl ThreadIndex {
 
     /// Forgets the thread `id`.
     pub fn remove(&mut self, id: &ThreadId) -> io::Result<()> {
-        let before = self.entries.len();
-        self.entries.retain(|e| &e.id != id);
-        if self.entries.len() == before {
-            return Ok(());
-        }
-        self.save()
+        self.update(|entries| {
+            let before = entries.len();
+            entries.retain(|e| &e.id != id);
+            Ok(entries.len() != before)
+        })
     }
 
     fn change(&mut self, id: &ThreadId, f: impl FnOnce(&mut IndexEntry)) -> io::Result<()> {
-        let Some(entry) = self.entries.iter_mut().find(|e| &e.id == id) else {
-            return Err(io::Error::new(io::ErrorKind::NotFound, format!("no thread {id}")));
-        };
-        f(entry);
-        self.save()
+        self.update(|entries| {
+            let Some(entry) = entries.iter_mut().find(|e| &e.id == id) else {
+                return Err(io::Error::new(io::ErrorKind::NotFound, format!("no thread {id}")));
+            };
+            f(entry);
+            Ok(true)
+        })
     }
 
-    fn save(&self) -> io::Result<()> {
+    /// Applies `change` to the entries as the file holds them now and writes them when it says they changed, all
+    /// under the folder's lock, so that another index of the same folder, in this process or another, loses nothing.
+    fn update(&mut self, change: impl FnOnce(&mut Vec<IndexEntry>) -> io::Result<bool>) -> io::Result<()> {
         if self.read_only {
-            return Err(io::Error::other(format!("{} stays as it is", self.path.display())));
+            return Err(self.stays());
         }
-        let document = serde_json::json!({ "version": VERSION, "threads": self.entries });
-        let mut bytes = serde_json::to_vec_pretty(&document).map_err(io::Error::other)?;
-        bytes.push(b'\n');
         let dir = self.path.parent().unwrap_or(Path::new("."));
         std::fs::create_dir_all(dir)?;
-        let temporary = dir.join(format!(".{FILE}.{}.tmp", std::process::id()));
-        std::fs::write(&temporary, &bytes)?;
-        std::fs::rename(&temporary, &self.path).inspect_err(|_| {
-            let _ = std::fs::remove_file(&temporary);
-        })
+        let lock = std::fs::OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .write(true)
+            .open(dir.join(LOCK))?;
+        lock.lock()?;
+        let (mut entries, read_only) = read(&self.path);
+        if read_only {
+            self.entries = entries;
+            self.read_only = true;
+            return Err(self.stays());
+        }
+        let changed = change(&mut entries);
+        let written = match changed {
+            Ok(true) => {
+                let document = serde_json::json!({ "version": VERSION, "threads": entries });
+                ide_core::atomic_write::write_json(&self.path, &document)
+            }
+            Ok(false) => Ok(()),
+            Err(error) => Err(error),
+        };
+        if written.is_ok() {
+            self.entries = entries;
+        }
+        written
+    }
+
+    fn stays(&self) -> io::Error {
+        io::Error::other(format!("{} stays as it is", self.path.display()))
+    }
+}
+
+/// Adds `entry` to `entries` or replaces the one with its id.
+fn put(entries: &mut Vec<IndexEntry>, entry: IndexEntry) {
+    match entries.iter_mut().find(|e| e.id == entry.id) {
+        Some(known) => *known = entry,
+        None => entries.push(entry),
+    }
+}
+
+/// The entries of the index file at `path`, and whether it must not be overwritten: written by a newer version, or
+/// not readable as an index.
+fn read(path: &Path) -> (Vec<IndexEntry>, bool) {
+    match std::fs::read(path) {
+        Err(_) => (Vec::new(), false),
+        Ok(bytes) if ide_core::atomic_write::is_torn(&bytes) => (Vec::new(), false),
+        Ok(bytes) => match serde_json::from_slice::<Value>(&bytes) {
+            Ok(Value::Object(map)) => {
+                let newer = map.get("version").and_then(Value::as_u64).is_some_and(|v| v > VERSION);
+                let entries = map
+                    .get("threads")
+                    .and_then(Value::as_array)
+                    .map(|list| list.iter().filter_map(|v| IndexEntry::deserialize(v).ok()).collect())
+                    .unwrap_or_default();
+                (entries, newer)
+            }
+            _ => (Vec::new(), true),
+        },
     }
 }
 
@@ -365,6 +410,70 @@ mod tests {
         assert_eq!(index.get(&ThreadId::from("x")).unwrap().title, "Kept");
         assert!(index.rename(&ThreadId::from("x"), "Changed").is_err());
         assert_eq!(std::fs::read_to_string(dir.join(FILE)).unwrap(), original);
+    }
+
+    #[test]
+    fn an_empty_file_left_by_a_power_loss_is_written_again() {
+        let dir = scratch("torn");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(FILE), "").unwrap();
+        let mut index = ThreadIndex::open(&dir);
+        assert!(!index.is_read_only());
+        index.upsert(entry("a", "After the power loss", 1)).unwrap();
+        assert_eq!(ThreadIndex::open(&dir).list(&Filter::default()).len(), 1);
+    }
+
+    #[test]
+    fn two_indexes_saving_at_once_leave_a_whole_file_with_both_lists() {
+        let dir = scratch("two-writers");
+        let writers: Vec<_> = ["a", "b"]
+            .into_iter()
+            .map(|name| {
+                let dir = dir.path().to_path_buf();
+                std::thread::spawn(move || {
+                    let mut index = ThreadIndex::open(&dir);
+                    for n in 0..30 {
+                        index.upsert(entry(&format!("{name}{n}"), "A title", n)).unwrap();
+                    }
+                })
+            })
+            .collect();
+        for writer in writers {
+            writer.join().unwrap();
+        }
+        let index = ThreadIndex::open(&dir);
+        assert!(!index.is_read_only(), "the file is whole");
+        assert_eq!(
+            index.list(&Filter::default()).len(),
+            60,
+            "both writers' lists, all of them"
+        );
+        let mut left: Vec<String> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        left.sort();
+        assert_eq!(left, [FILE, LOCK], "no scratch file left");
+    }
+
+    #[test]
+    fn an_index_opened_earlier_keeps_what_another_wrote_since() {
+        let dir = scratch("stale");
+        let mut first = ThreadIndex::open(&dir);
+        let mut second = ThreadIndex::open(&dir);
+        first.upsert(entry("a", "First's", 1)).unwrap();
+        second.upsert(entry("b", "Second's", 2)).unwrap();
+        second.rename(&ThreadId::from("a"), "Renamed by the second").unwrap();
+        first.remove(&ThreadId::from("gone")).unwrap();
+        first.set_archived(&ThreadId::from("b"), true).unwrap();
+        let again = ThreadIndex::open(&dir);
+        assert_eq!(again.get(&ThreadId::from("a")).unwrap().title, "Renamed by the second");
+        assert!(again.get(&ThreadId::from("b")).unwrap().archived);
+        assert_eq!(
+            first.get(&ThreadId::from("b")).unwrap().title,
+            "Second's",
+            "a change reads the file first"
+        );
     }
 
     #[test]

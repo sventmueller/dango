@@ -9,7 +9,6 @@
 //! Copilot gets code and takes that back. The CI and language server tabs ask in a sheet for what "+" adds.
 
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use ide_agent::stub::{Answer, Stub};
 use ide_agent::{Endpoint, ProviderKind, Rule};
@@ -24,8 +23,8 @@ use objc2_app_kit::{
 };
 use serde_json::json;
 
-use super::helpers::{self, answer_alert, answer_alert_saying, in_any_mode_after, wait_until};
-use super::{check, finish};
+use super::helpers::{self, answer_alert, answer_alert_saying, wait_until, when_alert_shows};
+use super::{check, finish, give_up};
 use crate::editor::predict::model::{self as predict, Choice, Local};
 use crate::settings::{AgentList as List, agent_selftest as agent};
 use crate::util::ns;
@@ -62,11 +61,10 @@ fn stub() -> Option<Stub> {
     .ok()
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let Some(stub) = stub() else {
-        check("the stub provider starts", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the stub provider starts");
     };
     let url = stub.url();
     // The stub serves until the app quits.
@@ -332,8 +330,7 @@ fn add_endpoint(f: Fixture) {
 
 fn key(f: Fixture) {
     let Some(row) = row_named("Neu") else {
-        check("the new endpoint is listed", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the new endpoint is listed");
     };
     select(List::Endpoints, row);
     through_sheet(
@@ -422,8 +419,7 @@ fn move_service(f: Fixture) {
 /// An endpoint of the user's own left without address is forgotten.
 fn forget_endpoint(f: Fixture) {
     let Some(row) = row_named("Neu") else {
-        check("the new endpoint is still listed", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the new endpoint is still listed");
     };
     select(List::Endpoints, row);
     through_sheet(
@@ -551,10 +547,8 @@ fn rules_and_folders(f: Fixture) {
     );
     let prompt = std::rc::Rc::new(std::cell::RefCell::new(None));
     let seen = std::rc::Rc::clone(&prompt);
-    in_any_mode_after(Duration::from_millis(800), move || {
-        let mtm = MainThreadMarker::new();
-        let panel = mtm.and_then(|mtm| NSApplication::sharedApplication(mtm).modalWindow());
-        let panel = panel.and_then(|p| p.downcast::<NSOpenPanel>().ok());
+    when_alert_shows(None, move |window| {
+        let panel = window.downcast_ref::<NSOpenPanel>();
         *seen.borrow_mut() = panel.map(|p| (p.prompt().to_string(), p.canChooseDirectories(), p.canChooseFiles()));
         answer_alert(NSModalResponseCancel);
     });
@@ -635,11 +629,7 @@ fn agents(f: Fixture) {
                     && after.contains("Zurück zu 2.5.0"),
                 format!("{before} → {after}"),
             );
-            let asked = answer_alert_saying(
-                Duration::from_millis(600),
-                "Codex installieren?".to_string(),
-                NSAlertSecondButtonReturn,
-            );
+            let asked = answer_alert_saying("Codex installieren?".to_string(), NSAlertSecondButtonReturn);
             let pressed = control(sel!(ideAgentsInstall:), Some(0)).is_some_and(|c| act(&c));
             check(
                 "an update asks first, and Abbrechen installs nothing",

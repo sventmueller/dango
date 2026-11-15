@@ -8,8 +8,9 @@ use super::*;
 
 /// The message and informative text of the question before the text of `view` goes, and its buttons, each with the
 /// key that presses it.
-pub fn inspect_question(view: &EditorTextView) -> (String, String, Vec<(String, String)>) {
-    let alert = discard_question(view);
+pub(crate) fn inspect_question(view: &EditorTextView) -> (String, String, Vec<(String, String)>) {
+    let question = discard_question(view);
+    let alert = question.ns();
     let buttons = alert
         .buttons()
         .iter()
@@ -23,8 +24,8 @@ pub fn inspect_question(view: &EditorTextView) -> (String, String, Vec<(String, 
 }
 
 /// What the bar says and offers, for the self-test.
-pub fn inspect(view: &EditorTextView) -> Option<(String, Vec<String>)> {
-    let bar = view.ivars().bar.borrow();
+pub(crate) fn inspect(view: &EditorTextView) -> Option<(String, Vec<String>)> {
+    let bar = view.ivars().around.bar.borrow();
     let bar = bar.as_ref()?;
     if bar.view.isHidden() {
         return None;
@@ -40,9 +41,9 @@ pub fn inspect(view: &EditorTextView) -> Option<(String, Vec<String>)> {
 }
 
 /// Clicks the bar's button titled `title`, for the self-test; whether there was one.
-pub fn press(view: &EditorTextView, title: &str) -> bool {
+pub(crate) fn press(view: &EditorTextView, title: &str) -> bool {
     let button = {
-        let bar = view.ivars().bar.borrow();
+        let bar = view.ivars().around.bar.borrow();
         let Some(bar) = bar.as_ref() else { return false };
         bar.buttons
             .arrangedSubviews()

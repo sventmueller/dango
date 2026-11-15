@@ -9,7 +9,7 @@ use splat_i18n::{t, tf};
 
 /// The shortest time between two snapshots, about a frame of a fast display.
 const FRAME: Duration = Duration::from_millis(8);
-pub const BELL_FLASH: Duration = Duration::from_millis(140);
+pub(crate) const BELL_FLASH: Duration = Duration::from_millis(140);
 /// Bells closer than this ring once.
 const BELL_GAP: Duration = Duration::from_millis(250);
 /// VoiceOver hears of new output at most this often.
@@ -17,47 +17,47 @@ const ANNOUNCE_GAP: Duration = Duration::from_millis(500);
 /// While a size is dragged, the grid reflows its scrollback and the program hears SIGWINCH at most this often.
 const RESIZE_GAP: Duration = Duration::from_millis(100);
 /// The tab takes a new title at most this often, as a spinner in a program's title changes it on every frame.
-pub const TITLE_GAP: Duration = Duration::from_millis(250);
+pub(crate) const TITLE_GAP: Duration = Duration::from_millis(250);
 
 #[derive(Default)]
-pub struct State {
-    pub first_responder: Cell<bool>,
-    pub focused: Cell<bool>,
-    pub exited: Cell<bool>,
-    pub prompts: Cell<usize>,
+pub(crate) struct State {
+    pub(crate) first_responder: Cell<bool>,
+    pub(crate) focused: Cell<bool>,
+    pub(crate) exited: Cell<bool>,
+    pub(crate) prompts: Cell<usize>,
     /// Output arrived while the view was hidden.
-    pub stale: Cell<bool>,
-    pub frame_pending: Cell<bool>,
+    pub(crate) stale: Cell<bool>,
+    pub(crate) frame_pending: Cell<bool>,
     last_frame: Cell<Option<Instant>>,
-    pub cursor_off: Cell<bool>,
+    pub(crate) cursor_off: Cell<bool>,
     last_bell: Cell<Option<Instant>>,
     flash_until: Cell<Option<Instant>>,
     announced: Cell<Option<Instant>>,
-    pub size: Cell<Option<Size>>,
+    pub(crate) size: Cell<Option<Size>>,
     /// Fitting the grid to a dragged size.
-    pub resizes: Pace,
+    pub(crate) resizes: Pace,
     /// Handing the title to the tab.
-    pub titles: Pace,
+    pub(crate) titles: Pace,
     /// The title the tab was given last.
-    pub tab_title: RefCell<Option<String>>,
+    pub(crate) tab_title: RefCell<Option<String>>,
     notices: Cell<u64>,
     /// A GPU frame was skipped while the window was hidden behind others.
-    pub unpresented: Cell<bool>,
+    pub(crate) unpresented: Cell<bool>,
     /// The view is drawing a picture of itself, which only Core Graphics can.
-    pub picturing: Cell<bool>,
+    pub(crate) picturing: Cell<bool>,
 }
 
 /// Spaces out a change that costs: at once when the last one is `gap` ago, else once after the rest of the gap.
 #[derive(Default)]
-pub struct Pace {
+pub(crate) struct Pace {
     last: Cell<Option<Instant>>,
     /// A later run is due; its timer clears this before it asks again.
-    pub pending: Cell<bool>,
+    pub(crate) pending: Cell<bool>,
 }
 
 impl Pace {
     /// When the change asked for at `now` happens; `Now` notes it as the last.
-    pub fn ask(&self, now: Instant, gap: Duration) -> Frame {
+    pub(crate) fn ask(&self, now: Instant, gap: Duration) -> Frame {
         if self.pending.get() {
             return Frame::Pending;
         }
@@ -73,7 +73,7 @@ impl Pace {
 
 /// What a bell does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Bell {
+pub(crate) enum Bell {
     /// It came too soon after the last one.
     Ignore,
     /// The system sound, for a view out of sight or a user who wants less motion.
@@ -84,7 +84,7 @@ pub enum Bell {
 
 /// When the snapshot for new output is taken.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Frame {
+pub(crate) enum Frame {
     /// The view is hidden; it takes one once it shows again.
     Stale,
     /// One is due already.
@@ -95,7 +95,7 @@ pub enum Frame {
 
 /// A command of the terminal's context menu.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Command {
+pub(crate) enum Command {
     Copy,
     Paste,
     SelectAll,
@@ -105,7 +105,7 @@ pub enum Command {
 
 impl State {
     /// What a bell at `now` does in a view that is `visible` or not.
-    pub fn bell(&self, now: Instant, visible: bool, reduce_motion: bool) -> Bell {
+    pub(crate) fn bell(&self, now: Instant, visible: bool, reduce_motion: bool) -> Bell {
         if self.last_bell.get().is_some_and(|last| now - last < BELL_GAP) {
             return Bell::Ignore;
         }
@@ -118,12 +118,12 @@ impl State {
         Bell::Flash(until)
     }
 
-    pub fn flashing(&self, now: Instant) -> bool {
+    pub(crate) fn flashing(&self, now: Instant) -> bool {
         self.flash_until.get().is_some_and(|until| now < until)
     }
 
     /// When the snapshot for output that arrived at `now` is taken, in a view that is `hidden` or not.
-    pub fn frame(&self, now: Instant, hidden: bool) -> Frame {
+    pub(crate) fn frame(&self, now: Instant, hidden: bool) -> Frame {
         if hidden {
             self.stale.set(true);
             return Frame::Stale;
@@ -140,19 +140,19 @@ impl State {
     }
 
     /// When a new size of the view at `now` reaches the grid, while a size is `dragging` or not.
-    pub fn resize(&self, now: Instant, dragging: bool) -> Frame {
+    pub(crate) fn resize(&self, now: Instant, dragging: bool) -> Frame {
         self.resizes
             .ask(now, if dragging { RESIZE_GAP } else { Duration::ZERO })
     }
 
     /// Notes that a snapshot was taken at `now`.
-    pub fn framed(&self, now: Instant) {
+    pub(crate) fn framed(&self, now: Instant) {
         self.last_frame.set(Some(now));
         self.stale.set(false);
     }
 
     /// Whether VoiceOver hears of the output at `now`: while the view has the focus, at most every half second.
-    pub fn announce(&self, now: Instant) -> bool {
+    pub(crate) fn announce(&self, now: Instant) -> bool {
         if !self.focused.get() || self.announced.get().is_some_and(|last| now - last < ANNOUNCE_GAP) {
             return false;
         }
@@ -161,25 +161,25 @@ impl State {
     }
 
     /// The number of a notice that shows now.
-    pub fn next_notice(&self) -> u64 {
+    pub(crate) fn next_notice(&self) -> u64 {
         let shown = self.notices.get() + 1;
         self.notices.set(shown);
         shown
     }
 
     /// Whether notice `shown` is still the last one, so its time running out hides it.
-    pub fn is_last_notice(&self, shown: u64) -> bool {
+    pub(crate) fn is_last_notice(&self, shown: u64) -> bool {
         self.notices.get() == shown
     }
 
     /// Whether the cursor blinks: one the program wants blinking and visible, in a view with the focus, before the
     /// program ended.
-    pub fn blinking(&self, cursor_blinks: bool) -> bool {
+    pub(crate) fn blinking(&self, cursor_blinks: bool) -> bool {
         self.focused.get() && !self.exited.get() && cursor_blinks
     }
 
     /// The lines of the grid when `fit` fit the view: after the program ended, one less, for the line that says so.
-    pub fn grid_lines(&self, fit: u16) -> u16 {
+    pub(crate) fn grid_lines(&self, fit: u16) -> u16 {
         if self.exited.get() {
             fit.saturating_sub(1).max(1)
         } else {
@@ -190,7 +190,7 @@ impl State {
 
 /// The line that says the program ended: where the cursor stands if that line is empty, else the next one, which may
 /// be the line kept free below the grid.
-pub fn final_line(screen: &Snapshot) -> usize {
+pub(crate) fn final_line(screen: &Snapshot) -> usize {
     let cursor = screen.cursor.point;
     let blank = screen
         .rows
@@ -201,7 +201,7 @@ pub fn final_line(screen: &Snapshot) -> usize {
 
 /// The lines that look different as the selection goes from `before` to `now`: those its ends passed over, or every
 /// line of a block, whose columns span all of its lines.
-pub fn selection_lines(before: Option<Highlight>, now: Option<Highlight>) -> Vec<usize> {
+pub(crate) fn selection_lines(before: Option<Highlight>, now: Option<Highlight>) -> Vec<usize> {
     let span = |h: Highlight| h.start.line..=h.end.line;
     match (before, now) {
         (a, b) if a == b => Vec::new(),
@@ -220,12 +220,12 @@ pub fn selection_lines(before: Option<Highlight>, now: Option<Highlight>) -> Vec
 }
 
 /// The title a program set, if it holds more than spaces.
-pub fn shown_title(title: Option<String>) -> Option<String> {
+pub(crate) fn shown_title(title: Option<String>) -> Option<String> {
     title.filter(|t| !t.trim().is_empty())
 }
 
 /// What VoiceOver calls the view.
-pub fn label(title: Option<&str>) -> String {
+pub(crate) fn label(title: Option<&str>) -> String {
     match title {
         Some(title) => tf("Terminal: {}", &[title]),
         None => t("Terminal").to_string(),
@@ -233,7 +233,7 @@ pub fn label(title: Option<&str>) -> String {
 }
 
 /// The context menu, `None` for a separator.
-pub fn menu() -> [Option<(&'static str, Command)>; 7] {
+pub(crate) fn menu() -> [Option<(&'static str, Command)>; 7] {
     [
         Some((t("Kopieren"), Command::Copy)),
         Some((t("Einsetzen"), Command::Paste)),
@@ -246,7 +246,7 @@ pub fn menu() -> [Option<(&'static str, Command)>; 7] {
 }
 
 /// Whether `command` works: copying needs a selection, pasting something the shell takes, the rest a started shell.
-pub fn enabled(command: Command, started: bool, selection: bool, can_paste: impl FnOnce() -> bool) -> bool {
+pub(crate) fn enabled(command: Command, started: bool, selection: bool, can_paste: impl FnOnce() -> bool) -> bool {
     match command {
         Command::Copy => selection,
         Command::Paste => started && can_paste(),

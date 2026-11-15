@@ -10,7 +10,7 @@ use ide_terminal::NamedKey;
 use ide_terminal::input::{ModifierKey, Side};
 
 /// The key with virtual key code `code` if it types no character, such as Return or F5.
-pub fn named(code: u16) -> Option<NamedKey> {
+pub(crate) fn named(code: u16) -> Option<NamedKey> {
     Some(match code {
         0x24 | 0x4c => NamedKey::Enter,
         0x30 => NamedKey::Tab,
@@ -43,7 +43,7 @@ fn function_number(code: u16) -> Option<u8> {
 }
 
 /// Whether `code` is a key of the numeric keypad.
-pub fn is_keypad(code: u16) -> bool {
+pub(crate) fn is_keypad(code: u16) -> bool {
     matches!(
         code,
         0x41 | 0x43 | 0x45 | 0x4b | 0x4c | 0x4e | 0x51 | 0x52..=0x59 | 0x5b | 0x5c
@@ -51,7 +51,7 @@ pub fn is_keypad(code: u16) -> bool {
 }
 
 /// The modifier key with virtual key code `code`.
-pub fn modifier(code: u16) -> Option<(ModifierKey, Side)> {
+pub(crate) fn modifier(code: u16) -> Option<(ModifierKey, Side)> {
     Some(match code {
         0x38 => (ModifierKey::Shift, Side::Left),
         0x3c => (ModifierKey::Shift, Side::Right),
@@ -66,7 +66,7 @@ pub fn modifier(code: u16) -> Option<(ModifierKey, Side)> {
 }
 
 /// Whether ⌥ acts as Meta on a character key that types `composed` with ⌥ and `plain` without it.
-pub fn option_is_meta(composed: &str, plain: &str) -> bool {
+pub(crate) fn option_is_meta(composed: &str, plain: &str) -> bool {
     !composed.is_empty() && composed == plain
 }
 

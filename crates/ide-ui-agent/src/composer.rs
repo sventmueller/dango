@@ -18,13 +18,13 @@ use super::target::AgentTarget;
 use super::ui;
 use crate::AgentKey;
 use ide_ui_common::constant;
-use ide_ui_common::util::{guarded, ns, symbol};
+use ide_ui_common::util::{activate, guarded, ns, symbol};
 
 /// The text view's height on one line, and at most before it scrolls.
 const MIN_TEXT: f64 = 20.0;
 const MAX_TEXT: f64 = 180.0;
 
-pub struct TextIvars {
+pub(crate) struct TextIvars {
     key: AgentKey,
 }
 
@@ -37,7 +37,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEAgentComposerText"]
     #[ivars = TextIvars]
-    pub struct ComposerText;
+    pub(crate) struct ComposerText;
 
     unsafe impl NSObjectProtocol for ComposerText {}
 
@@ -136,9 +136,9 @@ define_class!(
     }
 );
 
-pub struct Composer {
-    pub card: Retained<NSBox>,
-    pub text: Retained<ComposerText>,
+pub(crate) struct Composer {
+    pub(crate) card: Retained<NSBox>,
+    pub(crate) text: Retained<ComposerText>,
     #[cfg_attr(
         not(feature = "selftest"),
         expect(dead_code, reason = "kept with the views it holds")
@@ -146,16 +146,16 @@ pub struct Composer {
     scroll: Retained<NSScrollView>,
     height: Retained<NSLayoutConstraint>,
     placeholder: Retained<NSTextField>,
-    pub chips: Retained<NSStackView>,
-    pub model: Retained<NSButton>,
-    pub mode: Retained<NSButton>,
-    pub sandbox: Retained<NSButton>,
-    pub send: Retained<NSButton>,
+    pub(crate) chips: Retained<NSStackView>,
+    pub(crate) model: Retained<NSButton>,
+    pub(crate) mode: Retained<NSButton>,
+    pub(crate) sandbox: Retained<NSButton>,
+    pub(crate) send: Retained<NSButton>,
     /// Whether the send button shows a running turn and something to send, once it was set.
     send_look: std::cell::Cell<Option<(bool, bool)>>,
     /// The microphone, which dictates into the text view.
     #[cfg(feature = "dictation")]
-    pub mic: ide_ui_dictation::Mic,
+    pub(crate) mic: ide_ui_dictation::Mic,
 }
 
 /// The composer's card around `column`, which VoiceOver reads as the input.
@@ -188,7 +188,7 @@ fn pill(mtm: MainThreadMarker, target: &AgentTarget, action: objc2::runtime::Sel
 }
 
 impl Composer {
-    pub fn new(mtm: MainThreadMarker, key: AgentKey, target: &AgentTarget) -> Composer {
+    pub(crate) fn new(mtm: MainThreadMarker, key: AgentKey, target: &AgentTarget) -> Composer {
         let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(400.0, MIN_TEXT));
         let text = text_view(mtm, key, target, frame);
         let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
@@ -220,19 +220,17 @@ impl Composer {
         let trailing = {
             editor.addSubview(&mic.view);
             mic.view.setTranslatesAutoresizingMaskIntoConstraints(false);
-            mic.view
-                .trailingAnchor()
-                .constraintLessThanOrEqualToAnchor(&editor.trailingAnchor())
-                .setActive(true);
-            mic.view
-                .topAnchor()
-                .constraintEqualToAnchor(&editor.topAnchor())
-                .setActive(true);
+            activate([
+                mic.view
+                    .trailingAnchor()
+                    .constraintLessThanOrEqualToAnchor(&editor.trailingAnchor()),
+                mic.view.topAnchor().constraintEqualToAnchor(&editor.topAnchor()),
+            ]);
             (mic.view.leadingAnchor(), -6.0)
         };
         #[cfg(not(feature = "dictation"))]
         let trailing = (editor.trailingAnchor(), 0.0);
-        for constraint in [
+        activate([
             scroll.leadingAnchor().constraintEqualToAnchor(&editor.leadingAnchor()),
             scroll.topAnchor().constraintEqualToAnchor(&editor.topAnchor()),
             scroll.bottomAnchor().constraintEqualToAnchor(&editor.bottomAnchor()),
@@ -248,9 +246,7 @@ impl Composer {
             placeholder
                 .trailingAnchor()
                 .constraintLessThanOrEqualToAnchor(&scroll.trailingAnchor()),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         let spacer = ui::spacer(mtm);
         let footer = ui::row(
             mtm,
@@ -289,7 +285,7 @@ impl Composer {
     }
 
     /// Grows or shrinks the text view to its text, up to a limit, and shows the placeholder when it is empty.
-    pub fn fit(&self) {
+    pub(crate) fn fit(&self) {
         let empty = self.text.string().length() == 0;
         self.placeholder.setHidden(!empty);
         // SAFETY: The composer is a TextKit 1 view by choice; its layout manager is only read here.
@@ -311,32 +307,32 @@ impl Composer {
 
     /// Shows `text` while the composer is empty.
     /// Names the agent the message goes to, for VoiceOver.
-    pub fn set_agent(&self, agent: &str) {
+    pub(crate) fn set_agent(&self, agent: &str) {
         self.text
             .setAccessibilityLabel(Some(&ns(&tf("Nachricht an {}", &[agent]))));
     }
 
-    pub fn set_placeholder(&self, text: &str) {
+    pub(crate) fn set_placeholder(&self, text: &str) {
         self.placeholder.setStringValue(&ns(text));
     }
 
     /// What the user typed.
-    pub fn text(&self) -> String {
+    pub(crate) fn text(&self) -> String {
         self.text.string().to_string()
     }
 
-    pub fn clear(&self) {
+    pub(crate) fn clear(&self) {
         self.text.setString(&ns(""));
         self.fit();
     }
 
-    pub fn set_text(&self, text: &str) {
+    pub(crate) fn set_text(&self, text: &str) {
         self.text.setString(&ns(text));
         self.fit();
     }
 
     /// The border of the card, in the system's accent colour while the composer has the keyboard focus.
-    pub fn show_focus(&self, focused: bool) {
+    pub(crate) fn show_focus(&self, focused: bool) {
         let color = if focused {
             NSColor::controlAccentColor()
         } else {
@@ -346,7 +342,7 @@ impl Composer {
     }
 
     /// The send button as a stop button while a turn runs, dimmed when there is nothing to send.
-    pub fn show_running(&self, running: bool, can_send: bool) {
+    pub(crate) fn show_running(&self, running: bool, can_send: bool) {
         if self.send_look.replace(Some((running, can_send))) == Some((running, can_send)) {
             return;
         }
@@ -373,7 +369,7 @@ impl Composer {
     }
 
     /// Whether the composer has the keyboard focus.
-    pub fn has_focus(&self) -> bool {
+    pub(crate) fn has_focus(&self) -> bool {
         let Some(window) = self.text.window() else {
             return false;
         };
@@ -491,7 +487,7 @@ fn send_button(mtm: MainThreadMarker, target: &AgentTarget) -> Retained<NSButton
 }
 
 /// The pasteboard's types that hold a picture.
-pub fn image_types() -> [&'static NSPasteboardType; 2] {
+pub(crate) fn image_types() -> [&'static NSPasteboardType; 2] {
     [constant!(NSPasteboardTypePNG), constant!(NSPasteboardTypeTIFF)]
 }
 

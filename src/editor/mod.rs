@@ -8,11 +8,12 @@ mod conflict;
 mod container;
 mod context_menu;
 mod editing;
+mod file;
 mod fold;
 mod highlight;
 mod indent;
 mod inset_fragment;
-pub mod insets;
+pub(crate) mod insets;
 mod large;
 mod line_diagnostics;
 mod lsp_editor;
@@ -21,12 +22,13 @@ mod multi;
 mod on_disk;
 mod overlay;
 mod place;
-pub mod predict;
+pub(crate) mod predict;
 mod sticky;
-pub use lsp_editor::lsp_editor;
-pub use overlay::follow as follow_overlay;
+pub(crate) use lsp_editor::lsp_editor;
+pub(crate) use overlay::follow as follow_overlay;
 pub(crate) use saving::{save, save_soon};
-pub mod recovery;
+pub(crate) mod recovery;
+mod resync;
 mod ruler;
 mod saving;
 mod style;
@@ -38,22 +40,23 @@ use std::path::{Path, PathBuf};
 
 use ide_document::recovery::{Recovered, RecoveryId};
 use ide_document::{Change, Document};
+use ide_ui_common::alert::{Alert, Role, warn};
 use objc2::rc::{Retained, Weak};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
-    NSAccessibility, NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSAlertStyle, NSColor,
-    NSFontAttributeName, NSForegroundColorAttributeName, NSScrollView, NSUserInterfaceLayoutDirection,
+    NSAccessibility, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSColor, NSFontAttributeName,
+    NSForegroundColorAttributeName, NSScrollView, NSUserInterfaceLayoutDirection,
 };
 use objc2_foundation::{NSDictionary, NSPoint, NSRect, NSSize, NSString};
 use splat_i18n::{t, tf};
 
 use crate::util::{FlagGuard, constant, ns};
 use crate::window::{TabId, TabKind, WindowController};
-pub use view::EditorTextView;
+pub(crate) use view::EditorTextView;
 
 /// The state of the editors beside the list of them.
 #[derive(Default)]
-pub struct EditorState {
+pub(crate) struct EditorState {
     minimap: minimap::Shown,
     sticky: sticky::Lines,
     line_diagnostics: line_diagnostics::Shown,
@@ -66,36 +69,33 @@ pub struct EditorState {
 
 /// The editors still open.
 fn open_editors() -> Vec<Retained<EditorTextView>> {
-    let cx = crate::context::app();
-    let mut open = cx.editors().borrow_mut();
-    open.retain(|view| view.load().is_some());
-    open.iter().filter_map(Weak::load).collect()
+    crate::context::app().editors().live()
 }
 
 /// The editors still open, in every window.
-pub fn all_editors() -> Vec<Retained<EditorTextView>> {
+pub(crate) fn all_editors() -> Vec<Retained<EditorTextView>> {
     open_editors()
 }
 
 /// The open editor with `serial`, the number that other threads hold instead of the view.
-pub fn find_editor(serial: ide_ui_lsp::EditorSerial) -> Option<Retained<EditorTextView>> {
+pub(crate) fn find_editor(serial: ide_ui_lsp::EditorSerial) -> Option<Retained<EditorTextView>> {
     open_editors().into_iter().find(|v| v.ivars().serial == serial)
 }
 
 /// The editor of `path` in `controller`'s window.
-pub fn editor_for(controller: &WindowController, path: &Path) -> Option<Retained<EditorTextView>> {
-    open_editors()
+pub(crate) fn editor_for(controller: &WindowController, path: &Path) -> Option<Retained<EditorTextView>> {
+    editors_in(controller)
         .into_iter()
-        .find(|v| v.document().path() == Some(path) && v.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
+        .find(|v| v.document().path() == Some(path))
 }
 
 /// The UTF-16 range of the lines on screen, with a margin.
-pub fn visible_utf16(view: &EditorTextView) -> std::ops::Range<usize> {
+pub(crate) fn visible_utf16(view: &EditorTextView) -> std::ops::Range<usize> {
     utf16_in(view, view.visibleRect())
 }
 
 /// The UTF-16 range of the lines laid out in `rect` of the view, with a margin of lines on both sides.
-pub fn utf16_in(view: &EditorTextView, rect: NSRect) -> std::ops::Range<usize> {
+pub(crate) fn utf16_in(view: &EditorTextView, rect: NSRect) -> std::ops::Range<usize> {
     let lines = highlight::lines_in(view, rect);
     let length = view.document().text().len_utf16();
     let start = view.line_start(lines.start).unwrap_or(0);
@@ -104,35 +104,12 @@ pub fn utf16_in(view: &EditorTextView, rect: NSRect) -> std::ops::Range<usize> {
 }
 
 /// The tab that shows `view`.
-pub fn tab_of(view: &EditorTextView) -> Option<TabId> {
+pub(crate) fn tab_of(view: &EditorTextView) -> Option<TabId> {
     view.ivars().tab.get()
 }
 
-/// Redraws the line number column of `view`, after its diagnostics changed, once for any number of asks in a turn of
-/// the run loop.
-pub fn redraw_gutter(view: &EditorTextView) {
-    if view.ivars().gutter_due.replace(true) {
-        return;
-    }
-    let serial = view.ivars().serial;
-    crate::util::main_soon(move || {
-        if let Some(view) = find_editor(serial) {
-            redraw_gutter_now(&view);
-        }
-    });
-}
-
-fn redraw_gutter_now(view: &EditorTextView) {
-    view.ivars().gutter_due.set(false);
-    if let Some(gutter) = view.ivars().gutter.borrow().as_ref().and_then(Weak::load) {
-        gutter.setNeedsDisplay(true);
-    }
-    minimap::redraw(view);
-    sticky::refresh(view);
-}
-
 /// The rectangle of line `line` across the whole width of `editor`.
-pub fn line_rect(editor: &EditorTextView, line: usize) -> Option<NSRect> {
+pub(crate) fn line_rect(editor: &EditorTextView, line: usize) -> Option<NSRect> {
     let at = editor.line_start(line)?;
     let layout = editor.textLayoutManager()?;
     let content = editor.textContentStorage()?;
@@ -147,25 +124,27 @@ pub fn line_rect(editor: &EditorTextView, line: usize) -> Option<NSRect> {
     ))
 }
 
-pub use blame::{at_line_end as blame_at_line_end, set_line_end as set_blame_at_line_end, with_view_items};
-pub use fold::hidden_by_fold;
-pub use ide_ui_common::util::undo_step;
-pub use line_diagnostics::refresh as diagnostics_changed;
-pub use minimap::redraw as redraw_minimap;
-pub use place::{byte_y, byte_y_near, laid_out_line_rect, top_byte};
-pub use style::{code_font, palette_color};
+pub(crate) use blame::{at_line_end as blame_at_line_end, set_line_end as set_blame_at_line_end, with_view_items};
+pub(crate) use container::redraw_gutter;
+pub(crate) use file::update_dirty;
+pub(crate) use fold::hidden_by_fold;
+pub(crate) use ide_ui_common::util::undo_step;
+pub(crate) use line_diagnostics::refresh as diagnostics_changed;
+pub(crate) use minimap::redraw as redraw_minimap;
+pub(crate) use place::{byte_y, byte_y_near, laid_out_line_rect, top_byte};
+pub(crate) use style::{code_font, palette_color};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;
 
 /// Takes the language server's folding ranges, as first line and last hidden line, or `None` for the indentation's.
-pub fn set_server_folds(view: &EditorTextView, ranges: Option<Vec<(usize, usize)>>) {
+pub(crate) fn set_server_folds(view: &EditorTextView, ranges: Option<Vec<(usize, usize)>>) {
     fold::set_server_ranges(view, ranges);
 }
 
 /// The file of `view` got a new name, as a server's rename of a file did: the tab follows.
-pub fn path_changed(view: &EditorTextView) {
+pub(crate) fn path_changed(view: &EditorTextView) {
     if let (Some(path), Some(controller), Some(tab)) = (
         view.document().path().map(Path::to_path_buf),
         view.controller(),
@@ -178,13 +157,13 @@ pub fn path_changed(view: &EditorTextView) {
 }
 
 /// Something changed in a `.git` folder below `root`: the change marks of its editors follow the commit.
-pub fn git_changed(root: &Path) {
+pub(crate) fn git_changed(root: &Path) {
     changes::git_changed(root);
 }
 
 /// The texts of the editors with unsaved changes to files below `root`, which a project search reads in place of
 /// the files.
-pub fn unsaved_buffers(root: &Path) -> Vec<(PathBuf, String)> {
+pub(crate) fn unsaved_buffers(root: &Path) -> Vec<(PathBuf, String)> {
     open_editors()
         .iter()
         .filter_map(|view| {
@@ -197,7 +176,7 @@ pub fn unsaved_buffers(root: &Path) -> Vec<(PathBuf, String)> {
 
 /// Settings changed outside the editor's own switches, such as by the sync from another Mac: the editors read the
 /// changed ones again and show them.
-pub fn settings_changed(names: &[String]) {
+pub(crate) fn settings_changed(names: &[String]) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let cx = crate::context::AppContext::get(mtm);
     for name in names {
@@ -217,7 +196,7 @@ pub fn settings_changed(names: &[String]) {
         }
     }
     for view in open_editors() {
-        if let Some(map) = view.ivars().minimap.borrow().as_ref().and_then(Weak::load) {
+        if let Some(map) = view.ivars().around.minimap.borrow().as_ref().and_then(Weak::load) {
             map.fit();
         }
         sticky::refresh(&view);
@@ -227,7 +206,7 @@ pub fn settings_changed(names: &[String]) {
 
 /// Puts the unsaved texts a restored checkpoint held into their editors, opening in `controller` the files not open,
 /// each as one undoable step that leaves the editor unsaved.
-pub fn take_back_buffers(controller: &WindowController, buffers: Vec<(PathBuf, Vec<u8>)>) {
+pub(crate) fn take_back_buffers(controller: &WindowController, buffers: Vec<(PathBuf, Vec<u8>)>) {
     for (path, bytes) in buffers {
         let Ok(text) = String::from_utf8(bytes) else { continue };
         let view = match open_editors()
@@ -254,7 +233,7 @@ pub fn take_back_buffers(controller: &WindowController, buffers: Vec<(PathBuf, V
 }
 
 /// Adds the controls of the editor's whitespace rules, and of dictation, to its status bar's `stack`.
-pub fn status_items(mtm: MainThreadMarker, view: &EditorTextView, stack: &objc2_app_kit::NSStackView) {
+pub(crate) fn status_items(mtm: MainThreadMarker, view: &EditorTextView, stack: &objc2_app_kit::NSStackView) {
     vim::status_items(mtm, view, stack);
     indent::status_items(mtm, view, stack);
     predict::status_items(mtm, view, stack);
@@ -275,35 +254,25 @@ impl ide_ui_dictation::DictationField for EditorField {
 }
 
 /// The tab size and whether `view` indents with spaces, for a language server's formatting.
-pub fn formatting_options(view: &EditorTextView) -> (u32, bool) {
+pub(crate) fn formatting_options(view: &EditorTextView) -> (u32, bool) {
     indent::formatting(view)
 }
 
 /// The editor in tab `id` of `controller` is about to close.
-pub fn closing(controller: &WindowController, id: TabId) {
-    let view = open_editors()
-        .into_iter()
-        .find(|v| v.ivars().tab.get() == Some(id) && v.controller().is_some_and(|c| std::ptr::eq(&*c, controller)));
-    if let Some(view) = view {
+pub(crate) fn closing(controller: &WindowController, id: TabId) {
+    if let Some(view) = editor_of_tab(controller, id) {
         ide_ui_lsp::closed(&*view);
         crate::markdown::closing(&view);
-        crate::context::app()
+        controller
+            .context()
             .editors()
-            .borrow_mut()
             .retain(|w| w.load().is_some_and(|v| !std::ptr::eq(&*v, &*view)));
     }
 }
 
-/// Shows a warning with `message` and `detail` and waits for OK.
-pub fn show_alert(mtm: MainThreadMarker, message: &str, detail: &str) {
-    alert(mtm, message, detail);
-}
-
 /// Shows `text`, such as a test run's output, in a scrolling field of an alert titled `message`.
-pub fn show_text(mtm: MainThreadMarker, message: &str, text: &str) {
-    use objc2_app_kit::{NSAlert, NSScrollView, NSTextView};
-    let alert = NSAlert::new(mtm);
-    alert.setMessageText(&ns(message));
+pub(crate) fn show_text(mtm: MainThreadMarker, message: &str, text: &str) {
+    use objc2_app_kit::{NSScrollView, NSTextView};
     let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(560.0, 320.0));
     let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
     scroll.setHasVerticalScroller(true);
@@ -312,20 +281,17 @@ pub fn show_text(mtm: MainThreadMarker, message: &str, text: &str) {
     view.setFont(Some(&code_font(11.0)));
     view.setString(&ns(text));
     scroll.setDocumentView(Some(&view));
-    alert.setAccessoryView(Some(&scroll));
+    let alert = Alert::new(mtm, message).accessory(&scroll);
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
         return;
     }
-    alert.runModal();
+    alert.run_modal();
 }
 
 /// The editor of `controller`'s window that has the keyboard focus, else the one in view.
-pub fn focused_editor(controller: &WindowController) -> Option<Retained<EditorTextView>> {
-    let mine: Vec<Retained<EditorTextView>> = open_editors()
-        .into_iter()
-        .filter(|e| e.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
-        .collect();
+pub(crate) fn focused_editor(controller: &WindowController) -> Option<Retained<EditorTextView>> {
+    let mine = editors_in(controller);
     let responder = controller.window().and_then(|w| w.firstResponder());
     mine.iter()
         .find(|e| {
@@ -337,14 +303,14 @@ pub fn focused_editor(controller: &WindowController) -> Option<Retained<EditorTe
         .cloned()
 }
 
-pub fn display_name(path: &Path) -> String {
+pub(crate) fn display_name(path: &Path) -> String {
     path.file_name()
         .map_or_else(|| path.display().to_string(), |n| n.to_string_lossy().into_owned())
 }
 
 /// The title of a file's tab: its name, and for a file in a thread's worktree (I1) which worktree, so the user sees
 /// which copy they edit.
-pub fn tab_title(path: &Path) -> String {
+pub(crate) fn tab_title(path: &Path) -> String {
     let name = display_name(path);
     match crate::worktrees::tree_of(path) {
         Some(tree) => {
@@ -356,7 +322,7 @@ pub fn tab_title(path: &Path) -> String {
 }
 
 /// Opens `path` in a new editor tab of `controller`, or in its preview tab; shows an alert when it cannot be read.
-pub fn open_tab(controller: &WindowController, path: &Path, font_size: f64, preview: bool) {
+pub(crate) fn open_tab(controller: &WindowController, path: &Path, font_size: f64, preview: bool) {
     if large::is_large(path) && large::open(controller, path, font_size, preview) {
         return;
     }
@@ -374,7 +340,7 @@ fn opened(
     let document = match document {
         Ok(document) => document,
         Err(error) => {
-            alert(
+            warn(
                 mtm,
                 &tf("„{}“ lässt sich nicht öffnen.", &[&display_name(path)]),
                 &error.to_string(),
@@ -397,7 +363,7 @@ fn opened(
 
 /// Opens `path` in a new editor tab of `controller` as a launch puts back the tabs of the last run: a file that cannot
 /// be read is left out and only logged; whether it opened.
-pub fn open_quietly(controller: &WindowController, path: &Path, font_size: f64) -> bool {
+pub(crate) fn open_quietly(controller: &WindowController, path: &Path, font_size: f64) -> bool {
     match Document::open(path) {
         Ok(document) => {
             let key = path.to_string_lossy().into_owned();
@@ -421,7 +387,11 @@ pub fn open_quietly(controller: &WindowController, path: &Path, font_size: f64) 
 
 /// Opens the text a crash left unsaved in a new editor tab of `controller`, marked unsaved; its copy stays until the
 /// text is saved or given up. A look at its file follows with `check_recovered`.
-pub fn open_recovered(controller: &WindowController, recovered: Recovered, font_size: f64) -> Retained<EditorTextView> {
+pub(crate) fn open_recovered(
+    controller: &WindowController,
+    recovered: Recovered,
+    font_size: f64,
+) -> Retained<EditorTextView> {
     let id = recovered.pending.id.clone();
     let path = recovered.pending.path.clone();
     let (key, title) = match &path {
@@ -435,7 +405,13 @@ pub fn open_recovered(controller: &WindowController, recovered: Recovered, font_
 
 /// Opens `path` in `controller`, or selects its tab, and marks `columns`, in UTF-16 code units, of line `line`,
 /// counted from 1; `focus` selects them in the editor and gives it the keyboard focus.
-pub fn reveal(controller: &WindowController, path: &Path, line: u64, columns: std::ops::Range<usize>, focus: bool) {
+pub(crate) fn reveal(
+    controller: &WindowController,
+    path: &Path,
+    line: u64,
+    columns: std::ops::Range<usize>,
+    focus: bool,
+) {
     controller.open_file(path);
     large::with_opened(controller, path, move |view| {
         let line = usize::try_from(line.saturating_sub(1)).unwrap_or(usize::MAX);
@@ -445,7 +421,7 @@ pub fn reveal(controller: &WindowController, path: &Path, line: u64, columns: st
 
 /// Opens `path` in an editor tab of `controller`, or brings its tab forward, with the cursor on line `line` at column
 /// `column`, both counted from 1 in characters as compilers print them; a column past the end means the line's end.
-pub fn reveal_position(controller: &WindowController, path: &Path, line: usize, column: usize) {
+pub(crate) fn reveal_position(controller: &WindowController, path: &Path, line: usize, column: usize) {
     controller.open_file(path);
     large::with_opened(controller, path, move |view| {
         place_cursor(view, line, column);
@@ -473,7 +449,7 @@ fn place_cursor(view: &EditorTextView, line: usize, column: usize) {
 }
 
 /// Opens an empty, untitled editor tab.
-pub fn new_untitled(controller: &WindowController, font_size: f64) {
+pub(crate) fn new_untitled(controller: &WindowController, font_size: f64) {
     add_tab(
         controller,
         Document::untitled(""),
@@ -517,14 +493,15 @@ fn add_tab(
     overlay::attach(&view);
     insets::attach(&view);
     crate::debug::attach_rotor(&view, controller.context().debug_rotors());
-    *view.ivars().gutter.borrow_mut() = Some(objc2::rc::Weak::from(&*gutter));
+    *view.ivars().around.gutter.borrow_mut() = Some(objc2::rc::Weak::from(&*gutter));
     let id = if preview {
         controller.add_preview_tab(TabKind::Editor, key, title, container)
     } else {
         controller.add_tab(TabKind::Editor, key, title, container)
     };
     view.ivars().tab.set(Some(id));
-    crate::context::app().editors().borrow_mut().push(Weak::from(&*view));
+    let editors = controller.context().editors();
+    editors.insert(editors.next_id(), Weak::from(&*view));
     highlight::recolor_all(&view);
     ide_ui_lsp::opened(&*view);
     changes::reload(&view, true);
@@ -586,18 +563,6 @@ fn configure(view: &EditorTextView, font_size: f64) {
     view.setEditable(!read_only);
     view.setAccessibilityLabel(Some(&ns(&tf("Editor: {}", &[&name]))));
     view.follow_storage();
-}
-
-/// Shows the dirty state of the view's document on its tab when it changed.
-pub(crate) fn update_dirty(view: &EditorTextView) {
-    let dirty = view.document().is_dirty();
-    if dirty == view.ivars().shown_dirty.get() {
-        return;
-    }
-    view.ivars().shown_dirty.set(dirty);
-    if let (Some(controller), Some(tab)) = (view.controller(), view.ivars().tab.get()) {
-        controller.set_tab_dirty(tab, dirty);
-    }
 }
 
 /// What other parts of the app follow: the language server and a project search that shows unsaved text.
@@ -674,7 +639,7 @@ fn fit_width(view: &EditorTextView) {
 }
 
 /// Looks at the files of open editors in `dirs` and takes what changed on disk.
-pub fn files_changed(dirs: &[PathBuf]) {
+pub(crate) fn files_changed(dirs: &[PathBuf]) {
     for view in open_editors() {
         let path = view.document().path().map(Path::to_path_buf);
         let Some(path) = path else { continue };
@@ -687,7 +652,7 @@ pub fn files_changed(dirs: &[PathBuf]) {
 
 /// Looks at the files of every open editor below `root` and takes what changed on disk, after a git operation of the
 /// app's own: the watcher reports only folders the file tree has read.
-pub fn check_disk_below(root: &Path) {
+pub(crate) fn check_disk_below(root: &Path) {
     for view in open_editors() {
         if view.document().path().is_some_and(|path| path.starts_with(root)) {
             on_disk::look(&view, on_disk::Look::Changed);
@@ -707,39 +672,31 @@ fn take_disk(view: &EditorTextView) {
 /// Looks at the file of each editor whose text came back after a crash, `ids` naming their copies: a file unchanged
 /// since, or holding the same text, leaves the text as it came back; a file changed meanwhile gets the bar, never
 /// merged without a word.
-pub fn check_recovered(ids: &[RecoveryId]) {
+pub(crate) fn check_recovered(ids: &[RecoveryId]) {
     for view in open_editors() {
-        if ids.contains(&view.ivars().recovery) {
+        if ids.contains(&view.ivars().file.recovery) {
             on_disk::look(&view, on_disk::Look::Recovered);
         }
     }
 }
 
-fn editor_in(controller: &WindowController, id: TabId) -> Option<Retained<EditorTextView>> {
-    open_editors()
-        .into_iter()
-        .find(|v| v.ivars().tab.get() == Some(id) && v.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
-}
-
 /// The file and the copy against a crash of the editor in tab `id` of `controller`, if that tab is an editor.
-pub fn tab_document(controller: &WindowController, id: TabId) -> Option<(Option<PathBuf>, RecoveryId)> {
-    let view = editor_in(controller, id)?;
+pub(crate) fn tab_document(controller: &WindowController, id: TabId) -> Option<(Option<PathBuf>, RecoveryId)> {
+    let view = editor_of_tab(controller, id)?;
     let path = view.document().path().map(Path::to_path_buf);
-    Some((path, view.ivars().recovery.clone()))
+    Some((path, view.ivars().file.recovery.clone()))
 }
 
 /// Writes the copy of every editor of `controller` that holds unsaved text, as after a close the user cancelled.
-pub fn store_copies(controller: &WindowController) {
-    for view in open_editors() {
-        if view.controller().is_some_and(|c| std::ptr::eq(&*c, controller)) {
-            recovery::store(&view);
-        }
+pub(crate) fn store_copies(controller: &WindowController) {
+    for view in editors_in(controller) {
+        recovery::store(&view);
     }
 }
 
 /// Whether the editor in tab `id` of `controller` may close: saved, or the user said so.
-pub fn may_close(controller: &WindowController, id: TabId) -> bool {
-    let Some(view) = editor_in(controller, id) else {
+pub(crate) fn may_close(controller: &WindowController, id: TabId) -> bool {
+    let Some(view) = editor_of_tab(controller, id) else {
         return true;
     };
     if conflict::is_gone(&view) {
@@ -753,13 +710,12 @@ pub fn may_close(controller: &WindowController, id: TabId) -> bool {
         .document()
         .path()
         .map_or_else(|| t("Ohne Titel").to_string(), display_name);
-    let alert = NSAlert::new(controller.mtm());
-    alert.setMessageText(&ns(&tf("Änderungen an „{}“ sichern?", &[&name])));
-    alert.setInformativeText(&ns(t("Ohne Sichern gehen deine Änderungen verloren.")));
-    alert.addButtonWithTitle(&ns(t("Sichern")));
-    alert.addButtonWithTitle(&ns(t("Nicht sichern")));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
-    let response = alert.runModal();
+    let response = Alert::new(controller.mtm(), &tf("Änderungen an „{}“ sichern?", &[&name]))
+        .informative(t("Ohne Sichern gehen deine Änderungen verloren."))
+        .button(t("Sichern"), Role::Plain)
+        .button(t("Nicht sichern"), Role::Plain)
+        .button(t("Abbrechen"), Role::Plain)
+        .run_modal();
     if response == NSAlertFirstButtonReturn {
         save(&view, false);
         !view.document().is_dirty()
@@ -773,7 +729,7 @@ pub fn may_close(controller: &WindowController, id: TabId) -> bool {
 
 /// Whether the app may quit: the user saved or gave up the text of each editor whose file is gone, one question each,
 /// then saved or dropped the other unsaved changes. When the user cancels, every editor keeps its copy.
-pub fn confirm_quit(mtm: MainThreadMarker) -> bool {
+pub(crate) fn confirm_quit(mtm: MainThreadMarker) -> bool {
     let agreed = open_editors()
         .iter()
         .filter(|view| conflict::is_gone(view))
@@ -792,16 +748,15 @@ fn unsaved_may_go(mtm: MainThreadMarker) -> bool {
     if count == 0 {
         return true;
     }
-    let alert = NSAlert::new(mtm);
-    alert.setMessageText(&ns(&tf(
-        "{} Dateien haben ungesicherte Änderungen.",
-        &[&count.to_string()],
-    )));
-    alert.setInformativeText(&ns(t("Ohne Sichern gehen deine Änderungen verloren.")));
-    alert.addButtonWithTitle(&ns(t("Alle sichern")));
-    alert.addButtonWithTitle(&ns(t("Nicht sichern")));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
-    let response = alert.runModal();
+    let response = Alert::new(
+        mtm,
+        &tf("{} Dateien haben ungesicherte Änderungen.", &[&count.to_string()]),
+    )
+    .informative(t("Ohne Sichern gehen deine Änderungen verloren."))
+    .button(t("Alle sichern"), Role::Plain)
+    .button(t("Nicht sichern"), Role::Plain)
+    .button(t("Abbrechen"), Role::Plain)
+    .run_modal();
     if response == NSAlertFirstButtonReturn {
         save_all()
     } else if response == NSAlertSecondButtonReturn {
@@ -815,7 +770,7 @@ fn unsaved_may_go(mtm: MainThreadMarker) -> bool {
 }
 
 /// The editor of the document `tab` in `controller`'s window.
-pub fn editor_of_tab(controller: &WindowController, tab: TabId) -> Option<Retained<EditorTextView>> {
+pub(crate) fn editor_of_tab(controller: &WindowController, tab: TabId) -> Option<Retained<EditorTextView>> {
     editors_in(controller)
         .into_iter()
         .find(|view| view.ivars().tab.get() == Some(tab))
@@ -831,7 +786,7 @@ fn editors_in(controller: &WindowController) -> Vec<Retained<EditorTextView>> {
 
 /// The names of the documents in `controller`'s window whose text closing would lose: unsaved changes, and files gone
 /// from disk (E43).
-pub fn unsaved_in(controller: &WindowController) -> Vec<String> {
+pub(crate) fn unsaved_in(controller: &WindowController) -> Vec<String> {
     editors_in(controller)
         .into_iter()
         .filter(|view| view.document().is_dirty() || conflict::is_gone(view))
@@ -844,19 +799,19 @@ pub fn unsaved_in(controller: &WindowController) -> Vec<String> {
 }
 
 /// Gives up the changes in the editors of `controller`'s window and their crash copies, as "Nicht sichern" does.
-pub fn discard_changes(controller: &WindowController) {
+pub(crate) fn discard_changes(controller: &WindowController) {
     for view in editors_in(controller) {
         recovery::discard(&view);
     }
 }
 
 /// How many open editors have unsaved changes, those of gone files aside, which get a question of their own.
-pub fn dirty_count() -> usize {
+pub(crate) fn dirty_count() -> usize {
     unsaved().len()
 }
 
 /// The files below `root` whose open editors have unsaved changes, those of gone files aside.
-pub fn unsaved_below(root: &Path) -> Vec<PathBuf> {
+pub(crate) fn unsaved_below(root: &Path) -> Vec<PathBuf> {
     let mut paths: Vec<PathBuf> = unsaved()
         .iter()
         .filter_map(|view| {
@@ -872,7 +827,7 @@ pub fn unsaved_below(root: &Path) -> Vec<PathBuf> {
 }
 
 /// Saves the editors of files below `root` with unsaved changes; whether none is left unsaved.
-pub fn save_below(root: &Path) -> bool {
+pub(crate) fn save_below(root: &Path) -> bool {
     let below = |view: &Retained<EditorTextView>| view.document().path().is_some_and(|p| p.starts_with(root));
     for view in unsaved().iter().filter(|view| below(view)) {
         save(view, false);
@@ -881,7 +836,7 @@ pub fn save_below(root: &Path) -> bool {
 }
 
 /// Saves every editor with unsaved changes, those of gone files aside; whether all of them were saved.
-pub fn save_all() -> bool {
+pub(crate) fn save_all() -> bool {
     for view in unsaved() {
         save(&view, false);
     }
@@ -893,24 +848,6 @@ fn unsaved() -> Vec<Retained<EditorTextView>> {
         .into_iter()
         .filter(|view| view.document().is_dirty() && !conflict::is_gone(view))
         .collect()
-}
-
-fn confirm(mtm: MainThreadMarker, message: &str, detail: &str, action: &str) -> bool {
-    let alert = NSAlert::new(mtm);
-    alert.setAlertStyle(NSAlertStyle::Warning);
-    alert.setMessageText(&ns(message));
-    alert.setInformativeText(&ns(detail));
-    alert.addButtonWithTitle(&ns(action));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
-    alert.runModal() == NSAlertFirstButtonReturn
-}
-
-fn alert(mtm: MainThreadMarker, message: &str, detail: &str) {
-    let alert = NSAlert::new(mtm);
-    alert.setAlertStyle(NSAlertStyle::Warning);
-    alert.setMessageText(&ns(message));
-    alert.setInformativeText(&ns(detail));
-    alert.runModal();
 }
 
 /// Tells the language servers when `scroll` shows other lines of `view`.
@@ -928,7 +865,7 @@ fn follow_scrolling(scroll: &NSScrollView, view: &Retained<EditorTextView>) {
 }
 
 /// Whether long lines wrap at the view's edge.
-pub fn wraps(view: &EditorTextView) -> bool {
+pub(crate) fn wraps(view: &EditorTextView) -> bool {
     // SAFETY: A text view keeps its text container alive as long as it lives.
     unsafe { view.textContainer() }.is_some_and(|c| c.widthTracksTextView())
 }

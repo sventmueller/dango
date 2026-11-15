@@ -6,19 +6,19 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::time::Duration;
 
-use block2::RcBlock;
 use ide_core::settings::{Settings, keys};
 use ide_lsp::Error;
 use ide_lsp::lsp_types::{FormattingOptions, PrepareRenameResponse, TextEdit};
+use ide_ui_common::alert::{Alert, Role, first, warn};
 use objc2::MainThreadOnly;
-use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSModalResponse, NSTextField};
+use objc2_app_kit::NSTextField;
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
 use super::{server_of, text};
 use crate::editor::Editor;
 use crate::host as editor;
-use ide_ui_common::util::{guarded, main_after, main_soon, ns};
+use ide_ui_common::util::{main_after, main_soon, ns};
 
 /// How long saving waits for the server's formatting before it saves the text as it is.
 const FORMAT_WAIT: Duration = Duration::from_secs(2);
@@ -76,31 +76,31 @@ pub fn rename(view: &dyn Editor) {
 fn ask_name(view: &dyn Editor, index: usize, current: &str) {
     let Some(window) = view.window() else { return };
     let mtm = view.mtm();
-    let alert = NSAlert::new(mtm);
-    alert.setMessageText(&ns(&tf("„{}“ umbenennen", &[current])));
-    alert.setInformativeText(&ns(t("Der neue Name gilt in allen Dateien des Ordners.")));
-    alert.addButtonWithTitle(&ns(t("Umbenennen")));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
     let field = NSTextField::textFieldWithString(&ns(current), mtm);
     field.setFrame(NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(280.0, 24.0)));
-    alert.setAccessoryView(Some(&field));
-    alert.window().setInitialFirstResponder(Some(&field));
     let serial = view.lsp().borrow().serial;
-    let handler = RcBlock::new(move |response: NSModalResponse| {
-        guarded((), || {
+    Alert::new(mtm, &tf("„{}“ umbenennen", &[current]))
+        .informative(t("Der neue Name gilt in allen Dateien des Ordners."))
+        .button(t("Umbenennen"), Role::Plain)
+        .button(t("Abbrechen"), Role::Plain)
+        .accessory(&field)
+        .focus(&field)
+        .sheet(&window, move |response| {
             let name = field.stringValue().to_string();
-            if response == NSAlertFirstButtonReturn
+            if first(response)
                 && !name.trim().is_empty()
                 && let Some(view) = editor::find_editor(serial)
             {
                 rename_to(&*view, index, name.trim());
             }
         });
-    });
-    alert.beginSheetModalForWindow_completionHandler(&window, Some(&handler));
 }
 
 /// Renames the symbol at UTF-16 offset `index` to `name` in every file the server names.
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unreachable_pub, reason = "the self-test re-exports it")
+)]
 pub fn rename_to(view: &dyn Editor, index: usize, name: &str) {
     let Some((server, uri)) = server_of(view) else { return };
     let Some(position) = text::position(view.document().text(), index) else {
@@ -119,14 +119,14 @@ pub fn rename_to(view: &dyn Editor, index: usize, name: &str) {
                 Ok(Some(edit)) => {
                     return super::edits::apply_workspace_edit(&folder, &edit, |applied| {
                         if let (Err(failure), Some(mtm)) = (applied, objc2::MainThreadMarker::new()) {
-                            editor::show_alert(mtm, t("Umbenennen fehlgeschlagen"), &failure.message);
+                            warn(mtm, t("Umbenennen fehlgeschlagen"), &failure.message);
                         }
                     });
                 }
                 Ok(None) => t("Der Sprachserver nennt nichts umzubenennen.").to_string(),
                 Err(error) => error.to_string(),
             };
-            editor::show_alert(view.mtm(), t("Umbenennen fehlgeschlagen"), &problem);
+            warn(view.mtm(), t("Umbenennen fehlgeschlagen"), &problem);
         });
     });
 }
@@ -141,7 +141,7 @@ fn options(view: &dyn Editor) -> FormattingOptions {
 }
 
 /// What runs after formatting, such as saving.
-pub type Then = Box<dyn FnOnce(&dyn Editor)>;
+pub(crate) type Then = Box<dyn FnOnce(&dyn Editor)>;
 
 /// Formatting requests waiting for their answer, by the editor's serial.
 struct Pending {
@@ -152,7 +152,7 @@ struct Pending {
 
 /// The format-on-save requests that run, by editor.
 #[derive(Default)]
-pub struct Formatting {
+pub(crate) struct Formatting {
     formatting: RefCell<HashMap<crate::EditorSerial, Pending>>,
     /// Prettier's runs by editor: the run's id and what waits for it.
     prettier: RefCell<HashMap<crate::EditorSerial, (u64, Option<Then>)>>,
@@ -160,12 +160,12 @@ pub struct Formatting {
 
 impl Formatting {
     /// Keeps `then` until Prettier's run `id` for the editor `serial` ends.
-    pub fn wait(&self, serial: EditorSerial, id: u64, then: Option<Then>) {
+    pub(crate) fn wait(&self, serial: EditorSerial, id: u64, then: Option<Then>) {
         self.prettier.borrow_mut().insert(serial, (id, then));
     }
 
     /// What waits for Prettier's run `id` for the editor `serial`; `None` once a later run took its place.
-    pub fn take(&self, serial: EditorSerial, id: u64) -> Option<Option<Then>> {
+    pub(crate) fn take(&self, serial: EditorSerial, id: u64) -> Option<Option<Then>> {
         let mut runs = self.prettier.borrow_mut();
         if runs.get(&serial).is_some_and(|(run, _)| *run == id) {
             runs.remove(&serial).map(|(_, then)| then)
@@ -208,7 +208,7 @@ pub fn format(view: &dyn Editor, then: Option<Then>) {
         }
         Err(error) => match then {
             Some(then) => then(view),
-            None => editor::show_alert(view.mtm(), t("Formatieren fehlgeschlagen"), &error.to_string()),
+            None => warn(view.mtm(), t("Formatieren fehlgeschlagen"), &error.to_string()),
         },
     }
 }

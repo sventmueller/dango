@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use splat_file_state::{Encoding, FileFormat, Fingerprint, Stamp};
 
 /// The largest file a document opens.
-pub const MAX_FILE_BYTES: u64 = 512 << 20;
+pub(crate) const MAX_FILE_BYTES: u64 = 512 << 20;
 
 /// How much of a file is looked at for a NUL byte, as Git does to tell binary files from text.
 const BINARY_PROBE: usize = 8000;
@@ -31,7 +31,7 @@ pub enum ReadOnly {
 
 impl ReadOnly {
     /// Whether the text shown differs from the file, so that no save may write it.
-    pub fn is_lossy(self) -> bool {
+    pub(crate) fn is_lossy(self) -> bool {
         matches!(self, ReadOnly::Binary | ReadOnly::Undecodable)
     }
 }
@@ -43,13 +43,13 @@ pub struct FileContent {
     /// The text, with its line breaks as the file has them.
     pub text: String,
     /// Encoding and byte order mark.
-    pub format: FileFormat,
+    pub(crate) format: FileFormat,
     /// Why the document of this file may not be edited, if it may not.
-    pub read_only: Option<ReadOnly>,
+    pub(crate) read_only: Option<ReadOnly>,
     /// Modification time and size when read.
-    pub stamp: Stamp,
+    pub(crate) stamp: Stamp,
     /// The fingerprint of the bytes read.
-    pub fingerprint: Fingerprint,
+    pub(crate) fingerprint: Fingerprint,
 }
 
 impl FileContent {
@@ -127,7 +127,7 @@ pub(crate) fn encode(format: FileFormat, text: &str) -> Vec<u8> {
 }
 
 /// The stamp of the file at `path` now, following symbolic links; unreachable if there is none.
-pub fn stamp(path: &Path) -> Stamp {
+pub(crate) fn stamp(path: &Path) -> Stamp {
     fs::metadata(path).map_or(Stamp::UNREACHABLE, |meta| stamp_of(&meta))
 }
 
@@ -142,15 +142,17 @@ fn is_protected(meta: &Metadata) -> bool {
 
 /// What tells two paths to one file apart from two files: on a volume that ignores case, through symbolic or hard
 /// links, both paths give the same key.
+#[cfg(test)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct FileKey {
+pub(crate) struct FileKey {
     device: u64,
     inode: u64,
 }
 
+#[cfg(test)]
 impl FileKey {
     /// The key of the file at `path`, following symbolic links.
-    pub fn of(path: &Path) -> io::Result<FileKey> {
+    pub(crate) fn of(path: &Path) -> io::Result<FileKey> {
         let meta = fs::metadata(path)?;
         Ok(FileKey {
             device: meta.dev(),
@@ -161,7 +163,7 @@ impl FileKey {
 
 /// The file a save through `path` writes: the end of its symbolic links, spelled as the volume spells it, so a
 /// save neither replaces a link by a file nor renames a file on a volume that ignores case.
-pub fn save_target(path: &Path) -> io::Result<PathBuf> {
+pub(crate) fn save_target(path: &Path) -> io::Result<PathBuf> {
     match fs::canonicalize(path) {
         Ok(real) => Ok(real),
         Err(error) if error.kind() == io::ErrorKind::NotFound => {
@@ -189,7 +191,8 @@ pub fn save_target(path: &Path) -> io::Result<PathBuf> {
 }
 
 /// Writes `bytes` as the file at `path` and returns its new stamp. The bytes go to a new file beside it that then
-/// takes its place, with the old file's permissions, so a crash leaves the old file or the new one. A file with
+/// takes its place, with the old file's permissions, after which the folder is flushed, so a crash or a power loss
+/// leaves the old file or the new one. A file with
 /// further hard links or another owner is written in place instead, since replacing it would cut the links or
 /// change the owner.
 pub(crate) fn write(path: &Path, bytes: &[u8]) -> io::Result<Stamp> {
@@ -225,7 +228,11 @@ pub(crate) fn write(path: &Path, bytes: &[u8]) -> io::Result<Stamp> {
         Ok(true)
     })();
     match written {
-        Ok(true) => Ok(stamp(&target)),
+        Ok(true) => {
+            // Some file systems refuse to flush a folder; the file has its new content and name either way.
+            let _ = File::open(folder).and_then(|folder| folder.sync_all());
+            Ok(stamp(&target))
+        }
         Ok(false) => {
             let _ = fs::remove_file(&temporary);
             write_in_place(&target, bytes)
@@ -324,6 +331,31 @@ pub(crate) mod tests {
         );
         assert_eq!(stamp, super::stamp(&path));
         assert_eq!(fs::read_dir(&dir).unwrap().count(), 1, "no temporary file stays behind");
+    }
+
+    #[test]
+    fn a_save_into_a_folder_that_cannot_be_flushed_still_replaces_the_file() {
+        let dir = scratch("unflushable");
+        let folder = dir.join("write-only");
+        fs::create_dir(&folder).unwrap();
+        let path = folder.join("file.txt");
+        fs::write(&path, "old").unwrap();
+        let before = FileKey::of(&path).unwrap();
+        fs::set_permissions(&folder, fs::Permissions::from_mode(0o300)).unwrap();
+        let written = write(&path, b"new");
+        fs::set_permissions(&folder, fs::Permissions::from_mode(0o755)).unwrap();
+        written.unwrap();
+        assert_eq!(fs::read(&path).unwrap(), b"new");
+        assert_ne!(
+            FileKey::of(&path).unwrap(),
+            before,
+            "a new file took the old one's place"
+        );
+        assert_eq!(
+            fs::read_dir(&folder).unwrap().count(),
+            1,
+            "no temporary file stays behind"
+        );
     }
 
     #[test]

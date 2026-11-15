@@ -64,7 +64,7 @@ fn background_kind(task_type: &str) -> BackgroundKind {
 
 impl Mapper {
     /// The updates for the output of a background task that `get_task_output` returned.
-    pub fn task_output(&self, task_id: &str, output: &TaskOutput) -> Vec<Update> {
+    pub(crate) fn task_output(&self, task_id: &str, output: &TaskOutput) -> Vec<Update> {
         vec![Update::BackgroundItem(BackgroundPatch {
             id: task_id.to_string(),
             output: Some(OutputTail {

@@ -64,7 +64,7 @@ impl Checkpoints {
     /// keep them. Files created since are deleted, except ignored ones, which no checkpoint holds. The state before is
     /// taken as a checkpoint first, so a restore can itself be restored away.
     pub fn restore(&self, checkpoint: &Checkpoint, options: &RestoreOptions) -> Result<Restore> {
-        let target = self.space.parts(&checkpoint.commit)?;
+        let target = self.space.parts(checkpoint.commit.as_str())?;
         let now = self.space.snapshot(self.max_file_size)?;
         let changed = self.space.changed(&target.worktree, &now.worktree)?;
         let keep: BTreeSet<PathBuf> = all_relative(&self.space.root, &options.keep)?.into_iter().collect();
@@ -142,11 +142,11 @@ impl Checkpoints {
             if !current.finished {
                 continue;
             }
-            let Some(after) = self.space.parts(&current.commit)?.after else {
+            let Some(after) = self.space.parts(current.commit.as_str())?.after else {
                 continue;
             };
             let next = match later.get(i + 1) {
-                Some(next) => self.space.parts(&next.commit)?.worktree,
+                Some(next) => self.space.parts(next.commit.as_str())?.worktree,
                 None => now.to_string(),
             };
             user.extend(self.space.changed(&after, &next)?.into_iter().map(|(_, path)| path));

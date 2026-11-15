@@ -13,7 +13,7 @@ use splat_i18n::t;
 use super::form::Row;
 use crate::util::{guarded, ns, set_action};
 
-pub struct EditorIvars {
+pub(crate) struct EditorIvars {
     views: RefCell<Option<Views>>,
 }
 
@@ -29,7 +29,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEEditorSettings"]
     #[ivars = EditorIvars]
-    pub struct EditorSettings;
+    pub(crate) struct EditorSettings;
 
     unsafe impl NSObjectProtocol for EditorSettings {}
 
@@ -68,7 +68,7 @@ define_class!(
 
 /// The editor part of the settings on view, which its controls send their actions to.
 #[derive(Default)]
-pub struct EditorSettingsShown {
+pub(crate) struct EditorSettingsShown {
     tab: RefCell<Option<Retained<EditorSettings>>>,
 }
 
@@ -111,7 +111,7 @@ impl EditorSettings {
 }
 
 /// The rows of the General tab for the editor's switches.
-pub fn rows(mtm: MainThreadMarker) -> Vec<Row> {
+pub(crate) fn rows(mtm: MainThreadMarker) -> Vec<Row> {
     let target = EditorSettings::new(mtm);
     // SAFETY: The checkbox sends its action to the target, which answers it, set right below.
     let hints = unsafe { NSButton::checkboxWithTitle_target_action(&ns(t("Im Editor zeigen")), None, None, mtm) };
@@ -151,7 +151,7 @@ pub fn rows(mtm: MainThreadMarker) -> Vec<Row> {
 }
 
 /// Shows the editor's switches as the settings are now, when the window comes to the front.
-pub fn reload() {
+pub(crate) fn reload() {
     with_tab(|tab| {
         if let Some(tab) = tab.borrow().as_ref() {
             tab.reload();
@@ -162,4 +162,4 @@ pub fn reload() {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

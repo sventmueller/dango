@@ -132,15 +132,16 @@ fn srgb(c: Rgb) -> Retained<NSColor> {
 
 /// A colour that AppKit resolves anew for each appearance, from `pick`.
 fn dynamic(pick: impl Fn(Appearance) -> Rgb + 'static) -> Retained<NSColor> {
+    // The block keeps the fallback alive, so it may hand AppKit the fallback's pointer without retaining it.
+    let fallback = NSColor::labelColor();
     let block = RcBlock::new(move |appearance: NonNull<NSAppearance>| -> NonNull<NSColor> {
-        let color = guarded(NSColor::labelColor(), || {
+        guarded(NonNull::from(&*fallback), || {
             // SAFETY: `NonNull` rules out null, and AppKit keeps the appearance alive while it asks for its colour.
             let appearance = unsafe { appearance.as_ref() };
-            srgb(pick(appearance_of(appearance)))
-        });
-        let pointer = Retained::autorelease_return(color);
-        // SAFETY: `autorelease_return` hands back the pointer of a live object, which is never null.
-        unsafe { NonNull::new_unchecked(pointer) }
+            let pointer = Retained::autorelease_return(srgb(pick(appearance_of(appearance))));
+            // SAFETY: `autorelease_return` hands back the pointer of a live object, which is never null.
+            unsafe { NonNull::new_unchecked(pointer) }
+        })
     });
     // SAFETY: The provider only reads the appearance it is given and returns an autoreleased colour.
     unsafe { NSColor::colorWithName_dynamicProvider(None, &block) }

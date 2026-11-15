@@ -11,7 +11,7 @@ use ide_lsp::lsp_types::{Diagnostic, DiagnosticSeverity, NumberOrString};
 
 /// What the running servers published, shared with the own agent's worker threads.
 #[derive(Default)]
-pub struct AgentDiagnostics {
+pub(crate) struct AgentDiagnostics {
     published: Mutex<BTreeMap<PathBuf, Vec<ide_agent::Diagnostic>>>,
     /// The project roots and languages of the servers that run, by their real path.
     served: Mutex<Vec<(PathBuf, Language)>>,

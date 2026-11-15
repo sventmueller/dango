@@ -24,7 +24,7 @@ static ENVIRONMENT: OnceLock<Vec<(String, String)>> = OnceLock::new();
 static READY: (Mutex<bool>, Condvar) = (Mutex::new(false), Condvar::new());
 
 /// Reads the login shell's environment on a thread of its own.
-pub fn start() {
+pub(crate) fn start() {
     let started = crate::util::spawn("login-env", || {
         let home = ide_core::paths::home();
         let environment =
@@ -51,12 +51,12 @@ fn publish(environment: Vec<(String, String)>) {
 }
 
 /// The environment, once it is known.
-pub fn get() -> Option<&'static [(String, String)]> {
+pub(crate) fn get() -> Option<&'static [(String, String)]> {
     ENVIRONMENT.get().map(Vec::as_slice)
 }
 
 /// The environment, waiting up to `timeout` for it.
-pub fn wait(timeout: Duration) -> Option<&'static [(String, String)]> {
+pub(crate) fn wait(timeout: Duration) -> Option<&'static [(String, String)]> {
     let (lock, ready) = &READY;
     let guard = lock.lock_ignoring_poison();
     let _ = ready

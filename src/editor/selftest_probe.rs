@@ -6,15 +6,15 @@
 )]
 use super::*;
 
-pub use super::highlight::colours_painted;
-pub use super::overlay::LAID_OUT;
+pub(crate) use super::highlight::colours_painted;
+pub(crate) use super::overlay::LAID_OUT;
 
 mod probe;
 
-pub use probe::*;
+pub(crate) use probe::*;
 
 /// Scrolls `view` so that the line holding byte `byte` is the first on screen.
-pub fn scroll_to_byte(view: &EditorTextView, byte: usize) {
+pub(crate) fn scroll_to_byte(view: &EditorTextView, byte: usize) {
     if let Some(y) = byte_y(view, byte) {
         view.scrollPoint(NSPoint::new(view.visibleRect().origin.x, y));
     }

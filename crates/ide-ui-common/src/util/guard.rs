@@ -22,10 +22,10 @@ impl Drop for FlagGuard<'_> {
 
 /// One edit of a text storage, which it processes once the guard drops, also when a panic unwinds past it.
 #[must_use = "the edit ends as soon as the guard drops"]
-pub struct EditingGuard<'a>(&'a NSTextStorage);
+pub(crate) struct EditingGuard<'a>(&'a NSTextStorage);
 
 impl<'a> EditingGuard<'a> {
-    pub fn begin(storage: &'a NSTextStorage) -> Self {
+    pub(crate) fn begin(storage: &'a NSTextStorage) -> Self {
         storage.beginEditing();
         Self(storage)
     }
@@ -45,7 +45,7 @@ pub fn with_editing<R>(storage: &NSTextStorage, f: impl FnOnce() -> R) -> R {
 
 /// An undo group, which ends once the guard drops, also when a panic unwinds past it.
 #[must_use = "the group ends as soon as the guard drops"]
-pub struct UndoGroupGuard<'a> {
+pub(crate) struct UndoGroupGuard<'a> {
     undo: &'a NSUndoManager,
     by_event: bool,
 }
@@ -53,7 +53,7 @@ pub struct UndoGroupGuard<'a> {
 impl<'a> UndoGroupGuard<'a> {
     /// Opens a group inside the one open, or else a top-level group of its own, during which the manager does not
     /// open one per event.
-    pub fn begin(undo: &'a NSUndoManager) -> Self {
+    pub(crate) fn begin(undo: &'a NSUndoManager) -> Self {
         let by_event = undo.groupsByEvent() && undo.groupingLevel() == 0;
         if by_event {
             undo.setGroupsByEvent(false);

@@ -4,7 +4,6 @@
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::time::Duration;
 
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, Message, sel};
@@ -12,13 +11,13 @@ use objc2_app_kit::{NSAlertFirstButtonReturn, NSApplication, NSButton, NSView};
 use serde_json::json;
 use splat_i18n::t;
 
-use super::helpers::{self, in_any_mode_after, picture_alert_after};
-use super::{check, finish};
+use super::helpers::{self, picture_alert, when_alert_shows};
+use super::{check, finish, give_up};
 use crate::util::main_on_run_loop;
 
 const NAME: &str = "quit";
 
-pub fn run() {
+pub(crate) fn run() {
     helpers::open_project(NAME, "quit-project", &[], |controller| {
         let root = helpers::root("quit-project");
         check(
@@ -27,8 +26,7 @@ pub fn run() {
             crate::quit::running().join(", "),
         );
         let Some(tab) = ide_ui_agent::open_replay(&controller) else {
-            check("an AI tab opens", false, "");
-            return finish(NAME);
+            return give_up(NAME, "an AI tab opens");
         };
         tab.feed(&turn_starts());
         tab.feed(&state("running"));
@@ -57,10 +55,8 @@ struct Seen {
 fn quit_while_running(root: PathBuf, title: String) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let seen = Rc::new(RefCell::new(Seen::default()));
-    picture_alert_after(Duration::from_millis(500), "quit-alert");
-    inspect_and_cancel_after(Duration::from_millis(700), &seen);
-    // Ends the alert should the click not reach it, so the run fails on its checks instead of hanging.
-    helpers::answer_alert_after(Duration::from_secs(5), NSAlertFirstButtonReturn);
+    picture_alert("quit-alert");
+    inspect_and_cancel(&seen);
     let chosen = choose_quit(mtm);
     let seen = seen.take();
     check("the app menu has Quit with ⌘Q", chosen, "");
@@ -101,8 +97,9 @@ fn after_the_turn(root: PathBuf) {
         crate::quit::running().join(", "),
     );
     let seen = Rc::new(RefCell::new(Seen::default()));
-    inspect_and_cancel_after(Duration::from_millis(300), &seen);
+    let asking = inspect_and_cancel(&seen);
     let may_quit = crate::quit::agents_may_stop(mtm);
+    asking.stop();
     check(
         "without a running agent, quitting asks nothing",
         may_quit && seen.borrow().texts.is_empty(),
@@ -111,15 +108,14 @@ fn after_the_turn(root: PathBuf) {
     finish(NAME);
 }
 
-/// Records the alert in front `delay` from now and clicks its "Abbrechen".
-fn inspect_and_cancel_after(delay: Duration, seen: &Rc<RefCell<Seen>>) {
+/// Records the next alert as soon as it shows and clicks its "Abbrechen"; one without it ends with its first button,
+/// so the run fails on its checks instead of hanging.
+fn inspect_and_cancel(seen: &Rc<RefCell<Seen>>) -> helpers::AlertWait {
     let seen = Rc::clone(seen);
-    in_any_mode_after(delay, move || {
-        let Some(mtm) = MainThreadMarker::new() else { return };
-        let Some(alert) = NSApplication::sharedApplication(mtm).modalWindow() else {
-            return;
+    when_alert_shows(None, move |alert| {
+        let Some(content) = alert.contentView() else {
+            return helpers::answer_alert(NSAlertFirstButtonReturn);
         };
-        let Some(content) = alert.contentView() else { return };
         let mut buttons = Vec::new();
         buttons_in(&content, &mut buttons);
         let mut seen = seen.borrow_mut();
@@ -134,8 +130,12 @@ fn inspect_and_cancel_after(delay: Duration, seen: &Rc<RefCell<Seen>>) {
             seen.cancelled = true;
             // SAFETY: A click without a sender, on the alert's own button, which the alert keeps alive.
             unsafe { cancel.performClick(None) };
+            // The alert's stop takes effect with the next event.
+            helpers::post_event();
+        } else {
+            helpers::answer_alert(NSAlertFirstButtonReturn);
         }
-    });
+    })
 }
 
 fn buttons_in(view: &NSView, out: &mut Vec<Retained<NSButton>>) {

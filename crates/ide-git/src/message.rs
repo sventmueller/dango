@@ -10,7 +10,7 @@ use crate::error::Result;
 use crate::repo::Repository;
 
 /// How many lines of one file's diff the request takes; the rest is named, not sent.
-pub const LINES_PER_FILE: usize = 200;
+pub(crate) const LINES_PER_FILE: usize = 200;
 /// How many subjects of the history the request takes, for the style and language of the message.
 pub const SUBJECTS: usize = 10;
 
@@ -115,11 +115,6 @@ impl CheckedRequest {
     /// How many changed files it holds.
     pub fn files(&self) -> usize {
         self.files
-    }
-
-    /// Whether it holds the staged changes rather than every change.
-    pub fn staged(&self) -> bool {
-        self.staged
     }
 }
 

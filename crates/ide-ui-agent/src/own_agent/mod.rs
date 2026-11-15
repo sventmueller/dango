@@ -23,10 +23,12 @@ use ide_thread::ThreadId;
 
 use ide_ui_common::util::main_soon;
 
-pub use words::{destructive_text, load_error, provider_error, rule_text};
+pub(crate) use words::{destructive_text, load_error};
+pub use words::{provider_error, rule_text};
 
 /// The endpoints the user added, and the addresses they gave the services, by endpoint id.
-pub const ENDPOINTS: Key<Vec<Endpoint>> = Key::user("agentEndpoints", ide_core::settings::Sharing::PerMac, Vec::new);
+pub(crate) const ENDPOINTS: Key<Vec<Endpoint>> =
+    Key::user("agentEndpoints", ide_core::settings::Sharing::PerMac, Vec::new);
 /// The model new threads start with.
 pub const MODEL: Key<Option<ModelChoice>> = Key::user("agentModel", ide_core::settings::Sharing::Shared, || None);
 /// How hard the model thinks in new threads; the provider's default when not set.
@@ -241,7 +243,7 @@ fn change_rules(change: impl FnOnce(&mut BTreeMap<String, Vec<Rule>>)) {
 }
 
 /// Where a thread's conversation is kept.
-pub fn store_path(thread: &ThreadId) -> PathBuf {
+pub(crate) fn store_path(thread: &ThreadId) -> PathBuf {
     ide_core::paths::data_dir()
         .join("agent-threads")
         .join(format!("{}.json", thread.as_str()))

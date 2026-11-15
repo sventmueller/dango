@@ -3,7 +3,7 @@
 use super::*;
 
 /// The text of the open popover's labels, for the self-test.
-pub fn popover_texts(view: &EditorTextView) -> Option<Vec<String>> {
+pub(crate) fn popover_texts(view: &EditorTextView) -> Option<Vec<String>> {
     pub(crate) fn collect(view: &NSView, out: &mut Vec<String>) {
         if let Some(field) = view.downcast_ref::<NSTextField>() {
             out.push(field.stringValue().to_string());

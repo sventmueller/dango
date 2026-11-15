@@ -11,10 +11,11 @@ use ide_thread::{Answer as QuestionAnswer, Change, Decision, Thread, Update, Use
 use serde_json::Value;
 
 use crate::control::{
-    self, Answer, ContextUsage, Incoming, InitializeResult, PermissionAsk, PlanAnswer, TaskOutput, UsageReport,
+    self, Answer, ContextCount, ContextUsage, Incoming, InitializeResult, PermissionAsk, PlanAnswer, TaskOutput,
+    UsageReport,
 };
 use crate::mapping::Mapper;
-use crate::protocol::{self, Message};
+use crate::protocol::{self, Message, Outcome};
 
 /// The prefix of a line the app sent.
 pub const SENT: &str = ">> ";
@@ -156,7 +157,7 @@ impl Replay {
                     return Vec::new();
                 };
                 let payload = response.response.unwrap_or_default();
-                if response.subtype != "success" {
+                if response.subtype != Outcome::Success {
                     return Vec::new();
                 }
                 let field = |name: &str| {
@@ -174,7 +175,14 @@ impl Replay {
                         .map(|output| self.mapper.task_output(&field("task_id"), &output))
                         .unwrap_or_default(),
                     Some("get_context_usage") => ContextUsage::read(payload)
-                        .map(|usage| self.mapper.context(&usage, field("detail") == "full", now))
+                        .map(|usage| {
+                            let count = if field("detail") == "full" {
+                                ContextCount::Exact
+                            } else {
+                                ContextCount::Estimated
+                            };
+                            self.mapper.context(&usage, count, now)
+                        })
                         .unwrap_or_default(),
                     Some("get_usage") => {
                         if let Ok(report) = UsageReport::read(payload) {

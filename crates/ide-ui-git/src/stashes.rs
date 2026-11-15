@@ -5,7 +5,7 @@
 
 use std::path::{Path, PathBuf};
 
-use ide_git::{Applied, Stash, StashOptions};
+use ide_git::{Applied, CommitId, Stash, StashOptions};
 use objc2::rc::Retained;
 use objc2::runtime::Sel;
 use objc2::{MainThreadMarker, sel};
@@ -22,12 +22,12 @@ use super::panel::{GitPanel, with_panel};
 use super::rows::{HoverCell, file_text, letter_label};
 use super::text::Problem;
 use super::{sheets, work};
-use ide_ui_common::util::{label, ns, symbol, symbol_button};
+use ide_ui_common::util::{activate, center_y, label, ns, symbol, symbol_button};
 
 const ACTION_POINTS: f64 = 12.0;
 
 /// The menu of a stash entry or of a file below one.
-pub fn menu(keys: &[RowKey]) -> Vec<(&'static str, Option<Sel>)> {
+pub(crate) fn menu(keys: &[RowKey]) -> Vec<(&'static str, Option<Sel>)> {
     match keys {
         [RowKey::Stash(_)] => vec![
             (t("Anwenden"), Some(sel!(ideGitApplyStash:))),
@@ -50,7 +50,7 @@ fn actions() -> [(&'static str, &'static str, Sel); 3] {
 }
 
 /// The entry's own words, without the branch git puts before them, and the branch.
-pub fn title_of(stash: &Stash) -> (String, Option<String>) {
+pub(crate) fn title_of(stash: &Stash) -> (String, Option<String>) {
     let message = stash.message.as_str();
     let rest = message.strip_prefix("WIP on ").or_else(|| message.strip_prefix("On "));
     match rest.and_then(|rest| rest.split_once(": ")) {
@@ -66,7 +66,7 @@ fn name_of(stash: &Stash) -> String {
 
 impl GitPanel {
     /// The row of the stash entry `hash`: its words, its age and, on hover, what it offers.
-    pub fn stash_cell(&self, mtm: MainThreadMarker, hash: &str) -> Option<Retained<NSView>> {
+    pub(crate) fn stash_cell(&self, mtm: MainThreadMarker, hash: &CommitId) -> Option<Retained<NSView>> {
         let state = self.read();
         let stash = state.model.stash(hash)?.clone();
         let files = state.stash_changes.get(hash).map(Vec::len);
@@ -103,21 +103,15 @@ impl GitPanel {
         buttons.setHidden(true);
         for view in [&*text as &NSView, &when, &buttons] {
             cell.addSubview(view);
-            view.setTranslatesAutoresizingMaskIntoConstraints(false);
-            view.centerYAnchor()
-                .constraintEqualToAnchor(&cell.centerYAnchor())
-                .setActive(true);
+            center_y(view, &cell);
         }
-        text.leadingAnchor()
-            .constraintEqualToAnchor(&cell.leadingAnchor())
-            .setActive(true);
-        when.trailingAnchor()
-            .constraintEqualToAnchor(&cell.trailingAnchor())
-            .setActive(true);
-        buttons
-            .trailingAnchor()
-            .constraintEqualToAnchor_constant(&when.leadingAnchor(), -4.0)
-            .setActive(true);
+        activate([
+            text.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
+            when.trailingAnchor().constraintEqualToAnchor(&cell.trailingAnchor()),
+            buttons
+                .trailingAnchor()
+                .constraintEqualToAnchor_constant(&when.leadingAnchor(), -4.0),
+        ]);
         let to_edge = text
             .trailingAnchor()
             .constraintLessThanOrEqualToAnchor_constant(&when.leadingAnchor(), -6.0);
@@ -140,7 +134,12 @@ impl GitPanel {
     }
 
     /// The row of a file the stash entry `hash` changed.
-    pub fn stash_file_cell(&self, mtm: MainThreadMarker, hash: &str, path: &Path) -> Option<Retained<NSView>> {
+    pub(crate) fn stash_file_cell(
+        &self,
+        mtm: MainThreadMarker,
+        hash: &CommitId,
+        path: &Path,
+    ) -> Option<Retained<NSView>> {
         let change = self
             .read()
             .stash_changes
@@ -154,23 +153,18 @@ impl GitPanel {
         let letter = letter_label(mtm, mark);
         for view in [&*text as &NSView, &letter] {
             cell.addSubview(view);
-            view.setTranslatesAutoresizingMaskIntoConstraints(false);
-            view.centerYAnchor()
-                .constraintEqualToAnchor(&cell.centerYAnchor())
-                .setActive(true);
+            center_y(view, &cell);
         }
-        for constraint in [
+        activate([
             text.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
             letter.trailingAnchor().constraintEqualToAnchor(&cell.trailingAnchor()),
             text.trailingAnchor()
                 .constraintLessThanOrEqualToAnchor_constant(&letter.leadingAnchor(), -4.0),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         let described = tf("{}, {}", &[&path.display().to_string(), mark.word()]);
         cell.setToolTip(Some(&ns(&described)));
         cell.setAccessibilityLabel(Some(&ns(&described)));
-        let key = RowKey::StashFile(hash.to_string(), path.to_path_buf());
+        let key = RowKey::StashFile(hash.clone(), path.to_path_buf());
         let custom = self.custom_actions(&key, &menu(std::slice::from_ref(&key)));
         cell.setAccessibilityCustomActions(Some(&NSArray::from_retained_slice(&custom)));
         // SAFETY: The label is a subview of the cell, which keeps it.
@@ -179,10 +173,10 @@ impl GitPanel {
     }
 
     /// Reads what the stash entry `hash` changed, once; an open row then lists the files.
-    pub fn read_stash_changes(&self, hash: &str) {
+    pub(crate) fn read_stash_changes(&self, hash: &CommitId) {
         {
             let mut state = self.state();
-            if state.stash_changes.contains_key(hash) || !state.reading_stashes.insert(hash.to_string()) {
+            if state.stash_changes.contains_key(hash) || !state.reading_stashes.insert(hash.clone()) {
                 return;
             }
         }
@@ -190,7 +184,7 @@ impl GitPanel {
             self.state().reading_stashes.remove(hash);
             return;
         };
-        let (id, theirs, mine) = (self.id(), hash.to_string(), hash.to_string());
+        let (id, theirs, mine) = (self.id(), hash.clone(), hash.clone());
         let queued = work::local(
             move || repo.stash_changes(&theirs),
             move |result| with_panel(id, |panel| panel.stash_changes_read(&mine, result)),
@@ -200,15 +194,15 @@ impl GitPanel {
         }
     }
 
-    fn stash_changes_read(&self, hash: &str, result: Option<ide_git::Result<Vec<ide_git::ChangedFile>>>) {
+    fn stash_changes_read(&self, hash: &CommitId, result: Option<ide_git::Result<Vec<ide_git::ChangedFile>>>) {
         self.state().reading_stashes.remove(hash);
         let files = match result {
             Some(Ok(files)) => files,
             Some(Err(error)) => return self.report(&error),
             None => return,
         };
-        self.state().stash_changes.insert(hash.to_string(), files);
-        let item = self.item_for(&RowKey::Stash(hash.to_string()));
+        self.state().stash_changes.insert(hash.clone(), files);
+        let item = self.item_for(&RowKey::Stash(hash.clone()));
         let outline = &self.ui().outline;
         // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
         let row = unsafe { outline.rowForItem(Some(&item)) };
@@ -224,7 +218,7 @@ impl GitPanel {
     }
 
     /// Shows what the stash entry `hash` changed in `file` in a diff tab.
-    pub fn show_stash_diff(&self, hash: &str, file: &Path, preview: bool) {
+    pub(crate) fn show_stash_diff(&self, hash: &CommitId, file: &Path, preview: bool) {
         let (Some(controller), Some(repo)) = (self.controller(), self.repo()) else {
             return;
         };
@@ -242,7 +236,7 @@ impl GitPanel {
     }
 
     /// Whether `keys` name a stash entry the menus can act on.
-    pub fn has_stash(&self, keys: &[RowKey]) -> bool {
+    pub(crate) fn has_stash(&self, keys: &[RowKey]) -> bool {
         self.stash_of(keys).is_some()
     }
 
@@ -275,7 +269,7 @@ impl GitPanel {
     }
 
     /// "Stash …": asks for the message and whether untracked files go too, then parks the changes.
-    pub fn ask_stash(&self) {
+    pub(crate) fn ask_stash(&self) {
         self.before_stash(|panel| {
             let Some(window) = panel.controller().and_then(|c| c.window()) else {
                 return;
@@ -294,7 +288,7 @@ impl GitPanel {
     }
 
     /// "Nur Vorgemerktes stashen": parks what is staged and leaves the rest.
-    pub fn stash_staged(&self) {
+    pub(crate) fn stash_staged(&self) {
         if self.read().model.staged.is_empty() {
             self.set_problem(Some(Problem::plain(t("Nichts vorgemerkt."))));
             return;
@@ -331,8 +325,8 @@ impl GitPanel {
         );
     }
 
-    /// Applies the stash entry among `keys`; with `pop` it leaves the stash once its changes are in.
-    pub fn apply_stash(&self, keys: &[RowKey], pop: bool) {
+    /// Applies the stash entry among `keys`, keeping or removing it as `how` says.
+    pub(crate) fn apply_stash(&self, keys: &[RowKey], how: ide_git::Unstash) {
         let Some(stash) = self.stash_of(keys) else { return };
         self.before_stash(move |panel| {
             let Some(repo) = panel.repo() else { return };
@@ -341,7 +335,7 @@ impl GitPanel {
             }
             let id = panel.id();
             work::long(
-                move || repo.apply_stash(&stash, pop),
+                move || repo.apply_stash(&stash, how),
                 move |result| with_panel(id, |panel| panel.stash_applied(result)),
             );
         });
@@ -360,7 +354,7 @@ impl GitPanel {
     }
 
     /// Asks, then deletes the stash entry among `keys` for good (E27).
-    pub fn drop_stash(&self, keys: &[RowKey]) {
+    pub(crate) fn drop_stash(&self, keys: &[RowKey]) {
         let (Some(stash), Some(window)) = (self.stash_of(keys), self.controller().and_then(|c| c.window())) else {
             return;
         };
@@ -382,12 +376,12 @@ impl GitPanel {
     }
 
     /// "Fertig": the conflicts of the stash apply count as resolved.
-    pub fn finish_stash_conflict(&self) {
+    pub(crate) fn finish_stash_conflict(&self) {
         self.before_stash(|panel| panel.run_stash(ide_git::Repository::finish_stash_apply));
     }
 
     /// Asks, then puts back the state from before the stash apply that met conflicts (E27).
-    pub fn abort_stash_conflict(&self) {
+    pub(crate) fn abort_stash_conflict(&self) {
         let Some(window) = self.controller().and_then(|c| c.window()) else {
             return;
         };
@@ -477,7 +471,7 @@ mod tests {
     fn stash(message: &str) -> Stash {
         Stash {
             index: 2,
-            hash: "abc".into(),
+            hash: CommitId::parse(&"a".repeat(40)).unwrap(),
             message: message.into(),
             time: 0,
         }

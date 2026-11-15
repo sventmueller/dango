@@ -19,10 +19,10 @@ use ignore::{DirEntry, WalkState};
 use crate::{Cancel, rules, text};
 
 /// Results one search reports at most, counted per match.
-pub const DEFAULT_MAX_RESULTS: usize = 20_000;
+pub(crate) const DEFAULT_MAX_RESULTS: usize = 20_000;
 
 /// Files larger than this are left out.
-pub const DEFAULT_MAX_FILE_SIZE: u64 = 16 * 1024 * 1024;
+pub(crate) const DEFAULT_MAX_FILE_SIZE: u64 = 16 * 1024 * 1024;
 
 /// UTF-16 code units of a line shown in a preview.
 const PREVIEW_WIDTH: usize = 250;
@@ -43,18 +43,18 @@ pub struct SearchOptions {
     /// Whether upper and lower case must match exactly.
     pub case_sensitive: bool,
     /// Whether a match must start and end at a word boundary.
-    pub whole_word: bool,
+    pub(crate) whole_word: bool,
     /// Globs in `.gitignore` syntax of the files to search, such as `*.rs` or `src`; empty for all. A file one of them
     /// names is searched even if an ignore file hides it, unless it lies in an ignored folder.
     pub include: Vec<String>,
     /// Globs in `.gitignore` syntax of files and folders to leave out.
-    pub exclude: Vec<String>,
+    pub(crate) exclude: Vec<String>,
     /// Whether to search what the ignore files hide.
-    pub include_ignored: bool,
+    pub(crate) include_ignored: bool,
     /// Matches reported at most; the search stops at this many.
     pub max_results: usize,
     /// Files larger than this many bytes are left out.
-    pub max_file_size: u64,
+    pub(crate) max_file_size: u64,
 }
 
 impl SearchOptions {
@@ -111,26 +111,26 @@ pub struct Preview {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Summary {
     /// Files with at least one match.
-    pub files: usize,
+    pub(crate) files: usize,
     /// Matches reported; a line that matches only an empty match counts once.
-    pub matches: usize,
+    pub(crate) matches: usize,
     /// Files left out because they hold binary data.
-    pub binary_skipped: usize,
+    pub(crate) binary_skipped: usize,
     /// The search stopped at `max_results`, so there may be more.
     pub limit_reached: bool,
     /// The search stopped because it was cancelled.
-    pub cancelled: bool,
+    pub(crate) cancelled: bool,
 }
 
 /// Why a search could not start.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum SearchError {
     /// The pattern is empty or not a valid regular expression.
     Pattern(String),
     /// One of the globs is not valid.
     Glob(String),
     /// The folder cannot be read.
-    Root(String),
+    Root(std::io::Error),
 }
 
 impl ide_core::explain::Explain for SearchError {
@@ -138,7 +138,7 @@ impl ide_core::explain::Explain for SearchError {
         match self {
             SearchError::Pattern(why) => splat_i18n::tf("Ungültiges Suchmuster: {}", &[why]),
             SearchError::Glob(why) => splat_i18n::tf("Ungültiges Dateimuster: {}", &[why]),
-            SearchError::Root(why) => why.clone(),
+            SearchError::Root(why) => ide_core::explain::Explain::explain(why),
         }
     }
 }
@@ -153,7 +153,14 @@ impl fmt::Display for SearchError {
     }
 }
 
-impl std::error::Error for SearchError {}
+impl std::error::Error for SearchError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            SearchError::Root(why) => Some(why),
+            SearchError::Pattern(_) | SearchError::Glob(_) => None,
+        }
+    }
+}
 
 /// Searches the files below `root` and hands each file with matches to `on_file` on the calling thread, in no
 /// particular order, until all are searched, `cancel` stops it or `max_results` is reached.
@@ -174,7 +181,7 @@ pub fn search_with(
     cancel: &Cancel,
     mut on_file: impl FnMut(FileResult),
 ) -> Result<Summary, SearchError> {
-    let root = root.canonicalize().map_err(|e| SearchError::Root(e.to_string()))?;
+    let root = root.canonicalize().map_err(SearchError::Root)?;
     let buffers: HashMap<PathBuf, &str> = buffers
         .iter()
         .map(|(path, text)| (path.canonicalize().unwrap_or_else(|_| path.clone()), text.as_str()))
@@ -541,6 +548,12 @@ mod tests {
             search(&root, &SearchOptions::new(""), &Cancel::new(), |_| ()),
             Err(SearchError::Pattern(_))
         ));
+        let gone = search(&root.join("gone"), &SearchOptions::new("x"), &Cancel::new(), |_| ());
+        let Err(SearchError::Root(why)) = &gone else {
+            panic!("{gone:?}")
+        };
+        assert_eq!(why.kind(), std::io::ErrorKind::NotFound);
+        assert!(std::error::Error::source(gone.as_ref().unwrap_err()).is_some());
     }
 
     #[test]

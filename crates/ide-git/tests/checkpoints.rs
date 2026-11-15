@@ -7,8 +7,13 @@ use std::path::{Path, PathBuf};
 
 use common::{Scratch, numbered, read, write, write_bytes};
 use ide_git::{
-    Cancel, Checkpoint, CheckpointKind, Checkpoints, Error, Prune, PushOptions, Restore, RestoreOptions, Restored,
+    Cancel, Checkpoint, CheckpointKind, CheckpointThread, Checkpoints, Error, Prune, PushOptions, Restore,
+    RestoreOptions, Restored,
 };
+
+fn thread(name: &str) -> CheckpointThread {
+    CheckpointThread::new(name).unwrap()
+}
 
 fn restored(outcome: Restore) -> Restored {
     match outcome {
@@ -23,7 +28,10 @@ fn paths(names: &[&str]) -> Vec<PathBuf> {
 
 /// Two turns of an agent with the user's edits between and after them, as the app would record them.
 fn two_turns(checkpoints: &Checkpoints, root: &Path) -> (Checkpoint, Checkpoint) {
-    let first = checkpoints.create("thread-1", "first prompt", &[]).unwrap().checkpoint;
+    let first = checkpoints
+        .create(&thread("thread-1"), "first prompt", &[])
+        .unwrap()
+        .checkpoint;
     write(root, "a.txt", "agent 1\n");
     write(root, "agent.txt", "made by the agent\n");
     std::fs::remove_file(root.join("b.txt")).unwrap();
@@ -32,7 +40,10 @@ fn two_turns(checkpoints: &Checkpoints, root: &Path) -> (Checkpoint, Checkpoint)
     write(root, "notes.txt", "the user's notes\n");
     write(root, "mine/new.txt", "the user's file\n");
 
-    let second = checkpoints.create("thread-1", "second prompt", &[]).unwrap().checkpoint;
+    let second = checkpoints
+        .create(&thread("thread-1"), "second prompt", &[])
+        .unwrap()
+        .checkpoint;
     write(root, "a.txt", "agent 2\n");
     write(root, "agent2.txt", "more from the agent\n");
     let second = checkpoints.finish(&second).unwrap();
@@ -78,7 +89,7 @@ fn restore_around_the_users_edits(checkpoints: &Checkpoints, root: &Path) {
     assert!(!root.join("mine").exists(), "a folder left empty goes too");
     assert!(back.undo.number > done.undo.number);
     let kinds: Vec<CheckpointKind> = checkpoints
-        .list(Some("thread-1"))
+        .list(Some(&thread("thread-1")))
         .unwrap()
         .iter()
         .map(|c| c.kind)
@@ -113,7 +124,7 @@ fn a_folder_outside_git_has_the_same_checkpoints_in_a_store_of_its_own() {
     assert_eq!(read(&folder, "node_modules/pkg/index.js"), "dependency\n");
     assert_eq!(read(&folder, "scratch.tmp"), "ignored\n");
 
-    let checkpoint = checkpoints.create("thread-2", "diff", &[]).unwrap().checkpoint;
+    let checkpoint = checkpoints.create(&thread("thread-2"), "diff", &[]).unwrap().checkpoint;
     write(&folder, "a.txt", "a\nagent line\n");
     let diff = checkpoints.diff(&checkpoint).unwrap();
     assert_eq!(diff.len(), 1);
@@ -165,7 +176,7 @@ fn taking_a_checkpoint_leaves_the_users_index_head_branches_and_stash_alone() {
     let head_before = repository.head().unwrap();
 
     let checkpoints = Checkpoints::for_repository(&repository);
-    let created = checkpoints.create("t", "before", &[]).unwrap();
+    let created = checkpoints.create(&thread("t"), "before", &[]).unwrap();
     assert!(created.skipped.is_empty());
 
     assert_eq!(std::fs::read(root.join(".git/index")).unwrap(), index_before);
@@ -207,7 +218,10 @@ fn unsaved_buffers_and_untracked_files_come_back_byte_for_byte() {
         (PathBuf::from("a.txt"), buffer.clone()),
         (root.join("never saved.txt"), b"draft".to_vec()),
     ];
-    let checkpoint = checkpoints.create("t", "with buffers", &buffers).unwrap().checkpoint;
+    let checkpoint = checkpoints
+        .create(&thread("t"), "with buffers", &buffers)
+        .unwrap()
+        .checkpoint;
 
     std::fs::remove_file(root.join("ünïcode untracked.txt")).unwrap();
     write(root, "a.txt", "agent\n");
@@ -229,7 +243,7 @@ fn unsaved_buffers_and_untracked_files_come_back_byte_for_byte() {
     );
     assert!(!root.join("never saved.txt").exists());
     assert!(matches!(
-        checkpoints.create("t", "x", &[(PathBuf::from("/elsewhere/x"), vec![])]),
+        checkpoints.create(&thread("t"), "x", &[(PathBuf::from("/elsewhere/x"), vec![])]),
         Err(Error::OutsideFolder { .. })
     ));
 }
@@ -242,7 +256,7 @@ fn large_files_and_repositories_inside_are_skipped_and_left_alone() {
     write_bytes(root, "video.mov", &[7u8; 4096]);
     scratch.repository("r/vendor/inner", &[("x.txt", "x\n")]);
     let checkpoints = Checkpoints::for_repository(&repository).with_max_file_size(1024);
-    let created = checkpoints.create("t", "s", &[]).unwrap();
+    let created = checkpoints.create(&thread("t"), "s", &[]).unwrap();
     let mut skipped = created.skipped.clone();
     skipped.sort();
     assert_eq!(skipped, paths(&["vendor/inner/", "video.mov"]));
@@ -264,7 +278,7 @@ fn the_index_comes_back_unless_head_moved_which_is_reported() {
     write(root, "a.txt", "staged\n");
     repository.stage(&["a.txt"]).unwrap();
     let checkpoints = Checkpoints::for_repository(&repository);
-    let checkpoint = checkpoints.create("t", "s", &[]).unwrap().checkpoint;
+    let checkpoint = checkpoints.create(&thread("t"), "s", &[]).unwrap().checkpoint;
 
     repository.unstage(&["a.txt"]).unwrap();
     write(root, "a.txt", "agent\n");
@@ -273,7 +287,10 @@ fn the_index_comes_back_unless_head_moved_which_is_reported() {
     assert_eq!(scratch.raw(root, &["show", ":a.txt"]), "staged\n");
     assert_eq!(read(root, "a.txt"), "staged\n");
 
-    let turn = checkpoints.create("t", "the agent commits", &[]).unwrap().checkpoint;
+    let turn = checkpoints
+        .create(&thread("t"), "the agent commits", &[])
+        .unwrap()
+        .checkpoint;
     write(root, "a.txt", "committed by the agent\n");
     repository.stage(&["a.txt"]).unwrap();
     repository
@@ -304,7 +321,7 @@ fn a_checkpoint_during_a_merge_conflict_has_no_index_but_keeps_the_files() {
     assert!(!scratch.try_raw(root, &["merge", "--quiet", "other"]));
     let conflicted = read(root, "c.txt");
     let checkpoints = Checkpoints::for_repository(&repository);
-    let checkpoint = checkpoints.create("t", "mid-merge", &[]).unwrap().checkpoint;
+    let checkpoint = checkpoints.create(&thread("t"), "mid-merge", &[]).unwrap().checkpoint;
     write(root, "c.txt", "resolved by the agent\n");
     let done = restored(checkpoints.restore(&checkpoint, &RestoreOptions::default()).unwrap());
     assert!(!done.index_restored);
@@ -317,7 +334,7 @@ fn diffs_show_the_changes_since_and_during_a_turn_and_single_hunks_can_be_taken_
     let repository = scratch.repository("r", &[("f.txt", &numbered(30))]);
     let root = repository.root();
     let checkpoints = Checkpoints::for_repository(&repository);
-    let checkpoint = checkpoints.create("t", "s", &[]).unwrap().checkpoint;
+    let checkpoint = checkpoints.create(&thread("t"), "s", &[]).unwrap().checkpoint;
     let edited = numbered(30)
         .replace("line 2\n", "two\n")
         .replace("line 28\n", "twenty-eight\n");
@@ -348,12 +365,12 @@ fn checkpoints_are_listed_pruned_and_deleted() {
     let checkpoints = Checkpoints::for_repository(&repository);
     for n in 0..3 {
         write(repository.root(), "a.txt", &format!("{n}\n"));
-        checkpoints.create("one", &format!("one {n}"), &[]).unwrap();
-        checkpoints.create("two", &format!("two {n}"), &[]).unwrap();
+        checkpoints.create(&thread("one"), &format!("one {n}"), &[]).unwrap();
+        checkpoints.create(&thread("two"), &format!("two {n}"), &[]).unwrap();
     }
     let all = checkpoints.list(None).unwrap();
     assert_eq!(all.len(), 6);
-    assert_eq!(all[0].thread, "one");
+    assert_eq!(all[0].thread.as_str(), "one");
     assert_eq!(all[2].label, "one 2");
     assert_eq!(
         checkpoints
@@ -364,11 +381,11 @@ fn checkpoints_are_listed_pruned_and_deleted() {
             .unwrap(),
         2
     );
-    let one = checkpoints.list(Some("one")).unwrap();
+    let one = checkpoints.list(Some(&thread("one"))).unwrap();
     assert_eq!(one.iter().map(|c| c.number).collect::<Vec<_>>(), [2, 3]);
     checkpoints.delete(&one[0]).unwrap();
-    assert_eq!(checkpoints.list(Some("one")).unwrap().len(), 1);
-    assert_eq!(checkpoints.delete_thread("two").unwrap(), 2);
+    assert_eq!(checkpoints.list(Some(&thread("one"))).unwrap().len(), 1);
+    assert_eq!(checkpoints.delete_thread(&thread("two")).unwrap(), 2);
     let future = std::time::SystemTime::now() + std::time::Duration::from_secs(60);
     assert_eq!(
         checkpoints
@@ -381,11 +398,11 @@ fn checkpoints_are_listed_pruned_and_deleted() {
     );
     assert!(checkpoints.list(None).unwrap().is_empty());
     assert!(matches!(
-        checkpoints.list(Some("no/slash")),
+        CheckpointThread::new("no/slash"),
         Err(Error::InvalidName { .. })
     ));
     assert!(matches!(
-        checkpoints.create("bad name", "x", &[]),
+        CheckpointThread::new("bad name"),
         Err(Error::InvalidName { .. })
     ));
 }
@@ -398,7 +415,13 @@ fn checkpoints_taken_at_the_same_time_get_their_own_numbers() {
     let handles: Vec<_> = (0..4)
         .map(|n| {
             let checkpoints = checkpoints.clone();
-            std::thread::spawn(move || checkpoints.create("t", &format!("{n}"), &[]).unwrap().checkpoint.number)
+            std::thread::spawn(move || {
+                checkpoints
+                    .create(&thread("t"), &format!("{n}"), &[])
+                    .unwrap()
+                    .checkpoint
+                    .number
+            })
         })
         .collect();
     let mut numbers: Vec<u64> = handles.into_iter().map(|h| h.join().unwrap()).collect();
@@ -410,7 +433,9 @@ fn checkpoints_taken_at_the_same_time_get_their_own_numbers() {
 fn checkpoints_stay_local_when_the_branch_is_pushed() {
     let scratch = Scratch::new("local");
     let repository = scratch.repository("r", &[("a.txt", "a\n")]);
-    Checkpoints::for_repository(&repository).create("t", "s", &[]).unwrap();
+    Checkpoints::for_repository(&repository)
+        .create(&thread("t"), "s", &[])
+        .unwrap();
     scratch.raw(&scratch.dir, &["init", "--quiet", "--bare", "remote.git"]);
     scratch.raw(repository.root(), &["remote", "add", "origin", "../remote.git"]);
     let options = PushOptions {

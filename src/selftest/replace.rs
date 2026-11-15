@@ -17,7 +17,7 @@ use objc2_foundation::NSRange;
 use splat_i18n::t;
 
 use super::helpers::{self, editor, type_at, wait_until, window_of};
-use super::{check, finish, snapshot};
+use super::{check, finish, give_up, give_up_saying, snapshot};
 use crate::terminal::inspect;
 use crate::window::{self, WindowController};
 
@@ -81,8 +81,7 @@ fn frame_of(controller: &WindowController) -> String {
 fn replace_clean(f: Folders) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let Some(controller) = window_of(&f.a) else {
-        check("the first folder gets its window", false, projects());
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "the first folder gets its window", projects());
     };
     let windows = window::open_windows().len();
     let before = frame_of(&controller);
@@ -119,7 +118,7 @@ fn replace_clean(f: Folders) {
 
 fn edit_b(f: Folders) {
     let Some(controller) = window_of(&f.b) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     controller.close_quick_open();
     controller.open_file(&f.b.join("b.rs"));
@@ -312,7 +311,7 @@ fn folders_apart(f: &Folders) {
 fn tab_group(f: Folders) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let Some(controller) = window_of(&f.b) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     controller.open_file(&f.b.join("more.rs"));
     if let Some(view) = editor(&controller, "more.rs") {
@@ -348,8 +347,7 @@ fn close_all(f: Folders, asked: bool) {
 
 fn closed_all(f: Folders, asked: bool, before: String) {
     let Some(controller) = window_of(&f.c) else {
-        check("„Alles schließen“ opens the folder in the window", false, projects());
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "„Alles schließen“ opens the folder in the window", projects());
     };
     let on_disk = std::fs::read_to_string(f.b.join("b.rs")).unwrap_or_default()
         + &std::fs::read_to_string(f.b.join("more.rs")).unwrap_or_default();
@@ -403,12 +401,11 @@ fn waiting_window(f: Folders) {
 /// Starts `sleep` in a terminal of folder A's window, which is in front now.
 fn running_terminal(f: Folders) {
     let Some(controller) = window_of(&f.a) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     crate::terminal::open_tab(&controller, None);
     let Some((id, _)) = inspect::latest() else {
-        check("a terminal opens", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "a terminal opens");
     };
     wait_until(
         move || inspect::view(id).is_some_and(|view| view.prompts() > 0),

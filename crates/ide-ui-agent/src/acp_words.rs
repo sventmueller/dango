@@ -7,7 +7,7 @@ use splat_i18n::t;
 use super::model::effort_name;
 
 /// The name and description of the mode `mode` of the agent with the id `agent`, where the app has words for it.
-pub fn mode(agent: &str, mode: &str) -> Option<(&'static str, &'static str)> {
+pub(crate) fn mode(agent: &str, mode: &str) -> Option<(&'static str, &'static str)> {
     Some(match (agent, mode) {
         ("codex-acp", "read-only") => (
             t("Nur lesen"),
@@ -43,13 +43,13 @@ pub fn mode(agent: &str, mode: &str) -> Option<(&'static str, &'static str)> {
 }
 
 /// The name of a thought level by the agent's value for it, where the app has a word for it.
-pub fn level(value: &str) -> Option<String> {
+pub(crate) fn level(value: &str) -> Option<String> {
     let name = effort_name(value);
     (name != value).then_some(name)
 }
 
 /// The name of the choice `value` of `option`: the app's word for a thought level it knows, else the agent's name.
-pub fn choice(option: &ConfigOption, value: &str, agents_name: &str) -> String {
+pub(crate) fn choice(option: &ConfigOption, value: &str, agents_name: &str) -> String {
     if option.category == ide_acp::Category::ThoughtLevel
         && let Some(name) = level(value)
     {
@@ -59,7 +59,7 @@ pub fn choice(option: &ConfigOption, value: &str, agents_name: &str) -> String {
 }
 
 /// The name of the choice `option` stands at now.
-pub fn current(option: &ConfigOption) -> String {
+pub(crate) fn current(option: &ConfigOption) -> String {
     match &option.value {
         OptionValue::Select { current, .. } => choice(option, current, &option.current_name()),
         OptionValue::Bool(_) => option.current_name(),
@@ -67,7 +67,7 @@ pub fn current(option: &ConfigOption) -> String {
 }
 
 /// The heading of `option` in the model pill's menu.
-pub fn heading(option: &ConfigOption) -> String {
+pub(crate) fn heading(option: &ConfigOption) -> String {
     match option.category {
         ide_acp::Category::Model => t("Modell").to_string(),
         ide_acp::Category::ThoughtLevel => t("Denktiefe").to_string(),

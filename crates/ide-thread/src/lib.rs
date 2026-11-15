@@ -4,7 +4,7 @@
 //! redraws just what changed.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs, unreachable_pub)]
+#![warn(missing_docs)]
 
 pub mod index;
 pub mod model;
@@ -14,6 +14,9 @@ pub mod update;
 
 pub use index::{Filter, IndexEntry, ThreadIndex};
 pub use model::*;
+#[cfg(feature = "fuzzing")]
+#[doc(hidden)]
+pub use thread::fuzzing;
 pub use thread::{Thread, title_from};
 pub use update::{BackgroundPatch, Change, Field, SubagentPatch, ToolPatch, Update, UsagePatch};
 

@@ -7,7 +7,6 @@
 //! saving remove the copies.
 
 use std::path::PathBuf;
-use std::time::Duration;
 
 use ide_document::recovery::{Recovery, RecoveryId};
 use objc2_app_kit::NSAlertSecondButtonReturn;
@@ -15,9 +14,9 @@ use objc2_foundation::NSRange;
 use splat_i18n::{t, tf};
 
 use super::helpers::{
-    self, answer_alert_after, answer_alert_saying, editor, tab, text_of, type_at, utf16_len, wait_until, window_of,
+    self, answer_alert_saying, answer_alert_when_shown, editor, tab, text_of, type_at, utf16_len, wait_until, window_of,
 };
-use super::{check, finish, snapshot, write_report};
+use super::{check, finish, give_up, give_up_saying, snapshot, write_report};
 use crate::window;
 
 const SCENARIO: &str = "recovery";
@@ -40,7 +39,7 @@ const DAMAGED: &str = "0bad-1-0";
 const ORPHAN: &str = "0abc-2-0";
 const ORPHAN_TEXT: &str = "Text ohne Beschreibung";
 
-pub fn run() {
+pub(crate) fn run() {
     if std::env::var("IDE_SELFTEST_LAUNCH").as_deref() == Ok("crash") {
         before_crash();
     } else {
@@ -155,13 +154,11 @@ fn changed_bar(name: &str) -> (String, Vec<String>) {
 
 fn after_crash(shown: bool) {
     let Some(controller) = window_of(&folder()) else {
-        check(
+        return give_up_saying(
+            SCENARIO,
             "the project window comes back",
-            false,
             format!("{} windows", window::open_windows().len()),
         );
-        finish(SCENARIO);
-        return;
     };
     check("the project window comes back", true, "");
     let titles = controller.tab_titles();
@@ -269,7 +266,7 @@ fn merge_both(controller: &crate::window::WindowController) {
         );
     }
     let Some(view) = editor(controller, NOTES) else {
-        finish(SCENARIO);
+        give_up(SCENARIO, "the editor is open");
         return;
     };
     crate::editor::press_conflict_button(&view, t("Zusammenführen"));
@@ -321,7 +318,7 @@ fn merge_both(controller: &crate::window::WindowController) {
 /// Saving one file and closing another without saving remove their copies; the untitled one keeps its copy.
 fn save_and_close() {
     let Some(controller) = window_of(&folder()) else {
-        finish(SCENARIO);
+        give_up(SCENARIO, "the folder's window is open");
         return;
     };
     let id_of = |title: &str| editor(&controller, title).map(|view| crate::editor::recovery_of(&view));
@@ -331,7 +328,7 @@ fn save_and_close() {
     }
     if let Some(id) = tab(&controller, NOTES) {
         let question = tf("Änderungen an „{}“ sichern?", &[NOTES]);
-        answer_alert_saying(Duration::from_millis(300), question, NSAlertSecondButtonReturn);
+        answer_alert_saying(question, NSAlertSecondButtonReturn);
         controller.close_tab(id);
     }
     let gone = [main, notes];
@@ -348,7 +345,7 @@ fn save_and_close() {
                 ok,
                 format!("{:?}, the untitled one is {untitled:?}", pending_ids()),
             );
-            answer_alert_after(Duration::from_secs(1), NSAlertSecondButtonReturn);
+            answer_alert_when_shown(None, NSAlertSecondButtonReturn);
             finish(SCENARIO);
         },
     );

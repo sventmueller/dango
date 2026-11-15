@@ -77,6 +77,8 @@ pub enum SessionError {
     Agent(String),
     /// The agent did not answer this request in time.
     Timeout(&'static str),
+    /// No permission request with this id waits for an answer.
+    UnknownRequest(String),
     /// The session has no live connection.
     Closed,
 }
@@ -90,6 +92,7 @@ impl std::fmt::Display for SessionError {
             SessionError::Version(v) => write!(f, "the agent speaks protocol version {v}"),
             SessionError::Agent(why) => write!(f, "{why}"),
             SessionError::Timeout(method) => write!(f, "the agent did not answer {method} in time"),
+            SessionError::UnknownRequest(id) => write!(f, "no request {id} waits for an answer"),
             SessionError::Closed => write!(f, "the session has ended"),
         }
     }
@@ -108,6 +111,7 @@ impl ide_core::explain::Explain for SessionError {
             ),
             SessionError::Agent(why) => why.clone(),
             SessionError::Timeout(method) => tf("Der Agent hat auf {} nicht rechtzeitig geantwortet.", &[method]),
+            SessionError::UnknownRequest(_) => t("Diese Anfrage wartet nicht mehr auf eine Antwort.").to_string(),
             SessionError::Closed => t("Die Sitzung ist beendet.").to_string(),
         }
     }
@@ -180,17 +184,14 @@ fn now() -> SystemTime {
     SystemTime::now()
 }
 
-/// The agent's name for `value` on the wire, such as `end_turn`.
-fn wire_name(value: &impl serde::Serialize) -> String {
-    serde_json::to_value(value)
-        .ok()
-        .and_then(|v| v.as_str().map(str::to_string))
-        .unwrap_or_default()
-}
-
 impl Shared {
     fn state(&self) -> MutexGuard<'_, State> {
         self.state.lock_ignoring_poison()
+    }
+
+    /// Tells the UI `event`; a panic in the sink costs that event, not the connection.
+    fn emit(&self, event: Event) {
+        ide_core::lane::contained(|| (self.sink)(event));
     }
 
     fn connection(&self) -> Option<ConnectionTo<Agent>> {
@@ -203,7 +204,7 @@ impl Shared {
         }
         let changes = self.state().thread.apply_all(updates);
         if !changes.is_empty() {
-            (self.sink)(Event::Changed(changes));
+            self.emit(Event::Changed(changes));
         }
     }
 
@@ -215,7 +216,7 @@ impl Shared {
         };
         self.apply(updates);
         if learned {
-            (self.sink)(Event::Capabilities);
+            self.emit(Event::Capabilities);
         }
     }
 
@@ -268,7 +269,7 @@ impl Shared {
     }
 
     fn fail(&self, error: SessionError) {
-        ide_core::lane::contained(|| (self.sink)(Event::Failed(error)));
+        self.emit(Event::Failed(error));
     }
 
     /// Gives the stderr reader a moment to take in what the agent wrote just before it exited.
@@ -315,7 +316,7 @@ impl Shared {
             self.apply(updates);
         }
         self.supervisor.stop(self.process, Duration::from_millis(500));
-        (self.sink)(Event::Ended { stderr });
+        self.emit(Event::Ended { stderr });
     }
 }
 
@@ -525,7 +526,7 @@ impl Session {
                     let mut state = shared.state();
                     match &result {
                         Ok(response) => {
-                            let mut updates = state.mapper.end_turn(&wire_name(&response.stop_reason), now());
+                            let mut updates = state.mapper.end_turn(response.stop_reason, now());
                             updates.extend(crate::usage::response(response));
                             updates
                         }
@@ -554,7 +555,12 @@ impl Session {
 
     /// Answers the permission request `request` with `choice`.
     pub fn answer(&self, request: &str, choice: Choice) -> Result<(), SessionError> {
-        let ask = self.shared.state().asks.remove(request).ok_or(SessionError::Closed)?;
+        let ask = self
+            .shared
+            .state()
+            .asks
+            .remove(request)
+            .ok_or_else(|| SessionError::UnknownRequest(request.to_string()))?;
         let picked = picked(&ask.options, choice, ask.destructive);
         let (outcome, decision) = match picked {
             Some(option) => {
@@ -605,7 +611,7 @@ impl Session {
                 Ok(_) => {
                     shared.state().caps.mode = Some(mode.clone());
                     shared.apply(vec![Update::Mode(mode)]);
-                    (shared.sink)(Event::Capabilities);
+                    shared.emit(Event::Capabilities);
                 }
                 Err(error) => shared.fail(SessionError::Agent(error.message)),
             },
@@ -640,7 +646,7 @@ impl Session {
                     state.mapper.options_changed(&state.caps)
                 };
                 shared.apply(updates);
-                (shared.sink)(Event::Capabilities);
+                shared.emit(Event::Capabilities);
             }
             Err(error) => shared.fail(SessionError::Agent(error.message)),
         });
@@ -765,7 +771,7 @@ async fn initialize(shared: &Shared, connection: &ConnectionTo<Agent>) -> Result
         .map_err(|e| SessionError::Agent(e.message))?;
     let version = response.protocol_version.as_u16();
     shared.state().caps.learn_initialize(&response);
-    (shared.sink)(Event::Capabilities);
+    shared.emit(Event::Capabilities);
     if version != ProtocolVersion::V1.as_u16() {
         return Err(SessionError::Version(version));
     }
@@ -831,7 +837,7 @@ async fn open(shared: &Shared, connection: &ConnectionTo<Agent>) -> Result<(), S
         updates
     };
     shared.apply(updates);
-    (shared.sink)(Event::Capabilities);
+    shared.emit(Event::Capabilities);
     Ok(())
 }
 

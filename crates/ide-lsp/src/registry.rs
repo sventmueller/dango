@@ -20,7 +20,7 @@ use crate::encoding::Encoding;
 use crate::language::{Common, CustomServer, Language};
 use crate::rpc::{Connection, Handler, Responder};
 use crate::server::ServerConfig;
-use crate::tool::{self, Exits, Job};
+use ide_process::tool::{self, Helper};
 
 /// How long a helper such as `go env` or `rustup which` may take.
 const HELPER_TIMEOUT: Duration = Duration::from_secs(20);
@@ -49,12 +49,10 @@ pub enum Source {
 
 /// How to start a server.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Launch {
-    /// For which language.
-    pub language: Language,
-    /// The program.
+    pub(crate) language: Language,
     pub program: PathBuf,
-    /// Its arguments.
     pub args: Vec<String>,
     /// What the activity view shows.
     pub label: String,
@@ -82,9 +80,9 @@ pub enum Install {
 }
 
 /// The tag of `microsoft/vscode-eslint` the ESLint server is built from; an update is a new tag with a new digest.
-pub const ESLINT_TAG: &str = "release/3.0.34";
+pub(crate) const ESLINT_TAG: &str = "release/3.0.34";
 /// The SHA-256 of GitHub's archive of `ESLINT_TAG`.
-pub const ESLINT_DIGEST: &str = "f82fb2aab96eede6273af2d9aafeb9a29c5723c5af5a9819e37c61d7f51cc052";
+pub(crate) const ESLINT_DIGEST: &str = "f82fb2aab96eede6273af2d9aafeb9a29c5723c5af5a9819e37c61d7f51cc052";
 
 /// Where the built ESLint server lies in the tools folder `tools`.
 pub(crate) fn eslint_server(tools: &Path) -> PathBuf {
@@ -102,8 +100,8 @@ pub const VTSLS: Install = Install::Npm {
 
 /// No server was found.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct NotFound {
-    /// For which language.
     pub language: Language,
     /// The server's program, as the status bar names it.
     pub program: String,
@@ -130,7 +128,6 @@ impl NotFound {
 /// Finds servers with the login shell's environment, never the app's own.
 pub struct Registry {
     supervisor: Supervisor,
-    exits: Exits,
     env: Vec<(String, String)>,
     tools: PathBuf,
     /// Whether a TypeScript compiler speaks the protocol, by its path, for its modification time.
@@ -147,7 +144,6 @@ impl Registry {
     pub fn with_tools(supervisor: &Supervisor, env: Vec<(String, String)>, tools: PathBuf) -> Registry {
         Registry {
             supervisor: supervisor.clone(),
-            exits: Exits::watch(supervisor),
             env,
             tools,
             probes: Mutex::default(),
@@ -254,10 +250,9 @@ impl Registry {
         tool::var(&self.env, "HOME").map_or_else(ide_core::paths::home, PathBuf::from)
     }
 
-    fn job(&self) -> Job<'_> {
-        Job {
+    fn job(&self) -> Helper<'_> {
+        Helper {
             supervisor: &self.supervisor,
-            exits: &self.exits,
             env: &self.env,
             timeout: HELPER_TIMEOUT,
             cancel: None,

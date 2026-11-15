@@ -14,7 +14,7 @@ use splat_i18n::{t, tf};
 
 use super::git::{answer_sheet, sheet_default_button, sheet_views};
 use super::helpers::{self, wait_within};
-use super::{check, finish, snapshot};
+use super::{check, finish, give_up, give_up_saying, snapshot};
 use crate::containers_panel::{self as panel, ContainersPanel};
 use crate::window::{self, Panel, WindowController};
 
@@ -121,15 +121,14 @@ fn stand_in() -> Result<(), String> {
     .map_err(|e| e.to_string())
 }
 
-pub fn run() {
+pub(crate) fn run() {
     helpers::open_project(
         SCENARIO,
         PROJECT,
         &[("compose.yaml", "services:\n  db:\n    image: postgres:16\n")],
         |controller| {
             if let Err(error) = stand_in() {
-                check("the stand-in docker is made", false, error);
-                return finish(SCENARIO);
+                return give_up_saying(SCENARIO, "the stand-in docker is made", error);
             }
             preloaded(&controller);
         },
@@ -139,12 +138,10 @@ pub fn run() {
 /// Hidden, the panel reads Docker once without watching it, and opens with its list.
 fn preloaded(window: &WindowController) {
     let Some(panel) = panel::panel_of(window) else {
-        check("the window has a Containers panel", false, String::new());
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the window has a Containers panel");
     };
     if let Err(error) = std::fs::write(tools().join("state"), "up\n") {
-        check("the stand-in daemon starts", false, error.to_string());
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "the stand-in daemon starts", error.to_string());
     }
     panel.preload_with(&tools());
     wait_within(
@@ -162,8 +159,7 @@ fn preloaded(window: &WindowController) {
                 calls(),
             );
             if let Err(error) = std::fs::write(tools().join("state"), "down\n") {
-                check("the stand-in daemon stops", false, error.to_string());
-                return finish(SCENARIO);
+                return give_up_saying(SCENARIO, "the stand-in daemon stops", error.to_string());
             }
             missing();
         },
@@ -172,8 +168,7 @@ fn preloaded(window: &WindowController) {
 
 fn missing() {
     let Some(panel) = the_panel() else {
-        check("the window has a Containers panel", false, String::new());
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the window has a Containers panel");
     };
     panel.set_path(&helpers::root(EMPTY));
     wait_within(
@@ -217,8 +212,7 @@ fn not_running() {
                 snapshot(&window, "containers-not-running");
             }
             if let Err(error) = std::fs::write(tools().join("state"), "up\n") {
-                check("the stand-in daemon starts", false, error.to_string());
-                return finish(SCENARIO);
+                return give_up_saying(SCENARIO, "the stand-in daemon starts", error.to_string());
             }
             hidden();
         },
@@ -228,7 +222,7 @@ fn not_running() {
 /// Hidden, the panel's retry waits for it to show, then reads at once.
 fn hidden() {
     let Some(window) = controller() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     window.activate_panel(Panel::Files);
     let calls_before = calls().lines().count();
@@ -403,7 +397,7 @@ fn delete() {
             );
             super::git::sheet_pictures(root(), "containers-delete", |root| {
                 if !answer_sheet(&root, NSAlertFirstButtonReturn, None) {
-                    return finish(SCENARIO);
+                    return give_up(SCENARIO, "the delete sheet is there to answer");
                 }
                 deleted();
             });

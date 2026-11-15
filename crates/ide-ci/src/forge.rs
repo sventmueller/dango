@@ -118,11 +118,11 @@ impl HostRule {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RemoteUrl {
     /// `https`, or `http` for a remote that says so; ssh remotes reach the API over https.
-    pub scheme: String,
+    pub(crate) scheme: String,
     /// The host, with the port of an http(s) remote that names one.
     pub host: String,
     /// The path without slashes around it and without `.git`.
-    pub path: String,
+    pub(crate) path: String,
 }
 
 impl RemoteUrl {

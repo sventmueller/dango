@@ -6,9 +6,10 @@ use ide_core::explain::Explained;
 use ide_ui_common::window::{Inspector, Notices, Tabs, Trust};
 use std::time::Duration;
 
-use ide_core::debugging::ConsoleKind;
+use ide_dap::kept::ConsoleKind;
 use ide_dap::{Adapters, Event, LaunchConfig, Request, Session, StartError};
 use ide_process::Supervisor;
+use ide_ui_common::alert::{Alert, Role, first};
 use objc2::{DefinedClass, MainThreadOnly};
 use objc2_app_kit::{NSMenuItem, NSPopUpButton};
 use splat_i18n::{t, tf};
@@ -37,17 +38,17 @@ const ATTACH_TAG: isize = -2;
 
 impl DebugPanel {
     /// Whether a session can start now: in a trusted folder, while no other is being started.
-    pub fn can_start(&self) -> bool {
+    pub(crate) fn can_start(&self) -> bool {
         self.controller().is_some_and(|c| c.is_trusted()) && self.ivars().links.borrow().starting.is_none()
     }
 
     /// Whether the window has a debug console.
-    pub fn has_console(&self) -> bool {
+    pub(crate) fn has_console(&self) -> bool {
         !self.ivars().links.borrow().consoles.is_empty()
     }
 
     /// Brings the newest console tab to the front.
-    pub fn show_console(&self) {
+    pub(crate) fn show_console(&self) {
         let console = self.ivars().links.borrow().consoles.last().cloned();
         if let (Some(tab), Some(controller)) = (console.and_then(|c| c.tab), self.controller()) {
             controller.select_tab_by_id(tab);
@@ -55,7 +56,7 @@ impl DebugPanel {
     }
 
     /// Reads the configurations of `launch.json` and offers them with "debug the current program" and attaching.
-    pub fn load_configurations(&self) {
+    pub(crate) fn load_configurations(&self) {
         let trusted = self.controller().is_some_and(|c| c.is_trusted());
         let variables = ide_dap::Variables {
             workspace_folder: self.root().to_path_buf(),
@@ -120,7 +121,7 @@ impl DebugPanel {
     }
 
     /// Starts what the configuration menu shows.
-    pub fn start_chosen(&self) {
+    pub(crate) fn start_chosen(&self) {
         match self.ui().configurations.selectedTag() {
             CURRENT_TAG => self.debug_current_program(),
             ATTACH_TAG => self.ask_attach(),
@@ -142,7 +143,7 @@ impl DebugPanel {
 
     /// Debugs the file of the editor in front without a configuration: Rust after `cargo build`, Go by its package,
     /// Node and Python by the file itself.
-    pub fn debug_current_program(&self) {
+    pub(crate) fn debug_current_program(&self) {
         let Some(controller) = self.controller() else { return };
         let Some(editor) = crate::host::host().front_editor(controller.id()) else {
             self.tell(t("Öffne zuerst die Datei des Programms, das du debuggen willst."));
@@ -163,15 +164,14 @@ impl DebugPanel {
     }
 
     /// Debugs one test of the Tests panel (B27), named `name`, with what `program` needs to run.
-    pub fn debug_test(&self, name: String, program: ide_dap::TestProgram) {
+    pub(crate) fn debug_test(&self, name: String, program: ide_dap::TestProgram) {
         let title = name.clone();
         self.begin(name, Origin::Launched, move |adapters, _root, trusted, cancel, line| {
             ide_dap::test_program(adapters, trusted, &title, &program, cancel, line).map_err(|e| Explained::of(&e))
         });
     }
 
-    /// Starts `config`.
-    pub fn start_config(&self, config: LaunchConfig) {
+    pub(crate) fn start_config(&self, config: LaunchConfig) {
         let origin = match config.request {
             Request::Launch => Origin::Launched,
             Request::Attach => Origin::Attached,
@@ -430,7 +430,7 @@ impl DebugPanel {
     }
 
     /// What a session reports.
-    pub fn event(&self, id: u64, event: Event) {
+    pub(crate) fn event(&self, id: u64, event: Event) {
         self.ensure(id);
         let effects = match event {
             Event::Initialized(caps) | Event::Capabilities(caps) => {
@@ -566,7 +566,7 @@ impl DebugPanel {
     /// Runs the program in a terminal tab as the adapter asks; it belongs to that terminal (Review C7).
     fn run_in_terminal(&self, request: ide_dap::TerminalRequest, answer: ide_dap::TerminalAnswer) {
         let Some(controller) = self.controller() else {
-            return answer.failed("the window closed");
+            return answer.failed(ide_dap::Refusal::WindowClosed);
         };
         let mut line = String::new();
         for (name, value) in &request.env {
@@ -584,13 +584,13 @@ impl DebugPanel {
             line,
             Box::new(move |shell| match shell {
                 Some(pid) => answer.started(None, Some(pid)),
-                None => answer.failed("the terminal did not start"),
+                None => answer.failed(ide_dap::Refusal::TerminalNotStarted),
             }),
         );
     }
 
     /// Lets the user pick a running process to attach to, in a sheet with a list; `then` gets its number.
-    pub fn pick_process(&self, then: impl FnOnce(&DebugPanel, u32) + 'static) {
+    pub(crate) fn pick_process(&self, then: impl FnOnce(&DebugPanel, u32) + 'static) {
         let panel = self.id();
         self.ivars().links.borrow_mut().picking = Some(Box::new(then));
         let listed = ide_ui_common::util::spawn("debug-processes", move || {
@@ -604,7 +604,7 @@ impl DebugPanel {
     }
 
     /// Asks for a process and attaches the debugger of the editor's language to it, else lldb-dap.
-    pub fn ask_attach(&self) {
+    pub(crate) fn ask_attach(&self) {
         let kind = self
             .controller()
             .and_then(|c| crate::host::host().front_editor(c.id()))
@@ -622,39 +622,39 @@ impl DebugPanel {
         let Some(window) = self.controller().and_then(|c| c.window()) else {
             return;
         };
-        let alert = objc2_app_kit::NSAlert::new(self.mtm());
-        alert.setMessageText(&ide_ui_common::util::ns(t("vscode-js-debug installieren?")));
-        alert.setInformativeText(&ide_ui_common::util::ns(t(
-            "Zum Debuggen von JavaScript und TypeScript lädt die App vscode-js-debug in fester Version mit Prüfsumme in ihren eigenen Ordner.",
-        )));
-        alert.addButtonWithTitle(&ide_ui_common::util::ns(t("Installieren")));
-        alert.addButtonWithTitle(&ide_ui_common::util::ns(t("Abbrechen")));
         let panel = self.id();
-        super::sheets::answer(&alert, &window, move |agreed| {
-            if agreed {
-                let installing = ide_ui_common::util::spawn("debug-install", move || {
-                    let env = ide_ui_common::window::environment(ENVIRONMENT_WAIT);
-                    let adapters = Adapters::new(Supervisor::global(), env);
-                    let done = adapters.install(
-                        ide_dap::Install::JsDebug,
-                        &ide_net::Http::new("debug adapter installer"),
-                        &ide_lsp::Cancel::new(),
-                        &mut |_| {},
-                    );
-                    let words = match done {
-                        Ok(_) => t("vscode-js-debug ist installiert. Starte das Debuggen noch einmal.").to_string(),
-                        Err(error) => tf(
-                            "vscode-js-debug ließ sich nicht installieren: {}",
-                            &[&ide_core::explain::Explain::explain(&error)],
-                        ),
-                    };
-                    main_soon(move || with_panel(panel, |p| p.tell(&words)));
-                });
-                if let Err(why) = installing {
-                    with_panel(panel, |p| p.tell(&why.0));
+        let informative = t(
+            "Zum Debuggen von JavaScript und TypeScript lädt die App vscode-js-debug in fester Version mit Prüfsumme in ihren eigenen Ordner.",
+        );
+        Alert::new(self.mtm(), t("vscode-js-debug installieren?"))
+            .informative(informative)
+            .button(t("Installieren"), Role::Plain)
+            .button(t("Abbrechen"), Role::Plain)
+            .sheet(&window, move |response| {
+                if first(response) {
+                    let installing = ide_ui_common::util::spawn("debug-install", move || {
+                        let env = ide_ui_common::window::environment(ENVIRONMENT_WAIT);
+                        let adapters = Adapters::new(Supervisor::global(), env);
+                        let done = adapters.install(
+                            ide_dap::Install::JsDebug,
+                            &ide_net::Http::new("debug adapter installer"),
+                            &ide_lsp::Cancel::new(),
+                            &mut |_| {},
+                        );
+                        let words = match done {
+                            Ok(_) => t("vscode-js-debug ist installiert. Starte das Debuggen noch einmal.").to_string(),
+                            Err(error) => tf(
+                                "vscode-js-debug ließ sich nicht installieren: {}",
+                                &[&ide_core::explain::Explain::explain(&error)],
+                            ),
+                        };
+                        main_soon(move || with_panel(panel, |p| p.tell(&words)));
+                    });
+                    if let Err(why) = installing {
+                        with_panel(panel, |p| p.tell(&why.0));
+                    }
                 }
-            }
-        });
+            });
     }
 
     /// Tells the user `text` at the foot of the window.

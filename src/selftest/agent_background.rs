@@ -6,17 +6,16 @@ use std::path::PathBuf;
 use serde_json::{Value, json};
 
 use super::agent::tab_of;
-use super::{check, finish, helpers, snapshot};
+use super::{check, finish, give_up, give_up_saying, helpers, snapshot};
 use ide_ui_agent::{AgentKey, AgentTab};
 
 const NAME: &str = "agent-background";
 
-pub fn run() {
+pub(crate) fn run() {
     helpers::open_project(NAME, "background-project", &[], |controller| {
         let root = helpers::root("background-project");
         let Some(tab) = ide_ui_agent::open_replay(&controller) else {
-            check("an AI tab opens", false, "");
-            return finish(NAME);
+            return give_up(NAME, "an AI tab opens");
         };
         tab.feed(&history(40));
         begin(&tab);
@@ -29,17 +28,16 @@ pub fn run() {
 /// Puts another tab in front, streams into the hidden AI tab and brings it back.
 fn to_background(root: PathBuf, key: AgentKey, round: u32) {
     let (Some(controller), Some(tab)) = (helpers::window_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     let ai = controller.tab_with_key(&tab.tab_key());
     let other = controller.tab_ids().into_iter().find(|id| Some(*id) != ai);
     let (Some(ai), Some(other)) = (ai, other) else {
-        check(
+        return give_up_saying(
+            NAME,
             "the window has a second tab",
-            false,
             format!("{:?}", controller.tab_ids()),
         );
-        return finish(NAME);
     };
     controller.select_tab_by_id(other);
     let height = table_height(&tab);
@@ -61,7 +59,7 @@ fn to_background(root: PathBuf, key: AgentKey, round: u32) {
 
 fn returned(root: PathBuf, key: AgentKey, round: u32, before: f64) {
     let Some(tab) = tab_of(key) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab is open");
     };
     check(
         if round == 0 {
@@ -87,7 +85,7 @@ fn returned(root: PathBuf, key: AgentKey, round: u32, before: f64) {
         move || followed(key, height + 50.0),
         move |_| {
             let Some(tab) = tab_of(key) else {
-                return finish(NAME);
+                return give_up(NAME, "the AI tab is open");
             };
             check(
                 if round == 0 {
@@ -113,7 +111,7 @@ fn returned(root: PathBuf, key: AgentKey, round: u32, before: f64) {
 /// A user who scrolls a little up while the answer streams stays where they scrolled, and follows again at the end.
 fn scroll_up_while_streaming(key: AgentKey) {
     let Some(tab) = tab_of(key) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab is open");
     };
     let clip = tab.timeline().view().contentView();
     let up = clip.bounds().origin.y - 30.0;
@@ -125,7 +123,7 @@ fn scroll_up_while_streaming(key: AgentKey) {
         move || tab_of(key).is_some_and(|tab| !tab.timeline().is_at_bottom()),
         move |_| {
             let Some(tab) = tab_of(key) else {
-                return finish(NAME);
+                return give_up(NAME, "the AI tab is open");
             };
             let clip = tab.timeline().view().contentView();
             let y = clip.bounds().origin.y;
@@ -144,7 +142,7 @@ fn scroll_up_while_streaming(key: AgentKey) {
                 move || followed(key, height + 50.0),
                 move |_| {
                     let Some(tab) = tab_of(key) else {
-                        return finish(NAME);
+                        return give_up(NAME, "the AI tab is open");
                     };
                     check(
                         "scrolling back to the end follows the answer again",

@@ -124,7 +124,7 @@ fn conflicts_are_opened_and_marked_resolved() {
 
 #[test]
 fn commits_get_the_history_menu_and_rows_that_are_gone_get_none() {
-    let commit = menu(&[RowKey::Commit("abc".into())]);
+    let commit = menu(&[RowKey::Commit(ide_git::CommitId::parse(&"a".repeat(40)).unwrap())]);
     assert_eq!(
         commit.first(),
         Some(&format!("{} ideGitCopyHash:", t("Commit-ID kopieren")))

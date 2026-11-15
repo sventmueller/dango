@@ -21,7 +21,7 @@ use super::decorate::Severity;
 use super::{server_of, text};
 use crate::editor::Editor;
 use crate::host as editor;
-use ide_ui_common::util::{guarded, item, label, main_soon, ns, set_action};
+use ide_ui_common::util::{activate, guarded, item, label, main_soon, ns, set_action};
 use ide_ui_common::window::{Files, Window, WindowId};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
@@ -34,7 +34,7 @@ pub fn definition(view: &dyn Editor) {
 }
 
 /// Goes to the definition of the symbol at UTF-16 offset `index`, or lists them when there are several.
-pub fn definition_at(view: &dyn Editor, index: usize) {
+pub(crate) fn definition_at(view: &dyn Editor, index: usize) {
     go_to_at(view, index, Goto::Definition);
 }
 
@@ -188,7 +188,7 @@ pub fn open_at(window: WindowId, path: &Path, range: LspRange) -> bool {
 }
 
 /// Shows `path` with `selection` in the window of `folder`, as a server may ask.
-pub fn show(folder: &Path, path: &Path, selection: Option<LspRange>) -> bool {
+pub(crate) fn show(folder: &Path, path: &Path, selection: Option<LspRange>) -> bool {
     let Some(window) = Window::for_project(folder) else {
         return false;
     };
@@ -299,7 +299,7 @@ struct Entry {
     title: String,
 }
 
-pub struct SheetIvars {
+pub(crate) struct SheetIvars {
     /// The window it shows over, by its id.
     window: WindowId,
     entries: RefCell<Vec<Entry>>,
@@ -313,7 +313,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDELocationSheet"]
     #[ivars = SheetIvars]
-    pub struct LocationSheet;
+    pub(crate) struct LocationSheet;
 
     unsafe impl NSObjectProtocol for LocationSheet {}
 
@@ -355,7 +355,7 @@ define_class!(
 
 /// The sheet of locations on view.
 #[derive(Default)]
-pub struct LocationSheets {
+pub(crate) struct LocationSheets {
     sheet: RefCell<Option<Retained<LocationSheet>>>,
     /// The last menu of symbols, which the self-test reads instead of tracking it.
     #[cfg(feature = "selftest")]
@@ -512,7 +512,7 @@ impl LocationSheet {
             content.addSubview(view);
             view.setTranslatesAutoresizingMaskIntoConstraints(false);
         }
-        for constraint in [
+        activate([
             heading
                 .leadingAnchor()
                 .constraintEqualToAnchor_constant(&content.leadingAnchor(), 16.0),
@@ -539,9 +539,7 @@ impl LocationSheet {
                 .trailingAnchor()
                 .constraintEqualToAnchor_constant(&open.leadingAnchor(), -10.0),
             close.centerYAnchor().constraintEqualToAnchor(&open.centerYAnchor()),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         *self.ivars().sheet.borrow_mut() = Some(panel.clone());
         *self.ivars().table.borrow_mut() = Some(table);
         panel

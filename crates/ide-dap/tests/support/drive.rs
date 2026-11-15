@@ -7,14 +7,14 @@ use std::time::Duration;
 
 use ide_dap::{EvaluateContext, Event, Session, Stop, StopReason, ThreadId, wait};
 
-pub const WAIT: Duration = Duration::from_secs(60);
+pub(crate) const WAIT: Duration = Duration::from_secs(60);
 
 /// The line of `total += …` in the program, where the breakpoint goes.
-pub const LOOP_LINE: u32 = 10;
+pub(crate) const LOOP_LINE: u32 = 10;
 
 /// What the session showed.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Observed {
+pub(crate) struct Observed {
     pub stop_line: u32,
     pub function: String,
     pub point: Vec<(String, String)>,
@@ -47,7 +47,7 @@ fn total(session: &Session, thread: ThreadId) -> String {
 }
 
 /// Stops at the loop, looks around, steps, continues to the next round, removes the breakpoint and runs to the end.
-pub fn drive(session: &Session, rx: &Receiver<Event>, source: &Path) -> Observed {
+pub(crate) fn drive(session: &Session, rx: &Receiver<Event>, source: &Path) -> Observed {
     let stop = stopped(rx);
     assert_eq!(stop.reason, StopReason::Breakpoint);
     let threads = wait(|r| session.threads(r)).unwrap();

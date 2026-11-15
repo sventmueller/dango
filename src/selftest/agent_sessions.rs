@@ -10,9 +10,10 @@ use objc2::MainThreadMarker;
 use objc2_app_kit::NSAlertFirstButtonReturn;
 
 use super::agent::{controller_of, picture, tab_of};
-use super::agent_actions::{answer_when_shown, answered, soon, stand_in, titles};
+use super::agent_actions::{soon, stand_in, titles};
 use super::agent_stand_in::SESSION;
-use super::{check, finish, helpers};
+use super::helpers::{answer_when_shown, answered};
+use super::{check, finish, give_up, give_up_saying, helpers};
 use crate::window::Panel;
 
 const NAME: &str = "agent-actions";
@@ -20,7 +21,7 @@ const NAME: &str = "agent-actions";
 /// The AI panel's context menu renames, bookmarks and archives the session, and shows the archive.
 pub(super) fn panel(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     controller.activate_panel(Panel::Agents);
     let row_of = |title: &str| {
@@ -30,8 +31,7 @@ pub(super) fn panel(root: PathBuf, key: AgentKey) {
     };
     let tabs = ide_ui_agent::all().len();
     let Some(row) = row_of(&tab.title()) else {
-        check("the AI panel lists the session", false, tab.title());
-        return finish(NAME);
+        return give_up_saying(NAME, "the AI panel lists the session", tab.title());
     };
     let menu = ide_ui_agent::agent_panel::session_menu(&controller, row);
     let shown = menu.as_ref().map(|m| titles(m)).unwrap_or_default();
@@ -79,7 +79,7 @@ fn row_of_in(root: &PathBuf, title: &str) -> Option<isize> {
 /// The archive: an archived session shows there and comes back from it.
 fn archive(root: PathBuf, key: AgentKey, tabs: usize) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     let row_of = |title: &str| row_of_in(&root, title);
     let was_archived = archived(tab.thread_id());
@@ -103,7 +103,9 @@ fn archive(root: PathBuf, key: AgentKey, tabs: usize) {
         let id = tab.thread_id().clone();
         let back_again = move || !archived(&id);
         helpers::wait_until(back_again, move |_| {
-            let Some(tab) = tab_of(key) else { return finish(NAME) };
+            let Some(tab) = tab_of(key) else {
+                return give_up(NAME, "the AI tab is open");
+            };
             check(
                 "the archive's menu brings a session back, and a click on an open session shows its tab",
                 back.get(2).map(String::as_str) == Some("Aus dem Archiv holen")
@@ -121,7 +123,7 @@ fn archive(root: PathBuf, key: AgentKey, tabs: usize) {
 /// The archive's own menu leads back to the sessions.
 fn leave(root: PathBuf, key: AgentKey) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let leave = ide_ui_agent::agent_panel::session_menu(&controller, -1);
     let shown = leave.as_ref().map(|m| titles(m)).unwrap_or_default();
@@ -140,10 +142,10 @@ fn leave(root: PathBuf, key: AgentKey) {
 /// An own-agent tab without a provider says what is missing and leads to the settings.
 fn no_model(root: PathBuf, key: AgentKey) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let Some(own) = ide_ui_agent::open_own(&controller, None) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab opens");
     };
     let own = own.key;
     soon(
@@ -163,7 +165,9 @@ fn no_model(root: PathBuf, key: AgentKey) {
 
 /// A CLI without a sign-in: the new tab says so, signs in in a terminal and starts once the CLI has one.
 fn signed_out(root: PathBuf, key: AgentKey) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     let answer = stand_in().dir.join("answer-initialize.json");
     let usual = std::fs::read_to_string(&answer).unwrap_or_default();
     let _ = std::fs::write(
@@ -177,14 +181,15 @@ fn signed_out(root: PathBuf, key: AgentKey) {
         .map(|t| t.key)
         .filter(|_| ide_ui_agent::all().len() > before)
     else {
-        check("a new session opens a tab", false, "");
-        return finish(NAME);
+        return give_up(NAME, "a new session opens a tab");
     };
     soon(
         "the signed-out CLI asks for a sign-in",
         move || tab_of(new).is_some_and(|t| t.problem_name() == Some("sign in")),
         move || {
-            let Some(tab) = tab_of(new) else { return finish(NAME) };
+            let Some(tab) = tab_of(new) else {
+                return give_up(NAME, "the AI tab is open");
+            };
             let shown = tab.problem_texts();
             let terminals = controller_of(&root).map_or(0, |c| c.tab_titles().len());
             let signed = tab.press_problem("claude im Terminal anmelden");
@@ -214,7 +219,7 @@ const TERMINAL_SESSION: &str = "51e1f7e5-6000-4000-8000-000000000001";
 /// with the conversation of its transcript.
 fn reopen(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window and the AI tab are open");
     };
     let title = tab.title();
     if let Some(id) = controller.tab_with_key(&tab.tab_key()) {
@@ -242,7 +247,7 @@ fn reopen(root: PathBuf, key: AgentKey) {
     };
     helpers::wait_until(listed, move |_| {
         let Some(controller) = controller_of(&root) else {
-            return finish(NAME);
+            return give_up(NAME, "the folder's window is open");
         };
         controller.activate_panel(Panel::Agents);
         let rows = ide_ui_agent::agent_panel::inspect(&controller)
@@ -253,12 +258,11 @@ fn reopen(root: PathBuf, key: AgentKey) {
             .position(|(kind, open, t)| *kind == "AI" && !*open && *t == title);
         let terminal = rows.iter().position(|(kind, _, _)| *kind == "CLI");
         let (Some(ours), Some(terminal)) = (ours, terminal) else {
-            check(
+            return give_up_saying(
+                NAME,
                 "the panel lists the closed session and the terminal's",
-                false,
                 format!("{rows:?}"),
             );
-            return finish(NAME);
         };
         let _ = std::fs::remove_file(stand_in().dir.join("args.txt"));
         ide_ui_agent::agent_panel::open_session_row(&controller, ours);
@@ -316,8 +320,7 @@ fn cli_rewind() {
             .copied()
     });
     let (Some(tab), Some(prompt)) = (tab, prompt) else {
-        check("the terminal's session shows its prompt", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the terminal's session shows its prompt");
     };
     let before = answered().len();
     answer_when_shown(NSAlertFirstButtonReturn, None);
@@ -345,18 +348,17 @@ fn cli_rewind() {
 /// A folder not trusted yet: its AI tab starts nothing until the user trusts it.
 fn untrusted() {
     let Some(mtm) = MainThreadMarker::new() else {
-        return finish(NAME);
+        return give_up(NAME, "the scenario runs on the main thread");
     };
     let folder = ide_core::paths::home().join("untrusted-project");
     let _ = std::fs::create_dir_all(&folder);
     let folder = folder.canonicalize().unwrap_or(folder);
     super::helpers::open_beside(mtm, &folder);
     let Some(controller) = controller_of(&folder) else {
-        check("the untrusted folder opens beside", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the untrusted folder opens beside");
     };
     let Some(tab) = ide_ui_agent::open_tab(&controller, None) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab opens");
     };
     let shown = tab.problem_texts();
     let blocked = !tab.is_live() && tab.problem_name() == Some("untrusted");

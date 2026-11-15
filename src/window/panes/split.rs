@@ -1,14 +1,17 @@
-//! Parts of a window tab side by side or one above the other, each holding its share of the room as the tab changes
-//! size; only a drag of a divider changes the shares (E63, E145).
+//! The view of a split of a window tab: its parts side by side or one above the other, each holding its share of the
+//! room as the tab changes size; only a drag of a divider changes the shares, which go back into the tree (E63, E145).
 
 use std::cell::RefCell;
 use std::rc::{Rc, Weak as RcWeak};
 
+use ide_core::panes::{PaneTree, SplitId};
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
-use objc2_app_kit::{NSLayoutConstraint, NSSplitViewDividerStyle, NSView, NSWindowOrderingMode};
+use objc2_app_kit::{NSLayoutConstraint, NSSplitViewDividerStyle, NSView};
 
-use super::Node;
+use super::{is_in, place_in_order};
+use crate::util::activate;
+use crate::window::TabId;
 use crate::window::document_area::DocumentArea;
 
 /// The priority that holds a share: above the split view's holding priority, below a drag of its divider.
@@ -20,103 +23,83 @@ const MIN_HEIGHT: f64 = 120.0;
 
 pub(super) struct Split {
     pub(super) area: Retained<DocumentArea>,
-    pub(super) children: RefCell<Vec<Node>>,
-    /// Each child's share of the room along the split, adding up to 1.
-    shares: RefCell<Vec<f64>>,
+    /// The views of the parts, in their order, as the split holds them now.
+    children: RefCell<Vec<Retained<NSView>>>,
     holding: RefCell<Vec<Retained<NSLayoutConstraint>>>,
 }
 
 impl Split {
-    pub(super) fn new(mtm: MainThreadMarker, side_by_side: bool) -> Rc<Split> {
+    /// The view of the split `id` of `tree`, which takes the shares the user drags its divider to.
+    pub(super) fn new(
+        mtm: MainThreadMarker,
+        side_by_side: bool,
+        id: SplitId,
+        tree: RcWeak<RefCell<PaneTree<TabId>>>,
+    ) -> Rc<Split> {
         let area = DocumentArea::new(mtm);
         area.setVertical(side_by_side);
         area.setDividerStyle(NSSplitViewDividerStyle::Thin);
         let split = Rc::new(Split {
             area,
             children: RefCell::new(Vec::new()),
-            shares: RefCell::new(Vec::new()),
             holding: RefCell::new(Vec::new()),
         });
         let dragged: RcWeak<Split> = Rc::downgrade(&split);
         split.area.on_drag(move || {
-            if let Some(split) = dragged.upgrade() {
-                split.take_dragged_shares();
+            let (Some(split), Some(tree)) = (dragged.upgrade(), tree.upgrade()) else {
+                return;
+            };
+            let shares = tree.borrow().split(id).map(|split| split.shares().to_vec());
+            let Some(dragged) = shares.and_then(|shares| split.dragged_shares(&shares)) else {
+                return;
+            };
+            tree.borrow_mut().set_shares(id, &dragged);
+            let shares = tree.borrow().split(id).map(|split| split.shares().to_vec());
+            if let Some(shares) = shares {
+                split.hold(&shares);
             }
         });
         split
     }
 
-    pub(super) fn side_by_side(&self) -> bool {
+    pub(super) fn view(&self) -> Retained<NSView> {
+        Retained::into_super(Retained::into_super(self.area.clone()))
+    }
+
+    fn side_by_side(&self) -> bool {
         self.area.isVertical()
     }
 
-    pub(super) fn shares(&self) -> Vec<f64> {
-        self.shares.borrow().clone()
-    }
-
-    /// Puts `node` at `index` with `share` of the room, taken from the others in proportion.
-    pub(super) fn insert(&self, index: usize, node: Node, share: f64) {
-        let index = index.min(self.children.borrow().len());
-        let view = node.view();
-        match self.children.borrow().get(index) {
-            Some(after) => {
-                self.area
-                    .addSubview_positioned_relativeTo(&view, NSWindowOrderingMode::Below, Some(&after.view()))
+    /// Holds `children` in their order: views that left the split go, new ones come in at their place.
+    pub(super) fn arrange(&self, children: &[Retained<NSView>]) {
+        let area: &NSView = &self.area;
+        let before = self.children.borrow().clone();
+        let same = before.len() == children.len()
+            && before.iter().zip(children).all(|(a, b)| std::ptr::eq(&**a, &**b))
+            && children.iter().all(|child| is_in(child, area));
+        if same {
+            return;
+        }
+        for old in &before {
+            if !children.iter().any(|child| std::ptr::eq(&**child, &**old)) && is_in(old, area) {
+                old.removeFromSuperview();
             }
-            None => self.area.addSubview(&view),
         }
-        self.children.borrow_mut().insert(index, node);
-        let mut shares = self.shares.borrow_mut();
-        let share = if shares.is_empty() {
-            1.0
-        } else {
-            share.clamp(0.05, 0.95)
-        };
-        for other in shares.iter_mut() {
-            *other *= 1.0 - share;
-        }
-        shares.insert(index, share);
+        place_in_order(area, children);
+        *self.children.borrow_mut() = children.to_vec();
     }
 
-    /// Takes the child at `index` out; its share goes to the neighbour before it, else the one after.
-    pub(super) fn remove(&self, index: usize) -> Node {
-        let node = self.children.borrow_mut().remove(index);
-        node.view().removeFromSuperview();
-        let mut shares = self.shares.borrow_mut();
-        let freed = shares.remove(index);
-        let neighbour = index.checked_sub(1).or((!shares.is_empty()).then_some(0));
-        if let Some(neighbour) = neighbour.and_then(|at| shares.get_mut(at)) {
-            *neighbour += freed;
-        }
-        node
-    }
-
-    /// Puts `node` in the place of the child at `index`, with its share.
-    pub(super) fn replace(&self, index: usize, node: Node) -> Node {
-        let old = std::mem::replace(&mut self.children.borrow_mut()[index], node.clone());
-        self.area.replaceSubview_with(&old.view(), &node.view());
-        old
-    }
-
-    pub(super) fn set_shares(&self, shares: &[f64]) {
-        let count = self.children.borrow().len();
-        let total: f64 = shares.iter().sum();
-        if shares.len() == count && total > 0.0 && shares.iter().all(|share| share.is_finite() && *share > 0.0) {
-            *self.shares.borrow_mut() = shares.iter().map(|share| share / total).collect();
-        }
-    }
-
-    /// Holds the children that show at their shares among one another, and at their least size.
-    pub(super) fn hold(&self) {
+    /// Holds the children that show at their `shares` among one another, and at their least size.
+    pub(super) fn hold(&self, shares: &[f64]) {
         for constraint in self.holding.borrow_mut().drain(..) {
             constraint.setActive(false);
         }
-        let children = self.children.borrow();
-        let shares = self.shares.borrow();
-        let shown: Vec<(Retained<NSView>, f64)> = children
+        let shown: Vec<(Retained<NSView>, f64)> = self
+            .children
+            .borrow()
             .iter()
             .zip(shares.iter())
-            .map(|(child, share)| (child.view(), *share))
+            .map(|(child, share)| (child.clone(), *share))
             .filter(|(view, _)| !view.isHidden())
             .collect();
         if shown.len() < 2 {
@@ -145,16 +128,14 @@ impl Split {
             least.setPriority(SHARE_PRIORITY + 10.0);
             holding.push(least);
         }
-        for constraint in &holding {
-            constraint.setActive(true);
-        }
+        activate(holding.iter().cloned());
         *self.holding.borrow_mut() = holding;
-        drop(children);
         self.area.adjustSubviews();
     }
 
-    /// The shares the children that show have now, as the user dragged a divider; hidden ones keep theirs.
-    fn take_dragged_shares(&self) {
+    /// The shares the children that show have now, as the user dragged a divider, from `shares` before; hidden ones
+    /// keep theirs.
+    fn dragged_shares(&self, shares: &[f64]) -> Option<Vec<f64>> {
         let side_by_side = self.side_by_side();
         let length = |view: &NSView| {
             let size = view.frame().size;
@@ -164,12 +145,8 @@ impl Split {
             .children
             .borrow()
             .iter()
-            .map(|child| {
-                let view = child.view();
-                (!view.isHidden()).then(|| length(&view))
-            })
+            .map(|view| (!view.isHidden()).then(|| length(view)))
             .collect();
-        let mut shares = self.shares.borrow_mut();
         let shown_share: f64 = shares
             .iter()
             .zip(&measured)
@@ -177,15 +154,18 @@ impl Split {
             .map(|(share, _)| share)
             .sum();
         let shown_length: f64 = measured.iter().flatten().sum();
-        if shown_length <= 1.0 {
-            return;
+        if shown_length <= 1.0 || measured.len() != shares.len() {
+            return None;
         }
-        for (share, length) in shares.iter_mut().zip(&measured) {
-            if let Some(length) = length {
-                *share = (length / shown_length * shown_share).max(0.02);
-            }
-        }
-        drop(shares);
-        self.hold();
+        Some(
+            shares
+                .iter()
+                .zip(&measured)
+                .map(|(share, length)| match length {
+                    Some(length) => (length / shown_length * shown_share).max(0.02),
+                    None => *share,
+                })
+                .collect(),
+        )
     }
 }

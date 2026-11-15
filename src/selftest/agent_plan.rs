@@ -12,7 +12,7 @@ use serde_json::json;
 use splat_i18n::t;
 
 use super::agent::{DRAWN, appearance, controller_of, picture, tab_of, view_picture};
-use super::{check, finish, helpers};
+use super::{check, give_up, helpers};
 use crate::util::constant;
 use ide_ui_agent::plan::{self, PLAN_IN_CARD, PLAN_IN_DOC, PLAN_REJECT, PLAN_REVISE};
 use ide_ui_agent::{AgentKey, AgentTab};
@@ -107,19 +107,18 @@ fn comment_on(tab: &AgentTab, id: u64, place: u8, comment: &str) -> bool {
     typed
 }
 
-pub fn run(root: PathBuf, requests: AgentKey, first: AgentKey, then: fn(PathBuf, AgentKey, AgentKey)) {
+pub(crate) fn run(root: PathBuf, requests: AgentKey, first: AgentKey, then: fn(PathBuf, AgentKey, AgentKey)) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let Some(tab) = ide_ui_agent::open_replay(&controller) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab opens");
     };
     tab.feed(&start_frames());
     tab.timeline().scroll_to_end();
     let waits = plan_state(&tab, "toolu_plan_1") == Some(RequestState::Pending);
     let Some(id) = entry_id(&tab, "toolu_plan_1").filter(|_| waits) else {
-        check("the plan waits for approval", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the plan waits for approval");
     };
     let key = tab.key;
     let shown = move || tab_of(key).is_some_and(|tab| plan::card_shown(&tab, id));
@@ -128,7 +127,9 @@ pub fn run(root: PathBuf, requests: AgentKey, first: AgentKey, then: fn(PathBuf,
 
 /// A comment on a passage marked in the plan's card.
 fn in_card(root: PathBuf, key: AgentKey, id: u64, next: Next) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     let selected = plan::select(
         &tab,
         id,
@@ -150,7 +151,9 @@ fn in_card(root: PathBuf, key: AgentKey, id: u64, next: Next) {
 
 /// Comments in the plan's document: on two passages and on the whole plan.
 fn in_doc(root: PathBuf, key: AgentKey, id: u64, next: Next) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     check(
         "the card marks the commented passage",
         plan::card_marks(&tab, id) == Some(1),
@@ -164,7 +167,9 @@ fn in_doc(root: PathBuf, key: AgentKey, id: u64, next: Next) {
             if let Some((view, _)) = plan::comment_view() {
                 view_picture(&view, "agent-plan-comment");
             }
-            let Some(tab) = tab_of(key) else { return finish(NAME) };
+            let Some(tab) = tab_of(key) else {
+                return give_up(NAME, "the AI tab is open");
+            };
             plan::type_comment("Is the lexer the right place?");
             tab.plan_commit(id);
             if let Some(text) = plan::text_of(key, id) {
@@ -195,7 +200,7 @@ fn in_doc(root: PathBuf, key: AgentKey, id: u64, next: Next) {
 /// Editing a comment starts from its text; removing one unmarks its passage.
 fn edit(root: PathBuf, key: AgentKey, id: u64, next: Next) {
     let (Some(tab), Some(anchor)) = (tab_of(key), plan::text_of(key, id)) else {
-        return finish(NAME);
+        return give_up(NAME, "the AI tab is open and the plan has its text");
     };
     let ids = note_ids(&tab, id);
     if let Some(note) = ids.get(1) {
@@ -226,13 +231,13 @@ fn edit(root: PathBuf, key: AgentKey, id: u64, next: Next) {
 /// The document and the card, in dark and in light.
 fn pictures(root: PathBuf, key: AgentKey, id: u64, next: Next) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     picture(&controller, "agent-plan-doc");
     appearance(&controller, constant!(NSAppearanceNameDarkAqua));
     helpers::after(DRAWN, move || {
         let Some(controller) = controller_of(&root) else {
-            return finish(NAME);
+            return give_up(NAME, "the folder's window is open");
         };
         picture(&controller, "agent-plan-doc-dark");
         if let Some(tab) = tab_of(key) {
@@ -242,7 +247,7 @@ fn pictures(root: PathBuf, key: AgentKey, id: u64, next: Next) {
         let marked = move || tab_of(key).and_then(|tab| plan::card_marks(&tab, id)) == Some(2);
         helpers::wait_until(marked, move |_| {
             let Some(controller) = controller_of(&root) else {
-                return finish(NAME);
+                return give_up(NAME, "the folder's window is open");
             };
             check(
                 "the card marks the passages commented on in the document",
@@ -263,7 +268,9 @@ fn pictures(root: PathBuf, key: AgentKey, id: u64, next: Next) {
 
 /// "Mit Kommentaren überarbeiten lassen", then the CLI's answer and the revised plan.
 fn revise(root: PathBuf, key: AgentKey, id: u64, next: Next) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     let sent = tab.plan_feedback(id);
     tab.plan(id, PLAN_REVISE);
     let state = plan_state(&tab, "toolu_plan_1");
@@ -298,7 +305,9 @@ fn revise(root: PathBuf, key: AgentKey, id: u64, next: Next) {
 
 /// "Ablehnen" on the revised plan.
 fn reject(root: PathBuf, key: AgentKey, id: u64, (requests, first, then): Next) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     let visible = tab.inspect().visible;
     check(
         "the answered plan's card says it went back with comments",
@@ -322,7 +331,7 @@ fn reject(root: PathBuf, key: AgentKey, id: u64, (requests, first, then): Next) 
         move || shows(key, t("Plan abgelehnt")),
         move |_| {
             let Some(controller) = controller_of(&root) else {
-                return finish(NAME);
+                return give_up(NAME, "the folder's window is open");
             };
             picture(&controller, "agent-plan-answered");
             let visible = tab_of(key).map(|tab| tab.inspect().visible).unwrap_or_default();
@@ -349,7 +358,7 @@ fn shows(key: AgentKey, text: &str) -> bool {
 /// Closing the plan's AI tab takes its document with it, whose answers would go nowhere.
 fn closed(root: PathBuf, key: AgentKey, id: u64, (requests, first, then): Next) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let doc = controller.tab_with_key(&format!("plan:{}:{id}", key.get()));
     check(

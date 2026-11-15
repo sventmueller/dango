@@ -107,7 +107,7 @@ impl Text {
     }
 
     /// The length in bytes of UTF-8.
-    pub fn len_bytes(&self) -> usize {
+    pub(crate) fn len_bytes(&self) -> usize {
         self.rope.len_bytes()
     }
 
@@ -116,8 +116,7 @@ impl Text {
         self.rope.len_utf16_cu()
     }
 
-    /// Whether the text is empty.
-    pub fn is_empty(&self) -> bool {
+    pub(crate) fn is_empty(&self) -> bool {
         self.rope.len_bytes() == 0
     }
 
@@ -127,12 +126,12 @@ impl Text {
     }
 
     /// The pieces the text is stored in, in order.
-    pub fn chunks(&self) -> impl Iterator<Item = &str> {
+    pub(crate) fn chunks(&self) -> impl Iterator<Item = &str> {
         self.rope.chunks()
     }
 
     /// The bytes `range` of the text, if it lies on character boundaries within it.
-    pub fn slice(&self, range: Range<usize>) -> Option<Cow<'_, str>> {
+    pub(crate) fn slice(&self, range: Range<usize>) -> Option<Cow<'_, str>> {
         if range.start > range.end || !self.is_boundary(range.start) || !self.is_boundary(range.end) {
             return None;
         }
@@ -145,7 +144,7 @@ impl Text {
     }
 
     /// The bytes of line `line` with its line break.
-    pub fn line_bytes(&self, line: usize) -> Option<Range<usize>> {
+    pub(crate) fn line_bytes(&self, line: usize) -> Option<Range<usize>> {
         (line < self.line_count()).then(|| self.rope.line_to_byte(line)..self.rope.line_to_byte(line + 1))
     }
 

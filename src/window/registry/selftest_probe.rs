@@ -3,6 +3,6 @@
 use super::*;
 
 /// The open windows, for the self-test.
-pub fn open_windows() -> Vec<Retained<WindowController>> {
+pub(crate) fn open_windows() -> Vec<Retained<WindowController>> {
     windows()
 }

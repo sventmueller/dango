@@ -15,7 +15,7 @@ use splat_i18n::t;
 
 use super::a11y::keys::{Went, press};
 use super::helpers::{editor, text_of, type_at, wait_until, window_of};
-use super::{check, finish, snapshot};
+use super::{check, finish, give_up, snapshot};
 use crate::debug::probe::{self as debug, Command};
 use crate::window::{Panel, WindowController};
 
@@ -24,13 +24,13 @@ const SCENARIO: &str = "debug";
 const INSPECTOR_FOLD: Duration = Duration::from_millis(1500);
 
 /// The program the scripted adapter walks through, line by line.
-pub const PROGRAM: &str = "fn main() {\n    let mut hits = 0;\n    let point = (1, 2);\n    hits += 1;\n    \
+pub(crate) const PROGRAM: &str = "fn main() {\n    let mut hits = 0;\n    let point = (1, 2);\n    hits += 1;\n    \
                            println!(\"{hits}\");\n    hits += point.0;\n    let line = hits;\n    \
                            println!(\"{line}\");\n    drop(point);\n    let done = true;\n    \
                            assert!(done);\n}\n";
 
 /// A folder of its own under the run's home, with `src/main.rs`, trusted.
-pub fn project(name: &str) -> PathBuf {
+pub(crate) fn project(name: &str) -> PathBuf {
     let _ = super::helpers::make_project(name, &[("src/main.rs", PROGRAM)]);
     let root = super::helpers::root(name);
     crate::project::trust(&root);
@@ -38,7 +38,7 @@ pub fn project(name: &str) -> PathBuf {
 }
 
 /// The scripted adapter for the folder's program: every line takes breakpoints, it cannot restart.
-pub fn script(root: &Path) -> ide_dap::fake::Script {
+pub(crate) fn script(root: &Path) -> ide_dap::fake::Script {
     ide_dap::fake::Script {
         path: root.join("src/main.rs"),
         lines: (1..=13).collect(),
@@ -99,8 +99,7 @@ fn enabled(menu: &[(String, bool)], title: &str) -> Option<bool> {
 /// on one is greyed out.
 fn focus(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        check("the folder opens", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder opens");
     };
     check(
         "the activity bar has six panels and settings",
@@ -108,7 +107,7 @@ fn focus(root: PathBuf) {
         format!("{} buttons", controller.inspect().activity_buttons),
     );
     let Some(window) = controller.window() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the window shows");
     };
     let mut frame = window.frame();
     frame.size.width = 1700.0;
@@ -222,8 +221,7 @@ fn layout(controller: &WindowController) {
 fn breakpoints(root: PathBuf) {
     let file = root.join("src/main.rs");
     let (Some(controller), Some(view)) = (front(&root), front(&root).and_then(|c| editor(&c, "main.rs"))) else {
-        check("the program opens in an editor", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the program opens in an editor");
     };
     let clicked = crate::debug::gutter_click(&view, 3);
     let line_five = text_of(&view).lines().take(5).map(|l| l.len() + 1).sum::<usize>();
@@ -288,10 +286,10 @@ fn breakpoints(root: PathBuf) {
 /// ⌥⌘I shows the inspector; it comes along to another tab with its width, and ⌥⌘I folds it again.
 fn inspector(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let Some(window) = controller.window() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the window shows");
     };
     controller.show_inspector(false);
     let went = press(
@@ -337,7 +335,7 @@ fn inspector_inside(controller: &WindowController) -> Option<(bool, objc2_founda
 /// The inspector ⌥⌘I unfolded lies inside the window once the tab has been laid out.
 fn inspector_seen(root: PathBuf, width: f64) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let inside = inspector_inside(&controller);
     check(
@@ -422,7 +420,7 @@ fn controller_paused(root: &Path) -> bool {
 /// Stopped at the breakpoint: what the controls, the menu, the panel and the inspector show.
 fn paused(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let seen = debug::seen(&controller).unwrap_or_default();
     check(
@@ -499,7 +497,7 @@ fn paused(root: PathBuf) {
 
 fn inspected(root: PathBuf, ok: bool) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let seen = debug::seen(&controller).unwrap_or_default();
     check(
@@ -572,7 +570,7 @@ fn audit(window: &objc2_app_kit::NSWindow) {
 /// Continue runs to the second breakpoint; Stop ends the session, greys the controls out and finishes the console.
 fn continue_and_stop(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     debug::run(&controller, Command::Continue);
     let probe = root.clone();
@@ -585,7 +583,7 @@ fn continue_and_stop(root: PathBuf) {
         move |ok| {
             check("Continue runs on to the next breakpoint", ok, "");
             let Some(controller) = front(&root) else {
-                return finish(SCENARIO);
+                return give_up(SCENARIO, "the folder's window is open");
             };
             debug::run(&controller, Command::Stop);
             let probe = root.clone();
@@ -603,7 +601,7 @@ fn continue_and_stop(root: PathBuf) {
 
 fn stopped(root: PathBuf, ok: bool) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let seen = debug::seen(&controller).unwrap_or_default();
     check(
@@ -625,7 +623,7 @@ fn stopped(root: PathBuf, ok: bool) {
 /// seconds and can be stopped (R23).
 fn waiting(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let slow = ide_dap::fake::Script {
         launch_delay_ms: 30_000,
@@ -643,7 +641,7 @@ fn waiting(root: PathBuf) {
         },
         move |ok| {
             let Some(controller) = front(&root) else {
-                return finish(SCENARIO);
+                return give_up(SCENARIO, "the folder's window is open");
             };
             let seen = debug::seen(&controller).unwrap_or_default();
             let explained = seen
@@ -679,7 +677,7 @@ fn waiting(root: PathBuf) {
 /// breakpoint again once it ended.
 fn unverified(root: PathBuf) {
     let Some(controller) = front(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let file = root.join("src/main.rs");
     let without_six = ide_dap::fake::Script {
@@ -692,7 +690,7 @@ fn unverified(root: PathBuf) {
         move || controller_paused(&probe),
         move |ok| {
             let Some(controller) = front(&root) else {
-                return finish(SCENARIO);
+                return give_up(SCENARIO, "the folder's window is open");
             };
             let seen = debug::seen(&controller).unwrap_or_default();
             let look = editor(&controller, "main.rs").map(|view| debug::gutter(&view, 5).0);

@@ -77,6 +77,7 @@ publish = false
 
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "deny"
+unreachable_pub = "warn"
 
 [workspace.lints.clippy]
 undocumented_unsafe_blocks = "deny"

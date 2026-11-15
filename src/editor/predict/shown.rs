@@ -3,20 +3,18 @@
 //! in the text; the hint "Tab: Zeile 42" at the end of the caret's line for a change elsewhere; and the switch in the
 //! status bar. Nothing here moves: with or without "Bewegung reduzieren", ghost text appears without an animation.
 
-use std::cell::Cell;
 use std::ops::Range;
 use std::path::Path;
 
-use block2::RcBlock;
+use ide_ui_common::alert::{Alert, Role, first};
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSAlert, NSAlertFirstButtonReturn, NSBackgroundColorAttributeName, NSBox, NSBoxType, NSButton,
-    NSCellImagePosition, NSColor, NSFont, NSFontAttributeName, NSForegroundColorAttributeName, NSModalResponse,
-    NSPasteboard, NSPasteboardTypeString, NSStackView, NSStackViewGravity, NSStrikethroughStyleAttributeName,
-    NSTextField, NSTitlePosition, NSUnderlineStyleAttributeName, NSVisualEffectBlendingMode, NSVisualEffectMaterial,
-    NSVisualEffectState, NSVisualEffectView, NSWindow,
+    NSAccessibility, NSBackgroundColorAttributeName, NSBox, NSBoxType, NSButton, NSCellImagePosition, NSColor, NSFont,
+    NSFontAttributeName, NSForegroundColorAttributeName, NSPasteboard, NSPasteboardTypeString, NSStackView,
+    NSStackViewGravity, NSStrikethroughStyleAttributeName, NSTextField, NSTitlePosition, NSUnderlineStyleAttributeName,
+    NSVisualEffectBlendingMode, NSVisualEffectMaterial, NSVisualEffectState, NSVisualEffectView, NSWindow,
 };
 use objc2_foundation::{NSMutableAttributedString, NSNumber, NSPoint, NSRange, NSRect, NSSize, NSString};
 use splat_i18n::{t, tf};
@@ -24,11 +22,11 @@ use splat_i18n::{t, tf};
 use super::model::{Kind, Proposal};
 use crate::editor::EditorTextView;
 use crate::editor::insets::{self, Inset, Layer, Place};
-use crate::util::{constant, guarded, main_soon, ns, set_action, symbol};
+use crate::util::{constant, main_soon, ns, set_action, symbol};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;
 
 /// Room between the box's edge and its text.
 const PADDING: f64 = 6.0;
@@ -37,7 +35,7 @@ const MOST_LINES: usize = 14;
 
 /// The views a proposal and the status bar use.
 #[derive(Default)]
-pub struct Parts {
+pub(crate) struct Parts {
     boxed: Option<Retained<NSBox>>,
     field: Option<Retained<NSTextField>>,
     /// The range of the text marked as changing, in UTF-16 code units.
@@ -46,7 +44,7 @@ pub struct Parts {
 }
 
 /// Shows `proposal` in `view`.
-pub fn present(view: &EditorTextView, proposal: &Proposal) {
+pub(crate) fn present(view: &EditorTextView, proposal: &Proposal) {
     let at = super::utf16(view, proposal.range.start);
     match &proposal.kind {
         Kind::Insert { first, rest } => {
@@ -98,7 +96,7 @@ fn at_line_end(view: &EditorTextView, at: usize) -> bool {
 }
 
 /// Takes everything a proposal showed out of `view`.
-pub fn clear(view: &EditorTextView) {
+pub(crate) fn clear(view: &EditorTextView) {
     insets::clear(view, Layer::Prediction);
     let (boxed, marked) = {
         let mut state = view.ivars().predict.borrow_mut();
@@ -251,7 +249,7 @@ fn show_box(view: &EditorTextView, at: usize, text: &NSMutableAttributedString) 
 }
 
 /// Adds the switch to the status bar's `stack`, sending `idePrediction:` with `tag`.
-pub fn status_item(mtm: MainThreadMarker, view: &EditorTextView, stack: &NSStackView, tag: isize) {
+pub(crate) fn status_item(mtm: MainThreadMarker, view: &EditorTextView, stack: &NSStackView, tag: isize) {
     // SAFETY: A nil target until `set_action` below, which checks that the view answers the action.
     let button = unsafe { NSButton::buttonWithTitle_target_action(&ns(""), None, None, mtm) };
     button.setBordered(false);
@@ -266,7 +264,7 @@ pub fn status_item(mtm: MainThreadMarker, view: &EditorTextView, stack: &NSStack
 }
 
 /// Shows `title` in the status bar's switch, with `tip` as its tooltip; greyed out when it can do nothing.
-pub fn set_status(view: &EditorTextView, title: &str, tip: &str, enabled: bool) {
+pub(crate) fn set_status(view: &EditorTextView, title: &str, tip: &str, enabled: bool) {
     let Ok(state) = view.ivars().predict.try_borrow() else {
         return;
     };
@@ -277,39 +275,25 @@ pub fn set_status(view: &EditorTextView, title: &str, tip: &str, enabled: bool) 
     }
 }
 
-/// Shows `alert` as a sheet on `window`; `then` learns whether its first button ended it.
-fn sheet(alert: &NSAlert, window: &NSWindow, then: impl FnOnce(bool) + 'static) {
-    let then = Cell::new(Some(then));
-    let handler = RcBlock::new(move |response: NSModalResponse| {
-        guarded((), || {
-            if let Some(then) = then.take() {
-                then(response == NSAlertFirstButtonReturn);
-            }
-        });
-    });
-    alert.beginSheetModalForWindow_completionHandler(window, Some(&handler));
-}
-
 /// Asks once whether `provider`, which is not on this Mac, may get the text proposals are made from, and says what
 /// goes there (E101); `then` runs when the user allows it.
-pub fn ask_consent(window: &NSWindow, provider: &str, then: impl FnOnce() + 'static) {
-    let alert = NSAlert::new(window.mtm());
-    alert.setMessageText(&ns(&tf("Code an {} senden?", &[provider])));
-    alert.setInformativeText(&ns(&tf(
-        "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen.",
-        &[provider],
-    )));
-    alert.addButtonWithTitle(&ns(t("Erlauben")));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
-    sheet(&alert, window, move |agreed| {
-        if agreed {
-            then();
-        }
-    });
+pub(crate) fn ask_consent(window: &NSWindow, provider: &str, then: impl FnOnce() + 'static) {
+    Alert::new(window.mtm(), &tf("Code an {} senden?", &[provider]))
+        .informative(&tf(
+            "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen.",
+            &[provider],
+        ))
+        .button(t("Erlauben"), Role::Plain)
+        .button(t("Abbrechen"), Role::Plain)
+        .sheet(window, move |response| {
+            if first(response) {
+                then();
+            }
+        });
 }
 
 /// Signs in to Copilot of `root` through GitHub's device flow, with the code in a sheet on the settings window.
-pub fn sign_in_sheet(root: &Path) {
+pub(crate) fn sign_in_sheet(root: &Path) {
     let Some(copilot) = super::provider::copilot(root) else {
         return;
     };
@@ -323,10 +307,9 @@ pub fn sign_in_sheet(root: &Path) {
                 Ok(ide_predict::copilot::SignIn::Device(code)) => device_code(&window, &code, finisher),
                 Ok(ide_predict::copilot::SignIn::Already { .. }) => {}
                 Err(error) => {
-                    let alert = NSAlert::new(window.mtm());
-                    alert.setMessageText(&ns(t("Anmeldung bei Copilot fehlgeschlagen")));
-                    alert.setInformativeText(&ns(&ide_core::explain::Explain::explain(&error)));
-                    sheet(&alert, &window, |_| {});
+                    Alert::new(window.mtm(), t("Anmeldung bei Copilot fehlgeschlagen"))
+                        .informative(&ide_core::explain::Explain::explain(&error))
+                        .sheet(&window, |_| {});
                 }
             }
         });
@@ -338,23 +321,22 @@ fn device_code(
     code: &ide_predict::copilot::DeviceCode,
     copilot: std::sync::Arc<ide_predict::copilot::Copilot>,
 ) {
-    let alert = NSAlert::new(window.mtm());
-    alert.setMessageText(&ns(t("Bei GitHub anmelden")));
-    alert.setInformativeText(&ns(&tf(
-        "Gib auf {} den Code {} ein. „Code kopieren und öffnen“ legt ihn in die Zwischenablage und öffnet die Seite im Browser.",
-        &[&code.verification_uri, &code.user_code],
-    )));
-    alert.addButtonWithTitle(&ns(t("Code kopieren und öffnen")));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
     let user_code = code.user_code.clone();
-    sheet(&alert, window, move |agreed| {
-        if !agreed {
-            return;
-        }
-        let pasteboard = NSPasteboard::generalPasteboard();
-        pasteboard.clearContents();
-        // SAFETY: A string under the pasteboard's string type.
-        unsafe { pasteboard.setString_forType(&NSString::from_str(&user_code), NSPasteboardTypeString) };
-        copilot.finish_sign_in(ide_predict::Cancel::new());
-    });
+    Alert::new(window.mtm(), t("Bei GitHub anmelden"))
+        .informative(&tf(
+            "Gib auf {} den Code {} ein. „Code kopieren und öffnen“ legt ihn in die Zwischenablage und öffnet die Seite im Browser.",
+            &[&code.verification_uri, &code.user_code],
+        ))
+        .button(t("Code kopieren und öffnen"), Role::Plain)
+        .button(t("Abbrechen"), Role::Plain)
+        .sheet(window, move |response| {
+            if !first(response) {
+                return;
+            }
+            let pasteboard = NSPasteboard::generalPasteboard();
+            pasteboard.clearContents();
+            // SAFETY: A string under the pasteboard's string type.
+            unsafe { pasteboard.setString_forType(&NSString::from_str(&user_code), NSPasteboardTypeString) };
+            copilot.finish_sign_in(ide_predict::Cancel::new());
+        });
 }

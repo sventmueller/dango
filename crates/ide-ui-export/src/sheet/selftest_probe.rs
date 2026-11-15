@@ -4,7 +4,7 @@ use super::*;
 
 impl Sheet {
     /// What the sheet says now.
-    pub fn text(&self) -> String {
+    pub(crate) fn text(&self) -> String {
         self.label.stringValue().to_string()
     }
 }

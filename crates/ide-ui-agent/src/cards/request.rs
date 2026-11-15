@@ -2,6 +2,7 @@
 
 use ide_thread::{
     Decision, EntryId, PermissionOption, PermissionRequest, PlanApproval, Question, QuestionItem, RequestState,
+    RuleScope,
 };
 use objc2::rc::Retained;
 use objc2::{MainThreadOnly, sel};
@@ -22,12 +23,16 @@ use super::{Ctx, Part, disclosure, markdown_text, pack};
 use ide_ui_common::util::ns;
 
 /// What a permission card's buttons send in their tag beside the entry.
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unreachable_pub, reason = "the self-test re-exports it")
+)]
 pub const ALLOW_ONCE: u8 = 1;
-pub const ALLOW_ALWAYS: u8 = 2;
-pub const DENY: u8 = 3;
+pub(crate) const ALLOW_ALWAYS: u8 = 2;
+pub(crate) const DENY: u8 = 3;
 
 /// What a plan's answer buttons send in their tag beside the entry.
-pub const PLAN_APPROVE: u8 = 1;
+pub(crate) const PLAN_APPROVE: u8 = 1;
 pub const PLAN_REVISE: u8 = 2;
 pub const PLAN_REJECT: u8 = 3;
 
@@ -36,7 +41,7 @@ pub const PLAN_IN_CARD: u8 = 0;
 pub const PLAN_IN_DOC: u8 = 1;
 
 /// The text the user edits before allowing: a command as such, other input as JSON.
-pub fn editable_input(tool: &str, input: &Value) -> String {
+pub(crate) fn editable_input(tool: &str, input: &Value) -> String {
     match edited_field(tool, input)
         .and_then(|field| input.get(field))
         .and_then(Value::as_str)
@@ -58,7 +63,7 @@ fn edited_field(tool: &str, input: &Value) -> Option<&'static str> {
 }
 
 /// What the user edits before allowing, as the editor's caption.
-pub fn edited_caption(tool: &str, input: &Value) -> Option<&'static str> {
+pub(crate) fn edited_caption(tool: &str, input: &Value) -> Option<&'static str> {
     match edited_field(tool, input)? {
         "new_string" => Some(t("Ersetzt durch – vor dem Erlauben änderbar")),
         "content" => Some(t("Neuer Inhalt – vor dem Erlauben änderbar")),
@@ -67,7 +72,7 @@ pub fn edited_caption(tool: &str, input: &Value) -> Option<&'static str> {
 }
 
 /// The input the edited text stands for; `None` when it is not valid.
-pub fn edited_input(tool: &str, original: &Value, text: &str) -> Option<Value> {
+pub(crate) fn edited_input(tool: &str, original: &Value, text: &str) -> Option<Value> {
     match edited_field(tool, original) {
         Some(field) => {
             let mut input = original.clone();
@@ -80,7 +85,7 @@ pub fn edited_input(tool: &str, original: &Value, text: &str) -> Option<Value> {
 
 /// How the request's command throws work away, if it runs a destructive git command, which needs a question every
 /// time (E27): the command of the input, or for an agent that names it only there, of the title.
-pub fn destructive(request: &PermissionRequest) -> Option<ide_thread::shell::Destructive> {
+pub(crate) fn destructive(request: &PermissionRequest) -> Option<ide_thread::shell::Destructive> {
     match ide_thread::shell::command_of(&request.input) {
         Some(command) => ide_thread::shell::destructive_git(&command),
         None => ide_thread::shell::destructive_git(request.title.as_deref()?),
@@ -88,17 +93,17 @@ pub fn destructive(request: &PermissionRequest) -> Option<ide_thread::shell::Des
 }
 
 /// Where a stored rule applies, as the user reads it.
-pub fn scope_name(scope: &str) -> String {
+pub fn scope_name(scope: &RuleScope) -> String {
     match scope {
-        "session" => t("diese Sitzung").to_string(),
-        "localSettings" => t("dieses Projekt, nur für dich").to_string(),
-        "projectSettings" => t("dieses Projekt").to_string(),
-        "userSettings" => t("alle Projekte").to_string(),
-        other => other.to_string(),
+        RuleScope::Session => t("diese Sitzung").to_string(),
+        RuleScope::ProjectLocal => t("dieses Projekt, nur für dich").to_string(),
+        RuleScope::Project => t("dieses Projekt").to_string(),
+        RuleScope::User => t("alle Projekte").to_string(),
+        RuleScope::Other(other) => other.clone(),
     }
 }
 
-pub fn permission(ctx: &Ctx<'_>, id: EntryId, request: &PermissionRequest) -> Retained<NSView> {
+pub(crate) fn permission(ctx: &Ctx<'_>, id: EntryId, request: &PermissionRequest) -> Retained<NSView> {
     match &request.state {
         RequestState::Pending => pending_permission(ctx, id, request),
         RequestState::Decided(decision) => {
@@ -298,7 +303,7 @@ fn field(ctx: &Ctx<'_>, id: EntryId, what: u8, placeholder: &str) -> Retained<NS
     field
 }
 
-pub fn question(ctx: &Ctx<'_>, id: EntryId, question: &Question) -> Retained<NSView> {
+pub(crate) fn question(ctx: &Ctx<'_>, id: EntryId, question: &Question) -> Retained<NSView> {
     let mtm = ctx.mtm;
     match &question.state {
         RequestState::Decided(Decision::Answered(answers)) => {
@@ -434,7 +439,7 @@ fn question_item(ctx: &Ctx<'_>, id: EntryId, index: u8, item: &QuestionItem, wai
     parts
 }
 
-pub fn plan(ctx: &Ctx<'_>, id: EntryId, plan: &PlanApproval) -> Retained<NSView> {
+pub(crate) fn plan(ctx: &Ctx<'_>, id: EntryId, plan: &PlanApproval) -> Retained<NSView> {
     if plan.state == RequestState::Pending {
         pending_plan(ctx, id, plan)
     } else {
@@ -443,7 +448,7 @@ pub fn plan(ctx: &Ctx<'_>, id: EntryId, plan: &PlanApproval) -> Retained<NSView>
 }
 
 /// What became of an answered plan: its symbol, colour and line, and the comments it went back with.
-pub fn plan_outcome(plan: &PlanApproval) -> (&'static str, Retained<NSColor>, &'static str, Option<&str>) {
+pub(crate) fn plan_outcome(plan: &PlanApproval) -> (&'static str, Retained<NSColor>, &'static str, Option<&str>) {
     let returned = "arrow.uturn.backward.circle";
     match &plan.state {
         RequestState::Decided(Decision::Approved) => (
@@ -623,7 +628,7 @@ fn plan_answers(ctx: &Ctx<'_>, id: EntryId, waiting: bool, noted: bool) -> Retai
 }
 
 /// The labels checked in a question that takes several.
-pub fn checked(buttons: &[Retained<NSButton>]) -> Vec<String> {
+pub(crate) fn checked(buttons: &[Retained<NSButton>]) -> Vec<String> {
     buttons
         .iter()
         .filter(|b| b.state() == objc2_app_kit::NSControlStateValueOn)

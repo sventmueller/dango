@@ -3,7 +3,7 @@
 use super::*;
 
 /// The diff tab showing `key` in `controller`'s window.
-pub fn find(controller: &(impl AsWindow + ?Sized), key: &str) -> Option<Retained<DiffTab>> {
+pub(crate) fn find(controller: &(impl AsWindow + ?Sized), key: &str) -> Option<Retained<DiffTab>> {
     let controller = &controller.as_window();
     live_tabs().into_iter().find(|tab| {
         let ivars = tab.ivars();

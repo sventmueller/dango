@@ -12,7 +12,7 @@ use super::EditorTextView;
 use crate::util::{ns, set_target};
 
 /// Adds the format entry and the code actions to `menu`, the text view's context menu, after its cut, copy and paste.
-pub fn extend(view: &EditorTextView, menu: &NSMenu) {
+pub(crate) fn extend(view: &EditorTextView, menu: &NSMenu) {
     navigation(view, menu);
     let items: Vec<Retained<NSMenuItem>> = format_item(view)
         .into_iter()

@@ -11,7 +11,7 @@ use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use splat_i18n::tf;
 
-use super::{check, finish, helpers, snapshot};
+use super::{check, finish, give_up_saying, helpers, snapshot};
 use crate::window::panes::Side;
 use crate::window::{TabId, WindowController};
 
@@ -28,8 +28,7 @@ const SESSION: &str = "51e1f7e5-0000-4000-8000-0000000000cc";
 fn window_of(root: &Path) -> Option<Retained<WindowController>> {
     let controller = helpers::window_of(root);
     if controller.is_none() {
-        check("the folder gets its window", false, root.display().to_string());
-        finish(SCENARIO);
+        give_up_saying(SCENARIO, "the folder gets its window", root.display().to_string());
     }
     controller
 }

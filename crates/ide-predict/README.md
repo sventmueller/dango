@@ -8,7 +8,7 @@ and a local server sees its connection close, so it stops generating (R9).
 ```mermaid
 flowchart LR
     editor["editor, main thread"] -->|"Request after a pause in typing"| provider{{"Provider"}}
-    editor -->|"Cancel at the next keystroke"| provider
+    editor -->|"ide_core::Cancel at the next keystroke: its on_cancel hooks close or tell"| provider
     provider -->|"Reply on the provider's thread"| editor
     editor -->|"accepted: Copilot's command"| provider
     subgraph copilot ["copilot::Copilot"]
@@ -17,7 +17,7 @@ flowchart LR
         lsp -->|"checkStatus, signIn, finishDeviceFlow, signOut"| cls
     end
     subgraph local ["fim::Ollama, fim::LmStudio"]
-        gap["prefix and suffix around the caret"] --> http["ide_agent::Http, one connection per request"]
+        gap["prefix and suffix around the caret"] --> http["ide_net::api::Http, one connection per request"]
         http -->|"/api/generate with suffix"| ollama(["Ollama"])
         http -->|"/v1/completions with the family's marks"| lms(["LM Studio"])
         http --> clean["cut at stop marks and where it repeats the line"]
@@ -28,7 +28,8 @@ flowchart LR
 ```
 
 - **Copilot** (`copilot`): the official `@github/copilot-language-server`, installed on request with
-  `ide_lsp::Installer` (`copilot::INSTALL`) and found with `copilot::find`. The provider keeps the server told about
+  `ide_lsp::Installer` (`copilot::INSTALL`) and found with `copilot::find`, in the tools folder or with
+  `ide_process::tool::which` on the login shell's PATH. The provider keeps the server told about
   the documents it asks for, asks for an inline completion and next edits together, and turns their positions into
   byte offsets of the request's text, shrunk to what actually changes. The command an item carries is the
   prediction's feedback and runs through `workspace/executeCommand` once the user took it. Sign-in is GitHub's device
@@ -38,8 +39,8 @@ flowchart LR
 - **Local fill-in-the-middle** (`fim`): Ollama through `/api/generate` with `suffix`, using the model's own template;
   LM Studio through `/v1/completions` without a chat template, with the marks and stop sequences of the model's
   family from a fixed list: Qwen2.5 and Qwen3 Coder, StarCoder and StarCoder2, DeepSeek Coder, Code Llama,
-  Codestral, CodeGemma. HTTP is the agent's (`ide_agent::Http`, Review C16); each request gets a client of its own,
-  which cancelling closes.
+  Codestral, CodeGemma. HTTP is the one the agent uses too (`ide_net::api::Http`, Review C16); each request gets a
+  client of its own, which cancelling closes.
 - Errors: `Error::SignIn`, `Error::Unavailable` with what to do in the interface language, `Error::Malformed`.
 
 The API is documented in [`src/lib.rs`](src/lib.rs). Tests run without the network: a fake Copilot server

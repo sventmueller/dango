@@ -16,7 +16,7 @@ use objc2_foundation::{NSDictionary, NSObjectProtocol, NSPoint, NSRect, NSSize, 
 use super::view::EditorTextView;
 use crate::util::{constant, guarded, ns};
 
-pub struct OverlayIvars {
+pub(crate) struct OverlayIvars {
     editor: Weak<EditorTextView>,
     /// The insets its tooltip areas and pointer are for: where each is, in the overlay's coordinates, whether it has a
     /// tooltip and whether a click on it does something.
@@ -29,7 +29,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEEditorOverlay"]
     #[ivars = OverlayIvars]
-    pub struct Overlay;
+    pub(crate) struct Overlay;
 
     unsafe impl NSObjectProtocol for Overlay {}
 
@@ -92,7 +92,7 @@ define_class!(
 /// Puts an overlay over the part of `editor` on screen. It has a layer of its own: without one it would draw into the
 /// text view's layer, under the layers TextKit 2 draws the text in. Covering only what is on screen keeps that layer
 /// small in a long text.
-pub fn attach(editor: &EditorTextView) {
+pub(crate) fn attach(editor: &EditorTextView) {
     let this = Overlay::alloc(editor.mtm()).set_ivars(OverlayIvars {
         editor: Weak::from(editor),
         offered: RefCell::new(Vec::new()),
@@ -102,19 +102,19 @@ pub fn attach(editor: &EditorTextView) {
     this.setWantsLayer(true);
     this.setAccessibilityElement(false);
     editor.addSubview_positioned_relativeTo(&this, NSWindowOrderingMode::Above, None);
-    *editor.ivars().overlay.borrow_mut() = Some(Weak::from(&*this));
+    *editor.ivars().around.overlay.borrow_mut() = Some(Weak::from(&*this));
 }
 
 /// How often TextKit told an editor it laid out the lines on screen, for the self-test.
 #[cfg(feature = "selftest")]
-pub static LAID_OUT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+pub(crate) static LAID_OUT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
 /// TextKit laid out the lines on screen: the overlay moves over them and draws again, as what it draws follows the
 /// layout.
-pub fn laid_out(editor: &EditorTextView) {
+pub(crate) fn laid_out(editor: &EditorTextView) {
     #[cfg(feature = "selftest")]
     LAID_OUT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    if let Some(overlay) = editor.ivars().overlay.borrow().as_ref().and_then(Weak::load) {
+    if let Some(overlay) = editor.ivars().around.overlay.borrow().as_ref().and_then(Weak::load) {
         let subviews = editor.subviews();
         let on_top = subviews
             .lastObject()
@@ -128,9 +128,9 @@ pub fn laid_out(editor: &EditorTextView) {
 }
 
 /// Moves the overlay of `editor` and that of its diagnostics over the part on screen and draws it there.
-pub fn follow(editor: &EditorTextView) {
+pub(crate) fn follow(editor: &EditorTextView) {
     ide_ui_lsp::follow_squiggles(editor);
-    if let Some(overlay) = editor.ivars().overlay.borrow().as_ref().and_then(Weak::load) {
+    if let Some(overlay) = editor.ivars().around.overlay.borrow().as_ref().and_then(Weak::load) {
         let seen = editor.visibleRect();
         if overlay.frame() != seen {
             overlay.setFrame(seen);
@@ -143,8 +143,8 @@ pub fn follow(editor: &EditorTextView) {
 }
 
 /// Draws the overlay of `editor` again.
-pub fn redraw(editor: &EditorTextView) {
-    if let Some(overlay) = editor.ivars().overlay.borrow().as_ref().and_then(Weak::load) {
+pub(crate) fn redraw(editor: &EditorTextView) {
+    if let Some(overlay) = editor.ivars().around.overlay.borrow().as_ref().and_then(Weak::load) {
         overlay.setNeedsDisplay(true);
     }
 }

@@ -19,13 +19,13 @@ pub const CONSENT: Key<Vec<String>> = Key::user("commitMessageConsent", ide_core
 pub const CLAUDE: &str = "claude";
 
 /// The instruction every request goes with; the request's own text carries everything else.
-pub const SYSTEM: &str = "You write git commit messages.";
+pub(crate) const SYSTEM: &str = "You write git commit messages.";
 /// The longest message a model may write, in tokens.
 const MAX_TOKENS: u64 = 1024;
 
 /// What writes the message.
 #[derive(Clone)]
-pub enum Source {
+pub(crate) enum Source {
     /// A model of one of the own agent's endpoints.
     Provider {
         endpoint: Endpoint,
@@ -38,7 +38,7 @@ pub enum Source {
 
 /// Why a request ends without a message.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Failure {
+pub(crate) enum Failure {
     Cancelled,
     /// What went wrong, in the user's words.
     Failed(String),
@@ -46,7 +46,7 @@ pub enum Failure {
 
 impl Source {
     /// The model the settings name, or `claude` at `claude` when they name none; `Err` says why there is none.
-    pub fn resolve(
+    pub(crate) fn resolve(
         choice: Option<ModelChoice>,
         endpoint: impl Fn(&str) -> Option<Endpoint>,
         key: impl Fn(&Endpoint) -> Option<ApiKey>,
@@ -76,7 +76,7 @@ impl Source {
     }
 
     /// The source the settings and this Mac give now.
-    pub fn current() -> Result<Source, &'static str> {
+    pub(crate) fn current() -> Result<Source, &'static str> {
         Source::resolve(
             Settings::load_user().get(&MODEL),
             |id| crate::host::host().endpoint(id),
@@ -86,7 +86,7 @@ impl Source {
     }
 
     /// The name the consent is kept under; `None` for a model on this Mac, which needs none.
-    pub fn consent_id(&self) -> Option<String> {
+    pub(crate) fn consent_id(&self) -> Option<String> {
         match self {
             Source::Provider { endpoint, .. } if on_this_mac(endpoint) => None,
             Source::Provider { endpoint, .. } => Some(endpoint.id.clone()),
@@ -95,7 +95,7 @@ impl Source {
     }
 
     /// The provider's name for the user.
-    pub fn name(&self) -> String {
+    pub(crate) fn name(&self) -> String {
         match self {
             Source::Provider { endpoint, .. } => endpoint.name.clone(),
             Source::Claude(_) => "Claude (claude -p)".to_string(),
@@ -103,7 +103,7 @@ impl Source {
     }
 
     /// Sends `text` and hands each piece of the answer to `on` as it arrives; the whole message at the end.
-    pub fn send(&self, text: &str, cancel: &Cancel, on: &mut dyn FnMut(&str)) -> Result<String, Failure> {
+    pub(crate) fn send(&self, text: &str, cancel: &Cancel, on: &mut dyn FnMut(&str)) -> Result<String, Failure> {
         match self {
             Source::Provider { endpoint, model, key } => {
                 let provider = Provider::new(endpoint.clone(), key.clone(), Http::new());
@@ -136,7 +136,7 @@ impl Source {
 }
 
 /// Why no model can write commit messages now, if none can; reads no key.
-pub fn unavailable() -> Option<&'static str> {
+pub(crate) fn unavailable() -> Option<&'static str> {
     match Settings::load_user().get(&MODEL) {
         Some(choice) => crate::host::host().endpoint(&choice.endpoint).is_none().then(|| {
             t("Den Anbieter für Commit-Nachrichten gibt es nicht mehr. Wähle einen in den Einstellungen unter „Agent“.")
@@ -158,7 +158,7 @@ fn claude() -> Option<PathBuf> {
 
 /// Whether the model of `endpoint` runs on this Mac: Ollama or LM Studio at a loopback address. A server of another
 /// kind on this Mac may pass the request on to a service outside it, as proxies do.
-pub fn on_this_mac(endpoint: &Endpoint) -> bool {
+pub(crate) fn on_this_mac(endpoint: &Endpoint) -> bool {
     endpoint.kind.is_local() && loopback(&endpoint.base_url)
 }
 
@@ -177,12 +177,12 @@ fn loopback(url: &str) -> bool {
 }
 
 /// Whether the user allowed `id` to get the request.
-pub fn consented(id: &str) -> bool {
+pub(crate) fn consented(id: &str) -> bool {
     Settings::load_user().get(&CONSENT).iter().any(|c| c == id)
 }
 
 /// Keeps the user's consent for `id`.
-pub fn consent(id: &str) {
+pub(crate) fn consent(id: &str) {
     let mut settings = Settings::load_user();
     let mut all = settings.get(&CONSENT);
     if !all.iter().any(|c| c == id) {

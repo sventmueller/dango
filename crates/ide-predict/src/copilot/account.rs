@@ -47,7 +47,7 @@ pub struct DeviceCode {
     /// The page that asks for it.
     pub verification_uri: String,
     /// How long the code is good for.
-    pub expires_in: Duration,
+    pub(crate) expires_in: Duration,
 }
 
 /// GitHub's page for device codes, where the server sends the user when it does not name one.

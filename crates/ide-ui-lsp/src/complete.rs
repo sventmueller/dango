@@ -22,7 +22,7 @@ use objc2_foundation::{NSIndexSet, NSNotification, NSObjectProtocol, NSPoint, NS
 use super::{ViewState, server_by_id, server_of, servers_of, text};
 use crate::editor::Editor;
 use crate::host as editor;
-use ide_ui_common::util::{label, main_soon, ns};
+use ide_ui_common::util::{activate, label, main_soon, ns};
 
 const WIDTH: f64 = 440.0;
 const ROW: f64 = 20.0;
@@ -30,11 +30,11 @@ const VISIBLE_ROWS: f64 = 9.0;
 const MOST: usize = 200;
 
 /// The tab stops of an inserted snippet still to visit, in order; the last is where the cursor ends.
-pub struct Session {
+pub(crate) struct Session {
     stops: Vec<Range<usize>>,
 }
 
-pub struct ListIvars {
+pub(crate) struct ListIvars {
     panel: RefCell<Option<Retained<NSPanel>>>,
     table: RefCell<Option<Retained<NSTableView>>>,
     /// The editor it completes in, by its serial.
@@ -67,7 +67,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDECompletionList"]
     #[ivars = ListIvars]
-    pub struct CompletionList;
+    pub(crate) struct CompletionList;
 
     unsafe impl NSObjectProtocol for CompletionList {}
 
@@ -104,7 +104,7 @@ define_class!(
 
 /// The completion list on view.
 #[derive(Default)]
-pub struct Completion {
+pub(crate) struct Completion {
     list: RefCell<Option<Retained<CompletionList>>>,
 }
 
@@ -166,7 +166,7 @@ fn word_start(view: &dyn Editor, at: usize) -> usize {
 }
 
 /// Asks the server for completions at the cursor, as the menu command and trigger characters do.
-pub fn complete(view: &dyn Editor) {
+pub(crate) fn complete(view: &dyn Editor) {
     request(view, None);
 }
 
@@ -231,7 +231,7 @@ fn request(view: &dyn Editor, trigger: Option<String>) {
 }
 
 /// The user typed `typed` into `view`: the list filters or closes, a trigger character asks anew.
-pub fn typed(view: &dyn Editor, typed: &str) {
+pub(crate) fn typed(view: &dyn Editor, typed: &str) {
     if let Some(list) = open_for(view) {
         if typed.chars().all(is_word) {
             if list.ivars().incomplete.get() {
@@ -265,7 +265,7 @@ pub fn typed(view: &dyn Editor, typed: &str) {
 }
 
 /// A command of the keyboard reached `view`; whether the list or a snippet took it.
-pub fn command(view: &dyn Editor, command: Sel) -> bool {
+pub(crate) fn command(view: &dyn Editor, command: Sel) -> bool {
     if let Some(list) = open_for(view) {
         let step = |by: isize| list.step(by);
         match command {
@@ -293,7 +293,7 @@ pub fn command(view: &dyn Editor, command: Sel) -> bool {
 }
 
 /// After a command the editor ran itself, such as deleting backwards: the list follows or closes.
-pub fn after_command(view: &dyn Editor, command: Sel) {
+pub(crate) fn after_command(view: &dyn Editor, command: Sel) {
     if let Some(list) = open_for(view)
         && command == sel!(deleteBackward:)
     {
@@ -306,14 +306,14 @@ pub fn after_command(view: &dyn Editor, command: Sel) {
 }
 
 /// Closes the list if it belongs to `view`.
-pub fn dismiss_for(view: &dyn Editor) {
+pub(crate) fn dismiss_for(view: &dyn Editor) {
     if let Some(list) = open_for(view) {
         list.close();
     }
 }
 
 /// Keeps the tab stops of a snippet on their text while it is edited.
-pub fn shift(state: &mut ViewState, change: &Change) {
+pub(crate) fn shift(state: &mut ViewState, change: &Change) {
     if let Some(session) = &mut state.snippet {
         for stop in &mut session.stops {
             super::decorate::follow(stop, change);
@@ -593,7 +593,7 @@ impl CompletionList {
         }
     }
 
-    pub fn close(&self) {
+    pub(crate) fn close(&self) {
         if let Some(panel) = self.ivars().panel.borrow().as_ref() {
             if let Some(parent) = panel.parentWindow() {
                 parent.removeChildWindow(panel);
@@ -680,7 +680,7 @@ fn row_view(mtm: MainThreadMarker, item: &CompletionItem) -> Retained<NSView> {
         250.0,
         objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
     );
-    for constraint in [
+    activate([
         name.leadingAnchor()
             .constraintEqualToAnchor_constant(&cell.leadingAnchor(), 8.0),
         name.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
@@ -691,9 +691,7 @@ fn row_view(mtm: MainThreadMarker, item: &CompletionItem) -> Retained<NSView> {
             .trailingAnchor()
             .constraintEqualToAnchor_constant(&cell.trailingAnchor(), -8.0),
         detail.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     cell
 }
 

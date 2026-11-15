@@ -12,7 +12,7 @@ use objc2_foundation::NSRange;
 use splat_markdown::code::CodeToken;
 
 use super::snappy::{BUDGET, measure};
-use super::{check, finish, helpers};
+use super::{check, finish, give_up, helpers};
 use crate::editor::{self, EditorTextView};
 
 const SCENARIO: &str = "snappy-recolor";
@@ -82,13 +82,12 @@ pub(super) fn no_longer(name: &'static str, done: bool, plain: Duration) {
     );
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let code = code();
     helpers::open_project(SCENARIO, PROJECT, &[(FILE, &code)], |_| {
         helpers::wait_for_editor(&root(), &root().join(FILE), |view| {
             let Some(view) = view else {
-                check("the file of 10 000 lines opens", false, "");
-                return finish(SCENARIO);
+                return give_up(SCENARIO, "the file of 10 000 lines opens");
             };
             helpers::wait_within(
                 COLOURED,
@@ -101,7 +100,9 @@ pub fn run() {
 
 /// Two keystrokes inside a name, as many as `/*` takes, which change the colour of no other line, for comparison.
 fn plain_keystroke() {
-    let Some(view) = big() else { return finish(SCENARIO) };
+    let Some(view) = big() else {
+        return give_up(SCENARIO, "the big file opens in an editor");
+    };
     measure();
     helpers::type_at(&view, NSRange::new(11, 0), "xy");
     helpers::after(KEYSTROKE, || {
@@ -114,7 +115,9 @@ fn plain_keystroke() {
 }
 
 fn open_comment(plain: Duration) {
-    let Some(view) = big() else { return finish(SCENARIO) };
+    let Some(view) = big() else {
+        return give_up(SCENARIO, "the big file opens in an editor");
+    };
     check(
         "the lines on screen show their keywords before the edit",
         screen_coloured(&view, CodeToken::Keyword),
@@ -137,7 +140,9 @@ fn open_comment(plain: Duration) {
 }
 
 fn scroll_to_end(plain: Duration) {
-    let Some(view) = big() else { return finish(SCENARIO) };
+    let Some(view) = big() else {
+        return give_up(SCENARIO, "the big file opens in an editor");
+    };
     measure();
     let near_end = view.line_start(FUNCTIONS * 5 - 40).unwrap_or(0);
     view.scrollRangeToVisible(NSRange::new(near_end, 0));
@@ -162,7 +167,9 @@ fn scroll_to_end(plain: Duration) {
 }
 
 fn close_comment(plain: Duration) {
-    let Some(view) = big() else { return finish(SCENARIO) };
+    let Some(view) = big() else {
+        return give_up(SCENARIO, "the big file opens in an editor");
+    };
     measure();
     delete(&view, NSRange::new(0, 2));
     helpers::wait_within(

@@ -4,22 +4,24 @@
 use ide_core::LockIgnoringPoison;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
-use ide_git::{Checkpoint, Checkpoints, Git, Restore, RestoreOptions};
-use ide_process::Supervisor;
+use ide_git::{Checkpoint, CheckpointThread, Checkpoints, Restore, RestoreOptions};
 
-/// The checkpoints of one folder, opened on first use.
+use crate::Host;
+
+/// The checkpoints of one folder, opened on first use with the app's git.
 #[derive(Clone)]
-pub struct Store {
+pub(crate) struct Store {
     folder: PathBuf,
+    host: &'static (dyn Host + Sync),
     open: Arc<Mutex<Option<Checkpoints>>>,
 }
 
 impl Store {
-    pub fn new(folder: PathBuf) -> Store {
+    pub(crate) fn new(folder: PathBuf, host: &'static (dyn Host + Sync)) -> Store {
         Store {
             folder,
+            host,
             open: Arc::new(Mutex::new(None)),
         }
     }
@@ -29,8 +31,8 @@ impl Store {
         let checkpoints = match open.take() {
             Some(checkpoints) => checkpoints,
             None => {
-                let env = ide_ui_common::window::environment(Duration::from_secs(10));
-                Checkpoints::open(&Git::new(Supervisor::global(), env), &self.folder)?
+                let git = self.host.git().ok_or(ide_git::Error::GitMissing)?;
+                Checkpoints::open(&git, &self.folder)?
             }
         };
         f(open.insert(checkpoints))
@@ -38,7 +40,7 @@ impl Store {
 
     /// Takes a checkpoint for `thread` with the unsaved `buffers` on a worker thread and hands it to `done` there;
     /// `None` when it failed.
-    pub fn create(
+    pub(crate) fn create(
         &self,
         thread: String,
         label: String,
@@ -47,7 +49,7 @@ impl Store {
     ) {
         let store = self.clone();
         let spawned = ide_ui_common::util::spawn_with("checkpoint", done, move |done| {
-            let created = store.with(|c| c.create(&thread, &label, &buffers));
+            let created = store.with(|c| c.create(&CheckpointThread::new(thread)?, &label, &buffers));
             match created {
                 Ok(created) => done(Some(created.checkpoint)),
                 Err(error) => {
@@ -63,7 +65,7 @@ impl Store {
     }
 
     /// Records the end of the turn `checkpoint` started, on a worker thread.
-    pub fn finish(&self, checkpoint: Checkpoint, done: impl FnOnce(Checkpoint) + Send + 'static) {
+    pub(crate) fn finish(&self, checkpoint: Checkpoint, done: impl FnOnce(Checkpoint) + Send + 'static) {
         let store = self.clone();
         if let Err(why) =
             ide_ui_common::util::spawn("checkpoint", move || match store.with(|c| c.finish(&checkpoint)) {
@@ -76,7 +78,7 @@ impl Store {
     }
 
     /// Brings `checkpoint` back on a worker thread and hands the outcome to `done` there, the buffers by full path.
-    pub fn restore(
+    pub(crate) fn restore(
         &self,
         checkpoint: Checkpoint,
         options: RestoreOptions,
@@ -102,7 +104,7 @@ impl Store {
 
 /// Why a checkpoint did not come back.
 #[derive(Debug)]
-pub enum RestoreError {
+pub(crate) enum RestoreError {
     /// git refused.
     Git(ide_git::Error),
     /// No thread could do it.

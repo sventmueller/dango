@@ -2,12 +2,11 @@
 //! Homebrew, rustup, go and npm's folders, so language servers and agents would not be found.
 
 use std::ffi::CStr;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::mpsc::channel;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
+use crate::pipes::Pipes;
 use crate::supervisor::{Kind, Supervisor};
 
 /// Marks the start and end of the environment in the shell's output, which may also hold what its startup files print.
@@ -29,18 +28,34 @@ pub enum CaptureError {
 
 /// The user's login shell from the user database, else `/bin/zsh`.
 pub fn user_shell() -> PathBuf {
-    // SAFETY: getpwuid returns a pointer into static storage or null; it is read at once on this thread.
-    let shell = unsafe {
-        let entry = libc::getpwuid(libc::getuid());
-        if entry.is_null() || (*entry).pw_shell.is_null() {
-            None
-        } else {
-            Some(CStr::from_ptr((*entry).pw_shell).to_string_lossy().into_owned())
-        }
-    };
-    shell
+    login_shell()
         .filter(|s| !s.is_empty())
         .map_or_else(|| PathBuf::from("/bin/zsh"), PathBuf::from)
+}
+
+/// The shell the user database names for the user, read with `getpwuid_r`, which any thread may call.
+fn login_shell() -> Option<String> {
+    // SAFETY: getuid only reads the calling process's user id.
+    let uid = unsafe { libc::getuid() };
+    let mut space = 1024;
+    loop {
+        let mut buffer = vec![0 as libc::c_char; space];
+        // SAFETY: passwd is plain data for which all zero bytes are a valid value.
+        let mut entry: libc::passwd = unsafe { std::mem::zeroed() };
+        let mut found: *mut libc::passwd = std::ptr::null_mut();
+        // SAFETY: entry and found are live locals and the buffer holds `space` bytes; getpwuid_r writes the entry's
+        // strings into that buffer and nowhere else.
+        let status = unsafe { libc::getpwuid_r(uid, &raw mut entry, buffer.as_mut_ptr(), space, &raw mut found) };
+        if status == libc::ERANGE && space < 1 << 20 {
+            space *= 4;
+            continue;
+        }
+        if status != 0 || found.is_null() || entry.pw_shell.is_null() {
+            return None;
+        }
+        // SAFETY: On success pw_shell points to a string ending in a zero byte within `buffer`, which is still alive.
+        return Some(unsafe { CStr::from_ptr(entry.pw_shell) }.to_string_lossy().into_owned());
+    }
 }
 
 /// The environment `shell` has as an interactive login shell in `dir`.
@@ -63,17 +78,32 @@ pub fn capture(
     let spawned = supervisor
         .spawn(command, Kind::Tool, "login shell")
         .map_err(CaptureError::Start)?;
-    let mut stdout = spawned.stdout.ok_or(CaptureError::NoEnvironment)?;
-    let (tx, rx) = channel();
-    std::thread::spawn(move || {
-        let mut output = Vec::new();
-        let _ = stdout.read_to_end(&mut output);
-        let _ = tx.send(output);
-    });
-    let Ok(output) = rx.recv_timeout(timeout) else {
-        supervisor.stop(spawned.id, Duration::from_millis(500));
-        return Err(CaptureError::Timeout);
+    let stop = || supervisor.stop(spawned.id, Duration::from_millis(500));
+    let Some(stdout) = spawned.stdout else {
+        stop();
+        return Err(CaptureError::NoEnvironment);
     };
+    let mut pipes = Pipes::new(None, None, Some(stdout), None).map_err(|error| {
+        stop();
+        CaptureError::Start(error)
+    })?;
+    let deadline = Instant::now() + timeout;
+    let mut output = Vec::new();
+    while pipes.open() {
+        let Some(left) = deadline
+            .checked_duration_since(Instant::now())
+            .filter(|left| !left.is_zero())
+        else {
+            stop();
+            return Err(CaptureError::Timeout);
+        };
+        if pipes
+            .step(Some(left), &mut |_, bytes| output.extend_from_slice(bytes))
+            .is_err()
+        {
+            break;
+        }
+    }
     parse(&output).ok_or(CaptureError::NoEnvironment)
 }
 
@@ -149,7 +179,37 @@ mod tests {
     }
 
     #[test]
+    fn an_environment_printed_in_pieces_is_read_whole() {
+        let supervisor = Supervisor::new();
+        let script_dir = ide_core::testing::scratch("pieces");
+        let shell = script_dir.join("slow.sh");
+        let script = format!(
+            "#!/bin/sh\nprintf '%s' '{MARK}'\nsleep 0.2\nprintf 'A=1\\000'\nsleep 0.2\nprintf 'B=2\\000{MARK}'\n"
+        );
+        std::fs::write(&shell, script).unwrap();
+        std::fs::set_permissions(&shell, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
+        let env = capture(&supervisor, &shell, &script_dir, Duration::from_secs(10)).unwrap();
+        assert_eq!(
+            env,
+            [("A".to_string(), "1".to_string()), ("B".to_string(), "2".to_string())]
+        );
+    }
+
+    #[test]
     fn the_users_shell_is_a_path() {
         assert!(user_shell().is_absolute());
+    }
+
+    #[test]
+    fn threads_reading_the_users_shell_at_once_all_read_the_same() {
+        let first = login_shell().expect("the user database knows the user running the tests");
+        let threads: Vec<_> = (0..16)
+            .map(|_| std::thread::spawn(|| (0..200).map(|_| login_shell()).collect::<Vec<_>>()))
+            .collect();
+        for thread in threads {
+            for shell in thread.join().unwrap() {
+                assert_eq!(shell.as_ref(), Some(&first));
+            }
+        }
     }
 }

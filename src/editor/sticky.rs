@@ -28,11 +28,11 @@ const LINE_PADDING: f64 = 5.0;
 
 /// How many header lines editors hold, as the user last chose; read from the settings once.
 #[derive(Default)]
-pub struct Lines(Cell<Option<usize>>);
+pub(crate) struct Lines(Cell<Option<usize>>);
 
 impl Lines {
     /// Reads the setting again on next use.
-    pub fn forget(&self) {
+    pub(crate) fn forget(&self) {
         self.0.set(None);
     }
 }
@@ -42,7 +42,7 @@ fn context() -> Option<std::rc::Rc<crate::context::AppContext>> {
 }
 
 /// How many header lines editors hold at most, 0 while Sticky Scroll is off.
-pub fn lines() -> usize {
+pub(crate) fn lines() -> usize {
     let Some(cx) = context() else { return 0 };
     let cell = &cx.editor().sticky.0;
     cell.get().unwrap_or_else(|| {
@@ -53,7 +53,7 @@ pub fn lines() -> usize {
 }
 
 /// Turns Sticky Scroll off, or on with five lines, in every editor and remembers the choice.
-pub fn toggle() {
+pub(crate) fn toggle() {
     let value = if lines() > 0 { 0 } else { DEFAULT_LINES };
     if let Some(cx) = context() {
         cx.editor().sticky.0.set(Some(value));
@@ -68,7 +68,7 @@ pub fn toggle() {
 }
 
 /// Whether `item` is the menu item of Sticky Scroll, which then gets its check mark.
-pub fn validate(item: &NSMenuItem) -> Option<bool> {
+pub(crate) fn validate(item: &NSMenuItem) -> Option<bool> {
     if item.action() != Some(objc2::sel!(ideToggleStickyScroll:)) {
         return None;
     }
@@ -81,18 +81,18 @@ pub fn validate(item: &NSMenuItem) -> Option<bool> {
 }
 
 fn of(view: &EditorTextView) -> Option<Retained<Sticky>> {
-    view.ivars().sticky.borrow().as_ref().and_then(Weak::load)
+    view.ivars().around.sticky.borrow().as_ref().and_then(Weak::load)
 }
 
 /// Finds the blocks and headers of `view` again and draws them.
-pub fn refresh(view: &EditorTextView) {
+pub(crate) fn refresh(view: &EditorTextView) {
     if let Some(sticky) = of(view) {
         sticky.update(true);
     }
 }
 
 /// The height the headers of `view` take over its text.
-pub fn height(view: &EditorTextView) -> f64 {
+pub(crate) fn height(view: &EditorTextView) -> f64 {
     of(view).map_or(0.0, |sticky| sticky.frame().size.height)
 }
 
@@ -112,7 +112,7 @@ fn scopes(view: &EditorTextView) -> super::fold::Lines {
 
 /// The header lines over `top`, the first line under them: the blocks that start above it and end on or after it,
 /// outermost first, at most `most`, one per line; `scopes` are ordered by header line.
-pub fn headers_over(scopes: &[(usize, usize)], top: usize, most: usize) -> Vec<usize> {
+pub(crate) fn headers_over(scopes: &[(usize, usize)], top: usize, most: usize) -> Vec<usize> {
     let above = scopes.partition_point(|(head, _)| *head < top);
     let mut lines: Vec<usize> = Vec::new();
     for (head, _) in scopes[..above].iter().filter(|(_, end)| *end >= top) {
@@ -126,7 +126,7 @@ pub fn headers_over(scopes: &[(usize, usize)], top: usize, most: usize) -> Vec<u
     lines
 }
 
-pub struct StickyIvars {
+pub(crate) struct StickyIvars {
     editor: Weak<EditorTextView>,
     scroll: Weak<NSScrollView>,
     height: RefCell<Option<Retained<NSLayoutConstraint>>>,
@@ -145,7 +145,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEStickyScroll"]
     #[ivars = StickyIvars]
-    pub struct Sticky;
+    pub(crate) struct Sticky;
 
     unsafe impl NSObjectProtocol for Sticky {}
 
@@ -169,7 +169,7 @@ define_class!(
 
 impl Sticky {
     /// The headers of `editor`, over `scroll` and the columns before it, updated as it scrolls.
-    pub fn new(mtm: MainThreadMarker, scroll: &NSScrollView, editor: &EditorTextView) -> Retained<Sticky> {
+    pub(crate) fn new(mtm: MainThreadMarker, scroll: &NSScrollView, editor: &EditorTextView) -> Retained<Sticky> {
         let this = Self::alloc(mtm).set_ivars(StickyIvars {
             editor: Weak::from(editor),
             scroll: Weak::from(scroll),
@@ -198,12 +198,12 @@ impl Sticky {
             },
         );
         let _ = this.ivars().scrolled.set(watch);
-        *editor.ivars().sticky.borrow_mut() = Some(Weak::from(&*this));
+        *editor.ivars().around.sticky.borrow_mut() = Some(Weak::from(&*this));
         this
     }
 
     /// Holds the headers at `constraint`'s height, zero while there are none.
-    pub fn set_height_constraint(&self, constraint: Retained<NSLayoutConstraint>) {
+    pub(crate) fn set_height_constraint(&self, constraint: Retained<NSLayoutConstraint>) {
         *self.ivars().height.borrow_mut() = Some(constraint);
     }
 
@@ -352,7 +352,7 @@ fn scroll_line_to_top(editor: &EditorTextView, line: usize, above: f64) {
 }
 
 /// Moves `editor` so that `range`, already scrolled into view, does not end up under the headers.
-pub fn keep_clear(editor: &EditorTextView, range: NSRange) {
+pub(crate) fn keep_clear(editor: &EditorTextView, range: NSRange) {
     let covered = height(editor);
     if covered <= 0.0 {
         return;
@@ -483,4 +483,4 @@ mod tests {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

@@ -17,7 +17,7 @@
 //! assert_eq!(vim.mode(), Mode::Insert);
 //! ```
 
-#![warn(missing_docs, unreachable_pub)]
+#![warn(missing_docs)]
 
 mod search;
 
@@ -36,7 +36,7 @@ use modalkit::key::TerminalKey;
 use modalkit::keybindings::BindingMachine;
 use modalkit::prelude::{EditTarget, IndentChange, RepeatType, ViewportContext};
 
-pub use search::Search;
+use search::Search;
 
 /// The mode the keys are in, as the status bar shows it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -213,7 +213,7 @@ impl Vim {
     }
 
     /// Feeds one key.
-    pub fn key(&mut self, key: TerminalKey) -> Outcome {
+    pub(crate) fn key(&mut self, key: TerminalKey) -> Outcome {
         let mut effects = Vec::new();
         if self.search.is_open() || (self.mode() == Mode::Normal && search::opens(&key)) {
             let (cursor, text) = (self.cursor(), self.text());
@@ -224,7 +224,7 @@ impl Vim {
                     effects.push(Effect::Highlight(Some(pattern)));
                 }
                 search::Step::Command(command) => effects.extend(self.ex(&command)),
-                search::Step::Failed(message) => effects.push(Effect::Message(message)),
+                search::Step::Failed(miss) => effects.push(Effect::Message(miss.to_string())),
             }
             return Outcome {
                 replacements: Vec::new(),
@@ -370,7 +370,7 @@ impl Vim {
                     self.set_cursor(cursor.0, 0);
                     Vec::new()
                 }
-                Some(Err(message)) => vec![Effect::Message(message)],
+                Some(Err(miss)) => vec![Effect::Message(miss.to_string())],
                 None => vec![Effect::Message(format!("unsupported: :{command}"))],
             },
         }
@@ -395,7 +395,7 @@ fn shadow(text: &str) -> String {
 }
 
 /// The keys of `keys`, written as Vim writes them: single characters and names in angle brackets such as `<Esc>`.
-pub fn parse(keys: &str) -> Vec<TerminalKey> {
+pub(crate) fn parse(keys: &str) -> Vec<TerminalKey> {
     let mut out = Vec::new();
     let mut rest = keys;
     while let Some(first) = rest.chars().next() {
@@ -540,5 +540,7 @@ fn position(rope: &ropey::Rope, index: usize) -> (usize, usize) {
     (line, char - rope.line_to_char(line))
 }
 
+#[cfg(test)]
+mod property_tests;
 #[cfg(test)]
 mod tests;

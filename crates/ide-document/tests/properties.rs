@@ -1,5 +1,7 @@
 //! Properties of edits, positions and the three-way merge, checked against simple models over generated texts (E96).
-//! The seed is fixed, so two runs of `make check` try the same cases; a failure is kept in `proptest-regressions/`.
+//! The seed is fixed, so two runs of `make check` try the same cases; `make fuzz ARGS=properties` sets
+//! `PROPTEST_RNG_SEED` and `PROPTEST_CASES`, which proptest reads over it. A failure is kept in
+//! `properties.proptest-regressions` beside this file.
 
 use ide_document::merge::{self, Reconciliation};
 use ide_document::{Document, Edit, Text, Unit};

@@ -11,6 +11,7 @@ use objc2::DefinedClass;
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2_app_kit::NSTextElementProvider;
+use std::cell::{Cell, RefCell};
 use std::ops::Range;
 use std::time::{Duration, Instant};
 
@@ -20,10 +21,21 @@ use objc2::sel;
 use objc2_app_kit::{NSColor, NSForegroundColorAttributeName, NSTextContentStorage, NSTextLayoutManager};
 use objc2_foundation::{NSMutableAttributedString, NSPoint, NSRange};
 
-pub use self::unpainted::Unpainted;
+pub(crate) use self::unpainted::Unpainted;
 use super::style::{palette_color, token_color};
 use super::view::EditorTextView;
 use crate::util::{constant, with_editing};
+
+/// What an editor still has to paint.
+#[derive(Default)]
+pub(crate) struct Paint {
+    /// The lines whose colours wait to be painted.
+    pub(super) unpainted: RefCell<Unpainted>,
+    /// The lines whose Markdown font traits wait to be painted into the storage.
+    pub(super) unstyled: RefCell<Unpainted>,
+    /// Markdown's font traits were painted into the storage, which another language takes out again.
+    pub(super) styled: Cell<bool>,
+}
 
 /// How long one slice of background colouring may hold the main thread.
 const SLICE: Duration = Duration::from_millis(4);
@@ -32,24 +44,28 @@ const SLICE: Duration = Duration::from_millis(4);
 const MARGIN: usize = 40;
 
 /// Marks the lines `change` touched for painting, which `schedule` then does.
-pub fn edited(view: &EditorTextView, change: &Change) {
+pub(crate) fn edited(view: &EditorTextView, change: &Change) {
     let (first, old_end, new_end) = (change.start.line, change.old_end.line, change.new_end.line);
-    view.ivars().unpainted.borrow_mut().edited(first, old_end, new_end);
+    view.ivars()
+        .paint
+        .unpainted
+        .borrow_mut()
+        .edited(first, old_end, new_end);
     if is_markdown(view) {
-        view.ivars().unstyled.borrow_mut().edited(first, old_end, new_end);
+        view.ivars().paint.unstyled.borrow_mut().edited(first, old_end, new_end);
     }
 }
 
 /// Marks `lines`, whose colours changed, for painting.
 fn changed(view: &EditorTextView, lines: Range<usize>) {
     if is_markdown(view) {
-        view.ivars().unstyled.borrow_mut().add(lines.clone());
+        view.ivars().paint.unstyled.borrow_mut().add(lines.clone());
     }
-    view.ivars().unpainted.borrow_mut().add(lines);
+    view.ivars().paint.unpainted.borrow_mut().add(lines);
 }
 
 /// Colours what an edit changed once the run loop comes round.
-pub fn schedule(view: &EditorTextView) {
+pub(crate) fn schedule(view: &EditorTextView) {
     view.later(sel!(ideColorStep), 0.0);
 }
 
@@ -60,7 +76,7 @@ fn is_markdown(view: &EditorTextView) -> bool {
 /// Lexes and paints the visible lines and, in a step that had nothing to paint on screen, lexes a slice of the rest
 /// while the document is not lexed through. The step after a keystroke thus shares its turn of the run loop with
 /// little more than the keystroke's own drawing, and catching up above the screen stops when the slice is over.
-pub fn step(view: &EditorTextView) {
+pub(crate) fn step(view: &EditorTextView) {
     let start = Instant::now();
     let visible = visible_lines(view);
     let lines = view.document_mut().highlight_within(visible.clone(), SLICE);
@@ -87,23 +103,23 @@ pub fn step(view: &EditorTextView) {
 }
 
 /// After TextKit laid out the lines on screen: those whose colours wait get them before they are drawn.
-pub fn laid_out(view: &EditorTextView) {
-    if view.ivars().unpainted.borrow().is_empty() && view.ivars().unstyled.borrow().is_empty() {
+pub(crate) fn laid_out(view: &EditorTextView) {
+    if view.ivars().paint.unpainted.borrow().is_empty() && view.ivars().paint.unstyled.borrow().is_empty() {
         return;
     }
     let visible = visible_lines(view);
-    if view.ivars().unpainted.borrow().meets(&visible)
-        || view.ivars().unstyled.borrow().meets(&on_screen(view, &visible))
+    if view.ivars().paint.unpainted.borrow().meets(&visible)
+        || view.ivars().paint.unstyled.borrow().meets(&on_screen(view, &visible))
     {
         paint_due(view, &visible);
     }
 }
 
 /// Colours everything again, after the whole text was replaced or its language changed.
-pub fn recolor_all(view: &EditorTextView) {
+pub(crate) fn recolor_all(view: &EditorTextView) {
     let markdown = is_markdown(view);
-    if view.ivars().styled.get() && !markdown {
-        view.ivars().styled.set(false);
+    if view.ivars().paint.styled.get() && !markdown {
+        view.ivars().paint.styled.set(false);
         if let Some(storage) = view.storage() {
             let whole = NSRange::new(0, storage.length());
             with_editing(&storage, || {
@@ -114,8 +130,8 @@ pub fn recolor_all(view: &EditorTextView) {
     let lines = view.document().text().line_count();
     let visible = visible_lines(view);
     let _ = view.document_mut().highlight_within(visible.clone(), SLICE);
-    *view.ivars().unpainted.borrow_mut() = Unpainted::default();
-    *view.ivars().unstyled.borrow_mut() = Unpainted::default();
+    *view.ivars().paint.unpainted.borrow_mut() = Unpainted::default();
+    *view.ivars().paint.unstyled.borrow_mut() = Unpainted::default();
     changed(view, 0..lines.max(1));
     paint_due(view, &visible);
     schedule(view);
@@ -130,19 +146,24 @@ fn on_screen(view: &EditorTextView, visible: &Range<usize>) -> Range<usize> {
 
 /// Paints the lines of `lines` whose colours wait; whether there were any.
 fn paint_due(view: &EditorTextView, lines: &Range<usize>) -> bool {
-    let due = view.ivars().unpainted.borrow_mut().take_in(lines);
-    let restyle = view.ivars().unstyled.borrow_mut().take_in(&on_screen(view, lines));
+    let due = view.ivars().paint.unpainted.borrow_mut().take_in(lines);
+    let restyle = view
+        .ivars()
+        .paint
+        .unstyled
+        .borrow_mut()
+        .take_in(&on_screen(view, lines));
     if let Some(restyle) = restyle.clone()
         && !traits::paint(view, restyle.clone())
     {
-        view.ivars().unstyled.borrow_mut().add(restyle);
+        view.ivars().paint.unstyled.borrow_mut().add(restyle);
     }
     let Some(due) = due else { return restyle.is_some() };
     if let Some(utf16) = paint_shown(view, due.clone()) {
         ide_ui_lsp::paint_tokens(view, &utf16);
         view.paint_found();
     } else {
-        view.ivars().unpainted.borrow_mut().add(due);
+        view.ivars().paint.unpainted.borrow_mut().add(due);
     }
     true
 }
@@ -158,7 +179,7 @@ pub(super) fn paint_under_server(view: &EditorTextView, range: &Range<usize>) {
         };
         line(range.start)..line(range.end) + 1
     };
-    let _ = view.ivars().unpainted.borrow_mut().take_in(&lines);
+    let _ = view.ivars().paint.unpainted.borrow_mut().take_in(&lines);
     let _ = paint_shown(view, lines);
 }
 
@@ -261,7 +282,7 @@ pub(super) fn lines_in(view: &EditorTextView, rect: objc2_foundation::NSRect) ->
 }
 
 /// The line laid out at `point` of the view.
-pub fn line_at(view: &EditorTextView, point: NSPoint) -> Option<usize> {
+pub(crate) fn line_at(view: &EditorTextView, point: NSPoint) -> Option<usize> {
     let layout = view.textLayoutManager()?;
     let content = view.textContentStorage()?;
     let origin = view.textContainerOrigin();
@@ -295,4 +316,4 @@ fn part(line: NSRange, start: u32, end: u32) -> Option<NSRange> {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

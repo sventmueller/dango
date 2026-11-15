@@ -41,7 +41,7 @@ pub(super) const CLICK_GAP: Duration = Duration::from_millis(200);
 pub(super) const SECOND: &str = "zweite.md";
 
 /// Runs these steps and those of `dictation_failures` for the editor field `target`, then `then`.
-pub fn run(target: Target, then: fn()) {
+pub(crate) fn run(target: Target, then: fn()) {
     failure_texts();
     menu_bar(target, then);
 }

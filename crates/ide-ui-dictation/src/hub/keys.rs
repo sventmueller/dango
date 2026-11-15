@@ -14,7 +14,7 @@ use lowspeak::models::ApiProvider;
 pub const PROVIDERS: [ApiProvider; 2] = [ApiProvider::OpenAi, ApiProvider::Groq];
 
 /// The keychain account of `provider`'s key, under the app's own service.
-pub fn account(provider: ApiProvider) -> &'static str {
+pub(super) fn account(provider: ApiProvider) -> &'static str {
     match provider {
         ApiProvider::OpenAi => "dictation.openai",
         ApiProvider::Groq => "dictation.groq",
@@ -22,20 +22,20 @@ pub fn account(provider: ApiProvider) -> &'static str {
 }
 
 /// The app's dictation keys, read from the store once and then kept in memory.
-pub struct Keys {
+pub(super) struct Keys {
     store: Arc<dyn SecretStore>,
     known: Mutex<HashMap<ApiProvider, Option<String>>>,
 }
 
 impl Keys {
-    pub fn new(store: Arc<dyn SecretStore>) -> Keys {
+    pub(super) fn new(store: Arc<dyn SecretStore>) -> Keys {
         Keys {
             store,
             known: Mutex::new(HashMap::new()),
         }
     }
 
-    pub fn get(&self, provider: ApiProvider) -> Option<String> {
+    pub(super) fn get(&self, provider: ApiProvider) -> Option<String> {
         let mut known = self.known.lock_ignoring_poison();
         known
             .entry(provider)
@@ -52,12 +52,12 @@ impl Keys {
             .clone()
     }
 
-    pub fn has(&self, provider: ApiProvider) -> bool {
+    pub(super) fn has(&self, provider: ApiProvider) -> bool {
         self.get(provider).is_some()
     }
 
     /// Keeps `key` for the provider its prefix names; the provider, or why not.
-    pub fn save(&self, key: &str) -> Result<ApiProvider, KeyError> {
+    pub(super) fn save(&self, key: &str) -> Result<ApiProvider, KeyError> {
         let key = key.trim();
         let provider = ApiProvider::from_api_key(key).ok_or(KeyError::UnknownFormat)?;
         self.store.set(account(provider), key).map_err(KeyError::Keychain)?;
@@ -67,7 +67,7 @@ impl Keys {
         Ok(provider)
     }
 
-    pub fn remove(&self, provider: ApiProvider) -> Result<(), KeyError> {
+    pub(super) fn remove(&self, provider: ApiProvider) -> Result<(), KeyError> {
         self.store.delete(account(provider)).map_err(KeyError::Keychain)?;
         self.known.lock_ignoring_poison().insert(provider, None);
         Ok(())
@@ -116,7 +116,7 @@ impl ide_core::explain::Explain for KeyError {
 }
 
 /// The keys as lowspeak's pipeline asks for them.
-pub struct Shared(pub Arc<Keys>);
+pub(super) struct Shared(pub Arc<Keys>);
 
 impl KeyStore for Shared {
     fn load(&self, provider: ApiProvider) -> Option<String> {
@@ -126,7 +126,7 @@ impl KeyStore for Shared {
 
 /// What the app asks before a dictation that needs a key it lacks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Question {
+pub(super) enum Question {
     /// Lowspeak keeps a key for the provider: take it over?
     TakeOver(ApiProvider),
     /// Enter a key for the provider.
@@ -135,7 +135,7 @@ pub enum Question {
 
 /// The question for a dictation whose missing key is `missing`, once per provider and run; `lowspeak_has` tells
 /// whether Lowspeak keeps a key, asked without reading it.
-pub fn question(
+pub(super) fn question(
     missing: Option<ApiProvider>,
     asked: &mut HashSet<ApiProvider>,
     lowspeak_has: impl Fn(ApiProvider) -> bool,
@@ -153,14 +153,14 @@ pub fn question(
 
 /// What became of taking Lowspeak's key over.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TakeOver {
+pub(super) enum TakeOver {
     Done(ApiProvider),
     /// Lowspeak's item was gone, or macOS did not hand it out; the user may enter a key instead.
     Unread(KeyError),
 }
 
 /// Reads Lowspeak's key for `provider` once, through `read`, and keeps it as the app's own.
-pub fn take_over(
+pub(super) fn take_over(
     keys: &Keys,
     provider: ApiProvider,
     read: impl FnOnce(ApiProvider) -> Result<Option<String>, super::engine::EngineError>,

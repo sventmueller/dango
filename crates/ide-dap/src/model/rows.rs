@@ -16,7 +16,7 @@ pub enum Section {
 
 impl Section {
     /// Every section, in the panel's order.
-    pub const ALL: [Section; 2] = [Section::Sessions, Section::Breakpoints];
+    pub(crate) const ALL: [Section; 2] = [Section::Sessions, Section::Breakpoints];
 
     /// The name it is kept under.
     pub fn name(self) -> &'static str {
@@ -44,46 +44,6 @@ pub enum Key {
     Filter(String),
     /// A breakpoint, by file and line.
     Breakpoint(PathBuf, usize),
-}
-
-impl Key {
-    /// The key as text, for the outline view.
-    pub fn encode(&self) -> String {
-        match self {
-            Key::Section(section) => format!("S:{}", section.name()),
-            Key::Empty(section) => format!("E:{}", section.name()),
-            Key::Session(id) => format!("s:{id}"),
-            Key::Thread(id, thread) => format!("t:{id}:{thread}"),
-            Key::Frame(id, thread, index) => format!("f:{id}:{thread}:{index}"),
-            Key::Filter(filter) => format!("x:{filter}"),
-            Key::Breakpoint(path, line) => format!("b:{line}:{}", path.display()),
-        }
-    }
-
-    /// The key from its text.
-    pub fn decode(text: &str) -> Option<Key> {
-        let (kind, rest) = text.split_once(':')?;
-        let section = |name: &str| Section::ALL.into_iter().find(|s| s.name() == name);
-        let mut numbers = rest.split(':');
-        let mut number = || numbers.next()?.parse::<i64>().ok();
-        match kind {
-            "S" => section(rest).map(Key::Section),
-            "E" => section(rest).map(Key::Empty),
-            "s" => Some(Key::Session(u64::try_from(number()?).ok()?)),
-            "t" => Some(Key::Thread(u64::try_from(number()?).ok()?, number()?)),
-            "f" => Some(Key::Frame(
-                u64::try_from(number()?).ok()?,
-                number()?,
-                usize::try_from(number()?).ok()?,
-            )),
-            "x" => Some(Key::Filter(rest.to_string())),
-            "b" => {
-                let (line, path) = rest.split_once(':')?;
-                Some(Key::Breakpoint(PathBuf::from(path), line.parse().ok()?))
-            }
-            _ => None,
-        }
-    }
 }
 
 impl Model {
@@ -152,24 +112,8 @@ impl Model {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::kept::{Breakpoint, Debugging, ExceptionFilter};
     use crate::model::session::{Frame, Origin, Session};
-    use ide_core::debugging::{Breakpoint, Debugging, ExceptionFilter};
-
-    #[test]
-    fn keys_survive_their_text() {
-        for key in [
-            Key::Section(Section::Breakpoints),
-            Key::Empty(Section::Sessions),
-            Key::Session(4),
-            Key::Thread(4, -1),
-            Key::Frame(4, 17, 2),
-            Key::Filter("rust:panic".into()),
-            Key::Breakpoint("/p/a b:c.rs".into(), 12),
-        ] {
-            assert_eq!(Key::decode(&key.encode()), Some(key));
-        }
-        assert_eq!(Key::decode("nonsense"), None);
-    }
 
     #[test]
     fn sections_list_sessions_threads_frames_filters_and_breakpoints() {

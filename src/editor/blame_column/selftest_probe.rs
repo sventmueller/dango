@@ -3,13 +3,13 @@
 use super::*;
 
 /// The column of `view`, for the self-test.
-pub fn of(view: &EditorTextView) -> Option<Retained<BlameColumn>> {
+pub(crate) fn of(view: &EditorTextView) -> Option<Retained<BlameColumn>> {
     column_of(view)
 }
 
 impl BlameColumn {
     /// The entries on screen as their first line and text, for the self-test.
-    pub fn shown(&self) -> Vec<(usize, String)> {
+    pub(crate) fn shown(&self) -> Vec<(usize, String)> {
         self.ivars()
             .editor
             .load()

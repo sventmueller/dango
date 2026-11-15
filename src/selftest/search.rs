@@ -13,7 +13,7 @@ use objc2_app_kit::{NSApplication, NSEventModifierFlags, NSMenu};
 use splat_i18n::{t, tf};
 
 use super::helpers::wait_until;
-use super::{check, finish, helpers, snapshot};
+use super::{check, finish, give_up, helpers, snapshot};
 use crate::window::{self, Panel, SearchToggle as Toggle, WindowController, search_selftest as search};
 
 const SCENARIO: &str = "search";
@@ -21,7 +21,7 @@ const MANY: usize = 6_000;
 
 const MAIN: &str = "fn main() {\n    let needle = 1;\n    println!(\"Needle {needle}\");\n}\n";
 
-pub fn run() {
+pub(crate) fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let many: String = (0..MANY).map(|n| format!("hit {n}\n")).collect();
     let files = [
@@ -41,7 +41,7 @@ pub fn run() {
 /// After the files header: ⌘⇧F, then the first query.
 fn searching(root: PathBuf) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     controller.activate_panel(Panel::Agents);
     controller.show_search();
@@ -136,7 +136,7 @@ fn expect_files(seen: &search::Seen, expected: &[(&str, usize)]) -> bool {
 
 fn found(root: PathBuf, ok: bool) {
     let Some(seen) = seen(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the panel shows what it found");
     };
     check(
         "a query lists its matches grouped per file, without ignored files",
@@ -251,7 +251,7 @@ fn ink_start(view: &objc2_app_kit::NSView) -> Option<f64> {
 
 fn case_sensitive(root: PathBuf, ok: bool) {
     let Some(seen) = seen(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the panel shows what it found");
     };
     check(
         "matching case leaves out NEEDLE and Needle",
@@ -267,7 +267,7 @@ fn case_sensitive(root: PathBuf, ok: bool) {
 
 fn whole_word(root: PathBuf, ok: bool) {
     let Some(seen) = seen(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the panel shows what it found");
     };
     check(
         "a whole word leaves out needles",
@@ -285,7 +285,7 @@ fn whole_word(root: PathBuf, ok: bool) {
 
 fn regex(root: PathBuf, ok: bool) {
     let Some(seen) = seen(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the panel shows what it found");
     };
     check(
         "a regular expression finds both function heads",
@@ -301,7 +301,7 @@ fn regex(root: PathBuf, ok: bool) {
 
 fn invalid(root: PathBuf, ok: bool) {
     let Some(seen) = seen(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the panel shows what it found");
     };
     let prefix = tf("Ungültiges Suchmuster: {}", &[""]);
     check(
@@ -320,7 +320,7 @@ fn invalid(root: PathBuf, ok: bool) {
 
 fn filtered(root: PathBuf, ok: bool) {
     let Some(seen) = seen(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the panel shows what it found");
     };
     check(
         "the file filters include a folder and exclude a file",
@@ -339,7 +339,7 @@ fn filtered(root: PathBuf, ok: bool) {
 
 fn limited(root: PathBuf, ok: bool) {
     let Some(seen) = seen(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the panel shows what it found");
     };
     let expected = tf(
         "Mehr als {} Treffer — Suche eingrenzen",
@@ -383,7 +383,7 @@ fn match_opened(root: &Path) -> (bool, Option<objc2_foundation::NSRange>, bool) 
 
 fn opened_match(root: PathBuf, opened: bool) {
     let Some(controller) = window_of(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let editor = crate::editor::editor_of(&controller, &root.join("src/main.rs"));
     let (ok, selected, focused) = match_opened(&root);
@@ -409,7 +409,7 @@ fn buffer_counted(seen: &search::Seen) -> bool {
 
 fn unsaved(root: PathBuf, ok: bool) {
     let Some(seen) = seen(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the panel shows what it found");
     };
     check(
         "the matches follow an editor's unsaved text, searched in place of its file",
@@ -426,7 +426,7 @@ fn disk_counted(seen: &search::Seen) -> bool {
 
 fn written(root: PathBuf, ok: bool) {
     let Some(seen) = seen(&root) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the panel shows what it found");
     };
     check(
         "a file written on disk while matches are shown joins them",

@@ -1,18 +1,19 @@
-//! Typing help: indentation that follows the line above, closing brackets and quotes, commenting lines out, going to
-//! a line.
+//! Typing help as the view makes it, with the edits `ide_document::typing` works out: indentation that follows the
+//! line above, closing brackets and quotes, commenting lines out; and going to a line.
 
+use std::ops::Range;
+
+use ide_document::typing::{self, Step};
+use ide_ui_common::alert::{Alert, Role, first};
 use objc2::runtime::AnyObject;
 use objc2::{DefinedClass, MainThreadOnly};
+use objc2_app_kit::NSTextField;
 use objc2_app_kit::NSTextInputClient;
-use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSTextField};
 use objc2_foundation::{NSAttributedString, NSNotFound, NSPoint, NSRange, NSRect, NSSize, NSString};
 use splat_i18n::t;
 
 use super::view::EditorTextView;
 use crate::util::ns;
-
-/// Pairs typed together; the closing one is skipped over when typed in front of itself.
-const PAIRS: [(char, char); 6] = [('(', ')'), ('[', ']'), ('{', '}'), ('"', '"'), ('\'', '\''), ('`', '`')];
 
 fn text_of(object: &AnyObject) -> Option<String> {
     if let Some(s) = object.downcast_ref::<NSString>() {
@@ -23,14 +24,36 @@ fn text_of(object: &AnyObject) -> Option<String> {
         .map(|s| s.string().to_string())
 }
 
-/// The character at UTF-16 offset `at`, if there is one.
-fn char_at(view: &EditorTextView, at: usize) -> Option<char> {
+/// The view's text from UTF-16 offset `from` to `to`, widened to whole characters: where it starts and what it says.
+fn piece(view: &EditorTextView, from: usize, to: usize) -> (usize, String) {
     let string = view.string();
-    if at >= string.length() {
-        return None;
+    let to = to.min(string.length());
+    let from = from.min(to);
+    if from == to {
+        return (from, String::new());
     }
-    let unit = string.characterAtIndex(at);
-    char::from_u32(u32::from(unit))
+    let range = string.rangeOfComposedCharacterSequencesForRange(NSRange::new(from, to - from));
+    (range.location, string.substringWithRange(range).to_string())
+}
+
+/// `selection` counted from `start`, the start of a piece of the text.
+fn within(selection: NSRange, start: usize) -> Range<usize> {
+    selection.location - start..selection.end() - start
+}
+
+/// Makes `step`, worked out on a piece of the text that starts at UTF-16 offset `start`.
+fn make(view: &EditorTextView, start: usize, step: Step) {
+    let range = |r: Range<usize>| NSRange::new(r.start + start, r.end - r.start);
+    match step {
+        Step::Move(at) => view.setSelectedRange(NSRange::new(at + start, 0)),
+        Step::Type { text, select } => {
+            insert(view, &text);
+            if let Some(select) = select {
+                view.setSelectedRange(range(select));
+            }
+        }
+        Step::Replace { range: replaced, text } => replace(view, range(replaced), &text),
+    }
 }
 
 fn insert(view: &EditorTextView, text: &str) {
@@ -40,8 +63,8 @@ fn insert(view: &EditorTextView, text: &str) {
 
 /// Closes brackets and quotes as they are typed, steps over a closing one already there, and wraps a selection in a
 /// pair; whether it handled `object`.
-pub fn typed(view: &EditorTextView, object: &AnyObject, replacement: NSRange) -> bool {
-    if replacement.location != NSNotFound.cast_unsigned() || view.ivars().document.borrow().read_only().is_some() {
+pub(crate) fn typed(view: &EditorTextView, object: &AnyObject, replacement: NSRange) -> bool {
+    if replacement.location != NSNotFound.cast_unsigned() || view.document().read_only().is_some() {
         return false;
     }
     let Some(text) = text_of(object) else { return false };
@@ -50,132 +73,51 @@ pub fn typed(view: &EditorTextView, object: &AnyObject, replacement: NSRange) ->
         return false;
     };
     let selection = view.selectedRange();
-    let next = char_at(view, selection.location + selection.length);
-    if selection.length == 0 && next == Some(c) && PAIRS.iter().any(|(_, close)| *close == c) {
-        view.setSelectedRange(NSRange::new(selection.location + 1, 0));
-        return true;
-    }
-    let Some((open, close)) = PAIRS.iter().find(|(open, _)| *open == c).copied() else {
+    let (start, piece) = piece(view, selection.location.saturating_sub(1), selection.end() + 1);
+    let Some(step) = typing::typed(&piece, within(selection, start), c) else {
         return false;
     };
-    if selection.length > 0 {
-        let selected = view.string().substringWithRange(selection).to_string();
-        insert(view, &format!("{open}{selected}{close}"));
-        view.setSelectedRange(NSRange::new(selection.location + 1, selection.length));
-        return true;
-    }
-    let free_after = next.is_none_or(|n| n.is_whitespace() || ")]},;".contains(n));
-    let previous = selection.location.checked_sub(1).and_then(|at| char_at(view, at));
-    let quote = open == close;
-    if !free_after || (quote && previous.is_some_and(|p| p.is_alphanumeric() || p == open)) {
-        return false;
-    }
-    insert(view, &format!("{open}{close}"));
-    view.setSelectedRange(NSRange::new(selection.location + 1, 0));
+    make(view, start, step);
     true
-}
-
-/// The line around UTF-16 offset `at`: its start and its text up to `at`.
-fn line_before(view: &EditorTextView, at: usize) -> (usize, String) {
-    let string = view.string();
-    let line = string.lineRangeForRange(NSRange::new(at, 0));
-    let before = string
-        .substringWithRange(NSRange::new(line.location, at - line.location))
-        .to_string();
-    (line.location, before)
 }
 
 /// A new line indented like the one above, one level deeper after an opening bracket or colon; between a bracket pair
 /// the closing one moves to a line of its own.
-pub fn newline(view: &EditorTextView) {
+pub(crate) fn newline(view: &EditorTextView) {
     let selection = view.selectedRange();
-    let (_, before) = line_before(view, selection.location);
-    let indent: String = before.chars().take_while(|c| *c == ' ' || *c == '\t').collect();
+    let line = view.string().lineRangeForRange(NSRange::new(selection.location, 0));
+    let (start, piece) = piece(view, line.location, selection.end() + 1);
     let ending = super::indent::newline(view).as_str().to_string();
     let unit = view.ivars().indent.borrow().clone();
-    let opens = before.trim_end().ends_with(['{', '(', '[', ':']);
-    let next = char_at(view, selection.location + selection.length);
-    let closes = next.is_some_and(|n| "}])".contains(n));
-    if opens && closes {
-        insert(view, &format!("{ending}{indent}{unit}{ending}{indent}"));
-        let back = indent.encode_utf16().count() + ending.encode_utf16().count();
-        let at = view.selectedRange().location - back;
-        view.setSelectedRange(NSRange::new(at, 0));
-    } else if opens {
-        insert(view, &format!("{ending}{indent}{unit}"));
-    } else {
-        insert(view, &format!("{ending}{indent}"));
-    }
+    make(
+        view,
+        start,
+        typing::newline(&piece, within(selection, start), &ending, &unit),
+    );
 }
 
 /// Inserts one level of indentation, or indents every selected line.
-pub fn tab(view: &EditorTextView) {
-    let unit = view.ivars().indent.borrow().clone();
+pub(crate) fn tab(view: &EditorTextView) {
     let selection = view.selectedRange();
-    let string = view.string();
-    let lines = string.lineRangeForRange(selection);
-    let spans_lines = string.substringWithRange(selection).to_string().contains('\n');
-    if !spans_lines {
-        insert(view, &unit);
-        return;
-    }
-    let block = string.substringWithRange(lines).to_string();
-    let indented: String = block
-        .split_inclusive('\n')
-        .map(|line| {
-            if line.trim().is_empty() {
-                line.to_string()
-            } else {
-                format!("{unit}{line}")
-            }
-        })
-        .collect();
-    replace(view, lines, &indented);
-}
-
-/// The marker that starts a line comment in the document's language.
-fn comment_marker(view: &EditorTextView) -> Option<&'static str> {
-    let language = view.document().language()?;
-    match language.name() {
-        "python" | "bash" | "yaml" | "toml" | "ruby" => Some("#"),
-        "sql" => Some("--"),
-        "html" | "css" | "mermaid" | "tex" | "markdown" => None,
-        _ => Some("//"),
-    }
+    let lines = view.string().lineRangeForRange(selection);
+    let (start, piece) = piece(view, lines.location, lines.end());
+    let unit = view.ivars().indent.borrow().clone();
+    make(view, start, typing::tab(&piece, within(selection, start), &unit));
 }
 
 /// Comments the selected lines out, or in again when all of them are comments.
-pub fn toggle_comment(view: &EditorTextView) {
-    let Some(marker) = comment_marker(view) else { return };
-    let string = view.string();
-    let lines = string.lineRangeForRange(view.selectedRange());
-    let block = string.substringWithRange(lines).to_string();
-    let content: Vec<&str> = block.split_inclusive('\n').collect();
-    let commented = content
-        .iter()
-        .filter(|line| !line.trim().is_empty())
-        .all(|line| line.trim_start().starts_with(marker));
-    let indent = content
-        .iter()
-        .filter(|line| !line.trim().is_empty())
-        .map(|line| line.len() - line.trim_start().len())
-        .min()
-        .unwrap_or(0);
-    let changed: String = content
-        .iter()
-        .map(|line| {
-            if line.trim().is_empty() {
-                (*line).to_string()
-            } else if commented {
-                let start = line.len() - line.trim_start().len();
-                let rest = &line[start + marker.len()..];
-                format!("{}{}", &line[..start], rest.strip_prefix(' ').unwrap_or(rest))
-            } else {
-                format!("{}{marker} {}", &line[..indent], &line[indent..])
-            }
-        })
-        .collect();
-    replace(view, lines, &changed);
+pub(crate) fn toggle_comment(view: &EditorTextView) {
+    let Some(marker) = view.document().language().and_then(|l| l.line_comment()) else {
+        return;
+    };
+    let selection = view.selectedRange();
+    let lines = view.string().lineRangeForRange(selection);
+    let (start, piece) = piece(view, lines.location, lines.end());
+    make(
+        view,
+        start,
+        typing::toggle_comment(&piece, within(selection, start), marker),
+    );
 }
 
 /// Replaces `range` like typing would, as one undoable step.
@@ -190,17 +132,16 @@ fn replace(view: &EditorTextView, range: NSRange, text: &str) {
 }
 
 /// Asks for a line number and puts the cursor at its start.
-pub fn go_to_line(view: &EditorTextView) {
+pub(crate) fn go_to_line(view: &EditorTextView) {
     let mtm = view.mtm();
-    let alert = NSAlert::new(mtm);
-    alert.setMessageText(&ns(t("Gehe zu Zeile")));
-    alert.addButtonWithTitle(&ns(t("OK")));
-    alert.addButtonWithTitle(&ns(t("Abbrechen")));
     let field = NSTextField::textFieldWithString(&ns(""), mtm);
     field.setFrame(NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(120.0, 24.0)));
-    alert.setAccessoryView(Some(&field));
-    alert.window().setInitialFirstResponder(Some(&field));
-    if alert.runModal() != NSAlertFirstButtonReturn {
+    let alert = Alert::new(mtm, t("Gehe zu Zeile"))
+        .button(t("OK"), Role::Plain)
+        .button(t("Abbrechen"), Role::Plain)
+        .accessory(&field)
+        .focus(&field);
+    if !first(alert.run_modal()) {
         return;
     }
     let Ok(line) = field.stringValue().to_string().trim().parse::<usize>() else {

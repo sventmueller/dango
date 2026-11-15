@@ -10,8 +10,8 @@ use std::time::Duration;
 use ide_process::Supervisor;
 
 use crate::adapter::{Adapter, AdapterKind, free_port};
-use crate::helper::{self, Helper};
 use crate::install::{self, JS_DEBUG};
+use ide_process::tool::{self, Helper};
 
 /// How long a helper such as `xcrun --find` or `go env` may take.
 const HELPER_TIMEOUT: Duration = Duration::from_secs(20);
@@ -26,16 +26,15 @@ pub enum Install {
 /// No adapter was found; what the status bar says about it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Missing {
-    /// For which adapter.
-    pub kind: AdapterKind,
+    pub(crate) kind: AdapterKind,
     /// The adapter's program as the user knows it, such as `dlv`.
-    pub program: &'static str,
+    pub(crate) program: &'static str,
     /// A program it needs that the login shell's PATH lacks, such as `node`; install that first.
-    pub needs: Option<&'static str>,
+    pub(crate) needs: Option<&'static str>,
     /// What the app can install itself, after the user agreed.
     pub install: Option<Install>,
     /// The command the user installs it with, when the app cannot.
-    pub command: Option<String>,
+    pub(crate) command: Option<String>,
 }
 
 impl fmt::Display for Missing {
@@ -74,7 +73,7 @@ impl Adapters {
     }
 
     /// The login shell's environment the adapters get.
-    pub fn env(&self) -> &[(String, String)] {
+    pub(crate) fn env(&self) -> &[(String, String)] {
         &self.env
     }
 
@@ -84,7 +83,7 @@ impl Adapters {
     }
 
     /// The tools folder.
-    pub fn tools(&self) -> &Path {
+    pub(crate) fn tools(&self) -> &Path {
         &self.tools
     }
 
@@ -125,11 +124,11 @@ impl Adapters {
     }
 
     pub(crate) fn path(&self) -> Option<&str> {
-        helper::var(&self.env, "PATH")
+        tool::var(&self.env, "PATH")
     }
 
     fn home(&self) -> PathBuf {
-        helper::var(&self.env, "HOME").map_or_else(ide_core::paths::home, PathBuf::from)
+        tool::var(&self.env, "HOME").map_or_else(ide_core::paths::home, PathBuf::from)
     }
 
     /// lldb-dap of the selected developer tools; `/usr/bin` only holds stand-ins that offer to install them.
@@ -139,15 +138,15 @@ impl Adapters {
             .helper()
             .run(Path::new("/usr/bin/xcode-select"), &["-p"], &home, &mut |_| {})
             .ok()
-            .filter(helper::Output::succeeded)
+            .filter(tool::Output::succeeded)
             .and_then(|_| {
                 self.helper()
                     .run(Path::new("/usr/bin/xcrun"), &["--find", "lldb-dap"], &home, &mut |_| {})
                     .ok()
             })
-            .filter(helper::Output::succeeded)
+            .filter(tool::Output::succeeded)
             .map(|output| PathBuf::from(output.stdout.trim()))
-            .filter(|program| !program.starts_with("/usr/bin") && helper::is_executable(program));
+            .filter(|program| !program.starts_with("/usr/bin") && tool::is_executable(program));
         match found {
             Some(program) => Ok(Adapter::command(
                 AdapterKind::Lldb,
@@ -168,20 +167,20 @@ impl Adapters {
 
     /// `dlv` on the PATH or in Go's bin folder, listening for the session on a port of its own.
     fn delve(&self, root: &Path) -> Result<Adapter, Missing> {
-        let program = helper::which("dlv", self.path()).or_else(|| {
-            let go = helper::which("go", self.path())?;
+        let program = tool::which("dlv", self.path()).or_else(|| {
+            let go = tool::which("go", self.path())?;
             let output = self
                 .helper()
                 .run(&go, &["env", "GOPATH"], &self.home(), &mut |_| {})
                 .ok()?;
             let first = output.stdout.trim().split(':').next()?.to_string();
             let dlv = Path::new(&first).join("bin/dlv");
-            helper::is_executable(&dlv).then_some(dlv)
+            tool::is_executable(&dlv).then_some(dlv)
         });
         let missing = || Missing {
             kind: AdapterKind::Go,
             program: "dlv",
-            needs: helper::which("go", self.path()).is_none().then_some("go"),
+            needs: tool::which("go", self.path()).is_none().then_some("go"),
             install: None,
             command: Some("go install github.com/go-delve/delve/cmd/dlv@latest".into()),
         };
@@ -200,7 +199,7 @@ impl Adapters {
 
     /// js-debug's DAP server from the tools folder, run by Node, listening on a port of its own.
     fn js_debug(&self, root: &Path) -> Result<Adapter, Missing> {
-        let node = helper::which("node", self.path());
+        let node = tool::which("node", self.path());
         let server = install::js_debug_server(&self.tools);
         let missing = |needs| Missing {
             kind: AdapterKind::JsDebug,
@@ -258,14 +257,14 @@ impl Adapters {
     }
 
     /// The project's Python: its virtual environment, the one the login shell activated, or `python3` on the PATH.
-    pub fn python(&self, root: &Path) -> Option<PathBuf> {
+    pub(crate) fn python(&self, root: &Path) -> Option<PathBuf> {
         let venvs = [".venv", "venv", "env"].map(|name| root.join(name).join("bin/python"));
-        let active = helper::var(&self.env, "VIRTUAL_ENV").map(|v| Path::new(v).join("bin/python"));
+        let active = tool::var(&self.env, "VIRTUAL_ENV").map(|v| Path::new(v).join("bin/python"));
         venvs
             .into_iter()
             .chain(active)
-            .find(|p| helper::is_executable(p))
-            .or_else(|| helper::which("python3", self.path()))
+            .find(|p| tool::is_executable(p))
+            .or_else(|| tool::which("python3", self.path()))
             .filter(|p| !is_stub(p) || self.has_developer_tools())
     }
 

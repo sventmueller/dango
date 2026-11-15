@@ -13,12 +13,11 @@ flowchart TB
     destructive --> repo
     repo -->|"Git::run(Call)"| run["Git: login-shell environment, limits"]
     repo -->|"SecretScan and RequestScan via run_program, the request on stdin"| run
-    run -->|"Supervisor::spawn as Kind::Git or Kind::Tool"| process(["git or gitleaks"])
-    run -->|"threads git-stdin, git-stdout, git-stderr"| pipes["input written, output read up to a limit"]
-    pipes -->|"Done and progress lines over a channel"| loop["calling thread: polls every 50 ms"]
+    run -->|"Supervisor::spawn_awaited as Kind::Git or Kind::Tool"| process(["git or gitleaks"])
+    run -->|"Pipes::step on the calling thread, no thread of its own"| pipes["input written, output read up to a limit, progress lines"]
+    pipes --> loop["calling thread: waits for the pipes, the time limit, 50 ms while a Cancel may come, 250 ms for the end; gives the pipes up 2 s after the end"]
     loop -->|"Cancel or timeout: Supervisor::stop"| process
-    supervisor["Supervisor events"] -->|"Ended"| exits["Endings, kept until the call takes them"]
-    exits --> loop
+    supervisor["Supervisor::wait"] -->|"the end the reaper reported, kept until the call takes it"| loop
     loop -->|"Output parsed: FileDiff, Status, Commit, ..."| callers
 ```
 

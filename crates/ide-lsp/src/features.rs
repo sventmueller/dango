@@ -80,7 +80,7 @@ pub struct Insertion {
     /// The range to replace when inserting; `None` means the word before the cursor, as the editor sees it.
     pub insert: Option<Range>,
     /// The range to replace when the user asks to overwrite; the same as `insert` unless the server gave both.
-    pub replace: Option<Range>,
+    pub(crate) replace: Option<Range>,
 }
 
 /// What choosing `item` inserts.

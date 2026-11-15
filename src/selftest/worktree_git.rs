@@ -19,7 +19,7 @@ const TITLE: &str = "Pick me";
 /// A check's name, whether it held and what was seen.
 type Seen = (&'static str, bool, String);
 
-pub fn run() {
+pub(crate) fn run() {
     let root = crate::selftest::helpers::folder("worktree-git");
     std::thread::spawn(move || {
         let seen = steps(&root).unwrap_or_else(|error| vec![("the worktree steps run", false, error)]);

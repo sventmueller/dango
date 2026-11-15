@@ -6,7 +6,7 @@ mod common;
 use std::path::{Path, PathBuf};
 
 use common::{Scratch, read, write};
-use ide_git::{Applied, Change, Error, LineKind, Repository, StashOptions, StatusOptions};
+use ide_git::{Applied, Change, Error, LineKind, Repository, StashOptions, StatusOptions, Unstash};
 
 fn changed(repository: &Repository) -> Vec<PathBuf> {
     let mut paths: Vec<PathBuf> = repository
@@ -49,7 +49,7 @@ fn stashing_parks_changes_lists_them_newest_first_and_says_when_there_was_nothin
     let stashes = repository.stashes().unwrap();
     let listed: Vec<(usize, &str)> = stashes.iter().map(|s| (s.index, s.message.as_str())).collect();
     assert_eq!(listed, [(0, "On main: second: with new"), (1, "On main: first")]);
-    assert!(stashes.iter().all(|s| s.hash.len() >= 40 && s.time > 0));
+    assert!(stashes.iter().all(|s| s.hash.as_str().len() >= 40 && s.time > 0));
 
     let files: Vec<(PathBuf, Change)> = repository
         .stash_changes(&stashes[0].hash)
@@ -112,7 +112,7 @@ fn applying_keeps_the_entry_popping_removes_it() {
     };
     repository.stash(&options).unwrap();
     let stash = repository.stashes().unwrap().remove(0);
-    assert_eq!(repository.apply_stash(&stash, false).unwrap(), Applied::Clean);
+    assert_eq!(repository.apply_stash(&stash, Unstash::Apply).unwrap(), Applied::Clean);
     assert_eq!(read(repository.root(), "a.txt"), "a changed\n");
     assert_eq!(read(repository.root(), "new.txt"), "new\n");
     assert_eq!(repository.stashes().unwrap().len(), 1);
@@ -120,7 +120,7 @@ fn applying_keeps_the_entry_popping_removes_it() {
 
     scratch.raw(repository.root(), &["checkout", "--quiet", "--", "a.txt"]);
     std::fs::remove_file(repository.root().join("new.txt")).unwrap();
-    assert_eq!(repository.apply_stash(&stash, true).unwrap(), Applied::Clean);
+    assert_eq!(repository.apply_stash(&stash, Unstash::Pop).unwrap(), Applied::Clean);
     assert_eq!(read(repository.root(), "a.txt"), "a changed\n");
     assert!(repository.stashes().unwrap().is_empty());
 }
@@ -134,7 +134,10 @@ fn an_entry_that_moved_is_neither_applied_nor_dropped() {
     let old = repository.stashes().unwrap().remove(0);
     write(repository.root(), "a.txt", "two\n");
     repository.stash(&message("two")).unwrap();
-    assert!(matches!(repository.apply_stash(&old, false), Err(Error::StashMoved)));
+    assert!(matches!(
+        repository.apply_stash(&old, Unstash::Apply),
+        Err(Error::StashMoved)
+    ));
     assert!(matches!(
         repository.destructive().drop_stash(&old),
         Err(Error::StashMoved)
@@ -174,7 +177,7 @@ fn a_conflict_on_apply_waits_and_abandoning_it_puts_back_the_state_before() {
     let before = scratch.raw(repository.root(), &["status", "--porcelain=v1"]);
     let stash = repository.stashes().unwrap().remove(0);
     assert_eq!(
-        repository.apply_stash(&stash, false).unwrap(),
+        repository.apply_stash(&stash, Unstash::Apply).unwrap(),
         Applied::Conflicts(vec![PathBuf::from("a.txt")])
     );
     assert!(read(repository.root(), "a.txt").contains("<<<<<<<"));
@@ -199,7 +202,7 @@ fn a_pop_with_conflicts_keeps_its_entry_and_finishing_marks_the_conflicts_resolv
     let repository = conflicting(&scratch);
     let stash = repository.stashes().unwrap().remove(0);
     assert!(matches!(
-        repository.apply_stash(&stash, true).unwrap(),
+        repository.apply_stash(&stash, Unstash::Pop).unwrap(),
         Applied::Conflicts(_)
     ));
     assert_eq!(repository.stashes().unwrap(), std::slice::from_ref(&stash));
@@ -223,7 +226,7 @@ fn local_changes_in_the_way_leave_everything_as_it_was() {
     write(repository.root(), "a.txt", "local\n");
     let stash = repository.stashes().unwrap().remove(0);
     assert!(matches!(
-        repository.apply_stash(&stash, true),
+        repository.apply_stash(&stash, Unstash::Pop),
         Err(Error::LocalChanges { .. })
     ));
     assert_eq!(read(repository.root(), "a.txt"), "local\n");
@@ -236,7 +239,7 @@ fn a_waiting_apply_is_forgotten_once_head_moves_on() {
     let scratch = Scratch::new("stash-stale");
     let repository = conflicting(&scratch);
     let stash = repository.stashes().unwrap().remove(0);
-    repository.apply_stash(&stash, false).unwrap();
+    repository.apply_stash(&stash, Unstash::Apply).unwrap();
     write(repository.root(), "a.txt", "1\nresolved\n3\n");
     scratch.raw(repository.root(), &["add", "--all"]);
     scratch.raw(

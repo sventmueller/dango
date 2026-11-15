@@ -7,7 +7,7 @@
 use super::*;
 
 /// A replay into an empty thread, as the self-test plays it.
-pub fn replay(thread: Thread) -> Source {
+pub(crate) fn replay(thread: Thread) -> Source {
     Source::Replay(Box::new(Replay::new(
         thread,
         SystemTime::now(),
@@ -25,7 +25,7 @@ pub fn set_test_program(program: PathBuf) {
 
 impl Source {
     /// Plays recorded lines into the replay; what changed.
-    pub fn feed(&mut self, lines: &str) -> Vec<ide_thread::Change> {
+    pub(crate) fn feed(&mut self, lines: &str) -> Vec<ide_thread::Change> {
         match self {
             Source::Replay(replay) => replay.feed_all(lines),
             _ => Vec::new(),

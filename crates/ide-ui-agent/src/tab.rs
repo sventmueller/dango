@@ -28,23 +28,35 @@ use super::suggest::Suggestions;
 use super::target::AgentTarget;
 use super::timeline::Timeline;
 use super::{overlay, ui};
-use ide_ui_common::util::{guarded, main_after, main_soon};
+use ide_ui_common::util::{activate, auto_layout, guarded, main_after, main_soon};
 use ide_ui_common::window::{Notices, TabDecor, TabId, TabKind, Tabs, Window};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
 /// The room on either side of the conversation, which takes the rest of the tab's width.
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unreachable_pub, reason = "the self-test re-exports it")
+)]
 pub const SIDE_MARGIN: f64 = 16.0;
 /// The widest the composer gets; it stands in the middle below a wider conversation.
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unreachable_pub, reason = "the self-test re-exports it")
+)]
 pub const INPUT_WIDTH: f64 = 852.0;
 /// The room between the composer and the conversation's edges.
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unreachable_pub, reason = "the self-test re-exports it")
+)]
 pub const INPUT_INSET: f64 = 14.0;
 /// How strongly the composer fills the conversation's width up to `INPUT_WIDTH`: above the content's hugging and the
 /// holding priority of the window's content, below the sidebar's, so a wide window neither narrows nor moves it.
 const FILL_PRIORITY: f32 = 255.0;
 
 /// What a session reported, from either kind of connection.
-pub enum Incoming {
+pub(crate) enum Incoming {
     Claude(Event),
     Acp(ide_acp::Event),
     Own(ide_agent::Event),
@@ -52,12 +64,12 @@ pub enum Incoming {
 
 /// Session events waiting for the main thread.
 #[derive(Default)]
-pub struct Inbox {
+pub(crate) struct Inbox {
     pub(super) events: Mutex<super::inbox::Pending>,
     pub(super) scheduled: AtomicBool,
 }
 
-pub struct RootIvars {
+pub(crate) struct RootIvars {
     key: AgentKey,
 }
 
@@ -67,7 +79,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEAgentRoot"]
     #[ivars = RootIvars]
-    pub struct AgentRoot;
+    pub(crate) struct AgentRoot;
 
     unsafe impl NSObjectProtocol for AgentRoot {}
 
@@ -148,13 +160,18 @@ pub struct AgentTab {
 
 impl AgentTab {
     /// A new tab in `controller`'s window running `agent`, not started yet.
-    pub fn open(controller: &Window, agent: Agent, resume: Option<Resume>) -> Option<Rc<AgentTab>> {
+    pub(crate) fn open(controller: &Window, agent: Agent, resume: Option<Resume>) -> Option<Rc<AgentTab>> {
         let cwd = controller.project_root().or_else(|| controller.project())?;
         AgentTab::open_in(controller, agent, cwd, resume)
     }
 
     /// A new tab in `controller`'s window running `agent` in `cwd`, such as a thread's worktree, not started yet.
-    pub fn open_in(controller: &Window, agent: Agent, cwd: PathBuf, resume: Option<Resume>) -> Option<Rc<AgentTab>> {
+    pub(crate) fn open_in(
+        controller: &Window,
+        agent: Agent,
+        cwd: PathBuf,
+        resume: Option<Resume>,
+    ) -> Option<Rc<AgentTab>> {
         let thread_id = resume.as_ref().and_then(|r| r.thread.clone()).unwrap_or_default();
         let thread = Thread::new(thread_id.clone(), agent.id(), &cwd);
         let tab = Rc::new(AgentTab::build(controller, agent, cwd, thread_id, thread, Source::Idle));
@@ -207,7 +224,7 @@ impl AgentTab {
             mtm,
             controller: *controller,
             tab_id: std::cell::Cell::new(None),
-            store: Store::new(cwd.clone()),
+            store: Store::new(cwd.clone(), crate::host::host()),
             cwd,
             thread_id,
             target,
@@ -263,8 +280,7 @@ impl AgentTab {
         ] {
             column.addSubview(view);
         }
-        self.empty.setTranslatesAutoresizingMaskIntoConstraints(false);
-        self.problem_holder.setTranslatesAutoresizingMaskIntoConstraints(false);
+        auto_layout(&[&self.empty, &self.problem_holder]);
         let scroll = self.timeline.view();
         let constraints: Vec<Retained<NSLayoutConstraint>> = vec![
             self.header.view.topAnchor().constraintEqualToAnchor(&root.topAnchor()),
@@ -312,9 +328,7 @@ impl AgentTab {
                 .widthAnchor()
                 .constraintLessThanOrEqualToAnchor(&scroll.widthAnchor()),
         ];
-        for constraint in constraints.into_iter().chain(input_constraints(&bottom, &column)) {
-            constraint.setActive(true);
-        }
+        activate(constraints.into_iter().chain(input_constraints(&bottom, &column)));
     }
 
     /// Adds the tab to the window's tab bar.
@@ -344,11 +358,11 @@ impl AgentTab {
         &self.timeline
     }
 
-    pub fn controller(&self) -> Option<Window> {
+    pub(crate) fn controller(&self) -> Option<Window> {
         self.controller.load()
     }
 
-    pub fn belongs_to(&self, controller: &Window) -> bool {
+    pub(crate) fn belongs_to(&self, controller: &Window) -> bool {
         self.controller.is_open() && self.controller == *controller
     }
 
@@ -372,7 +386,7 @@ impl AgentTab {
     }
 
     /// Names the thread `title`, as the user would rename it.
-    pub fn set_custom_title(&self, title: &str) {
+    pub(crate) fn set_custom_title(&self, title: &str) {
         self.state.borrow_mut().set_custom_title(title.to_string());
         self.refresh();
     }
@@ -393,7 +407,7 @@ impl AgentTab {
     }
 
     /// The running session, if there is one.
-    pub fn session(&self) -> Option<Session> {
+    pub(crate) fn session(&self) -> Option<Session> {
         self.state
             .borrow()
             .source()
@@ -407,7 +421,7 @@ impl AgentTab {
     }
 
     /// Whether the tab is the one showing in its window.
-    pub fn is_shown(&self) -> bool {
+    pub(crate) fn is_shown(&self) -> bool {
         self.root.window().is_some_and(|w| ide_ui_common::panel::in_front(&w))
             && !self.root.isHiddenOrHasHiddenAncestor()
     }
@@ -422,7 +436,7 @@ impl AgentTab {
     }
 
     /// Resumes presentation and live labels after a background tab comes back into view.
-    pub fn show_pending(&self) {
+    pub(crate) fn show_pending(&self) {
         self.timeline.show_pending();
         self.start_ticking();
     }
@@ -518,7 +532,7 @@ impl AgentTab {
         self.header.set_bookmarked(on);
     }
 
-    pub fn set_problem(&self, problem: Option<Problem>) {
+    pub(crate) fn set_problem(&self, problem: Option<Problem>) {
         self.state.borrow_mut().set_problem(problem);
         self.refresh();
     }
@@ -530,7 +544,7 @@ impl AgentTab {
     }
 
     /// Brings the head, the composer, the status line and the overlays up to date with the state.
-    pub fn refresh(&self) {
+    pub(crate) fn refresh(&self) {
         let (problem, thread, title) = {
             let state = self.state.borrow();
             (
@@ -595,7 +609,7 @@ impl AgentTab {
     }
 
     /// Ends the session, as the tab closes.
-    pub fn close(&self) {
+    pub(crate) fn close(&self) {
         self.persist();
         let source = self.state.borrow_mut().end();
         source.end();
@@ -635,13 +649,13 @@ impl AgentTab {
         window.makeFirstResponder(Some(&self.composer.text));
     }
 
-    pub fn leave_focus(&self) {
+    pub(crate) fn leave_focus(&self) {
         let Some(window) = self.root.window() else { return };
         let previous = self.previous_focus.borrow_mut().take().and_then(|w| w.load());
         window.makeFirstResponder(previous.as_deref());
     }
 
-    pub fn composer_focus(&self, focused: bool) {
+    pub(crate) fn composer_focus(&self, focused: bool) {
         self.composer.show_focus(focused);
         if focused {
             self.offer_selection();

@@ -8,7 +8,7 @@ use ide_thread::{Filter, ThreadIndex};
 use splat_i18n::t;
 
 use super::agent::{DRAWN, controller_of, picture, tab_of};
-use super::{check, finish, helpers};
+use super::{check, finish, give_up, give_up_saying, helpers};
 use ide_ui_agent::{AgentKey, AgentTab};
 
 const NAME: &str = "agent-live";
@@ -17,18 +17,20 @@ const TURN: Duration = Duration::from_secs(100);
 
 /// `agent-live`: one real turn with the installed `claude` (haiku) in an empty folder, answering its permission request
 /// as a user would. Needs a signed-in CLI and the network, so it runs only when named.
-pub fn live() {
+pub(crate) fn live() {
     helpers::open_project(NAME, "live-project", &[], |controller| {
         let root = helpers::root("live-project");
         let Some(tab) = ide_ui_agent::open_tab(&controller, None) else {
-            return finish(NAME);
+            return give_up(NAME, "the AI tab opens");
         };
         tab.use_model("haiku");
         tab.keep_remote_control_off();
         let key = tab.key;
         let live = move || tab_of(key).is_some_and(|tab| tab.is_live());
         helpers::wait_within(TURN, live, move |_| {
-            let Some(tab) = tab_of(key) else { return finish(NAME) };
+            let Some(tab) = tab_of(key) else {
+                return give_up(NAME, "the AI tab is open");
+            };
             tab.type_and_send(
                 "Run `echo hello-from-vibeedit` with the Bash tool, then reply with exactly one word: done.",
             );
@@ -53,11 +55,12 @@ fn allowed_and_done(key: AgentKey) -> bool {
 }
 
 fn live_turn(root: PathBuf, key: AgentKey, done: bool) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     if !done {
         let entries = tab.inspect().visible.join(" | ");
-        check("a live turn finishes in time", false, entries);
-        return finish(NAME);
+        return give_up_saying(NAME, "a live turn finishes in time", entries);
     }
     let thread = tab.snapshot();
     let output = thread.entries(&ide_thread::Lane::Main).iter().any(|e| match &e.kind {
@@ -106,7 +109,9 @@ fn answered_with(tab: &AgentTab, word: &str) -> bool {
 
 /// A second prompt goes out, the conversation rewinds to before it, and it goes out again.
 fn live_rewind(root: PathBuf, key: AgentKey) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     tab.type_and_send(SECOND);
     let second = move || tab_of(key).is_some_and(|tab| answered_with(&tab, "second"));
     helpers::wait_within(TURN, second, move |ok| {
@@ -150,8 +155,7 @@ fn live_rewind(root: PathBuf, key: AgentKey) {
 
 fn rewind_late() {
     let seen = ide_ui_agent::all().first().map(|tab| tab.inspect().visible.join(" | "));
-    check("a live rewind finishes in time", false, seen.unwrap_or_default());
-    finish(NAME);
+    give_up_saying(NAME, "a live rewind finishes in time", seen.unwrap_or_default());
 }
 
 /// The checks once the prompt went out again on the rewound session.

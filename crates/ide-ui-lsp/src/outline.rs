@@ -15,7 +15,7 @@ use ide_ui_common::util::main_soon;
 
 /// A symbol of the document and where it is, in UTF-16 code units.
 #[derive(Debug, Clone)]
-pub struct Crumb {
+pub(crate) struct Crumb {
     range: Range<usize>,
     /// Where the symbol's name starts, the line a sticky header shows.
     head: Range<usize>,
@@ -39,7 +39,7 @@ fn flatten(view: &dyn Editor, symbols: &[DocumentSymbol], out: &mut Vec<Crumb>) 
 }
 
 /// Asks the server for the document's symbols and folding ranges.
-pub fn refresh(view: &dyn Editor, server: &Server, uri: &Uri) {
+pub(crate) fn refresh(view: &dyn Editor, server: &Server, uri: &Uri) {
     let serial = view.lsp().borrow().serial;
     let revision = view.document().revision();
     let _ = server.document_symbols(uri, move |answer| {
@@ -77,7 +77,7 @@ pub fn refresh(view: &dyn Editor, server: &Server, uri: &Uri) {
 }
 
 /// Keeps the symbols on their text while it changes, until the server sends new ones.
-pub fn shift(state: &mut ViewState, change: &Change) {
+pub(crate) fn shift(state: &mut ViewState, change: &Change) {
     for crumb in &mut state.crumbs {
         super::decorate::follow(&mut crumb.range, change);
         super::decorate::follow(&mut crumb.head, change);
@@ -85,14 +85,14 @@ pub fn shift(state: &mut ViewState, change: &Change) {
 }
 
 /// The cursor moved: the breadcrumbs follow once it rests.
-pub fn selection_moved(view: &dyn Editor) {
+pub(crate) fn selection_moved(view: &dyn Editor) {
     if !view.lsp().borrow().crumbs.is_empty() {
         view.later(sel!(ideBreadcrumbs), 0.05);
     }
 }
 
 /// The names of the symbols around the cursor, outermost first.
-pub fn breadcrumbs(view: &dyn Editor) -> Vec<String> {
+pub(crate) fn breadcrumbs(view: &dyn Editor) -> Vec<String> {
     let cursor = view.selectedRange().location;
     view.lsp()
         .borrow()

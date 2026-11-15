@@ -37,12 +37,14 @@ pub fn observe(
 ) -> Observation {
     let f = MainThreadBound::new(f, mtm);
     let block = RcBlock::new(move |notification: NonNull<NSNotification>| {
-        let Some(mtm) = MainThreadMarker::new() else {
-            return;
-        };
-        // SAFETY: The center hands the block a notification it keeps alive for the length of the call.
-        let notification = unsafe { notification.as_ref() };
-        guarded((), || f.get(mtm)(notification));
+        guarded((), || {
+            let Some(mtm) = MainThreadMarker::new() else {
+                return;
+            };
+            // SAFETY: The center hands the block a notification it keeps alive for the length of the call.
+            let notification = unsafe { notification.as_ref() };
+            f.get(mtm)(notification);
+        });
     });
     // SAFETY: The block captures only a `MainThreadBound`, which may be called and released on any thread and lets
     // `f` run only on the main thread; without a queue the center calls the block on the posting thread.

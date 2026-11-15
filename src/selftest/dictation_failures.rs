@@ -16,14 +16,14 @@ use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2::{MainThreadMarker, Message};
 use objc2_app_kit::{
-    NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSApplication, NSModalResponse, NSPasteboard,
-    NSPasteboardTypeString, NSRunningApplication, NSSecureTextField, NSView, NSWorkspace,
+    NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSModalResponse, NSPasteboard, NSPasteboardTypeString,
+    NSRunningApplication, NSSecureTextField, NSView, NSWorkspace,
 };
 use objc2_foundation::{NSDictionary, NSString};
 use splat_i18n::{t, tf};
 
 use super::check;
-use super::helpers::{after, alert_texts, answer_alert, in_any_mode_after, open_beside, tab, wait_until, window_of};
+use super::helpers::{after, alert_texts, answer_alert, open_beside, tab, wait_until, when_alert_shows, window_of};
 use crate::util::{constant, main_on_run_loop, ns};
 use ide_ui_dictation::selftest::{self as dictation, Answer, Opening};
 use ide_ui_dictation::{FnState, fn_state};
@@ -164,14 +164,12 @@ fn secure_field(view: &NSView) -> Option<Retained<NSSecureTextField>> {
     view.subviews().iter().find_map(|child| secure_field(&child))
 }
 
-/// Answers the key alert in front `millis` from now with `response`, after typing `typed` into its field and noting
+/// Answers the next key alert as soon as it shows with `response`, after typing `typed` into its field and noting
 /// whether it says `says`.
-fn key_alert(millis: u64, typed: &'static str, says: String, response: NSModalResponse, saw: Arc<Mutex<Vec<bool>>>) {
-    in_any_mode_after(Duration::from_millis(millis), move || {
-        let Some(mtm) = MainThreadMarker::new() else { return };
-        let alert = NSApplication::sharedApplication(mtm).modalWindow();
+fn key_alert(typed: &'static str, says: String, response: NSModalResponse, saw: Arc<Mutex<Vec<bool>>>) {
+    when_alert_shows(None, move |alert| {
         let said = alert_texts().iter().any(|text| text.contains(&says));
-        if let Some(field) = alert.and_then(|a| a.contentView()).as_deref().and_then(secure_field) {
+        if let Some(field) = alert.contentView().as_deref().and_then(secure_field) {
             field.setStringValue(&ns(typed));
         }
         saw.lock_ignoring_poison().push(said);
@@ -193,9 +191,8 @@ fn keys(then: fn(), target: Target) {
         "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?",
         &[groq.display_name(), ide_product::NAME],
     );
-    key_alert(800, "", question, NSAlertSecondButtonReturn, Arc::clone(&saw));
+    key_alert("", question, NSAlertSecondButtonReturn, Arc::clone(&saw));
     key_alert(
-        1800,
         "gsk_selbst_eingegeben",
         tf("API-Schlüssel für {}", &[groq.display_name()]),
         NSAlertFirstButtonReturn,
@@ -216,14 +213,13 @@ fn wrong_key(then: fn(), target: Target) {
     let saw = Arc::new(Mutex::new(Vec::new()));
     let openai = ApiProvider::OpenAi;
     key_alert(
-        800,
         "kein Schlüssel",
         tf("API-Schlüssel für {}", &[openai.display_name()]),
         NSAlertFirstButtonReturn,
         Arc::clone(&saw),
     );
     let problem = t("Das ist kein Schlüssel von OpenAI (sk-…) oder Groq (gsk_…).").to_string();
-    key_alert(1800, "", problem, NSAlertSecondButtonReturn, Arc::clone(&saw));
+    key_alert("", problem, NSAlertSecondButtonReturn, Arc::clone(&saw));
     main_on_run_loop(move || {
         ide_ui_dictation::enter_key(openai);
         check(
@@ -243,9 +239,9 @@ fn unreadable_key(then: fn(), target: Target) {
         "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?",
         &[openai.display_name(), ide_product::NAME],
     );
-    key_alert(800, "", question, NSAlertFirstButtonReturn, Arc::clone(&saw));
+    key_alert("", question, NSAlertFirstButtonReturn, Arc::clone(&saw));
     let problem = t("Lowspeaks Schlüssel ließ sich nicht lesen. Gib den Schlüssel selbst ein.").to_string();
-    key_alert(1800, "", problem, NSAlertSecondButtonReturn, Arc::clone(&saw));
+    key_alert("", problem, NSAlertSecondButtonReturn, Arc::clone(&saw));
     main_on_run_loop(move || {
         ide_ui_dictation::take_over_key(openai);
         dictation::lowspeak_key_readable(true);
@@ -445,14 +441,14 @@ fn save() {
 
 /// The buttons of the dictation settings: a key only Lowspeak keeps is taken over, the app's own is removed, which
 /// leaves Lowspeak's, and the fn switch turns fn off and on; then the scenario ends.
-pub fn settings_buttons() {
+pub(crate) fn settings_buttons() {
     let saw = Arc::new(Mutex::new(Vec::new()));
     let groq = ApiProvider::Groq;
     let question = tf(
         "Lowspeak hat einen Schlüssel für {}. Für {} übernehmen?",
         &[groq.display_name(), ide_product::NAME],
     );
-    key_alert(800, "", question, NSAlertFirstButtonReturn, Arc::clone(&saw));
+    key_alert("", question, NSAlertFirstButtonReturn, Arc::clone(&saw));
     main_on_run_loop(move || {
         let key_button = |tag| super::settings_pages::control(objc2::sel!(ideDictationKey:), Some(tag));
         let took = key_button(1).is_some_and(|b| super::settings_pages::act(&b));

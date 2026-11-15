@@ -2,36 +2,27 @@
 //! selected folder, each named in the question the context menu's "Neu" asks too, and folding every folder.
 
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use objc2::MainThreadMarker;
 use objc2::runtime::Sel;
-use objc2_app_kit::{NSAlertFirstButtonReturn, NSApplication, NSTextField, NSView};
+use objc2_app_kit::{NSAlertFirstButtonReturn, NSTextField, NSView};
 
-use super::helpers::{in_any_mode_after, wait_until};
+use super::helpers::{answer_alert, wait_until, when_alert_shows};
 use super::{check, snapshot};
 use crate::util::{main_on_run_loop, ns};
 use crate::window::{self, WindowController};
-
-/// When the question for the name is answered, a moment after it opened.
-const ANSWER_AFTER: Duration = Duration::from_millis(500);
 
 fn controller(root: &Path) -> Option<objc2::rc::Retained<WindowController>> {
     window::for_project(root)
 }
 
-/// Types `name` into the question in front and confirms it, from a timer of the run loop, which runs while it shows.
+/// Types `name` into the question for a name as soon as it shows and confirms it.
 fn answer_name(name: &'static str) {
-    in_any_mode_after(ANSWER_AFTER, move || {
-        let Some(mtm) = MainThreadMarker::new() else { return };
-        let app = NSApplication::sharedApplication(mtm);
-        let Some(content) = app.modalWindow().and_then(|w| w.contentView()) else {
-            return;
-        };
-        if let Some(field) = editable_field(&content) {
+    when_alert_shows(None, move |alert| {
+        if let Some(field) = alert.contentView().and_then(|content| editable_field(&content)) {
             field.setStringValue(&ns(name));
         }
-        app.stopModalWithCode(NSAlertFirstButtonReturn);
+        answer_alert(NSAlertFirstButtonReturn);
     });
 }
 
@@ -58,7 +49,7 @@ fn press(root: &Path, action: Sel) -> bool {
 }
 
 /// Once the tree shows the folder, opens `src`.
-pub fn run(root: PathBuf, then: fn(PathBuf)) {
+pub(crate) fn run(root: PathBuf, then: fn(PathBuf)) {
     no_folder();
     let probe = root.clone();
     wait_until(

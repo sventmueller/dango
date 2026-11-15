@@ -1,117 +1,84 @@
 //! A folder's window: the activity bar and panel on the left, its documents on the right, each in a native window
-//! tab of its own (E60).
+//! tab of its own (E60). The controller answers AppKit here and owns its parts, each with its state and module: the
+//! folder and trust in `folder`, the window tabs, their documents and panes in `documents`, the sidebar in `sidebar`,
+//! the inspector in `inspector`, the toolbar in `toolbar`, and what comes back after a restart in `layout` and `frame`.
 
 mod activity_bar;
 mod agent_choices;
 mod document_area;
-mod document_tabs;
+mod documents;
 pub(crate) mod file_outline;
 mod files;
 mod files_header;
-mod finding;
+mod folder;
 mod frame;
 mod full_screen;
 mod inspector;
-pub mod layout;
-mod lifecycle;
+pub(crate) mod layout;
 mod new_tab_button;
 mod notice;
-mod pane_commands;
-pub mod panels;
-pub mod panes;
+pub(crate) mod panels;
+pub(crate) mod panes;
 mod quick_open;
 mod registry;
-mod replace;
 mod search;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 mod sidebar;
-mod split_mode;
 mod tabs;
-pub mod toolbar;
+pub(crate) mod toolbar;
 mod validate;
 mod welcome;
 
 use std::cell::{Cell, RefCell};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, Sel};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSControl, NSLayoutConstraint, NSMenuItem, NSMenuItemValidation, NSToolbar, NSToolbarDelegate, NSToolbarItem,
-    NSToolbarItemIdentifier, NSView, NSWindow, NSWindowDelegate,
+    NSControl, NSMenuItem, NSMenuItemValidation, NSToolbar, NSToolbarDelegate, NSToolbarItem, NSToolbarItemIdentifier,
+    NSView, NSWindow, NSWindowDelegate,
 };
 use objc2_foundation::{NSArray, NSNotification, NSObjectProtocol};
 use splat_i18n::t;
 
 use crate::context::AppContext;
-use crate::util::{FlagGuard, guarded, main_soon, ns};
-use activity_bar::ActivityBar;
-pub use agent_choices::{AgentChoicesCache, refresh as refresh_agent_choices};
-use files::FileTree;
-pub use ide_ui_common::window::TabId;
+use crate::util::{FlagGuard, guarded, main_soon};
+pub(crate) use agent_choices::{AgentChoicesCache, refresh as refresh_agent_choices};
+pub(crate) use ide_ui_common::window::TabId;
 use ide_ui_common::window::WindowId;
-pub use new_tab_button::NewTabMenu;
-pub use notice::announce;
-use panels::Panels;
-use quick_open::QuickOpenPanel;
+pub(crate) use new_tab_button::NewTabMenu;
+pub(crate) use notice::announce;
 #[cfg(feature = "selftest")]
-pub use registry::open_windows;
-pub use registry::{
+pub(crate) use registry::open_windows;
+pub(crate) use registry::{
     deliver, for_project, frontmost, open_projects, records, save_layouts, show_ignored_files, toggle_activity_symbol,
     tree_changed, tree_listed,
 };
-pub use search::SearchPanel;
-pub use search::{HierarchyPanels, SearchPanels};
+pub(crate) use search::SearchPanel;
+pub(crate) use search::{HierarchyPanels, SearchPanels};
 #[cfg(feature = "selftest")]
-pub use search::{LIMIT as SEARCH_LIMIT, Toggle as SearchToggle, selftest as search_selftest};
-pub use search::{buffer_edited, files_changed as files_changed_on_disk};
-pub use tabs::TabKind;
-use tabs::{Document, TabWindow};
+pub(crate) use search::{LIMIT as SEARCH_LIMIT, Toggle as SearchToggle, selftest as search_selftest};
+pub(crate) use search::{buffer_edited, files_changed as files_changed_on_disk};
+pub(crate) use sidebar::ACTIVITY_WIDTH;
+#[cfg(feature = "selftest")]
+pub(crate) use sidebar::{PANEL_DEFAULT_WIDTH, SIDEBAR_RAISE};
+use tabs::Document;
+pub(crate) use tabs::TabKind;
 
-/// How far the activity bar and the panel reach above the sidebar's safe area, which puts their first symbol and title
-/// level with the top edge of the tabs, which start where the safe area does.
-pub const SIDEBAR_RAISE: f64 = 11.0;
-/// How far the panel reaches under the activity bar, so that its content keeps the same distance from the symbols as
-/// the symbols keep from the window's edge.
-const PANEL_UNDER_ACTIVITY: f64 = 8.5;
-/// The width of the activity bar, which stays when the panel beside it is closed.
-pub(crate) const ACTIVITY_WIDTH: f64 = 44.0;
-const PANEL_MIN_WIDTH: f64 = 200.0;
-const PANEL_MAX_WIDTH: f64 = 560.0;
-pub(crate) const PANEL_DEFAULT_WIDTH: f64 = 260.0;
+pub(crate) use ide_ui_common::window::Panel;
 
-pub use ide_ui_common::window::Panel;
-
-pub struct Ivars {
+/// The window controller's state, part by part.
+pub(crate) struct Ivars {
     context: Rc<AppContext>,
     /// The window's id among the open ones, which answers from other threads carry.
     id: WindowId,
-    project: RefCell<Option<PathBuf>>,
-    panel: Cell<Option<Panel>>,
-    panel_open: Cell<bool>,
-    panel_width: Cell<f64>,
-    activity: RefCell<Option<ActivityBar>>,
-    panels: RefCell<Option<Panels>>,
+    folder: folder::State,
+    sidebar: sidebar::State,
     inspector: inspector::State,
-    /// The activity bar and the panel beside it, which the window tab in front shows.
-    sidebar: RefCell<Option<Retained<NSView>>>,
-    /// Keeps the sidebar's top below the toolbar, which in full screen reaches further down than its safe area.
-    below_toolbar: RefCell<Option<Retained<NSLayoutConstraint>>>,
-    /// The window tabs, in the order they opened.
-    tabs: RefCell<Vec<Rc<TabWindow>>>,
-    /// The window tab in front, which has the sidebar.
-    current: RefCell<Option<Rc<TabWindow>>>,
-    /// The number of the next document.
-    next_id: Cell<isize>,
-    /// Where a document about to open goes instead of where it would by default (E145).
-    target: RefCell<Option<panes::Place>>,
-    workspace: RefCell<Option<Rc<crate::project::Project>>>,
-    files: RefCell<Option<FileTree>>,
-    search: RefCell<Option<Retained<SearchPanel>>>,
-    quick_open: RefCell<Option<Retained<QuickOpenPanel>>>,
+    documents: documents::State,
     /// The note at the foot of the documents and what it says.
     notice: RefCell<Option<(Retained<objc2_app_kit::NSBox>, String)>>,
     /// Whether the window closed; it stays among the open ones until the main queue gets to it, but has nothing left
@@ -127,7 +94,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEWindowController"]
     #[ivars = Ivars]
-    pub struct WindowController;
+    pub(crate) struct WindowController;
 
     unsafe impl NSObjectProtocol for WindowController {}
 
@@ -315,7 +282,7 @@ define_class!(
 
         #[unsafe(method(ideSplitRight:))]
         fn split_right_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.split_active(pane_commands::side_with_option()));
+            guarded((), || self.split_active(documents::side_with_option()));
         }
 
         #[unsafe(method(ideSplitBelow:))]
@@ -533,16 +500,16 @@ impl WindowController {
     }
 
     /// The window's id among the open ones.
-    pub fn id(&self) -> WindowId {
+    pub(crate) fn id(&self) -> WindowId {
         self.ivars().id
     }
 
     /// The window as the feature crates know it.
-    pub fn handle(&self) -> ide_ui_common::window::Window {
+    pub(crate) fn handle(&self) -> ide_ui_common::window::Window {
         ide_ui_common::window::Window::new(self.id())
     }
 
-    pub fn context(&self) -> &Rc<AppContext> {
+    pub(crate) fn context(&self) -> &Rc<AppContext> {
         &self.ivars().context
     }
 }
@@ -550,14 +517,6 @@ impl WindowController {
 /// The open windows, in the order they opened.
 fn windows() -> Vec<Retained<WindowController>> {
     crate::context::app().windows().all()
-}
-
-/// `panel` unless its symbol is among `hidden`, else the first panel whose symbol shows.
-fn first_shown(panel: Panel, hidden: &[Panel]) -> Panel {
-    if !hidden.contains(&panel) {
-        return panel;
-    }
-    Panel::ALL.into_iter().find(|p| !hidden.contains(p)).unwrap_or(panel)
 }
 
 /// The tag of the control or menu item that sent an action.
@@ -581,7 +540,7 @@ fn browser_commands() -> [Sel; 4] {
 
 impl WindowController {
     /// Brings the window of `project` to the front, or puts it into an empty window, or opens a new one.
-    pub fn open(mtm: MainThreadMarker, project: Option<PathBuf>) -> Retained<WindowController> {
+    pub(crate) fn open(mtm: MainThreadMarker, project: Option<PathBuf>) -> Retained<WindowController> {
         let cx = AppContext::get(mtm);
         let open = cx.windows();
         let existing = match &project {
@@ -604,7 +563,7 @@ impl WindowController {
     }
 
     /// A new window for `project`, even if another shows it, as a launch puts back the windows of the last run.
-    pub fn open_new(mtm: MainThreadMarker, project: Option<PathBuf>) -> Retained<WindowController> {
+    pub(crate) fn open_new(mtm: MainThreadMarker, project: Option<PathBuf>) -> Retained<WindowController> {
         new_tab_button::install();
         let controller = WindowController::new(mtm, project);
         agent_choices::refresh(controller.context());
@@ -622,23 +581,10 @@ impl WindowController {
         let ivars = Ivars {
             id: WindowId::new(context.windows().next_id()),
             context,
-            project: RefCell::new(project),
-            panel: Cell::default(),
-            panel_open: Cell::default(),
-            panel_width: Cell::new(PANEL_DEFAULT_WIDTH),
-            activity: RefCell::default(),
-            panels: RefCell::default(),
+            folder: folder::State::new(project),
+            sidebar: sidebar::State::default(),
             inspector: inspector::State::default(),
-            sidebar: RefCell::default(),
-            below_toolbar: RefCell::default(),
-            tabs: RefCell::default(),
-            current: RefCell::default(),
-            next_id: Cell::new(1),
-            target: RefCell::default(),
-            workspace: RefCell::default(),
-            files: RefCell::default(),
-            search: RefCell::default(),
-            quick_open: RefCell::default(),
+            documents: documents::State::default(),
             notice: RefCell::default(),
             closed: Cell::default(),
             closing: Cell::default(),
@@ -646,13 +592,13 @@ impl WindowController {
         let this = Self::alloc(mtm).set_ivars(ivars);
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
-        this.build();
+        this.build_sidebar();
         let tab = this.new_tab_window();
         let sidebar = this.saved_sidebar();
-        this.ivars().panel_open.set(true);
+        this.start_with_panel_open();
         this.restore_frame(&tab.window);
         this.make_current(&tab);
-        this.show_panel(first_shown(sidebar.panel, &activity_bar::hidden()));
+        this.show_panel(sidebar::first_shown(sidebar.panel, &activity_bar::hidden()));
         if !sidebar.open {
             this.set_panel_open(false);
         }
@@ -668,179 +614,8 @@ impl WindowController {
         format!("folder {:p}", self)
     }
 
-    /// Builds the sidebar, the activity bar and the panel beside it, which moves into the window tab in front.
-    fn build(&self) {
-        let mtm = self.mtm();
-        let sidebar_view = NSView::new(mtm);
-        let activity = ActivityBar::new(mtm, self);
-        let panels = Panels::new(mtm, self, self.project().as_deref());
-        sidebar_view.addSubview(panels.view());
-        sidebar_view.addSubview(activity.view());
-        let guide = sidebar_view.safeAreaLayoutGuide();
-        activity.view().setTranslatesAutoresizingMaskIntoConstraints(false);
-        panels.view().setTranslatesAutoresizingMaskIntoConstraints(false);
-        let under_title_bar = activity
-            .view()
-            .topAnchor()
-            .constraintEqualToAnchor_constant(&guide.topAnchor(), -SIDEBAR_RAISE);
-        // Below required, so that the toolbar of full screen, which the safe area leaves out, pushes the sidebar down.
-        under_title_bar.setPriority(999.0);
-        for constraint in [
-            activity
-                .view()
-                .leadingAnchor()
-                .constraintEqualToAnchor(&sidebar_view.leadingAnchor()),
-            under_title_bar,
-            activity
-                .view()
-                .bottomAnchor()
-                .constraintEqualToAnchor(&sidebar_view.bottomAnchor()),
-            activity.view().widthAnchor().constraintEqualToConstant(ACTIVITY_WIDTH),
-            panels
-                .view()
-                .leadingAnchor()
-                .constraintEqualToAnchor_constant(&activity.view().trailingAnchor(), -PANEL_UNDER_ACTIVITY),
-            panels
-                .view()
-                .trailingAnchor()
-                .constraintEqualToAnchor(&sidebar_view.trailingAnchor()),
-            panels
-                .view()
-                .topAnchor()
-                .constraintEqualToAnchor(&activity.view().topAnchor()),
-            panels
-                .view()
-                .bottomAnchor()
-                .constraintEqualToAnchor(&sidebar_view.bottomAnchor()),
-        ] {
-            constraint.setActive(true);
-        }
-        let below_toolbar = activity
-            .view()
-            .topAnchor()
-            .constraintGreaterThanOrEqualToAnchor_constant(&sidebar_view.topAnchor(), -SIDEBAR_RAISE);
-        below_toolbar.setActive(true);
-        let ivars = self.ivars();
-        *ivars.below_toolbar.borrow_mut() = Some(below_toolbar);
-        *ivars.activity.borrow_mut() = Some(activity);
-        *ivars.panels.borrow_mut() = Some(panels);
-        *ivars.sidebar.borrow_mut() = Some(sidebar_view);
-    }
-
-    /// Moves the sidebar's first symbol and title below the toolbar of the window tab in front, as far as it reaches now.
-    fn follow_toolbar(&self) {
-        let reach = self.current_tab().map_or(0.0, |tab| tab.toolbar_reach());
-        self.keep_sidebar_below_toolbar(reach);
-    }
-
-    /// Keeps the sidebar's first symbol and title clear of a toolbar that reaches `toolbar` down from the sidebar's top.
-    fn keep_sidebar_below_toolbar(&self, toolbar: f64) {
-        if let Some(constraint) = self.ivars().below_toolbar.borrow().as_ref() {
-            constraint.setConstant(toolbar - SIDEBAR_RAISE);
-        }
-    }
-
-    /// Reads the folder, shows its tree and asks once whether the user trusts it.
-    fn load_project(&self) {
-        let ivars = self.ivars();
-        if let Some(search) = ivars.search.borrow_mut().take() {
-            search.stop();
-        }
-        if let Some(quick_open) = ivars.quick_open.take() {
-            quick_open.close();
-        }
-        *ivars.files.borrow_mut() = None;
-        *ivars.workspace.borrow_mut() = None;
-        let Some(root) = self.project() else { return };
-        let project = match crate::project::Project::open(&root) {
-            Ok(project) => Rc::new(project),
-            Err(error) => {
-                crate::diag::report("opening a folder", error);
-                return;
-            }
-        };
-        let tree = FileTree::new(self.mtm(), self, project.clone());
-        let search = SearchPanel::new(self.mtm(), self, project.root());
-        if let Some(panels) = ivars.panels.borrow().as_ref() {
-            panels.set_files(&tree.page(), &tree.header_buttons(self.mtm()));
-            if let Some(page) = search.page() {
-                panels.set_page(Panel::Search, page);
-            }
-            if let Some(header) = search.header() {
-                panels.set_accessory(Panel::Search, header);
-            }
-        }
-        *ivars.files.borrow_mut() = Some(tree);
-        *ivars.search.borrow_mut() = Some(search);
-        *ivars.workspace.borrow_mut() = Some(project);
-        self.folder_attached();
-        if !crate::project::is_trusted(&root) {
-            self.ask_trust(root);
-        }
-    }
-
-    /// Opens the tabs the folder's window had when it closed, as opening a folder does.
-    pub fn restore_layout(&self) {
-        let size = ide_core::settings::Settings::load_user().get(&ide_core::settings::keys::FONT_SIZE);
-        layout::restore(self, &mut |controller, document| match document {
-            layout::Document::File(path) => path.is_file() && crate::editor::open_quietly(controller, path, size),
-            layout::Document::Untitled(_) => false,
-        });
-    }
-
-    /// `restore_layout` with `editor` opening each editor's document, and saying whether it did, so the launch can put
-    /// the copies a crash left in their places (`session::restore`).
-    pub(crate) fn restore_layout_with(&self, editor: &mut layout::Opener) {
-        layout::restore(self, editor);
-    }
-
-    /// The sheet that asks whether the folder may run what it configures itself (E22).
-    fn ask_trust(&self, root: PathBuf) {
-        let Some(window) = self.window() else { return };
-        let alert = objc2_app_kit::NSAlert::new(self.mtm());
-        alert.setMessageText(&ns(&splat_i18n::tf(
-            "Vertraust du den Dateien in „{}“?",
-            &[&folder_name(&root)],
-        )));
-        alert.setInformativeText(&ns(t(
-            "In einem vertrauten Ordner dürfen Git-Hooks, Sprachserver aus dem Projekt und Agenten laufen. \
-             Eingeschränkt kannst du lesen und bearbeiten, aber nichts davon startet.",
-        )));
-        alert.addButtonWithTitle(&ns(t("Vertrauen")));
-        alert.addButtonWithTitle(&ns(t("Eingeschränkt öffnen")));
-        let handler = block2::RcBlock::new(move |response: objc2_app_kit::NSModalResponse| {
-            guarded((), || {
-                if response == objc2_app_kit::NSAlertFirstButtonReturn {
-                    crate::project::trust(&root);
-                    lifecycle::trust_changed(&root);
-                }
-            });
-        });
-        alert.beginSheetModalForWindow_completionHandler(&window, Some(&handler));
-    }
-
-    /// Asks again whether the user trusts the folder, for a panel that waits for it.
-    pub fn ask_trust_again(&self) {
-        if let Some(root) = self.project_root()
-            && self.window().is_some_and(|w| w.attachedSheet().is_none())
-        {
-            self.ask_trust(root);
-        }
-    }
-
-    /// The folder's root, if the window has one open.
-    pub fn project_root(&self) -> Option<PathBuf> {
-        self.ivars().workspace.borrow().as_ref().map(|p| p.root().to_path_buf())
-    }
-
-    /// Whether the user trusts this window's folder (E22).
-    pub fn is_trusted(&self) -> bool {
-        self.project_root()
-            .is_some_and(|root| crate::project::is_trusted(&root))
-    }
-
     /// Shows `text` at the foot of the documents of the tab in front for a few seconds.
-    pub fn show_notice(&self, text: &str) {
+    pub(crate) fn show_notice(&self, text: &str) {
         let Some(tab) = self.current_tab() else { return };
         let note = notice::show(self.mtm(), tab.content(), text);
         *self.ivars().notice.borrow_mut() = Some((note, text.to_string()));
@@ -877,17 +652,17 @@ impl WindowController {
     }
 
     /// The window of the tab in front, which has the sidebar; sheets and the keyboard focus go there.
-    pub fn window(&self) -> Option<Retained<NSWindow>> {
-        self.ivars().current.borrow().as_ref().map(|tab| tab.window.clone())
+    pub(crate) fn window(&self) -> Option<Retained<NSWindow>> {
+        self.current_tab().map(|tab| tab.window.clone())
     }
 
     /// The windows of the tabs, in the order of the tab bar.
-    pub fn tab_windows(&self) -> Vec<Retained<NSWindow>> {
+    pub(crate) fn tab_windows(&self) -> Vec<Retained<NSWindow>> {
         self.ordered_tabs().iter().map(|tab| tab.window.clone()).collect()
     }
 
     /// Whether `window` is one of this window's tabs.
-    pub fn owns_window(&self, window: &NSWindow) -> bool {
+    pub(crate) fn owns_window(&self, window: &NSWindow) -> bool {
         self.tab_of_window(window).is_some()
     }
 
@@ -899,50 +674,6 @@ impl WindowController {
         self.ivars().closed.set(true);
         self.folder_closes();
         main_soon_unregister(self.id());
-    }
-
-    /// The folder this window shows.
-    pub fn project(&self) -> Option<PathBuf> {
-        self.ivars().project.borrow().clone()
-    }
-
-    fn set_project(&self, project: Option<PathBuf>) {
-        *self.ivars().project.borrow_mut() = project;
-        self.update_title();
-        if let Some(panels) = self.ivars().panels.borrow().as_ref() {
-            panels.set_project(self.project().as_deref());
-        }
-        self.load_project();
-    }
-
-    fn frame_name(&self) -> String {
-        match self.project() {
-            Some(path) => format!("ProjectWindow {}", path.display()),
-            None => "ProjectWindow".into(),
-        }
-    }
-
-    fn update_title(&self) {
-        for tab in self.ivars().tabs.borrow().iter() {
-            self.update_title_of(&tab.window);
-        }
-    }
-
-    /// Names the folder in the title bar of `window`; the tabs name their documents.
-    fn update_title_of(&self, window: &NSWindow) {
-        match self.project() {
-            Some(path) => {
-                window.setTitle(&ns(&folder_name(&path)));
-                window.setSubtitle(&ns(&crate::app::display_path(&path)));
-                window.setRepresentedURL(Some(&objc2_foundation::NSURL::fileURLWithPath(&ns(
-                    &path.to_string_lossy()
-                ))));
-            }
-            None => {
-                window.setTitle(&ns(ide_product::NAME));
-                window.setSubtitle(&ns(""));
-            }
-        }
     }
 
     /// Brings the welcome page to the front, or opens it; its number.
@@ -965,24 +696,4 @@ impl WindowController {
     }
 }
 
-pub use ide_ui_common::panel::in_front;
-
-fn folder_name(path: &Path) -> String {
-    path.file_name().map_or_else(
-        || path.display().to_string(),
-        |name| name.to_string_lossy().into_owned(),
-    )
-}
-
-#[cfg(test)]
-mod tests {
-    use std::path::Path;
-
-    use super::folder_name;
-
-    #[test]
-    fn a_window_is_named_after_its_folder_and_the_root_after_itself() {
-        assert_eq!(folder_name(Path::new("/Users/a/dango")), "dango");
-        assert_eq!(folder_name(Path::new("/")), "/");
-    }
-}
+pub(crate) use ide_ui_common::panel::in_front;

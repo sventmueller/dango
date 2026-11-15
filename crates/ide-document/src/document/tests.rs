@@ -169,7 +169,7 @@ fn a_read_only_document_refuses_edits_and_a_lossy_one_stays_read_only() {
         Err(EditError::ReadOnly(ReadOnly::Requested))
     );
     assert!(matches!(
-        document.begin_save(false),
+        document.begin_save(ChangedOnDisk::Refuse),
         Err(SaveError::ReadOnly(ReadOnly::Requested))
     ));
     document.set_read_only(false).unwrap();
@@ -258,7 +258,7 @@ fn a_save_writes_the_format_it_read_and_typing_during_it_stays_unsaved() {
         }
     );
     edit(&mut document, 0..3, "ONE");
-    let job = document.begin_save(false).unwrap();
+    let job = document.begin_save(ChangedOnDisk::Refuse).unwrap();
     edit(&mut document, 0..0, ">");
     let saved = job.run().unwrap();
     document.end_save(saved);
@@ -276,9 +276,9 @@ fn a_save_that_finishes_after_a_newer_one_changes_nothing() {
     fs::write(&path, "base\n").unwrap();
     let mut document = Document::open(&path).unwrap();
     edit(&mut document, 0..0, "1");
-    let older = document.begin_save(false).unwrap().run().unwrap();
+    let older = document.begin_save(ChangedOnDisk::Refuse).unwrap().run().unwrap();
     edit(&mut document, 0..0, "2");
-    let newer = document.begin_save(true).unwrap().run().unwrap();
+    let newer = document.begin_save(ChangedOnDisk::Overwrite).unwrap().run().unwrap();
     document.end_save(newer);
     document.end_save(older);
     assert!(!document.is_dirty());
@@ -292,7 +292,7 @@ fn a_save_that_finishes_after_a_newer_one_changes_nothing() {
 /// answer unrun, and the copy the editor kept writes the file on its own thread.
 #[test]
 fn a_save_the_full_disk_lane_refuses_is_written_by_the_copy_kept_for_it() {
-    use ide_core::lane::{Full, Lane};
+    use ide_core::lane::{Lane, Refused};
     use std::sync::mpsc::channel;
     use std::sync::{Arc, Barrier};
     static LANE: Lane = Lane::new("test-full-save", 1, 1);
@@ -312,14 +312,14 @@ fn a_save_the_full_disk_lane_refuses_is_written_by_the_copy_kept_for_it() {
     fs::write(&path, "base\n").unwrap();
     let mut document = Document::open(&path).unwrap();
     edit(&mut document, 0..0, "mine ");
-    let job = document.begin_save(false).unwrap();
+    let job = document.begin_save(ChangedOnDisk::Refuse).unwrap();
     let kept = job.clone();
     let (answered, answers) = channel();
     let queued = LANE.ask(
         move || job.run(),
         move |written| answered.send(written.is_some()).unwrap(),
     );
-    assert_eq!(queued, Err(Full));
+    assert_eq!(queued, Err(Refused::Full));
     assert!(
         answers.recv().is_err(),
         "the refused answer is gone without being called"
@@ -341,7 +341,7 @@ fn a_save_refuses_to_overwrite_a_change_another_program_made() {
     fs::write(&path, "theirs\n").unwrap();
     assert!(matches!(document.save(), Err(SaveError::ChangedOnDisk)));
     assert_eq!(fs::read_to_string(&path).unwrap(), "theirs\n");
-    let saved = document.begin_save(true).unwrap().run().unwrap();
+    let saved = document.begin_save(ChangedOnDisk::Overwrite).unwrap().run().unwrap();
     document.end_save(saved);
     assert_eq!(fs::read_to_string(&path).unwrap(), "mine base\n");
 

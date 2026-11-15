@@ -54,7 +54,7 @@ fn audit() -> bool {
 
 /// Makes the shared application object one that never activates the app, when a scenario runs; called before anything
 /// else asks for the shared application.
-pub fn install(_mtm: MainThreadMarker) {
+pub(crate) fn install(_mtm: MainThreadMarker) {
     if std::env::var_os("IDE_SELFTEST").is_none() {
         return;
     }

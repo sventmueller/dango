@@ -7,7 +7,7 @@ use ide_agent::{
 use splat_i18n::{t, tf};
 
 /// The wording the own agent's sessions are given.
-pub struct Words;
+pub(super) struct Words;
 
 impl Wording for Words {
     fn note(&self, note: &Note) -> String {
@@ -46,7 +46,7 @@ impl Wording for Words {
 }
 
 /// What a destructive git command throws away, for every agent's permission card (E27).
-pub fn destructive_text(why: Destructive) -> String {
+pub(crate) fn destructive_text(why: Destructive) -> String {
     match why {
         Destructive::ForcePush => t("git push --force überschreibt den Verlauf auf dem Server"),
         Destructive::ResetHard => t("git reset --hard verwirft nicht gesicherte Änderungen"),
@@ -105,7 +105,7 @@ fn failure(kind: ErrorKind) -> &'static str {
 }
 
 /// Why a stored thread could not be opened.
-pub fn load_error(error: &LoadError) -> String {
+pub(crate) fn load_error(error: &LoadError) -> String {
     match error {
         LoadError::NoStore => t("Der Thread hat keinen Speicherort.").to_string(),
         LoadError::Unreadable(detail) => tf("Der gespeicherte Thread ließ sich nicht lesen: {}", &[detail]),

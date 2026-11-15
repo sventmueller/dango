@@ -18,7 +18,7 @@ use objc2_foundation::{NSNumber, NSObjectProtocol, NSPoint, NSRect};
 use splat_i18n::{t, tf};
 
 use super::Side;
-use crate::util::{constant, guarded, item, ns, separator, set_target, symbol, symbol_button};
+use crate::util::{activate, constant, guarded, item, ns, pin_sides, separator, set_target, symbol, symbol_button};
 use crate::window::tabs::Document;
 use crate::window::{TabId, WindowController};
 
@@ -30,7 +30,7 @@ const TAB_HEIGHT: f64 = 26.0;
 const MIN_TAB_WIDTH: f64 = 60.0;
 const TITLE_POINTS: f64 = 13.0;
 
-pub struct TabIvars {
+pub(crate) struct TabIvars {
     id: TabId,
     target: Weak<WindowController>,
     title: Retained<NSTextField>,
@@ -54,7 +54,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEPaneTab"]
     #[ivars = TabIvars]
-    pub struct PaneTab;
+    pub(crate) struct PaneTab;
 
     unsafe impl NSObjectProtocol for PaneTab {}
 
@@ -177,8 +177,7 @@ impl PaneTab {
         status.setSymbolConfiguration(Some(
             &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
                 6.0,
-                // SAFETY: AppKit sets its font weight constants when it loads.
-                unsafe { objc2_app_kit::NSFontWeightRegular },
+                constant!(objc2_app_kit::NSFontWeightRegular),
             ),
         ));
         status.setHidden(true);
@@ -226,7 +225,7 @@ impl PaneTab {
         }
         let centred = stack.centerXAnchor().constraintEqualToAnchor(&self.centerXAnchor());
         centred.setPriority(700.0);
-        for constraint in [
+        activate([
             ivars
                 .close
                 .leadingAnchor()
@@ -245,9 +244,7 @@ impl PaneTab {
                 .constraintLessThanOrEqualToAnchor_constant(&self.trailingAnchor(), -8.0),
             self.heightAnchor().constraintEqualToConstant(TAB_HEIGHT),
             self.widthAnchor().constraintGreaterThanOrEqualToConstant(MIN_TAB_WIDTH),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
     }
 
     pub(super) fn id(&self) -> TabId {
@@ -473,7 +470,9 @@ impl PaneBar {
         }
         let height = view.heightAnchor().constraintEqualToConstant(0.0);
         let inset = (TRACK_HEIGHT - TAB_HEIGHT) / 2.0;
-        for constraint in [
+        pin_sides(&strip, &track, inset);
+        pin_sides(&line, &view, 0.0);
+        activate([
             drop.leadingAnchor().constraintEqualToAnchor(&track.leadingAnchor()),
             drop.trailingAnchor().constraintEqualToAnchor(&track.trailingAnchor()),
             drop.topAnchor().constraintEqualToAnchor(&track.topAnchor()),
@@ -495,20 +494,10 @@ impl PaneBar {
                 .topAnchor()
                 .constraintEqualToAnchor_constant(&view.topAnchor(), 4.0),
             track.heightAnchor().constraintEqualToConstant(TRACK_HEIGHT),
-            strip
-                .leadingAnchor()
-                .constraintEqualToAnchor_constant(&track.leadingAnchor(), inset),
-            strip
-                .trailingAnchor()
-                .constraintEqualToAnchor_constant(&track.trailingAnchor(), -inset),
             strip.centerYAnchor().constraintEqualToAnchor(&track.centerYAnchor()),
-            line.leadingAnchor().constraintEqualToAnchor(&view.leadingAnchor()),
-            line.trailingAnchor().constraintEqualToAnchor(&view.trailingAnchor()),
             line.bottomAnchor().constraintEqualToAnchor(&view.bottomAnchor()),
             height.clone(),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         view.setHidden(true);
         PaneBar {
             view,

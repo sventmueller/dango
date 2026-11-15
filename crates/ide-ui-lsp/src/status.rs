@@ -11,14 +11,14 @@ use objc2_foundation::NSEdgeInsets;
 use splat_i18n::{t, tf};
 
 use crate::editor::Editor;
-use ide_ui_common::util::{label, ns, set_action, symbol};
+use ide_ui_common::util::{activate, label, ns, pin_inset, set_action, symbol};
 
 /// The height of the bar.
 pub const HEIGHT: f64 = 24.0;
 
 /// What the bar's button does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Action {
+pub(crate) enum Action {
     None,
     Install,
     Cancel,
@@ -39,7 +39,7 @@ impl Action {
 }
 
 /// The controls of one editor's bar.
-pub struct Bar {
+pub(crate) struct Bar {
     problems: Retained<NSButton>,
     crumbs: Retained<NSButton>,
     server: Retained<NSTextField>,
@@ -95,25 +95,19 @@ pub fn bar(mtm: MainThreadMarker, view: &dyn Editor) -> Retained<NSView> {
     container.addSubview(&line);
     container.addSubview(&stack);
     line.setTranslatesAutoresizingMaskIntoConstraints(false);
-    stack.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
+    activate([
         line.leadingAnchor().constraintEqualToAnchor(&container.leadingAnchor()),
         line.trailingAnchor()
             .constraintEqualToAnchor(&container.trailingAnchor()),
         line.topAnchor().constraintEqualToAnchor(&container.topAnchor()),
-        stack
-            .leadingAnchor()
-            .constraintEqualToAnchor(&container.leadingAnchor()),
-        stack
-            .trailingAnchor()
-            .constraintEqualToAnchor(&container.trailingAnchor()),
-        stack
-            .topAnchor()
-            .constraintEqualToAnchor_constant(&container.topAnchor(), 1.0),
-        stack.bottomAnchor().constraintEqualToAnchor(&container.bottomAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
+    let below_line = objc2_foundation::NSEdgeInsets {
+        top: 1.0,
+        left: 0.0,
+        bottom: 0.0,
+        right: 0.0,
+    };
+    pin_inset(&stack, &container, below_line);
     view.lsp().borrow_mut().status = Some(Bar {
         problems,
         crumbs,

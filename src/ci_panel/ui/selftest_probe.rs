@@ -8,12 +8,12 @@ use super::*;
 
 impl Ui {
     /// Whether the empty state offers the browser login, and whether it can be pressed.
-    pub fn browser_button(&self) -> Option<bool> {
+    pub(crate) fn browser_button(&self) -> Option<bool> {
         self.browser.get()
     }
 
     /// The note below the list, when it shows.
-    pub fn note(&self) -> Option<String> {
+    pub(crate) fn note(&self) -> Option<String> {
         (!self.no_runs.isHidden()).then(|| self.no_runs.stringValue().to_string())
     }
 }

@@ -10,7 +10,7 @@ use splat_i18n::{t, tf};
 
 use super::{Action, Line, background_symbol, task_status};
 
-pub use ide_ui_agent::work::Part;
+pub(crate) use ide_ui_agent::work::Part;
 
 /// The lines of `part` of the session in tab `key`, what runs first.
 pub(super) fn lines(key: AgentKey, thread: &Thread, part: Part, now: SystemTime) -> Vec<Line> {

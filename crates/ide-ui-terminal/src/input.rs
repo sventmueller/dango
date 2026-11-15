@@ -20,12 +20,12 @@ use super::view::TerminalView;
 use crate::keys;
 
 /// AppKit's `NSNotFound`, which ranges use to say "none".
-pub const NOT_FOUND: NSUInteger = NSUInteger::MAX >> 1;
+pub(crate) const NOT_FOUND: NSUInteger = NSUInteger::MAX >> 1;
 
 #[derive(Default)]
-pub struct KeyState {
+pub(crate) struct KeyState {
     /// Text an input method is composing.
-    pub marked: RefCell<String>,
+    pub(crate) marked: RefCell<String>,
     /// The part of `marked` the input method selected, as location and length.
     selection: Cell<(usize, usize)>,
     /// The key being interpreted while `interpretKeyEvents:` runs.

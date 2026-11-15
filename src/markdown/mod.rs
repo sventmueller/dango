@@ -21,11 +21,11 @@ use splat_markdown::text::Byte;
 use crate::editor::EditorTextView;
 use crate::util::{ns, separator, submenu, tagged};
 use ide_ui_export as export;
-pub use splat_app::open_in_splat_item;
+pub(crate) use splat_app::open_in_splat_item;
 
 /// A command of the menus, by the tag of its menu item.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Command {
+pub(crate) enum Command {
     Bold = 1,
     Italic,
     Strikethrough,
@@ -118,7 +118,7 @@ impl Command {
 }
 
 /// The Format menu, its shortcuts from the keymap.
-pub fn format_menu(mtm: MainThreadMarker, shortcut: &dyn Fn(&str) -> String) -> Retained<NSMenuItem> {
+pub(crate) fn format_menu(mtm: MainThreadMarker, shortcut: &dyn Fn(&str) -> String) -> Retained<NSMenuItem> {
     use Command::*;
     let groups: [&[Command]; 4] = [
         &[Bold, Italic, Strikethrough, Code],
@@ -137,7 +137,7 @@ pub fn format_menu(mtm: MainThreadMarker, shortcut: &dyn Fn(&str) -> String) -> 
 }
 
 /// The File menu's entries for Markdown documents: the exports and, where Splat is installed, opening it there.
-pub fn file_items(mtm: MainThreadMarker) -> Vec<Retained<NSMenuItem>> {
+pub(crate) fn file_items(mtm: MainThreadMarker) -> Vec<Retained<NSMenuItem>> {
     let no_key = |_: &str| String::new();
     let exports = [Command::ExportPdf, Command::ExportHtml, Command::ExportWord]
         .iter()
@@ -149,12 +149,12 @@ pub fn file_items(mtm: MainThreadMarker) -> Vec<Retained<NSMenuItem>> {
 }
 
 /// The Edit menu's entry that pastes text without its formatting.
-pub fn paste_plain_item(mtm: MainThreadMarker, shortcut: &dyn Fn(&str) -> String) -> Retained<NSMenuItem> {
+pub(crate) fn paste_plain_item(mtm: MainThreadMarker, shortcut: &dyn Fn(&str) -> String) -> Retained<NSMenuItem> {
     Command::PastePlain.item(mtm, shortcut)
 }
 
 /// Runs the command of the menu item tagged `tag` on the editor `view`.
-pub fn perform(view: &EditorTextView, tag: isize) {
+pub(crate) fn perform(view: &EditorTextView, tag: isize) {
     let Some(command) = Command::of_tag(tag) else { return };
     match command {
         Command::PastePlain => paste::plain(view),
@@ -178,7 +178,7 @@ fn export_as(view: &EditorTextView, kind: export::Kind) {
 }
 
 /// What an export of the document `view` shows makes a file of.
-pub fn source_of(view: &EditorTextView) -> Option<export::Source> {
+pub(crate) fn source_of(view: &EditorTextView) -> Option<export::Source> {
     let document = view.document();
     let path = document.path()?;
     Some(export::Source {
@@ -190,7 +190,7 @@ pub fn source_of(view: &EditorTextView) -> Option<export::Source> {
 }
 
 /// Whether the menu item of an `ideMarkdown:` command applies to the editor `view`; `None` for other items.
-pub fn validate(view: &EditorTextView, item: &NSMenuItem) -> Option<bool> {
+pub(crate) fn validate(view: &EditorTextView, item: &NSMenuItem) -> Option<bool> {
     (item.action() == Some(sel!(ideMarkdown:))).then(|| match Command::of_tag(item.tag()) {
         Some(Command::PastePlain) => view.isEditable(),
         Some(Command::OpenInSplat) => is_markdown(view) && splat_app::location().is_some(),
@@ -201,19 +201,19 @@ pub fn validate(view: &EditorTextView, item: &NSMenuItem) -> Option<bool> {
 }
 
 /// ⌘V: in a Markdown document, rich text from Word or the web goes in as Markdown; whether the paste was taken.
-pub fn paste(view: &EditorTextView) -> bool {
+pub(crate) fn paste(view: &EditorTextView) -> bool {
     is_markdown(view) && paste::rich(view, &objc2_app_kit::NSPasteboard::generalPasteboard())
 }
 
 /// An editor opened `view` at the user's request: a Markdown file gets its preview beside it, if the user wants that.
-pub fn opened(view: &EditorTextView) {
+pub(crate) fn opened(view: &EditorTextView) {
     if is_markdown(view) && Settings::load_user().get(&keys::MARKDOWN_PREVIEW) {
         crate::preview::open_beside(view, true);
     }
 }
 
 /// The editor `view` closes: the preview that opened with it goes too.
-pub fn closing(view: &EditorTextView) {
+pub(crate) fn closing(view: &EditorTextView) {
     crate::preview::close_beside(view, true);
 }
 
@@ -272,12 +272,12 @@ fn apply(view: &EditorTextView, edit: &Edit, name: &str) {
 
 /// What the self-test calls directly, without menus, panels or the general pasteboard.
 #[cfg(feature = "selftest")]
-pub mod selftest {
-    pub use super::Command;
-    pub use super::export::seen as export_seen;
-    pub use super::export::{Kind, Outcome, Source, start as export_to};
-    pub use super::format::link_with;
-    pub use super::paste::rich as paste_from;
-    pub use super::source_of;
-    pub use super::splat_app::saved as saved_for_splat;
+pub(crate) mod selftest {
+    pub(crate) use super::Command;
+    pub(crate) use super::export::seen as export_seen;
+    pub(crate) use super::export::{Kind, Outcome, Source, start as export_to};
+    pub(crate) use super::format::link_with;
+    pub(crate) use super::paste::rich as paste_from;
+    pub(crate) use super::source_of;
+    pub(crate) use super::splat_app::saved as saved_for_splat;
 }

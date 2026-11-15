@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use super::agent::tab_of;
 use super::agent_actions::{index_of, titles};
-use super::{check, finish, helpers};
+use super::{check, finish, give_up, give_up_saying, helpers};
 use ide_ui_agent::{AgentKey, TabMenu};
 
 const NAME: &str = "own-agent";
@@ -16,15 +16,16 @@ fn soon(what: &'static str, ready: impl Fn() -> bool + 'static, then: impl FnOnc
         if ok {
             then();
         } else {
-            check(what, false, "waited in vain");
-            finish(NAME);
+            give_up_saying(NAME, what, "waited in vain");
         }
     });
 }
 
 /// Picks from the menus of the tab `key`, whose model is `model`, then ends the scenario.
-pub fn run(_root: PathBuf, key: AgentKey, model: &'static str) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+pub(crate) fn run(_root: PathBuf, key: AgentKey, model: &'static str) {
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     let slash = tab.menu(TabMenu::Slash);
     check(
         "the own agent's slash menu offers compacting",
@@ -60,7 +61,9 @@ pub fn run(_root: PathBuf, key: AgentKey, model: &'static str) {
 }
 
 fn modes(key: AgentKey) {
-    let Some(tab) = tab_of(key) else { return finish(NAME) };
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
     let menu = tab.menu(TabMenu::Mode);
     check(
         "the mode menu offers the profiles, then the approval modes",

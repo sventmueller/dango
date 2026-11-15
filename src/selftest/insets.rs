@@ -17,7 +17,7 @@ use objc2_foundation::{NSPoint, NSRange, NSRect};
 use splat_i18n::t;
 
 use super::helpers::{self, editor, wait_until};
-use super::{check, finish, snapshot};
+use super::{check, finish, give_up, give_up_saying, snapshot};
 use crate::editor::insets::{self, Inset, Layer, Place};
 use crate::editor::{self, EditorTextView};
 use crate::util::ns;
@@ -105,7 +105,7 @@ fn picture(name: &str) {
 }
 
 /// Presses and lets go of the mouse at `point` of `view`, through the view a hit test finds there, as AppKit does.
-pub fn click_at(view: &EditorTextView, point: NSPoint) {
+pub(crate) fn click_at(view: &EditorTextView, point: NSPoint) {
     let (Some(window), Some(mtm)) = (view.window(), MainThreadMarker::new()) else {
         return;
     };
@@ -133,7 +133,7 @@ pub fn click_at(view: &EditorTextView, point: NSPoint) {
     target.mouseDown(&down);
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let text = gate_text();
     helpers::open_project(SCENARIO, PROJECT, &[(FILE, text.as_str())], |controller| {
         editor::new_untitled(&controller, 13.0);
@@ -154,7 +154,7 @@ fn controller_editor(title: &str) -> Option<Retained<EditorTextView>> {
 /// An empty document has no character before anything: an inline inset goes to the end of its only line.
 fn empty_document() {
     let Some(view) = controller_editor(t("Ohne Titel")) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the editor is open");
     };
     let undo_before = view.undoManager().is_some_and(|u| u.canUndo());
     insets::set(&view, Layer::Inlay, vec![Inset::new(0, ": i32", Place::Inline)]);
@@ -166,7 +166,7 @@ fn empty_document() {
 
 fn empty_shown(undo_before: bool) {
     let Some(view) = controller_editor(t("Ohne Titel")) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the editor is open");
     };
     redraw(&view);
     let shown = insets::shown(&view);
@@ -209,8 +209,7 @@ impl Before {
 
 fn gate() {
     let Some(view) = gate_view() else {
-        check("the gate's file opens", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the gate's file opens");
     };
     redraw(&view);
     let p = places();
@@ -385,7 +384,7 @@ fn indicator_x(view: &EditorTextView) -> Option<f64> {
 /// leaves the text alone.
 fn clicks(clicked: &Cell<u32>) {
     let Some(view) = gate_view() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the editor is open");
     };
     redraw(&view);
     let p = places();
@@ -521,7 +520,7 @@ fn marked_text(view: &EditorTextView) {
 
 fn committed() {
     let Some(view) = gate_view() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the editor is open");
     };
     redraw(&view);
     let p = places();
@@ -551,7 +550,7 @@ fn committed() {
 
 fn undone() {
     let Some(view) = gate_view() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the editor is open");
     };
     let p = places();
     let kerns = insets::kerns(&view);
@@ -599,7 +598,7 @@ fn copy_and_save(view: &EditorTextView) {
 /// With wrapped lines, the gap and its inset stay on the visual line of the character before it.
 fn wrap() {
     let Some(view) = gate_view() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the editor is open");
     };
     let p = places();
     if !editor::wraps(&view) {
@@ -618,7 +617,7 @@ fn wrap() {
     };
     wait_until(wrapped, move |_| {
         let Some(view) = gate_view() else {
-            return finish(SCENARIO);
+            return give_up(SCENARIO, "the editor is open");
         };
         redraw(&view);
         let drawn = shown_at(&view, Layer::Inlay, 5);
@@ -644,7 +643,7 @@ fn wrap() {
 /// A fold hides the insets of its lines, and the one at the end of its first line moves past the placeholder.
 fn fold() {
     let Some(view) = gate_view() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the editor is open");
     };
     let p = places();
     view.setSelectedRange(NSRange::new(p.header, 0));
@@ -652,7 +651,7 @@ fn fold() {
     let folded = || gate_view().is_some_and(|view| editor::selftest::folded(&view) == 1);
     wait_until(folded, move |_| {
         let Some(view) = gate_view() else {
-            return finish(SCENARIO);
+            return give_up(SCENARIO, "the editor is open");
         };
         redraw(&view);
         let placeholders = editor::selftest::placeholders(&view);
@@ -728,14 +727,18 @@ fn appearances(view: &EditorTextView) {
 
 /// The median CPU time a keystroke in 10 000 lines may take in the self-tests: E25's 16 ms is the frame, this the
 /// budget, well below it so that a step back shows before the user feels it.
-pub const KEYSTROKE: Duration = Duration::from_millis(5);
+pub(crate) const KEYSTROKE: Duration = Duration::from_millis(5);
 
 /// What drawing insets, diagnostics or proposals may add to a keystroke's median.
-pub const ADDED: Duration = Duration::from_millis(2);
+pub(crate) const ADDED: Duration = Duration::from_millis(2);
 
 /// Keystrokes with and without insets in alternating blocks, so that the load of this Mac weighs on both alike: the
 /// lowest median and the highest slowest of each, with first.
-pub fn compare(view: &EditorTextView, on: impl Fn(), off: impl Fn()) -> ((Duration, Duration), (Duration, Duration)) {
+pub(crate) fn compare(
+    view: &EditorTextView,
+    on: impl Fn(),
+    off: impl Fn(),
+) -> ((Duration, Duration), (Duration, Duration)) {
     let (mut with, mut without) = (Vec::new(), Vec::new());
     for _ in 0..3 {
         on();
@@ -756,7 +759,7 @@ pub fn compare(view: &EditorTextView, on: impl Fn(), off: impl Fn()) -> ((Durati
 
 /// Types `count` keystrokes at the caret of `view`, each with what follows it on screen, and gives the median and the
 /// slowest in CPU time.
-pub fn keystrokes(view: &EditorTextView, count: usize) -> (Duration, Duration) {
+pub(crate) fn keystrokes(view: &EditorTextView, count: usize) -> (Duration, Duration) {
     let mut times = Vec::new();
     for n in 0..count {
         let start = thread_time();
@@ -779,11 +782,10 @@ fn budget() {
         .collect();
     let path = root().join("big.rs.txt");
     if let Err(error) = std::fs::write(&path, &big) {
-        check("the big file is written", false, error.to_string());
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "the big file is written", error.to_string());
     }
     let Some(window) = controller() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     window.open_file(&path);
     let opened = path.clone();
@@ -794,8 +796,7 @@ fn budget() {
     };
     wait_until(laid_out, move |_| {
         let Some(view) = controller().and_then(|c| editor::editor_for(&c, &path)) else {
-            check("the big file opens", false, "");
-            return finish(SCENARIO);
+            return give_up(SCENARIO, "the big file opens");
         };
         let starts: Vec<usize> = (0..10_000).filter_map(|line| view.line_start(line)).collect();
         let line = 5000;

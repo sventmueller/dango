@@ -8,6 +8,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use ide_project::Entry;
+use ide_ui_common::panel::{RowItem, RowItems};
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, NSObject, Sel};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
@@ -17,20 +18,20 @@ use objc2_app_kit::{
     NSProgressIndicatorStyle, NSTableCellView, NSTableColumn, NSTextField, NSUserInterfaceItemIdentification,
     NSUserInterfaceLayoutDirection, NSView,
 };
-use objc2_foundation::{NSNotification, NSObjectProtocol, NSString};
+use objc2_foundation::{NSNotification, NSObjectProtocol};
 
-use super::model::{Command, MenuEntry, Model, Row};
+use super::model::{Command, Kind, MenuEntry, Model, Row};
 use crate::project::Project;
-use crate::util::{guarded, item, ns, separator, set_target};
+use crate::util::{activate, auto_layout, guarded, item, ns, separator, set_target};
 use crate::window::WindowController;
 
-pub struct TreeIvars {
+pub(crate) struct TreeIvars {
     pub(super) project: Rc<Project>,
     pub(super) controller: Weak<WindowController>,
     pub(super) model: RefCell<Model>,
     /// The objects that stand for rows in the outline view, one per path for as long as the tree lives, since the
     /// view keeps no reference of its own.
-    items: RefCell<HashMap<PathBuf, Retained<NSString>>>,
+    items: RowItems<PathBuf>,
     /// The entries of each open folder as the outline view was last told them.
     pub(super) shown: RefCell<HashMap<PathBuf, Arc<[Entry]>>>,
     /// The folders opened whose entries are still being read.
@@ -63,7 +64,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEFileTreeSource"]
     #[ivars = TreeIvars]
-    pub struct FileTreeSource;
+    pub(crate) struct FileTreeSource;
 
     unsafe impl NSObjectProtocol for FileTreeSource {}
 
@@ -247,12 +248,12 @@ define_class!(
 
         #[unsafe(method(ideTreeNewFile:))]
         fn header_new_file(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.create_from_header(false));
+            guarded((), || self.create_from_header(Kind::File));
         }
 
         #[unsafe(method(ideTreeNewFolder:))]
         fn header_new_folder(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.create_from_header(true));
+            guarded((), || self.create_from_header(Kind::Folder));
         }
 
         #[unsafe(method(ideTreeCollapseAll:))]
@@ -273,7 +274,7 @@ impl FileTreeSource {
             model: RefCell::new(Model::new(project.root().to_path_buf())),
             project,
             controller: Weak::from(controller),
-            items: RefCell::new(HashMap::new()),
+            items: RowItems::default(),
             shown: RefCell::new(HashMap::new()),
             pending: RefCell::new(HashMap::new()),
             cascade: Cell::new(false),
@@ -283,8 +284,8 @@ impl FileTreeSource {
     }
 
     /// The object that stands for `path` in the outline view, if the view was handed one.
-    pub(super) fn item_of(&self, path: &Path) -> Option<Retained<NSString>> {
-        self.ivars().items.borrow().get(path).cloned()
+    pub(super) fn item_of(&self, path: &Path) -> Option<Retained<RowItem>> {
+        self.ivars().items.get(&path.to_path_buf())
     }
 
     fn children_of(&self, item: Option<&AnyObject>) -> Listed {
@@ -304,14 +305,9 @@ impl FileTreeSource {
         }
     }
 
-    pub(super) fn item_for(&self, entry: &Entry) -> Retained<NSString> {
+    pub(super) fn item_for(&self, entry: &Entry) -> Retained<RowItem> {
         self.ivars().model.borrow_mut().note(&entry.path, Row::of(entry));
-        self.ivars()
-            .items
-            .borrow_mut()
-            .entry(entry.path.clone())
-            .or_insert_with(|| ns(&entry.path.to_string_lossy()))
-            .clone()
+        self.ivars().items.item(self.mtm(), &entry.path)
     }
 
     fn fill_menu(&self, menu: &NSMenu) {
@@ -391,7 +387,7 @@ fn pane_click(mtm: MainThreadMarker) -> Option<bool> {
 }
 
 pub(super) fn path_of(item: &AnyObject) -> Option<PathBuf> {
-    item.downcast_ref::<NSString>().map(|s| PathBuf::from(s.to_string()))
+    RowItems::<PathBuf>::key_of(item)
 }
 
 /// Points the chevron of the folder that opened or closed down or right.
@@ -444,14 +440,10 @@ fn spinner_view(mtm: MainThreadMarker) -> Retained<NSView> {
     spinner.setControlSize(objc2_app_kit::NSControlSize::Small);
     cell.addSubview(&spinner);
     spinner.setTranslatesAutoresizingMaskIntoConstraints(false);
-    spinner
-        .leadingAnchor()
-        .constraintEqualToAnchor(&cell.leadingAnchor())
-        .setActive(true);
-    spinner
-        .centerYAnchor()
-        .constraintEqualToAnchor(&cell.centerYAnchor())
-        .setActive(true);
+    activate([
+        spinner.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
+        spinner.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
+    ]);
     // SAFETY: A nil sender is what AppKit's own callers pass.
     unsafe { spinner.startAnimation(None) };
     cell.into_super()
@@ -504,9 +496,8 @@ fn row_view(mtm: MainThreadMarker) -> Retained<NSTableCellView> {
         cell.setImageView(Some(&image));
         cell.setTextField(Some(&label));
     }
-    image.setTranslatesAutoresizingMaskIntoConstraints(false);
-    label.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
+    auto_layout(&[&image, &label]);
+    activate([
         image.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
         image.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
         image.widthAnchor().constraintEqualToConstant(16.0),
@@ -518,9 +509,7 @@ fn row_view(mtm: MainThreadMarker) -> Retained<NSTableCellView> {
             .trailingAnchor()
             .constraintLessThanOrEqualToAnchor(&cell.trailingAnchor()),
         label.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     cell
 }
 

@@ -71,8 +71,37 @@ plus `cargo install cargo-fuzz` set it up. `make fuzz` runs every target for `FU
 it. A crash stops the run and leaves its input in the crate's `fuzz/artifacts/`; the fix comes with a unit test built
 from that input, then the file goes.
 
-Property tests (E96) run in `make check` with a fixed seed, `crates/ide-document/tests/properties.rs`; a failing case
-is kept in `crates/ide-document/proptest-regressions/`, which is checked in.
+A target checks results, not only that nothing panics. What it holds the code to, per target:
+
+| Target | Oracle |
+|---|---|
+| `scan` | the scanner fed in pieces finds exactly the events it finds fed whole |
+| `procargs` | arguments written into a `KERN_PROCARGS2` buffer read back as they were |
+| `messages` (LSP) | a body framed again reads back as itself; a position on the text reads back in every unit; an edit makes the text a string edit at the same place would |
+| `updates` (ACP), `stream_json` (Claude) | the changes the thread reports rebuild every timeline, its lookups agree with its timelines, a removed id never comes back (`ide_thread::fuzzing::Replay`) |
+| `diff` | line numbers count up from the hunk's starts within its counts; the staging patch of all hunks, forwards and backwards, reads back as them |
+| `stream` (providers) | events written out again read back as themselves; what OpenAI's and Gemini's readers stream is the text, reasoning and tool calls of their message. Anthropic's reader has no such oracle: a block's start carries text no delta told, and a fallback drops blocks |
+| `answer` (predictions) | a cut proposal is a start of the answer without a stop, blank or trailing space, on one line inside a line; Copilot's proposals lie between characters and change the text |
+| `dap_messages` | every message written again reads back as itself |
+| `launch_json` | removing comments keeps every byte's place and leaves plain JSON alone; a configuration with nothing left to fill in reads back as itself |
+
+The conversions of adapter answers into the crate's types (`convert`, `Capabilities`) and Anthropic's reader are
+one-way, without an encoder or a second account of the result to compare with; for them the targets check only that
+nothing panics. The DAP fuzz crate turns on serde_json's `float_roundtrip`, without which a number written and read
+again may differ in its last bit.
+
+Property tests (E96) run in `make check` with a fixed seed and a fixed number of cases: `tests/properties.rs` of
+`ide-document`, and the unit test modules `property_tests` of `ide-git` (staging some hunks), `ide-project` (fuzzy
+matching), `ide-terminal` (the scanner in pieces) and `ide-vim` (the replacement it hands the editor). `make fuzz`
+also runs them, or `make fuzz ARGS=properties` alone, with a fresh seed and `PROPTEST_CASES` cases (10 000 by
+default): proptest reads `PROPTEST_RNG_SEED` and `PROPTEST_CASES` over the values the tests fix, and the run prints
+the seed it chose. A failure prints the command that repeats it with the same seed, for example
+`PROPTEST_RNG_SEED=8123 PROPTEST_CASES=10000 cargo test --package ide-git --lib -- property_tests::`. proptest
+shrinks the failing case and writes its own seed down: for `tests/properties.rs` into
+`tests/properties.proptest-regressions` beside it, for a unit test module into the crate's `proptest-regressions/`
+along the module's path, such as `crates/ide-git/proptest-regressions/staging/property_tests.txt`. That file is
+checked in with the fix, and from then on every run, the fixed one of `make check` included, tries that case first. Where the shrunk case says more as
+an example, it also becomes a named unit test with the values written out.
 
 ## Coverage
 `make coverage` (`cargo xtask coverage`, `xtask/src/coverage.rs`) measures line coverage of `cargo test --workspace`
@@ -93,10 +122,15 @@ targets' entry points `fuzzing.rs`, and code that only exists to test the rest: 
 recorder. xtask's selftest runner is tooling and counts. `src/decoder_main.rs` is left out too: launchd starts the
 decoding service in a sandbox that cannot write coverage data; `preview` exercises it through the app. A file the build compiled without code
 to run (only `mod` lines or types) counts with no lines; a file no instrumented program contains counts with its code
-lines as uncovered. The results are in `target/coverage/`: `coverage.txt` (the summary,
-then folders and files, lowest first), `files.json` (the same per file) and `llvm-cov.json` (llvm-cov's export).
-`make coverage ARGS=--check` fails below 90 % in total or 50 % in any file, naming them; `--strict` also fails the run
-when a test or a selftest scenario failed.
+lines as uncovered. Beside the coverage of both together, the report gives `cargo test` alone and the self-test alone,
+per crate, folder and file and in total: while the self-test is reported alone, the profiles of `cargo test` wait in
+`target/llvm-cov-target/unit-profiles/`. The results are in `target/coverage/`: `coverage.txt` (the summary,
+then crates, folders and files, lowest first), `files.json` (the same per file), `llvm-cov.json` (llvm-cov's export of
+both), `llvm-cov-unit.json` and `llvm-cov-selftest.json` (each alone).
+`make coverage ARGS=--check` fails below 90 % in total or 50 % in any file, naming them, and when `cargo test` alone
+covers the app crate's `src/` (its self-test left out) other than `APP_UNIT_FLOOR` in `xtask/src/coverage.rs`: below it,
+or above it by a tenth, naming the value to raise it to, a ratchet like those of `cargo xtask rules`. `--strict` also
+fails the run when a test or a selftest scenario failed.
 
 ## CI and deploy
 `make ci` (`cargo xtask ci`, `xtask/src/ci.rs`) is the whole pipeline. It refuses while the screen is locked (the
@@ -250,11 +284,18 @@ own. `cargo xtask selftest` and the app agree on this:
    skips every picture, for runs that only want the checks.
 2. The app runs the scenario, writes the report and exits with status 0:
    ```json
-   {"scenario": "probe", "checks": [{"name": "window opens", "ok": true, "detail": "one window, 1200×800"}]}
+   {"scenario": "probe", "ending": "ran", "checks": [{"name": "window opens", "ok": true, "detail": "one window, 1200×800"}]}
    ```
    It should write the file whole, to a temporary name and then renamed, since a cut-off report counts as unreadable.
+   `ending` says how the scenario ended: `"ran"` to its end through `finish`, `{"skipped": "…"}` when `skip` ended it
+   early on purpose, such as without a language server, or `{"gave_up": "…"}` when `give_up` ended it because
+   something it needed was missing; `give_up` also records that as a failed check with the file and line it gave up
+   at. `cargo xtask rules` refuses a `finish` after `return`, inside a branch or before more code, also through a
+   function that ends with `finish`, so that only `give_up` and `skip` end a scenario early; a loop ends by falling
+   through to its `finish`.
 3. A scenario passes when the app ends by itself within its time limit with status 0 and its report is readable,
-   names the scenario, lists at least one check and every check is `ok`, and its stderr holds no failed TextKit 2
+   names the scenario, says how it ended, did not give up, lists at least one check and every check is `ok`, and its
+   stderr holds no failed TextKit 2
    assertion: UIFoundation logs one as `Make a symbolic breakpoint at NSText…` and carries on. The runner prints
    each check as `✓ name — detail` or `✗ name — detail`. At the limit of the scenario's row it kills the app: 120 seconds by default, 300 for `a11y` and `a11y-rtl`, and 600
    for the language server scenarios, which wait for a real rust-analyzer or gopls to index and settle before each
@@ -294,9 +335,12 @@ the system's capture service; with several selftest runs capturing at the same t
 ten seconds. A run therefore holds `<temporary folder>/<BUNDLE_ID>.selftest-capture.lock` while it captures, and gives a capture 15
 seconds before it draws the picture itself.
 
-Alerts that a scenario answers itself, such as the question at a quit with unsaved text, are answered from a timer of
-the run loop: an alert opened inside a callback of the main dispatch queue holds up every other such callback until
-it closes, `main_after` included.
+Alerts and panels that a scenario answers itself, such as the question at a quit with unsaved text, are answered as
+soon as they show by `when_alert_shows` of `src/selftest/helpers.rs` and the answerers built on it, which look every
+50 ms from timers of the run loop for 20 s: an alert opened inside a callback of the main dispatch queue holds up
+every other such callback until it closes, `main_after` included. Each alert goes to the call that began to wait
+first among those it suits, so answers set up one after another answer alerts one after another; `look_at_alert`,
+for a picture, leaves the alert to the next one.
 
 A step that depends on a state waits for it with `wait_until`, `wait_for`, `wait_for_window` or `wait_for_editor` of
 `src/selftest/helpers.rs`, which check every 50 ms and give up after 20 s (`wait_within` for another limit); a fixed

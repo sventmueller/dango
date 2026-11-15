@@ -15,7 +15,7 @@ use objc2_foundation::{NSRect, NSSize};
 use ide_ui_common::util::guarded;
 
 /// The side of an icon's square, in points.
-pub const SIDE: f64 = 16.0;
+pub(crate) const SIDE: f64 = 16.0;
 
 /// The side a logo takes in it: a logo fills its square, where a symbol leaves room around its shape.
 const DRAWN: f64 = 13.0;
@@ -70,7 +70,7 @@ fn svg(name: &str) -> Option<&'static str> {
 }
 
 /// The outline of the logo `name`, from the `d` of its one path.
-pub fn path(name: &str) -> Option<BezPath> {
+pub(crate) fn path(name: &str) -> Option<BezPath> {
     let svg = svg(name)?;
     let start = svg.find(" d=\"")? + 4;
     let length = svg[start..].find('"')?;
@@ -78,7 +78,7 @@ pub fn path(name: &str) -> Option<BezPath> {
 }
 
 /// A template image of the logo `name`, centred in an icon's square.
-pub fn image(name: &'static str) -> Option<Retained<NSImage>> {
+pub(crate) fn image(name: &'static str) -> Option<Retained<NSImage>> {
     if let Some(image) = IMAGES.with(|images| images.borrow().get(name).cloned()) {
         return Some(image);
     }

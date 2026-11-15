@@ -12,7 +12,7 @@
 //! assert_eq!(containers[0].ports[0].host_port, 5432);
 //! ```
 
-#![warn(missing_docs, unreachable_pub)]
+#![warn(missing_docs)]
 
 pub mod board;
 
@@ -21,7 +21,7 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 /// The oldest Docker whose `docker events` speaks JSON (A10).
-pub const MIN_VERSION: (u32, u32, u32) = (24, 0, 6);
+pub(crate) const MIN_VERSION: (u32, u32, u32) = (24, 0, 6);
 
 const PROJECT_LABEL: &str = "com.docker.compose.project";
 const SERVICE_LABEL: &str = "com.docker.compose.service";
@@ -35,21 +35,79 @@ pub struct Port {
     pub host_port: u16,
     /// The container's port.
     pub container_port: u16,
-    /// `tcp` or `udp`.
-    pub protocol: String,
+    /// Its transport.
+    pub protocol: Protocol,
+}
+
+/// The transport of a published port, as Docker writes it after the slash.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Protocol {
+    /// `tcp`, the one a browser tab can open.
+    Tcp,
+    /// `udp`.
+    Udp,
+    /// `sctp`.
+    Sctp,
+    /// One a later Docker adds, in its words.
+    Other(String),
+}
+
+impl Protocol {
+    fn read(word: &str) -> Protocol {
+        match word {
+            "tcp" => Protocol::Tcp,
+            "udp" => Protocol::Udp,
+            "sctp" => Protocol::Sctp,
+            other => Protocol::Other(other.to_string()),
+        }
+    }
+}
+
+/// Where a container is in its life, by Docker's `State`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ContainerState {
+    /// Made and never started.
+    Created,
+    /// Running.
+    Running,
+    /// Frozen by `docker pause`.
+    Paused,
+    /// Being started again by its restart policy.
+    Restarting,
+    /// Being deleted.
+    Removing,
+    /// Ended.
+    Exited,
+    /// Could not be deleted completely.
+    Dead,
+    /// A state a later Docker adds, in its words.
+    Other(String),
+}
+
+impl ContainerState {
+    fn read(word: &str) -> ContainerState {
+        match word {
+            "created" => ContainerState::Created,
+            "running" => ContainerState::Running,
+            "paused" => ContainerState::Paused,
+            "restarting" => ContainerState::Restarting,
+            "removing" => ContainerState::Removing,
+            "exited" => ContainerState::Exited,
+            "dead" => ContainerState::Dead,
+            other => ContainerState::Other(other.to_string()),
+        }
+    }
 }
 
 /// A container as `docker ps -a` lists it.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Container {
-    /// Its id.
     pub id: String,
-    /// Its name.
     pub name: String,
-    /// Its image.
     pub image: String,
-    /// `running`, `exited`, `paused`, `created`, `restarting` or `dead`.
-    pub state: String,
+    /// Where it is in its life.
+    pub state: ContainerState,
     /// What Docker says of it, such as `Up 2 hours`.
     pub status: String,
     /// The ports it publishes.
@@ -63,14 +121,14 @@ pub struct Container {
 impl Container {
     /// Whether it runs.
     pub fn running(&self) -> bool {
-        self.state == "running" || self.state == "restarting"
+        matches!(self.state, ContainerState::Running | ContainerState::Restarting)
     }
 
     /// The address of its first published TCP port on the Mac, for a browser tab.
     pub fn url(&self) -> Option<String> {
         self.ports
             .iter()
-            .find(|p| p.protocol == "tcp")
+            .find(|p| p.protocol == Protocol::Tcp)
             .map(|p| format!("http://localhost:{}", p.host_port))
     }
 }
@@ -78,19 +136,17 @@ impl Container {
 /// An image as `docker images` lists it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Image {
-    /// Its id.
-    pub id: String,
+    pub(crate) id: String,
     /// Its repository, `<none>` for a dangling image.
-    pub repository: String,
-    /// Its tag.
-    pub tag: String,
+    pub(crate) repository: String,
+    pub(crate) tag: String,
     /// Its size as Docker writes it.
-    pub size: String,
+    pub(crate) size: String,
 }
 
 impl Image {
     /// `repository:tag`, or the id for a dangling image.
-    pub fn reference(&self) -> String {
+    pub(crate) fn reference(&self) -> String {
         if self.repository == "<none>" {
             self.id.clone()
         } else {
@@ -102,40 +158,73 @@ impl Image {
 /// A volume as `docker volume ls` lists it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Volume {
-    /// Its name.
-    pub name: String,
-    /// Its driver.
-    pub driver: String,
+    pub(crate) name: String,
+    pub(crate) driver: String,
     /// The Compose project it belongs to.
-    pub project: Option<String>,
+    pub(crate) project: Option<String>,
 }
 
 /// A Docker context as `docker context ls` lists it.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Context {
-    /// Its name.
     pub name: String,
     /// Whether it is the user's current one.
     pub current: bool,
     /// What it says of itself.
-    pub description: String,
+    pub(crate) description: String,
 }
 
 /// A change `docker events` reports.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Event {
-    /// What changed: `container`, `image`, `volume`, `network`.
-    pub kind: String,
-    /// How, such as `start`, `die` or `destroy`.
-    pub action: String,
+    /// What changed.
+    pub(crate) kind: ObjectKind,
+    pub(crate) action: EventAction,
     /// The id or name of what changed.
-    pub id: String,
+    pub(crate) id: String,
 }
 
-impl Event {
-    /// Whether it can change what the panel lists; a container's health check alone reports `exec_*` and
-    /// `health_status` every few seconds.
-    pub fn changes_listing(&self) -> bool {
+/// What a change of `docker events` is about, by its `Type`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum ObjectKind {
+    /// A container.
+    Container,
+    /// An image.
+    Image,
+    /// A volume.
+    Volume,
+    /// A network.
+    Network,
+    /// Anything else, such as `daemon` or `plugin`, in Docker's words.
+    Other(String),
+}
+
+impl ObjectKind {
+    fn read(word: &str) -> ObjectKind {
+        match word {
+            "container" => ObjectKind::Container,
+            "image" => ObjectKind::Image,
+            "volume" => ObjectKind::Volume,
+            "network" => ObjectKind::Network,
+            other => ObjectKind::Other(other.to_string()),
+        }
+    }
+}
+
+/// How something changed, by the `Action` of `docker events`, in Docker's words such as `start` or
+/// `health_status: healthy`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum EventAction {
+    /// Leaves what the panel lists as it was: a container's health check alone reports `exec_*` and `health_status`
+    /// every few seconds.
+    Quiet(String),
+    /// May change what the panel lists, such as `start`, `die` or `destroy`.
+    Listed(String),
+}
+
+impl EventAction {
+    fn read(word: &str) -> EventAction {
         const QUIET: &[&str] = &[
             "exec_",
             "health_status",
@@ -147,7 +236,26 @@ impl Event {
             "extract-to-dir",
             "export",
         ];
-        !QUIET.iter().any(|q| self.action.starts_with(q))
+        if QUIET.iter().any(|q| word.starts_with(q)) {
+            EventAction::Quiet(word.to_string())
+        } else {
+            EventAction::Listed(word.to_string())
+        }
+    }
+
+    /// Docker's words for it.
+    #[cfg(test)]
+    pub(crate) fn word(&self) -> &str {
+        match self {
+            EventAction::Quiet(word) | EventAction::Listed(word) => word,
+        }
+    }
+}
+
+impl Event {
+    /// Whether it can change what the panel lists.
+    pub fn changes_listing(&self) -> bool {
+        matches!(self.action, EventAction::Listed(_))
     }
 }
 
@@ -202,7 +310,7 @@ fn label(labels: &str, key: &str) -> Option<String> {
 
 /// The ports of Docker's `Ports` text, such as `0.0.0.0:8080->80/tcp, :::8080->80/tcp`; one per port, IPv6 twins left
 /// out.
-pub fn ports(text: &str) -> Vec<Port> {
+pub(crate) fn ports(text: &str) -> Vec<Port> {
     let mut out: Vec<Port> = Vec::new();
     for part in text.split(", ") {
         let Some((host, inner)) = part.split_once("->") else {
@@ -217,6 +325,7 @@ pub fn ports(text: &str) -> Vec<Port> {
         let (Ok(host_port), Ok(container_port)) = (port.parse::<u16>(), container.parse::<u16>()) else {
             continue;
         };
+        let protocol = Protocol::read(protocol);
         if out.iter().any(|p| p.host_port == host_port && p.protocol == protocol) {
             continue;
         }
@@ -224,7 +333,7 @@ pub fn ports(text: &str) -> Vec<Port> {
             host_ip: ip.to_string(),
             host_port,
             container_port,
-            protocol: protocol.to_string(),
+            protocol,
         });
     }
     out
@@ -237,7 +346,7 @@ pub fn containers(output: &str) -> Vec<Container> {
             id: f.id,
             name: f.names,
             image: f.image,
-            state: f.state,
+            state: ContainerState::read(&f.state),
             status: f.status,
             ports: ports(&f.ports),
             project: label(&f.labels, PROJECT_LABEL),
@@ -283,8 +392,8 @@ pub fn contexts(output: &str) -> Vec<Context> {
 /// The change one line of `docker events --format '{{json .}}'` reports.
 pub fn event(line: &str) -> Option<Event> {
     let value: serde_json::Value = serde_json::from_str(line.trim()).ok()?;
-    let kind = value.get("Type")?.as_str()?.to_string();
-    let action = value.get("Action")?.as_str()?.to_string();
+    let kind = ObjectKind::read(value.get("Type")?.as_str()?);
+    let action = EventAction::read(value.get("Action")?.as_str()?);
     let id = value
         .get("Actor")
         .and_then(|a| a.get("ID"))

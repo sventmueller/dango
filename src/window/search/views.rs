@@ -13,7 +13,7 @@ use objc2_foundation::NSEdgeInsets;
 use splat_i18n::t;
 
 use super::{SearchOutlineView, SearchPanel, Toggle};
-use crate::util::{ns, pin_edges, set_action, symbol, symbol_button};
+use crate::util::{activate, ns, pin_edges, pin_sides, set_action, symbol, symbol_button};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
@@ -207,22 +207,14 @@ impl Views {
 
 fn layout(page: &NSView, bar: &NSStackView, body: &NSView) {
     for view in [bar as &NSView, body] {
-        view.setTranslatesAutoresizingMaskIntoConstraints(false);
-        view.leadingAnchor()
-            .constraintEqualToAnchor(&page.leadingAnchor())
-            .setActive(true);
-        view.trailingAnchor()
-            .constraintEqualToAnchor(&page.trailingAnchor())
-            .setActive(true);
+        pin_sides(view, page, 0.0);
     }
-    for constraint in [
+    activate([
         bar.topAnchor().constraintEqualToAnchor(&page.topAnchor()),
         body.topAnchor()
             .constraintEqualToAnchor_constant(&bar.bottomAnchor(), 2.0),
         body.bottomAnchor().constraintEqualToAnchor(&page.bottomAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
 }
 
 /// A plain field like the replace field below it; typing, Return and Esc reach the panel through the delegate.
@@ -368,8 +360,7 @@ fn size_chevron(button: &NSButton) {
     button.setSymbolConfiguration(Some(
         &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
             CHEVRON_POINTS,
-            // SAFETY: AppKit sets its font weight constants when it loads.
-            unsafe { objc2_app_kit::NSFontWeightSemibold },
+            crate::util::constant!(objc2_app_kit::NSFontWeightSemibold),
         ),
     ));
 }
@@ -380,24 +371,20 @@ fn glob_fields(mtm: MainThreadMarker, include: &NSTextField, exclude: &NSTextFie
     for field in [include, exclude] {
         globs.addSubview(field);
         field.setTranslatesAutoresizingMaskIntoConstraints(false);
-        field
-            .leadingAnchor()
-            .constraintEqualToAnchor_constant(&globs.leadingAnchor(), FIELD_INDENT)
-            .setActive(true);
-        field
-            .trailingAnchor()
-            .constraintEqualToAnchor(&globs.trailingAnchor())
-            .setActive(true);
+        activate([
+            field
+                .leadingAnchor()
+                .constraintEqualToAnchor_constant(&globs.leadingAnchor(), FIELD_INDENT),
+            field.trailingAnchor().constraintEqualToAnchor(&globs.trailingAnchor()),
+        ]);
     }
-    for constraint in [
+    activate([
         include.topAnchor().constraintEqualToAnchor(&globs.topAnchor()),
         exclude
             .topAnchor()
             .constraintEqualToAnchor_constant(&include.bottomAnchor(), 4.0),
         exclude.bottomAnchor().constraintEqualToAnchor(&globs.bottomAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     globs.setHidden(true);
     globs
 }

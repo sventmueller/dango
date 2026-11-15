@@ -13,16 +13,16 @@ use splat_i18n::t;
 
 use super::WindowController;
 use super::tabs::TabWindow;
-use crate::util::pin_edges;
+use crate::util::{center_in, pin_edges};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
-pub const MIN_WIDTH: f64 = 220.0;
-pub const MAX_WIDTH: f64 = 520.0;
-pub const DEFAULT_WIDTH: f64 = 280.0;
+pub(crate) const MIN_WIDTH: f64 = 220.0;
+pub(crate) const MAX_WIDTH: f64 = 520.0;
+pub(crate) const DEFAULT_WIDTH: f64 = 280.0;
 
 /// The folder's inspector: what it shows, whether it shows and how wide.
-pub struct State {
+pub(crate) struct State {
     content: RefCell<Option<Retained<NSView>>>,
     shown: Cell<bool>,
     width: Cell<f64>,
@@ -57,12 +57,12 @@ pub(super) fn split_item(mtm: MainThreadMarker) -> (Retained<NSSplitViewItem>, R
 }
 
 impl TabWindow {
-    pub fn inspector_shown(&self) -> bool {
+    pub(crate) fn inspector_shown(&self) -> bool {
         !self.inspector.isCollapsed()
     }
 
     /// The inspector's width now, from its view controller.
-    pub fn inspector_width(&self) -> f64 {
+    pub(crate) fn inspector_width(&self) -> f64 {
         self.inspector
             .viewController(self.window.mtm())
             .view()
@@ -104,7 +104,7 @@ impl TabWindow {
 
 impl WindowController {
     /// Shows `view` in the folder's inspector, in whichever tab is in front.
-    pub fn set_inspector_content(&self, view: &NSView) {
+    pub(crate) fn set_inspector_content(&self, view: &NSView) {
         *self.ivars().inspector.content.borrow_mut() = Some(objc2::Message::retain(view));
         if let Some(tab) = self.current_tab() {
             tab.adopt_inspector(view);
@@ -112,22 +112,21 @@ impl WindowController {
     }
 
     /// Shows or folds the inspector, as ⌥⌘I does, in whichever tab is in front.
-    pub fn show_inspector(&self, shown: bool) {
+    pub(crate) fn show_inspector(&self, shown: bool) {
         let state = &self.ivars().inspector;
         state.shown.set(shown);
-        let tabs = self.ivars().tabs.borrow().clone();
-        for tab in &tabs {
+        for tab in &self.open_tabs() {
             tab.set_inspector(shown, state.width.get());
         }
         self.later(|controller| {
-            for tab in controller.ivars().tabs.borrow().iter() {
+            for tab in &controller.open_tabs() {
                 tab.release_inspector();
             }
         });
     }
 
     /// Shows the inspector if it is folded, folds it if it shows.
-    pub fn toggle_inspector(&self) {
+    pub(crate) fn toggle_inspector(&self) {
         let shown = self.current_tab().is_some_and(|tab| tab.inspector_shown());
         self.show_inspector(!shown);
     }
@@ -152,14 +151,7 @@ impl WindowController {
         tab.set_inspector(state.shown.get(), state.width.get());
         let window = Retained::as_ptr(&tab.window) as usize;
         self.later(move |controller| {
-            let held = controller
-                .ivars()
-                .tabs
-                .borrow()
-                .iter()
-                .find(|tab| Retained::as_ptr(&tab.window) as usize == window)
-                .cloned();
-            if let Some(tab) = held {
+            if let Some(tab) = controller.tab_at(window) {
                 tab.release_inspector();
             }
         });
@@ -176,13 +168,7 @@ impl WindowController {
             None,
         );
         view.addSubview(&state);
-        state.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
-            state.centerXAnchor().constraintEqualToAnchor(&view.centerXAnchor()),
-            state.centerYAnchor().constraintEqualToAnchor(&view.centerYAnchor()),
-        ] {
-            constraint.setActive(true);
-        }
+        center_in(&state, &view);
         *self.ivars().inspector.content.borrow_mut() = Some(view.clone());
         view
     }

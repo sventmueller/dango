@@ -35,10 +35,10 @@ pub enum Source {
 
 /// A token for one host.
 #[derive(Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Credential {
     /// The host it belongs to.
-    pub host: String,
-    /// The token.
+    pub(crate) host: String,
     pub token: String,
     /// Where it came from.
     pub source: Source,
@@ -107,10 +107,8 @@ impl From<SecretError> for SaveError {
 /// What a program printed.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Printed {
-    /// Its standard output.
-    pub stdout: String,
-    /// Its standard error.
-    pub stderr: String,
+    pub(crate) stdout: String,
+    pub(crate) stderr: String,
 }
 
 /// Runs the command-line tools of the services.

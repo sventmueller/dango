@@ -8,19 +8,17 @@ use std::time::Duration;
 
 use objc2::MainThreadMarker;
 
-use super::{check, finish};
+use super::{check, finish, give_up_saying};
 use crate::window::{self, WindowController};
 
 /// How long the worker takes for its answer; the window closes right away. Once the open window's answer came, the
 /// closed window's answer gets this long again, since a dropped answer leaves nothing to wait for.
 const WORK: Duration = Duration::from_millis(300);
 
-pub fn run() {
+pub(crate) fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let Some(open) = window::open_windows().first().cloned() else {
-        check("a window opens", false, "none");
-        finish("app-context");
-        return;
+        return give_up_saying("app-context", "a window opens", "none");
     };
     let closing = WindowController::open_new(mtm, None);
     let closed_id = closing.id();

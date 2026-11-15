@@ -60,9 +60,10 @@ use ide_ui_common::window::{AsWindow, Notices, Window};
 
 pub use acp::{AcpAgent, Agent, Availability, agent_name, availability, cached_register, launch_of};
 pub use acp_install::confirm_install;
-pub use actions::ask_text;
+pub(crate) use actions::ask_text;
 pub use cards::request::scope_name;
-pub use format::{age, elapsed, iso_time, short_age, time_of_day, tokens};
+pub use format::{age, elapsed, tokens};
+pub(crate) use format::{iso_time, short_age, time_of_day};
 pub use host::{Host, install};
 pub use outside::ci_log;
 pub use source::Resume;
@@ -70,9 +71,30 @@ pub use stop::Stop;
 pub use tab::AgentTab;
 pub use ui::{framed, icon, insets, separator};
 
+/// An AI thread as the layout keeps it, opened again by resuming its session.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct KeptSession {
+    /// The agent's id for the session.
+    pub session: String,
+}
+
+impl ide_core::layout::Kind for KeptSession {
+    const NAME: &'static str = "agent";
+}
+
+/// The settings this crate declares, for the app's registry of every setting.
+pub const SETTINGS: &[ide_core::settings::Declared] = &[
+    own_agent::ENDPOINTS.declared(),
+    own_agent::MODEL.declared(),
+    own_agent::EFFORT.declared(),
+    own_agent::PRICES.declared(),
+    own_agent::RULES.declared(),
+    own_agent::ALLOWED.declared(),
+];
+
 /// Every open AI tab, in the order they were opened; a tab leaves when it is closed.
 #[derive(Default)]
-pub struct AgentTabs {
+pub(crate) struct AgentTabs {
     tabs: RefCell<Vec<Rc<AgentTab>>>,
     keys: ide_ui_common::registry::Serial,
 }
@@ -236,7 +258,7 @@ fn get(key: AgentKey) -> Option<Rc<AgentTab>> {
 
 /// The window of the AI tab with `key`, for a dictation whose composer closed.
 #[cfg(feature = "dictation")]
-pub fn controller_of(key: AgentKey) -> Option<Window> {
+pub(crate) fn controller_of(key: AgentKey) -> Option<Window> {
     get(key)?.controller()
 }
 
@@ -252,7 +274,7 @@ pub fn of_window(controller: &(impl AsWindow + ?Sized)) -> Vec<Rc<AgentTab>> {
 }
 
 /// The open tab that shows the agent session `session`, in `controller`'s window.
-pub fn find_session(controller: &(impl AsWindow + ?Sized), session: &str) -> Option<Rc<AgentTab>> {
+pub(crate) fn find_session(controller: &(impl AsWindow + ?Sized), session: &str) -> Option<Rc<AgentTab>> {
     let controller = &controller.as_window();
     of_window(controller)
         .into_iter()

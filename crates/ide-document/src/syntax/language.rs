@@ -116,16 +116,15 @@ const INTERPRETERS: &[(&str, &str)] = &[
 ];
 
 impl Language {
-    /// Markdown.
-    pub const MARKDOWN: Language = Language(MARKDOWN);
+    pub(crate) const MARKDOWN: Language = Language(MARKDOWN);
 
     /// The language splat knows by `name` as the first name it goes by, in any case.
-    pub fn named(name: &str) -> Option<Language> {
+    pub(crate) fn named(name: &str) -> Option<Language> {
         Language::all().find(|known| known.0.eq_ignore_ascii_case(name))
     }
 
     /// Every language splat knows: its languages of code, then Markdown.
-    pub fn all() -> impl Iterator<Item = Language> {
+    pub(crate) fn all() -> impl Iterator<Item = Language> {
         splat_markdown::code::language_names()
             .map(Language)
             .chain(std::iter::once(Language::MARKDOWN))
@@ -139,6 +138,16 @@ impl Language {
     /// Whether it is Markdown, which is coloured from splat's parse rather than by tokens.
     pub fn is_markdown(self) -> bool {
         self == Language::MARKDOWN
+    }
+
+    /// The marker that starts a line comment, or `None` for a language whose comments only enclose their text.
+    pub fn line_comment(self) -> Option<&'static str> {
+        match self.0 {
+            "python" | "bash" | "yaml" | "toml" | "ruby" => Some("#"),
+            "sql" => Some("--"),
+            "html" | "css" | "mermaid" | "tex" | MARKDOWN => None,
+            _ => Some("//"),
+        }
     }
 
     /// The language of a file at `path` whose text begins with `first_line`: its name decides, then its extension,

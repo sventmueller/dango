@@ -15,18 +15,18 @@ use super::rows::tag_of;
 
 impl DebugPanel {
     /// Runs a control's or the Debug menu's command on the current session.
-    pub fn run_command(&self, command: Command) {
+    pub(crate) fn run_command(&self, command: Command) {
         let effects = self.model().run(command);
         self.apply(effects);
     }
 
     /// Whether `command` can run now, for the controls and the Debug menu.
-    pub fn can(&self, command: Command) -> bool {
+    pub(crate) fn can(&self, command: Command) -> bool {
         self.read().can(command)
     }
 
     /// Sets or clears the breakpoint at `line` of `path`, as a click in the gutter and ⌘\ do.
-    pub fn toggle_breakpoint(&self, path: &Path, line: usize) {
+    pub(crate) fn toggle_breakpoint(&self, path: &Path, line: usize) {
         let effects = {
             let mut model = self.model();
             model.breakpoints.toggle(path, line);
@@ -36,7 +36,7 @@ impl DebugPanel {
     }
 
     /// Changes the breakpoint at `line` of `path`.
-    pub fn change_breakpoint(&self, path: &Path, line: usize, edit: Edit) {
+    pub(crate) fn change_breakpoint(&self, path: &Path, line: usize, edit: Edit) {
         let effects = {
             let mut model = self.model();
             if !model.breakpoints.change(path, line, edit) {
@@ -97,7 +97,7 @@ impl DebugPanel {
     }
 
     /// Adds a watch expression, which the inspector shows and evaluates while the program is paused.
-    pub fn add_watch(&self, expression: &str) {
+    pub(crate) fn add_watch(&self, expression: &str) {
         let effects = self.model().add_watch(expression);
         self.apply(effects);
     }
@@ -125,7 +125,7 @@ impl DebugPanel {
 
     /// Shows the model again: the list with its rows open as the model and the user want them, the controls, the
     /// inspector, the editors' breakpoints and paused line, and the activity view.
-    pub fn refresh(&self) {
+    pub(crate) fn refresh(&self) {
         let ui = self.ui();
         let model = self.read();
         let detaches = super::model::stops_by_detaching(&model);
@@ -155,6 +155,7 @@ impl DebugPanel {
         self.reload(&ui.inspector.outline, |panel| {
             parts.iter().map(|row| panel.inspector_item(row)).collect()
         });
+        self.forget_gone_items();
         if let Some(window) = self.controller() {
             crate::host::host().refresh_editors(window.id());
         }
@@ -167,7 +168,7 @@ impl DebugPanel {
     fn reload(
         &self,
         view: &NSOutlineView,
-        open: impl Fn(&DebugPanel) -> Vec<objc2::rc::Retained<objc2_foundation::NSString>>,
+        open: impl Fn(&DebugPanel) -> Vec<objc2::rc::Retained<ide_ui_common::panel::RowItem>>,
     ) {
         let _unfolding = FlagGuard::raise(&self.ivars().unfolding);
         let selected = view.selectedRow();
@@ -190,7 +191,7 @@ impl DebugPanel {
     }
 
     /// Selects the row of the paused frame, as a stop does.
-    pub fn select_paused_frame(&self) {
+    pub(crate) fn select_paused_frame(&self) {
         let selection = self.read().selected;
         let Some(selection) = selection else { return };
         let Some(thread) = selection.thread else { return };

@@ -414,6 +414,32 @@ fn allowing_always_and_dismissing_are_told_apart() {
 }
 
 #[test]
+fn a_sink_that_panics_costs_its_events_not_the_connection_and_unknown_requests_are_named() {
+    let dir = scratch("acp-panicking-sink");
+    let supervisor = Supervisor::new();
+    let launch = launch("basic", &dir);
+    let thread = Thread::new(ThreadId::from("t"), launch.agent.clone(), launch.cwd.clone());
+    let session = Session::start(&supervisor, launch, thread, |_| panic!("a sink that panics")).unwrap();
+    wait("a session", || session.is_ready());
+    session.send(message("list the files")).unwrap();
+    wait("a permission request", || {
+        session.snapshot().pending_requests().len() == 1
+    });
+    assert_eq!(
+        session.answer("nope", Choice::Dismiss),
+        Err(SessionError::UnknownRequest("nope".into()))
+    );
+    let request = permission(&session.snapshot()).request_id;
+    session.answer(&request, Choice::Option(0)).unwrap();
+    wait("the end of the turn", || {
+        let thread = session.snapshot();
+        thread.status() == Status::Idle && thread.title().contains("Listing")
+    });
+    assert_eq!(tool(&session.snapshot(), "call-1").status, ToolStatus::Completed);
+    session.stop(Duration::from_millis(500));
+}
+
+#[test]
 fn cancelling_while_the_agent_asks_withdraws_the_request() {
     let dir = scratch("acp-session");
     let (session, _, _) = ready("basic", &dir);
@@ -427,7 +453,7 @@ fn cancelling_while_the_agent_asks_withdraws_the_request() {
     assert_eq!(permission(&session.snapshot()).state, RequestState::Withdrawn);
     assert_eq!(
         session.answer(&request, Choice::Option(0)),
-        Err(SessionError::Closed),
+        Err(SessionError::UnknownRequest(request.clone())),
         "a withdrawn request takes no answer"
     );
     session.stop(Duration::from_millis(500));

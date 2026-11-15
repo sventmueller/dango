@@ -4,6 +4,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 use crate::error::{Error, Result};
+use crate::id::CommitId;
 use crate::path::from_bytes;
 use crate::remote::word;
 use crate::repo::Repository;
@@ -14,13 +15,13 @@ pub struct Worktree {
     /// Its folder.
     pub path: PathBuf,
     /// The commit it has checked out; `None` before the first commit.
-    pub head: Option<String>,
+    pub head: Option<CommitId>,
     /// Its branch's full ref; `None` when detached.
     pub branch: Option<String>,
     /// Whether it is the repository's main working tree.
     pub main: bool,
     /// Why it is locked, when it is; an empty reason when none was given.
-    pub locked: Option<String>,
+    pub(crate) locked: Option<String>,
     /// Why git could prune it, such as a folder that is gone.
     pub prunable: Option<String>,
 }
@@ -74,14 +75,29 @@ impl Repository {
         if output.code == 0 {
             return Ok(());
         }
-        let said = output.said();
-        if said.contains("contains modified or untracked files") {
+        if !force && !self.locked(path)? && self.has_changes(path)? {
             return Err(Error::LocalChanges {
                 paths: Vec::new(),
-                output: said,
+                output: output.said(),
             });
         }
         Err(crate::run::failure(&output))
+    }
+
+    /// Whether the working tree at `path` is locked, which git checks before its changes.
+    fn locked(&self, path: &Path) -> Result<bool> {
+        let same = |other: &Path| match (path.canonicalize(), other.canonicalize()) {
+            (Ok(a), Ok(b)) => a == b,
+            _ => path == other,
+        };
+        Ok(self.worktrees()?.iter().any(|w| w.locked.is_some() && same(&w.path)))
+    }
+
+    /// Whether the working tree at `path` has changes or untracked files, as `git worktree remove` counts them.
+    fn has_changes(&self, path: &Path) -> Result<bool> {
+        let call = crate::run::Call::new(path, ["status", "--porcelain", "-z", "--ignore-submodules=none"]);
+        let output = self.git().run(call)?;
+        Ok(output.code == 0 && !output.stdout.is_empty())
     }
 }
 
@@ -112,7 +128,7 @@ fn parse(output: &[u8]) -> Vec<Worktree> {
         }
         let Some(worktree) = current.as_mut() else { continue };
         match key {
-            b"HEAD" => worktree.head = text().filter(|h| h.bytes().any(|b| b != b'0')),
+            b"HEAD" => worktree.head = text().filter(|h| h.bytes().any(|b| b != b'0')).map(CommitId::from_git),
             b"branch" => worktree.branch = text(),
             b"locked" => worktree.locked = Some(text().unwrap_or_default()),
             b"prunable" => worktree.prunable = Some(text().unwrap_or_default()),

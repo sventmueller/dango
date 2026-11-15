@@ -5,14 +5,15 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::error::Result;
+use crate::id::CommitId;
 use crate::remote::word;
 use crate::repo::Repository;
 
 /// A commit that last changed some lines.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BlameCommit {
-    /// The full hash.
-    pub hash: String,
+    /// Its name.
+    pub hash: CommitId,
     /// The author's name.
     pub author: String,
     /// The author's email address, without its angle brackets.
@@ -27,7 +28,7 @@ pub struct BlameCommit {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Blame {
     /// The commits, each once.
-    pub commits: Vec<BlameCommit>,
+    pub(crate) commits: Vec<BlameCommit>,
     /// For each line of the file, counted from 0, the index of its commit in `commits`; `None` for a line the output
     /// left out.
     pub lines: Vec<Option<usize>>,
@@ -54,7 +55,7 @@ impl Repository {
     }
 
     /// The whole message of `commit`, its subject first.
-    pub fn commit_message(&self, commit: &str) -> Result<String> {
+    pub fn commit_message(&self, commit: &CommitId) -> Result<String> {
         let output = self.git().ok(self.call([
             "-c",
             "log.showSignature=false",
@@ -62,7 +63,7 @@ impl Repository {
             "--no-patch",
             "--no-color",
             "--format=%B",
-            word(commit)?,
+            commit.as_str(),
             "--",
         ]))?;
         Ok(String::from_utf8_lossy(&output.stdout).trim_end().to_string())
@@ -83,8 +84,11 @@ pub(crate) fn parse_incremental(output: &[u8]) -> Blame {
         if let Some((hash, final_line, count)) = group_header(line) {
             let at = *index.entry(hash.to_string()).or_insert_with(|| {
                 blame.commits.push(BlameCommit {
-                    hash: hash.to_string(),
-                    ..BlameCommit::default()
+                    hash: CommitId::from_git(hash),
+                    author: String::new(),
+                    author_email: String::new(),
+                    author_time: 0,
+                    summary: String::new(),
                 });
                 blame.commits.len() - 1
             });
@@ -164,7 +168,7 @@ mod tests {
         assert_eq!(blame.commits.len(), 2);
         assert_eq!(blame.lines, vec![Some(1), Some(1), Some(0), Some(1)]);
         let third = blame.commit_of(2).unwrap();
-        assert_eq!(third.hash, B);
+        assert_eq!(third.hash.as_str(), B);
         assert_eq!(third.author, "Bea");
         assert_eq!(third.author_email, "bea@example.com");
         assert_eq!(third.author_time, 1_700_000_300);

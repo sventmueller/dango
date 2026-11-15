@@ -48,7 +48,7 @@ fn offers() -> Vec<(ide_agent::Endpoint, Vec<String>, Option<String>)> {
 }
 
 /// Whether the own agent is set up: an endpoint can be asked and has a model to pick.
-pub fn set_up() -> bool {
+pub(crate) fn set_up() -> bool {
     !offers().is_empty()
 }
 

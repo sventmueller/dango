@@ -8,7 +8,7 @@ use objc2_foundation::{NSRange, NSRect};
 use super::view::TerminalView;
 
 /// The visible lines joined by line breaks.
-pub struct ScreenText {
+pub(crate) struct ScreenText {
     text: String,
     /// The offset at which each line starts.
     starts: Vec<usize>,
@@ -16,7 +16,7 @@ pub struct ScreenText {
 }
 
 impl ScreenText {
-    pub fn new(lines: &[String]) -> ScreenText {
+    pub(crate) fn new(lines: &[String]) -> ScreenText {
         let text = lines.join("\n");
         let mut starts = Vec::with_capacity(lines.len());
         let mut offset = 0;
@@ -28,28 +28,28 @@ impl ScreenText {
         ScreenText { text, starts, length }
     }
 
-    pub fn text(&self) -> &str {
+    pub(crate) fn text(&self) -> &str {
         &self.text
     }
 
-    pub fn length(&self) -> usize {
+    pub(crate) fn length(&self) -> usize {
         self.length
     }
 
     /// The line that holds `offset`; an offset past the end belongs to the last line.
-    pub fn line_of(&self, offset: usize) -> usize {
+    pub(crate) fn line_of(&self, offset: usize) -> usize {
         self.starts.partition_point(|&start| start <= offset).saturating_sub(1)
     }
 
     /// Where `line` starts and how long it is, its line break included.
-    pub fn line_range(&self, line: usize) -> Option<(usize, usize)> {
+    pub(crate) fn line_range(&self, line: usize) -> Option<(usize, usize)> {
         let start = *self.starts.get(line)?;
         let end = self.starts.get(line + 1).copied().unwrap_or(self.length);
         Some((start, end - start))
     }
 
     /// The offset of the `chars`-th character of `line`, at most its end.
-    pub fn offset(&self, line: usize, chars: usize) -> usize {
+    pub(crate) fn offset(&self, line: usize, chars: usize) -> usize {
         let Some(&start) = self.starts.get(line) else {
             return self.length;
         };
@@ -64,7 +64,7 @@ impl ScreenText {
     }
 
     /// The text from `location`, `length` code units long, when both ends fall between characters.
-    pub fn substring(&self, location: usize, length: usize) -> Option<String> {
+    pub(crate) fn substring(&self, location: usize, length: usize) -> Option<String> {
         let end = location.checked_add(length).filter(|&end| end <= self.length)?;
         let units: Vec<u16> = self.text.encode_utf16().skip(location).take(end - location).collect();
         String::from_utf16(&units).ok()

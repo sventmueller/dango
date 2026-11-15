@@ -11,7 +11,7 @@ use objc2_app_kit::{
 };
 
 use super::agent::{appearance, controller_of, picture};
-use super::{check, finish, helpers, snapshot};
+use super::{check, finish, give_up, helpers, snapshot};
 use crate::util::constant;
 use crate::window::Panel;
 
@@ -76,7 +76,7 @@ const FILES: &[&str] = &[
     "workflow.yml",
 ];
 
-pub fn run() {
+pub(crate) fn run() {
     let _ = std::fs::create_dir_all(helpers::folder(PROJECT).join("src"));
     let files: Vec<(&str, &str)> = FILES.iter().map(|file| (*file, "x\n")).collect();
     helpers::open_project(NAME, PROJECT, &files, |controller| {
@@ -101,7 +101,7 @@ fn expected_rows() -> isize {
 /// Pictures the tree once it lists the folder.
 fn listed(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let rows = controller.tree_rows();
     let expected = expected_rows();
@@ -133,7 +133,7 @@ fn listed(root: PathBuf) {
 
 fn dark(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     picture(&controller, "file-icons-dark");
     appearance(
@@ -145,7 +145,7 @@ fn dark(root: PathBuf) {
 
 fn contrast_dark(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     picture(&controller, "file-icons-contrast-dark");
     appearance(&controller, constant!(NSAppearanceNameAccessibilityHighContrastAqua));
@@ -154,7 +154,7 @@ fn contrast_dark(root: PathBuf) {
 
 fn contrast(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     picture(&controller, "file-icons-contrast");
     appearance(&controller, constant!(NSAppearanceNameAqua));
@@ -168,7 +168,7 @@ fn contrast(root: PathBuf) {
 
 fn quick_open(root: PathBuf) {
     let Some(controller) = controller_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let hits = controller.quick_open_hits();
     check(

@@ -11,11 +11,11 @@ use std::time::Duration;
 use objc2::rc::Retained;
 use objc2_foundation::NSRange;
 
-use super::{check, finish, helpers, snapshot};
+use super::{check, finish, give_up, give_up_saying, helpers, skip, snapshot};
 use crate::editor::{self, EditorTextView};
 use crate::window::{self, WindowController};
 
-const SCENARIO: &str = "lsp";
+pub(super) const SCENARIO: &str = "lsp";
 /// The longest the server may take to start, to index the project or to settle before a request.
 pub(super) const WAIT: Duration = Duration::from_secs(180);
 /// The longest an answer may take once the server settled.
@@ -167,7 +167,7 @@ pub(super) fn done() {
     finish(SCENARIO);
 }
 
-pub fn run() {
+pub(crate) fn run() {
     END.start(BUDGET);
     let files = [
         (
@@ -191,18 +191,15 @@ fn opened(controller: Retained<WindowController>) {
 
 fn started(waited: Waited) {
     let Some(view) = main_view() else {
-        check("main.rs opens in an editor", false, "");
-        finish(SCENARIO);
-        return;
+        return give_up(SCENARIO, "main.rs opens in an editor");
     };
     match ide_ui_lsp::server_running(&*view) {
         Err(why) if why == "missing" => {
-            check(
-                "skipped: rust-analyzer missing",
-                true,
+            skip(
+                SCENARIO,
+                "rust-analyzer is there",
                 "no rust-analyzer through rustup, on PATH or in the tools",
             );
-            done();
         }
         Ok(true) => {
             check(
@@ -214,12 +211,11 @@ fn started(waited: Waited) {
             poll(WAIT, move || typed() || quiet(SILENCE), diagnosed);
         }
         other => {
-            check(
+            give_up_saying(
+                SCENARIO,
                 "rust-analyzer starts for the trusted folder",
-                false,
                 format!("{waited}: {other:?}"),
             );
-            done();
         }
     }
 }
@@ -535,9 +531,7 @@ fn outlined(waited: Waited) {
 fn unresolved(waited: Waited) {
     check("a module without its file is reported", waited.ok, waited.to_string());
     if let Err(error) = std::fs::write(root().join("src/extra.rs"), "pub fn more() {}\n") {
-        check("the module's file is written", false, error.to_string());
-        done();
-        return;
+        return give_up_saying(SCENARIO, "the module's file is written", error.to_string());
     }
     let unresolved = has_mark("E0583");
     poll(WAIT, move || !unresolved(), watched);

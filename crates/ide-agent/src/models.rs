@@ -8,7 +8,7 @@ pub struct ModelInfo {
     /// The id requests name.
     pub id: String,
     /// The name the provider shows, where it gives one.
-    pub name: Option<String>,
+    pub(crate) name: Option<String>,
     /// How many tokens the context window holds.
     pub context: Option<u64>,
     /// How many tokens one answer may take.
@@ -19,7 +19,8 @@ pub struct ModelInfo {
 
 impl ModelInfo {
     /// A model of which only the id is known.
-    pub fn id(id: &str) -> ModelInfo {
+    #[cfg(test)]
+    pub(crate) fn id(id: &str) -> ModelInfo {
         ModelInfo {
             id: id.to_string(),
             name: None,

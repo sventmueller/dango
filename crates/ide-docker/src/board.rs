@@ -20,7 +20,7 @@ pub enum Look {
 }
 
 /// What a row stands for.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Node {
     /// A section's title: Compose, Containers, Images, Volumes.
     Section(Section),
@@ -35,7 +35,7 @@ pub enum Node {
 }
 
 /// The sections of the tree.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Section {
     /// Compose projects.
     Compose,
@@ -64,12 +64,10 @@ pub struct Row {
 
 /// What Docker shows for one context.
 #[derive(Debug, Clone, Default)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Board {
-    /// The containers.
     pub containers: Vec<Container>,
-    /// The images.
     pub images: Vec<Image>,
-    /// The volumes.
     pub volumes: Vec<Volume>,
     /// The Compose files of the window's folder.
     pub files: Vec<PathBuf>,
@@ -82,7 +80,7 @@ impl Board {
     }
 
     /// The Compose file of project `name` in the folder, if it has one.
-    pub fn file_of(&self, name: &str) -> Option<&Path> {
+    pub(crate) fn file_of(&self, name: &str) -> Option<&Path> {
         self.files
             .iter()
             .find(|f| crate::project_of(f) == name)

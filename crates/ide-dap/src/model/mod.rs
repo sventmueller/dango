@@ -10,7 +10,7 @@ pub mod variables;
 
 use std::path::PathBuf;
 
-use ide_core::debugging::{Debugging, ExceptionFilter};
+use crate::kept::{Debugging, ExceptionFilter};
 
 use breakpoints::Breakpoints;
 use session::{Frame, Origin, Phase, Session};
@@ -117,10 +117,10 @@ pub struct Selection {
 
 /// The debugger of a window.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Model {
     /// The window's sessions, in the order they started.
     pub sessions: Vec<Session>,
-    /// What is selected.
     pub selected: Option<Selection>,
     /// The breakpoints of the project.
     pub breakpoints: Breakpoints,
@@ -131,7 +131,7 @@ pub struct Model {
     /// The launch configuration last used, by name.
     pub configuration: Option<String>,
     /// The panel's sections the user folded, by name.
-    pub folded: Vec<String>,
+    pub(crate) folded: Vec<String>,
 }
 
 impl Model {
@@ -518,7 +518,7 @@ impl Model {
     }
 
     /// Whether the panel section `name` is folded.
-    pub fn is_folded(&self, name: &str) -> bool {
+    pub(crate) fn is_folded(&self, name: &str) -> bool {
         self.folded.iter().any(|f| f == name)
     }
 

@@ -3,8 +3,9 @@
 use super::*;
 
 /// Whether the overlay of `view` is showing, for the self-test.
-pub fn visible(view: &EditorTextView) -> bool {
+pub(crate) fn visible(view: &EditorTextView) -> bool {
     view.ivars()
+        .around
         .whitespace
         .borrow()
         .as_ref()

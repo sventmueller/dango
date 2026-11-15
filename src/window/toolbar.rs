@@ -18,7 +18,7 @@ const ACTIVITY: &str = "ide.activity";
 const QUICK_OPEN: &str = "ide.quickOpen";
 pub(crate) const SPLIT: &str = "ide.split";
 
-pub fn default_identifiers() -> Retained<NSArray<NSToolbarItemIdentifier>> {
+pub(crate) fn default_identifiers() -> Retained<NSArray<NSToolbarItemIdentifier>> {
     let ids = [
         constant!(NSToolbarToggleSidebarItemIdentifier).to_owned(),
         constant!(NSToolbarSidebarTrackingSeparatorItemIdentifier).to_owned(),
@@ -32,7 +32,7 @@ pub fn default_identifiers() -> Retained<NSArray<NSToolbarItemIdentifier>> {
     NSArray::from_retained_slice(&ids)
 }
 
-pub fn make(controller: &WindowController, id: &str) -> Option<Retained<NSToolbarItem>> {
+pub(crate) fn make(controller: &WindowController, id: &str) -> Option<Retained<NSToolbarItem>> {
     match id {
         ACTIVITY => Some(crate::activity::toolbar_item(controller)),
         QUICK_OPEN => Some(quick_open(controller)),
@@ -68,7 +68,7 @@ fn split(controller: &WindowController) -> Retained<NSToolbarItem> {
 }
 
 /// What a process is there for, as the activity view names it.
-pub fn kind_name(kind: Kind) -> &'static str {
+pub(crate) fn kind_name(kind: Kind) -> &'static str {
     match kind {
         Kind::Terminal => t("Terminal"),
         Kind::LanguageServer => t("Sprachserver"),
@@ -83,7 +83,7 @@ pub fn kind_name(kind: Kind) -> &'static str {
 }
 
 /// A running time like `12 s`, `3 min` or `2 h`.
-pub fn duration(seconds: u64) -> String {
+pub(crate) fn duration(seconds: u64) -> String {
     match seconds {
         0..60 => tf("{} s", &[&seconds.to_string()]),
         60..3600 => tf("{} min", &[&(seconds / 60).to_string()]),

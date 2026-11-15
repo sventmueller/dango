@@ -35,7 +35,7 @@ use crate::model::{self, Command, State};
 use crate::palette::{self, Theme};
 use crate::render::{self, Fonts};
 use ide_ui_common::constant;
-use ide_ui_common::util::{FlagGuard, guarded, item, live, main_after, ns, separator, set_target};
+use ide_ui_common::util::{FlagGuard, guarded, item, live, main_after, ns, pin_sides, separator, set_target};
 
 /// What a terminal view keeps.
 pub struct Ivars {
@@ -607,12 +607,7 @@ impl TerminalView {
         );
         for view in [dev_server.view(), notice.view(), self] {
             stack.addArrangedSubview(view);
-            view.leadingAnchor()
-                .constraintEqualToAnchor(&stack.leadingAnchor())
-                .setActive(true);
-            view.trailingAnchor()
-                .constraintEqualToAnchor(&stack.trailingAnchor())
-                .setActive(true);
+            pin_sides(view, &stack, 0.0);
         }
         self.setContentHuggingPriority_forOrientation(1.0, NSLayoutConstraintOrientation::Vertical);
         self.setContentCompressionResistancePriority_forOrientation(1.0, NSLayoutConstraintOrientation::Vertical);

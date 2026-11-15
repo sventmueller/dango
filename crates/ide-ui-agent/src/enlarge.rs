@@ -15,7 +15,7 @@ use objc2_foundation::{NSObjectProtocol, NSPoint, NSPointInRect, NSRect, NSSize}
 use splat_i18n::t;
 
 use super::tab::AgentRoot;
-use ide_ui_common::util::{guarded, ns, pin_edges, set_action, set_label, symbol_button};
+use ide_ui_common::util::{activate, guarded, ns, pin_edges, set_action, set_label, symbol_button};
 
 /// The room kept free around the picture, wide enough for the close button above it.
 const MARGIN: f64 = 56.0;
@@ -36,7 +36,7 @@ thread_local! {
 
 /// The picture shown large.
 #[derive(Default)]
-pub struct EnlargedPicture {
+pub(crate) struct EnlargedPicture {
     shown: RefCell<Option<Retained<Shade>>>,
 }
 
@@ -70,7 +70,7 @@ define_class!(
     }
 );
 
-pub struct ShadeIvars {
+pub(crate) struct ShadeIvars {
     close: Retained<NSButton>,
     picture: Retained<NSView>,
     before: RefCell<Option<Retained<NSResponder>>>,
@@ -161,7 +161,7 @@ fn opener(mtm: MainThreadMarker) -> Retained<Opener> {
 }
 
 /// A clear button over a tile's picture, named `name`, that opens the picture large.
-pub fn button(mtm: MainThreadMarker, name: &str) -> Retained<NSButton> {
+pub(crate) fn button(mtm: MainThreadMarker, name: &str) -> Retained<NSButton> {
     // SAFETY: A nil target sends the action along the responder chain; `set_action` gives it the opener right after.
     let button = unsafe { NSButton::buttonWithTitle_target_action(&ns(""), None, None, mtm) };
     set_action(&button, &opener(mtm), sel!(ideAgentEnlargePicture:));
@@ -289,14 +289,14 @@ fn shade(
     place(&picture, &shade, image.size());
     shade.addSubview(&close);
     close.setTranslatesAutoresizingMaskIntoConstraints(false);
-    close
-        .topAnchor()
-        .constraintEqualToAnchor_constant(&shade.topAnchor(), CLOSE_INSET)
-        .setActive(true);
-    close
-        .trailingAnchor()
-        .constraintEqualToAnchor_constant(&shade.trailingAnchor(), -CLOSE_INSET)
-        .setActive(true);
+    activate([
+        close
+            .topAnchor()
+            .constraintEqualToAnchor_constant(&shade.topAnchor(), CLOSE_INSET),
+        close
+            .trailingAnchor()
+            .constraintEqualToAnchor_constant(&shade.trailingAnchor(), -CLOSE_INSET),
+    ]);
     shade
 }
 
@@ -349,7 +349,7 @@ fn place(picture: &NSView, shade: &NSView, natural: NSSize) {
     let (width, height) = (natural.width.max(1.0), natural.height.max(1.0));
     let preferred = picture.widthAnchor().constraintEqualToConstant(width);
     preferred.setPriority(NATURAL_SIZE);
-    for constraint in [
+    activate([
         picture.centerXAnchor().constraintEqualToAnchor(&shade.centerXAnchor()),
         picture.centerYAnchor().constraintEqualToAnchor(&shade.centerYAnchor()),
         picture
@@ -363,9 +363,7 @@ fn place(picture: &NSView, shade: &NSView, natural: NSSize) {
             .heightAnchor()
             .constraintLessThanOrEqualToAnchor_constant(&shade.heightAnchor(), -2.0 * MARGIN),
         preferred,
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
 }
 
 fn loosen(view: &NSView) {
@@ -381,4 +379,4 @@ fn loosen(view: &NSView) {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

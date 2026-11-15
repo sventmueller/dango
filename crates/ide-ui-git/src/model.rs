@@ -1,22 +1,26 @@
 //! The Git panel's model (E98): what it shows for its folder, what runs, which rows are open, and how a refresh and
 //! the opening of a row change that. It knows no AppKit; the panel's controller reads git and draws.
 
-pub use ide_git::panel::{FileRow, Mark, Model, RowKey, Section};
+pub(crate) use ide_git::panel::{FileRow, Mark, Model, RowKey, Section};
 
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
-use ide_git::{Branch, BranchStatus, Cancel, Commit, Operation, Repository, Stash, StashApply, Status};
+use ide_git::{Branch, BranchStatus, Cancel, Commit, CommitId, Operation, Repository, Stash, StashApply, Status};
 
 use super::text::Problem;
 use ide_git::TreeState;
 
 /// How many commits the graph shows at first, and how many more each time the user asks.
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unreachable_pub, reason = "the self-test re-exports it")
+)]
 pub const HISTORY_PAGE: usize = 50;
 
 /// What the panel can show for its folder.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub enum Phase {
+pub(crate) enum Phase {
     #[default]
     Loading,
     Untrusted,
@@ -28,7 +32,7 @@ pub enum Phase {
 
 /// Something running that keeps other operations from starting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Task {
+pub(crate) enum Task {
     Commit,
     Scan,
     Fetch,
@@ -45,9 +49,9 @@ pub enum Task {
     Message,
 }
 
-pub struct Busy {
-    pub task: Task,
-    pub cancel: Option<Cancel>,
+pub(crate) struct Busy {
+    pub(crate) task: Task,
+    pub(crate) cancel: Option<Cancel>,
 }
 
 #[derive(Default)]
@@ -58,48 +62,48 @@ struct Refresh {
 }
 
 #[derive(Default)]
-pub struct State {
-    pub phase: Phase,
-    pub repo: Option<Repository>,
-    pub branch: BranchStatus,
-    pub branches: Vec<Branch>,
+pub(crate) struct State {
+    pub(crate) phase: Phase,
+    pub(crate) repo: Option<Repository>,
+    pub(crate) branch: BranchStatus,
+    pub(crate) branches: Vec<Branch>,
     /// The merge or rebase that stopped at conflicts.
-    pub operation: Option<Operation>,
+    pub(crate) operation: Option<Operation>,
     /// The stash apply that stopped at conflicts (E87).
-    pub stash_apply: Option<StashApply>,
+    pub(crate) stash_apply: Option<StashApply>,
     /// The stash entries whose files show.
-    pub open_stashes: HashSet<String>,
+    pub(crate) open_stashes: HashSet<CommitId>,
     /// What stash entries changed, by commit, as far as read.
-    pub stash_changes: HashMap<String, Vec<ide_git::ChangedFile>>,
+    pub(crate) stash_changes: HashMap<CommitId, Vec<ide_git::ChangedFile>>,
     /// The stash entries whose changes are being read.
-    pub reading_stashes: HashSet<String>,
+    pub(crate) reading_stashes: HashSet<CommitId>,
     /// The commit message a model writes or wrote (E88).
-    pub message: super::message::MessageState,
-    pub model: Model,
-    pub collapsed: HashSet<Section>,
+    pub(crate) message: super::message::MessageState,
+    pub(crate) model: Model,
+    pub(crate) collapsed: HashSet<Section>,
     /// The thread worktrees whose files show.
-    pub open_trees: HashSet<PathBuf>,
+    pub(crate) open_trees: HashSet<PathBuf>,
     /// The commits whose files show.
-    pub open_commits: HashSet<String>,
+    pub(crate) open_commits: HashSet<CommitId>,
     /// What commits changed, by hash, as far as read.
-    pub commit_changes: HashMap<String, ide_git::CommitChanges>,
+    pub(crate) commit_changes: HashMap<CommitId, ide_git::CommitChanges>,
     /// The commits whose changes are being read.
-    pub reading_changes: HashSet<String>,
+    pub(crate) reading_changes: HashSet<CommitId>,
     /// How many more pages of history the user asked for.
-    pub more_pages: usize,
+    pub(crate) more_pages: usize,
     /// What follows the commit that runs: a push, or a pull and then a push.
-    pub after_commit: Option<Task>,
+    pub(crate) after_commit: Option<Task>,
     /// Whether a push follows the pull that runs.
-    pub push_after_pull: bool,
-    pub busy: Option<Busy>,
-    pub problem: Option<Problem>,
+    pub(crate) push_after_pull: bool,
+    pub(crate) busy: Option<Busy>,
+    pub(crate) problem: Option<Problem>,
     /// The rows the open context menu acts on.
-    pub menu_keys: Vec<RowKey>,
+    pub(crate) menu_keys: Vec<RowKey>,
     refresh: Refresh,
 }
 
 /// What a refresh read from git.
-pub enum Loaded {
+pub(crate) enum Loaded {
     NoGit,
     NotRepository,
     Failed(Problem),
@@ -115,14 +119,14 @@ pub enum Loaded {
 }
 
 /// The stash as a refresh read it: its entries and the apply that waits at its conflicts.
-pub struct StashRead {
-    pub entries: Vec<Stash>,
-    pub apply: Option<StashApply>,
+pub(crate) struct StashRead {
+    pub(crate) entries: Vec<Stash>,
+    pub(crate) apply: Option<StashApply>,
 }
 
 /// What the controller does when a refresh is asked for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Start {
+pub(crate) enum Start {
     /// The folder is not trusted: show that, read nothing.
     Untrusted,
     /// A read runs; another follows it.
@@ -133,27 +137,27 @@ pub enum Start {
 
 /// What the controller reads when a row opens.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Read {
+pub(crate) enum Read {
     /// The files a commit changed, by hash.
-    CommitChanges(String),
+    CommitChanges(CommitId),
     /// The files a stash entry changed, by its commit.
-    StashChanges(String),
+    StashChanges(CommitId),
 }
 
 impl State {
     /// How many commits the graph reads.
-    pub fn history_limit(&self) -> usize {
+    pub(crate) fn history_limit(&self) -> usize {
         HISTORY_PAGE * (self.more_pages + 1)
     }
 
     /// Notes that changes on disk ask for a refresh; whether the controller has to schedule one, which it does not
     /// while one is scheduled already.
-    pub fn schedule_refresh(&mut self) -> bool {
+    pub(crate) fn schedule_refresh(&mut self) -> bool {
         !std::mem::replace(&mut self.refresh.scheduled, true)
     }
 
     /// Starts a refresh now, or right after the one that runs.
-    pub fn start_refresh(&mut self, trusted: bool) -> Start {
+    pub(crate) fn start_refresh(&mut self, trusted: bool) -> Start {
         self.refresh.scheduled = false;
         if !trusted {
             self.phase = Phase::Untrusted;
@@ -171,18 +175,18 @@ impl State {
     }
 
     /// The read could not start; the controller schedules it again.
-    pub fn refresh_not_started(&mut self) {
+    pub(crate) fn refresh_not_started(&mut self) {
         self.refresh.running = false;
     }
 
     /// The read is over; whether another one was asked for while it ran.
-    pub fn refresh_finished(&mut self) -> bool {
+    pub(crate) fn refresh_finished(&mut self) -> bool {
         self.refresh.running = false;
         std::mem::take(&mut self.refresh.again)
     }
 
     /// Takes what a refresh read; whether anything the panel shows changed.
-    pub fn apply(&mut self, loaded: Loaded) -> bool {
+    pub(crate) fn apply(&mut self, loaded: Loaded) -> bool {
         let was_ready = self.phase == Phase::Ready;
         if was_ready && self.shows_already(&loaded) {
             return false;
@@ -212,7 +216,7 @@ impl State {
                 self.branch = status.branch.clone();
                 self.branches = branches;
                 self.model = Model::new(&status, log, worktrees, stashes, self.history_limit());
-                let kept: HashSet<&String> = self.model.stashes.iter().map(|s| &s.hash).collect();
+                let kept: HashSet<&CommitId> = self.model.stashes.iter().map(|s| &s.hash).collect();
                 self.open_stashes.retain(|hash| kept.contains(hash));
             }
         }
@@ -254,7 +258,7 @@ impl State {
     }
 
     /// The rows below `parent`, the sections for the top.
-    pub fn children(&self, parent: Option<&RowKey>) -> Vec<RowKey> {
+    pub(crate) fn children(&self, parent: Option<&RowKey>) -> Vec<RowKey> {
         match parent {
             None => self.model.sections().into_iter().map(RowKey::Section).collect(),
             Some(RowKey::Section(section)) => self.model.keys(*section),
@@ -277,7 +281,7 @@ impl State {
     }
 
     /// The keys of every row the panel has, open or not.
-    pub fn all_keys(&self) -> std::collections::HashSet<RowKey> {
+    pub(crate) fn all_keys(&self) -> std::collections::HashSet<RowKey> {
         let mut all = std::collections::HashSet::new();
         let mut pending = self.children(None);
         while let Some(key) = pending.pop() {
@@ -288,7 +292,7 @@ impl State {
     }
 
     /// Whether the row of `key` can open.
-    pub fn expandable(&self, key: &RowKey) -> bool {
+    pub(crate) fn expandable(&self, key: &RowKey) -> bool {
         match key {
             RowKey::Section(_) | RowKey::Stash(_) | RowKey::Commit(_) => true,
             RowKey::Worktree(path) => !self.model.tree_keys(path).is_empty(),
@@ -297,7 +301,7 @@ impl State {
     }
 
     /// Notes that the row of `key` opened or closed; what the controller has to read for it.
-    pub fn expansion(&mut self, key: RowKey, expanded: bool) -> Option<Read> {
+    pub(crate) fn expansion(&mut self, key: RowKey, expanded: bool) -> Option<Read> {
         match key {
             RowKey::Section(section) => {
                 if expanded {
@@ -336,6 +340,11 @@ impl State {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A commit whose hash is `digit` forty times.
+    fn id(digit: char) -> CommitId {
+        CommitId::parse(&digit.to_string().repeat(40)).unwrap()
+    }
 
     #[test]
     fn a_refresh_is_scheduled_once_until_it_starts() {
@@ -389,17 +398,17 @@ mod tests {
     #[test]
     fn opening_a_commit_or_stash_reads_its_files_and_closing_forgets_it() {
         let mut state = State::default();
-        let commit = RowKey::Commit("abc".into());
+        let commit = RowKey::Commit(id('a'));
         assert_eq!(
             state.expansion(commit.clone(), true),
-            Some(Read::CommitChanges("abc".into()))
+            Some(Read::CommitChanges(id('a')))
         );
-        assert!(state.open_commits.contains("abc"));
+        assert!(state.open_commits.contains(&id('a')));
         assert_eq!(state.expansion(commit, false), None);
         assert!(state.open_commits.is_empty());
         assert_eq!(
-            state.expansion(RowKey::Stash("s".into()), true),
-            Some(Read::StashChanges("s".into()))
+            state.expansion(RowKey::Stash(id('5')), true),
+            Some(Read::StashChanges(id('5')))
         );
         assert_eq!(state.expansion(RowKey::Section(Section::Staged), false), None);
         assert!(state.collapsed.contains(&Section::Staged));
@@ -410,7 +419,7 @@ mod tests {
     #[test]
     fn a_commit_shows_its_files_once_they_are_read() {
         let state = State::default();
-        let commit = RowKey::Commit("abc".into());
+        let commit = RowKey::Commit(id('a'));
         assert!(state.expandable(&commit));
         assert!(state.children(Some(&commit)).is_empty());
         assert!(!state.expandable(&RowKey::Worktree("/t".into())));

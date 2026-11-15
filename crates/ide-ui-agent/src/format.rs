@@ -40,7 +40,7 @@ pub fn tokens(count: u64) -> String {
 }
 
 /// A size in bytes, like `12,3 MB`, in the user's number format.
-pub fn bytes(count: u64) -> String {
+pub(crate) fn bytes(count: u64) -> String {
     let formatter = objc2_foundation::NSByteCountFormatter::new();
     formatter
         .stringFromByteCount(i64::try_from(count).unwrap_or(i64::MAX))
@@ -48,7 +48,7 @@ pub fn bytes(count: u64) -> String {
 }
 
 /// US dollars in the user's number format.
-pub fn dollars(amount: f64) -> String {
+pub(crate) fn dollars(amount: f64) -> String {
     let formatter = NSNumberFormatter::new();
     formatter.setNumberStyle(NSNumberFormatterStyle::CurrencyStyle);
     formatter.setCurrencyCode(Some(&ns("USD")));
@@ -59,7 +59,7 @@ pub fn dollars(amount: f64) -> String {
 }
 
 /// A cost in the unit supplied by the agent, without currency conversion.
-pub fn reported_cost(cost: &ide_thread::ReportedCost) -> String {
+pub(crate) fn reported_cost(cost: &ide_thread::ReportedCost) -> String {
     if cost.currency == "USD" {
         return dollars(cost.amount);
     }
@@ -73,6 +73,10 @@ pub fn reported_cost(cost: &ide_thread::ReportedCost) -> String {
 }
 
 /// A share, `0.42` for 42 percent, in the user's number format.
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unreachable_pub, reason = "the self-test re-exports it")
+)]
 pub fn percent(share: f64) -> String {
     let formatter = NSNumberFormatter::new();
     formatter.setNumberStyle(NSNumberFormatterStyle::PercentStyle);
@@ -88,7 +92,7 @@ fn date(at: SystemTime) -> Retained<NSDate> {
 }
 
 /// The time of day, like `5:31 PM`, in the user's format; with the date when it is not today.
-pub fn time_of_day(at: SystemTime) -> String {
+pub(crate) fn time_of_day(at: SystemTime) -> String {
     let formatter = NSDateFormatter::new();
     formatter.setTimeStyle(NSDateFormatterStyle::ShortStyle);
     let now = SystemTime::now();
@@ -106,7 +110,7 @@ pub fn time_of_day(at: SystemTime) -> String {
 }
 
 /// An ISO 8601 time, such as `2026-11-09T22:00:00Z`, as `time_of_day` writes it; the text as it is when it is none.
-pub fn iso_time(text: &str) -> String {
+pub(crate) fn iso_time(text: &str) -> String {
     let parsed = NSISO8601DateFormatter::new().dateFromString(&ns(text));
     match parsed {
         Some(date) => {
@@ -130,7 +134,7 @@ pub fn age(at: SystemTime) -> String {
 }
 
 /// How long ago `at` was without the word for "ago", like `7 min`, for a column of times; `now` under a minute.
-pub fn short_age(at: SystemTime) -> String {
+pub(crate) fn short_age(at: SystemTime) -> String {
     let at = at.min(SystemTime::now());
     if SystemTime::now().duration_since(at).unwrap_or_default() < Duration::from_secs(60) {
         return age(SystemTime::now());
@@ -152,7 +156,7 @@ pub fn short_age(at: SystemTime) -> String {
 }
 
 /// `path` relative to `cwd` when it lies inside, else with the home folder as `~`.
-pub fn short_path(path: &str, cwd: &Path) -> String {
+pub(crate) fn short_path(path: &str, cwd: &Path) -> String {
     let p = Path::new(path);
     match p.strip_prefix(cwd) {
         Ok(rest) if !rest.as_os_str().is_empty() => rest.display().to_string(),
@@ -161,7 +165,7 @@ pub fn short_path(path: &str, cwd: &Path) -> String {
 }
 
 /// The first line of `text`, at most `limit` characters, with an ellipsis when cut.
-pub fn first_line(text: &str, limit: usize) -> String {
+pub(crate) fn first_line(text: &str, limit: usize) -> String {
     let line = text.lines().find(|l| !l.trim().is_empty()).unwrap_or_default().trim();
     let mut out: String = line.chars().take(limit).collect();
     if line.chars().count() > limit || text.trim().lines().count() > 1 {

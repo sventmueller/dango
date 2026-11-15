@@ -64,9 +64,11 @@ pub fn set_local_cookie(mtm: MainThreadMarker, name: &str, value: &str, done: im
     let cookie = unsafe { NSHTTPCookie::cookieWithProperties(&properties) }?;
     let done = std::cell::Cell::new(Some(done));
     let block = block2::RcBlock::new(move || {
-        if let Some(done) = done.take() {
-            ide_ui_common::util::guarded((), done);
-        }
+        ide_ui_common::util::guarded((), || {
+            if let Some(done) = done.take() {
+                done();
+            }
+        });
     });
     // SAFETY: The store and the cookie live on the main thread; WebKit calls the block there once the cookie is set.
     unsafe {
@@ -78,7 +80,7 @@ pub fn set_local_cookie(mtm: MainThreadMarker, name: &str, value: &str, done: im
 }
 
 /// The configuration of a new tab. It adds no script message handler, so no page can call into the app.
-pub fn configuration(mtm: MainThreadMarker) -> Retained<WKWebViewConfiguration> {
+pub(crate) fn configuration(mtm: MainThreadMarker) -> Retained<WKWebViewConfiguration> {
     // SAFETY: A plain configuration object, created on the main thread.
     let config = unsafe { WKWebViewConfiguration::new(mtm) };
     // SAFETY: The shared store and plain flags, set before any view uses the configuration.
@@ -136,7 +138,7 @@ fn enable_inspect_element(config: &WKWebViewConfiguration) {
     });
 }
 
-pub fn new_view(mtm: MainThreadMarker, config: &WKWebViewConfiguration) -> Retained<WKWebView> {
+pub(crate) fn new_view(mtm: MainThreadMarker, config: &WKWebViewConfiguration) -> Retained<WKWebView> {
     // SAFETY: The configuration is complete and the frame empty, which constraints replace.
     let web = unsafe {
         WKWebView::initWithFrame_configuration(WKWebView::alloc(mtm), objc2_foundation::NSRect::ZERO, config)
@@ -151,7 +153,7 @@ pub fn new_view(mtm: MainThreadMarker, config: &WKWebViewConfiguration) -> Retai
 }
 
 /// Loads `url` in `web`; `false` if it is no URL.
-pub fn load(web: &WKWebView, url: &str) -> bool {
+pub(crate) fn load(web: &WKWebView, url: &str) -> bool {
     let Some(url) = NSURL::URLWithString(&ns(url)) else {
         return false;
     };
@@ -161,7 +163,7 @@ pub fn load(web: &WKWebView, url: &str) -> bool {
 }
 
 /// Loads the file at `path`, letting the page read the files of `root` and nothing else.
-pub fn load_file(web: &WKWebView, path: &Path, root: &Path) {
+pub(crate) fn load_file(web: &WKWebView, path: &Path, root: &Path) {
     let file = NSURL::fileURLWithPath(&ns(&path.to_string_lossy()));
     let folder = NSURL::fileURLWithPath_isDirectory(&ns(&root.to_string_lossy()), true);
     // SAFETY: Both are file URLs, the file inside the folder, checked by the caller.
@@ -169,15 +171,15 @@ pub fn load_file(web: &WKWebView, path: &Path, root: &Path) {
 }
 
 /// What the view shows: its URL, title, whether it loads and where it can go.
-pub struct State {
-    pub url: Option<String>,
-    pub title: String,
-    pub loading: bool,
-    pub back: bool,
-    pub forward: bool,
+pub(crate) struct State {
+    pub(crate) url: Option<String>,
+    pub(crate) title: String,
+    pub(crate) loading: bool,
+    pub(crate) back: bool,
+    pub(crate) forward: bool,
 }
 
-pub fn state(web: &WKWebView) -> State {
+pub(crate) fn state(web: &WKWebView) -> State {
     // SAFETY: Plain properties of a view on the main thread.
     unsafe {
         State {
@@ -190,29 +192,29 @@ pub fn state(web: &WKWebView) -> State {
     }
 }
 
-pub fn go_back(web: &WKWebView) {
+pub(crate) fn go_back(web: &WKWebView) {
     // SAFETY: Asks for nothing; without a page to go back to it does nothing.
     unsafe { web.goBack() };
 }
 
-pub fn go_forward(web: &WKWebView) {
+pub(crate) fn go_forward(web: &WKWebView) {
     // SAFETY: Asks for nothing; without a page to go forward to it does nothing.
     unsafe { web.goForward() };
 }
 
-pub fn reload(web: &WKWebView) {
+pub(crate) fn reload(web: &WKWebView) {
     // SAFETY: Stopping takes no arguments and does nothing when the view loads nothing.
     unsafe { web.reload() };
 }
 
-pub fn stop(web: &WKWebView) {
+pub(crate) fn stop(web: &WKWebView) {
     // SAFETY: Stopping takes no arguments and does nothing when the view loads nothing.
     unsafe { web.stopLoading() };
 }
 
 /// What to do with a navigation: let it load, cancel it, cancel it and open its URL in a new tab, or download it.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Decision {
+pub(crate) enum Decision {
     Allow,
     Cancel,
     NewTab(String),
@@ -221,7 +223,7 @@ pub enum Decision {
 
 /// Decides a navigation of a page in a window whose folder is `root`. Pages may lead to web pages, to local files
 /// only inside the folder (a web page reaches none, WebKit sees to that), and to other apps' schemes never.
-pub fn decide_action(action: &WKNavigationAction, root: Option<&Path>) -> Decision {
+pub(crate) fn decide_action(action: &WKNavigationAction, root: Option<&Path>) -> Decision {
     // SAFETY: The action and its request are valid while WebKit asks about them.
     let (url, download, link, command, main_frame) = unsafe {
         let url = action
@@ -265,7 +267,7 @@ fn decide(url: Option<String>, download: bool, command_link: bool, main_frame: b
 }
 
 /// Downloads what a page cannot show, and what its server sends as an attachment.
-pub fn decide_response(response: &WKNavigationResponse) -> WKNavigationResponsePolicy {
+pub(crate) fn decide_response(response: &WKNavigationResponse) -> WKNavigationResponsePolicy {
     // SAFETY: The response is valid while WebKit asks about it.
     let (main_frame, showable, response) = unsafe {
         (
@@ -291,7 +293,7 @@ pub fn decide_response(response: &WKNavigationResponse) -> WKNavigationResponseP
     }
 }
 
-pub fn action_policy(decision: &Decision) -> WKNavigationActionPolicy {
+pub(crate) fn action_policy(decision: &Decision) -> WKNavigationActionPolicy {
     match decision {
         Decision::Allow => WKNavigationActionPolicy::Allow,
         Decision::Download => WKNavigationActionPolicy::Download,
@@ -300,13 +302,13 @@ pub fn action_policy(decision: &Decision) -> WKNavigationActionPolicy {
 }
 
 /// Hands `download` to `delegate`, which asks where to save it.
-pub fn adopt_download(download: &WKDownload, delegate: &ProtocolObject<dyn WKDownloadDelegate>) {
+pub(crate) fn adopt_download(download: &WKDownload, delegate: &ProtocolObject<dyn WKDownloadDelegate>) {
     // SAFETY: The download keeps its delegate weakly; the delegate lives as long as the app.
     unsafe { download.setDelegate(Some(delegate)) };
 }
 
 /// The value of `key` in an error's details, as text.
-pub fn error_detail(error: &objc2_foundation::NSError, key: &objc2_foundation::NSString) -> Option<String> {
+pub(crate) fn error_detail(error: &objc2_foundation::NSError, key: &objc2_foundation::NSString) -> Option<String> {
     let value: Retained<AnyObject> = error.userInfo().objectForKey(key)?;
     if let Some(text) = value.downcast_ref::<objc2_foundation::NSString>() {
         return Some(text.to_string());

@@ -22,7 +22,7 @@ const SLACK: f64 = 1.0;
 
 /// Clears the toolbar's background above `sidebar` while `window` is in full screen, or brings it back with `clear`
 /// false.
-pub fn clear_above_sidebar(window: &NSWindow, sidebar: &NSView, clear: bool) {
+pub(crate) fn clear_above_sidebar(window: &NSWindow, sidebar: &NSView, clear: bool) {
     if clear && !window.styleMask().contains(NSWindowStyleMask::FullScreen) {
         return;
     }
@@ -65,7 +65,7 @@ fn is_toolbar_of(toolbar: &NSWindow, window: &NSWindow) -> bool {
 /// How far the toolbar of `window` in full screen reaches down from the top of `sidebar`, none outside full screen:
 /// down to where the safe area of `content`, the documents' column, begins, less a tab bar between them, and further
 /// by as far as the toolbar slid down from the screen's top.
-pub fn toolbar_reach(window: &NSWindow, sidebar: &NSView, content: &NSView) -> f64 {
+pub(crate) fn toolbar_reach(window: &NSWindow, sidebar: &NSView, content: &NSView) -> f64 {
     if !window.styleMask().contains(NSWindowStyleMask::FullScreen) {
         return 0.0;
     }
@@ -91,7 +91,7 @@ pub fn toolbar_reach(window: &NSWindow, sidebar: &NSView, content: &NSView) -> f
 
 /// How far the toolbar's window of `window` slid down from the window's top, as it does in full screen while the window
 /// buttons or the menu bar show; the documents' column keeps its safe area meanwhile, and the toolbar covers its top.
-pub fn toolbar_slide(window: &NSWindow) -> f64 {
+pub(crate) fn toolbar_slide(window: &NSWindow) -> f64 {
     let frame = window.frame();
     toolbar_windows(window).first().map_or(0.0, |(toolbar, _)| {
         let toolbar = toolbar.frame();
@@ -108,7 +108,7 @@ fn tab_bar(view: &NSView) -> Option<Retained<NSView>> {
 
 /// Clears the toolbar above `sidebar` again whenever `split` resizes it in full screen, where AppKit lays the toolbar's
 /// parts out anew; the token ends the watch when handed to `NSNotificationCenter::removeObserver`.
-pub fn follow_sidebar(
+pub(crate) fn follow_sidebar(
     window: &NSWindow,
     sidebar: &NSView,
     split: &NSSplitView,
@@ -116,17 +116,19 @@ pub fn follow_sidebar(
     let window = Weak::from(window);
     let sidebar = Weak::from(sidebar);
     let block = RcBlock::new(move |_: NonNull<NSNotification>| {
-        let (window, sidebar) = (window.clone(), sidebar.clone());
-        let later = RcBlock::new(move || {
-            guarded((), || {
-                if let (Some(window), Some(sidebar)) = (window.load(), sidebar.load()) {
-                    clear_above_sidebar(&window, &sidebar, true);
-                }
+        guarded((), || {
+            let (window, sidebar) = (window.clone(), sidebar.clone());
+            let later = RcBlock::new(move || {
+                guarded((), || {
+                    if let (Some(window), Some(sidebar)) = (window.load(), sidebar.load()) {
+                        clear_above_sidebar(&window, &sidebar, true);
+                    }
+                });
             });
+            // After the toolbar followed the new widths, which AppKit lays out once this notification is through.
+            // SAFETY: Split views post on the main thread, whose run loop then calls the block on the same thread.
+            unsafe { NSRunLoop::currentRunLoop().performBlock(&later) };
         });
-        // After the toolbar followed the new widths, which AppKit lays out once this notification is through.
-        // SAFETY: Split views post on the main thread, whose run loop then calls the block on the same thread.
-        unsafe { NSRunLoop::currentRunLoop().performBlock(&later) };
     });
     let center = NSNotificationCenter::defaultCenter();
     let name = constant!(NSSplitViewDidResizeSubviewsNotification);
@@ -136,7 +138,7 @@ pub fn follow_sidebar(
 
 /// Calls `moved` whenever AppKit moves the toolbar's window of `window` in full screen; the token ends the watch when
 /// handed to `NSNotificationCenter::removeObserver`.
-pub fn follow_toolbar_window(
+pub(crate) fn follow_toolbar_window(
     window: &NSWindow,
     moved: impl Fn() + 'static,
 ) -> Retained<ProtocolObject<dyn NSObjectProtocol>> {
@@ -161,7 +163,7 @@ pub fn follow_toolbar_window(
 
 /// Calls `moved` once AppKit laid out anew after `views` changed their frames; the tokens end the watch when handed to
 /// `NSNotificationCenter::removeObserver`.
-pub fn follow_frames(
+pub(crate) fn follow_frames(
     views: &[&NSView],
     moved: impl Fn() + 'static,
 ) -> Vec<Retained<ProtocolObject<dyn NSObjectProtocol>>> {
@@ -173,10 +175,12 @@ pub fn follow_frames(
             view.setPostsFrameChangedNotifications(true);
             let moved = moved.clone();
             let block = RcBlock::new(move |_: NonNull<NSNotification>| {
-                let moved = moved.clone();
-                let later = RcBlock::new(move || guarded((), || moved()));
-                // SAFETY: Views post on the main thread, whose run loop then calls the block on the same thread.
-                unsafe { NSRunLoop::currentRunLoop().performBlock(&later) };
+                guarded((), || {
+                    let moved = moved.clone();
+                    let later = RcBlock::new(move || guarded((), || moved()));
+                    // SAFETY: Views post on the main thread, whose run loop then calls the block on the same thread.
+                    unsafe { NSRunLoop::currentRunLoop().performBlock(&later) };
+                });
             });
             let name = constant!(NSViewFrameDidChangeNotification);
             // SAFETY: The block runs on the main thread, where views post, and holds nothing the view owns.

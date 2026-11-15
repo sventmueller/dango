@@ -9,8 +9,7 @@ mod family;
 
 use std::ops::Range;
 
-use ide_agent::chat::{ErrorKind, ProviderError};
-use ide_agent::http::Http;
+use ide_net::api::{ErrorKind, Http, ProviderError};
 use serde_json::{Value, json};
 
 pub use family::Family;

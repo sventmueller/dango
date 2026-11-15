@@ -8,18 +8,18 @@ use super::*;
 
 impl Gutter {
     /// The folded lines, for the self-test.
-    pub fn folded(&self) -> impl Iterator<Item = usize> + '_ {
+    pub(crate) fn folded(&self) -> impl Iterator<Item = usize> + '_ {
         self.folded.iter().copied()
     }
 }
 
 /// Whether the folds come from the language server, for the self-test.
-pub fn from_server(view: &EditorTextView) -> bool {
+pub(crate) fn from_server(view: &EditorTextView) -> bool {
     view.ivars().folds.borrow().server.is_some()
 }
 
 /// The lines TextKit lays out, in order, for the self-test: folded ones are missing.
-pub fn laid_out_lines(view: &EditorTextView) -> Vec<usize> {
+pub(crate) fn laid_out_lines(view: &EditorTextView) -> Vec<usize> {
     use objc2_app_kit::{NSTextLayoutFragment, NSTextLayoutFragmentEnumerationOptions};
     let (Some(layout), Some(content)) = (view.textLayoutManager(), view.textContentStorage()) else {
         return vec![];
@@ -49,6 +49,6 @@ pub fn laid_out_lines(view: &EditorTextView) -> Vec<usize> {
 }
 
 /// How many folds are folded, for the self-test.
-pub fn folded(view: &EditorTextView) -> usize {
+pub(crate) fn folded(view: &EditorTextView) -> usize {
     view.ivars().folds.borrow().hidden.len()
 }

@@ -23,7 +23,7 @@ const NONE: i32 = i32::MIN / 4;
 
 /// A query prepared for matching many paths.
 #[derive(Debug, Clone)]
-pub struct Pattern {
+pub(crate) struct Pattern {
     terms: Vec<Term>,
 }
 
@@ -37,11 +37,11 @@ struct Term {
 
 /// How well a path matches and where.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Match {
+pub(crate) struct Match {
     /// Higher is better; only comparable between matches of the same pattern.
-    pub score: i32,
+    pub(crate) score: i32,
     /// The matched characters as ranges of UTF-16 code units, for highlighting.
-    pub ranges: Vec<Range<usize>>,
+    pub(crate) ranges: Vec<Range<usize>>,
 }
 
 /// Reusable buffers, so matching many paths does not allocate per path.
@@ -68,7 +68,7 @@ enum Class {
 
 impl Pattern {
     /// The pattern of `query`, whose words separated by spaces must all match; `None` if it has no words.
-    pub fn new(query: &str) -> Option<Pattern> {
+    pub(crate) fn new(query: &str) -> Option<Pattern> {
         let terms: Vec<Term> = query
             .split_whitespace()
             .map(|word| {
@@ -89,7 +89,7 @@ impl Pattern {
     }
 
     /// How well `text` matches, with the positions of the matched characters.
-    pub fn find(&self, text: &str) -> Option<Match> {
+    pub(crate) fn find(&self, text: &str) -> Option<Match> {
         let mut scratch = Scratch::default();
         let (score, mut positions) = self.run(text, &mut scratch, true)?;
         positions.sort_unstable();
@@ -282,6 +282,9 @@ fn bonus(previous: Class, current: Class) -> i32 {
         },
     }
 }
+
+#[cfg(test)]
+mod property_tests;
 
 #[cfg(test)]
 mod tests {

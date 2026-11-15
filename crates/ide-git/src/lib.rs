@@ -16,7 +16,7 @@
 //! are reached through [`Repository::destructive`], so the app can ask for the user's approval before each (E27).
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs, unreachable_pub)]
+#![warn(missing_docs)]
 
 mod blame;
 mod branch;
@@ -30,6 +30,7 @@ mod error;
 pub mod fuzzing;
 mod history;
 mod hooks;
+mod id;
 mod integrate;
 mod message;
 mod operation;
@@ -38,6 +39,7 @@ mod path;
 mod remote;
 mod repo;
 mod run;
+mod said;
 mod secrets;
 mod staging;
 mod stash;
@@ -47,14 +49,17 @@ mod worktree;
 
 pub use blame::{Blame, BlameCommit};
 pub use branch::{Branch, Commit};
-pub use checkpoint::{Checkpoint, CheckpointKind, Checkpoints, Created, Prune, Restore, RestoreOptions, Restored};
+pub use checkpoint::{
+    Checkpoint, CheckpointKind, CheckpointThread, Checkpoints, Created, Prune, Restore, RestoreOptions, Restored,
+};
 pub use commit::CommitOptions;
 pub use destructive::Destructive;
 pub use diff::{Change, DiffSource, FileDiff, Hunk, Line, LineKind};
 pub use error::{Error, Result};
 pub use history::CommitChanges;
+pub use id::CommitId;
 pub use integrate::ChangedFile;
-pub use message::{CheckedRequest, LINES_PER_FILE, MessageRequest, Place, RequestFinding, RequestScan, SUBJECTS};
+pub use message::{CheckedRequest, MessageRequest, Place, RequestFinding, RequestScan, SUBJECTS};
 pub use operation::Operation;
 pub use remote::{
     FetchOptions, Progress, PullMode, PullOptions, PushFlag, PushOptions, PushOutcome, PushedRef, Remote,
@@ -62,7 +67,7 @@ pub use remote::{
 pub use repo::Repository;
 pub use run::{Cancel, Git};
 pub use secrets::{Finding, SecretScan};
-pub use stash::{Applied, Stash, StashApply, StashOptions};
+pub use stash::{Applied, Stash, StashApply, StashOptions, Unstash};
 pub use status::{
     BranchStatus, Conflict, EntryKind, FileState, Status, StatusEntry, StatusOptions, Submodule, Untracked,
 };

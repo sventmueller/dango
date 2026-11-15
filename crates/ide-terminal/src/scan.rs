@@ -240,6 +240,9 @@ fn percent_decode(text: &[u8]) -> Vec<u8> {
 }
 
 #[cfg(test)]
+mod property_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 

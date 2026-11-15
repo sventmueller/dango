@@ -1,11 +1,9 @@
 //! Remotes and the operations that reach them: fetch, pull and push, with progress and a way to cancel.
 
-use std::path::PathBuf;
-
 use crate::error::{Error, Result};
-use crate::path::{from_bytes, unquoted};
 use crate::repo::Repository;
 use crate::run::{Cancel, Output};
+use crate::said::{Said, overwritten_paths};
 
 /// A remote with the URLs git uses for it, `insteadOf` rewrites applied.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -26,11 +24,11 @@ pub struct Progress {
     /// The share done, when git gives one.
     pub percent: Option<u8>,
     /// How many items are done.
-    pub done: Option<u64>,
+    pub(crate) done: Option<u64>,
     /// How many items there are, when known.
-    pub total: Option<u64>,
+    pub(crate) total: Option<u64>,
     /// Whether the server reports it rather than the local git.
-    pub remote: bool,
+    pub(crate) remote: bool,
 }
 
 /// What to fetch.
@@ -84,7 +82,7 @@ pub struct PushOutcome {
     /// Every ref the push touched.
     pub refs: Vec<PushedRef>,
     /// What the server said, such as a link to open a merge request.
-    pub messages: Vec<String>,
+    pub(crate) messages: Vec<String>,
 }
 
 /// One ref of a push, from `git push --porcelain`.
@@ -93,11 +91,11 @@ pub struct PushedRef {
     /// What happened to it.
     pub flag: PushFlag,
     /// The local ref.
-    pub from: String,
+    pub(crate) from: String,
     /// The remote ref.
     pub to: String,
     /// git's summary, such as `[new branch]` or `[rejected] (fetch first)`.
-    pub summary: String,
+    pub(crate) summary: String,
 }
 
 /// What a push did with a ref.
@@ -170,17 +168,19 @@ impl Repository {
             });
         }
         let said = output.said();
-        if said.contains("Not possible to fast-forward") || said.contains("Diverging branches can't be fast-forwarded")
-        {
+        if Said::NotFastForward.in_text(&said) {
             return Err(Error::NotFastForward { output: said });
         }
-        if said.contains("no tracking information") {
+        if options.remote.is_none()
+            && !matches!(
+                crate::run::failure(&output),
+                Error::AuthFailed { .. } | Error::Network { .. }
+            )
+            && self.lacks_upstream()?
+        {
             return Err(Error::NoUpstream { output: said });
         }
-        if said.contains("would be overwritten")
-            || said.contains("You have unstaged changes")
-            || said.contains("Your index contains uncommitted changes")
-        {
+        if Said::LocalChanges.in_text(&said) {
             return Err(Error::LocalChanges {
                 paths: overwritten_paths(&said),
                 output: said,
@@ -242,10 +242,19 @@ impl Repository {
         if refs.iter().any(|r| r.flag == PushFlag::Rejected) {
             return Err(Error::PushRejected { refs, output: said });
         }
-        if said.contains("has no upstream branch") || said.contains("No configured push destination") {
+        let failure = crate::run::failure(&output);
+        let nowhere = options.refspec.is_none()
+            && matches!(failure, Error::Failed { .. })
+            && (self.lacks_upstream()? || options.remote.is_none() && self.remotes()?.is_empty());
+        if nowhere {
             return Err(Error::NoUpstream { output: said });
         }
-        Err(crate::run::failure(&output))
+        Err(failure)
+    }
+
+    /// Whether HEAD is on a branch that tracks none.
+    fn lacks_upstream(&self) -> Result<bool> {
+        Ok(self.current_branch()?.is_some() && self.resolve("@{upstream}")?.is_none())
     }
 
     /// Runs a command that talks to a remote: no time limit, cancellable, progress parsed, server messages kept.
@@ -372,14 +381,6 @@ fn parse_push(text: &str) -> Vec<PushedRef> {
         .collect()
 }
 
-/// The files git lists, indented by a tab, under a message about local changes.
-pub(crate) fn overwritten_paths(said: &str) -> Vec<PathBuf> {
-    said.lines()
-        .filter_map(|line| line.strip_prefix('\t'))
-        .map(|path| from_bytes(&unquoted(path.trim_end().as_bytes())))
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -448,15 +449,5 @@ mod tests {
         assert_eq!(refs[0].to, "refs/heads/main");
         assert_eq!(refs[1].flag, PushFlag::Rejected);
         assert_eq!(refs[1].summary, "[rejected] (fetch first)");
-    }
-
-    #[test]
-    fn files_git_would_overwrite_are_listed() {
-        let said = "error: Your local changes to the following files would be overwritten by checkout:\n\
-                    \ta.txt\n\t\"new\\nline.txt\"\nPlease commit your changes or stash them before you switch branches.\nAborting";
-        assert_eq!(
-            overwritten_paths(said),
-            [PathBuf::from("a.txt"), PathBuf::from("new\nline.txt")]
-        );
     }
 }

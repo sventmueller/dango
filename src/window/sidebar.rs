@@ -1,27 +1,225 @@
-//! The sidebar of a window: its width per tab, which panel it shows, the symbols of the activity bar and their marks,
-//! and moving the focus into a panel.
+//! The sidebar of a window, one per folder (E60): the activity bar and the panel beside it, which move into the window
+//! tab in front at the width they had; which panel shows, the symbols of the activity bar and their marks, keeping it
+//! below the toolbar, and moving the focus into a panel.
 
-use objc2::DefinedClass;
+use std::cell::{Cell, RefCell};
+use std::rc::Rc;
+
 use objc2::rc::Retained;
-use objc2_app_kit::NSView;
+use objc2::{DefinedClass, MainThreadOnly};
+use objc2_app_kit::{NSLayoutConstraint, NSView};
 
-#[cfg(feature = "selftest")]
 use super::activity_bar::ActivityBar;
-use super::{
-    ACTIVITY_WIDTH, PANEL_MAX_WIDTH, PANEL_MIN_WIDTH, Panel, WindowController, first_shown, panels::Panels, tabs,
-    tabs::TabWindow,
-};
+use super::panels::Panels;
+use super::tabs::{self, TabWindow};
+use super::{Panel, WindowController};
+use crate::util::{activate, auto_layout};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
+
+/// How far the activity bar and the panel reach above the sidebar's safe area, which puts their first symbol and title
+/// level with the top edge of the tabs, which start where the safe area does.
+pub(crate) const SIDEBAR_RAISE: f64 = 11.0;
+/// How far the panel reaches under the activity bar, so that its content keeps the same distance from the symbols as
+/// the symbols keep from the window's edge.
+const PANEL_UNDER_ACTIVITY: f64 = 8.5;
+/// The width of the activity bar, which stays when the panel beside it is closed.
+pub(crate) const ACTIVITY_WIDTH: f64 = 44.0;
+pub(super) const PANEL_MIN_WIDTH: f64 = 200.0;
+pub(super) const PANEL_MAX_WIDTH: f64 = 560.0;
+pub(crate) const PANEL_DEFAULT_WIDTH: f64 = 260.0;
 
 /// How long a panel's page stays in the sidebar after another panel showed, so switching back and forth is cheap and
 /// a move of the sidebar into another window tab later moves only the page that shows.
 const LEAVE_OUT: std::time::Duration = std::time::Duration::from_secs(2);
 
+/// The folder's sidebar: its views, which panel shows, whether the panel beside the activity bar is open and how wide.
+pub(super) struct State {
+    panel: Cell<Option<Panel>>,
+    panel_open: Cell<bool>,
+    panel_width: Cell<f64>,
+    activity: RefCell<Option<ActivityBar>>,
+    panels: RefCell<Option<Panels>>,
+    /// The activity bar and the panel beside it, which the window tab in front shows.
+    view: RefCell<Option<Retained<NSView>>>,
+    /// Keeps the sidebar's top below the toolbar, which in full screen reaches further down than its safe area.
+    below_toolbar: RefCell<Option<Retained<NSLayoutConstraint>>>,
+}
+
+impl Default for State {
+    fn default() -> State {
+        State {
+            panel: Cell::default(),
+            panel_open: Cell::default(),
+            panel_width: Cell::new(PANEL_DEFAULT_WIDTH),
+            activity: RefCell::default(),
+            panels: RefCell::default(),
+            view: RefCell::default(),
+            below_toolbar: RefCell::default(),
+        }
+    }
+}
+
+/// `panel` unless its symbol is among `hidden`, else the first panel whose symbol shows.
+pub(super) fn first_shown(panel: Panel, hidden: &[Panel]) -> Panel {
+    if !hidden.contains(&panel) {
+        return panel;
+    }
+    Panel::ALL.into_iter().find(|p| !hidden.contains(p)).unwrap_or(panel)
+}
+
 impl WindowController {
+    /// Builds the sidebar, the activity bar and the panel beside it, which moves into the window tab in front.
+    pub(super) fn build_sidebar(&self) {
+        let mtm = self.mtm();
+        let sidebar_view = NSView::new(mtm);
+        let activity = ActivityBar::new(mtm, self);
+        let panels = Panels::new(mtm, self, self.project().as_deref());
+        sidebar_view.addSubview(panels.view());
+        sidebar_view.addSubview(activity.view());
+        let guide = sidebar_view.safeAreaLayoutGuide();
+        auto_layout(&[activity.view(), panels.view()]);
+        let under_title_bar = activity
+            .view()
+            .topAnchor()
+            .constraintEqualToAnchor_constant(&guide.topAnchor(), -SIDEBAR_RAISE);
+        // Below required, so that the toolbar of full screen, which the safe area leaves out, pushes the sidebar down.
+        under_title_bar.setPriority(999.0);
+        activate([
+            activity
+                .view()
+                .leadingAnchor()
+                .constraintEqualToAnchor(&sidebar_view.leadingAnchor()),
+            under_title_bar,
+            activity
+                .view()
+                .bottomAnchor()
+                .constraintEqualToAnchor(&sidebar_view.bottomAnchor()),
+            activity.view().widthAnchor().constraintEqualToConstant(ACTIVITY_WIDTH),
+            panels
+                .view()
+                .leadingAnchor()
+                .constraintEqualToAnchor_constant(&activity.view().trailingAnchor(), -PANEL_UNDER_ACTIVITY),
+            panels
+                .view()
+                .trailingAnchor()
+                .constraintEqualToAnchor(&sidebar_view.trailingAnchor()),
+            panels
+                .view()
+                .topAnchor()
+                .constraintEqualToAnchor(&activity.view().topAnchor()),
+            panels
+                .view()
+                .bottomAnchor()
+                .constraintEqualToAnchor(&sidebar_view.bottomAnchor()),
+        ]);
+        let below_toolbar = activity
+            .view()
+            .topAnchor()
+            .constraintGreaterThanOrEqualToAnchor_constant(&sidebar_view.topAnchor(), -SIDEBAR_RAISE);
+        below_toolbar.setActive(true);
+        let state = &self.ivars().sidebar;
+        *state.below_toolbar.borrow_mut() = Some(below_toolbar);
+        *state.activity.borrow_mut() = Some(activity);
+        *state.panels.borrow_mut() = Some(panels);
+        *state.view.borrow_mut() = Some(sidebar_view);
+    }
+
+    /// Moves the sidebar's first symbol and title below the toolbar of the window tab in front, as far as it reaches now.
+    pub(super) fn follow_toolbar(&self) {
+        let reach = self.current_tab().map_or(0.0, |tab| tab.toolbar_reach());
+        self.keep_sidebar_below_toolbar(reach);
+    }
+
+    /// Keeps the sidebar's first symbol and title clear of a toolbar that reaches `toolbar` down from the sidebar's top.
+    fn keep_sidebar_below_toolbar(&self, toolbar: f64) {
+        if let Some(constraint) = self.ivars().sidebar.below_toolbar.borrow().as_ref() {
+            constraint.setConstant(toolbar - SIDEBAR_RAISE);
+        }
+    }
+
+    /// The sidebar leaves `previous` for `next`: its width and the inspector's are kept, `previous` keeps a picture of
+    /// it while its window stays on screen beside, and the panels let go of the pages that do not show. Whether the
+    /// sidebar of `previous` was folded away.
+    pub(super) fn sidebar_leaves(&self, previous: &TabWindow, next: &TabWindow) -> bool {
+        let collapsed = previous.sidebar_collapsed();
+        self.remember_sidebar_width(previous);
+        self.remember_inspector(previous);
+        match self.ivars().sidebar.view.borrow().as_ref() {
+            Some(view) if stays_on_screen(previous, next) => previous.keep_picture_of(view),
+            _ => previous.forget_picture(),
+        }
+        if let Some(panels) = self.ivars().sidebar.panels.borrow().as_ref() {
+            panels.leave_out_hidden();
+        }
+        collapsed
+    }
+
+    /// The sidebar moves into `tab`, which came to the front, at the width it had, folded away when `collapsed`; the
+    /// inspector follows it.
+    pub(super) fn sidebar_joins(&self, tab: &Rc<TabWindow>, collapsed: bool) {
+        if let Some(view) = self.ivars().sidebar.view.borrow().as_ref() {
+            tab.adopt_sidebar(view);
+        }
+        self.fit_sidebar(tab, collapsed);
+        self.inspector_follows(tab);
+    }
+
+    /// Gives `tab`, on screen beside the tab in front, a picture of the sidebar, unless it has one.
+    pub(super) fn picture_sidebar_in(&self, tab: &TabWindow) {
+        if tab.has_picture() {
+            return;
+        }
+        if let Some(view) = self.ivars().sidebar.view.borrow().as_ref() {
+            tab.keep_picture_of(view);
+        }
+    }
+
+    /// Shows the folder's tree with `buttons` in the title row of the files panel, as a folder opens.
+    pub(super) fn set_files_page(&self, page: &NSView, buttons: &NSView) {
+        if let Some(panels) = self.ivars().sidebar.panels.borrow().as_ref() {
+            panels.set_files(page, buttons);
+        }
+    }
+
+    /// Tells the panels the window shows another folder now.
+    pub(super) fn panels_follow_project(&self) {
+        if let Some(panels) = self.ivars().sidebar.panels.borrow().as_ref() {
+            panels.set_project(self.project().as_deref());
+        }
+    }
+
+    /// The width of the panel beside the activity bar, as the user left it.
+    pub(super) fn panel_width(&self) -> f64 {
+        self.ivars().sidebar.panel_width.get()
+    }
+
+    /// Takes the panel width of the last save, `width` of the whole sidebar.
+    pub(super) fn set_saved_panel_width(&self, width: f64) {
+        self.ivars()
+            .sidebar
+            .panel_width
+            .set((width - ACTIVITY_WIDTH).clamp(PANEL_MIN_WIDTH, PANEL_MAX_WIDTH));
+    }
+
+    /// The panel picked last, whether or not the sidebar shows it.
+    pub(super) fn picked_panel(&self) -> Option<Panel> {
+        self.ivars().sidebar.panel.get()
+    }
+
+    /// Whether the panel beside the activity bar is open.
+    pub(super) fn panel_open(&self) -> bool {
+        self.ivars().sidebar.panel_open.get()
+    }
+
+    /// Counts the panel beside the activity bar as open, which a new window starts with before it shows.
+    pub(super) fn start_with_panel_open(&self) {
+        self.ivars().sidebar.panel_open.set(true);
+    }
+
     /// Keeps the width the user gave the sidebar in `tab`.
     pub(super) fn remember_sidebar_width(&self, tab: &TabWindow) {
-        let ivars = self.ivars();
+        let ivars = &self.ivars().sidebar;
         let width = tab.sidebar_width();
         if ivars.panel_open.get() && tab.window.isVisible() && width > ACTIVITY_WIDTH + PANEL_MIN_WIDTH - 1.0 {
             ivars
@@ -33,7 +231,7 @@ impl WindowController {
     /// Gives the sidebar of `tab` the width it has in the other tabs, which a tab that has not shown yet takes only
     /// held there; the user may drag it again once the tab is laid out.
     pub(super) fn fit_sidebar(&self, tab: &TabWindow, collapsed: bool) {
-        let ivars = self.ivars();
+        let ivars = &self.ivars().sidebar;
         let open = ivars.panel_open.get();
         let width = if open {
             ACTIVITY_WIDTH + ivars.panel_width.get()
@@ -56,15 +254,8 @@ impl WindowController {
             // would stay held.
             let window = Retained::as_ptr(&tab.window) as usize;
             self.later(move |controller| {
-                let held = controller
-                    .ivars()
-                    .tabs
-                    .borrow()
-                    .iter()
-                    .find(|tab| Retained::as_ptr(&tab.window) as usize == window)
-                    .cloned();
-                if controller.ivars().panel_open.get()
-                    && let Some(tab) = held
+                if controller.panel_open()
+                    && let Some(tab) = controller.tab_at(window)
                 {
                     tab.release_sidebar(ACTIVITY_WIDTH + PANEL_MIN_WIDTH, ACTIVITY_WIDTH + PANEL_MAX_WIDTH);
                 }
@@ -73,27 +264,28 @@ impl WindowController {
     }
 
     /// Shows `panel`, opening the sidebar if it is closed; the panel that already shows stays open (E61).
-    pub fn activate_panel(&self, panel: Panel) {
-        if !self.ivars().panel_open.get() {
+    pub(crate) fn activate_panel(&self, panel: Panel) {
+        if !self.panel_open() {
             self.set_panel_open(true);
         }
         self.show_panel(panel);
     }
 
     pub(super) fn show_panel(&self, panel: Panel) {
-        self.ivars().panel.set(Some(panel));
-        if let Some(panels) = self.ivars().panels.borrow().as_ref() {
+        let state = &self.ivars().sidebar;
+        state.panel.set(Some(panel));
+        if let Some(panels) = state.panels.borrow().as_ref() {
             panels.show(panel);
         }
         let id = self.id();
         crate::util::main_after(LEAVE_OUT, move || {
             if let Some(controller) = crate::host::window(id)
-                && let Some(panels) = controller.ivars().panels.borrow().as_ref()
+                && let Some(panels) = controller.ivars().sidebar.panels.borrow().as_ref()
             {
                 panels.leave_out_hidden();
             }
         });
-        if let Some(activity) = self.ivars().activity.borrow().as_ref() {
+        if let Some(activity) = state.activity.borrow().as_ref() {
             activity.select(Some(panel));
         }
         if self.shown_panel() == Some(Panel::Containers) {
@@ -102,15 +294,15 @@ impl WindowController {
     }
 
     /// The panel the sidebar shows, if it is open.
-    pub fn shown_panel(&self) -> Option<Panel> {
-        let ivars = self.ivars();
+    pub(crate) fn shown_panel(&self) -> Option<Panel> {
+        let ivars = &self.ivars().sidebar;
         ivars.panel_open.get().then(|| ivars.panel.get()).flatten()
     }
 
     /// Hides the activity bar's symbols of `hidden`; a hidden panel that showed gives way to the first that still has
     /// its symbol.
     pub(super) fn leave_out_symbols(&self, hidden: &[Panel]) {
-        let ivars = self.ivars();
+        let ivars = &self.ivars().sidebar;
         if let Some(activity) = ivars.activity.borrow().as_ref() {
             activity.leave_out(hidden);
         }
@@ -126,7 +318,7 @@ impl WindowController {
     /// Puts the keyboard focus into the panel beside the activity bar while it shows, else back into the active tab.
     pub(super) fn focus_panel(&self) {
         let Some(window) = self.window() else { return };
-        let ivars = self.ivars();
+        let ivars = &self.ivars().sidebar;
         let page = ivars.panels.borrow().as_ref().and_then(Panels::shown_page);
         let target = page
             .as_deref()
@@ -154,7 +346,7 @@ impl WindowController {
 
     /// Opens or closes the panel beside the activity bar, which stays.
     pub(super) fn set_panel_open(&self, open: bool) {
-        let ivars = self.ivars();
+        let ivars = &self.ivars().sidebar;
         let Some(tab) = self.current_tab() else { return };
         if let Some(panels) = ivars.panels.borrow().as_ref() {
             panels.view().setHidden(!open);
@@ -173,30 +365,37 @@ impl WindowController {
     }
 
     /// Names `words`, such as a failed CI run, in the tooltip of `panel`'s symbol; `None` names only the panel.
-    pub fn set_symbol_status(&self, panel: Panel, words: Option<&str>) {
-        if let Some(activity) = self.ivars().activity.borrow().as_ref() {
+    pub(crate) fn set_symbol_status(&self, panel: Panel, words: Option<&str>) {
+        if let Some(activity) = self.ivars().sidebar.activity.borrow().as_ref() {
             activity.set_status(panel, words);
         }
     }
 
     /// Names `count` changes in the tooltip of `panel`'s symbol.
-    pub fn set_symbol_count(&self, panel: Panel, count: usize) {
-        if let Some(activity) = self.ivars().activity.borrow().as_ref() {
+    pub(crate) fn set_symbol_count(&self, panel: Panel, count: usize) {
+        if let Some(activity) = self.ivars().sidebar.activity.borrow().as_ref() {
             activity.set_count(panel, count);
         }
     }
 
     /// Shows `view` as the page of `panel`.
-    pub fn set_panel_page(&self, panel: Panel, view: &NSView) {
-        if let Some(panels) = self.ivars().panels.borrow().as_ref() {
+    pub(crate) fn set_panel_page(&self, panel: Panel, view: &NSView) {
+        if let Some(panels) = self.ivars().sidebar.panels.borrow().as_ref() {
             panels.set_page(panel, view);
         }
     }
 
     /// Shows `view` at the end of the title row of `panel`.
-    pub fn set_panel_accessory(&self, panel: Panel, view: &NSView) {
-        if let Some(panels) = self.ivars().panels.borrow().as_ref() {
+    pub(crate) fn set_panel_accessory(&self, panel: Panel, view: &NSView) {
+        if let Some(panels) = self.ivars().sidebar.panels.borrow().as_ref() {
             panels.set_accessory(panel, view);
         }
     }
+}
+
+/// Whether the window of `previous` stays on screen once `next` comes to the front: it is visible and not in the tab
+/// group of `next`, whose selected window is the only one of the group on screen.
+fn stays_on_screen(previous: &TabWindow, next: &TabWindow) -> bool {
+    let group = |tab: &TabWindow| tab.window.tabGroup().map(|group| Retained::as_ptr(&group));
+    previous.window.isVisible() && (group(previous).is_none() || group(previous) != group(next))
 }

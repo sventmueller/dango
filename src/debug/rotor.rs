@@ -17,7 +17,7 @@ use splat_i18n::t;
 use crate::editor::EditorTextView;
 use crate::util::{guarded, ns};
 
-pub struct RotorIvars {
+pub(crate) struct RotorIvars {
     editor: Weak<EditorTextView>,
 }
 
@@ -27,7 +27,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEBreakpointRotor"]
     #[ivars = RotorIvars]
-    pub struct BreakpointRotor;
+    pub(crate) struct BreakpointRotor;
 
     unsafe impl NSObjectProtocol for BreakpointRotor {}
 
@@ -45,12 +45,12 @@ define_class!(
 
 /// The rotors' delegates, which the rotors hold only weakly, until their editor is gone.
 #[derive(Default)]
-pub struct Rotors {
+pub(crate) struct Rotors {
     delegates: RefCell<Vec<Retained<BreakpointRotor>>>,
 }
 
 /// The marked lines of `editor`, each with the UTF-16 offset of its start and what VoiceOver reads.
-pub fn items(editor: &EditorTextView) -> Vec<(usize, String)> {
+pub(crate) fn items(editor: &EditorTextView) -> Vec<(usize, String)> {
     let lines = editor.document().text().line_count();
     let mut marked: Vec<usize> = Vec::new();
     if let Some((panel, path)) = super::editor::panel_and_path(editor) {
@@ -104,7 +104,7 @@ impl BreakpointRotor {
 }
 
 /// Gives `editor` the rotor "Haltepunkte", beside the rotors it has.
-pub fn attach(editor: &EditorTextView, state: &Rotors) {
+pub(crate) fn attach(editor: &EditorTextView, state: &Rotors) {
     let delegate = BreakpointRotor::alloc(editor.mtm()).set_ivars(RotorIvars {
         editor: Weak::from(editor),
     });

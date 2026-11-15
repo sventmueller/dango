@@ -10,10 +10,11 @@ flowchart TB
     caller -->|"Transport::send, end_input"| queue[["bounded writer queue: Congested when full"]]
     table --> queue
     queue -->|"thread PROTOCOL-write-LABEL"| output(["the other side's input"])
+    queue -->|"a write fails: Transport::close, Call::closed for each"| table
     input(["the other side's output"]) -->|"thread PROTOCOL-read-LABEL: framing::read"| receiver["Receiver::receive(body)"]
     receiver -->|"Transport::take(id)"| table
     receiver -->|"Responder: ok, fail, or the refusal on drop"| queue
-    timer["thread PROTOCOL-timer-LABEL"] -->|"deadline passed"| expired["Call::expired"]
+    timer["ide_core::timer, one thread for the whole app"] -->|"deadline of a call passed"| expired["Call::expired"]
     table --> timer
     input -->|"end or broken frame: diag::report"| close["Transport::close: Call::closed for each, then Receiver::ended"]
     close --> table

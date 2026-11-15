@@ -18,7 +18,7 @@ impl Keys {
     }
 }
 
-pub fn install(app: &NSApplication, delegate: &AppDelegate, mtm: MainThreadMarker) {
+pub(crate) fn install(app: &NSApplication, delegate: &AppDelegate, mtm: MainThreadMarker) {
     let (keymap, problems) = Keymap::load(&Keymap::user_path());
     for problem in problems {
         crate::diag::report("keybindings", problem);
@@ -471,7 +471,7 @@ fn tab_stand_ins(mtm: MainThreadMarker) -> [Retained<NSMenuItem>; 2] {
 }
 
 /// Builds the menu bar again, after the shortcuts changed, such as by the sync from another Mac.
-pub fn reinstall(mtm: MainThreadMarker) {
+pub(crate) fn reinstall(mtm: MainThreadMarker) {
     let app = NSApplication::sharedApplication(mtm);
     let Some(delegate) = app.delegate() else { return };
     let object: &objc2::runtime::AnyObject = delegate.as_ref();

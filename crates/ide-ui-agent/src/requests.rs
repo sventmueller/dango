@@ -4,23 +4,24 @@ use ide_ui_common::window::Files;
 use std::path::PathBuf;
 
 use ide_claude::{PermissionAnswer, PlanAnswer};
-use ide_thread::{Answer, EntryKind, PermissionOption, RequestState};
+use ide_thread::{Answer, EntryKind, PermissionOption, RequestState, RuleScope};
+use ide_ui_common::alert::Alert;
 use objc2::rc::Retained;
 use objc2::sel;
-use objc2_app_kit::{NSAlert, NSMenu, NSView};
+use objc2_app_kit::{NSMenu, NSView};
 use splat_i18n::{t, tf};
 
 use super::actions::pop_up;
 use super::cards::pack;
 use super::cards::request::{ALLOW_ALWAYS, ALLOW_ONCE, DENY, PLAN_APPROVE, PLAN_REJECT, edited_input, scope_name};
 use super::tab::AgentTab;
-use ide_ui_common::util::{main_soon, ns};
+use ide_ui_common::util::main_soon;
 
 /// What the model is told when the user refuses a tool; for the model, so not translated.
 const DENIED: &str = "The user denied this tool call.";
 
 /// The rules a request offers to store, by suggestion: the rule and where it would be stored.
-pub(super) fn always_rules(options: &[PermissionOption]) -> Vec<(usize, String, String)> {
+pub(super) fn always_rules(options: &[PermissionOption]) -> Vec<(usize, String, RuleScope)> {
     options
         .iter()
         .filter_map(|o| match o {
@@ -94,7 +95,7 @@ impl AgentTab {
     }
 
     /// The menu of the rules request `id` could store, each with where it would be stored.
-    pub(super) fn rule_items(&self, id: ide_thread::EntryId, rules: &[(usize, String, String)]) -> Retained<NSMenu> {
+    pub(super) fn rule_items(&self, id: ide_thread::EntryId, rules: &[(usize, String, RuleScope)]) -> Retained<NSMenu> {
         let menu = NSMenu::new(self.mtm);
         for (suggestion, rule, scope) in rules {
             let tag = pack(id, u8::try_from(*suggestion).unwrap_or(0));
@@ -109,7 +110,7 @@ impl AgentTab {
     }
 
     /// Allows request `id` and stores the rule of suggestion `suggestion`.
-    pub fn allow_rule(&self, id: u64, suggestion: usize) {
+    pub(crate) fn allow_rule(&self, id: u64, suggestion: usize) {
         if self.agent.is_acp() {
             return self.acp_permission(id, ALLOW_ALWAYS, Some(suggestion));
         }
@@ -144,16 +145,15 @@ impl AgentTab {
         };
         let input = edited_input(tool, original, &text);
         if input.is_none() {
-            let alert = NSAlert::new(self.mtm);
-            alert.setMessageText(&ns(t("Die geänderte Eingabe ist kein gültiges JSON.")));
-            alert.setInformativeText(&ns(t("Korrigiere sie oder lehne die Anfrage ab.")));
-            alert.runModal();
+            Alert::new(self.mtm, t("Die geänderte Eingabe ist kein gültiges JSON."))
+                .informative(t("Korrigiere sie oder lehne die Anfrage ab."))
+                .run_modal();
         }
         input
     }
 
     /// Option `option` of question `question` of request `id`; sent once every question has an answer.
-    pub fn answer(&self, id: u64, question: u8, option: u8) {
+    pub(crate) fn answer(&self, id: u64, question: u8, option: u8) {
         let Some(entry) = self.entry(id) else { return };
         let EntryKind::Question(asked) = &entry.kind else {
             return;
@@ -175,7 +175,7 @@ impl AgentTab {
     }
 
     /// The user's own words, or the checked options, for question `question` of request `id`.
-    pub fn answer_other(&self, id: u64, question: u8) {
+    pub(crate) fn answer_other(&self, id: u64, question: u8) {
         let text = self.typed(id, question);
         if text.is_empty() {
             objc2_app_kit::NSBeep();
@@ -280,7 +280,7 @@ impl AgentTab {
     }
 
     /// Stops the subagent the card `id` shows.
-    pub fn stop_task_of(&self, id: u64) {
+    pub(crate) fn stop_task_of(&self, id: u64) {
         let Some(entry) = self.entry(id) else { return };
         let EntryKind::ToolCall(call) = &entry.kind else { return };
         let task = self
@@ -299,14 +299,14 @@ impl AgentTab {
         self.state.borrow().source().stop_task(task);
     }
 
-    pub fn move_to_background(&self, id: u64) {
+    pub(crate) fn move_to_background(&self, id: u64) {
         let Some(entry) = self.entry(id) else { return };
         if let EntryKind::ToolCall(call) = &entry.kind {
             self.state.borrow().source().background(&call.call_id);
         }
     }
 
-    pub fn show_output_of(&self, id: u64) {
+    pub(crate) fn show_output_of(&self, id: u64) {
         let Some(entry) = self.entry(id) else { return };
         if let EntryKind::ToolCall(call) = &entry.kind
             && let Some(task) = &call.background_task
@@ -336,23 +336,26 @@ impl AgentTab {
         };
         let key = self.key;
         let task = task.to_string();
+        // The answer comes on the session's reader thread, which must not wait for the disk.
         session.task_output(&task).then(move |output| {
             let Ok(output) = output else { return };
-            let file = ide_core::paths::data_dir()
-                .join("task-output")
-                .join(format!("{task}.txt"));
-            let written = file
-                .parent()
-                .map(std::fs::create_dir_all)
-                .transpose()
-                .and_then(|_| std::fs::write(&file, output.output));
-            if written.is_ok() {
-                main_soon(move || {
-                    if let Some(controller) = super::get(key).and_then(|t| t.controller()) {
-                        controller.open_file(&file);
-                    }
-                });
-            }
+            let _ = ide_core::lane::DISK.try_run(move || {
+                let file = ide_core::paths::data_dir()
+                    .join("task-output")
+                    .join(format!("{task}.txt"));
+                let written = file
+                    .parent()
+                    .map(std::fs::create_dir_all)
+                    .transpose()
+                    .and_then(|_| std::fs::write(&file, output.output));
+                if written.is_ok() {
+                    main_soon(move || {
+                        if let Some(controller) = super::get(key).and_then(|t| t.controller()) {
+                            controller.open_file(&file);
+                        }
+                    });
+                }
+            });
         });
     }
 }
@@ -368,20 +371,20 @@ mod tests {
             PermissionOption::AllowAlways {
                 suggestion: 2,
                 rule: "Bash(cargo test:*)".into(),
-                scope: "project".into(),
+                scope: RuleScope::Project,
             },
             PermissionOption::Deny,
             PermissionOption::AllowAlways {
                 suggestion: 0,
                 rule: "Read".into(),
-                scope: "session".into(),
+                scope: RuleScope::Session,
             },
         ];
         assert_eq!(
             always_rules(&options),
             [
-                (2, "Bash(cargo test:*)".to_string(), "project".to_string()),
-                (0, "Read".to_string(), "session".to_string()),
+                (2, "Bash(cargo test:*)".to_string(), RuleScope::Project),
+                (0, "Read".to_string(), RuleScope::Session),
             ]
         );
         assert!(always_rules(&[PermissionOption::AllowOnce, PermissionOption::Deny]).is_empty());

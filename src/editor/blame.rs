@@ -32,7 +32,7 @@ const CACHED: usize = 24;
 const MESSAGE_WIDTH: f64 = 420.0;
 
 /// One file's blame at one commit, with where it is in its repository.
-pub struct Loaded {
+pub(crate) struct Loaded {
     repo_root: PathBuf,
     /// The file relative to the repository's root.
     relative: PathBuf,
@@ -41,7 +41,7 @@ pub struct Loaded {
 
 /// What blame says about one line of the text.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Line {
+pub(crate) enum Line {
     /// Added or changed since the last commit, saved or not.
     Uncommitted,
     Commit(BlameCommit),
@@ -49,7 +49,7 @@ pub enum Line {
 
 /// What an editor knows about its blame.
 #[derive(Default)]
-pub struct State {
+pub(crate) struct State {
     /// The blame of the file at the commit the change marks compare with, once read.
     loaded: Option<(String, Rc<Loaded>)>,
     /// The commit being read, so a second request waits for the first.
@@ -81,7 +81,7 @@ thread_local! {
 }
 
 /// Whether the blame of the cursor's line shows at its end, as the user last chose.
-pub fn at_line_end() -> bool {
+pub(crate) fn at_line_end() -> bool {
     AT_LINE_END.with(|cell| {
         cell.get().unwrap_or_else(|| {
             let value = Settings::load_user().get(&keys::BLAME_AT_LINE_END);
@@ -92,17 +92,17 @@ pub fn at_line_end() -> bool {
 }
 
 /// Reads the setting again on next use, after it changed elsewhere.
-pub fn forget() {
+pub(crate) fn forget() {
     AT_LINE_END.with(|cell| cell.set(None));
 }
 
 /// Turns the blame at the end of the cursor's line on or off in every editor and remembers the choice.
-pub fn toggle_line_end() {
+pub(crate) fn toggle_line_end() {
     set_line_end(!at_line_end());
 }
 
 /// Sets whether the blame of the cursor's line shows at its end, as the settings window does.
-pub fn set_line_end(on: bool) {
+pub(crate) fn set_line_end(on: bool) {
     AT_LINE_END.with(|cell| cell.set(Some(on)));
     let mut settings = Settings::load_user();
     if let Err(error) = settings.set(&keys::BLAME_AT_LINE_END, &on) {
@@ -129,7 +129,7 @@ fn source(view: &EditorTextView) -> Option<(PathBuf, String)> {
 }
 
 /// Whether blame can show for `view`.
-pub fn available(view: &EditorTextView) -> bool {
+pub(crate) fn available(view: &EditorTextView) -> bool {
     source(view).is_some()
 }
 
@@ -279,14 +279,14 @@ fn mapping(view: &EditorTextView, fresh: bool) -> Option<Mapping> {
 }
 
 /// What blame says about each line of a text: the file's blame and where each line stands in the committed file.
-pub struct Lines {
+pub(crate) struct Lines {
     loaded: Rc<Loaded>,
     mapping: Mapping,
 }
 
 impl Lines {
     /// What blame says about `line`, counted from 0.
-    pub fn at(&self, line: usize) -> Option<Line> {
+    pub(crate) fn at(&self, line: usize) -> Option<Line> {
         match self.mapping.get(line)? {
             None => Some(Line::Uncommitted),
             Some(committed) => self.loaded.blame.commit_of(*committed).cloned().map(Line::Commit),
@@ -295,21 +295,21 @@ impl Lines {
 }
 
 /// What blame says about `line` of `view`, counted from 0; `None` while the data or the marks are not ready.
-pub fn line(view: &EditorTextView, line: usize, fresh: bool) -> Option<Line> {
+pub(crate) fn line(view: &EditorTextView, line: usize, fresh: bool) -> Option<Line> {
     let loaded = data(view)?;
     let mapping = mapping(view, fresh)?;
     Lines { loaded, mapping }.at(line)
 }
 
 /// What blame says about every line of `view`; `None` while not ready.
-pub fn all_lines(view: &EditorTextView) -> Option<Lines> {
+pub(crate) fn all_lines(view: &EditorTextView) -> Option<Lines> {
     let loaded = data(view)?;
     let mapping = mapping(view, false)?;
     Some(Lines { loaded, mapping })
 }
 
 /// How the end of a line reads it: "Autor, vor 3 Tagen · Betreff".
-pub fn summary(line: &Line) -> String {
+pub(crate) fn summary(line: &Line) -> String {
     match line {
         Line::Uncommitted => t("Nicht committet").to_string(),
         Line::Commit(commit) => tf(
@@ -320,7 +320,7 @@ pub fn summary(line: &Line) -> String {
 }
 
 /// How long ago `time`, in seconds since 1970, was.
-pub fn age(time: i64) -> String {
+pub(crate) fn age(time: i64) -> String {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(i64::MAX));
@@ -336,7 +336,7 @@ fn cursor_line(view: &EditorTextView) -> usize {
 }
 
 /// The cursor moved: the blame at a line's end goes and comes back for the new line once the cursor rests.
-pub fn cursor_moved(view: &EditorTextView) {
+pub(crate) fn cursor_moved(view: &EditorTextView) {
     if !at_line_end() {
         return;
     }
@@ -352,7 +352,7 @@ pub fn cursor_moved(view: &EditorTextView) {
 }
 
 /// The cursor rested: its line's blame shows at the line's end, once the data and the marks are ready.
-pub fn rest(view: &EditorTextView) {
+pub(crate) fn rest(view: &EditorTextView) {
     if !at_line_end() || !available(view) {
         insets::clear(view, Layer::Blame);
         return;
@@ -381,7 +381,7 @@ pub fn rest(view: &EditorTextView) {
 }
 
 /// The mouse moved over `view`: resting on the blame at a line's end opens its popover, as pointing at it does.
-pub fn mouse_moved(view: &EditorTextView, event: &objc2_app_kit::NSEvent) {
+pub(crate) fn mouse_moved(view: &EditorTextView, event: &objc2_app_kit::NSEvent) {
     let point = view.convertPoint_fromView(event.locationInWindow(), None);
     let over = insets::shown(view).into_iter().any(|s| {
         s.layer == Layer::Blame
@@ -402,7 +402,7 @@ pub fn mouse_moved(view: &EditorTextView, event: &objc2_app_kit::NSEvent) {
 }
 
 /// The mouse rested on the blame at a line's end: its popover opens.
-pub fn hover_rest(view: &EditorTextView) {
+pub(crate) fn hover_rest(view: &EditorTextView) {
     let Some(point) = view.ivars().blame.borrow().hover else {
         return;
     };
@@ -428,7 +428,7 @@ pub fn hover_rest(view: &EditorTextView) {
 }
 
 /// The change marks compared again, as after a commit or an edit: what blame shows follows.
-pub fn marks_changed(view: &EditorTextView) {
+pub(crate) fn marks_changed(view: &EditorTextView) {
     if let Some((revision, _)) = &mut view.ivars().blame.borrow_mut().mapping {
         *revision = None;
     }
@@ -447,14 +447,14 @@ fn refresh(view: &EditorTextView) {
 }
 
 /// Shows or hides the blame column of `view`.
-pub fn toggle_column(view: &EditorTextView) {
+pub(crate) fn toggle_column(view: &EditorTextView) {
     let on = !view.ivars().blame.borrow().column && available(view);
     view.ivars().blame.borrow_mut().column = on;
     super::blame_column::show(view, on);
 }
 
 /// The menu items of blame: ticked when on, greyed out where blame cannot run; `None` for every other item.
-pub fn validate(view: &EditorTextView, item: &NSMenuItem) -> Option<bool> {
+pub(crate) fn validate(view: &EditorTextView, item: &NSMenuItem) -> Option<bool> {
     let action = item.action()?;
     let tick = |on: bool| {
         item.setState(if on {
@@ -479,7 +479,7 @@ pub fn validate(view: &EditorTextView, item: &NSMenuItem) -> Option<bool> {
 
 /// `view_menu`, the menu bar's Darstellung, with the switches of inlay hints (E83) and blame after "Leerzeichen
 /// anzeigen".
-pub fn with_view_items(mtm: MainThreadMarker, view_menu: Retained<NSMenuItem>) -> Retained<NSMenuItem> {
+pub(crate) fn with_view_items(mtm: MainThreadMarker, view_menu: Retained<NSMenuItem>) -> Retained<NSMenuItem> {
     let Some(menu) = view_menu.submenu() else {
         return view_menu;
     };
@@ -513,7 +513,7 @@ pub fn with_view_items(mtm: MainThreadMarker, view_menu: Retained<NSMenuItem>) -
 }
 
 /// The context menu's blame entries, where blame can run.
-pub fn context_items(view: &EditorTextView) -> Vec<Retained<NSMenuItem>> {
+pub(crate) fn context_items(view: &EditorTextView) -> Vec<Retained<NSMenuItem>> {
     if !available(view) {
         return Vec::new();
     }
@@ -525,7 +525,7 @@ pub fn context_items(view: &EditorTextView) -> Vec<Retained<NSMenuItem>> {
 }
 
 /// Opens the popover of the cursor's line, as the menu command does, below the caret.
-pub fn show_for_cursor(view: &EditorTextView) {
+pub(crate) fn show_for_cursor(view: &EditorTextView) {
     let number = cursor_line(view);
     let at = view.selectedRange().location;
     let Some(caret) = ide_ui_lsp::rect_of(view, at..at) else {
@@ -544,7 +544,7 @@ pub fn show_for_cursor(view: &EditorTextView) {
 }
 
 /// Shows the whole commit of `line` of `view` in a popover at `rect` of `anchor`.
-pub fn show_popover(view: &EditorTextView, line_number: usize, anchor: &NSView, rect: NSRect) {
+pub(crate) fn show_popover(view: &EditorTextView, line_number: usize, anchor: &NSView, rect: NSRect) {
     dismiss(view);
     let Some(found) = line(view, line_number, false) else {
         return;
@@ -581,7 +581,7 @@ pub fn show_popover(view: &EditorTextView, line_number: usize, anchor: &NSView, 
 }
 
 /// Closes the popover of `view`, if one is open.
-pub fn dismiss(view: &EditorTextView) {
+pub(crate) fn dismiss(view: &EditorTextView) {
     let popover = view.ivars().blame.borrow_mut().popover.take();
     if let Some(popover) = popover {
         popover.close();
@@ -616,12 +616,14 @@ const MESSAGE_TAG: isize = 86;
 
 fn commit_content(mtm: MainThreadMarker, view: &EditorTextView, commit: &BlameCommit) -> Retained<NSView> {
     let stack = stack(mtm);
-    let short: String = commit.hash.chars().take(8).collect();
     let title = label(
         mtm,
         &tf(
             "{} · {}",
-            &[&tf("{} · {}", &[&commit.author, &age(commit.author_time)]), &short],
+            &[
+                &tf("{} · {}", &[&commit.author, &age(commit.author_time)]),
+                commit.hash.short(),
+            ],
         ),
     );
     title.setFont(Some(&NSFont::boldSystemFontOfSize(ide_ui_common::style::LABEL)));
@@ -649,7 +651,7 @@ fn commit_content(mtm: MainThreadMarker, view: &EditorTextView, commit: &BlameCo
 }
 
 /// Reads the whole message of `hash` and puts it into the open popover of `view`.
-fn read_message(view: &EditorTextView, hash: String) {
+fn read_message(view: &EditorTextView, hash: ide_git::CommitId) {
     let Some(loaded) = view.ivars().blame.borrow().shown.as_ref().map(|(l, _)| l.clone()) else {
         return;
     };
@@ -683,18 +685,18 @@ fn read_message(view: &EditorTextView, hash: String) {
 }
 
 /// The popover's "Commit-ID kopieren".
-pub fn copy_hash(view: &EditorTextView) {
+pub(crate) fn copy_hash(view: &EditorTextView) {
     let Some((_, commit)) = view.ivars().blame.borrow().shown.clone() else {
         return;
     };
     let pasteboard = NSPasteboard::generalPasteboard();
     pasteboard.clearContents();
-    pasteboard.setString_forType(&ns(&commit.hash), constant!(NSPasteboardTypeString));
+    pasteboard.setString_forType(&ns(commit.hash.as_str()), constant!(NSPasteboardTypeString));
     dismiss(view);
 }
 
 /// The popover's "Im Graph zeigen": the commit in the Git panel's history (E74).
-pub fn show_in_graph(view: &EditorTextView) {
+pub(crate) fn show_in_graph(view: &EditorTextView) {
     let shown = view.ivars().blame.borrow().shown.clone();
     if let (Some((_, commit)), Some(controller)) = (shown, view.controller()) {
         dismiss(view);
@@ -703,7 +705,7 @@ pub fn show_in_graph(view: &EditorTextView) {
 }
 
 /// The popover's "Diff zeigen": what the commit changed in this file, in a diff tab.
-pub fn show_diff(view: &EditorTextView) {
+pub(crate) fn show_diff(view: &EditorTextView) {
     let shown = view.ivars().blame.borrow().shown.clone();
     if let (Some((loaded, commit)), Some(controller)) = (shown, view.controller()) {
         dismiss(view);
@@ -719,7 +721,7 @@ mod tests {
     fn a_line_end_names_author_age_and_subject_or_that_it_is_uncommitted() {
         assert_eq!(summary(&Line::Uncommitted), t("Nicht committet"));
         let commit = BlameCommit {
-            hash: "abc".into(),
+            hash: ide_git::CommitId::parse(&"a".repeat(40)).unwrap(),
             author: "Ada".into(),
             author_email: "ada@example.com".into(),
             author_time: 0,
@@ -736,4 +738,4 @@ mod tests {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

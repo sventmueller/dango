@@ -12,7 +12,7 @@ use objc2_app_kit::{NSColor, NSView, NSWindow};
 use crate::window::WindowController;
 
 /// The running app, as the crates' hooks reach it.
-pub struct AppHost;
+pub(crate) struct AppHost;
 
 impl ide_ui_export::Host for AppHost {
     fn state(&self) -> Rc<ide_ui_export::State> {
@@ -432,6 +432,10 @@ impl ide_ui_agent::Host for AppHost {
         }
     }
 
+    fn git(&self) -> Option<ide_git::Git> {
+        ide_ui_git::git()
+    }
+
     fn unsaved_buffers(&self, root: &Path) -> Vec<(PathBuf, Vec<u8>)> {
         crate::editor::unsaved_buffers(root)
             .into_iter()
@@ -467,10 +471,6 @@ impl ide_ui_agent::Host for AppHost {
         if let Some(c) = self::window(window) {
             crate::worktrees::turn_ended(&c, cwd);
         }
-    }
-
-    fn show_alert(&self, mtm: MainThreadMarker, message: &str, detail: &str) {
-        crate::editor::show_alert(mtm, message, detail);
     }
 
     fn trust(&self, folder: &Path) {
@@ -515,10 +515,6 @@ impl ide_ui_lsp::Host for AppHost {
         if let Some(controller) = self::window(window) {
             controller.show_hierarchy(hierarchy);
         }
-    }
-
-    fn show_alert(&self, mtm: MainThreadMarker, message: &str, detail: &str) {
-        crate::editor::show_alert(mtm, message, detail);
     }
 
     fn code_font(&self, size: f64) -> Retained<objc2_app_kit::NSFont> {

@@ -24,3 +24,4 @@ unicode-normalization = "0.1.26"
 
 [dev-dependencies]
 ide-core = { path = "../ide-core", features = ["testing"] }
+proptest = "1.12.0"

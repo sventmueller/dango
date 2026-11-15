@@ -14,7 +14,7 @@ pub struct Usage {
     /// Input tokens read from the prompt cache.
     pub cache_read_tokens: u64,
     /// Input tokens written to the prompt cache.
-    pub cache_write_tokens: u64,
+    pub(crate) cache_write_tokens: u64,
     /// The agent's estimate of what the thread has cost, in US dollars.
     pub cost_usd: Option<f64>,
     /// The session cost in the unit the agent reports, including currencies other than USD and credits.
@@ -112,6 +112,7 @@ impl Tokens {
 
 /// One model's share of a session.
 #[derive(Debug, Clone, Default, PartialEq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct ModelCost {
     /// The model.
     pub model: String,
@@ -119,7 +120,6 @@ pub struct ModelCost {
     pub cost_usd: f64,
     /// The tokens it used.
     pub tokens: Tokens,
-    /// Its context window.
     pub context_window: Option<u64>,
 }
 
@@ -146,14 +146,13 @@ pub struct ContextBreakdown {
 
 /// One row of the context breakdown.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct ContextRow {
     /// The agent's stable name for the row, such as `system_prompt`, `messages` or `free_space`, when it sends one.
     pub id: Option<String>,
     /// The row's title as the agent words it.
     pub name: String,
-    /// Its tokens.
     pub tokens: u64,
-    /// What it is.
     pub kind: ContextKind,
 }
 
@@ -172,12 +171,12 @@ pub enum ContextKind {
 
 /// One part of a context row.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct ContextPart {
     /// Which sort of part.
     pub group: ContextGroup,
     /// Its name: a file path, a tool or agent name, or for messages a stable id such as `tool_results`.
     pub name: String,
-    /// Its tokens.
     pub tokens: u64,
 }
 

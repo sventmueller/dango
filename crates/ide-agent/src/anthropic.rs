@@ -6,6 +6,7 @@
 
 use std::collections::BTreeMap;
 
+use ide_net::api::anthropic::{BlockDelta, ContentBlock, Event, Usage};
 use serde_json::{Map, Value, json};
 
 use crate::chat::{Cancel, Delta, ErrorKind, ProviderError, Reply, Request, Stop, TurnUsage};
@@ -172,22 +173,25 @@ enum Slot {
     Ignored,
 }
 
-/// What the stream has said so far.
 /// Takes `events` as a stream would and builds the message, for the fuzz target.
 #[cfg(feature = "fuzzing")]
 pub(crate) fn read_all(events: &[Value]) {
     let mut answer = Answer::default();
-    for event in events {
-        if !matches!(answer.take(event, &mut |_| {}), Ok(false)) {
+    for event in events
+        .iter()
+        .filter_map(|value| serde_json::from_value::<Event>(value.clone()).ok())
+    {
+        if !matches!(answer.take(&event, &mut |_| {}), Ok(false)) {
             break;
         }
     }
     let _ = answer.message(true, true);
 }
 
+/// What the stream has said so far.
 #[derive(Default)]
 struct Answer {
-    slots: BTreeMap<u64, Slot>,
+    slots: BTreeMap<usize, Slot>,
     usage: TurnUsage,
     stop: Option<Stop>,
     model: Option<String>,
@@ -195,116 +199,100 @@ struct Answer {
 
 impl Answer {
     /// Takes one event; true once the message is complete.
-    fn take(&mut self, event: &Value, on: &mut dyn FnMut(Delta)) -> Result<bool, ProviderError> {
-        let index = event.get("index").and_then(Value::as_u64).unwrap_or(0);
-        match event.get("type").and_then(Value::as_str).unwrap_or_default() {
-            "message_start" => {
-                let message = &event["message"];
-                self.model = message.get("model").and_then(Value::as_str).map(str::to_string);
-                self.usage(&message["usage"]);
+    fn take(&mut self, event: &Event, on: &mut dyn FnMut(Delta)) -> Result<bool, ProviderError> {
+        match event {
+            Event::MessageStart { message } => {
+                self.model.clone_from(&message.model);
+                if let Some(usage) = &message.usage {
+                    self.usage(usage);
+                }
             }
-            "content_block_start" => self.start(index, &event["content_block"], on),
-            "content_block_delta" => self.delta(index, &event["delta"], on),
-            "message_delta" => {
-                self.usage(&event["usage"]);
-                if let Some(reason) = event["delta"].get("stop_reason").and_then(Value::as_str) {
-                    let category = event["delta"]
-                        .get("stop_details")
-                        .and_then(|d| d.get("category"))
-                        .and_then(Value::as_str);
+            Event::ContentBlockStart { index, content_block } => self.start(*index, content_block, on),
+            Event::ContentBlockDelta { index, delta } => self.delta(*index, delta, on),
+            Event::MessageDelta { delta, usage } => {
+                if let Some(usage) = usage {
+                    self.usage(usage);
+                }
+                if let Some(reason) = &delta.stop_reason {
+                    let category = delta.stop_details.as_ref().and_then(|d| d.category.as_deref());
                     self.stop = Some(stop(reason, category));
                 }
             }
-            "message_stop" => return Ok(true),
-            "error" => return Err(http::stream_error(&event["error"])),
-            _ => {}
+            Event::MessageStop => return Ok(true),
+            Event::Error { error } => return Err(http::stream_error(error)),
+            Event::ContentBlockStop { .. } | Event::Other => {}
         }
         Ok(false)
     }
 
-    fn usage(&mut self, usage: &Value) {
-        let field = |name: &str| usage.get(name).and_then(Value::as_u64);
-        if let Some(n) = field("input_tokens") {
+    fn usage(&mut self, usage: &Usage) {
+        if let Some(n) = usage.input_tokens {
             self.usage.input = n;
         }
-        if let Some(n) = field("output_tokens") {
+        if let Some(n) = usage.output_tokens {
             self.usage.output = n;
         }
-        if let Some(n) = field("cache_read_input_tokens") {
+        if let Some(n) = usage.cache_read_input_tokens {
             self.usage.cache_read = n;
         }
-        if let Some(n) = field("cache_creation_input_tokens") {
+        if let Some(n) = usage.cache_creation_input_tokens {
             self.usage.cache_write = n;
         }
     }
 
-    fn start(&mut self, index: u64, block: &Value, on: &mut dyn FnMut(Delta)) {
-        let text = |name: &str| block.get(name).and_then(Value::as_str).unwrap_or_default().to_string();
-        let slot = match block.get("type").and_then(Value::as_str).unwrap_or_default() {
-            "text" => Slot::Text(text("text")),
-            "thinking" => Slot::Thinking {
-                text: text("thinking"),
-                signature: block
-                    .get("signature")
-                    .and_then(Value::as_str)
-                    .filter(|s| !s.is_empty())
-                    .map(str::to_string),
+    fn start(&mut self, index: usize, block: &ContentBlock, on: &mut dyn FnMut(Delta)) {
+        let slot = match block {
+            ContentBlock::Text { text } => Slot::Text(text.clone()),
+            ContentBlock::Thinking { thinking, signature } => Slot::Thinking {
+                text: thinking.clone(),
+                signature: signature.clone().filter(|s| !s.is_empty()),
             },
-            "redacted_thinking" => Slot::Redacted(text("data")),
-            "tool_use" => {
+            ContentBlock::RedactedThinking { data } => Slot::Redacted(data.clone()),
+            ContentBlock::ToolUse { id, name, .. } => {
                 on(Delta::ToolStarted {
-                    id: text("id"),
-                    name: text("name"),
+                    id: id.clone(),
+                    name: name.clone(),
                 });
                 Slot::Tool {
-                    id: text("id"),
-                    name: text("name"),
+                    id: id.clone(),
+                    name: name.clone(),
                     json: String::new(),
                 }
             }
-            "fallback" => {
+            ContentBlock::Fallback { from, to } => {
                 self.slots.retain(|_, slot| matches!(slot, Slot::Text(_)));
-                let model = |side: &str| {
-                    block[side]
-                        .get("model")
-                        .and_then(Value::as_str)
-                        .unwrap_or_default()
-                        .to_string()
-                };
                 on(Delta::Fallback {
-                    from: model("from"),
-                    to: model("to"),
+                    from: from.model.clone(),
+                    to: to.model.clone(),
                 });
                 Slot::Ignored
             }
-            _ => Slot::Ignored,
+            ContentBlock::ServerToolUse { .. } | ContentBlock::Other => Slot::Ignored,
         };
         self.slots.insert(index, slot);
     }
 
-    fn delta(&mut self, index: u64, delta: &Value, on: &mut dyn FnMut(Delta)) {
+    fn delta(&mut self, index: usize, delta: &BlockDelta, on: &mut dyn FnMut(Delta)) {
         let Some(slot) = self.slots.get_mut(&index) else {
             return;
         };
-        let text = |name: &str| delta.get(name).and_then(Value::as_str).unwrap_or_default().to_string();
-        match (slot, delta.get("type").and_then(Value::as_str).unwrap_or_default()) {
-            (Slot::Text(all), "text_delta") => {
-                let part = text("text");
-                all.push_str(&part);
-                on(Delta::Text(part));
+        match (slot, delta) {
+            (Slot::Text(all), BlockDelta::TextDelta { text }) => {
+                all.push_str(text);
+                on(Delta::Text(text.clone()));
             }
-            (Slot::Thinking { text: all, .. }, "thinking_delta") => {
-                let part = text("thinking");
-                all.push_str(&part);
-                on(Delta::Thinking(part));
+            (Slot::Thinking { text: all, .. }, BlockDelta::ThinkingDelta { thinking }) => {
+                all.push_str(thinking);
+                on(Delta::Thinking(thinking.clone()));
             }
-            (Slot::Thinking { signature, .. }, "signature_delta") => *signature = Some(text("signature")),
-            (Slot::Tool { id, json, .. }, "input_json_delta") => {
-                let part = text("partial_json");
-                json.push_str(&part);
+            (Slot::Thinking { signature, .. }, BlockDelta::SignatureDelta { signature: part }) => {
+                *signature = Some(part.clone());
+            }
+            (Slot::Tool { id, json, .. }, BlockDelta::InputJsonDelta { partial_json }) => {
+                json.push_str(partial_json);
                 on(Delta::ToolInput {
                     id: id.clone(),
-                    json: part,
+                    json: partial_json.clone(),
                 });
             }
             _ => {}
@@ -361,6 +349,11 @@ pub(crate) fn tool_use(id: String, name: String, json: &str) -> Block {
     }
 }
 
+/// The event one `data` line of the stream holds.
+fn parse(data: &str) -> Result<Event, ProviderError> {
+    serde_json::from_str(data).map_err(|e| ProviderError::new(ErrorKind::Malformed, format!("{e}: {data}")))
+}
+
 fn stop(reason: &str, category: Option<&str>) -> Stop {
     match reason {
         "end_turn" | "stop_sequence" => Stop::EndTurn,
@@ -391,7 +384,7 @@ pub(crate) fn stream(
             break;
         }
         let event = event.map_err(|e| ProviderError::new(ErrorKind::Network, e.to_string()))?;
-        if answer.take(&http::parse(&event.data)?, on)? {
+        if answer.take(&parse(&event.data)?, on)? {
             complete = true;
             break;
         }

@@ -24,7 +24,7 @@ const INLINE_LINES: usize = 30;
 const INLINE_LENGTH: usize = 60;
 
 /// The debugger of `editor`'s window and the file the editor shows.
-pub fn panel_and_path(editor: &EditorTextView) -> Option<(Retained<DebugPanel>, PathBuf)> {
+pub(crate) fn panel_and_path(editor: &EditorTextView) -> Option<(Retained<DebugPanel>, PathBuf)> {
     let controller = editor.controller()?;
     let path = editor.document().path()?.to_path_buf();
     Some((ide_ui_debug::of(controller.handle())?, path))
@@ -39,7 +39,7 @@ fn editors_of(controller: &WindowController) -> Vec<Retained<EditorTextView>> {
 }
 
 /// Shows the debugger's breakpoints, paused line and values in every editor of `controller`'s window.
-pub fn refresh_editors(controller: &WindowController) {
+pub(crate) fn refresh_editors(controller: &WindowController) {
     let Some(panel) = ide_ui_debug::of(controller.handle()) else {
         return;
     };
@@ -51,7 +51,7 @@ pub fn refresh_editors(controller: &WindowController) {
 }
 
 /// Closes the value popovers of `controller`'s editors, which speak of a frame that is gone once the program runs on.
-pub fn forget_values(controller: &WindowController) {
+pub(crate) fn forget_values(controller: &WindowController) {
     for editor in editors_of(controller) {
         ide_ui_lsp::dismiss_hover(&*editor);
     }
@@ -59,7 +59,7 @@ pub fn forget_values(controller: &WindowController) {
 
 /// A click on the line numbers of `editor` at `line`: sets or clears a breakpoint there; whether the editor has a
 /// file and a debugger to keep it.
-pub fn gutter_click(editor: &EditorTextView, line: usize) -> bool {
+pub(crate) fn gutter_click(editor: &EditorTextView, line: usize) -> bool {
     let (Some(controller), Some(path)) = (editor.controller(), editor.document().path().map(Path::to_path_buf)) else {
         return false;
     };
@@ -67,14 +67,14 @@ pub fn gutter_click(editor: &EditorTextView, line: usize) -> bool {
 }
 
 /// The context menu of the line numbers of `editor` at `line`.
-pub fn gutter_menu(editor: &EditorTextView, line: usize) -> Option<Retained<NSMenu>> {
+pub(crate) fn gutter_menu(editor: &EditorTextView, line: usize) -> Option<Retained<NSMenu>> {
     let controller = editor.controller()?;
     let path = editor.document().path()?.to_path_buf();
     ide_ui_debug::gutter::menu(controller.handle(), &path, line)
 }
 
 /// How the line `line` of `editor` is marked in the gutter: its breakpoint, and whether the program is paused there.
-pub fn gutter_mark(editor: &EditorTextView, line: usize) -> (Option<Look>, bool) {
+pub(crate) fn gutter_mark(editor: &EditorTextView, line: usize) -> (Option<Look>, bool) {
     let (Some(controller), Some(path)) = (editor.controller(), editor.document().path().map(Path::to_path_buf)) else {
         return (None, false);
     };
@@ -83,20 +83,20 @@ pub fn gutter_mark(editor: &EditorTextView, line: usize) -> (Option<Look>, bool)
 
 /// How the lines of an editor are marked in the gutter.
 #[derive(Default)]
-pub struct GutterMarks {
+pub(crate) struct GutterMarks {
     looks: std::collections::HashMap<usize, Look>,
     paused: Option<usize>,
 }
 
 impl GutterMarks {
     /// The breakpoint of `line`, and whether the program is paused there.
-    pub fn at(&self, line: usize) -> (Option<Look>, bool) {
+    pub(crate) fn at(&self, line: usize) -> (Option<Look>, bool) {
         (self.looks.get(&line).copied(), self.paused == Some(line))
     }
 }
 
 /// How the lines of `editor` are marked in the gutter, for drawing all lines on screen at once.
-pub fn gutter_marks(editor: &EditorTextView) -> GutterMarks {
+pub(crate) fn gutter_marks(editor: &EditorTextView) -> GutterMarks {
     let Some(controller) = editor.controller() else {
         return GutterMarks::default();
     };
@@ -109,14 +109,14 @@ pub fn gutter_marks(editor: &EditorTextView) -> GutterMarks {
 }
 
 /// An edit of `editor`'s text moves the breakpoints of its file.
-pub fn edited(editor: &EditorTextView, change: &Change) {
+pub(crate) fn edited(editor: &EditorTextView, change: &Change) {
     if let Some((panel, path)) = panel_and_path(editor) {
         panel.text_changed(&path, change);
     }
 }
 
 /// The line the program is paused at in `editor`, if it shows the paused frame's file.
-pub fn paused_line(editor: &EditorTextView) -> Option<usize> {
+pub(crate) fn paused_line(editor: &EditorTextView) -> Option<usize> {
     let (panel, path) = panel_and_path(editor)?;
     let model = panel.read();
     let frame = model.paused_at()?;
@@ -125,7 +125,7 @@ pub fn paused_line(editor: &EditorTextView) -> Option<usize> {
 
 /// Draws the paused line's band in `editor`'s coordinates, under the overlay's other marks; the gutter's arrow says
 /// the same without colour.
-pub fn draw_paused_line(editor: &EditorTextView) {
+pub(crate) fn draw_paused_line(editor: &EditorTextView) {
     let Some(rect) = paused_line(editor).and_then(|line| crate::editor::laid_out_line_rect(editor, line)) else {
         return;
     };
@@ -200,7 +200,7 @@ fn shorten(value: &str) -> String {
 
 /// The expression under the mouse at UTF-16 offset `index` of `editor`: the name there with the field accesses in front
 /// of it, such as `self.items`, and its range.
-pub fn expression_at(editor: &EditorTextView, index: usize) -> Option<(String, std::ops::Range<usize>)> {
+pub(crate) fn expression_at(editor: &EditorTextView, index: usize) -> Option<(String, std::ops::Range<usize>)> {
     let document = editor.document();
     let text = document.text();
     let byte = text.utf16_to_byte(index).ok()?;
@@ -230,7 +230,7 @@ fn expression_bounds(line: &str, column: usize) -> Option<(usize, usize)> {
 
 /// The mouse rested on `index` of `editor`: while the program is paused, the value of what is there shows in the
 /// hover popover; whether the debugger took the hover.
-pub fn hover(editor: &EditorTextView, index: usize) -> bool {
+pub(crate) fn hover(editor: &EditorTextView, index: usize) -> bool {
     let Some((panel, _)) = panel_and_path(editor) else {
         return false;
     };
@@ -250,7 +250,7 @@ pub fn hover(editor: &EditorTextView, index: usize) -> bool {
 
 /// Whether `editor` shows a file while its window's debugger is paused, so the mouse resting on a name asks for its
 /// value.
-pub fn paused_in(editor: &EditorTextView) -> bool {
+pub(crate) fn paused_in(editor: &EditorTextView) -> bool {
     panel_and_path(editor).is_some_and(|(panel, _)| panel.read().frame().is_some())
 }
 

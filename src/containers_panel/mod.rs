@@ -12,10 +12,10 @@ use objc2_app_kit::{NSMenu, NSMenuItem};
 use splat_i18n::{t, tf};
 
 use crate::window::{Panel, WindowController};
-pub use panel::{ContainersPanel, Reach};
+pub(crate) use panel::{ContainersPanel, Reach};
 
 /// Runs `f` with the panel `id`, if its window is still open.
-pub fn with_panel(id: u64, f: impl FnOnce(&ContainersPanel)) {
+pub(crate) fn with_panel(id: u64, f: impl FnOnce(&ContainersPanel)) {
     if let Some(mtm) = MainThreadMarker::new() {
         crate::context::AppContext::get(mtm).containers_panels().with(id, f);
     }
@@ -27,7 +27,7 @@ fn of(controller: &WindowController) -> Option<Retained<ContainersPanel>> {
 
 /// The window shows a folder: its panel reads Docker, whether or not the folder is trusted, since nothing of the
 /// folder runs for reading.
-pub fn attach(controller: &WindowController) {
+pub(crate) fn attach(controller: &WindowController) {
     let Some(root) = controller.project_root() else { return };
     window_closed(controller);
     let panels = &controller.context().containers_panels();
@@ -48,14 +48,14 @@ pub fn attach(controller: &WindowController) {
 const PRELOAD_AFTER: std::time::Duration = std::time::Duration::from_secs(3);
 
 /// The window shows its Containers panel: the panel watches Docker from now on.
-pub fn shown(controller: &WindowController) {
+pub(crate) fn shown(controller: &WindowController) {
     if let Some(panel) = of(controller) {
         panel.start();
     }
 }
 
 /// The window's folder closes: its panel stops watching Docker and goes.
-pub fn window_closed(controller: &WindowController) {
+pub(crate) fn window_closed(controller: &WindowController) {
     let panels = &controller.context().containers_panels();
     let id = controller.id();
     for panel in panels.all().iter().filter(|p| p.window() == id) {
@@ -170,7 +170,7 @@ fn command_item(mtm: MainThreadMarker, command: Command) -> Retained<NSMenuItem>
 }
 
 /// The Containers menu between Debug and Window (E101): every command of the panel, on its selected row.
-pub fn menu(mtm: MainThreadMarker) -> Retained<NSMenuItem> {
+pub(crate) fn menu(mtm: MainThreadMarker) -> Retained<NSMenuItem> {
     let mut items = Vec::new();
     for group in [
         &[Command::Start, Command::Stop, Command::Restart][..],
@@ -216,7 +216,7 @@ pub(crate) fn fill_menu(panel: &ContainersPanel, menu: &NSMenu) {
 }
 
 /// Whether the Containers menu's `item` applies in `controller`'s window; greyed without `docker` (E101).
-pub fn validate(controller: &WindowController, item: &NSMenuItem) -> bool {
+pub(crate) fn validate(controller: &WindowController, item: &NSMenuItem) -> bool {
     let (Some(panel), Some(command)) = (of(controller), Command::from_tag(item.tag())) else {
         return false;
     };
@@ -224,7 +224,7 @@ pub fn validate(controller: &WindowController, item: &NSMenuItem) -> bool {
 }
 
 /// Does the command of menu item `tag` in `controller`'s window.
-pub fn perform(controller: &WindowController, tag: isize) {
+pub(crate) fn perform(controller: &WindowController, tag: isize) {
     let (Some(panel), Some(command)) = (of(controller), Command::from_tag(tag)) else {
         return;
     };
@@ -348,19 +348,19 @@ mod tests {
         assert_eq!(Command::from_tag(13), None);
     }
 
-    fn board(state: &str, published: bool) -> Board {
+    fn board(state: ide_docker::ContainerState, published: bool) -> Board {
         let ports = published.then(|| ide_docker::Port {
             host_ip: "0.0.0.0".into(),
             host_port: 8080,
             container_port: 80,
-            protocol: "tcp".into(),
+            protocol: ide_docker::Protocol::Tcp,
         });
         Board {
             containers: vec![ide_docker::Container {
                 id: "c1".into(),
                 name: "web".into(),
                 image: "nginx".into(),
-                state: state.into(),
+                state,
                 status: String::new(),
                 ports: ports.into_iter().collect(),
                 project: None,
@@ -390,7 +390,12 @@ mod tests {
     #[test]
     fn a_stopped_container_starts_and_a_running_one_stops_shows_logs_and_opens_its_port() {
         let container = row(Node::Container("c1".into()));
-        let stopped = applying(&Reach::Ready, &board("exited", true), true, Some(&container));
+        let stopped = applying(
+            &Reach::Ready,
+            &board(ide_docker::ContainerState::Exited, true),
+            true,
+            Some(&container),
+        );
         assert_eq!(
             stopped,
             [
@@ -401,7 +406,12 @@ mod tests {
                 Command::Refresh
             ]
         );
-        let running = applying(&Reach::Ready, &board("running", true), true, Some(&container));
+        let running = applying(
+            &Reach::Ready,
+            &board(ide_docker::ContainerState::Running, true),
+            true,
+            Some(&container),
+        );
         assert_eq!(
             running,
             [
@@ -415,7 +425,12 @@ mod tests {
                 Command::Refresh
             ]
         );
-        let unpublished = applying(&Reach::Ready, &board("running", false), true, Some(&container));
+        let unpublished = applying(
+            &Reach::Ready,
+            &board(ide_docker::ContainerState::Running, false),
+            true,
+            Some(&container),
+        );
         assert!(!unpublished.contains(&Command::OpenPort));
     }
 
@@ -435,7 +450,7 @@ mod tests {
     #[test]
     fn without_docker_nothing_applies_and_without_its_daemon_only_refresh() {
         let container = row(Node::Container("c1".into()));
-        let board = board("running", true);
+        let board = board(ide_docker::ContainerState::Running, true);
         assert!(applying(&Reach::Missing, &board, true, Some(&container)).is_empty());
         let not_running = Reach::NotRunning("no daemon".into());
         assert_eq!(
@@ -457,4 +472,4 @@ mod tests {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

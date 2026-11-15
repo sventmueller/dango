@@ -79,7 +79,7 @@ fn feed(key: AgentKey, lines: Range<usize>) {
 
 /// With the focus on the background shell's Stop, the subagent above it ends: the focus stays on the shell's row.
 /// Then the shell stops: the focus goes to the nearest row left, the session's.
-pub fn rows_change(root: PathBuf, key: AgentKey, then: fn(PathBuf)) {
+pub(crate) fn rows_change(root: PathBuf, key: AgentKey, then: fn(PathBuf)) {
     let shell = shown(&root).and_then(|(window, buttons)| {
         let (button, _) = buttons
             .into_iter()

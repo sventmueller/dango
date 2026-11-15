@@ -7,15 +7,15 @@
 use super::*;
 
 impl FailurePage {
-    pub fn offers_proceed(&self) -> bool {
+    pub(crate) fn offers_proceed(&self) -> bool {
         !self.view.isHidden() && !self.proceed.isHidden()
     }
 
-    pub fn is_shown(&self) -> bool {
+    pub(crate) fn is_shown(&self) -> bool {
         !self.view.isHidden()
     }
 
-    pub fn heading(&self) -> String {
+    pub(crate) fn heading(&self) -> String {
         self.heading.stringValue().to_string()
     }
 }

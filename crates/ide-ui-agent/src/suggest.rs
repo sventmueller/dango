@@ -14,20 +14,20 @@ use super::ui;
 use ide_ui_common::util::{ns, set_action, symbol};
 
 /// How many completions show at most.
-pub const SHOWN: usize = 8;
+pub(crate) const SHOWN: usize = 8;
 
 /// One completion.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Item {
-    pub label: String,
-    pub detail: String,
+pub(crate) struct Item {
+    pub(crate) label: String,
+    pub(crate) detail: String,
     /// What replaces the typed mention.
-    pub insert: String,
-    pub symbol: &'static str,
+    pub(crate) insert: String,
+    pub(crate) symbol: &'static str,
 }
 
-pub struct Suggestions {
-    pub view: Retained<NSBox>,
+pub(crate) struct Suggestions {
+    pub(crate) view: Retained<NSBox>,
     column: Retained<NSStackView>,
     target: Retained<AgentTarget>,
     items: RefCell<Vec<Item>>,
@@ -41,7 +41,7 @@ pub struct Suggestions {
 }
 
 impl Suggestions {
-    pub fn new(mtm: MainThreadMarker, target: &AgentTarget) -> Suggestions {
+    pub(crate) fn new(mtm: MainThreadMarker, target: &AgentTarget) -> Suggestions {
         let column = ui::column(mtm, 0.0, &[]);
         let view = ui::framed(
             mtm,
@@ -66,21 +66,21 @@ impl Suggestions {
     }
 
     /// A new question to the file index; answers to earlier ones are dropped.
-    pub fn ask(&self) -> u64 {
+    pub(crate) fn ask(&self) -> u64 {
         self.asked.set(self.asked.get() + 1);
         self.asked.get()
     }
 
-    pub fn is_current(&self, asked: u64) -> bool {
+    pub(crate) fn is_current(&self, asked: u64) -> bool {
         self.asked.get() == asked
     }
 
-    pub fn is_shown(&self) -> bool {
+    pub(crate) fn is_shown(&self) -> bool {
         !self.view.isHidden()
     }
 
     /// Shows `items` for the mention at `range`, the first chosen.
-    pub fn show(&self, items: Vec<Item>, range: Range<usize>) {
+    pub(crate) fn show(&self, items: Vec<Item>, range: Range<usize>) {
         *self.range.borrow_mut() = range;
         let items: Vec<Item> = items.into_iter().take(SHOWN).collect();
         let empty = items.is_empty();
@@ -91,14 +91,14 @@ impl Suggestions {
     }
 
     /// Hides the list; answers still on their way are dropped.
-    pub fn hide(&self) {
+    pub(crate) fn hide(&self) {
         self.ask();
         self.view.setHidden(true);
         self.items.borrow_mut().clear();
     }
 
     /// Moves the choice by `by` rows, wrapping around.
-    pub fn step(&self, by: isize) {
+    pub(crate) fn step(&self, by: isize) {
         let count = self.items.borrow().len();
         if count == 0 {
             return;
@@ -110,14 +110,14 @@ impl Suggestions {
     }
 
     /// Chooses row `index`.
-    pub fn choose(&self, index: usize) {
+    pub(crate) fn choose(&self, index: usize) {
         if index < self.items.borrow().len() {
             self.selected.set(index);
         }
     }
 
     /// The chosen completion and the range it replaces.
-    pub fn chosen(&self) -> Option<(Item, Range<usize>)> {
+    pub(crate) fn chosen(&self) -> Option<(Item, Range<usize>)> {
         let item = self.items.borrow().get(self.selected.get()).cloned()?;
         Some((item, self.range.borrow().clone()))
     }

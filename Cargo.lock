@@ -1588,6 +1588,7 @@ version = "0.0.0"
 dependencies = [
  "base64 0.23.1",
  "ide-core",
+ "ide-net",
  "ide-process",
  "ide-thread",
  "serde",
@@ -1655,6 +1656,7 @@ dependencies = [
  "ide-core",
  "ide-process",
  "ide-product",
+ "proptest",
  "serde",
  "serde_json",
  "splat-i18n",
@@ -1687,6 +1689,8 @@ dependencies = [
  "ide-core",
  "ide-process",
  "ide-product",
+ "serde",
+ "serde_json",
  "sha2",
  "splat-i18n",
  "ureq",
@@ -1696,9 +1700,9 @@ dependencies = [
 name = "ide-predict"
 version = "0.0.0"
 dependencies = [
- "ide-agent",
  "ide-core",
  "ide-lsp",
+ "ide-net",
  "ide-predict",
  "ide-process",
  "ide-product",
@@ -1730,6 +1734,7 @@ dependencies = [
  "ide-process",
  "ignore",
  "notify",
+ "proptest",
  "serde",
  "serde_json",
  "splat-i18n",
@@ -1765,6 +1770,7 @@ dependencies = [
  "libc",
  "memchr",
  "polling",
+ "proptest",
 ]
 
 [[package]]
@@ -1992,6 +1998,7 @@ name = "ide-vim"
 version = "0.0.0"
 dependencies = [
  "modalkit",
+ "proptest",
  "regex",
  "ropey",
 ]
@@ -5265,8 +5272,10 @@ dependencies = [
  "ide-process",
  "ide-product",
  "image",
+ "proc-macro2",
  "serde",
  "serde_json",
+ "syn 2.0.119",
 ]
 
 [[package]]

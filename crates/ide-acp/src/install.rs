@@ -29,6 +29,7 @@ const MAX_ARCHIVE_BYTES: u64 = 1024 * 1024 * 1024;
 
 /// Where an installation comes from.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub enum Source {
     /// An archive to download and unpack.
     Archive {
@@ -40,7 +41,6 @@ pub enum Source {
         cmd: String,
         /// The program's arguments.
         args: Vec<String>,
-        /// Variables for its environment.
         env: Vec<(String, String)>,
     },
     /// A Node package installed with npm.
@@ -243,15 +243,13 @@ impl Plan {
 
 /// An installed version of an agent.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Installed {
-    /// Its version.
     pub version: String,
     /// The program, relative to the version's folder.
     pub program: PathBuf,
-    /// Its arguments.
     pub args: Vec<String>,
-    /// Variables for its environment.
-    pub env: Vec<(String, String)>,
+    pub(crate) env: Vec<(String, String)>,
     /// Whether it was installed as a combination verified with this build.
     pub verified: bool,
 }
@@ -296,10 +294,7 @@ impl Installs {
     }
 
     fn save(&self, id: &str, state: &State) -> io::Result<()> {
-        let file = self.folder(id).join("state.json");
-        let staged = file.with_extension("json.part");
-        fs::write(&staged, serde_json::to_vec_pretty(state).map_err(io::Error::other)?)?;
-        fs::rename(staged, file)
+        ide_core::atomic_write::write_json(&self.folder(id).join("state.json"), state)
     }
 
     /// The version in use and its program's full path.

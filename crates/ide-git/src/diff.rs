@@ -88,6 +88,7 @@ impl FileDiff {
 
 /// One changed region of a file with its context.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Hunk {
     /// The first line before; for a region without old lines, the line after which it starts.
     pub old_start: u32,
@@ -99,7 +100,6 @@ pub struct Hunk {
     pub new_count: u32,
     /// The text after the second `@@`, often the enclosing function.
     pub section: String,
-    /// The lines.
     pub lines: Vec<Line>,
 }
 
@@ -196,7 +196,11 @@ impl Repository {
             DiffSource::Staged => args.extend(["--cached", "-M"].map(OsString::from)),
             DiffSource::AgainstHead => {
                 args.push("-M".into());
-                args.push(self.head()?.map_or_else(|| self.empty_tree(), Ok)?.into());
+                let base = match self.head()? {
+                    Some(head) => head.to_string(),
+                    None => self.empty_tree()?,
+                };
+                args.push(base.into());
             }
         }
         args.push("--".into());
@@ -280,10 +284,11 @@ pub(crate) fn parse(output: &[u8]) -> Result<Vec<FileDiff>> {
             continue;
         } else if let Some(file) = current.as_mut() {
             if line.starts_with(b"@@ ") {
-                let mut hunk = hunk_header(line).ok_or_else(|| Error::Unexpected {
+                let unexpected = || Error::Unexpected {
                     what: String::from_utf8_lossy(line).into_owned(),
-                })?;
-                hunk_body(&mut hunk, &mut lines);
+                };
+                let mut hunk = hunk_header(line).ok_or_else(unexpected)?;
+                hunk_body(&mut hunk, &mut lines).ok_or_else(unexpected)?;
                 file.hunks.push(hunk);
             } else {
                 header_line(file, line);
@@ -431,10 +436,11 @@ fn hunk_header(line: &[u8]) -> Option<Hunk> {
     })
 }
 
-/// Reads as many lines into `hunk` as its header counts, and the marks of a missing final line end.
-fn hunk_body<'a>(hunk: &mut Hunk, lines: &mut Peekable<impl Iterator<Item = &'a [u8]>>) {
+/// Reads as many lines into `hunk` as its header counts, and the marks of a missing final line end; `None` when a line
+/// would be numbered past `u32::MAX`.
+fn hunk_body<'a>(hunk: &mut Hunk, lines: &mut Peekable<impl Iterator<Item = &'a [u8]>>) -> Option<()> {
     let (mut old_left, mut new_left) = (hunk.old_count, hunk.new_count);
-    let (mut old, mut new) = (hunk.old_start, hunk.new_start);
+    let (mut old, mut new) = (Some(hunk.old_start), Some(hunk.new_start));
     while let Some(&line) = lines.peek() {
         let (kind, content) = match line.first() {
             Some(b'\\') => {
@@ -452,16 +458,16 @@ fn hunk_body<'a>(hunk: &mut Hunk, lines: &mut Peekable<impl Iterator<Item = &'a 
             _ => break,
         };
         let (old_number, new_number) = match kind {
-            LineKind::Context => (Some(old), Some(new)),
-            LineKind::Removed => (Some(old), None),
-            LineKind::Added => (None, Some(new)),
+            LineKind::Context => (Some(old?), Some(new?)),
+            LineKind::Removed => (Some(old?), None),
+            LineKind::Added => (None, Some(new?)),
         };
-        if old_number.is_some() {
-            old += 1;
+        if let Some(number) = old_number {
+            old = number.checked_add(1);
             old_left -= 1;
         }
-        if new_number.is_some() {
-            new += 1;
+        if let Some(number) = new_number {
+            new = number.checked_add(1);
             new_left -= 1;
         }
         hunk.lines.push(Line {
@@ -473,6 +479,7 @@ fn hunk_body<'a>(hunk: &mut Hunk, lines: &mut Peekable<impl Iterator<Item = &'a 
         });
         lines.next();
     }
+    Some(())
 }
 
 #[cfg(test)]
@@ -619,5 +626,21 @@ Binary files a/b c.bin and b/b c.bin differ\n";
         assert_eq!(hunk.lines.len(), 4);
         assert_eq!(hunk.lines[1].kind, LineKind::Context);
         assert!(hunk.lines[1].content.is_empty());
+    }
+
+    #[test]
+    fn a_hunk_numbered_past_the_largest_line_number_is_an_error() {
+        let past = b"diff --git a/a b/a\n--- a/a\n+++ b/a\n@@ -4294967295,2 +1,2 @@\n x\n y\n";
+        assert!(matches!(parse(past), Err(Error::Unexpected { .. })));
+        let added = b"diff --git a/a b/a\n--- a/a\n+++ b/a\n@@ -1,0 +4294967295,2 @@\n+x\n+y\n";
+        assert!(matches!(parse(added), Err(Error::Unexpected { .. })));
+        let last = b"diff --git a/a b/a\n--- a/a\n+++ b/a\n@@ -4294967295 +4294967295 @@\n-x\n+y\n";
+        let hunk = &parse(last).unwrap()[0].hunks[0];
+        assert_eq!(
+            hunk.lines[0].old_number,
+            Some(u32::MAX),
+            "the largest number itself is a line"
+        );
+        assert_eq!(hunk.lines[1].new_number, Some(u32::MAX));
     }
 }

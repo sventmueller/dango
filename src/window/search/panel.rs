@@ -2,8 +2,8 @@
 //! model, and the actions of its fields, buttons and menu, which go on to the controller.
 
 use std::cell::{OnceCell, RefCell, RefMut};
-use std::collections::HashMap;
 
+use ide_ui_common::panel::{RowItem, RowItems};
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, NSObject, Sel};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
@@ -11,21 +11,21 @@ use objc2_app_kit::{
     NSControl, NSControlTextEditingDelegate, NSEvent, NSMenu, NSMenuDelegate, NSOutlineView, NSOutlineViewDataSource,
     NSOutlineViewDelegate, NSTableColumn, NSTextFieldDelegate, NSTextView, NSView,
 };
-use objc2_foundation::{NSNotification, NSObjectProtocol, NSRect, NSString};
+use objc2_foundation::{NSNotification, NSObjectProtocol, NSRect};
 
 use super::model::{Model, Spot};
 use super::{ESCAPE_KEY, OUTDENT, RETURN_KEYS, hierarchy, rows, views};
 use crate::util::{guarded, ns};
 use crate::window::WindowController;
 
-pub struct SearchIvars {
+pub(crate) struct SearchIvars {
     pub(super) id: u64,
     pub(super) controller: Weak<WindowController>,
     pub(super) views: OnceCell<views::Views>,
     pub(super) hierarchy: OnceCell<Retained<hierarchy::HierarchyPanel>>,
     model: RefCell<Model>,
     /// The objects that stand for rows in the outline view, which keeps no reference of its own.
-    items: RefCell<HashMap<Spot, Retained<NSString>>>,
+    items: RowItems<Spot>,
 }
 
 impl SearchIvars {
@@ -36,7 +36,7 @@ impl SearchIvars {
             views: OnceCell::new(),
             hierarchy: OnceCell::new(),
             model: RefCell::new(model),
-            items: RefCell::new(HashMap::new()),
+            items: RowItems::default(),
         }
     }
 }
@@ -47,7 +47,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDESearchPanel"]
     #[ivars = SearchIvars]
-    pub struct SearchPanel;
+    pub(crate) struct SearchPanel;
 
     unsafe impl NSObjectProtocol for SearchPanel {}
 
@@ -212,7 +212,7 @@ define_class!(
     #[unsafe(super(NSOutlineView))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDESearchOutlineView"]
-    pub struct SearchOutlineView;
+    pub(crate) struct SearchOutlineView;
 
     unsafe impl NSObjectProtocol for SearchOutlineView {}
 
@@ -248,7 +248,7 @@ define_class!(
 );
 
 impl SearchOutlineView {
-    pub fn new(mtm: MainThreadMarker, frame: NSRect) -> Retained<SearchOutlineView> {
+    pub(crate) fn new(mtm: MainThreadMarker, frame: NSRect) -> Retained<SearchOutlineView> {
         // SAFETY: NSOutlineView's designated initializer, called once on the newly allocated object.
         unsafe { msg_send![SearchOutlineView::alloc(mtm), initWithFrame: frame] }
     }
@@ -284,32 +284,24 @@ impl SearchPanel {
     }
 
     /// The panel's page: the fields and their options above the matches.
-    pub fn page(&self) -> Option<&NSView> {
+    pub(crate) fn page(&self) -> Option<&NSView> {
         self.ivars().views.get().map(|views| &*views.page)
     }
 
     /// The option toggles for the panel's title row.
-    pub fn header(&self) -> Option<&NSView> {
+    pub(crate) fn header(&self) -> Option<&NSView> {
         self.ivars().views.get().map(|views| &*views.header as &NSView)
     }
 
     /// The object that stands for `spot`, the same one for as long as the model has the row.
-    pub(super) fn item(&self, spot: &Spot) -> Retained<NSString> {
-        self.ivars()
-            .items
-            .borrow_mut()
-            .entry(spot.clone())
-            .or_insert_with(|| match spot {
-                Spot::File(path) => ns(&format!("F\0{}", path.to_string_lossy())),
-                Spot::Line(path, index) => ns(&format!("L\0{index}\0{}", path.to_string_lossy())),
-            })
-            .clone()
+    pub(super) fn item(&self, spot: &Spot) -> Retained<RowItem> {
+        self.ivars().items.item(self.mtm(), spot)
     }
 
     /// Lets go of the objects of rows the model no longer has.
     pub(super) fn forget_items(&self) {
         let model = self.read();
-        self.ivars().items.borrow_mut().retain(|spot, _| model.has(spot));
+        self.ivars().items.keep(|spot| model.has(spot));
     }
 
     fn children(&self, item: Option<&AnyObject>) -> usize {
@@ -319,7 +311,7 @@ impl SearchPanel {
         }
     }
 
-    fn child_item(&self, index: usize, item: Option<&AnyObject>) -> Option<Retained<NSString>> {
+    fn child_item(&self, index: usize, item: Option<&AnyObject>) -> Option<Retained<RowItem>> {
         let spot = match item.map(spot_of) {
             None => self.read().child(index, None),
             Some(parent) => self.read().child(index, Some(&parent?)),
@@ -360,11 +352,5 @@ impl SearchPanel {
 
 /// Where `item`, an outline item of a search panel, points.
 pub(super) fn spot_of(item: &AnyObject) -> Option<Spot> {
-    let text = item.downcast_ref::<NSString>()?.to_string();
-    let mut parts = text.splitn(3, '\0');
-    match (parts.next()?, parts.next()?, parts.next()) {
-        ("F", path, None) => Some(Spot::File(std::path::PathBuf::from(path))),
-        ("L", index, Some(path)) => Some(Spot::Line(std::path::PathBuf::from(path), index.parse().ok()?)),
-        _ => None,
-    }
+    RowItems::<Spot>::key_of(item)
 }

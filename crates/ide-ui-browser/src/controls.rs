@@ -16,19 +16,19 @@ use splat_i18n::t;
 use super::view::BrowserView;
 use ide_ui_common::util::{ns, symbol, symbol_button};
 
-pub struct Controls {
-    pub row: Retained<NSStackView>,
-    pub back: Retained<NSButton>,
-    pub forward: Retained<NSButton>,
-    pub reload: Retained<NSButton>,
-    pub field: Retained<NSTextField>,
-    pub spinner: Retained<NSProgressIndicator>,
-    pub login: Retained<NSButton>,
-    pub external: Retained<NSButton>,
+pub(crate) struct Controls {
+    pub(crate) row: Retained<NSStackView>,
+    pub(crate) back: Retained<NSButton>,
+    pub(crate) forward: Retained<NSButton>,
+    pub(crate) reload: Retained<NSButton>,
+    pub(crate) field: Retained<NSTextField>,
+    pub(crate) spinner: Retained<NSProgressIndicator>,
+    pub(crate) login: Retained<NSButton>,
+    pub(crate) external: Retained<NSButton>,
 }
 
 impl Controls {
-    pub fn new(mtm: MainThreadMarker, target: &BrowserView) -> Controls {
+    pub(crate) fn new(mtm: MainThreadMarker, target: &BrowserView) -> Controls {
         let button = |name: &str, description: &str, action: Sel| {
             let button = symbol_button(
                 mtm,
@@ -95,7 +95,7 @@ impl Controls {
     }
 
     /// Shows reload or stop on the button that does either, and the indicator while the page loads.
-    pub fn set_loading(&self, loading: bool) {
+    pub(crate) fn set_loading(&self, loading: bool) {
         let (name, description) = if loading {
             ("xmark", t("Laden stoppen"))
         } else {

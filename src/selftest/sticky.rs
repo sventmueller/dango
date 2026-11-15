@@ -10,7 +10,7 @@ use objc2_app_kit::NSApplication;
 use objc2_foundation::NSRange;
 
 use super::helpers::{self, wait_until};
-use super::{check, finish, snapshot};
+use super::{check, finish, give_up, give_up_saying, snapshot};
 use crate::editor::{self, EditorTextView};
 use crate::window;
 
@@ -58,10 +58,9 @@ fn scroll_to_line(view: &EditorTextView, line: usize) {
     }
 }
 
-pub fn run() {
+pub(crate) fn run() {
     if let Err(error) = helpers::make_project(PROJECT, &[(FILE, &source())]) {
-        check("the scenario's folder is made", false, error.to_string());
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "the scenario's folder is made", error.to_string());
     }
     let Some(mtm) = objc2::MainThreadMarker::new() else {
         return;
@@ -69,8 +68,7 @@ pub fn run() {
     crate::app::open_project(mtm, root());
     helpers::wait_for_window(&root(), |controller| {
         let Some(controller) = controller else {
-            check("the project's window opens", false, "");
-            return finish(SCENARIO);
+            return give_up(SCENARIO, "the project's window opens");
         };
         controller.open_file(&root().join(FILE));
         wait_until(
@@ -82,8 +80,7 @@ pub fn run() {
 
 fn headers() {
     let Some(view) = view() else {
-        check("the file opens in an editor", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the file opens in an editor");
     };
     let at_top = editor::sticky_shown(&view);
     scroll_to_line(&view, 100);

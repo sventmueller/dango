@@ -15,7 +15,7 @@ const SCRIPT: &str = include_str!("fill_login.js");
 
 /// Writes `user` and `password` into the login form of `web`'s page if it still shows `host`; `done` gets how many
 /// fields took a value, none on a page without a login form.
-pub fn fill(web: &WKWebView, host: &str, user: &str, password: &str, done: impl Fn(usize) + 'static) {
+pub(crate) fn fill(web: &WKWebView, host: &str, user: &str, password: &str, done: impl Fn(usize) + 'static) {
     let keys = [&*ns("host"), &*ns("user"), &*ns("password")];
     let values: Vec<Retained<AnyObject>> = [host, user, password]
         .into_iter()

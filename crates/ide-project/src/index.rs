@@ -30,7 +30,7 @@ pub struct Hit {
     /// The path relative to the project folder, with `/` between folders.
     pub path: String,
     /// Higher is better.
-    pub score: i32,
+    pub(crate) score: i32,
     /// The matched characters of `path` as ranges of UTF-16 code units, for highlighting.
     pub ranges: Vec<Range<usize>>,
 }
@@ -52,22 +52,25 @@ impl FileIndex {
     }
 
     /// The project folder with links resolved.
-    pub fn root(&self) -> &Path {
+    #[cfg(test)]
+    pub(crate) fn root(&self) -> &Path {
         &self.root
     }
 
     /// How many files the index holds.
-    pub fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.files.len()
     }
 
     /// Whether the index holds no file.
-    pub fn is_empty(&self) -> bool {
+    #[cfg(test)]
+    pub(crate) fn is_empty(&self) -> bool {
         self.files.is_empty()
     }
 
     /// Whether the index holds the file at `relative`.
-    pub fn contains(&self, relative: &str) -> bool {
+    #[cfg(test)]
+    pub(crate) fn contains(&self, relative: &str) -> bool {
         self.files.binary_search_by(|f| (**f).cmp(relative)).is_ok()
     }
 
@@ -77,7 +80,8 @@ impl FileIndex {
     }
 
     /// Brings the index up to date with what the watcher saw; `Interrupted` leaves it as it was.
-    pub fn apply(&mut self, event: &WatchEvent, cancel: &Cancel) -> io::Result<()> {
+    #[cfg(test)]
+    pub(crate) fn apply(&mut self, event: &WatchEvent, cancel: &Cancel) -> io::Result<()> {
         match self.plan(event, cancel)? {
             Plan::Rebuild => self.files = walk_parallel(&self.root, cancel)?,
             Plan::Edit(edit) => self.commit(edit),
@@ -86,7 +90,7 @@ impl FileIndex {
     }
 
     /// Up to `limit` files matching `query`, best first; empty for an empty query or when `cancel` stops it.
-    pub fn query(&self, query: &str, limit: usize, cancel: &Cancel) -> Vec<Hit> {
+    pub(crate) fn query(&self, query: &str, limit: usize, cancel: &Cancel) -> Vec<Hit> {
         let Some(pattern) = Pattern::new(query) else {
             return Vec::new();
         };
@@ -418,9 +422,9 @@ impl Drop for Visitor<'_> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Indexed {
     /// How many files the index holds.
-    pub files: usize,
+    pub(crate) files: usize,
     /// How long the walk took.
-    pub took: Duration,
+    pub(crate) took: Duration,
 }
 
 type Answer = Box<dyn FnOnce(Vec<Hit>) + Send>;

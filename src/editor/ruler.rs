@@ -56,7 +56,7 @@ fn light_number_attributes(font_size: f64) -> Retained<NSDictionary<NSString, ob
 }
 
 /// The column's width for a text of `lines` lines in `font_size`: as wide as its highest number needs.
-pub fn width_for(lines: usize, font_size: f64) -> f64 {
+pub(crate) fn width_for(lines: usize, font_size: f64) -> f64 {
     let digits = lines.max(1).to_string();
     let widest = ns(&"0".repeat(digits.len()));
     // SAFETY: The attributes hold a font and a colour, as the method expects.
@@ -64,7 +64,7 @@ pub fn width_for(lines: usize, font_size: f64) -> f64 {
     (NUMBERS_LEFT + numbers + NUMBERS_GAP + FOLD_WIDTH + CHANGE_STRIP).ceil()
 }
 
-pub struct GutterIvars {
+pub(crate) struct GutterIvars {
     editor: Weak<EditorTextView>,
     /// The texts of the diagnostic markers' tooltips; a view holds the owners of its tooltips only weakly.
     tips: std::cell::RefCell<Vec<Retained<NSString>>>,
@@ -82,7 +82,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDELineNumbers"]
     #[ivars = GutterIvars]
-    pub struct LineNumbers;
+    pub(crate) struct LineNumbers;
 
     unsafe impl NSObjectProtocol for LineNumbers {}
 
@@ -184,13 +184,13 @@ impl LineNumbers {
     }
 
     /// Holds the column at `constraint`'s width, which `fit` sets.
-    pub fn set_width_constraint(&self, constraint: Retained<objc2_app_kit::NSLayoutConstraint>) {
+    pub(crate) fn set_width_constraint(&self, constraint: Retained<objc2_app_kit::NSLayoutConstraint>) {
         *self.ivars().width.borrow_mut() = Some(constraint);
         self.fit();
     }
 
     /// Makes the column as wide as the editor's highest line number needs.
-    pub fn fit(&self) {
+    pub(crate) fn fit(&self) {
         let Some(editor) = self.ivars().editor.load() else {
             return;
         };
@@ -326,7 +326,7 @@ impl LineNumbers {
     }
 
     /// The column for `editor`, redrawn whenever the text scrolls or changes size.
-    pub fn new(mtm: MainThreadMarker, scroll: &NSScrollView, editor: &EditorTextView) -> Retained<LineNumbers> {
+    pub(crate) fn new(mtm: MainThreadMarker, scroll: &NSScrollView, editor: &EditorTextView) -> Retained<LineNumbers> {
         let this = Self::alloc(mtm).set_ivars(GutterIvars {
             editor: Weak::from(editor),
             tips: std::cell::RefCell::new(vec![]),

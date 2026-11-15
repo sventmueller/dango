@@ -10,25 +10,25 @@ use std::sync::{Arc, Mutex};
 
 /// The service a stub plays.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Service {
+pub(crate) enum Service {
     GitHub,
     GitLab,
 }
 
 /// A request the stub got.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Seen {
-    pub method: String,
-    pub target: String,
-    pub authorization: Option<String>,
-    pub body: String,
+pub(crate) struct Seen {
+    pub(crate) method: String,
+    pub(crate) target: String,
+    pub(crate) authorization: Option<String>,
+    pub(crate) body: String,
 }
 
 /// The token GitHub's device flow hands out.
-pub const DEVICE_TOKEN: &str = "gho_selftest";
+pub(crate) const DEVICE_TOKEN: &str = "gho_selftest";
 
 /// The code GitHub's device flow shows.
-pub const USER_CODE: &str = "SELF-TEST";
+pub(crate) const USER_CODE: &str = "SELF-TEST";
 
 #[derive(Default)]
 struct Inner {
@@ -41,8 +41,8 @@ struct Inner {
 }
 
 /// A running stub.
-pub struct Stub {
-    pub port: u16,
+pub(crate) struct Stub {
+    pub(crate) port: u16,
     service: Service,
     token: Option<&'static str>,
     inner: Arc<Mutex<Inner>>,
@@ -56,7 +56,7 @@ macro_rules! fixture {
 
 impl Stub {
     /// Listens on a free port; answers only requests that carry `token`, when there is one.
-    pub fn start(service: Service, token: Option<&'static str>) -> std::io::Result<Arc<Stub>> {
+    pub(crate) fn start(service: Service, token: Option<&'static str>) -> std::io::Result<Arc<Stub>> {
         let listener = TcpListener::bind("127.0.0.1:0")?;
         let stub = Arc::new(Stub {
             port: listener.local_addr()?.port(),
@@ -76,14 +76,14 @@ impl Stub {
     }
 
     /// The commit and branch its runs belong to.
-    pub fn set_head(&self, sha: &str, branch: &str) {
+    pub(crate) fn set_head(&self, sha: &str, branch: &str) {
         let mut inner = self.lock();
         inner.sha = sha.to_string();
         inner.branch = branch.to_string();
     }
 
     /// What it was asked so far.
-    pub fn seen(&self) -> Vec<Seen> {
+    pub(crate) fn seen(&self) -> Vec<Seen> {
         self.lock().seen.clone()
     }
 

@@ -18,7 +18,7 @@ thread_local! {
 
 /// Loads Sparkle from the app's Frameworks folder and starts the updater, which runs the checks the user allowed.
 /// Without Sparkle, as in local builds, nothing happens.
-pub fn start(_mtm: MainThreadMarker) {
+pub(crate) fn start(_mtm: MainThreadMarker) {
     CONTROLLER.with(|c| {
         c.get_or_init(load);
     });
@@ -52,7 +52,7 @@ fn load_from(frameworks: &NSURL) -> Option<Retained<AnyObject>> {
 }
 
 /// The app menu's item that checks for updates now, or none without Sparkle; Sparkle enables it while no check runs.
-pub fn menu_item(mtm: MainThreadMarker) -> Option<Retained<NSMenuItem>> {
+pub(crate) fn menu_item(mtm: MainThreadMarker) -> Option<Retained<NSMenuItem>> {
     let controller = CONTROLLER.with(|c| c.get().cloned().flatten())?;
     let check = item(mtm, t("Nach Updates suchen …"), Some(sel!(checkForUpdates:)), "");
     set_target(&check, &controller);

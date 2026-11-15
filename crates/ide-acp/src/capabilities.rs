@@ -7,10 +7,10 @@ use serde_json::Value;
 
 /// How the agent signs in in a terminal: its arguments and variables for its environment.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct TerminalSignIn {
     /// The arguments the agent runs with.
     pub args: Vec<String>,
-    /// Variables for its environment.
     pub env: Vec<(String, String)>,
 }
 
@@ -85,6 +85,7 @@ pub enum OptionValue {
 
 /// A setting of the session the agent lets the user change.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct ConfigOption {
     /// The agent's id for it.
     pub id: String,
@@ -94,7 +95,6 @@ pub struct ConfigOption {
     pub description: Option<String>,
     /// What it is about.
     pub category: Category,
-    /// Its value.
     pub value: OptionValue,
 }
 
@@ -132,6 +132,7 @@ pub struct SlashCommand {
 
 /// What the agent and its session offer.
 #[derive(Debug, Clone, PartialEq, Default)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Capabilities {
     /// The protocol version agreed on.
     pub protocol_version: Option<u16>,
@@ -139,18 +140,17 @@ pub struct Capabilities {
     pub agent: Option<(String, Option<String>, String)>,
     /// Whether past sessions can be loaded.
     pub load_session: bool,
-    /// Whether the agent lists its sessions.
-    pub list_sessions: bool,
+    pub(crate) list_sessions: bool,
     /// Whether a session can be resumed without replaying it.
-    pub resume_session: bool,
+    pub(crate) resume_session: bool,
     /// Whether prompts may hold images.
     pub images: bool,
     /// Whether prompts may hold audio.
-    pub audio: bool,
+    pub(crate) audio: bool,
     /// Whether prompts may embed the content of files.
     pub embedded_context: bool,
     /// Whether MCP servers over HTTP can be handed over.
-    pub mcp_http: bool,
+    pub(crate) mcp_http: bool,
     /// The ways to sign in.
     pub auth_methods: Vec<AuthMethod>,
     /// The modes of the session.
@@ -159,7 +159,6 @@ pub struct Capabilities {
     pub mode: Option<String>,
     /// The settings of the session.
     pub options: Vec<ConfigOption>,
-    /// The commands.
     pub commands: Vec<SlashCommand>,
     /// Extension fields the app does not read, as name and JSON text.
     pub unknown: Vec<(String, String)>,

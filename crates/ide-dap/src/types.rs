@@ -41,7 +41,7 @@ pub struct VariablesRef(pub i64);
 
 impl VariablesRef {
     /// Whether there are children to fetch with `Session::variables`.
-    pub fn has_children(self) -> bool {
+    pub(crate) fn has_children(self) -> bool {
         self.0 > 0
     }
 }
@@ -91,14 +91,14 @@ pub struct Capabilities {
 
 impl Capabilities {
     /// What `body`, the protocol's `Capabilities` object, says; unknown fields are ignored.
-    pub fn from_json(body: &Value) -> Capabilities {
+    pub(crate) fn from_json(body: &Value) -> Capabilities {
         let mut capabilities = Capabilities::default();
         capabilities.update(body);
         capabilities
     }
 
     /// Takes what `body` says over and leaves the rest, as a `capabilities` event asks.
-    pub fn update(&mut self, body: &Value) {
+    pub(crate) fn update(&mut self, body: &Value) {
         let flags: [(&str, &mut bool); 13] = [
             ("supportsConfigurationDoneRequest", &mut self.configuration_done),
             ("supportsConditionalBreakpoints", &mut self.conditional_breakpoints),
@@ -180,13 +180,13 @@ pub struct Breakpoint {
     /// Whether it could be set; an unverified one is shown hollow and greyed.
     pub verified: bool,
     /// Why it is unverified, or what else the adapter says about it.
-    pub message: Option<String>,
+    pub(crate) message: Option<String>,
     /// The file it is in.
-    pub path: Option<PathBuf>,
+    pub(crate) path: Option<PathBuf>,
     /// The line it really sits on, from 1, which may differ from the one asked for.
-    pub line: Option<u32>,
+    pub(crate) line: Option<u32>,
     /// Its column, from 1.
-    pub column: Option<u32>,
+    pub(crate) column: Option<u32>,
 }
 
 /// A thread of the program.
@@ -202,13 +202,13 @@ pub struct Thread {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Source {
     /// What the user reads.
-    pub name: Option<String>,
+    pub(crate) name: Option<String>,
     /// The file, if it is one.
     pub path: Option<PathBuf>,
     /// The adapter's number for code without a file, which only the adapter can show.
-    pub reference: Option<i64>,
+    pub(crate) reference: Option<i64>,
     /// `emphasize` or `deemphasize`, such as for library code.
-    pub hint: Option<String>,
+    pub(crate) hint: Option<String>,
 }
 
 /// A frame of a thread's call stack, the innermost first.
@@ -225,7 +225,7 @@ pub struct StackFrame {
     /// Its column, from 1; 0 without a source.
     pub column: u32,
     /// `normal`, `label` for a separator row, or `subtle` for a frame worth less attention.
-    pub hint: Option<String>,
+    pub(crate) hint: Option<String>,
 }
 
 /// A group of variables in a frame, such as locals or registers.
@@ -238,13 +238,13 @@ pub struct Scope {
     /// Whether fetching them is slow, so the inspector leaves it closed.
     pub expensive: bool,
     /// `arguments`, `locals` or `registers`, if the adapter says.
-    pub hint: Option<String>,
+    pub(crate) hint: Option<String>,
 }
 
 /// A variable, a field or an element.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Variable {
-    /// Its name.
     pub name: String,
     /// Its value as the adapter writes it.
     pub value: String,
@@ -253,7 +253,7 @@ pub struct Variable {
     /// Its children, fetched only when the user opens it.
     pub children: VariablesRef,
     /// An expression for it that `evaluate` understands, such as for a watch.
-    pub evaluate_name: Option<String>,
+    pub(crate) evaluate_name: Option<String>,
 }
 
 /// The value of an expression.
@@ -333,13 +333,13 @@ pub struct Stop {
     /// Why.
     pub reason: StopReason,
     /// The reason in the adapter's words, for the user.
-    pub description: Option<String>,
+    pub(crate) description: Option<String>,
     /// More, such as the exception's message.
     pub text: Option<String>,
     /// The thread that stopped, if the adapter says.
     pub thread: Option<ThreadId>,
     /// Whether every thread stopped, not only `thread`.
-    pub all_threads: bool,
+    pub(crate) all_threads: bool,
     /// The breakpoints that were hit, by `Breakpoint::id`.
     pub hit_breakpoints: Vec<i64>,
 }
@@ -367,14 +367,14 @@ pub struct Output {
     /// The text, with its line breaks.
     pub text: String,
     /// Where it was printed from, such as a log point, if the adapter says.
-    pub source: Option<Source>,
+    pub(crate) source: Option<Source>,
     /// The line there, from 1.
     pub line: Option<u32>,
 }
 
 /// How the program being debugged came to be.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StartMethod {
+pub(crate) enum StartMethod {
     /// The adapter started it.
     Launch,
     /// The adapter attached to it.
@@ -387,11 +387,11 @@ pub enum StartMethod {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
     /// Its name, usually the path of its executable.
-    pub name: String,
+    pub(crate) name: String,
     /// Its process number, if the adapter says.
     pub pid: Option<u32>,
     /// How it came to be, if the adapter says.
-    pub start: Option<StartMethod>,
+    pub(crate) start: Option<StartMethod>,
 }
 
 /// Why a session ended.
@@ -440,7 +440,7 @@ pub enum State {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TerminalRequest {
     /// A title for the tab.
-    pub title: Option<String>,
+    pub(crate) title: Option<String>,
     /// The folder to run it in.
     pub cwd: PathBuf,
     /// The program and its arguments.
@@ -448,5 +448,5 @@ pub struct TerminalRequest {
     /// Variables to set, or with `None` to remove, on top of the login shell's environment.
     pub env: Vec<(String, Option<String>)>,
     /// Whether the adapter asked for an external terminal; the app opens a tab either way.
-    pub external: bool,
+    pub(crate) external: bool,
 }

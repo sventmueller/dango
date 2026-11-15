@@ -24,16 +24,16 @@ use splat_i18n::{t, tf};
 
 use super::helpers::{
     alert_texts, answer_alert, answer_alert_saying, in_any_mode_after, text_of, type_at, utf16_len, wait_until,
+    when_alert_shows,
 };
-use super::{check, finish, helpers};
+use super::{check, finish, give_up, give_up_saying, helpers};
 use crate::editor::{self, EditorTextView};
 use crate::util::ns;
 use crate::window::{self, WindowController};
 
 const SCENARIO: &str = "editor-commands";
-/// How long after a command its alert is up, for the timer that answers it; the alert runs modal, so no step can wait
-/// for it.
-const ALERT_UP: Duration = Duration::from_millis(300);
+/// Time for the answer to a sheet to reach the one who asked; it reports no end.
+const SHEET_ANSWERED: Duration = Duration::from_millis(300);
 const PROJECT: &str = "commands-project";
 
 const MAIN: &str = "fn main() {\n    let total = 1;\n\n    let other = total;\n}\n";
@@ -94,19 +94,17 @@ fn unit(view: &EditorTextView) -> String {
     view.ivars().indent.borrow().clone()
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let folder = match helpers::make_project(PROJECT, &FILES) {
         Ok(folder) => folder,
         Err(error) => {
-            check("the files of the folder are made", false, error.to_string());
-            return finish(SCENARIO);
+            return give_up_saying(SCENARIO, "the files of the folder are made", error.to_string());
         }
     };
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::app::open_project(mtm, folder);
     let Some(window) = controller().and_then(|c| c.window()) else {
-        check("the folder opens in a window", false, "");
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder opens in a window");
     };
     if let Some(sheet) = window.attachedSheet() {
         window.endSheet_returnCode(&sheet, NSAlertSecondButtonReturn);
@@ -117,8 +115,7 @@ pub fn run() {
             if ok {
                 pairs();
             } else {
-                check("the file opens in an editor", false, "");
-                finish(SCENARIO);
+                give_up(SCENARIO, "the file opens in an editor");
             }
         },
     );
@@ -127,7 +124,7 @@ pub fn run() {
 /// Brackets and quotes typed in pairs, a closing one typed over, and a selection wrapped.
 fn pairs() {
     let Some(view) = open("pairs.rs") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "pairs.rs opens in an editor");
     };
     type_at(&view, NSRange::new(0, 0), "(");
     check(
@@ -168,7 +165,7 @@ fn pairs() {
 /// Return between brackets and after a colon, and Tab over several lines.
 fn returns() {
     let (Some(brace), Some(script)) = (open("brace.rs"), open("script.py")) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "brace.rs and script.py open in editors");
     };
     brace.setSelectedRange(NSRange::new(8, 0));
     send(&brace, sel!(insertNewline:));
@@ -205,7 +202,7 @@ fn returns() {
 /// Commenting lines out and in again, with the marker of each language.
 fn comments() {
     let Some(main) = open("src/main.rs") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "src/main.rs opens in an editor");
     };
     let end = line_start(&main, 4);
     main.setSelectedRange(NSRange::new(line_start(&main, 1), end - line_start(&main, 1)));
@@ -257,7 +254,7 @@ fn alert_field(view: &NSView) -> Option<Retained<NSTextField>> {
 /// "Gehe zu Zeile" answered with each of `answers` in turn, each time from the cursor at the text's start.
 fn go_to_line(answers: &'static [&'static str], mut reached: Vec<usize>) {
     let Some(main) = open("src/main.rs") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "src/main.rs opens in an editor");
     };
     let Some((answer, rest)) = answers.split_first() else {
         let last = main.document().text().line_count().saturating_sub(1);
@@ -270,13 +267,8 @@ fn go_to_line(answers: &'static [&'static str], mut reached: Vec<usize>) {
         return next(cancelled_line);
     };
     main.setSelectedRange(NSRange::new(0, 0));
-    in_any_mode_after(ALERT_UP, move || {
-        let app = MainThreadMarker::new().map(NSApplication::sharedApplication);
-        let field = app
-            .and_then(|app| app.modalWindow())
-            .and_then(|w| w.contentView())
-            .and_then(|v| alert_field(&v));
-        if let Some(field) = field {
+    when_alert_shows(None, move |alert| {
+        if let Some(field) = alert.contentView().and_then(|v| alert_field(&v)) {
             field.setStringValue(&ns(answer));
         }
         answer_alert(NSAlertFirstButtonReturn);
@@ -288,10 +280,10 @@ fn go_to_line(answers: &'static [&'static str], mut reached: Vec<usize>) {
 
 fn cancelled_line() {
     let Some(main) = open("src/main.rs") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "src/main.rs opens in an editor");
     };
     main.setSelectedRange(NSRange::new(3, 0));
-    let asked = answer_alert_saying(ALERT_UP, t("Gehe zu Zeile").to_string(), NSAlertSecondButtonReturn);
+    let asked = answer_alert_saying(t("Gehe zu Zeile").to_string(), NSAlertSecondButtonReturn);
     send(&main, sel!(ideGoToLine:));
     check(
         "cancelling Gehe zu Zeile leaves the cursor",
@@ -304,7 +296,7 @@ fn cancelled_line() {
 /// Folding from the commands, extra carets above, below and at the next occurrence, and line wrapping.
 fn folds_and_carets() {
     let Some(main) = open("src/main.rs") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "src/main.rs opens in an editor");
     };
     use crate::editor::selftest::{carets, copied, folded, set_carets};
     send(&main, sel!(ideFoldAll:));
@@ -375,7 +367,7 @@ fn mouse_at(
 fn option_mouse() {
     use objc2_app_kit::{NSEventModifierFlags as Flags, NSEventType as Kind};
     let Some(main) = open("src/main.rs") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "src/main.rs opens in an editor");
     };
     use crate::editor::selftest::{carets, paste_text, set_carets};
     let app = NSApplication::sharedApplication(main.mtm());
@@ -433,7 +425,10 @@ fn option_mouse() {
 fn gutter() {
     use objc2_app_kit::NSEventType;
     let (Some(controller), Some(main)) = (controller(), open("src/main.rs")) else {
-        return finish(SCENARIO);
+        return give_up(
+            SCENARIO,
+            "the folder's window is open and src/main.rs opens in an editor",
+        );
     };
     let path = root().join("src/main.rs");
     let click = |from_right: f64, kind: NSEventType| editor::gutter_mouse(&main, 0, from_right, kind);
@@ -479,7 +474,7 @@ fn gutter() {
 /// The status bar's indentation menu ticks what the file uses, and its entries switch to tabs and another width.
 fn indentation_menu() {
     let Some(script) = open("script.py") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "script.py opens in an editor");
     };
     let menu = editor::indent_menu(&script);
     let ticked: Vec<String> = menu
@@ -521,7 +516,7 @@ fn press(view: &EditorTextView, command: Sel) {
 fn completion_keys() {
     use ide_ui_lsp::completion;
     let Some(view) = open("list.rs") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "list.rs opens in an editor");
     };
     const LABELS: [&str; 5] = ["alpha", "beta", "abc", "able", "array"];
     view.setSelectedRange(NSRange::new(9, 0));
@@ -583,12 +578,11 @@ fn completion_keys() {
 /// Saving over a file that changed on disk asks first; a save that fails says so.
 fn changed_outside() {
     let Some(disk) = open("disk.txt") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "disk.txt opens in an editor");
     };
     type_at(&disk, NSRange::new(0, 0), "mine ");
     let _ = std::fs::write(root().join("disk.txt"), "theirs\n");
     let asked = answer_alert_saying(
-        ALERT_UP,
         tf("„{}“ wurde inzwischen außerhalb geändert.", &["disk.txt"]),
         NSAlertFirstButtonReturn,
     );
@@ -624,7 +618,7 @@ fn set_mode(path: &Path, mode: u32) {
 
 fn failed_save() {
     let Some(locked) = open("locked/file.txt") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "locked/file.txt opens in an editor");
     };
     type_at(&locked, NSRange::new(0, 0), "new ");
     let (dir, file) = (root().join("locked"), root().join("locked/file.txt"));
@@ -632,7 +626,7 @@ fn failed_save() {
     set_mode(&dir, 0o555);
     let seen = Rc::new(RefCell::new(Vec::new()));
     let texts = seen.clone();
-    in_any_mode_after(ALERT_UP, move || {
+    when_alert_shows(None, move |_| {
         texts.borrow_mut().extend(alert_texts());
         answer_alert(NSAlertFirstButtonReturn);
     });
@@ -661,20 +655,20 @@ fn failed_save() {
 /// Closing a tab with unsaved changes asks; Abbrechen keeps it, Nicht sichern closes it and leaves the file.
 fn close_dirty() {
     let (Some(controller), Some(notes)) = (controller(), open("notes.md")) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open and notes.md in an editor");
     };
     type_at(&notes, NSRange::new(0, 0), "x");
     let Some(tab) = editor::editors_of(&controller)
         .into_iter()
         .find_map(|(tab, view)| std::ptr::eq(&*view, &*notes).then_some(tab))
     else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "notes.md has its tab");
     };
     let question = tf("Änderungen an „{}“ sichern?", &["notes.md"]);
-    let kept = answer_alert_saying(ALERT_UP, question.clone(), NSAlertThirdButtonReturn);
+    let kept = answer_alert_saying(question.clone(), NSAlertThirdButtonReturn);
     controller.close_tab(tab);
     let still = controller.tab_ids().contains(&tab);
-    let gone = answer_alert_saying(ALERT_UP, question, NSAlertSecondButtonReturn);
+    let gone = answer_alert_saying(question, NSAlertSecondButtonReturn);
     controller.close_tab(tab);
     let disk = std::fs::read_to_string(root().join("notes.md")).unwrap_or_default();
     check(
@@ -689,12 +683,12 @@ fn close_dirty() {
 /// changed by the app's own git is taken.
 fn positions() {
     let Some(controller) = controller() else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the folder's window is open");
     };
     let main_path = root().join("src/main.rs");
     editor::reveal_position(&controller, &main_path, 2, 9);
     let Some(main) = open("src/main.rs") else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "src/main.rs opens in an editor");
     };
     let at = selection(&main).0;
     editor::reveal_position(&controller, &main_path, 2, 999);
@@ -731,7 +725,7 @@ fn positions() {
 /// A workspace edit renames an open file, and its editor and tab follow.
 fn file_operations() {
     if open("moved.txt").is_none() {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "moved.txt opens in an editor");
     }
     let uri = |file: &str| ide_lsp::uri::from_path(&root().join(file));
     let edit = WorkspaceEdit {
@@ -765,7 +759,7 @@ fn file_operations() {
 /// A server's question shows its answers as buttons of a sheet; the chosen one is answered.
 fn server_question() {
     let Some(window) = controller().and_then(|c| c.window()) else {
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the window shows");
     };
     let chosen: Rc<Cell<Option<Option<String>>>> = Rc::new(Cell::new(None));
     let heard = chosen.clone();
@@ -784,7 +778,7 @@ fn server_question() {
     if let Some(sheet) = window.attachedSheet() {
         window.endSheet_returnCode(&sheet, NSAlertSecondButtonReturn);
     }
-    in_any_mode_after(ALERT_UP, move || {
+    in_any_mode_after(SHEET_ANSWERED, move || {
         let answer = chosen.take();
         check(
             "a server's question shows three of its answers and a close button, and the chosen one is answered",

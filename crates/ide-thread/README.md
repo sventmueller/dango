@@ -14,7 +14,7 @@ flowchart LR
     apply -->|"Vec of Change: Header, Inserted, Updated, Removed, ..."| sink["session sink, Event::Changed"]
     sink -->|"main_soon in the app"| tab["agent tab: redraws only the entries named"]
     tab -->|"with_thread, snapshot"| thread
-    tab -->|"ThreadIndex::record, list, remove"| index[("threads index in the data folder")]
+    tab -->|"ThreadIndex::record, list, remove: each change read again and written under index.lock"| index[("threads index in the data folder")]
 ```
 
 The API is documented in [`src/lib.rs`](src/lib.rs) and its modules.

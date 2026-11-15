@@ -31,7 +31,7 @@ impl GitPanel {
             .collect()
     }
 
-    pub fn stage(&self, keys: Vec<RowKey>) {
+    pub(crate) fn stage(&self, keys: Vec<RowKey>) {
         let paths: Vec<PathBuf> = self
             .rows(&keys, Section::Changes)
             .iter()
@@ -42,7 +42,7 @@ impl GitPanel {
         }
     }
 
-    pub fn unstage(&self, keys: Vec<RowKey>) {
+    pub(crate) fn unstage(&self, keys: Vec<RowKey>) {
         let mut paths = vec![];
         for row in self.rows(&keys, Section::Staged) {
             paths.extend(row.from().map(std::path::Path::to_path_buf));
@@ -54,7 +54,7 @@ impl GitPanel {
     }
 
     /// Stages files whose conflicts the user resolved, which tells git they are done.
-    pub fn resolve(&self, keys: Vec<RowKey>) {
+    pub(crate) fn resolve(&self, keys: Vec<RowKey>) {
         let paths: Vec<PathBuf> = self
             .rows(&keys, Section::Conflicts)
             .iter()
@@ -65,16 +65,16 @@ impl GitPanel {
         }
     }
 
-    pub fn stage_all(&self) {
+    pub(crate) fn stage_all(&self) {
         self.run_local(Repository::stage_all);
     }
 
-    pub fn unstage_all(&self) {
+    pub(crate) fn unstage_all(&self) {
         self.run_local(Repository::unstage_all);
     }
 
     /// Asks, then drops unstaged changes and moves untracked files to the Trash.
-    pub fn discard(&self, keys: Vec<RowKey>) {
+    pub(crate) fn discard(&self, keys: Vec<RowKey>) {
         let rows: Vec<FileRow> = self
             .rows(&keys, Section::Changes)
             .into_iter()
@@ -134,7 +134,7 @@ impl GitPanel {
         }
     }
 
-    pub fn open(&self, keys: Vec<RowKey>) {
+    pub(crate) fn open(&self, keys: Vec<RowKey>) {
         self.open_tree_files(&keys);
         self.open_commit_files(&keys);
         let (Some(controller), Some(repo)) = (self.controller(), self.repo()) else {
@@ -150,7 +150,7 @@ impl GitPanel {
         }
     }
 
-    pub fn show_diff(&self, key: &RowKey, preview: bool) {
+    pub(crate) fn show_diff(&self, key: &RowKey, preview: bool) {
         if let RowKey::WorktreeFile(tree, file) = key {
             return self.show_tree_diff(tree, file, preview);
         }
@@ -167,7 +167,7 @@ impl GitPanel {
     }
 
     /// Runs `operation` on the git lane, then reads the repository again.
-    pub fn run_local(&self, operation: impl FnOnce(&Repository) -> ide_git::Result<()> + Send + 'static) {
+    pub(crate) fn run_local(&self, operation: impl FnOnce(&Repository) -> ide_git::Result<()> + Send + 'static) {
         let Some(repo) = self.repo() else { return };
         let id = self.id();
         let queued = work::local(
@@ -211,12 +211,12 @@ impl GitPanel {
     }
 
     /// Commits what is staged once the secrets check found nothing, or the user goes on anyway.
-    pub fn commit(&self) {
+    pub(crate) fn commit(&self) {
         self.commit_then(None);
     }
 
     /// Commits, then pushes for `Task::Push`, or pulls and pushes for `Task::Pull`.
-    pub fn commit_then(&self, after: Option<Task>) {
+    pub(crate) fn commit_then(&self, after: Option<Task>) {
         let message = self.ui().message.text();
         let amend = self.ui().amend.state() == NSControlStateValueOn;
         let staged = !self.read().model.staged.is_empty();
@@ -297,7 +297,7 @@ impl GitPanel {
         );
     }
 
-    fn committed(&self, result: Option<ide_git::Result<String>>) {
+    fn committed(&self, result: Option<ide_git::Result<ide_git::CommitId>>) {
         self.end();
         let after = self.state().after_commit.take();
         match result {
@@ -318,7 +318,7 @@ impl GitPanel {
     }
 
     /// Fetch and pull start at once; a push checks the commits it would send for secrets first.
-    pub fn remote(&self, task: Task) {
+    pub(crate) fn remote(&self, task: Task) {
         if task != Task::Push {
             self.start_remote(task, PullMode::default());
             return;
@@ -399,7 +399,7 @@ impl GitPanel {
     }
 
     /// The branch popup: switches to the chosen branch, or asks for a new one.
-    pub fn branch_chosen(&self, sender: Option<&AnyObject>) {
+    pub(crate) fn branch_chosen(&self, sender: Option<&AnyObject>) {
         let item = sender
             .and_then(|s| s.downcast_ref::<objc2_app_kit::NSPopUpButton>())
             .and_then(|popup| popup.selectedItem())
@@ -434,7 +434,7 @@ impl GitPanel {
         );
     }
 
-    pub fn new_branch(&self) {
+    pub(crate) fn new_branch(&self) {
         let Some(window) = self.controller().and_then(|c| c.window()) else {
             return;
         };
@@ -447,7 +447,7 @@ impl GitPanel {
                     return;
                 }
                 work::long(
-                    move || repo.create_branch(&name, None, true),
+                    move || repo.switch_to_new_branch(&name, None),
                     move |result| with_panel(id, |panel| panel.remote_done(result)),
                 );
             });
@@ -455,7 +455,7 @@ impl GitPanel {
     }
 
     /// Carries on the merge or rebase once its conflicts are resolved.
-    pub fn continue_operation(&self) {
+    pub(crate) fn continue_operation(&self) {
         let Some(repo) = self.repo() else { return };
         if !self.begin(Task::Continue, None) {
             return;
@@ -468,7 +468,7 @@ impl GitPanel {
     }
 
     /// Asks, then abandons the merge or rebase and puts back the state before it (E27).
-    pub fn abort_operation(&self) {
+    pub(crate) fn abort_operation(&self) {
         let operation = self.read().operation;
         let (Some(operation), Some(window)) = (operation, self.controller().and_then(|c| c.window())) else {
             return;
@@ -494,7 +494,7 @@ impl GitPanel {
         );
     }
 
-    pub fn init_repository(&self) {
+    pub(crate) fn init_repository(&self) {
         let root = self.root().to_path_buf();
         let id = self.id();
         work::long(
@@ -515,7 +515,7 @@ impl GitPanel {
     }
 
     /// Shows git's or a hook's output of the problem on view.
-    pub fn show_problem_output(&self) {
+    pub(crate) fn show_problem_output(&self) {
         let Some(problem) = self.read().problem.clone() else {
             return;
         };

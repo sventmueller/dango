@@ -27,16 +27,18 @@ use draw::fill;
 use rotor::Rotor;
 
 pub(in crate::editor) use draw::line_fragments;
-pub use draw::{click, click_gap, draw, draw_fragment, hits, offers, retarget, shown, tooltip, width_after_text};
-pub use rotor::attach;
+pub(crate) use draw::{
+    click, click_gap, draw, draw_fragment, hits, offers, retarget, shown, tooltip, width_after_text,
+};
+pub(crate) use rotor::attach;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;
 
 /// The part of the app an inset belongs to; each sets and clears its own.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Layer {
+pub(crate) enum Layer {
     /// What edit prediction proposes to write at the caret, and where a proposal elsewhere waits (E92); first in a gap
     /// and at a line's end, right where the caret is.
     Prediction,
@@ -52,7 +54,7 @@ pub enum Layer {
 
 /// Where an inset wants to show.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Place {
+pub(crate) enum Place {
     /// Before the character at its offset, in a gap of the line; at the line's end where no character precedes it.
     Inline,
     /// After the end of its offset's line.
@@ -60,32 +62,32 @@ pub enum Place {
 }
 
 /// What a click on an inset does.
-pub type Action = Rc<dyn Fn(&EditorTextView)>;
+pub(crate) type Action = Rc<dyn Fn(&EditorTextView)>;
 
 /// One text that is not in the file.
 #[derive(Clone)]
-pub struct Inset {
+pub(crate) struct Inset {
     /// The UTF-16 offset it belongs to.
-    pub at: usize,
-    pub text: String,
-    pub place: Place,
-    pub tooltip: Option<String>,
+    pub(crate) at: usize,
+    pub(crate) text: String,
+    pub(crate) place: Place,
+    pub(crate) tooltip: Option<String>,
     /// What a click on it does; without one a click goes on to the text.
-    pub action: Option<Action>,
+    pub(crate) action: Option<Action>,
     /// Room for a space before or after it, as the language server asks.
-    pub pad_left: bool,
-    pub pad_right: bool,
+    pub(crate) pad_left: bool,
+    pub(crate) pad_right: bool,
     /// Ghost text: drawn as code would be, italic in the secondary colour and without a box, with the caret before it;
     /// at a line's end it follows the text without a space.
-    pub ghost: bool,
+    pub(crate) ghost: bool,
     /// How serious it is, shown with a symbol before the text in the severity's colour.
-    pub severity: Option<ide_ui_lsp::Severity>,
+    pub(crate) severity: Option<ide_ui_lsp::Severity>,
     /// Its width on screen, with its margins, measured when it is set.
     width: f64,
 }
 
 impl Inset {
-    pub fn new(at: usize, text: impl Into<String>, place: Place) -> Inset {
+    pub(crate) fn new(at: usize, text: impl Into<String>, place: Place) -> Inset {
         Inset {
             at,
             text: text.into(),
@@ -123,19 +125,19 @@ struct Kerned {
 
 /// Where an inset was drawn last, in the editor's coordinates.
 #[derive(Debug, Clone)]
-pub struct Shown {
-    pub rect: NSRect,
-    pub layer: Layer,
-    pub index: usize,
+pub(crate) struct Shown {
+    pub(crate) rect: NSRect,
+    pub(crate) layer: Layer,
+    pub(crate) index: usize,
     /// Whether it sits in a gap of its line rather than after the line's end.
-    pub in_gap: bool,
+    pub(crate) in_gap: bool,
     /// For a gap, the offset after the character it follows, where the caret stands right of the gap.
-    pub gap_end: Option<usize>,
+    pub(crate) gap_end: Option<usize>,
 }
 
 /// What an editor shows that is not in its text.
 #[derive(Default)]
-pub struct Insets {
+pub(crate) struct Insets {
     layers: Vec<(Layer, Vec<Inset>)>,
     kerned: Vec<Kerned>,
     /// Text an edit put in since the last settling, which may have taken a kern attribute from its neighbour.
@@ -214,7 +216,7 @@ fn shown_text(inset: &Inset) -> String {
 }
 
 /// Shows `insets` for `layer` in `view`, in place of the ones it had.
-pub fn set(view: &EditorTextView, layer: Layer, mut insets: Vec<Inset>) {
+pub(crate) fn set(view: &EditorTextView, layer: Layer, mut insets: Vec<Inset>) {
     let font_size = view.ivars().font_size.get();
     let attributes = attributes(font_size, &NSColor::secondaryLabelColor());
     {
@@ -271,7 +273,7 @@ fn redraw_text(view: &EditorTextView, span: Range<usize>) {
 }
 
 /// Takes away everything `layer` shows in `view`.
-pub fn clear(view: &EditorTextView, layer: Layer) {
+pub(crate) fn clear(view: &EditorTextView, layer: Layer) {
     let had = view.ivars().insets.borrow().layers.iter().any(|(l, _)| *l == layer);
     if had {
         set(view, layer, Vec::new());
@@ -279,7 +281,7 @@ pub fn clear(view: &EditorTextView, layer: Layer) {
 }
 
 /// What `layer` shows in `view` now.
-pub fn of(view: &EditorTextView, layer: Layer) -> Vec<Inset> {
+pub(crate) fn of(view: &EditorTextView, layer: Layer) -> Vec<Inset> {
     view.ivars()
         .insets
         .borrow()
@@ -319,7 +321,7 @@ fn follow_range(range: &mut Range<usize>, change: &Change) -> bool {
 
 /// Keeps the insets on their text while it changes; an inset whose character went goes too, until its layer sets it
 /// again.
-pub fn shift(view: &EditorTextView, change: &Change) {
+pub(crate) fn shift(view: &EditorTextView, change: &Change) {
     let Ok(mut state) = view.ivars().insets.try_borrow_mut() else {
         return;
     };
@@ -377,7 +379,7 @@ fn anchor(
 }
 
 /// Whether an inline inset at UTF-16 offset `at` of `view` gets a gap of its line, rather than going to the line's end.
-pub fn gap_possible(view: &EditorTextView, at: usize) -> bool {
+pub(crate) fn gap_possible(view: &EditorTextView, at: usize) -> bool {
     let Some(storage) = view.storage() else {
         return false;
     };
@@ -512,7 +514,7 @@ fn kerned_in(storage: &NSTextStorage, range: Range<usize>) -> Vec<Range<usize>> 
 /// Puts the kern attributes where the gaps are now, and takes them from text an edit gave them to by inheritance.
 /// After an edit only the gaps near it are looked at; the others moved with the text. Waits while an input method has
 /// marked text, which an attribute change would disturb.
-pub fn settle(view: &EditorTextView) {
+pub(crate) fn settle(view: &EditorTextView) {
     if view.hasMarkedText() {
         view.later(sel!(ideInsets), 0.1);
         return;
@@ -591,7 +593,7 @@ fn apply(storage: &NSTextStorage, remove: &[Range<usize>], wanted: &[Kerned], ol
 }
 
 /// The text of `view` was put in whole, without its attributes: every gap needs its kern again.
-pub fn reset(view: &EditorTextView) {
+pub(crate) fn reset(view: &EditorTextView) {
     if let Ok(mut state) = view.ivars().insets.try_borrow_mut() {
         state.kerned.clear();
         state.full = true;
@@ -600,7 +602,7 @@ pub fn reset(view: &EditorTextView) {
 }
 
 /// `attributes` without a kern, when they have one: text typed after a gap must not open a gap of its own.
-pub fn without_kern(
+pub(crate) fn without_kern(
     attributes: &NSDictionary<NSString, AnyObject>,
 ) -> Option<Retained<NSDictionary<NSString, AnyObject>>> {
     let key = constant!(NSKernAttributeName);
@@ -611,7 +613,7 @@ pub fn without_kern(
 }
 
 /// Takes a kern out of the typing attributes of `view`, which AppKit copies from the character before the caret.
-pub fn strip_typing(view: &EditorTextView) {
+pub(crate) fn strip_typing(view: &EditorTextView) {
     if let Some(clean) = without_kern(&view.typingAttributes()) {
         // SAFETY: The dictionary holds the attributes the view had, which are valid typing attributes.
         unsafe { view.setTypingAttributes(&clean) };
@@ -636,7 +638,7 @@ fn publish(view: &EditorTextView, kerned: &[Kerned]) {
     }
 }
 
-pub struct GapIvars {
+pub(crate) struct GapIvars {
     /// The offset after each gap's character, the gap's width and whether the caret stands at its left edge, ordered
     /// by offset.
     gaps: std::cell::RefCell<Rc<[(usize, f64, bool)]>>,
@@ -648,7 +650,7 @@ define_class!(
     #[unsafe(super(objc2_app_kit::NSTextLayoutManager))]
     #[name = "IDEGapLayoutManager"]
     #[ivars = GapIvars]
-    pub struct GapLayoutManager;
+    pub(crate) struct GapLayoutManager;
 
     unsafe impl NSObjectProtocol for GapLayoutManager {}
 
@@ -748,7 +750,7 @@ impl GapLayoutManager {
     }
 
     /// A layout manager that knows no gaps yet.
-    pub fn new() -> Retained<GapLayoutManager> {
+    pub(crate) fn new() -> Retained<GapLayoutManager> {
         let this = Self::alloc().set_ivars(GapIvars {
             gaps: std::cell::RefCell::new(Rc::new([])),
         });

@@ -7,7 +7,6 @@
 //! click, folds a file and asks before replacing everything.
 
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Sel};
@@ -20,11 +19,9 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSNotificationCenter, NSObject, NSPoint, NSRect, NSSize, NSString};
 
-use super::helpers::{
-    self, alert_texts, answer_alert, answer_alert_saying, in_any_mode_after, open_project, wait_until, window_of,
-};
+use super::helpers::{self, answer_alert, answer_alert_saying, open_project, wait_until, when_alert_shows, window_of};
 use super::settings_pages::all_in;
-use super::{check, finish};
+use super::{check, finish, give_up};
 use crate::util::{constant, ns};
 use crate::window::{Panel, WindowController, search_selftest as search};
 
@@ -37,7 +34,7 @@ const SVG: &str =
 const RETURN: u16 = 36;
 const ESCAPE: u16 = 53;
 
-pub fn run() {
+pub(crate) fn run() {
     let files = [
         ("src/main.rs", MAIN),
         ("src/lib.rs", LIB),
@@ -81,7 +78,7 @@ fn send(controller: &WindowController, action: Sel, sender: Option<&AnyObject>) 
 
 fn tabs(root: PathBuf) {
     let Some(c) = controller(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let front = c.front_title();
     send(&c, sel!(idePreviousTab:), None);
@@ -154,7 +151,7 @@ fn panel_with_query(query: &str) -> bool {
 
 fn symbols(root: PathBuf) {
     let Some(c) = controller(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     send(&c, sel!(ideProjectSymbols:), None);
     let shown = panel_with_query("#");
@@ -169,12 +166,11 @@ fn symbols(root: PathBuf) {
 
 /// The row of `path` in `outline`, whose items are the paths.
 fn row_of(outline: &NSOutlineView, path: &Path) -> Option<isize> {
-    let wanted = path.to_string_lossy();
     (0..outline.numberOfRows()).find(|row| {
         outline
             .itemAtRow(*row)
-            .and_then(|item| item.downcast::<NSString>().ok())
-            .is_some_and(|item| item.to_string() == wanted)
+            .and_then(|item| ide_ui_common::panel::RowItems::<PathBuf>::key_of(&item))
+            .is_some_and(|item| item == path)
     })
 }
 
@@ -221,17 +217,11 @@ fn titles(menu: &NSMenu) -> Vec<String> {
     menu.itemArray().iter().map(|item| item.title().to_string()).collect()
 }
 
-/// Types `name` into the field of the alert titled `title` once it runs and confirms it.
+/// Types `name` into the field of the alert titled `title` as soon as it shows and confirms it.
 fn name_in_alert(title: &'static str, name: &'static str) {
-    in_any_mode_after(Duration::from_millis(500), move || {
-        if !alert_texts().iter().any(|text| text == title) {
-            return;
-        }
-        let mtm = MainThreadMarker::new();
-        if let Some(alert) = mtm.and_then(|mtm| NSApplication::sharedApplication(mtm).modalWindow()) {
-            for field in all_in::<NSTextField>(&alert).iter().filter(|f| f.isEditable()) {
-                field.setStringValue(&ns(name));
-            }
+    when_alert_shows(Some(title.to_string()), move |alert| {
+        for field in all_in::<NSTextField>(alert).iter().filter(|f| f.isEditable()) {
+            field.setStringValue(&ns(name));
         }
         answer_alert(NSAlertFirstButtonReturn);
     });
@@ -263,7 +253,7 @@ fn tree_command(c: &WindowController, path: &Path, title: &str) -> Option<Vec<St
 /// Opens `src` in the folder tree and waits for its rows, which are read on the disk lane.
 fn files_menu(root: PathBuf) {
     let Some(c) = controller(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     if let Some(outline) = c.file_tree_outline()
         && let Some(row) = row_of(&outline, &root.join("src"))
@@ -283,7 +273,7 @@ fn files_menu(root: PathBuf) {
 
 fn files_menu_shown(root: PathBuf) {
     let Some(c) = controller(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let lib = root.join("src/lib.rs");
     let menu = tree_command(&c, &lib, "Pfad kopieren");
@@ -309,7 +299,7 @@ fn files_menu_shown(root: PathBuf) {
     let opened = move || controller(&probe).is_some_and(|c| c.tab_titles().iter().any(|t| t.contains("pic.svg")));
     wait_until(opened, move |_| {
         let Some(c) = controller(&root) else {
-            return finish(NAME);
+            return give_up(NAME, "the folder's window is open");
         };
         check(
             "an SVG's menu offers to open it as preview, which opens it",
@@ -333,7 +323,7 @@ fn files_menu_shown(root: PathBuf) {
 
 fn rename_taken(root: PathBuf, renamed: bool) {
     let Some(c) = controller(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let renamed_to = root.join("src/other2.rs");
     check(
@@ -342,11 +332,7 @@ fn rename_taken(root: PathBuf, renamed: bool) {
         "",
     );
     name_in_alert("Umbenennen", "main.rs");
-    let said = answer_alert_saying(
-        Duration::from_millis(1200),
-        "„main.rs“ gibt es schon.".to_string(),
-        NSAlertFirstButtonReturn,
-    );
+    let said = answer_alert_saying("„main.rs“ gibt es schon.".to_string(), NSAlertFirstButtonReturn);
     let asked = tree_command(&c, &renamed_to, "Umbenennen …").is_some();
     check(
         "a name that is taken is refused and the alert says so",
@@ -362,7 +348,7 @@ fn rename_taken(root: PathBuf, renamed: bool) {
     let made = move || probe.join("src/a.txt").is_file() && controller_front(&probe).as_deref() == Some("a.txt");
     wait_until(made, move |_| {
         let Some(c) = controller(&root) else {
-            return finish(NAME);
+            return give_up(NAME, "the folder's window is open");
         };
         check(
             "the menu of a folder makes a folder and a file in it, and the file opens",
@@ -380,7 +366,7 @@ fn rename_taken(root: PathBuf, renamed: bool) {
 /// A click on a row of the folder tree opens it, a double click too.
 fn tree_click(root: PathBuf) {
     let Some(c) = controller(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let notes = root.join("notes.md");
     let opened = c.file_tree_outline().is_some_and(|outline| {
@@ -404,7 +390,7 @@ fn tree_click(root: PathBuf) {
     let shown = move || controller_front(&probe).is_some_and(|t| t.contains("notes"));
     wait_until(shown, move |_| {
         let Some(c) = controller(&root) else {
-            return finish(NAME);
+            return give_up(NAME, "the folder's window is open");
         };
         check(
             "a click and a double click on a file's row open it",
@@ -475,7 +461,7 @@ fn outline_of(root: &Path) -> Option<Retained<NSOutlineView>> {
 
 fn searching(root: PathBuf) {
     let Some(c) = controller(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     send(&c, sel!(ideSearchProject:), None);
     let window = c.window();
@@ -485,7 +471,9 @@ fn searching(root: PathBuf) {
         c.inspect().panel == Some(Panel::Search) && field.is_some(),
         "",
     );
-    let Some((field, _)) = field else { return finish(NAME) };
+    let Some((field, _)) = field else {
+        return give_up(NAME, "the search panel's field has the focus");
+    };
     type_into(&field, "needle");
     let ready = root.clone();
     wait_until(
@@ -505,14 +493,13 @@ fn searching(root: PathBuf) {
 /// The arrow down moves from the field into the results, Return there opens the match, Esc empties the field.
 fn field_keys(root: PathBuf, total: usize) {
     let Some(c) = controller(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
     let (Some(window), Some(panel), Some(outline)) = (c.window(), panel(&root), outline_of(&root)) else {
-        return finish(NAME);
+        return give_up(NAME, "the window, the search panel and the file tree show");
     };
     let Some((field, editor)) = focused_field(&window) else {
-        check("the search field keeps the focus", false, "");
-        return finish(NAME);
+        return give_up(NAME, "the search field keeps the focus");
     };
     let control: &NSControl = &field;
     // SAFETY: The delegate method the field editor calls for a key's command, with the field and its editor.
@@ -602,7 +589,7 @@ fn options(root: PathBuf, total: usize) {
 /// A match's menu replaces it and opens it; a click on a match opens it too.
 fn row_menu(root: PathBuf) {
     let Some(outline) = outline_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the file tree shows");
     };
     let before = matches(&root);
     let menu = menu_at(&outline, 1);
@@ -619,7 +606,7 @@ fn row_menu(root: PathBuf) {
             );
             undo_replaced(&root);
             let Some(outline) = outline_of(&root) else {
-                return finish(NAME);
+                return give_up(NAME, "the file tree shows");
             };
             let opened = menu_at(&outline, 1).is_some_and(|m| pick(&m, "Öffnen"));
             let front = controller(&root).and_then(|c| c.front_title());
@@ -658,7 +645,7 @@ fn undo_replaced(root: &Path) {
 
 fn fold_and_replace_all(root: PathBuf) {
     let Some(outline) = outline_of(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the file tree shows");
     };
     let rows = outline.numberOfRows();
     if let Some(item) = outline.itemAtRow(0) {
@@ -754,12 +741,13 @@ fn post(name: &NSString, window: &NSWindow) {
 /// screen nothing is cleared.
 fn full_screen(root: PathBuf) {
     let Some(c) = controller(&root) else {
-        return finish(NAME);
+        return give_up(NAME, "the folder's window is open");
     };
-    let Some(window) = c.window() else { return finish(NAME) };
+    let Some(window) = c.window() else {
+        return give_up(NAME, "the window shows");
+    };
     let Some((toolbar, background)) = stand_in_toolbar(&window, c.inspect().sidebar_width) else {
-        check("a stand-in for the toolbar's window can be made", false, "");
-        return finish(NAME);
+        return give_up(NAME, "a stand-in for the toolbar's window can be made");
     };
     post(constant!(NSWindowDidEnterFullScreenNotification), &window);
     let kept = background.alphaValue();

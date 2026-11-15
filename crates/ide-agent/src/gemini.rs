@@ -118,18 +118,20 @@ fn content(message: &Message) -> Option<Value> {
     Some(json!({"role": role, "parts": parts}))
 }
 
-/// What the stream has said so far.
-/// Takes `chunks` as a stream would, for the fuzz target.
+/// Takes `chunks` as a stream would, for the fuzz target: what it told along the way, and the blocks it built.
 #[cfg(feature = "fuzzing")]
-pub(crate) fn read_all(chunks: &[Value]) {
+pub(crate) fn read_all(chunks: &[Value]) -> (Vec<Delta>, Vec<Block>) {
     let mut answer = Answer::default();
+    let mut told = Vec::new();
     for chunk in chunks {
-        if answer.take(chunk, &mut |_| {}).is_err() {
+        if answer.take(chunk, &mut |delta| told.push(delta)).is_err() {
             break;
         }
     }
+    (told, answer.blocks)
 }
 
+/// What the stream has said so far.
 #[derive(Default)]
 struct Answer {
     blocks: Vec<Block>,

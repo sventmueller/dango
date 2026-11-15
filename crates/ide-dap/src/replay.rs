@@ -14,10 +14,9 @@ use crate::protocol::{self, Message};
 
 /// One line of a recording.
 #[derive(Debug, Clone, PartialEq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Line {
-    /// Whether the client sent it.
-    pub from_client: bool,
-    /// The message.
+    pub(crate) from_client: bool,
     pub message: Message,
 }
 

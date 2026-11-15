@@ -3,5 +3,5 @@
 
 mod start;
 
-pub use ide_ui_git::worktrees::*;
-pub use start::{agents, ask_and_open, can_start, open_thread};
+pub(crate) use ide_ui_git::worktrees::*;
+pub(crate) use start::{agents, ask_and_open, can_start, open_thread};

@@ -25,8 +25,8 @@ pub enum Method {
 
 /// A call to an API.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Request {
-    /// The method.
     pub method: Method,
     /// The whole URL.
     pub url: String,
@@ -39,17 +39,15 @@ pub struct Request {
 /// What came back.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Response {
-    /// The status code.
-    pub status: u16,
+    pub(crate) status: u16,
     /// The headers, names in lower case.
-    pub headers: Vec<(String, String)>,
-    /// The body.
-    pub body: Vec<u8>,
+    pub(crate) headers: Vec<(String, String)>,
+    pub(crate) body: Vec<u8>,
 }
 
 impl Response {
     /// The first header called `name`, in any case.
-    pub fn header(&self, name: &str) -> Option<&str> {
+    pub(crate) fn header(&self, name: &str) -> Option<&str> {
         self.headers
             .iter()
             .find(|(n, _)| n.eq_ignore_ascii_case(name))
@@ -57,7 +55,7 @@ impl Response {
     }
 
     /// The body as text, with invalid UTF-8 replaced.
-    pub fn text(&self) -> String {
+    pub(crate) fn text(&self) -> String {
         String::from_utf8_lossy(&self.body).into_owned()
     }
 }
@@ -68,22 +66,18 @@ pub trait Transport: Send + Sync {
     fn send(&self, request: &Request) -> Result<Response>;
 }
 
-/// The network over HTTPS checked against the system's certificates. Redirects keep no `Authorization` header, so a
-/// log's download from blob storage gets no token.
+/// The network over HTTPS checked against the system's certificates. A request on HTTPS stays on it through its
+/// redirects, and redirects keep no `Authorization` header, so a log's download from blob storage gets no token.
 pub struct Network {
-    agent: ide_net::ureq::Agent,
+    service: ide_net::Service,
 }
 
 impl Network {
     /// A client with time limits for connecting and reading.
     pub fn new() -> Network {
-        let agent = ide_net::client(ide_net::Client {
-            purpose: "CI",
-            connect: Duration::from_secs(20),
-            read: Duration::from_secs(60),
-            status_as_error: false,
-        });
-        Network { agent }
+        Network {
+            service: ide_net::Service::new("CI", Duration::from_secs(20), Duration::from_secs(60)),
+        }
     }
 }
 
@@ -95,40 +89,19 @@ impl Default for Network {
 
 impl Transport for Network {
     fn send(&self, request: &Request) -> Result<Response> {
-        let result = match request.method {
-            Method::Get => {
-                let mut call = self.agent.get(&request.url);
-                for (name, value) in &request.headers {
-                    call = call.header(name, value);
-                }
-                call.call()
-            }
-            Method::Post => {
-                let mut call = self.agent.post(&request.url);
-                for (name, value) in &request.headers {
-                    call = call.header(name, value);
-                }
-                if request.body.is_empty() {
-                    call.send_empty()
-                } else {
-                    call.send(&request.body[..])
-                }
-            }
+        let post = match request.method {
+            Method::Get => None,
+            Method::Post => Some(&request.body[..]),
         };
-        let mut response = result.map_err(|e| Error::Network(e.to_string()))?;
-        let headers = response
-            .headers()
-            .iter()
-            .map(|(n, v)| (n.as_str().to_ascii_lowercase(), v.to_str().unwrap_or("").to_string()))
-            .collect();
-        let status = response.status().as_u16();
-        let body = response
-            .body_mut()
-            .with_config()
-            .limit(BODY_LIMIT as u64)
-            .read_to_vec()
+        let answer = self
+            .service
+            .send(&request.url, &request.headers, post, BODY_LIMIT as u64)
             .map_err(|e| Error::Network(e.to_string()))?;
-        Ok(Response { status, headers, body })
+        Ok(Response {
+            status: answer.status,
+            headers: answer.headers,
+            body: answer.body,
+        })
     }
 }
 

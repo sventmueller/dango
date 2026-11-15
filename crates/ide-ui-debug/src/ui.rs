@@ -15,7 +15,7 @@ use splat_i18n::t;
 
 use super::model::Command;
 use super::panel::DebugPanel;
-use ide_ui_common::util::{label, ns, pin_edges, set_action};
+use ide_ui_common::util::{activate, auto_layout, label, ns, pin_edges, pin_sides, set_action};
 
 /// How far the panel's content keeps from the sidebar's edges: as far as the panel's title.
 const MARGIN: f64 = 8.0;
@@ -33,7 +33,7 @@ define_class!(
     #[unsafe(super(NSOutlineView))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEDebugOutlineView"]
-    pub struct DebugOutlineView;
+    pub(crate) struct DebugOutlineView;
 
     unsafe impl NSObjectProtocol for DebugOutlineView {}
 
@@ -156,31 +156,31 @@ impl DebugOutlineView {
 }
 
 /// The views of the panel.
-pub struct Ui {
-    pub page: Retained<NSView>,
+pub(crate) struct Ui {
+    pub(crate) page: Retained<NSView>,
     /// The controls for the panel's title row.
-    pub header: Retained<NSStackView>,
+    pub(crate) header: Retained<NSStackView>,
     /// The controls in the order of `Command::CONTROLS`.
-    pub controls: Vec<Retained<NSButton>>,
-    pub configurations: Retained<NSPopUpButton>,
-    pub start: Retained<NSButton>,
-    pub outline: Retained<NSOutlineView>,
+    pub(crate) controls: Vec<Retained<NSButton>>,
+    pub(crate) configurations: Retained<NSPopUpButton>,
+    pub(crate) start: Retained<NSButton>,
+    pub(crate) outline: Retained<NSOutlineView>,
     /// Why nothing starts in a folder the user does not trust, with the way to trust it.
-    pub untrusted: Retained<NSStackView>,
-    pub inspector: InspectorUi,
+    pub(crate) untrusted: Retained<NSStackView>,
+    pub(crate) inspector: InspectorUi,
 }
 
 /// The views of the inspector.
-pub struct InspectorUi {
-    pub page: Retained<NSView>,
-    pub outline: Retained<NSOutlineView>,
+pub(crate) struct InspectorUi {
+    pub(crate) page: Retained<NSView>,
+    pub(crate) outline: Retained<NSOutlineView>,
     /// The field for a new watch expression, which the self-test types into.
     #[cfg(feature = "selftest")]
-    pub watch: Retained<NSTextField>,
+    pub(crate) watch: Retained<NSTextField>,
 }
 
 /// The symbol and the name of a control.
-pub fn control_look(command: Command) -> (&'static str, &'static str) {
+pub(crate) fn control_look(command: Command) -> (&'static str, &'static str) {
     match command {
         Command::Continue => ("play.fill", t("Fortsetzen")),
         Command::StepOver => ("arrow.uturn.right", t("Überspringen")),
@@ -206,7 +206,7 @@ fn shortcut_of(command: Command) -> Option<&'static str> {
 }
 
 /// A shortcut of the keymap, such as `ctrl+cmd+y`, as macOS writes it: ⌃⌘Y.
-pub fn key_symbols(keys: &str) -> String {
+pub(crate) fn key_symbols(keys: &str) -> String {
     let Some((modifiers, key)) = ide_core::keymap::split(keys) else {
         return keys.to_string();
     };
@@ -225,13 +225,13 @@ pub fn key_symbols(keys: &str) -> String {
 }
 
 /// The command of a control that sent an action.
-pub fn command_of(sender: Option<&AnyObject>) -> Option<Command> {
+pub(crate) fn command_of(sender: Option<&AnyObject>) -> Option<Command> {
     let tag = sender?.downcast_ref::<NSControl>()?.tag();
     Command::CONTROLS.get(usize::try_from(tag).ok()?).copied()
 }
 
 impl Ui {
-    pub fn new(mtm: MainThreadMarker, panel: &DebugPanel) -> Ui {
+    pub(crate) fn new(mtm: MainThreadMarker, panel: &DebugPanel) -> Ui {
         let (header, controls) = header(mtm, panel);
         let page = NSView::new(mtm);
         let content = NSStackView::new(mtm);
@@ -260,12 +260,7 @@ impl Ui {
         content.insertArrangedSubview_atIndex(&start_row, 0);
         content.insertArrangedSubview_atIndex(&untrusted, 1);
         for (view, inset) in [(&*list as &NSView, 0.0), (&untrusted, MARGIN), (&start_row, MARGIN)] {
-            view.leadingAnchor()
-                .constraintEqualToAnchor_constant(&content.leadingAnchor(), inset)
-                .setActive(true);
-            view.trailingAnchor()
-                .constraintEqualToAnchor_constant(&content.trailingAnchor(), -inset)
-                .setActive(true);
+            pin_sides(view, &content, inset);
             view.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Vertical);
         }
         list.setContentHuggingPriority_forOrientation(1.0, NSLayoutConstraintOrientation::Vertical);
@@ -284,7 +279,7 @@ impl Ui {
 
     /// Greys out the controls that cannot run now (E101) and names Stop "Trennen" for a program the session only
     /// attached to.
-    pub fn enable_controls(&self, can: &dyn Fn(Command) -> bool, detaches: bool) {
+    pub(crate) fn enable_controls(&self, can: &dyn Fn(Command) -> bool, detaches: bool) {
         for (command, button) in Command::CONTROLS.into_iter().zip(&self.controls) {
             button.setEnabled(can(command));
             if command == Command::Stop {
@@ -320,11 +315,9 @@ impl InspectorUi {
         page.addSubview(&close);
         page.addSubview(&list);
         page.addSubview(&watch);
-        for view in [&*title as &NSView, &close, &list, &watch] {
-            view.setTranslatesAutoresizingMaskIntoConstraints(false);
-        }
+        auto_layout(&[&title, &close, &list, &watch]);
         let guide = page.safeAreaLayoutGuide();
-        for constraint in [
+        activate([
             title
                 .topAnchor()
                 .constraintEqualToAnchor_constant(&guide.topAnchor(), MARGIN),
@@ -353,9 +346,7 @@ impl InspectorUi {
             watch
                 .bottomAnchor()
                 .constraintEqualToAnchor_constant(&page.bottomAnchor(), -MARGIN),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         InspectorUi {
             page,
             outline,
@@ -468,7 +459,12 @@ fn outline(
 }
 
 /// A row of two texts after a symbol: a name and, dimmer, what it is or where.
-pub fn row(mtm: MainThreadMarker, symbol: Option<(&str, &NSColor)>, title: &str, detail: &str) -> Retained<NSView> {
+pub(crate) fn row(
+    mtm: MainThreadMarker,
+    symbol: Option<(&str, &NSColor)>,
+    title: &str,
+    detail: &str,
+) -> Retained<NSView> {
     // The parts sit directly in a table cell view, which hands the selection's background style on to them, so the
     // texts turn light on a selected row.
     let cell = objc2_app_kit::NSTableCellView::new(mtm);
@@ -481,20 +477,17 @@ pub fn row(mtm: MainThreadMarker, symbol: Option<(&str, &NSColor)>, title: &str,
         icon.setSymbolConfiguration(Some(
             &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
                 11.0,
-                // SAFETY: AppKit sets its font weight constants when it loads.
-                unsafe { objc2_app_kit::NSFontWeightRegular },
+                ide_ui_common::constant!(objc2_app_kit::NSFontWeightRegular),
             ),
         ));
         ide_ui_common::util::hide_from_voiceover(&icon);
         cell.addSubview(&icon);
         icon.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
+        activate([
             icon.leadingAnchor().constraintEqualToAnchor(&leading),
             icon.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
             icon.widthAnchor().constraintEqualToConstant(16.0),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
         // SAFETY: The cell holds its image view weakly; the view is its subview and lives as long.
         unsafe { cell.setImageView(Some(&icon)) };
         leading = icon.trailingAnchor();
@@ -506,14 +499,12 @@ pub fn row(mtm: MainThreadMarker, symbol: Option<(&str, &NSColor)>, title: &str,
     name.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Horizontal);
     cell.addSubview(&name);
     name.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
+    activate([
         name.leadingAnchor().constraintEqualToAnchor_constant(&leading, gap),
         name.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
         name.trailingAnchor()
             .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     // SAFETY: The cell holds its text field weakly; the field is its subview and lives as long.
     unsafe { cell.setTextField(Some(&name)) };
     if !detail.is_empty() {
@@ -524,25 +515,28 @@ pub fn row(mtm: MainThreadMarker, symbol: Option<(&str, &NSColor)>, title: &str,
         more.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Horizontal);
         cell.addSubview(&more);
         more.setTranslatesAutoresizingMaskIntoConstraints(false);
-        for constraint in [
+        activate([
             more.leadingAnchor()
                 .constraintEqualToAnchor_constant(&name.trailingAnchor(), 5.0),
             more.firstBaselineAnchor()
                 .constraintEqualToAnchor(&name.firstBaselineAnchor()),
             more.trailingAnchor()
                 .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
-        ] {
-            constraint.setActive(true);
-        }
+        ]);
     }
     cell.into_super()
 }
 
 /// The height of a session's row, its name above how it stands.
-pub const SESSION_HEIGHT: f64 = 36.0;
+pub(crate) const SESSION_HEIGHT: f64 = 36.0;
 
 /// A row with `title` above `detail`, after a symbol, for a session whose state may be a long sentence.
-pub fn two_lines(mtm: MainThreadMarker, symbol: (&str, &NSColor), title: &str, detail: &str) -> Retained<NSView> {
+pub(crate) fn two_lines(
+    mtm: MainThreadMarker,
+    symbol: (&str, &NSColor),
+    title: &str,
+    detail: &str,
+) -> Retained<NSView> {
     let cell = objc2_app_kit::NSTableCellView::new(mtm);
     let icon = objc2_app_kit::NSImageView::new(mtm);
     icon.setImage(ide_ui_common::util::symbol(symbol.0, "").as_deref());
@@ -561,7 +555,7 @@ pub fn two_lines(mtm: MainThreadMarker, symbol: (&str, &NSColor), title: &str, d
     for field in [&name, &more] {
         field.setContentCompressionResistancePriority_forOrientation(250.0, NSLayoutConstraintOrientation::Horizontal);
     }
-    for constraint in [
+    activate([
         icon.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
         icon.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
         icon.widthAnchor().constraintEqualToConstant(16.0),
@@ -574,9 +568,7 @@ pub fn two_lines(mtm: MainThreadMarker, symbol: (&str, &NSColor), title: &str, d
         more.trailingAnchor()
             .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
         more.topAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     // SAFETY: The cell holds its text field and image view weakly; both are its subviews and live as long.
     unsafe {
         cell.setTextField(Some(&name));
@@ -586,10 +578,10 @@ pub fn two_lines(mtm: MainThreadMarker, symbol: (&str, &NSColor), title: &str, d
 }
 
 /// The height of a row that says why a list is empty, in two lines.
-pub const NOTE_HEIGHT: f64 = 40.0;
+pub(crate) const NOTE_HEIGHT: f64 = 40.0;
 
 /// A row that says why a list is empty, wrapping onto a second line.
-pub fn note(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
+pub(crate) fn note(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
     let cell = objc2_app_kit::NSTableCellView::new(mtm);
     let field = NSTextField::wrappingLabelWithString(&ns(text), mtm);
     field.setTextColor(Some(&NSColor::secondaryLabelColor()));
@@ -597,15 +589,13 @@ pub fn note(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
     field.setContentCompressionResistancePriority_forOrientation(250.0, NSLayoutConstraintOrientation::Horizontal);
     cell.addSubview(&field);
     field.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
+    activate([
         field.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
         field
             .trailingAnchor()
             .constraintEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
         field.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-    ] {
-        constraint.setActive(true);
-    }
+    ]);
     // SAFETY: The cell holds its text field weakly; the field is its subview and lives as long.
     unsafe { cell.setTextField(Some(&field)) };
     cell.into_super()

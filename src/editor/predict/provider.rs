@@ -18,13 +18,13 @@ use crate::util::main_soon;
 
 /// The settings edit prediction follows, as last read.
 #[derive(Debug, Clone, Default)]
-pub struct Chosen {
-    pub choice: Choice,
-    pub off_for: Vec<String>,
-    pub exclude: Vec<String>,
-    pub ollama: Option<Local>,
-    pub lm_studio: Option<Local>,
-    pub consent: Vec<String>,
+pub(crate) struct Chosen {
+    pub(crate) choice: Choice,
+    pub(crate) off_for: Vec<String>,
+    pub(crate) exclude: Vec<String>,
+    pub(crate) ollama: Option<Local>,
+    pub(crate) lm_studio: Option<Local>,
+    pub(crate) consent: Vec<String>,
 }
 
 impl Chosen {
@@ -41,7 +41,7 @@ impl Chosen {
     }
 
     /// The local model the choice names, if it is one.
-    pub fn local(&self) -> Option<&Local> {
+    pub(crate) fn local(&self) -> Option<&Local> {
         match self.choice {
             Choice::Ollama => self.ollama.as_ref(),
             Choice::LmStudio => self.lm_studio.as_ref(),
@@ -50,18 +50,18 @@ impl Chosen {
     }
 
     /// The name the consent for the chosen provider is kept under, when it needs one.
-    pub fn consent_id(&self) -> Option<String> {
+    pub(crate) fn consent_id(&self) -> Option<String> {
         model::consent_id(self.choice, self.local())
     }
 
     /// Whether the chosen provider may get text: it needs no consent, or has it.
-    pub fn consented(&self) -> bool {
+    pub(crate) fn consented(&self) -> bool {
         self.consent_id().is_none_or(|id| self.consent.contains(&id))
     }
 }
 
 /// Copilot for one folder.
-pub enum Slot {
+pub(crate) enum Slot {
     Starting,
     Running(Arc<Copilot>),
     /// Its server is not installed.
@@ -76,7 +76,7 @@ type Made = (Choice, Local, Arc<dyn Provider>);
 
 /// The providers of the app and what the editors asked them.
 #[derive(Default)]
-pub struct Predictions {
+pub(crate) struct Predictions {
     chosen: RefCell<Option<Chosen>>,
     /// Counts questions, so that the answer to an older one is dropped.
     next: Cell<u64>,
@@ -101,12 +101,12 @@ fn with<R>(f: impl FnOnce(&Predictions) -> R) -> R {
 }
 
 /// The settings as last read.
-pub fn chosen() -> Chosen {
+pub(crate) fn chosen() -> Chosen {
     with(|p| p.chosen.borrow_mut().get_or_insert_with(Chosen::load).clone())
 }
 
 /// Reads the settings again after they changed, and lets the editors follow.
-pub fn settings_changed() {
+pub(crate) fn settings_changed() {
     with(|p| {
         p.chosen.borrow_mut().take();
         p.local.borrow_mut().take();
@@ -115,7 +115,7 @@ pub fn settings_changed() {
 }
 
 /// The id of the next question.
-pub fn next_question() -> u64 {
+pub(crate) fn next_question() -> u64 {
     with(|p| {
         p.next.set(p.next.get() + 1);
         p.next.get()
@@ -123,7 +123,7 @@ pub fn next_question() -> u64 {
 }
 
 /// Whether requests leave the Mac: the chosen provider needs consent, or the self-test's counts as outside.
-pub fn outside() -> bool {
+pub(crate) fn outside() -> bool {
     if forced() {
         return with(|p| p.forced_outside.get());
     }
@@ -131,18 +131,18 @@ pub fn outside() -> bool {
 }
 
 /// The last secrets check of each file.
-pub fn scans() -> super::guard::Scans {
+pub(crate) fn scans() -> super::guard::Scans {
     with(|p| p.scans.clone())
 }
 
-/// The secrets check with gitleaks from the login shell's PATH, through the supervisor; blocks, for worker threads.
-pub fn gitleaks() -> super::guard::Scan {
+/// The secrets check with gitleaks from the login shell's PATH, through the app's git; blocks, for worker threads.
+pub(crate) fn gitleaks() -> super::guard::Scan {
     use super::guard::Verdict;
     Arc::new(|folder: &Path, text: &str| {
-        let Some(environment) = crate::environment::wait(std::time::Duration::from_secs(10)) else {
+        let Some(git) = ide_ui_git::git() else {
             return Verdict::Failed(t("Die Umgebung der Login-Shell fehlt.").to_string());
         };
-        match ide_git::Git::new(Supervisor::global(), environment.to_vec()).scan_text(folder, text) {
+        match git.scan_text(folder, text) {
             Ok(ide_git::SecretScan::Clean) => Verdict::Clean,
             Ok(ide_git::SecretScan::NotInstalled) => Verdict::NotInstalled,
             Ok(ide_git::SecretScan::Found(_)) => Verdict::Found,
@@ -152,13 +152,13 @@ pub fn gitleaks() -> super::guard::Scan {
 }
 
 /// Whether the self-test put a provider in place.
-pub fn forced() -> bool {
+pub(crate) fn forced() -> bool {
     with(|p| p.forced.borrow().is_some())
 }
 
 /// What keeps an editor from proposals, for its status bar.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Blocked {
+pub(crate) enum Blocked {
     Off,
     /// Not set up or not reachable, in the user's words.
     Unavailable(String),
@@ -170,7 +170,7 @@ pub enum Blocked {
 }
 
 /// The provider for an editor in `root`, or why there is none now.
-pub fn provider(root: &Path) -> Result<Arc<dyn Provider>, Blocked> {
+pub(crate) fn provider(root: &Path) -> Result<Arc<dyn Provider>, Blocked> {
     if let Some(forced) = with(|p| p.forced.borrow().clone()) {
         return Ok(forced);
     }
@@ -202,7 +202,7 @@ fn copilot_for(root: &Path) -> Result<Arc<dyn Provider>, Blocked> {
 }
 
 /// Copilot of `root`, once it runs.
-pub fn copilot(root: &Path) -> Option<Arc<Copilot>> {
+pub(crate) fn copilot(root: &Path) -> Option<Arc<Copilot>> {
     with(|p| match p.copilots.borrow().get(root) {
         Some(Slot::Running(copilot)) => Some(copilot.clone()),
         _ => None,
@@ -211,7 +211,7 @@ pub fn copilot(root: &Path) -> Option<Arc<Copilot>> {
 
 /// Where Copilot stands for a folder, for the settings.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum CopilotState {
+pub(crate) enum CopilotState {
     NotStarted,
     Starting,
     Missing,
@@ -221,7 +221,7 @@ pub enum CopilotState {
 }
 
 /// Where Copilot of `root` stands now.
-pub fn copilot_state(root: &Path) -> CopilotState {
+pub(crate) fn copilot_state(root: &Path) -> CopilotState {
     with(|p| p.copilot_state(root))
 }
 
@@ -285,7 +285,7 @@ impl Predictions {
 }
 
 /// The folders Copilot runs or starts for.
-pub fn copilot_roots() -> Vec<PathBuf> {
+pub(crate) fn copilot_roots() -> Vec<PathBuf> {
     with(|p| p.copilots.borrow().keys().cloned().collect())
 }
 
@@ -341,7 +341,7 @@ fn account_changed(root: &Path, account: Account) {
 }
 
 /// Installs Copilot's server into the app's tools folder, after the user asked for it, then starts it for `root`.
-pub fn install(root: &Path) {
+pub(crate) fn install(root: &Path) {
     let cancel = ide_lsp::Cancel::new();
     set_slot(root, Slot::Installing(cancel.clone(), t("Installiere …").to_string()));
     let root = root.to_path_buf();
@@ -393,7 +393,7 @@ pub fn install(root: &Path) {
 }
 
 /// Stops the installation of Copilot for `root`, if one runs.
-pub fn cancel_install(root: &Path) {
+pub(crate) fn cancel_install(root: &Path) {
     with(|p| {
         if let Some(Slot::Installing(cancel, _)) = p.copilots.borrow().get(root) {
             cancel.cancel();
@@ -402,14 +402,14 @@ pub fn cancel_install(root: &Path) {
 }
 
 /// Starts Copilot for `root` if the settings choose it and nothing runs there yet, so its state can show.
-pub fn wake(root: &Path) {
+pub(crate) fn wake(root: &Path) {
     if chosen().choice == Choice::Copilot && with(|p| !p.copilots.borrow().contains_key(root)) {
         start(root);
     }
 }
 
 /// Keeps the user's consent for the chosen provider.
-pub fn consent() {
+pub(crate) fn consent() {
     let Some(id) = chosen().consent_id() else { return };
     let mut settings = Settings::load_user();
     let mut all = settings.get(&model::CONSENT);
@@ -423,7 +423,7 @@ pub fn consent() {
 }
 
 /// Takes back every consent given.
-pub fn revoke_all() {
+pub(crate) fn revoke_all() {
     let mut settings = Settings::load_user();
     if let Err(error) = settings.set(&model::CONSENT, &Vec::new()) {
         crate::diag::report("taking back the consent for edit prediction", error);
@@ -433,7 +433,7 @@ pub fn revoke_all() {
 }
 
 /// The provider's name for the user.
-pub fn name(choice: Choice) -> &'static str {
+pub(crate) fn name(choice: Choice) -> &'static str {
     match choice {
         Choice::Off => t("Aus"),
         Choice::Copilot => "GitHub Copilot",
@@ -536,4 +536,4 @@ mod tests {
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;

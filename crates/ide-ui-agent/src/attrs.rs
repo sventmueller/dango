@@ -17,7 +17,7 @@ use objc2_foundation::{
 use ide_ui_common::constant;
 use ide_ui_common::util::ns;
 
-pub struct Attribute {
+pub(crate) struct Attribute {
     key: &'static NSAttributedStringKey,
     value: Retained<AnyObject>,
 }
@@ -30,58 +30,58 @@ impl Attribute {
         }
     }
 
-    pub fn font(font: &NSFont) -> Attribute {
+    pub(crate) fn font(font: &NSFont) -> Attribute {
         Attribute::new(constant!(NSFontAttributeName), font)
     }
 
-    pub fn foreground(color: &NSColor) -> Attribute {
+    pub(crate) fn foreground(color: &NSColor) -> Attribute {
         Attribute::new(constant!(NSForegroundColorAttributeName), color)
     }
 
-    pub fn background(color: &NSColor) -> Attribute {
+    pub(crate) fn background(color: &NSColor) -> Attribute {
         Attribute::new(constant!(NSBackgroundColorAttributeName), color)
     }
 
-    pub fn paragraph(style: &NSParagraphStyle) -> Attribute {
+    pub(crate) fn paragraph(style: &NSParagraphStyle) -> Attribute {
         Attribute::new(constant!(NSParagraphStyleAttributeName), style)
     }
 
-    pub fn strikethrough() -> Attribute {
+    pub(crate) fn strikethrough() -> Attribute {
         Attribute::new(constant!(NSStrikethroughStyleAttributeName), &*NSNumber::new_isize(1))
     }
 
-    pub fn underline() -> Attribute {
+    pub(crate) fn underline() -> Attribute {
         Attribute::new(constant!(NSUnderlineStyleAttributeName), &*NSNumber::new_isize(1))
     }
 
-    pub fn baseline_offset(offset: f64) -> Attribute {
+    pub(crate) fn baseline_offset(offset: f64) -> Attribute {
         Attribute::new(constant!(NSBaselineOffsetAttributeName), &*NSNumber::new_f64(offset))
     }
 
-    pub fn tool_tip(text: &str) -> Attribute {
+    pub(crate) fn tool_tip(text: &str) -> Attribute {
         Attribute::new(constant!(NSToolTipAttributeName), &*ns(text))
     }
 
-    pub fn link(url: &NSURL) -> Attribute {
+    pub(crate) fn link(url: &NSURL) -> Attribute {
         Attribute::new(constant!(NSLinkAttributeName), url)
     }
 
-    pub fn attachment(attachment: &NSTextAttachment) -> Attribute {
+    pub(crate) fn attachment(attachment: &NSTextAttachment) -> Attribute {
         Attribute::new(constant!(NSAttachmentAttributeName), attachment)
     }
 }
 
-pub struct Attributes(Retained<NSDictionary<NSAttributedStringKey, AnyObject>>);
+pub(crate) struct Attributes(Retained<NSDictionary<NSAttributedStringKey, AnyObject>>);
 
 impl Attributes {
-    pub fn new(attributes: &[Attribute]) -> Attributes {
+    pub(crate) fn new(attributes: &[Attribute]) -> Attributes {
         let keys: Vec<&NSAttributedStringKey> = attributes.iter().map(|a| a.key).collect();
         let values: Vec<&AnyObject> = attributes.iter().map(|a| &*a.value).collect();
         Attributes(NSDictionary::from_slices(&keys, &values))
     }
 }
 
-pub fn attributed(text: &str, attributes: &[Attribute]) -> Retained<NSAttributedString> {
+pub(crate) fn attributed(text: &str, attributes: &[Attribute]) -> Retained<NSAttributedString> {
     let attributes = Attributes::new(attributes);
     // SAFETY: `Attribute` gives every key a value of the type it expects.
     unsafe {
@@ -89,7 +89,7 @@ pub fn attributed(text: &str, attributes: &[Attribute]) -> Retained<NSAttributed
     }
 }
 
-pub fn attributed_mut(text: &str, attributes: &[Attribute]) -> Retained<NSMutableAttributedString> {
+pub(crate) fn attributed_mut(text: &str, attributes: &[Attribute]) -> Retained<NSMutableAttributedString> {
     let attributes = Attributes::new(attributes);
     // SAFETY: `Attribute` gives every key a value of the type it expects.
     unsafe {
@@ -101,13 +101,13 @@ pub fn attributed_mut(text: &str, attributes: &[Attribute]) -> Retained<NSMutabl
     }
 }
 
-pub fn add_attribute(text: &NSMutableAttributedString, attribute: &Attribute, range: NSRange) {
+pub(crate) fn add_attribute(text: &NSMutableAttributedString, attribute: &Attribute, range: NSRange) {
     // SAFETY: `Attribute` gives every key a value of the type it expects.
     unsafe { text.addAttribute_value_range(attribute.key, &attribute.value, range) };
 }
 
 /// The range of UTF-16 units that the bytes `start..end` of `text` cover, from `base` on.
-pub fn utf16_range(text: &str, start: usize, end: usize, base: usize) -> NSRange {
+pub(crate) fn utf16_range(text: &str, start: usize, end: usize, base: usize) -> NSRange {
     let from = text.get(..start).map_or(0, |s| s.encode_utf16().count());
     let length = text.get(start..end).map_or(0, |s| s.encode_utf16().count());
     NSRange::new(base + from, length)

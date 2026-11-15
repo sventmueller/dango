@@ -9,7 +9,7 @@ use std::time::{Duration, Instant, SystemTime};
 
 use ide_thread::{
     AgentMessage, Decision, EntryKind, ErrorKind as ThreadError, Lane, ModelCost, Notice, PermissionOption,
-    PermissionRequest, RequestState, Status, Thought, Tokens, ToolCall, ToolOutput, ToolPatch, ToolStatus,
+    PermissionRequest, RequestState, RuleScope, Status, Thought, Tokens, ToolCall, ToolOutput, ToolPatch, ToolStatus,
     TurnUsage as ThreadTurn, Update, UsagePatch,
 };
 use serde_json::{Value, json};
@@ -27,6 +27,15 @@ const ATTEMPTS: u32 = 5;
 /// Characters of a tool's result the model gets at most.
 const MAX_RESULT: usize = 100_000;
 
+/// A tool call of the model's reply.
+struct Call {
+    id: String,
+    name: String,
+    input: Value,
+    /// The input as sent, when it was no valid JSON.
+    invalid: Option<String>,
+}
+
 /// Runs the turn the last user message started.
 pub(crate) fn run(shared: &Shared, cancel: &Cancel) {
     let (started, before) = (Instant::now(), shared.lock().totals);
@@ -42,7 +51,7 @@ pub(crate) fn run(shared: &Shared, cancel: &Cancel) {
         let Some(reply) = request(shared, cancel) else {
             break;
         };
-        let calls: Vec<(String, String, Value, Option<String>)> = reply
+        let calls: Vec<Call> = reply
             .message
             .content
             .iter()
@@ -53,7 +62,12 @@ pub(crate) fn run(shared: &Shared, cancel: &Cancel) {
                     input,
                     invalid,
                     ..
-                } => Some((id.clone(), name.clone(), input.clone(), invalid.clone())),
+                } => Some(Call {
+                    id: id.clone(),
+                    name: name.clone(),
+                    input: input.clone(),
+                    invalid: invalid.clone(),
+                }),
                 _ => None,
             })
             .collect();
@@ -476,28 +490,28 @@ pub(crate) fn usage(shared: &Shared) -> UsagePatch {
 }
 
 /// Answers calls whose input the length limit cut off, so the model can try again with less.
-fn cut_off(shared: &Shared, calls: &[(String, String, Value, Option<String>)]) -> Vec<Block> {
+fn cut_off(shared: &Shared, calls: &[Call]) -> Vec<Block> {
     calls
         .iter()
-        .map(|(id, name, _, _)| {
-            fail_card(shared, id, &ToolNote::CutOff);
-            result(id, name, &ToolNote::CutOff.for_model(), true, Some(ToolNote::CutOff))
+        .map(|call| {
+            fail_card(shared, &call.id, &ToolNote::CutOff);
+            result(call, Outcome::failed(ToolNote::CutOff))
         })
         .collect()
 }
 
-fn result(id: &str, name: &str, content: &str, is_error: bool, note: Option<ToolNote>) -> Block {
-    let total = content.chars().count();
-    let mut content: String = content.chars().take(MAX_RESULT).collect();
+fn result(call: &Call, outcome: Outcome) -> Block {
+    let total = outcome.content.chars().count();
+    let mut content: String = outcome.content.chars().take(MAX_RESULT).collect();
     if total > MAX_RESULT {
         content.push_str("\n[… cut]");
     }
     Block::ToolResult {
-        tool_use_id: id.to_string(),
-        name: name.to_string(),
+        tool_use_id: call.id.clone(),
+        name: call.name.clone(),
         content,
-        is_error,
-        note,
+        is_error: outcome.is_error,
+        note: outcome.note,
     }
 }
 
@@ -514,29 +528,39 @@ fn fail_card(shared: &Shared, id: &str, note: &ToolNote) {
 }
 
 /// Read-only calls may overlap within a group; every other call is an ordering barrier.
-fn run_tools(shared: &Shared, cancel: &Cancel, calls: &[(String, String, Value, Option<String>)]) -> Vec<Block> {
+fn run_tools(shared: &Shared, cancel: &Cancel, calls: &[Call]) -> Vec<Block> {
     let mut results = Vec::new();
     let mut at = 0;
     while at < calls.len() {
         let end = calls[at..]
             .iter()
             .take(4)
-            .take_while(|(_, name, input, invalid)| {
-                invalid.is_none()
-                    && matches!(
-                        name.as_str(),
-                        "read_file" | "grep" | "glob" | "diagnostics" | "web_fetch"
-                    )
-                    && tools::action(name, input, &shared.workspace)
-                        .is_ok_and(|action| shared.lock().policy.decide(&action) == Verdict::Allow)
-            })
+            .take_while(
+                |Call {
+                     name, input, invalid, ..
+                 }| {
+                    invalid.is_none()
+                        && matches!(
+                            name.as_str(),
+                            "read_file" | "grep" | "glob" | "diagnostics" | "web_fetch"
+                        )
+                        && tools::action(name, input, &shared.workspace)
+                            .is_ok_and(|action| shared.lock().policy.decide(&action) == Verdict::Allow)
+                },
+            )
             .count()
             + at;
         if end > at + 1 && !cancel.is_cancelled() {
             results.extend(read_group(shared, cancel, &calls[at..end]));
             at = end;
         } else {
-            let (id, name, input, invalid) = &calls[at];
+            let this = &calls[at];
+            let Call {
+                id,
+                name,
+                input,
+                invalid,
+            } = this;
             let outcome = if cancel.is_cancelled() {
                 rejected(shared, id, ToolNote::Cancelled)
             } else if let Some(raw) = invalid {
@@ -546,7 +570,7 @@ fn run_tools(shared: &Shared, cancel: &Cancel, calls: &[(String, String, Value, 
             } else {
                 call(shared, cancel, id, name, input)
             };
-            results.push(result(id, name, &outcome.content, outcome.is_error, outcome.note));
+            results.push(result(this, outcome));
             at += 1;
         }
     }
@@ -559,10 +583,10 @@ fn rejected(shared: &Shared, id: &str, note: ToolNote) -> Outcome {
 }
 
 /// Permissions are settled in order before workers start, so parallel reads never race approval status.
-fn read_group(shared: &Shared, cancel: &Cancel, calls: &[(String, String, Value, Option<String>)]) -> Vec<Block> {
+fn read_group(shared: &Shared, cancel: &Cancel, calls: &[Call]) -> Vec<Block> {
     let prepared: Vec<_> = calls
         .iter()
-        .map(|(id, name, input, _)| {
+        .map(|Call { id, name, input, .. }| {
             if cancel.is_cancelled() {
                 Err(ToolNote::Cancelled)
             } else {
@@ -574,7 +598,7 @@ fn read_group(shared: &Shared, cancel: &Cancel, calls: &[(String, String, Value,
         let workers: Vec<_> = calls
             .iter()
             .zip(prepared)
-            .map(|((id, name, input, _), prepared)| {
+            .map(|(Call { id, name, input, .. }, prepared)| {
                 scope.spawn(move || match prepared {
                     Err(note) => rejected(shared, id, note),
                     Ok(()) if cancel.is_cancelled() => rejected(shared, id, ToolNote::Cancelled),
@@ -585,11 +609,11 @@ fn read_group(shared: &Shared, cancel: &Cancel, calls: &[(String, String, Value,
         workers
             .into_iter()
             .zip(calls)
-            .map(|(worker, (id, name, _, _))| {
-                let outcome = worker
-                    .join()
-                    .unwrap_or_else(|_| rejected(shared, id, ToolNote::NotStarted("tool worker panicked".into())));
-                result(id, name, &outcome.content, outcome.is_error, outcome.note)
+            .map(|(worker, call)| {
+                let outcome = worker.join().unwrap_or_else(|_| {
+                    rejected(shared, &call.id, ToolNote::NotStarted("tool worker panicked".into()))
+                });
+                result(call, outcome)
             })
             .collect()
     })
@@ -712,7 +736,7 @@ fn ask(shared: &Shared, cancel: &Cancel, call: &Asked<'_>, verdict: Verdict) -> 
         options.push(PermissionOption::AllowAlways {
             suggestion: 0,
             rule: shared.wording.rule(rule),
-            scope: "project".into(),
+            scope: RuleScope::Project,
         });
     }
     options.push(PermissionOption::Deny);

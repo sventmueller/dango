@@ -20,15 +20,15 @@ const JUMP: usize = 10;
 /// How many places each direction keeps.
 const LIMIT: usize = 100;
 /// The toolbar item of the two buttons.
-pub const TOOLBAR_ID: &str = "ide.navigation";
+pub(crate) const TOOLBAR_ID: &str = "ide.navigation";
 
 /// A cursor position in a file.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Place {
-    pub path: PathBuf,
+pub(crate) struct Place {
+    pub(crate) path: PathBuf,
     /// In UTF-16 code units, as the text view counts.
-    pub offset: usize,
-    pub line: usize,
+    pub(crate) offset: usize,
+    pub(crate) line: usize,
 }
 
 /// The places of one window.
@@ -109,7 +109,7 @@ impl History {
 
 /// The back and forward history of every window and the target of the toolbar's arrows.
 #[derive(Default)]
-pub struct Navigation {
+pub(crate) struct Navigation {
     histories: RefCell<Vec<(Weak<WindowController>, History)>>,
     navigator: OnceCell<Retained<Navigator>>,
     groups: RefCell<Vec<(Weak<NSToolbarItemGroup>, Weak<WindowController>)>>,
@@ -146,7 +146,7 @@ fn with_history<R>(controller: &WindowController, f: impl FnOnce(&mut History) -
 }
 
 /// The editor `view` shows its cursor where it is now, after a move or as it got the focus.
-pub fn moved(view: &EditorTextView, focus: bool) {
+pub(crate) fn moved(view: &EditorTextView, focus: bool) {
     let Some(controller) = view.controller() else { return };
     let Some(place) = place_of(view) else { return };
     with_history(&controller, |history| history.arrive(place, focus));
@@ -163,7 +163,7 @@ fn place_of(view: &EditorTextView) -> Option<Place> {
 }
 
 /// Whether `controller` has a place to go back, or forward, to.
-pub fn can_go(controller: &WindowController, back: bool) -> bool {
+pub(crate) fn can_go(controller: &WindowController, back: bool) -> bool {
     with_history(controller, |history| {
         let places = if back { &history.back } else { &history.forward };
         !places.is_empty()
@@ -171,7 +171,7 @@ pub fn can_go(controller: &WindowController, back: bool) -> bool {
 }
 
 /// Takes the user back, or forward, to the next place whose file still exists.
-pub fn go(controller: &WindowController, back: bool) {
+pub(crate) fn go(controller: &WindowController, back: bool) {
     loop {
         let target = with_history(
             controller,
@@ -215,7 +215,7 @@ define_class!(
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDENavigator"]
-    pub struct Navigator;
+    pub(crate) struct Navigator;
 
     unsafe impl NSObjectProtocol for Navigator {}
 
@@ -254,7 +254,7 @@ define_class!(
 );
 
 /// The object that menu items and the toolbar send back and forward to.
-pub fn navigator(mtm: MainThreadMarker) -> Retained<Navigator> {
+pub(crate) fn navigator(mtm: MainThreadMarker) -> Retained<Navigator> {
     with_navigator(|cell| {
         cell.get_or_init(|| {
             // SAFETY: NSObject's initializer, called once on the newly allocated object.
@@ -278,7 +278,7 @@ fn front_answers(f: impl FnOnce(&WindowController) -> bool) -> bool {
 }
 
 /// The toolbar's back and forward buttons, side by side before the title as Finder has them.
-pub fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarItem> {
+pub(crate) fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarItem> {
     let mtm = controller.mtm();
     let images: Vec<Retained<NSImage>> = [("chevron.backward", t("Zurück")), ("chevron.forward", t("Vorwärts"))]
         .into_iter()
@@ -329,7 +329,7 @@ fn refresh() {
 }
 
 /// The names of the menu items' actions, for the Go menu.
-pub fn actions() -> [(&'static str, Sel, &'static str); 2] {
+pub(crate) fn actions() -> [(&'static str, Sel, &'static str); 2] {
     [
         (t("Zurück"), sel!(ideGoBack:), "go.back"),
         (t("Vorwärts"), sel!(ideGoForward:), "go.forward"),

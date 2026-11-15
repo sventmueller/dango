@@ -10,11 +10,22 @@ use crate::window::{TabId, WindowController};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;
+
+/// A browser tab as the layout keeps it: the page it showed.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub(crate) struct KeptPage {
+    /// The page.
+    pub(crate) url: String,
+}
+
+impl ide_core::layout::Kind for KeptPage {
+    const NAME: &'static str = "browser";
+}
 
 /// Opens a browser tab at `url`, or empty. A URL whose tab is open selects that tab instead; a tab of a local server
 /// reloads, since a dev server that called it has new content.
-pub fn open_tab(controller: &WindowController, url: Option<&str>) {
+pub(crate) fn open_tab(controller: &WindowController, url: Option<&str>) {
     ide_ui_browser::open_tab(controller.mtm(), controller.id(), url);
 }
 
@@ -24,22 +35,22 @@ pub fn open_tab(controller: &WindowController, url: Option<&str>) {
     dead_code,
     reason = "the editor calls it after saving, once it knows the project's dev servers"
 )]
-pub fn reload_matching(controller: &WindowController, origin: &str) {
+pub(crate) fn reload_matching(controller: &WindowController, origin: &str) {
     ide_ui_browser::reload_matching(controller.id(), origin);
 }
 
 /// The address the browser tab `tab` of `controller`'s window shows, for opening it again.
-pub fn url_of_tab(controller: &WindowController, tab: TabId) -> Option<String> {
+pub(crate) fn url_of_tab(controller: &WindowController, tab: TabId) -> Option<String> {
     ide_ui_browser::url_of_tab(controller.id(), tab)
 }
 
 /// Runs a browser command of the menu bar on the browser tab in front, wherever the focus is.
-pub fn perform(controller: &WindowController, action: objc2::runtime::Sel) {
+pub(crate) fn perform(controller: &WindowController, action: objc2::runtime::Sel) {
     ide_ui_browser::perform(controller.id(), action);
 }
 
 /// Whether the browser command `action` of the menu bar applies to the tab in front.
-pub fn validate(controller: &WindowController, action: objc2::runtime::Sel) -> bool {
+pub(crate) fn validate(controller: &WindowController, action: objc2::runtime::Sel) -> bool {
     ide_ui_browser::validate(controller.id(), action)
 }
 

@@ -15,7 +15,7 @@
 //! resuming.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs, unreachable_pub)]
+#![warn(missing_docs)]
 
 mod anthropic;
 pub mod chat;
@@ -71,9 +71,22 @@ impl Provider {
         Provider { endpoint, key, http }
     }
 
-    /// The endpoint.
-    pub fn endpoint(&self) -> &Endpoint {
+    pub(crate) fn endpoint(&self) -> &Endpoint {
         &self.endpoint
+    }
+
+    /// The same endpoint and key over connections of its own, which `close` ends without touching other requests.
+    pub(crate) fn separate(&self) -> Provider {
+        Provider {
+            endpoint: self.endpoint.clone(),
+            key: self.key.clone(),
+            http: self.http.separate(),
+        }
+    }
+
+    /// Ends the requests of this provider and its clones at once, also one waiting in silence for the next part.
+    pub(crate) fn close(&self) {
+        self.http.close();
     }
 
     /// A service that needs a key and has none; an added endpoint may work without.
@@ -114,10 +127,22 @@ impl Provider {
             return Err(error);
         }
         let key = self.key.as_ref();
-        match self.endpoint.kind.wire() {
+        let result = match self.endpoint.kind.wire() {
             Wire::Anthropic => anthropic::stream(&self.http, &self.endpoint, key, request, cancel, on),
             Wire::OpenAiChat => openai::stream(&self.http, &self.endpoint, key, request, cancel, on),
             Wire::Gemini => gemini::stream(&self.http, &self.endpoint, key, request, cancel, on),
+        };
+        match result {
+            Err(_) if cancel.is_cancelled() => Ok(Reply {
+                message: Message {
+                    role: Role::Assistant,
+                    content: Vec::new(),
+                },
+                usage: TurnUsage::default(),
+                stop: Stop::Cancelled,
+                model: None,
+            }),
+            result => result,
         }
     }
 
@@ -136,7 +161,7 @@ impl Provider {
 }
 
 /// Whether `model` at an endpoint of `kind` thinks adaptively and takes an effort level.
-pub fn takes_effort(kind: ProviderKind, model: &str) -> bool {
+pub(crate) fn takes_effort(kind: ProviderKind, model: &str) -> bool {
     match kind.wire() {
         Wire::Anthropic => anthropic::adaptive(model),
         Wire::OpenAiChat | Wire::Gemini => true,

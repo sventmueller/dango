@@ -8,9 +8,9 @@ use std::time::SystemTime;
 
 use agent_client_protocol::v1::schema as acp;
 use ide_thread::{
-    AgentMessage, EntryKind, ErrorKind, Lane, Notice, PermissionOption, PermissionRequest, RequestState, Status,
-    TextEdit, Thought, Todo, TodoStatus, ToolCall, ToolKind, ToolOutput, ToolPatch, ToolStatus, ToolView, Update,
-    UserMessage,
+    AgentMessage, EntryKind, ErrorKind, Lane, Notice, PermissionOption, PermissionRequest, RequestState, RuleScope,
+    Status, TextEdit, Thought, Todo, TodoStatus, ToolCall, ToolKind, ToolOutput, ToolPatch, ToolStatus, ToolView,
+    Update, UserMessage,
 };
 use serde_json::Value;
 
@@ -227,7 +227,7 @@ pub(crate) fn permission_options(options: &[acp::PermissionOption]) -> Vec<Permi
             acp::PermissionOptionKind::AllowAlways => PermissionOption::AllowAlways {
                 suggestion: n,
                 rule: o.name.clone(),
-                scope: String::new(),
+                scope: RuleScope::Other(String::new()),
             },
             _ => PermissionOption::Deny,
         })
@@ -291,16 +291,16 @@ impl Mapper {
     }
 
     /// The turn ended for `reason`, the agent's stop reason as it named it on the wire.
-    pub(crate) fn end_turn(&mut self, reason: &str, at: SystemTime) -> Vec<Update> {
+    pub(crate) fn end_turn(&mut self, reason: acp::StopReason, at: SystemTime) -> Vec<Update> {
         self.prompting = false;
         let mut out = self.settle(at);
         out.push(Update::Status(Status::Idle));
         let notice = match reason {
-            "end_turn" => None,
-            "cancelled" => Some(Notice::Interrupted),
+            acp::StopReason::EndTurn => None,
+            acp::StopReason::Cancelled => Some(Notice::Interrupted),
             other => Some(Notice::Error {
                 kind: ErrorKind::Turn,
-                message: other.to_string(),
+                message: wire_name(other),
             }),
         };
         if let Some(notice) = notice {
@@ -557,6 +557,14 @@ impl Mapper {
             Err(_) => (Vec::new(), false),
         }
     }
+}
+
+/// The protocol's name for `reason`, such as `max_tokens`.
+fn wire_name(reason: acp::StopReason) -> String {
+    serde_json::to_value(reason)
+        .ok()
+        .and_then(|v| v.as_str().map(str::to_string))
+        .unwrap_or_default()
 }
 
 #[cfg(test)]
@@ -883,7 +891,11 @@ mod tests {
         let mut mapper = Mapper::new();
         let mut thread = ide_thread::Thread::new(ide_thread::ThreadId::new(), "acp", "/w");
         let at = SystemTime::UNIX_EPOCH;
-        for reason in ["end_turn", "cancelled", "max_tokens"] {
+        for reason in [
+            acp::StopReason::EndTurn,
+            acp::StopReason::Cancelled,
+            acp::StopReason::MaxTokens,
+        ] {
             thread.apply_all(mapper.begin_turn(&UserMessage::default(), at));
             thread.apply_all(mapper.end_turn(reason, at));
         }

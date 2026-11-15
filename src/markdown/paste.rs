@@ -13,7 +13,7 @@ use crate::editor::EditorTextView;
 use crate::util::constant;
 
 /// Pastes the rich text on `pasteboard` into `view` as Markdown; whether there was rich text to paste.
-pub fn rich(view: &EditorTextView, pasteboard: &NSPasteboard) -> bool {
+pub(crate) fn rich(view: &EditorTextView, pasteboard: &NSPasteboard) -> bool {
     let read = |kind| pasteboard.dataForType(kind).map(|data| data.to_vec());
     let html = read(constant!(NSPasteboardTypeHTML)).map(|data| String::from_utf8_lossy(&data).into_owned());
     let rtf = read(constant!(NSPasteboardTypeRTF));
@@ -52,7 +52,7 @@ pub fn rich(view: &EditorTextView, pasteboard: &NSPasteboard) -> bool {
 }
 
 /// Pastes the plain text of the pasteboard, whatever else it holds.
-pub fn plain(view: &EditorTextView) {
+pub(crate) fn plain(view: &EditorTextView) {
     // SAFETY: NSTextView's own action, sent with no sender, as a menu without a target would send it.
     unsafe { view.pasteAsPlainText(None) };
 }

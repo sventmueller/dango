@@ -16,10 +16,10 @@ use objc2_foundation::NSRange;
 use splat_i18n::{t, tf};
 
 use super::helpers::{
-    answer_alert_after, answer_alert_saying, editor, picture_alert_after, tab, text_of, type_at, utf16_len, wait_until,
+    answer_alert_saying, answer_alert_when_shown, editor, picture_alert, tab, text_of, type_at, utf16_len, wait_until,
     window_of,
 };
-use super::{check, finish, helpers, snapshot};
+use super::{check, finish, give_up, helpers, snapshot};
 use crate::window::WindowController;
 
 const SCENARIO: &str = "conflict";
@@ -77,7 +77,7 @@ fn press(name: &str, button: &str) -> bool {
         .is_some_and(|view| crate::editor::press_conflict_button(&view, button))
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let mut texts: Vec<(&str, String)> = [CLEAN, KEPT, LOADED, SAVED, CLOSED, DROPPED, GONE]
         .iter()
         .map(|name| (*name, format!("{name}\nzweite Zeile\n")))
@@ -151,7 +151,7 @@ fn changed_outside(arrived: bool) {
 
 fn show_differences() {
     let Some(controller) = controller() else {
-        finish(SCENARIO);
+        give_up(SCENARIO, "the folder's window is open");
         return;
     };
     press(MERGED, t("Unterschiede zeigen"));
@@ -203,7 +203,7 @@ fn show_differences() {
         // Should saving ask about the change on disk after all, the question is declined, so the check fails
         // instead of the run waiting for an answer.
         let question = tf("„{}“ wurde inzwischen außerhalb geändert.", &[KEPT]);
-        answer_alert_saying(Duration::from_millis(800), question, NSAlertSecondButtonReturn);
+        answer_alert_saying(question, NSAlertSecondButtonReturn);
         crate::editor::save_view(&view);
     }
     let on_disk = std::fs::read_to_string(root().join(KEPT)).unwrap_or_default();
@@ -287,8 +287,8 @@ fn close_unedited() {
         question == expected,
         format!("{question:?}"),
     );
-    picture_alert_after(Duration::from_millis(250), "conflict-close-deleted");
-    let saved = answer_alert_saying(Duration::from_millis(500), expected.0, NSAlertFirstButtonReturn);
+    picture_alert("conflict-close-deleted");
+    let saved = answer_alert_saying(expected.0, NSAlertFirstButtonReturn);
     press(DROPPED, t("Schließen"));
     let on_disk = std::fs::read_to_string(root().join(DROPPED)).unwrap_or_default();
     let after = titles();
@@ -320,8 +320,8 @@ fn close_edited() {
         let pending = Recovery::in_data_dir().pending().unwrap_or_default();
         copy.as_ref().is_some_and(|id| pending.iter().any(|p| &p.id == id))
     };
-    picture_alert_after(Duration::from_millis(250), "conflict-close-edited");
-    let cancelled = answer_alert_saying(Duration::from_millis(500), expected.0.clone(), NSAlertThirdButtonReturn);
+    picture_alert("conflict-close-edited");
+    let cancelled = answer_alert_saying(expected.0.clone(), NSAlertThirdButtonReturn);
     press(CLOSED, t("Schließen"));
     let after = titles();
     check(
@@ -339,7 +339,7 @@ fn close_edited() {
             after.join(", ")
         ),
     );
-    let discarded = answer_alert_saying(Duration::from_millis(500), expected.0, NSAlertSecondButtonReturn);
+    let discarded = answer_alert_saying(expected.0, NSAlertSecondButtonReturn);
     press(CLOSED, t("Schließen"));
     let answered = discarded.get();
     wait_until(
@@ -360,20 +360,16 @@ fn close_edited() {
 /// last cancels the close.
 fn cancelled_close() {
     let Some(controller) = controller() else {
-        finish(SCENARIO);
+        give_up(SCENARIO, "the folder's window is open");
         return;
     };
     if let Some(view) = editor(&controller, KEPT) {
         type_at(&view, NSRange::new(0, 0), "+");
     }
     let question = |name: &str| tf("Änderungen an „{}“ sichern?", &[name]);
-    answer_alert_saying(Duration::from_millis(500), question(MERGED), NSAlertSecondButtonReturn);
-    answer_alert_saying(Duration::from_millis(1500), question(KEPT), NSAlertSecondButtonReturn);
-    let gone = answer_alert_saying(
-        Duration::from_millis(2500),
-        deleted_question(),
-        NSAlertThirdButtonReturn,
-    );
+    answer_alert_saying(question(MERGED), NSAlertSecondButtonReturn);
+    answer_alert_saying(question(KEPT), NSAlertSecondButtonReturn);
+    let gone = answer_alert_saying(deleted_question(), NSAlertThirdButtonReturn);
     controller.close_all_tabs();
     let asked = gone.get();
     let copies = copies_of(&[MERGED, KEPT, GONE]);
@@ -398,13 +394,8 @@ fn cancelled_close() {
 /// about the other two cancels the quit.
 fn cancelled_quit() {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    let gone = answer_alert_saying(
-        Duration::from_millis(500),
-        deleted_question(),
-        NSAlertSecondButtonReturn,
-    );
+    let gone = answer_alert_saying(deleted_question(), NSAlertSecondButtonReturn);
     let others = answer_alert_saying(
-        Duration::from_millis(1500),
         tf("{} Dateien haben ungesicherte Änderungen.", &["2"]),
         NSAlertThirdButtonReturn,
     );
@@ -424,18 +415,14 @@ fn cancelled_quit() {
 /// ⌘W on the editor of a deleted file, given up.
 fn close_with_key() {
     let Some(controller) = controller() else {
-        finish(SCENARIO);
+        give_up(SCENARIO, "the folder's window is open");
         return;
     };
     if let Some(id) = tab(&controller, GONE) {
         controller.select_tab_by_id(id);
     }
     let copies = copies_of(&[GONE]);
-    let discarded = answer_alert_saying(
-        Duration::from_millis(500),
-        deleted_question(),
-        NSAlertSecondButtonReturn,
-    );
+    let discarded = answer_alert_saying(deleted_question(), NSAlertSecondButtonReturn);
     // SAFETY: The action takes its sender, which may be nil.
     let () = unsafe { msg_send![&*controller, ideCloseTab: None::<&AnyObject>] };
     let answered = discarded.get();
@@ -456,7 +443,7 @@ fn close_with_key() {
                     && !root().join(GONE).exists(),
                 format!("asked {answered}, copies of {copies:?}, {}", after.join(", ")),
             );
-            answer_alert_after(Duration::from_secs(1), NSAlertSecondButtonReturn);
+            answer_alert_when_shown(None, NSAlertSecondButtonReturn);
             finish(SCENARIO);
         },
     );

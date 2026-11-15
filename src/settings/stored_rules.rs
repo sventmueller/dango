@@ -7,12 +7,13 @@ use std::path::{Path, PathBuf};
 
 use ide_claude::rules::{self, Scope};
 use ide_core::settings::{State, remembered};
+use ide_ui_common::alert::Alert;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSAlert, NSButton, NSControlTextEditingDelegate, NSTableColumn, NSTableView,
-    NSTableViewDataSource, NSTableViewDelegate, NSView,
+    NSAccessibility, NSButton, NSControlTextEditingDelegate, NSTableColumn, NSTableView, NSTableViewDataSource,
+    NSTableViewDelegate, NSView,
 };
 use objc2_foundation::{NSNotification, NSObjectProtocol};
 use splat_i18n::t;
@@ -30,7 +31,7 @@ const HEIGHT: f64 = 110.0;
 
 /// Notes `folder` as one where Claude stored a rule, so the settings list its rules even once it left the recent
 /// folders.
-pub fn remember(folder: &Path) {
+pub(crate) fn remember(folder: &Path) {
     let mut state = State::load_user();
     let mut folders = state.get(&FOLDERS);
     if folders.iter().any(|f| f == folder) {
@@ -66,10 +67,10 @@ fn once_each(folders: impl IntoIterator<Item = PathBuf>) -> Vec<PathBuf> {
 
 /// One rule of the list.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Row {
-    pub project: PathBuf,
-    pub scope: Scope,
-    pub rule: String,
+pub(crate) struct Row {
+    pub(crate) project: PathBuf,
+    pub(crate) scope: Scope,
+    pub(crate) rule: String,
 }
 
 /// Every allow rule Claude keeps in the listed folders.
@@ -86,7 +87,7 @@ fn rows() -> Vec<Row> {
         .collect()
 }
 
-pub struct StoredRulesIvars {
+pub(crate) struct StoredRulesIvars {
     rows: RefCell<Vec<Row>>,
     table: OnceCell<Retained<NSTableView>>,
     remove: OnceCell<Retained<NSButton>>,
@@ -101,7 +102,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEStoredRules"]
     #[ivars = StoredRulesIvars]
-    pub struct StoredRules;
+    pub(crate) struct StoredRules;
 
     unsafe impl NSObjectProtocol for StoredRules {}
 
@@ -139,7 +140,7 @@ define_class!(
 );
 
 impl StoredRules {
-    pub fn new(mtm: MainThreadMarker) -> Retained<StoredRules> {
+    pub(crate) fn new(mtm: MainThreadMarker) -> Retained<StoredRules> {
         let this = Self::alloc(mtm).set_ivars(StoredRulesIvars {
             rows: RefCell::new(Vec::new()),
             table: OnceCell::new(),
@@ -152,7 +153,7 @@ impl StoredRules {
     }
 
     /// The section: its heading and note, the list with its remove button, and what holds for ACP agents.
-    pub fn views(&self) -> Vec<Retained<NSView>> {
+    pub(crate) fn views(&self) -> Vec<Retained<NSView>> {
         let mtm = self.mtm();
         let (table, scroll) = form::table(
             mtm,
@@ -188,7 +189,7 @@ impl StoredRules {
     }
 
     /// Reads the rules again from the projects' files and shows them.
-    pub fn reload(&self) {
+    pub(crate) fn reload(&self) {
         *self.ivars().rows.borrow_mut() = rows();
         if let Some(table) = self.ivars().table.get() {
             table.reloadData();
@@ -197,7 +198,7 @@ impl StoredRules {
     }
 
     /// The rows as the list shows them: project, rule, where it applies.
-    pub fn cells(&self) -> Vec<Vec<String>> {
+    pub(crate) fn cells(&self) -> Vec<Vec<String>> {
         self.ivars()
             .rows
             .borrow()
@@ -206,7 +207,7 @@ impl StoredRules {
                 vec![
                     crate::app::display_path(&row.project),
                     row.rule.clone(),
-                    ide_ui_agent::scope_name(row.scope.destination()),
+                    ide_ui_agent::scope_name(&row.scope.into()),
                 ]
             })
             .collect()
@@ -226,13 +227,12 @@ impl StoredRules {
     fn remove_selected(&self) {
         let Some(row) = self.selected() else { return };
         if let Err(error) = rules::remove_allow_rule(&row.project, row.scope, &row.rule) {
-            let alert = NSAlert::new(self.mtm());
-            alert.setMessageText(&ns(t("Die Regel ließ sich nicht entfernen.")));
-            alert.setInformativeText(&ns(&format!(
-                "{}\n{error}",
-                crate::app::display_path(&row.scope.file(&row.project))
-            )));
-            alert.runModal();
+            Alert::new(self.mtm(), t("Die Regel ließ sich nicht entfernen."))
+                .informative(&format!(
+                    "{}\n{error}",
+                    crate::app::display_path(&row.scope.file(&row.project))
+                ))
+                .run_modal();
         }
         self.reload();
     }

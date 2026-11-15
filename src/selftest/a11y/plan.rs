@@ -22,7 +22,7 @@ const PASSAGE: &str = "Passage by keyboard";
 const CARD: &str = "Card passage by keyboard";
 
 /// Opens an AI tab that waits for a plan's approval, then the comments, then `then`.
-pub fn start(root: PathBuf, then: fn(PathBuf)) {
+pub(crate) fn start(root: PathBuf, then: fn(PathBuf)) {
     let Some(controller) = window_of(&root) else { return };
     let Some(tab) = ide_ui_agent::open_replay(&controller) else {
         check("an AI tab with a plan opens", false, "");

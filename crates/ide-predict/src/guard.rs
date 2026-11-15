@@ -24,7 +24,7 @@ pub enum Verdict {
 
 impl Verdict {
     /// Whether the text may go out.
-    pub fn sends(&self) -> bool {
+    pub(crate) fn sends(&self) -> bool {
         matches!(self, Verdict::Clean | Verdict::NotInstalled)
     }
 }

@@ -97,8 +97,8 @@ pub struct Recovered {
 }
 
 impl Recovered {
-    /// The document's text.
-    pub fn text(&self) -> &str {
+    #[cfg(test)]
+    pub(crate) fn text(&self) -> &str {
         &self.text
     }
 
@@ -116,7 +116,7 @@ pub struct Recovery {
 
 impl Recovery {
     /// Copies in `dir`.
-    pub fn new(dir: PathBuf) -> Recovery {
+    pub(crate) fn new(dir: PathBuf) -> Recovery {
         Recovery { dir }
     }
 

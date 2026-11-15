@@ -19,11 +19,11 @@ use splat_git::diff::{ChangeKind, Hunk};
 use splat_i18n::t;
 
 use super::view::EditorTextView;
-use crate::util::{label, main_soon, ns, set_action};
+use crate::util::{fixed_size, label, main_soon, ns, pin_inset, set_action};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
-pub use selftest_probe::*;
+pub(crate) use selftest_probe::*;
 
 /// How long typing pauses before the marks follow it.
 const DELAY: f64 = 0.3;
@@ -47,7 +47,7 @@ struct Head {
 
 /// What an editor knows about its file's last commit and where its text differs.
 #[derive(Default)]
-pub struct Marks {
+pub(crate) struct Marks {
     head: Option<Head>,
     hunks: Vec<Hunk>,
     /// The lines of the text the hunks were found in, to place a removal behind the last line.
@@ -63,7 +63,7 @@ pub struct Marks {
 
 /// How a line is marked.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Mark {
+pub(crate) enum Mark {
     Added,
     Modified,
     /// Lines were removed in front of this one.
@@ -73,7 +73,7 @@ pub enum Mark {
 }
 
 impl Mark {
-    pub fn color(self) -> Retained<NSColor> {
+    pub(crate) fn color(self) -> Retained<NSColor> {
         match self {
             Mark::Added => NSColor::systemGreenColor(),
             Mark::Modified => NSColor::systemBlueColor(),
@@ -81,7 +81,7 @@ impl Mark {
         }
     }
 
-    pub fn description(self) -> &'static str {
+    pub(crate) fn description(self) -> &'static str {
         match self {
             Mark::Added => t("Seit dem letzten Commit hinzugefügt"),
             Mark::Modified => t("Seit dem letzten Commit geändert"),
@@ -116,7 +116,7 @@ fn hunks_of(head: &str, snapshot: &Snapshot) -> (Vec<Hunk>, usize, ide_document:
 }
 
 /// Reads the file's last commit again and compares; `force` reads it even when the commit is the one already known.
-pub fn reload(view: &EditorTextView, force: bool) {
+pub(crate) fn reload(view: &EditorTextView, force: bool) {
     let Some(path) = view.document().path().map(Path::to_path_buf) else {
         clear(view);
         return;
@@ -143,19 +143,19 @@ pub fn reload(view: &EditorTextView, force: bool) {
 }
 
 /// Compares the text with the commit once typing pauses.
-pub fn schedule(view: &EditorTextView) {
+pub(crate) fn schedule(view: &EditorTextView) {
     if view.ivars().marks.borrow().head.is_some() {
         view.later(sel!(ideGitMarks), DELAY);
     }
 }
 
 /// Something in a `.git` folder changed: the commit may have moved.
-pub fn schedule_head(view: &EditorTextView) {
+pub(crate) fn schedule_head(view: &EditorTextView) {
     view.later(sel!(ideGitHead), HEAD_DELAY);
 }
 
 /// Compares the text as it is now with the commit known.
-pub fn compare(view: &EditorTextView) {
+pub(crate) fn compare(view: &EditorTextView) {
     let Some(text) = view.ivars().marks.borrow().head.as_ref().map(|h| h.text.clone()) else {
         return;
     };
@@ -262,13 +262,13 @@ fn hunk_at(hunks: &[Hunk], lines: usize, line: usize) -> Option<(&Hunk, Mark)> {
 }
 
 /// The commit the marks compare against, as its full hash.
-pub fn head_commit(view: &EditorTextView) -> Option<String> {
+pub(crate) fn head_commit(view: &EditorTextView) -> Option<String> {
     view.ivars().marks.borrow().head.as_ref().map(|h| h.commit.to_string())
 }
 
 /// Where each line of the text, counted from 0, stands in the file of the last commit: `None` for a line added or
 /// changed since; `None` as a whole while the marks have not caught up with the text.
-pub fn head_lines(view: &EditorTextView) -> Option<Vec<Option<usize>>> {
+pub(crate) fn head_lines(view: &EditorTextView) -> Option<Vec<Option<usize>>> {
     let marks = view.ivars().marks.borrow();
     marks.head.as_ref()?;
     if marks.revision != Some(view.document().revision()) {
@@ -307,13 +307,13 @@ fn map_to_head(hunks: &[Hunk], lines: usize) -> Vec<Option<usize>> {
 }
 
 /// How `line`, counted from 0, is marked.
-pub fn mark_at(view: &EditorTextView, line: usize) -> Option<Mark> {
+pub(crate) fn mark_at(view: &EditorTextView, line: usize) -> Option<Mark> {
     let marks = view.ivars().marks.borrow();
     hunk_at(&marks.hunks, marks.lines, line).map(|(_, mark)| mark)
 }
 
 /// Draws `mark` at the right edge of `row` in the line number column, which is `width` wide.
-pub fn draw(mark: Mark, row: NSRect, width: f64) {
+pub(crate) fn draw(mark: Mark, row: NSRect, width: f64) {
     mark.color().setFill();
     let path = objc2_app_kit::NSBezierPath::bezierPath();
     match mark {
@@ -341,7 +341,7 @@ pub fn draw(mark: Mark, row: NSRect, width: f64) {
 }
 
 /// The column was clicked on `line`, counted from 0, at `at` in `column`: shows the committed lines of its hunk.
-pub fn clicked(view: &EditorTextView, line: usize, column: &NSView, at: NSRect) -> bool {
+pub(crate) fn clicked(view: &EditorTextView, line: usize, column: &NSView, at: NSRect) -> bool {
     let Some(head) = view.ivars().marks.borrow().head.as_ref().map(|h| h.text.clone()) else {
         return false;
     };
@@ -408,23 +408,7 @@ fn content(mtm: MainThreadMarker, view: &EditorTextView, mark: Mark, committed: 
     stack.addArrangedSubview(&button);
     let container = NSView::new(mtm);
     container.addSubview(&stack);
-    stack.setTranslatesAutoresizingMaskIntoConstraints(false);
-    for constraint in [
-        stack
-            .leadingAnchor()
-            .constraintEqualToAnchor_constant(&container.leadingAnchor(), PADDING.left),
-        stack
-            .trailingAnchor()
-            .constraintEqualToAnchor_constant(&container.trailingAnchor(), -PADDING.right),
-        stack
-            .topAnchor()
-            .constraintEqualToAnchor_constant(&container.topAnchor(), PADDING.top),
-        stack
-            .bottomAnchor()
-            .constraintEqualToAnchor_constant(&container.bottomAnchor(), -PADDING.bottom),
-    ] {
-        constraint.setActive(true);
-    }
+    pin_inset(&stack, &container, PADDING);
     container
 }
 
@@ -452,19 +436,12 @@ fn committed_view(mtm: MainThreadMarker, view: &EditorTextView, committed: &str)
     scroll.setDrawsBackground(false);
     scroll.setDocumentView(Some(&field));
     scroll.setTranslatesAutoresizingMaskIntoConstraints(false);
-    scroll
-        .widthAnchor()
-        .constraintEqualToConstant(size.width)
-        .setActive(true);
-    scroll
-        .heightAnchor()
-        .constraintEqualToConstant(size.height)
-        .setActive(true);
+    fixed_size(&scroll, size.width, size.height);
     Retained::into_super(scroll)
 }
 
 /// Closes the popover of `view`, if one is shown.
-pub fn dismiss(view: &EditorTextView) {
+pub(crate) fn dismiss(view: &EditorTextView) {
     let popover = view.ivars().marks.borrow_mut().popover.take();
     if let Some(popover) = popover {
         popover.close();
@@ -472,7 +449,7 @@ pub fn dismiss(view: &EditorTextView) {
 }
 
 /// Puts the committed lines of the hunk the popover shows back, as one undoable step.
-pub fn revert(view: &EditorTextView) {
+pub(crate) fn revert(view: &EditorTextView) {
     let shown = view.ivars().marks.borrow_mut().shown.take();
     dismiss(view);
     let Some((hunk, revision)) = shown else { return };
@@ -512,7 +489,7 @@ fn with_breaks(text: &str, ending: &str) -> String {
 }
 
 /// The editors whose file lies below `root` look at their commit again.
-pub fn git_changed(root: &Path) {
+pub(crate) fn git_changed(root: &Path) {
     for view in super::open_editors() {
         if view.document().path().is_some_and(|p| p.starts_with(root)) {
             schedule_head(&view);

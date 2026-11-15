@@ -7,7 +7,7 @@
 use super::*;
 
 /// What the self-test reads from the popover and the toolbar item: the popover's lines and the item's tooltip.
-pub fn inspect(controller: &WindowController) -> (Vec<String>, String) {
+pub(crate) fn inspect(controller: &WindowController) -> (Vec<String>, String) {
     let Some(activity) = of(controller) else {
         return (Vec::new(), String::new());
     };
@@ -31,7 +31,7 @@ pub fn inspect(controller: &WindowController) -> (Vec<String>, String) {
 }
 
 /// Closes the popover, for the self-test's later pictures.
-pub fn close(controller: &WindowController) {
+pub(crate) fn close(controller: &WindowController) {
     if let Some(activity) = of(controller)
         && let Some(popover) = activity.ivars().popover.borrow().as_ref()
     {
@@ -41,7 +41,7 @@ pub fn close(controller: &WindowController) {
 }
 
 /// The lines of the open popover, as the session overview shows them.
-pub fn overview_lines(controller: &WindowController) -> Vec<String> {
+pub(crate) fn overview_lines(controller: &WindowController) -> Vec<String> {
     let Some(activity) = of(controller) else {
         return Vec::new();
     };
@@ -60,12 +60,12 @@ pub fn overview_lines(controller: &WindowController) -> Vec<String> {
 pub(super) static UPDATED: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
 /// How often a popover changed the texts of its rows in place, for the self-test.
-pub fn updated_in_place() -> usize {
+pub(crate) fn updated_in_place() -> usize {
     UPDATED.load(std::sync::atomic::Ordering::Relaxed)
 }
 
 /// The popover's content, for the self-test's picture.
-pub fn popover_view(controller: &WindowController) -> Option<Retained<NSView>> {
+pub(crate) fn popover_view(controller: &WindowController) -> Option<Retained<NSView>> {
     let activity = of(controller)?;
     let popover = activity.ivars().popover.borrow().clone()?;
     Some(popover.contentViewController()?.view())

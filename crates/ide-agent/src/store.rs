@@ -14,21 +14,18 @@ const VERSION: u32 = 1;
 /// What a stored thread holds.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Stored {
-    /// The format's version.
-    pub version: u32,
-    /// The thread's title.
-    pub title: String,
+    pub(crate) version: u32,
+    pub(crate) title: String,
     /// The endpoint it talked to, by id.
     pub endpoint: String,
     /// The model it used last.
     pub model: String,
-    /// The conversation.
-    pub messages: Vec<Message>,
+    pub(crate) messages: Vec<Message>,
     /// The tokens and cost so far.
-    pub totals: Totals,
+    pub(crate) totals: Totals,
     /// The same, by model.
     #[serde(default)]
-    pub by_model: BTreeMap<String, Totals>,
+    pub(crate) by_model: BTreeMap<String, Totals>,
 }
 
 /// Why a stored thread could not be read.
@@ -45,17 +42,17 @@ pub enum LoadError {
 /// Tokens and cost of a thread so far.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
-pub struct Totals {
+pub(crate) struct Totals {
     /// Input tokens neither read from nor written to the cache.
-    pub input: u64,
+    pub(crate) input: u64,
     /// Output tokens.
-    pub output: u64,
+    pub(crate) output: u64,
     /// Input tokens read from the cache.
-    pub cache_read: u64,
+    pub(crate) cache_read: u64,
     /// Input tokens written to the cache.
-    pub cache_write: u64,
+    pub(crate) cache_write: u64,
     /// What it cost, as far as the prices are known.
-    pub cost_usd: Option<f64>,
+    pub(crate) cost_usd: Option<f64>,
 }
 
 /// Reads the thread stored at `path`.
@@ -70,7 +67,7 @@ pub fn load(path: &Path) -> Result<Stored, LoadError> {
 
 /// Why a thread was not written.
 #[derive(Debug)]
-pub enum SaveError {
+pub(crate) enum SaveError {
     /// It could not be written as JSON.
     Encode(serde_json::Error),
     /// Writing `path` failed.
@@ -100,21 +97,15 @@ impl std::error::Error for SaveError {
     }
 }
 
-/// Writes `stored` to `path` whole: to a temporary file beside it, then renamed over it.
-pub fn save(path: &Path, stored: &Stored) -> Result<(), SaveError> {
+/// Writes `stored` to `path` whole, with `ide_core::atomic_write`.
+pub(crate) fn save(path: &Path, stored: &Stored) -> Result<(), SaveError> {
     let mut stored = stored.clone();
     stored.version = VERSION;
     let text = serde_json::to_vec(&stored).map_err(SaveError::Encode)?;
-    let at = |path: &Path| {
-        let path = path.to_path_buf();
-        move |error| SaveError::Io { path, error }
-    };
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(at(parent))?;
-    }
-    let temporary = path.with_extension("json.part");
-    std::fs::write(&temporary, text).map_err(at(&temporary))?;
-    std::fs::rename(&temporary, path).map_err(at(path))
+    ide_core::atomic_write::write(path, &text).map_err(|error| SaveError::Io {
+        path: path.to_path_buf(),
+        error,
+    })
 }
 
 #[cfg(test)]

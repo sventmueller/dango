@@ -15,7 +15,7 @@ use super::form::{self, Row};
 use crate::settings_sync::{self, Status};
 use crate::util::{guarded, ns, set_action};
 
-pub struct SyncIvars {
+pub(crate) struct SyncIvars {
     switch: RefCell<Option<Retained<NSButton>>>,
     note: RefCell<Option<Retained<NSTextField>>>,
 }
@@ -26,7 +26,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDESyncSettings"]
     #[ivars = SyncIvars]
-    pub struct SyncSettings;
+    pub(crate) struct SyncSettings;
 
     unsafe impl NSObjectProtocol for SyncSettings {}
 
@@ -110,7 +110,7 @@ impl SyncSettings {
 }
 
 /// The rows of the General tab for the settings sync; `keep` holds the object their controls send their actions to.
-pub fn rows(mtm: MainThreadMarker, keep: &RefCell<Option<Retained<NSObject>>>) -> Vec<Row> {
+pub(crate) fn rows(mtm: MainThreadMarker, keep: &RefCell<Option<Retained<NSObject>>>) -> Vec<Row> {
     let target = SyncSettings::new(mtm);
     // SAFETY: The checkbox sends its action to the target, which answers it, set right below.
     let switch = unsafe {

@@ -23,7 +23,8 @@ use objc2::rc::Retained;
 use objc2_app_kit::{NSColor, NSFontWeightRegular, NSImage, NSImageScaling, NSImageSymbolConfiguration, NSImageView};
 use splat_markdown::palette::Rgb;
 
-pub use kinds::{Icon, Shape, Tint};
+pub(crate) use kinds::Tint;
+pub use kinds::{Icon, Shape};
 
 /// The point size of the symbols, which matches the logos' drawn size.
 const SYMBOL_SIZE: f64 = 12.0;
@@ -69,8 +70,7 @@ pub fn template(icon: &Icon) -> Option<Retained<NSImage>> {
     match icon.shape {
         Shape::Logo(name) => logo::image(name),
         Shape::Symbol(name) => {
-            // SAFETY: AppKit sets its font weight constants when it loads.
-            let weight = unsafe { NSFontWeightRegular };
+            let weight = ide_ui_common::constant!(NSFontWeightRegular);
             let configuration = NSImageSymbolConfiguration::configurationWithPointSize_weight(SYMBOL_SIZE, weight);
             ide_ui_common::util::symbol(name, "")?.imageWithSymbolConfiguration(&configuration)
         }

@@ -178,7 +178,7 @@ impl Session {
             } else {
                 shared.setup.breakpoints.insert(path.to_path_buf(), breakpoints.clone());
             }
-            (shared.configured, shared.children.clone())
+            (shared.course.is_configured(), shared.children.clone())
         };
         for child in children {
             child.set_breakpoints(path, breakpoints.clone(), Box::new(|_| {}));
@@ -203,7 +203,7 @@ impl Session {
         let (configured, children) = {
             let mut shared = self.inner().lock();
             shared.setup.exception_filters = Some(filters.clone());
-            (shared.configured, shared.children.clone())
+            (shared.course.is_configured(), shared.children.clone())
         };
         for child in children {
             child.set_exception_filters(filters.clone(), Box::new(|_| {}));

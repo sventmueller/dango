@@ -34,23 +34,23 @@ const WHITE: Rgb = Rgb::new(255, 255, 255);
 const BLACK: Rgb = Rgb::new(0, 0, 0);
 
 /// A rectangle of the frame filled with its colour.
-pub const SOLID: u32 = 0;
+pub(crate) const SOLID: u32 = 0;
 /// A rectangle filled with its colour where the sprite under it covers it.
-pub const MASK: u32 = 1;
+pub(crate) const MASK: u32 = 1;
 /// A rectangle showing the sprite's own colours.
-pub const PICTURE: u32 = 2;
+pub(crate) const PICTURE: u32 = 2;
 
 /// One rectangle of a frame in pixels from the top left, as the shader reads it.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Quad {
-    pub rect: [f32; 4],
+pub(crate) struct Quad {
+    pub(crate) rect: [f32; 4],
     /// The sprite's rectangle in the atlas, in pixels.
-    pub uv: [f32; 4],
+    pub(crate) uv: [f32; 4],
     /// Straight, not premultiplied.
-    pub color: [f32; 4],
+    pub(crate) color: [f32; 4],
     /// `SOLID`, `MASK` or `PICTURE`, then padding.
-    pub mode: [u32; 4],
+    pub(crate) mode: [u32; 4],
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -163,7 +163,7 @@ impl Shelves {
 }
 
 /// A view's sprites in one texture, drawn with one set of fonts.
-pub struct Sprites {
+pub(crate) struct Sprites {
     device: Retained<ProtocolObject<dyn MTLDevice>>,
     texture: Retained<ProtocolObject<dyn MTLTexture>>,
     /// Sprites placed but not yet in the texture: the next frame copies them in on the GPU, after the frames before
@@ -178,7 +178,7 @@ pub struct Sprites {
 }
 
 impl Sprites {
-    pub fn new(device: &ProtocolObject<dyn MTLDevice>) -> Option<Sprites> {
+    pub(crate) fn new(device: &ProtocolObject<dyn MTLDevice>) -> Option<Sprites> {
         Some(Sprites {
             device: device.retain(),
             texture: atlas(device, FIRST_SIDE)?,
@@ -191,13 +191,13 @@ impl Sprites {
         })
     }
 
-    pub fn texture(&self) -> &ProtocolObject<dyn MTLTexture> {
+    pub(crate) fn texture(&self) -> &ProtocolObject<dyn MTLTexture> {
         &self.texture
     }
 
     /// Copies the sprites placed since the last committed frame into the texture, as the first pass of `frame`;
     /// whether it could. They stay pending until [`Sprites::uploaded`].
-    pub fn upload(&self, frame: &ProtocolObject<dyn MTLCommandBuffer>) -> bool {
+    pub(crate) fn upload(&self, frame: &ProtocolObject<dyn MTLCommandBuffer>) -> bool {
         if self.uploads.is_empty() {
             return true;
         }
@@ -236,12 +236,12 @@ impl Sprites {
     }
 
     /// The frame that copied the pending sprites in was committed.
-    pub fn uploaded(&mut self) {
+    pub(crate) fn uploaded(&mut self) {
         self.uploads.clear();
     }
 
     /// Readies the sprites for a frame drawn with `fonts`, forgetting those of other fonts.
-    pub fn prepare(&mut self, fonts: &Fonts) {
+    pub(crate) fn prepare(&mut self, fonts: &Fonts) {
         if self.fonts != Some(fonts.id) {
             self.fonts = Some(fonts.id);
             self.entries.clear();
@@ -253,12 +253,12 @@ impl Sprites {
     }
 
     /// A sprite did not fit since `prepare`.
-    pub fn full(&self) -> bool {
+    pub(crate) fn full(&self) -> bool {
         self.full
     }
 
     /// Starts over in an empty atlas twice the size; false when it is as large as it gets.
-    pub fn grow(&mut self) -> bool {
+    pub(crate) fn grow(&mut self) -> bool {
         let side = self.shelves.side * 2;
         if side > LAST_SIDE {
             return false;
@@ -383,7 +383,7 @@ fn picture(frame: CGRect, scale: f64, ink: Rgb, color: Rgb, draw: &dyn Fn(&CGCon
 
 /// The BGRA pixels `draw` paints into a `width` × `height` bitmap that starts at `origin` pixels from the point
 /// sprites are drawn at, in points scaled by `scale` and running down like the view's.
-pub fn bitmap(
+pub(crate) fn bitmap(
     width: usize,
     height: usize,
     scale: f64,
@@ -464,14 +464,14 @@ fn text_picture(fonts: &Fonts, text: &str, face: Face, shift: u8, ink: Rgb, colo
 }
 
 /// Collects a frame as quads over the sprites.
-pub struct QuadCanvas<'a> {
+pub(crate) struct QuadCanvas<'a> {
     sprites: &'a mut Sprites,
     fonts: &'a Fonts,
-    pub quads: Vec<Quad>,
+    pub(crate) quads: Vec<Quad>,
 }
 
 impl<'a> QuadCanvas<'a> {
-    pub fn new(sprites: &'a mut Sprites, fonts: &'a Fonts) -> QuadCanvas<'a> {
+    pub(crate) fn new(sprites: &'a mut Sprites, fonts: &'a Fonts) -> QuadCanvas<'a> {
         QuadCanvas {
             sprites,
             fonts,

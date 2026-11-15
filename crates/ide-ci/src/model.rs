@@ -71,12 +71,12 @@ pub struct Run {
 
 /// One job of a run.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Job {
     /// The service's number for it.
     pub id: u64,
     /// The run it belongs to.
     pub run: u64,
-    /// Its name.
     pub name: String,
     /// GitLab's stage; `None` on GitHub.
     pub stage: Option<String>,
@@ -102,11 +102,11 @@ impl Job {
 
 /// A GitLab stage with its jobs.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Stage<'a> {
-    /// Its name.
     pub name: &'a str,
     /// Its jobs, in the order they were created.
-    pub jobs: Vec<&'a Job>,
+    pub(crate) jobs: Vec<&'a Job>,
 }
 
 impl Stage<'_> {
@@ -138,10 +138,10 @@ pub fn stages(jobs: &[Job]) -> Vec<Stage<'_>> {
 
 /// An open merge request (a pull request on GitHub) or issue.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Item {
     /// The number the project shows, such as 12 in `!12` or `#12`.
     pub number: u64,
-    /// Its title.
     pub title: String,
     /// Who opened it.
     pub author: Option<String>,
@@ -204,10 +204,10 @@ fn workflow(file: &str, text: &str) -> Option<Workflow> {
 
 /// One step of a job.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Step {
     /// Its position, from 1.
     pub number: u32,
-    /// Its name.
     pub name: String,
     /// How far it got.
     pub state: State,

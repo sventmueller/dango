@@ -12,33 +12,32 @@ use crate::text::Text;
 /// The names a server gives token types and modifiers; tokens refer to them by index.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Legend {
+pub(crate) struct Legend {
     /// Type names, such as `function` or `variable`.
-    pub token_types: Vec<String>,
+    pub(crate) token_types: Vec<String>,
     /// Modifier names, such as `readonly`; a token's bit `n` stands for the `n`th.
-    pub token_modifiers: Vec<String>,
+    pub(crate) token_modifiers: Vec<String>,
 }
 
 /// One token: a stretch of one line, with columns in UTF-16 code units.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Token {
-    /// Its line.
     pub line: u32,
     /// Its first column.
     pub start: u32,
-    /// Its length.
     pub length: u32,
     /// Its type, an index into the legend's types.
-    pub kind: u32,
+    pub(crate) kind: u32,
     /// Its modifiers, a bit set over the legend's modifiers.
-    pub modifiers: u32,
+    pub(crate) modifiers: u32,
 }
 
 /// The tokens of a whole document.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SemanticTokens {
     /// The names the indices in the tokens refer to.
-    pub legend: Arc<Legend>,
+    pub(crate) legend: Arc<Legend>,
     /// In document order.
     pub tokens: Vec<Token>,
 }
@@ -53,7 +52,8 @@ impl SemanticTokens {
     }
 
     /// The modifier names of `token`.
-    pub fn modifiers(&self, token: &Token) -> Vec<&str> {
+    #[cfg(test)]
+    pub(crate) fn modifiers(&self, token: &Token) -> Vec<&str> {
         self.legend
             .token_modifiers
             .iter()

@@ -13,7 +13,7 @@ use objc2_app_kit::NSApplication;
 use objc2_foundation::NSRange;
 
 use super::helpers::{self, wait_until, wait_within};
-use super::{check, finish};
+use super::{check, finish, give_up_saying};
 use crate::editor::{self, EditorTextView};
 use crate::window::{self, WindowController};
 
@@ -49,11 +49,10 @@ fn save(view: &EditorTextView) {
     unsafe { app.sendAction_to_from(objc2::sel!(ideSave:), Some(view), None) };
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let mut settings = Settings::load_user();
     if let Err(error) = settings.set(&keys::FORMAT_ON_SAVE, &true) {
-        check("format on save is turned on", false, error.to_string());
-        return finish(SCENARIO);
+        return give_up_saying(SCENARIO, "format on save is turned on", error.to_string());
     }
     helpers::open_project(
         SCENARIO,
@@ -70,8 +69,7 @@ pub fn run() {
             let program = root().join("web/node_modules/.bin/prettier");
             let made = std::fs::set_permissions(&program, std::os::unix::fs::PermissionsExt::from_mode(0o755));
             if let Err(error) = made {
-                check("the stand-in is executable", false, error.to_string());
-                return finish(SCENARIO);
+                return give_up_saying(SCENARIO, "the stand-in is executable", error.to_string());
             }
             formats(controller);
         },
@@ -89,8 +87,7 @@ fn opened(controller: &WindowController, file: &str, then: impl FnOnce(Retained<
         move |_| match view(&controller, &file) {
             Some(view) => then(view),
             None => {
-                check("the file opens in an editor", false, file);
-                finish(SCENARIO);
+                give_up_saying(SCENARIO, "the file opens in an editor", file);
             }
         },
     );

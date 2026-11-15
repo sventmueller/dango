@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use serde_json::{Value, json};
 
 /// The session id the stand-in's frames name.
-pub const SESSION: &str = "51e1f7e5-4000-4000-8000-0000000000aa";
+pub(crate) const SESSION: &str = "51e1f7e5-4000-4000-8000-0000000000aa";
 
 const SCRIPT: &str = r#"#!/bin/sh
 dir='@DIR@'
@@ -52,13 +52,13 @@ done
 "#;
 
 /// The stand-in's folder: the script, the answers and frames it gives, and what it saw.
-pub struct StandIn {
-    pub dir: PathBuf,
+pub(crate) struct StandIn {
+    pub(crate) dir: PathBuf,
 }
 
 impl StandIn {
     /// Writes the script and its answers into `dir`.
-    pub fn new(dir: &Path, cwd: &Path) -> std::io::Result<StandIn> {
+    pub(crate) fn new(dir: &Path, cwd: &Path) -> std::io::Result<StandIn> {
         let _ = std::fs::remove_dir_all(dir);
         std::fs::create_dir_all(dir)?;
         let stand_in = StandIn { dir: dir.to_path_buf() };
@@ -104,7 +104,7 @@ impl StandIn {
     }
 
     /// The program that stands in for `claude`.
-    pub fn program(&self) -> PathBuf {
+    pub(crate) fn program(&self) -> PathBuf {
         self.dir.join("claude")
     }
 
@@ -118,7 +118,7 @@ impl StandIn {
     }
 
     /// The arguments the program was last started with.
-    pub fn args(&self) -> Vec<String> {
+    pub(crate) fn args(&self) -> Vec<String> {
         std::fs::read_to_string(self.dir.join("args.txt"))
             .unwrap_or_default()
             .lines()
@@ -127,7 +127,7 @@ impl StandIn {
     }
 
     /// Every line the app wrote to the program, as JSON.
-    pub fn written(&self) -> Vec<Value> {
+    pub(crate) fn written(&self) -> Vec<Value> {
         std::fs::read_to_string(self.dir.join("written.ndjson"))
             .unwrap_or_default()
             .lines()
@@ -136,7 +136,7 @@ impl StandIn {
     }
 
     /// The app's answer to the program's request `id`.
-    pub fn answer_to(&self, id: &str) -> Option<Value> {
+    pub(crate) fn answer_to(&self, id: &str) -> Option<Value> {
         self.written().into_iter().find_map(|frame| {
             let response = frame.get("response")?;
             (frame["type"] == "control_response" && response["request_id"] == id).then(|| response["response"].clone())
@@ -144,7 +144,7 @@ impl StandIn {
     }
 
     /// The bodies of the control requests of `subtype` the app sent.
-    pub fn requests(&self, subtype: &str) -> Vec<Value> {
+    pub(crate) fn requests(&self, subtype: &str) -> Vec<Value> {
         self.written()
             .into_iter()
             .filter(|f| f["type"] == "control_request" && f["request"]["subtype"] == subtype)
@@ -153,7 +153,7 @@ impl StandIn {
     }
 
     /// The prompts the app sent, by their text.
-    pub fn prompts(&self) -> Vec<String> {
+    pub(crate) fn prompts(&self) -> Vec<String> {
         self.written()
             .into_iter()
             .filter(|f| f["type"] == "user")
@@ -235,12 +235,12 @@ fn result(n: u32) -> Value {
 }
 
 /// The question the stand-in asks: one answer picked, then several ticked with words of the user's own.
-pub const COLOUR: &str = "Welche Farbe?";
-pub const TESTS: &str = "Welche Tests?";
+pub(crate) const COLOUR: &str = "Welche Farbe?";
+pub(crate) const TESTS: &str = "Welche Tests?";
 
 /// The second request: two multiple-choice questions the user answers only in words, sent with one button.
-pub const AREAS: &str = "Welche Bereiche?";
-pub const EXTRAS: &str = "Welche Extras?";
+pub(crate) const AREAS: &str = "Welche Bereiche?";
+pub(crate) const EXTRAS: &str = "Welche Extras?";
 
 /// Write asks with two rules to store.
 fn first_turn(cwd: &Path) -> Vec<Value> {
@@ -374,13 +374,13 @@ fn after_plan() -> Vec<Value> {
 }
 
 /// Plays `frames` for the first prompt of the next start of the program, then `then` for those after it.
-pub fn next_start(stand_in: &StandIn, frames: &[Value], then: &[Value]) -> std::io::Result<()> {
+pub(crate) fn next_start(stand_in: &StandIn, frames: &[Value], then: &[Value]) -> std::io::Result<()> {
     stand_in.frames("turn-1.ndjson", frames)?;
     stand_in.frames("turn-1.ndjson.then", then)
 }
 
 /// The CLI's answer when it cannot resume at the point a rewind asked for.
-pub fn rewind_rejected() -> Value {
+pub(crate) fn rewind_rejected() -> Value {
     json!({"type": "result", "subtype": "error_during_execution", "is_error": true, "num_turns": 0,
            "duration_ms": 0, "duration_api_ms": 0, "stop_reason": null, "session_id": SESSION, "total_cost_usd": 0,
            "usage": {"input_tokens": 0, "output_tokens": 0}, "uuid": uuid(30),
@@ -388,7 +388,7 @@ pub fn rewind_rejected() -> Value {
 }
 
 /// A short answer that ends the turn.
-pub fn short_answer() -> Vec<Value> {
+pub(crate) fn short_answer() -> Vec<Value> {
     vec![text(31, "Erledigt."), result(32)]
 }
 
@@ -398,7 +398,7 @@ fn second_turn() -> Vec<Value> {
 }
 
 /// A turn that calls every kind of tool the timeline shows in a card of its own, each with an answer.
-pub fn tools_turn(cwd: &Path) -> Vec<Value> {
+pub(crate) fn tools_turn(cwd: &Path) -> Vec<Value> {
     let lines: String = (1..=12).map(|n| format!("row {n}\n")).collect();
     let calls = [
         (

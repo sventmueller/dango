@@ -13,9 +13,12 @@ use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
+/// The Messages API's stream events and token counts, which the own agent reads from the network too.
+pub use ide_net::api::anthropic::{BlockDelta, ContentBlock, Event, Usage as ApiUsage};
+pub(crate) use system::TaskUsage;
 pub use system::{
-    ApiRetry, BackgroundTask, CompactBoundary, Hook, Init, McpServer, System, TaskNotification, TaskPatch,
-    TaskProgress, TaskStarted, TaskUpdated, TaskUsage,
+    ApiRetry, BackgroundTask, CompactBoundary, Hook, Init, System, TaskNotification, TaskProgress, TaskStarted,
+    TaskUpdated,
 };
 
 /// One frame from the CLI.
@@ -90,7 +93,7 @@ pub fn parse(line: &str) -> Result<Message, NotJson> {
 
 impl Message {
     /// The frame `value` holds.
-    pub fn from_value(value: Value) -> Message {
+    pub(crate) fn from_value(value: Value) -> Message {
         let kind = value.get("type").and_then(Value::as_str).unwrap_or_default();
         let parsed = match kind {
             "assistant" => typed(&value).map(Message::Assistant),
@@ -132,38 +135,15 @@ fn text(value: &Value, field: &str) -> Option<String> {
 #[serde(default)]
 pub struct ApiMessage {
     /// Its id; consecutive assistant frames of one streamed response share it.
-    pub id: String,
+    pub(crate) id: String,
     /// The model that wrote it, `<synthetic>` for messages the CLI made up itself.
-    pub model: Option<String>,
+    pub(crate) model: Option<String>,
     /// Its content blocks; a streamed assistant frame carries just one.
     pub content: Vec<Block>,
     /// Why the response stopped; null on streamed frames.
-    pub stop_reason: Option<String>,
+    pub(crate) stop_reason: Option<String>,
     /// Token counts; not final on streamed frames.
-    pub usage: Option<ApiUsage>,
-}
-
-/// Token counts of a request.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
-#[serde(default)]
-pub struct ApiUsage {
-    /// Input tokens not read from or written to the cache.
-    pub input_tokens: Option<u64>,
-    /// Output tokens.
-    pub output_tokens: Option<u64>,
-    /// Input tokens written to the cache.
-    pub cache_creation_input_tokens: Option<u64>,
-    /// Input tokens read from the cache.
-    pub cache_read_input_tokens: Option<u64>,
-}
-
-impl ApiUsage {
-    /// All input tokens, cached or not: what the context window holds before the output.
-    pub fn context_input(&self) -> u64 {
-        self.input_tokens.unwrap_or(0)
-            + self.cache_creation_input_tokens.unwrap_or(0)
-            + self.cache_read_input_tokens.unwrap_or(0)
-    }
+    pub(crate) usage: Option<ApiUsage>,
 }
 
 /// A content block.
@@ -236,13 +216,13 @@ pub enum Block {
 pub struct ImageSource {
     /// `base64` when `data` holds the bytes.
     #[serde(default, rename = "type")]
-    pub kind: String,
+    pub(crate) kind: String,
     /// Its type, such as `image/png`.
     #[serde(default)]
-    pub media_type: String,
+    pub(crate) media_type: String,
     /// The bytes in base64.
     #[serde(default)]
-    pub data: String,
+    pub(crate) data: String,
 }
 
 /// An assistant frame.
@@ -252,57 +232,56 @@ pub struct Assistant {
     pub message: ApiMessage,
     /// The tool call that started the subagent which wrote it.
     #[serde(default)]
-    pub parent_tool_use_id: Option<String>,
+    pub(crate) parent_tool_use_id: Option<String>,
     /// Why the request failed, for messages the CLI made up to report a failure.
     #[serde(default)]
-    pub error: Option<String>,
+    pub(crate) error: Option<String>,
     /// The frame's id.
     #[serde(default)]
-    pub uuid: Option<String>,
+    pub(crate) uuid: Option<String>,
     /// Whether an interrupt cut the message short.
     #[serde(default)]
-    pub aborted: Option<bool>,
+    pub(crate) aborted: Option<bool>,
     /// Frames this one replaces.
     #[serde(default)]
-    pub supersedes: Vec<String>,
+    pub(crate) supersedes: Vec<String>,
 }
 
 /// A user-role frame from the CLI.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct User {
-    /// The message.
-    pub message: UserBody,
+    pub(crate) message: UserBody,
     /// The tool call that started the subagent it belongs to.
     #[serde(default)]
-    pub parent_tool_use_id: Option<String>,
+    pub(crate) parent_tool_use_id: Option<String>,
     /// Whether the CLI made it up rather than the user typing it.
     #[serde(default, rename = "isSynthetic")]
-    pub is_synthetic: Option<bool>,
+    pub(crate) is_synthetic: Option<bool>,
     /// Whether it echoes a prompt the CLI took in, from the app or from Remote Control.
     #[serde(default, rename = "isReplay")]
-    pub is_replay: Option<bool>,
+    pub(crate) is_replay: Option<bool>,
     /// Where an echoed prompt came from, such as `{"kind": "task-notification"}`; none for a person's prompt.
     #[serde(default)]
-    pub origin: Option<Value>,
+    pub(crate) origin: Option<Value>,
     /// The tool's structured output, shaped per tool.
     #[serde(default, alias = "toolUseResult")]
-    pub tool_use_result: Option<Value>,
+    pub(crate) tool_use_result: Option<Value>,
     /// The frame's id.
     #[serde(default)]
-    pub uuid: Option<String>,
+    pub(crate) uuid: Option<String>,
 }
 
 /// The body of a user-role message.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct UserBody {
+pub(crate) struct UserBody {
     /// A string or a list of blocks.
     #[serde(default)]
-    pub content: Value,
+    pub(crate) content: Value,
 }
 
 impl UserBody {
     /// The blocks, with a string read as one text block.
-    pub fn blocks(&self) -> Vec<Block> {
+    pub(crate) fn blocks(&self) -> Vec<Block> {
         match &self.content {
             Value::String(text) => vec![Block::Text { text: text.clone() }],
             Value::Array(items) => items.iter().map(|item| typed(item).unwrap_or(Block::Other)).collect(),
@@ -315,163 +294,88 @@ impl UserBody {
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct TurnResult {
     /// `success` or the sort of error.
-    pub subtype: String,
+    pub(crate) subtype: String,
     /// Whether the turn failed.
     #[serde(default)]
-    pub is_error: bool,
+    pub(crate) is_error: bool,
     /// The final answer's text, or the error.
     #[serde(default)]
-    pub result: Option<String>,
+    pub(crate) result: Option<String>,
     /// How long the turn took.
     #[serde(default)]
-    pub duration_ms: Option<u64>,
+    pub(crate) duration_ms: Option<u64>,
     /// How many model turns it took.
     #[serde(default)]
-    pub num_turns: Option<u64>,
+    pub(crate) num_turns: Option<u64>,
     /// The session's cost so far, in US dollars.
     #[serde(default)]
-    pub total_cost_usd: Option<f64>,
+    pub(crate) total_cost_usd: Option<f64>,
     /// Token counts of the main loop for this turn.
     #[serde(default)]
-    pub usage: Option<ApiUsage>,
+    pub(crate) usage: Option<ApiUsage>,
     /// Totals per model for the session so far.
     #[serde(default, rename = "modelUsage")]
-    pub model_usage: HashMap<String, ModelUsage>,
+    pub(crate) model_usage: HashMap<String, ModelUsage>,
     /// Errors of a failed turn.
     #[serde(default)]
-    pub errors: Option<Vec<String>>,
+    pub(crate) errors: Option<Vec<String>>,
     /// Why the turn ended.
     #[serde(default)]
-    pub terminal_reason: Option<String>,
+    pub(crate) terminal_reason: Option<String>,
     /// Why the CLI could not start, when it could not.
     #[serde(default)]
-    pub startup_failure_reason: Option<String>,
-    /// The session's id.
+    pub(crate) startup_failure_reason: Option<String>,
     #[serde(default)]
-    pub session_id: Option<String>,
+    pub(crate) session_id: Option<String>,
 }
 
 /// Totals for one model.
 #[derive(Debug, Clone, Copy, PartialEq, Default, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct ModelUsage {
-    /// Input tokens.
-    pub input_tokens: u64,
-    /// Output tokens.
-    pub output_tokens: u64,
+    pub(crate) input_tokens: u64,
+    pub(crate) output_tokens: u64,
     /// Input tokens read from the cache.
-    pub cache_read_input_tokens: u64,
+    pub(crate) cache_read_input_tokens: u64,
     /// Input tokens written to the cache.
-    pub cache_creation_input_tokens: u64,
+    pub(crate) cache_creation_input_tokens: u64,
     /// Cost in US dollars.
     #[serde(rename = "costUSD")]
-    pub cost_usd: f64,
-    /// The model's context window.
-    pub context_window: Option<u64>,
+    pub(crate) cost_usd: f64,
+    pub(crate) context_window: Option<u64>,
 }
 
 /// A streaming event, sent with `--include-partial-messages`.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct StreamEvent {
     /// The Messages API event.
-    pub event: RawEvent,
+    pub(crate) event: Event,
     /// The tool call that started the subagent it belongs to.
     #[serde(default)]
-    pub parent_tool_use_id: Option<String>,
-}
-
-/// A Messages API streaming event.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum RawEvent {
-    /// A message begins.
-    MessageStart {
-        /// The message so far.
-        message: ApiMessage,
-    },
-    /// A content block begins.
-    ContentBlockStart {
-        /// Its position in the message.
-        index: usize,
-        /// The block so far.
-        content_block: Block,
-    },
-    /// More of a content block.
-    ContentBlockDelta {
-        /// Its position in the message.
-        index: usize,
-        /// What arrived.
-        delta: Delta,
-    },
-    /// A content block ends.
-    ContentBlockStop {
-        /// Its position in the message.
-        index: usize,
-    },
-    /// The message's stop reason and usage.
-    MessageDelta {
-        /// Final token counts.
-        #[serde(default)]
-        usage: Option<ApiUsage>,
-    },
-    /// The message ends.
-    MessageStop,
-    /// Any other event, such as `ping`.
-    #[serde(other)]
-    Other,
-}
-
-/// What a streaming delta carries.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum Delta {
-    /// Text.
-    TextDelta {
-        /// The text.
-        #[serde(default)]
-        text: String,
-    },
-    /// Reasoning.
-    ThinkingDelta {
-        /// The reasoning.
-        #[serde(default)]
-        thinking: String,
-    },
-    /// Part of a tool call's input as JSON text.
-    InputJsonDelta {
-        /// The JSON text.
-        #[serde(default)]
-        partial_json: String,
-    },
-    /// Anything else, such as signatures.
-    #[serde(other)]
-    Other,
+    pub(crate) parent_tool_use_id: Option<String>,
 }
 
 /// A tool is still running.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct ToolProgress {
-    /// The call.
-    pub tool_use_id: String,
-    /// The tool.
+    pub(crate) tool_use_id: String,
     #[serde(default)]
-    pub tool_name: String,
+    pub(crate) tool_name: String,
     /// The tool call that started the subagent it belongs to.
     #[serde(default)]
-    pub parent_tool_use_id: Option<String>,
+    pub(crate) parent_tool_use_id: Option<String>,
     /// How long it has run.
     #[serde(default)]
-    pub elapsed_time_seconds: f64,
+    pub(crate) elapsed_time_seconds: f64,
 }
 
 /// A one-line summary of a group of tool calls.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct ToolUseSummary {
-    /// The summary.
-    pub summary: String,
+    pub(crate) summary: String,
     /// The calls it sums up.
     #[serde(default)]
-    pub preceding_tool_use_ids: Vec<String>,
+    pub(crate) preceding_tool_use_ids: Vec<String>,
 }
 
 /// The plan's rate-limit state.
@@ -479,16 +383,16 @@ pub struct ToolUseSummary {
 #[serde(rename_all = "camelCase")]
 pub struct RateLimitInfo {
     /// `allowed`, `allowed_warning` or `rejected`.
-    pub status: String,
+    pub(crate) status: String,
     /// When the window resets, in seconds since 1970.
     #[serde(default)]
-    pub resets_at: Option<f64>,
+    pub(crate) resets_at: Option<f64>,
     /// Which window, such as `five_hour`.
     #[serde(default)]
-    pub rate_limit_type: Option<String>,
+    pub(crate) rate_limit_type: Option<String>,
     /// The share used, from 0 to 1.
     #[serde(default)]
-    pub utilization: Option<f64>,
+    pub(crate) utilization: Option<f64>,
 }
 
 /// The state of a sign-in the CLI performs.
@@ -497,36 +401,57 @@ pub struct RateLimitInfo {
 pub struct AuthStatus {
     /// Whether it is still going on.
     #[serde(default)]
-    pub is_authenticating: bool,
+    pub(crate) is_authenticating: bool,
     /// What it printed.
     #[serde(default)]
-    pub output: Vec<String>,
-    /// Why it failed.
+    pub(crate) output: Vec<String>,
     #[serde(default)]
-    pub error: Option<String>,
+    pub(crate) error: Option<String>,
 }
 
 /// The conversation was discarded.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct ConversationReset {
-    /// The new conversation's id.
     #[serde(default)]
-    pub new_conversation_id: Option<String>,
+    pub(crate) new_conversation_id: Option<String>,
 }
 
 /// The answer to a control request the app sent.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct ControlResponse {
-    /// `success` or `error`.
-    pub subtype: String,
+    /// Whether the request succeeded.
+    pub(crate) subtype: Outcome,
     /// The request answered.
-    pub request_id: String,
+    pub(crate) request_id: String,
     /// The success payload.
     #[serde(default)]
-    pub response: Option<Value>,
-    /// The failure.
+    pub(crate) response: Option<Value>,
     #[serde(default)]
-    pub error: Option<String>,
+    pub(crate) error: Option<String>,
+}
+
+/// How the CLI answered a control request, by the response's `subtype`.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum Outcome {
+    /// It did what was asked.
+    Success,
+    /// It refused or failed.
+    Error,
+    /// A subtype the app does not know, which counts as a failure.
+    #[serde(untagged)]
+    Other(String),
+}
+
+impl Outcome {
+    /// The subtype as the CLI wrote it.
+    pub(crate) fn as_str(&self) -> &str {
+        match self {
+            Outcome::Success => "success",
+            Outcome::Error => "error",
+            Outcome::Other(other) => other,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -593,6 +518,19 @@ mod tests {
     }
 
     #[test]
+    fn control_response_outcomes_read_from_their_subtype() {
+        for (subtype, outcome) in [
+            ("success", Outcome::Success),
+            ("error", Outcome::Error),
+            ("cancelled", Outcome::Other("cancelled".into())),
+        ] {
+            let read: Outcome = serde_json::from_value(json!(subtype)).unwrap();
+            assert_eq!(read, outcome);
+            assert_eq!(read.as_str(), subtype);
+        }
+    }
+
+    #[test]
     fn control_frames_are_told_apart() {
         let request = parse(r#"{"type":"control_request","request_id":"r1","request":{"subtype":"can_use_tool"}}"#);
         assert!(matches!(request.unwrap(), Message::ControlRequest { request_id, .. } if request_id == "r1"));
@@ -601,7 +539,7 @@ mod tests {
         let Message::ControlResponse(r) = response.unwrap() else {
             panic!()
         };
-        assert_eq!((r.subtype.as_str(), r.error.as_deref()), ("error", Some("no")));
+        assert_eq!((r.subtype, r.error.as_deref()), (Outcome::Error, Some("no")));
         let cancel = parse(r#"{"type":"control_cancel_request","request_id":"r3"}"#).unwrap();
         assert_eq!(
             cancel,

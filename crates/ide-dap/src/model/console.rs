@@ -1,10 +1,10 @@
 //! A debug console: what the program and the adapter wrote, the expressions the user evaluated with their answers, and
 //! whether its session is over, after which it only shows its history (Review C18).
 
-use ide_core::debugging::{ConsoleKind, ConsoleLine};
+use crate::kept::{ConsoleKind, ConsoleLine};
 
 /// How many lines a console keeps; the oldest go first.
-pub const LIMIT: usize = 5_000;
+pub(crate) const LIMIT: usize = 5_000;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 /// The debug console of a session: its output and the expressions evaluated in it.
@@ -79,7 +79,7 @@ impl Console {
 
     /// The whole text, each line on its own line.
     #[cfg(test)]
-    pub fn text(&self) -> String {
+    pub(crate) fn text(&self) -> String {
         let mut text = String::new();
         for line in &self.lines {
             text.push_str(&line.text);

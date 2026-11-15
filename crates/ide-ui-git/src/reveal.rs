@@ -4,6 +4,7 @@
 use std::path::Path;
 use std::time::{Duration, Instant};
 
+use ide_git::CommitId;
 use objc2_foundation::NSIndexSet;
 
 use super::model::{RowKey, Section};
@@ -18,21 +19,21 @@ const PAGE_WAIT: Duration = Duration::from_secs(10);
 const POLL: Duration = Duration::from_millis(150);
 
 /// Opens the Git panel of `controller` with the commit `hash` selected in its history.
-pub fn reveal_commit(controller: &(impl AsWindow + ?Sized), hash: &str) {
+pub fn reveal_commit(controller: &(impl AsWindow + ?Sized), hash: &CommitId) {
     let controller = &controller.as_window();
     controller.activate_panel(Panel::Git);
     if let Some(panel) = panel::of(controller) {
-        reveal(&panel, hash.to_string(), 0);
+        reveal(&panel, hash.clone(), 0);
     }
 }
 
 /// Shows what the commit `hash` changed in `path`, relative to the repository's root `repo_root`, in a diff tab.
-pub fn show_commit_diff(controller: &(impl AsWindow + ?Sized), repo_root: &Path, hash: &str, path: &Path) {
+pub fn show_commit_diff(controller: &(impl AsWindow + ?Sized), repo_root: &Path, hash: &CommitId, path: &Path) {
     let controller = &controller.as_window();
     super::diff::show_commit(controller, repo_root, hash, path, false);
 }
 
-fn reveal(panel: &GitPanel, hash: String, pages: usize) {
+fn reveal(panel: &GitPanel, hash: CommitId, pages: usize) {
     if panel.read().model.commit(&hash).is_some() {
         select(panel, &hash);
         return;
@@ -47,7 +48,7 @@ fn reveal(panel: &GitPanel, hash: String, pages: usize) {
 }
 
 /// Waits for the next page of history to arrive, then looks for the commit again.
-fn wait(id: u64, hash: String, pages: usize, before: usize, until: Instant) {
+fn wait(id: u64, hash: CommitId, pages: usize, before: usize, until: Instant) {
     main_after(POLL, move || {
         with_panel(id, |panel| {
             if panel.read().model.commits.len() > before || Instant::now() > until {
@@ -59,14 +60,14 @@ fn wait(id: u64, hash: String, pages: usize, before: usize, until: Instant) {
     });
 }
 
-fn select(panel: &GitPanel, hash: &str) {
+fn select(panel: &GitPanel, hash: &CommitId) {
     panel.state().collapsed.remove(&Section::Commits);
     let outline = &panel.ui().outline;
     let section = panel.item_for(&RowKey::Section(Section::Commits));
     // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
     unsafe { outline.expandItem(Some(&section)) };
     // SAFETY: `item_for` returns the panel's cached item for the key, the same object the data source gave the view.
-    let row = unsafe { outline.rowForItem(Some(&panel.item_for(&RowKey::Commit(hash.to_string())))) };
+    let row = unsafe { outline.rowForItem(Some(&panel.item_for(&RowKey::Commit(hash.clone())))) };
     let Ok(index) = usize::try_from(row) else {
         return;
     };

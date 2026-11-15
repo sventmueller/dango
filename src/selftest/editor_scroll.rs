@@ -16,7 +16,7 @@ use objc2_foundation::{NSPoint, NSRange, NSRect, NSSize};
 
 use self::picture::Picture;
 use super::helpers::{self, wait_until};
-use super::{check, finish};
+use super::{check, finish, give_up};
 use crate::editor::insets::{self, Inset, Layer, Place};
 use crate::editor::{self, EditorTextView, selftest as edit};
 use crate::window;
@@ -76,7 +76,7 @@ fn gamma(view: &EditorTextView, block: usize) -> Option<std::ops::Range<usize>> 
     Some(start..start + 5)
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let text = text();
     helpers::open_project(SCENARIO, PROJECT, &[(FILE, text.as_str())], |controller| {
         controller.open_file(&root().join(FILE));
@@ -87,7 +87,7 @@ pub fn run() {
                 if ok {
                     prepare();
                 } else {
-                    finish(SCENARIO);
+                    give_up(SCENARIO, "the long file opens");
                 }
             },
         );
@@ -97,7 +97,9 @@ pub fn run() {
 /// Puts an inset after the first line of every sixth block, then, once the lines on screen show them, folds every
 /// third block, puts a caret in every third and a selection in the others, the view's own caret at the top.
 fn prepare() {
-    let Some(view) = view() else { return finish(SCENARIO) };
+    let Some(view) = view() else {
+        return give_up(SCENARIO, "the editor is open");
+    };
     let hints: Vec<Inset> = (0..BLOCKS)
         .filter(|b| with_inset(*b))
         .filter_map(|b| Some(Inset::new(view.line_start(b * LINES)?, "hint", Place::LineEnd)))
@@ -110,7 +112,9 @@ fn prepare() {
 }
 
 fn fold_and_place() {
-    let Some(view) = view() else { return finish(SCENARIO) };
+    let Some(view) = view() else {
+        return give_up(SCENARIO, "the editor is open");
+    };
     for block in (0..BLOCKS).filter(|b| folded(*b)) {
         if let Some(at) = view.line_start(block * LINES) {
             view.setSelectedRange(NSRange::new(at, 0));
@@ -224,11 +228,16 @@ impl Tally {
     }
 }
 
+/// Takes step `index`, or ends the scenario once every step was taken.
 fn step(index: usize, tally: Tally) {
-    let Some(&(_, movement, count, _)) = STEPS.get(index) else {
-        tally.report();
-        return finish(SCENARIO);
-    };
+    if let Some(&(_, movement, count, _)) = STEPS.get(index) {
+        return take(index, movement, count, tally);
+    }
+    tally.report();
+    finish(SCENARIO);
+}
+
+fn take(index: usize, movement: Move, count: usize, tally: Tally) {
     let before = view().map_or(0.0, |v| v.visibleRect().origin.y);
     if matches!(movement, Move::Wheel(_) | Move::Swipe(_))
         && let Some(view) = view()
@@ -324,7 +333,7 @@ fn wheel(view: &EditorTextView, unit: CGScrollEventUnit, delta: i32) {
 fn look(index: usize, before: f64, mut tally: Tally) {
     let Some(view) = view() else {
         tally.report();
-        return finish(SCENARIO);
+        return give_up(SCENARIO, "the editor is open");
     };
     let (name, _, _, direction) = STEPS[index];
     let label = format!("{index} {name}");

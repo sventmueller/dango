@@ -41,11 +41,6 @@ impl Client {
         &self.forge
     }
 
-    /// Whether it sends a token.
-    pub fn has_token(&self) -> bool {
-        self.token.is_some()
-    }
-
     /// The runs of the commit `sha`, newest first; when it has none, the latest runs of `branch`.
     ///
     /// ```

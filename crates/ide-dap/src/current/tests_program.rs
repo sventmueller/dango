@@ -11,9 +11,9 @@ use serde_json::{Map, Value, json};
 use super::{BUILD_TIMEOUT, CurrentError, build_env, compiler_errors, rust_formatters};
 use crate::adapter::AdapterKind;
 use crate::discover::Adapters;
-use crate::helper::{self, Helper};
 use crate::launch::LaunchConfig;
 use crate::types::Request;
+use ide_process::tool::{self, Helper};
 
 /// What a test needs to run under a debugger.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -120,7 +120,7 @@ fn native(
     cancel: &Cancel,
     line: &mut dyn FnMut(&str),
 ) -> Result<Map<String, Value>, CurrentError> {
-    let cargo = helper::which("cargo", adapters.path()).ok_or(CurrentError::Missing("cargo"))?;
+    let cargo = tool::which("cargo", adapters.path()).ok_or(CurrentError::Missing("cargo"))?;
     let helper = Helper {
         supervisor: adapters.supervisor(),
         env: &build_env(adapters),
@@ -128,12 +128,7 @@ fn native(
         cancel: Some(cancel),
     };
     let build: Vec<&str> = build.iter().map(String::as_str).collect();
-    let output = helper
-        .run(&cargo, &build, cwd, line)
-        .map_err(|e| CurrentError::Build(e.to_string()))?;
-    if output.ending.is_none() {
-        return Err(CurrentError::Cancelled);
-    }
+    let output = helper.run(&cargo, &build, cwd, line).map_err(super::stopped)?;
     if !output.succeeded() {
         let errors = compiler_errors(&output.stdout);
         return Err(CurrentError::Build(if errors.is_empty() {

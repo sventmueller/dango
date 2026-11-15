@@ -15,10 +15,10 @@ use ide_ui_common::util::{item, main_soon, ns, separator, set_target};
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(100);
 
 /// The tag of the menu item that asks for a new branch.
-pub const NEW_BRANCH_TAG: isize = 1;
+pub(crate) const NEW_BRANCH_TAG: isize = 1;
 
 /// Hands git's progress to the panel `id`, at most every `PROGRESS_INTERVAL`.
-pub fn sink(id: u64) -> impl FnMut(&Progress) {
+pub(crate) fn sink(id: u64) -> impl FnMut(&Progress) {
     let mut last: Option<(Instant, String)> = None;
     move |progress: &Progress| {
         let now = Instant::now();
@@ -37,7 +37,7 @@ pub fn sink(id: u64) -> impl FnMut(&Progress) {
 impl GitPanel {
     /// The branch popup with local branches, remote ones without a local branch, and "New Branch"; the distance to
     /// the upstream; which remote operations make sense.
-    pub fn update_header(&self) {
+    pub(crate) fn update_header(&self) {
         let ui = self.ui();
         let state = self.read();
         let mtm = self.mtm();
@@ -46,8 +46,8 @@ impl GitPanel {
         let Some(menu) = popup.menu() else { return };
         let current = state.branch.head.clone();
         if current.is_none() {
-            let short: String = state.branch.commit.as_deref().unwrap_or("").chars().take(8).collect();
-            let detached = item(mtm, &tf("Losgelöst bei {}", &[&short]), None, "");
+            let short = state.branch.commit.as_ref().map_or("", ide_git::CommitId::short);
+            let detached = item(mtm, &tf("Losgelöst bei {}", &[short]), None, "");
             detached.setEnabled(false);
             menu.addItem(&detached);
         }
@@ -133,7 +133,7 @@ impl GitPanel {
     }
 
     /// Disables what may not start while something runs and shows the progress row for it.
-    pub fn update_busy(&self) {
+    pub(crate) fn update_busy(&self) {
         let ui = self.ui();
         let busy = self.read().busy.as_ref().map(|b| (b.task, b.cancel.is_some()));
         let idle = busy.is_none();
@@ -182,7 +182,7 @@ impl GitPanel {
         ide_ui_common::util::set_label(&ui.progress_label, Some(text));
     }
 
-    pub fn show_progress(&self, progress: &Progress) {
+    pub(crate) fn show_progress(&self, progress: &Progress) {
         if self.read().busy.is_none() {
             return;
         }
@@ -202,7 +202,7 @@ impl GitPanel {
     }
 
     /// Shows the banner while a merge, rebase or stash apply waits, saying how many conflicts are left.
-    pub fn update_banner(&self) {
+    pub(crate) fn update_banner(&self) {
         let banner = &self.ui().banner;
         let (operation, stash, open) = {
             let state = self.read();
@@ -248,7 +248,7 @@ impl GitPanel {
     }
 
     /// The placeholder shows while the message is empty and says what an empty message does when amending.
-    pub fn update_placeholder(&self) {
+    pub(crate) fn update_placeholder(&self) {
         let ui = self.ui();
         let amend = ui.amend.state() == NSControlStateValueOn;
         let text = if amend {
@@ -276,7 +276,7 @@ fn running(operation: Operation) -> &'static str {
 }
 
 /// The question before `operation` is abandoned.
-pub fn abort_question(operation: Operation) -> &'static str {
+pub(crate) fn abort_question(operation: Operation) -> &'static str {
     match operation {
         Operation::Merge => t("Zusammenführung abbrechen?"),
         Operation::Rebase => t("Rebase abbrechen?"),

@@ -43,8 +43,8 @@ pub enum Decision {
 
 /// The answer to one question.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Answer {
-    /// The question.
     pub question: String,
     /// The chosen labels, or the user's own words.
     pub answer: String,
@@ -88,11 +88,26 @@ pub enum PermissionOption {
         suggestion: usize,
         /// What the rule allows, as the user reads it.
         rule: String,
-        /// Where the rule is stored, such as the session or the project.
-        scope: String,
+        /// Where the rule is stored.
+        scope: RuleScope,
     },
     /// Refuse this call.
     Deny,
+}
+
+/// Where a stored rule applies.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RuleScope {
+    /// Until the session ends.
+    Session,
+    /// The project, for this user only.
+    ProjectLocal,
+    /// The project, for everyone who works on it.
+    Project,
+    /// Every project of this user.
+    User,
+    /// A place the agent names in its own words, empty when it names none.
+    Other(String),
 }
 
 /// The agent asks the user questions.
@@ -110,10 +125,10 @@ pub struct Question {
 
 /// One question with its options; the user may also answer in their own words.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct QuestionItem {
     /// A short label for the question.
     pub header: Option<String>,
-    /// The question.
     pub question: String,
     /// The options offered.
     pub options: Vec<QuestionOption>,

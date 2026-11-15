@@ -14,7 +14,7 @@ use objc2_foundation::{NSObjectProtocol, NSRect};
 use super::view::EditorTextView;
 use crate::util::guarded;
 
-pub struct FragmentIvars {
+pub(crate) struct FragmentIvars {
     editor: Weak<EditorTextView>,
 }
 
@@ -24,7 +24,7 @@ define_class!(
     #[unsafe(super(NSTextLayoutFragment, NSObject))]
     #[name = "IDEInsetFragment"]
     #[ivars = FragmentIvars]
-    pub struct InsetFragment;
+    pub(crate) struct InsetFragment;
 
     unsafe impl NSObjectProtocol for InsetFragment {}
 
@@ -63,7 +63,7 @@ define_class!(
     }
 );
 
-pub struct LayoutIvars {
+pub(crate) struct LayoutIvars {
     editor: Weak<EditorTextView>,
 }
 
@@ -73,7 +73,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDEInsetLayout"]
     #[ivars = LayoutIvars]
-    pub struct InsetLayout;
+    pub(crate) struct InsetLayout;
 
     unsafe impl NSObjectProtocol for InsetLayout {}
 
@@ -99,7 +99,7 @@ define_class!(
 
 /// Has the text layout of `editor` make its fragments as `InsetFragment`s. The layout manager holds its delegate
 /// weakly, so the delegate is returned for the editor to keep.
-pub fn attach(editor: &EditorTextView) -> Option<Retained<InsetLayout>> {
+pub(crate) fn attach(editor: &EditorTextView) -> Option<Retained<InsetLayout>> {
     let layout = editor.textLayoutManager()?;
     let delegate = InsetLayout::alloc(editor.mtm()).set_ivars(LayoutIvars {
         editor: Weak::from(editor),

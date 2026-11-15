@@ -21,7 +21,7 @@ const STATE_MIGRATIONS: &[Migration] = &[];
 
 /// Where a setting may be set.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Scope {
+pub(crate) enum Scope {
     /// Only in the user's settings.
     User,
     /// In the user's settings, and in a project's, which wins there.
@@ -37,51 +37,26 @@ pub enum Sharing {
     PerMac,
 }
 
-/// The settings that follow the user to their other Macs (E113), by name; a test holds this list to the keys'
-/// declarations.
-pub const SHARED: &[&str] = &[
-    "vimClipboard",
-    "vimMode",
-    "emmet",
-    "eslintFixOnSave",
-    "agentEffort",
-    "agentModel",
-    "agentPrices",
-    "blameAtLineEnd",
-    "ciHosts",
-    "ciOAuthClients",
-    "commitMessageModel",
-    "diagnosticsAtLineEnd",
-    "dictation",
-    "dictationWithFn",
-    "editPrediction",
-    "editPredictionExclude",
-    "editPredictionOffFor",
-    "fontSize",
-    "formatOnSave",
-    "formatter",
-    "hiddenSidebarPanels",
-    "inlayHints",
-    "inlayHintsOffFor",
-    "markdownPreviewBeside",
-    "minimap",
-    "optionAsMeta",
-    "previewTabs",
-    "reopenProjects",
-    "searchEngine",
-    "showIgnoredFiles",
-    "showWhitespace",
-    "stickyScrollLines",
-];
+/// A setting as the registry of every setting knows it, whatever its type: the app gathers those of every crate, and
+/// the sync takes along the ones it marks shared (E113).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Declared {
+    /// The name in the JSON file.
+    pub name: &'static str,
+    /// Where it may be set.
+    pub(crate) scope: Scope,
+    /// Whether it follows the user to their other Macs.
+    pub sync: Sharing,
+}
 
 /// A named setting of type `T` with its default.
 pub struct Key<T> {
     /// The name in the JSON file.
-    pub name: &'static str,
+    pub(crate) name: &'static str,
     /// Where it may be set.
-    pub scope: Scope,
+    pub(crate) scope: Scope,
     /// Whether it follows the user to their other Macs.
-    pub sync: Sharing,
+    pub(crate) sync: Sharing,
     default: fn() -> T,
     kind: PhantomData<fn() -> T>,
 }
@@ -99,13 +74,22 @@ impl<T> Key<T> {
     }
 
     /// A setting a project may set for itself.
-    pub const fn project(name: &'static str, sync: Sharing, default: fn() -> T) -> Key<T> {
+    pub(crate) const fn project(name: &'static str, sync: Sharing, default: fn() -> T) -> Key<T> {
         Key {
             name,
             scope: Scope::Project,
             sync,
             default,
             kind: PhantomData,
+        }
+    }
+
+    /// The setting as the registry of every setting knows it.
+    pub const fn declared(&self) -> Declared {
+        Declared {
+            name: self.name,
+            scope: self.scope,
+            sync: self.sync,
         }
     }
 
@@ -117,7 +101,32 @@ impl<T> Key<T> {
 
 /// The settings of the app.
 pub mod keys {
-    use super::{Key, SearchEngine, Sharing};
+    use super::{Declared, FormatterChoice, Key, SearchEngine, Sharing};
+
+    /// The settings this crate declares, for the app's registry of every setting.
+    pub const SETTINGS: &[Declared] = &[
+        REOPEN_PROJECTS.declared(),
+        FONT_SIZE.declared(),
+        FORMAT_ON_SAVE.declared(),
+        SHOW_WHITESPACE.declared(),
+        MINIMAP.declared(),
+        FORMATTER.declared(),
+        EMMET.declared(),
+        VIM_MODE.declared(),
+        VIM_CLIPBOARD.declared(),
+        ESLINT_FIX_ON_SAVE.declared(),
+        DIAGNOSTICS_AT_LINE_END.declared(),
+        STICKY_SCROLL_LINES.declared(),
+        INLAY_HINTS.declared(),
+        INLAY_HINTS_OFF.declared(),
+        BLAME_AT_LINE_END.declared(),
+        PREVIEW_TABS.declared(),
+        MARKDOWN_PREVIEW.declared(),
+        SHOW_IGNORED_FILES.declared(),
+        SEARCH_ENGINE.declared(),
+        HIDDEN_PANELS.declared(),
+        OPTION_AS_META.declared(),
+    ];
 
     /// Opens the folders that were open when the app quit.
     pub const REOPEN_PROJECTS: Key<bool> = Key::user("reopenProjects", Sharing::Shared, || true);
@@ -132,9 +141,9 @@ pub mod keys {
     pub const SHOW_WHITESPACE: Key<bool> = Key::user("showWhitespace", Sharing::Shared, || false);
     /// Whether editors show the minimap beside the text (E107).
     pub const MINIMAP: Key<bool> = Key::user("minimap", Sharing::Shared, || false);
-    /// Who formats each language, `server` or `prettier`; a language not listed follows the project's Prettier
+    /// Who formats each language, by the language's name; a language not listed follows the project's Prettier
     /// configuration (E133).
-    pub const FORMATTER: Key<std::collections::BTreeMap<String, String>> =
+    pub const FORMATTER: Key<std::collections::BTreeMap<String, FormatterChoice>> =
         Key::project("formatter", Sharing::Shared, std::collections::BTreeMap::new);
     /// Whether Emmet's abbreviations show in completion for HTML, CSS and JSX (E109).
     pub const EMMET: Key<bool> = Key::user("emmet", Sharing::Shared, || true);
@@ -213,6 +222,56 @@ impl SearchEngine {
     }
 }
 
+/// Who formats a language, as the setting `formatter` names it (E133).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum FormatterChoice {
+    /// The language server.
+    Server,
+    /// Prettier.
+    Prettier,
+    /// A word the app does not know, kept as written; the language then follows the project's configuration.
+    #[serde(untagged)]
+    Other(String),
+}
+
+/// Why a setting could not be set for the project.
+#[cfg(test)]
+#[derive(Debug)]
+pub(crate) enum SetError {
+    /// The setting, by name, is the user's only.
+    UserOnly(&'static str),
+    /// No project is open.
+    NoProject,
+    /// The value has no JSON form.
+    Encode(serde_json::Error),
+    /// The project's settings file could not be written.
+    Write(io::Error),
+}
+
+#[cfg(test)]
+impl std::fmt::Display for SetError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SetError::UserOnly(name) => write!(f, "{name} is set by the user only"),
+            SetError::NoProject => f.write_str("no project is open"),
+            SetError::Encode(error) => write!(f, "the value has no JSON form: {error}"),
+            SetError::Write(error) => error.fmt(f),
+        }
+    }
+}
+
+#[cfg(test)]
+impl std::error::Error for SetError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            SetError::Encode(error) => Some(error),
+            SetError::Write(error) => Some(error),
+            SetError::UserOnly(_) | SetError::NoProject => None,
+        }
+    }
+}
+
 /// What the state file holds.
 pub mod remembered {
     use std::collections::BTreeMap;
@@ -266,7 +325,7 @@ fn changed(path: &Path, names: &[String]) {
 }
 
 /// How many folders the recent list keeps.
-pub const RECENT_LIMIT: usize = 12;
+pub(crate) const RECENT_LIMIT: usize = 12;
 
 /// The user's settings and, inside a project, the project's.
 #[derive(Debug, Clone)]
@@ -354,16 +413,16 @@ impl Settings {
     }
 
     /// Sets `key` in the project's settings and writes them.
-    pub fn set_for_project<T: Serialize>(&mut self, key: &Key<T>, value: &T) -> io::Result<()> {
+    #[cfg(test)]
+    pub(crate) fn set_for_project<T: Serialize>(&mut self, key: &Key<T>, value: &T) -> Result<(), SetError> {
         if key.scope != Scope::Project {
-            return Err(io::Error::other(format!("{} is set by the user only", key.name)));
+            return Err(SetError::UserOnly(key.name));
         }
-        let project = self
-            .project
-            .as_mut()
-            .ok_or_else(|| io::Error::other("no project is open"))?;
-        let value = serde_json::to_value(value).map_err(io::Error::other)?;
-        project.set(key.name, value, SETTINGS_MIGRATIONS)
+        let project = self.project.as_mut().ok_or(SetError::NoProject)?;
+        let value = serde_json::to_value(value).map_err(SetError::Encode)?;
+        project
+            .set(key.name, value, SETTINGS_MIGRATIONS)
+            .map_err(SetError::Write)
     }
 
     /// Settings files that are not written, and why: one the user should look at.
@@ -379,7 +438,7 @@ impl Settings {
 /// A named entry of the app's state file with its default; never synced to other Macs.
 pub struct StateKey<T> {
     /// The name in the JSON file.
-    pub name: &'static str,
+    pub(crate) name: &'static str,
     default: fn() -> T,
     kind: PhantomData<fn() -> T>,
 }
@@ -403,7 +462,7 @@ pub struct State {
 
 impl State {
     /// The state from `path`.
-    pub fn load(path: PathBuf) -> State {
+    pub(crate) fn load(path: PathBuf) -> State {
         State {
             store: Store::load(path, STATE_MIGRATIONS),
         }
@@ -462,7 +521,25 @@ mod tests {
         );
         settings.set(&keys::FONT_SIZE, &11.0).unwrap();
         assert_eq!(settings.get(&keys::FONT_SIZE), 15.0, "the project still wins");
-        assert!(settings.set_for_project(&keys::REOPEN_PROJECTS, &false).is_err());
+        assert!(matches!(
+            settings.set_for_project(&keys::REOPEN_PROJECTS, &false),
+            Err(SetError::UserOnly("reopenProjects"))
+        ));
+        assert!(matches!(
+            Settings::load(dir.join("user.json")).set_for_project(&keys::FONT_SIZE, &13.0),
+            Err(SetError::NoProject)
+        ));
+    }
+
+    #[test]
+    fn the_formatter_setting_reads_and_writes_as_stored() {
+        let stored = serde_json::json!({"typescript": "prettier", "rust": "server", "css": "biome"});
+        let read: std::collections::BTreeMap<String, FormatterChoice> = serde_json::from_value(stored.clone()).unwrap();
+        assert_eq!(read["typescript"], FormatterChoice::Prettier);
+        assert_eq!(read["rust"], FormatterChoice::Server);
+        assert_eq!(read["css"], FormatterChoice::Other("biome".into()));
+        assert_eq!(serde_json::to_value(&read).unwrap(), stored);
+        assert!(serde_json::from_value::<FormatterChoice>(serde_json::json!(2)).is_err());
     }
 
     #[test]

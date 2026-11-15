@@ -35,6 +35,7 @@ const OPENING_HEAD: usize = 16;
 /// Lines lexed between two looks at the clock.
 const LINES_PER_STEP: usize = 256;
 /// How far a search for the partner of a bracket goes, in lines.
+#[cfg(test)]
 pub(crate) const BRACKET_LINES: usize = 20_000;
 /// Lines longer than this, as minified code has them, stay without colours and brackets and hand on the state they
 /// start in, so that a keystroke in one costs no more than in a short line; VS Code draws the line at the same length.
@@ -65,12 +66,13 @@ pub(crate) struct Bracket {
 }
 
 /// Two brackets that belong together, as UTF-16 offsets into the text.
+#[cfg(test)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct BracketPair {
+pub(crate) struct BracketPair {
     /// The opening bracket.
-    pub open: usize,
+    pub(crate) open: usize,
     /// The closing bracket.
-    pub close: usize,
+    pub(crate) close: usize,
 }
 
 /// What a line starts inside of.
@@ -263,6 +265,7 @@ impl Syntax {
     }
 
     /// The bracket at UTF-16 offset `offset` or right before it, and its partner.
+    #[cfg(test)]
     pub(crate) fn matching_bracket(&mut self, text: &Text, offset: usize) -> Option<BracketPair> {
         let byte = text.utf16_to_byte(offset).ok()?;
         let line = text.line_of(byte);
@@ -320,6 +323,7 @@ impl Syntax {
     }
 
     /// Looks for the partner through `lines`, in the search's direction, lexing them a step at a time.
+    #[cfg(test)]
     fn walk_lines(
         &mut self,
         text: &Text,
@@ -358,6 +362,7 @@ impl Syntax {
 
 /// The column of the partner among `brackets`, walked in the search's direction; `depth` counts the brackets like
 /// the one searched from that are still open, across lines.
+#[cfg(test)]
 fn walk(brackets: &[Bracket], forward: bool, same: u8, partner: u8, depth: &mut usize) -> Option<u32> {
     let mut visit = |b: &Bracket| {
         if b.ch == same {
@@ -377,6 +382,7 @@ fn walk(brackets: &[Bracket], forward: bool, same: u8, partner: u8, depth: &mut 
     }
 }
 
+#[cfg(test)]
 fn pair_of(ch: u8) -> Option<(u8, u8)> {
     match ch {
         b'(' | b')' => Some((b'(', b')')),

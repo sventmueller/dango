@@ -6,7 +6,7 @@ use std::path::Path;
 
 use objc2::DefinedClass;
 
-use super::WindowController;
+use crate::window::WindowController;
 
 /// What a part of a window does when its folder opens, becomes trusted or closes.
 struct Part {
@@ -73,15 +73,15 @@ const PARTS: &[Part] = &[
 
 impl WindowController {
     /// The window's folder opened; every part takes it up.
-    pub(super) fn folder_attached(&self) {
+    pub(in crate::window) fn folder_attached(&self) {
         for part in PARTS {
             (part.attached)(self);
         }
     }
 
     /// The window's folder closes, for good or for another folder: the search stops and every part lets it go.
-    pub(super) fn folder_closes(&self) {
-        if let Some(search) = self.ivars().search.borrow().as_ref() {
+    pub(in crate::window) fn folder_closes(&self) {
+        if let Some(search) = self.ivars().folder.search.borrow().as_ref() {
             search.stop();
         }
         for part in PARTS {
@@ -91,7 +91,7 @@ impl WindowController {
 }
 
 /// The user trusts `root` now; the parts of every window that shows it may start what they waited for.
-pub(super) fn trust_changed(root: &Path) {
+pub(in crate::window) fn trust_changed(root: &Path) {
     for part in PARTS {
         (part.trust_changed)(root);
     }

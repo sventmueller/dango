@@ -12,20 +12,20 @@ use objc2::rc::{Retained, Weak};
 
 mod controller;
 mod hierarchy;
-pub use hierarchy::HierarchyPanels;
+pub(crate) use hierarchy::HierarchyPanels;
 use ide_project::search_panel as model;
 mod panel;
 mod replace;
 mod rows;
 #[cfg(feature = "selftest")]
-pub mod selftest;
+pub(crate) mod selftest;
 mod views;
 
 #[cfg(feature = "selftest")]
-pub use model::LIMIT;
-pub use model::Toggle;
+pub(crate) use model::LIMIT;
+pub(crate) use model::Toggle;
 use panel::SearchOutlineView;
-pub use panel::SearchPanel;
+pub(crate) use panel::SearchPanel;
 
 /// How long typing must pause before a search starts.
 const DEBOUNCE: Duration = Duration::from_millis(150);
@@ -41,7 +41,7 @@ const ESCAPE_KEY: u16 = 53;
 /// How far the rows move toward the leading edge from where a source list puts them.
 const OUTDENT: f64 = 4.0;
 /// The search panels of every window and the id the next one gets.
-pub struct SearchPanels {
+pub(crate) struct SearchPanels {
     panels: RefCell<Vec<Weak<SearchPanel>>>,
     next_id: std::cell::Cell<u64>,
 }
@@ -64,7 +64,7 @@ fn with_next_id<R>(f: impl FnOnce(&std::cell::Cell<u64>) -> R) -> R {
 }
 
 /// Files below `root` changed on disk: the searches of its folder that show matches run again.
-pub fn files_changed(root: &Path) {
+pub(crate) fn files_changed(root: &Path) {
     for panel in panels() {
         if panel.read().root() == root {
             panel.refresh_soon();
@@ -73,7 +73,7 @@ pub fn files_changed(root: &Path) {
 }
 
 /// The unsaved text of `path` changed: the searches that show matches below its folder run again.
-pub fn buffer_edited(path: &Path) {
+pub(crate) fn buffer_edited(path: &Path) {
     for panel in panels() {
         if path.starts_with(panel.read().root()) {
             panel.refresh_soon();

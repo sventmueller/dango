@@ -448,6 +448,7 @@ fn a_scenario_that_skipped_each_of_its_checks_counts_as_skipped() {
     };
     let report = |checks| Report {
         scenario: "ci-live".into(),
+        ending: Ending::Ran,
         checks,
         appearance: None,
     };

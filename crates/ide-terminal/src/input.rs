@@ -6,11 +6,11 @@ use alacritty_terminal::term::TermMode;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct InputModes {
     /// Cursor keys send `ESC O` instead of `ESC [` (DECCKM).
-    pub app_cursor: bool,
+    pub(crate) app_cursor: bool,
     /// The keypad sends its own sequences (DECKPAM).
-    pub app_keypad: bool,
+    pub(crate) app_keypad: bool,
     /// Enter sends CR LF (LNM).
-    pub newline: bool,
+    pub(crate) newline: bool,
     /// Pasted text is wrapped in `ESC [200~` and `ESC [201~`.
     pub bracketed_paste: bool,
     /// Focus changes are reported as `ESC [I` and `ESC [O`.
@@ -18,13 +18,13 @@ pub struct InputModes {
     /// Which mouse events the program wants.
     pub mouse: MouseTracking,
     /// How mouse events are written.
-    pub mouse_encoding: MouseEncoding,
+    pub(crate) mouse_encoding: MouseEncoding,
     /// The alternate screen is shown, as in full-screen programs.
     pub alternate_screen: bool,
     /// On the alternate screen without mouse reporting, the wheel sends cursor keys.
-    pub alternate_scroll: bool,
+    pub(crate) alternate_scroll: bool,
     /// The kitty keyboard protocol's progressive enhancements the program asked for.
-    pub kitty: KittyFlags,
+    pub(crate) kitty: KittyFlags,
 }
 
 impl InputModes {
@@ -72,40 +72,42 @@ impl InputModes {
 
 /// The kitty keyboard protocol's progressive enhancements, as the program pushed them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
-pub struct KittyFlags(u8);
+pub(crate) struct KittyFlags(u8);
 
 impl KittyFlags {
     /// Legacy encoding.
-    pub const NONE: KittyFlags = KittyFlags(0);
+    pub(crate) const NONE: KittyFlags = KittyFlags(0);
     /// Keys that are ambiguous in the legacy encoding, such as Esc or Ctrl+I, become `CSI u` sequences.
-    pub const DISAMBIGUATE: KittyFlags = KittyFlags(1);
+    pub(crate) const DISAMBIGUATE: KittyFlags = KittyFlags(1);
     /// Repeats and releases are reported too.
-    pub const EVENT_TYPES: KittyFlags = KittyFlags(2);
+    pub(crate) const EVENT_TYPES: KittyFlags = KittyFlags(2);
     /// The shifted key is reported next to the base key.
-    pub const ALTERNATE_KEYS: KittyFlags = KittyFlags(4);
+    pub(crate) const ALTERNATE_KEYS: KittyFlags = KittyFlags(4);
     /// Every key, text keys included, becomes an escape sequence.
-    pub const ALL_KEYS: KittyFlags = KittyFlags(8);
+    pub(crate) const ALL_KEYS: KittyFlags = KittyFlags(8);
     /// The text a key types is reported with its sequence.
-    pub const ASSOCIATED_TEXT: KittyFlags = KittyFlags(16);
+    pub(crate) const ASSOCIATED_TEXT: KittyFlags = KittyFlags(16);
 
     /// Whether all of `flags` are set.
-    pub fn contains(self, flags: KittyFlags) -> bool {
+    pub(crate) fn contains(self, flags: KittyFlags) -> bool {
         self.0 & flags.0 == flags.0
     }
 
     /// These flags and `flags`.
     #[must_use]
-    pub fn with(self, flags: KittyFlags) -> KittyFlags {
+    pub(crate) fn with(self, flags: KittyFlags) -> KittyFlags {
         KittyFlags(self.0 | flags.0)
     }
 
     /// Whether no flag is set.
-    pub fn is_empty(self) -> bool {
+    #[cfg(test)]
+    pub(crate) fn is_empty(self) -> bool {
         self.0 == 0
     }
 
     /// The flags as the protocol numbers them.
-    pub fn bits(self) -> u8 {
+    #[cfg(test)]
+    pub(crate) fn bits(self) -> u8 {
         self.0
     }
 }
@@ -126,7 +128,7 @@ pub enum MouseTracking {
 
 /// How mouse events are written.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum MouseEncoding {
+pub(crate) enum MouseEncoding {
     /// Three bytes after `CSI M`, up to column and line 223.
     #[default]
     Default,
@@ -171,8 +173,8 @@ impl Modifiers {
 
 /// A key event.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub struct Key {
-    /// Which key.
     pub code: KeyCode,
     /// The modifiers held, including the key itself when it is a modifier being pressed.
     pub modifiers: Modifiers,
@@ -288,7 +290,7 @@ pub enum KeyAction {
 }
 
 /// The bytes `key` sends to a program in `modes`; empty when it sends nothing.
-pub fn encode_key(key: &Key, modes: &InputModes) -> Vec<u8> {
+pub(crate) fn encode_key(key: &Key, modes: &InputModes) -> Vec<u8> {
     let flags = modes.kitty;
     let kitty = flags.contains(KittyFlags::DISAMBIGUATE)
         || flags.contains(KittyFlags::EVENT_TYPES)
@@ -696,7 +698,7 @@ pub struct MouseEvent {
 
 /// The report of `event` for a program in `modes`; `None` when it did not ask for this kind of event or the cell is
 /// beyond what the encoding can express.
-pub fn encode_mouse(event: &MouseEvent, modes: &InputModes) -> Option<Vec<u8>> {
+pub(crate) fn encode_mouse(event: &MouseEvent, modes: &InputModes) -> Option<Vec<u8>> {
     let (button, released, moved) = match event.action {
         MouseAction::Press(button) => (button.code(), false, false),
         MouseAction::Release(button) if button.is_wheel() => return None,
@@ -747,7 +749,7 @@ fn push_coordinate(report: &mut Vec<u8>, position: usize, utf8: bool) -> Option<
 
 /// What a turn of the wheel does in a terminal.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Wheel {
+pub(crate) enum Wheel {
     /// Send these bytes: mouse reports, or cursor keys on the alternate screen.
     Send(Vec<u8>),
     /// Scroll the history by this many lines, positive towards older output.
@@ -756,7 +758,7 @@ pub enum Wheel {
 
 /// What turning the wheel by `lines` (positive away from the user) at a cell does in `modes`. Shift scrolls the
 /// history even on the alternate screen.
-pub fn encode_wheel(lines: i32, line: usize, column: usize, modifiers: Modifiers, modes: &InputModes) -> Wheel {
+pub(crate) fn encode_wheel(lines: i32, line: usize, column: usize, modifiers: Modifiers, modes: &InputModes) -> Wheel {
     if lines == 0 {
         return Wheel::Send(Vec::new());
     }
@@ -791,7 +793,7 @@ pub fn encode_wheel(lines: i32, line: usize, column: usize, modifiers: Modifiers
 }
 
 /// The report of a focus change, if the program asked for them.
-pub fn encode_focus(focused: bool, modes: &InputModes) -> Option<&'static [u8]> {
+pub(crate) fn encode_focus(focused: bool, modes: &InputModes) -> Option<&'static [u8]> {
     modes
         .focus_reporting
         .then_some(if focused { b"\x1b[I" } else { b"\x1b[O" })
@@ -799,7 +801,7 @@ pub fn encode_focus(focused: bool, modes: &InputModes) -> Option<&'static [u8]> 
 
 /// Pasted text as the program should receive it: inside bracketed-paste markers when it asked for them, without any
 /// end marker of its own that would let the rest run as typed input; otherwise with line breaks as Enter sends them.
-pub fn encode_paste(text: &str, modes: &InputModes) -> Vec<u8> {
+pub(crate) fn encode_paste(text: &str, modes: &InputModes) -> Vec<u8> {
     if !modes.bracketed_paste {
         return text.replace("\r\n", "\r").replace('\n', "\r").into_bytes();
     }

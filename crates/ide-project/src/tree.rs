@@ -29,7 +29,7 @@ pub enum Kind {
 
 /// How a symbolic link resolves.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Link {
+pub(crate) enum Link {
     /// To an existing file or folder.
     Resolved,
     /// To nothing.
@@ -48,15 +48,15 @@ pub struct Entry {
     /// What it is, or for a link what it points to.
     pub kind: Kind,
     /// How it resolves, if it is a symbolic link.
-    pub link: Option<Link>,
+    pub(crate) link: Option<Link>,
     /// The size in bytes of a file; 0 for anything else.
-    pub size: u64,
+    pub(crate) size: u64,
     /// When the content last changed.
-    pub modified: Option<SystemTime>,
+    pub(crate) modified: Option<SystemTime>,
     /// Hidden by `.gitignore`, `.ignore`, `.git/info/exclude` or the global excludes.
-    pub is_ignored: bool,
+    pub(crate) is_ignored: bool,
     /// Hidden by the system with the hidden flag.
-    pub is_hidden: bool,
+    pub(crate) is_hidden: bool,
 }
 
 impl Entry {
@@ -101,13 +101,8 @@ impl Tree {
         &self.root
     }
 
-    /// What the tree lists.
-    pub fn options(&self) -> TreeOptions {
-        self.options
-    }
-
     /// The entries of `dir` if it has been read.
-    pub fn children(&self, dir: &Path) -> Option<&[Entry]> {
+    pub(crate) fn children(&self, dir: &Path) -> Option<&[Entry]> {
         self.loaded.get(dir).map(|entries| &**entries)
     }
 

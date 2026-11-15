@@ -61,10 +61,10 @@ use editor::Editor;
 use ide_ui_common::util::{main_after, main_soon};
 
 pub use actions::{Kind as ActionKind, bulb_line, place_bulb};
-pub use agent::{AgentDiagnostics, agent_diagnostics};
+pub(crate) use agent::AgentDiagnostics;
+pub use agent::agent_diagnostics;
 pub use decorate::{
-    LineMarks, Painted, Severity, follow, follow_squiggles, line_marks, line_messages, paint, paint_due, paint_tokens,
-    text_range,
+    Painted, Severity, follow, follow_squiggles, line_marks, line_messages, paint, paint_due, paint_tokens, text_range,
 };
 pub use host::{Host, State as LspState, install};
 
@@ -77,13 +77,16 @@ pub use hover::{dismiss as dismiss_hover, hover_at_cursor, hover_rest, mouse_mov
 pub use navigate::{Goto, definition, go_to, jump_to, next_problem, open_at, references, symbols};
 pub use project_symbols::{FoundSymbol, SymbolAnswer, open_symbol, search_symbols};
 pub use rename::{format, rename, save};
-pub use {
+pub(crate) use {
     actions::CodeActions, complete::Completion, navigate::LocationSheets, project_symbols::Leases, rename::Formatting,
     signature::ShownSignature,
 };
 
 /// How long typing must pause before semantic tokens and pulled diagnostics are asked for again.
 const REFRESH_DELAY: f64 = 0.4;
+
+/// The settings this crate declares, for the app's registry of every setting.
+pub const SETTINGS: &[ide_core::settings::Declared] = &[LANGUAGE_SERVERS.declared(), install::DECLINED.declared()];
 
 /// The language servers the user set up, which take their files from the built-in ones.
 pub const LANGUAGE_SERVERS: Key<Vec<CustomServer>> =
@@ -96,7 +99,7 @@ const CONTENT_MODIFIED: i64 = -32801;
 #[derive(Default)]
 pub struct ViewState {
     /// Tells editors apart in callbacks from other threads, which cannot hold a view.
-    pub serial: EditorSerial,
+    pub(crate) serial: EditorSerial,
     slot: Option<u64>,
     /// The second servers beside the main one (E140): their slots and the document's language id for them.
     companions: Vec<(u64, String)>,
@@ -156,7 +159,7 @@ thread_local! {
 }
 
 /// The language server workspaces of every window and the id the next one gets.
-pub struct Workspaces {
+pub(crate) struct Workspaces {
     workspaces: RefCell<Vec<Rc<Workspace>>>,
     next_id: Cell<u64>,
 }

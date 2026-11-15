@@ -4,7 +4,7 @@
 #[cfg(feature = "selftest")]
 use ide_core::LockIgnoringPoison;
 use ide_core::explain::{Explain, Explained};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::Duration;
 #[cfg(feature = "selftest")]
 use std::time::SystemTime;
@@ -12,6 +12,7 @@ use std::time::SystemTime;
 #[cfg(feature = "selftest")]
 use ide_claude::replay::Replay;
 use ide_claude::{Capabilities, Event, PermissionAnswer, PlanAnswer, Session, SessionError};
+use ide_process::tool;
 use ide_thread::{Answer, Thread, UserMessage};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
@@ -33,7 +34,7 @@ pub struct Resume {
 
 /// What keeps a tab from running a session.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Problem {
+pub(crate) enum Problem {
     /// The folder is not trusted (E22).
     Untrusted,
     /// No `claude` on the login shell's PATH.
@@ -54,7 +55,7 @@ pub enum Problem {
     Exited(Option<String>),
 }
 
-pub enum Source {
+pub(crate) enum Source {
     /// Nothing runs yet, or any more.
     Idle,
     /// Looking for `claude` and the login shell's environment.
@@ -69,7 +70,7 @@ pub enum Source {
 }
 
 impl Source {
-    pub fn session(&self) -> Option<&Session> {
+    pub(crate) fn session(&self) -> Option<&Session> {
         match self {
             Source::Live(session) => Some(session),
             _ => None,
@@ -77,7 +78,7 @@ impl Source {
     }
 
     /// The thread as it is now, when there is one.
-    pub fn snapshot(&self) -> Option<Thread> {
+    pub(crate) fn snapshot(&self) -> Option<Thread> {
         match self {
             Source::Live(session) => Some(session.snapshot()),
             Source::Acp(session) => Some(session.snapshot()),
@@ -88,12 +89,12 @@ impl Source {
         }
     }
 
-    pub fn capabilities(&self) -> Option<Capabilities> {
+    pub(crate) fn capabilities(&self) -> Option<Capabilities> {
         self.session().map(Session::capabilities)
     }
 
     /// Whether a recording plays instead of a process, which a restart must not replace with a real `claude`.
-    pub fn is_replay(&self) -> bool {
+    pub(crate) fn is_replay(&self) -> bool {
         #[cfg(feature = "selftest")]
         {
             matches!(self, Source::Replay(_))
@@ -104,7 +105,7 @@ impl Source {
         }
     }
 
-    pub fn is_live(&self) -> bool {
+    pub(crate) fn is_live(&self) -> bool {
         match self {
             Source::Acp(session) => session.is_ready(),
             Source::Own(_) => true,
@@ -113,7 +114,7 @@ impl Source {
     }
 
     /// The own agent's session, when the tab runs one.
-    pub fn own(&self) -> Option<&ide_agent::Session> {
+    pub(crate) fn own(&self) -> Option<&ide_agent::Session> {
         match self {
             Source::Own(session) => Some(session),
             _ => None,
@@ -121,39 +122,39 @@ impl Source {
     }
 
     /// The ACP session, when the tab runs one.
-    pub fn acp(&self) -> Option<&ide_acp::Session> {
+    pub(crate) fn acp(&self) -> Option<&ide_acp::Session> {
         match self {
             Source::Acp(session) => Some(session),
             _ => None,
         }
     }
 
-    pub fn acp_capabilities(&self) -> Option<ide_acp::Capabilities> {
+    pub(crate) fn acp_capabilities(&self) -> Option<ide_acp::Capabilities> {
         self.acp().map(ide_acp::Session::capabilities)
     }
 
-    pub fn authenticate(&self, method: &str) -> Result<(), ide_acp::SessionError> {
+    pub(crate) fn authenticate(&self, method: &str) -> Result<(), ide_acp::SessionError> {
         self.acp()
             .map_or(Err(ide_acp::SessionError::Closed), |s| s.authenticate(method))
     }
 
-    pub fn set_option(&self, option: &str, value: &str) -> Result<(), ide_acp::SessionError> {
+    pub(crate) fn set_option(&self, option: &str, value: &str) -> Result<(), ide_acp::SessionError> {
         self.acp()
             .map_or(Err(ide_acp::SessionError::Closed), |s| s.set_option(option, value))
     }
 
-    pub fn set_acp_mode(&self, mode: &str) -> Result<(), ide_acp::SessionError> {
+    pub(crate) fn set_acp_mode(&self, mode: &str) -> Result<(), ide_acp::SessionError> {
         self.acp()
             .map_or(Err(ide_acp::SessionError::Closed), |s| s.set_mode(mode))
     }
 
-    pub fn answer_acp(&self, request: &str, choice: ide_acp::Choice) -> Result<(), ide_acp::SessionError> {
+    pub(crate) fn answer_acp(&self, request: &str, choice: ide_acp::Choice) -> Result<(), ide_acp::SessionError> {
         self.acp()
             .map_or(Err(ide_acp::SessionError::Closed), |s| s.answer(request, choice))
     }
 
     /// Sends `message` as a prompt; the CLI's id for it, which an ACP agent does not give.
-    pub fn send(&self, message: UserMessage) -> Result<Option<String>, Explained> {
+    pub(crate) fn send(&self, message: UserMessage) -> Result<Option<String>, Explained> {
         match self {
             Source::Live(session) => session.send(message).map(Some).map_err(|e| Explained::of(&e)),
             Source::Acp(session) => session.send(message).map(|()| None).map_err(|e| Explained::of(&e)),
@@ -162,7 +163,7 @@ impl Source {
         }
     }
 
-    pub fn interrupt(&self) {
+    pub(crate) fn interrupt(&self) {
         if let Some(session) = self.session() {
             session.interrupt().then(|_| ());
         }
@@ -174,18 +175,22 @@ impl Source {
         }
     }
 
-    pub fn answer(&self, request: &str, answer: PermissionAnswer) -> Result<(), SessionError> {
+    pub(crate) fn answer(&self, request: &str, answer: PermissionAnswer) -> Result<(), SessionError> {
         self.session()
             .map_or(Err(SessionError::Closed), |s| s.answer(request, answer))
     }
 
-    pub fn answer_questions(&self, request: &str, answers: Vec<Answer>) -> Result<(), SessionError> {
+    pub(crate) fn answer_questions(&self, request: &str, answers: Vec<Answer>) -> Result<(), SessionError> {
         self.session()
             .map_or(Err(SessionError::Closed), |s| s.answer_questions(request, answers))
     }
 
     /// Answers a plan; what a recording played for the self-test changed, which a session reports as an event.
-    pub fn answer_plan(&mut self, request: &str, answer: PlanAnswer) -> Result<Vec<ide_thread::Change>, SessionError> {
+    pub(crate) fn answer_plan(
+        &mut self,
+        request: &str,
+        answer: PlanAnswer,
+    ) -> Result<Vec<ide_thread::Change>, SessionError> {
         #[cfg(feature = "selftest")]
         if let Source::Replay(replay) = self {
             return Ok(replay.answer_plan(request, &answer));
@@ -195,20 +200,20 @@ impl Source {
             .map(|()| Vec::new())
     }
 
-    pub fn stop_task(&self, task: &str) {
+    pub(crate) fn stop_task(&self, task: &str) {
         if let Some(session) = self.session() {
             session.stop_task(task).then(|_| ());
         }
     }
 
-    pub fn background(&self, call: &str) {
+    pub(crate) fn background(&self, call: &str) {
         if let Some(session) = self.session() {
             session.background(Some(call)).then(|_| ());
         }
     }
 
     /// Switches the session's permission mode; `refused` gets the CLI's reason when it says no.
-    pub fn set_mode(&self, mode: &str, refused: impl FnOnce(String) + Send + 'static) {
+    pub(crate) fn set_mode(&self, mode: &str, refused: impl FnOnce(String) + Send + 'static) {
         if let Some(session) = self.session() {
             session
                 .set_permission_mode(ide_claude::PermissionMode::from(mode))
@@ -220,20 +225,20 @@ impl Source {
         }
     }
 
-    pub fn set_model(&self, model: &str) {
+    pub(crate) fn set_model(&self, model: &str) {
         if let Some(session) = self.session() {
             session.set_model(Some(model)).then(|_| ());
         }
     }
 
-    pub fn set_effort(&self, level: &str) {
+    pub(crate) fn set_effort(&self, level: &str) {
         if let Some(session) = self.session() {
             session.set_effort(ide_claude::Effort::from(level)).then(|_| ());
         }
     }
 
     /// Ends the process: input closed, then the supervisor's signals.
-    pub fn end(&self) {
+    pub(crate) fn end(&self) {
         if let Some(session) = self.session() {
             session.stop(Duration::from_secs(2));
         }
@@ -247,37 +252,27 @@ impl Source {
 }
 
 /// The `claude` executable on the login shell's PATH, else in the places its installers use.
-pub fn find_claude(env: &[(String, String)]) -> Option<PathBuf> {
+pub(crate) fn find_claude(env: &[(String, String)]) -> Option<PathBuf> {
     #[cfg(feature = "selftest")]
     if let Some(program) = TEST_PROGRAM.lock_ignoring_poison().clone() {
         return Some(program);
     }
-    let home = ide_core::paths::home();
-    let path = env
-        .iter()
-        .find(|(name, _)| name == "PATH")
-        .map(|(_, value)| value.clone())
-        .unwrap_or_default();
-    path.split(':')
-        .filter(|dir| !dir.is_empty())
-        .map(PathBuf::from)
-        .chain([
+    tool::which("claude", tool::var(env, "PATH")).or_else(|| {
+        let home = ide_core::paths::home();
+        [
             home.join(".local/bin"),
             home.join(".claude/local"),
             PathBuf::from("/opt/homebrew/bin"),
             PathBuf::from("/usr/local/bin"),
-        ])
+        ]
+        .into_iter()
         .map(|dir| dir.join("claude"))
-        .find(|candidate| is_executable(candidate))
-}
-
-fn is_executable(path: &Path) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    std::fs::metadata(path).is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+        .find(|candidate| tool::is_executable(candidate))
+    })
 }
 
 /// What a session event means for the tab, beyond the thread changes.
-pub fn problem_of(event: &Event) -> Option<Problem> {
+pub(crate) fn problem_of(event: &Event) -> Option<Problem> {
     match event {
         Event::Failed(SessionError::SignInRequired(why)) => Some(Problem::SignIn(why.clone())),
         Event::Failed(SessionError::NotFound(_)) => Some(Problem::NotFound),
@@ -298,6 +293,15 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
         std::fs::set_permissions(&exe, std::fs::Permissions::from_mode(0o755)).unwrap();
         let env = vec![("PATH".to_string(), format!("/nonexistent:{}", dir.display()))];
-        assert_eq!(find_claude(&env), Some(exe));
+        assert_eq!(find_claude(&env), Some(exe.clone()));
+        let overridden = vec![
+            ("PATH".to_string(), "/nonexistent".to_string()),
+            ("PATH".to_string(), dir.display().to_string()),
+        ];
+        assert_eq!(
+            find_claude(&overridden),
+            Some(exe),
+            "the last PATH of the list is the one a child sees"
+        );
     }
 }

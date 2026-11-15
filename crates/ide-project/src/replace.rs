@@ -71,7 +71,8 @@ pub fn replacements(text: &str, options: &SearchOptions, replacement: &str) -> R
 }
 
 /// `text` with `replacements` made, which must not overlap.
-pub fn apply(text: &str, replacements: &[Replacement]) -> String {
+#[cfg(test)]
+pub(crate) fn apply(text: &str, replacements: &[Replacement]) -> String {
     let units: Vec<u16> = text.encode_utf16().collect();
     let mut sorted: Vec<&Replacement> = replacements.iter().collect();
     sorted.sort_by_key(|r| r.range_utf16.start);

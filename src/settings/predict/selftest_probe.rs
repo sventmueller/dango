@@ -7,7 +7,7 @@
 use super::*;
 
 /// What the tab shows, for the self-test: the provider's title, the Copilot line and the consent line.
-pub fn shown() -> Option<(String, String, String, bool)> {
+pub(crate) fn shown() -> Option<(String, String, String, bool)> {
     let this = with_shown(|shown| shown.borrow().clone())?;
     let views = this.ivars().views.get()?;
     Some((
@@ -19,18 +19,18 @@ pub fn shown() -> Option<(String, String, String, bool)> {
 }
 
 /// What the tab shows of the local server, for the self-test.
-pub struct LocalShown {
-    pub about: String,
-    pub url: String,
-    pub model: String,
+pub(crate) struct LocalShown {
+    pub(crate) about: String,
+    pub(crate) url: String,
+    pub(crate) model: String,
     /// The models the model field offers.
-    pub offered: Vec<String>,
-    pub note: String,
-    pub exclude: String,
+    pub(crate) offered: Vec<String>,
+    pub(crate) note: String,
+    pub(crate) exclude: String,
 }
 
 /// What the tab shows of the local server, for the self-test.
-pub fn local_shown() -> Option<LocalShown> {
+pub(crate) fn local_shown() -> Option<LocalShown> {
     let this = with_shown(|shown| shown.borrow().clone())?;
     let views = this.ivars().views.get()?;
     let offered = (0..views.model.numberOfItems())

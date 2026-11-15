@@ -3,8 +3,10 @@
 use std::path::PathBuf;
 
 use crate::error::{Error, Result};
+use crate::id::CommitId;
 use crate::repo::Repository;
 use crate::run::Output;
+use crate::said::Said;
 use crate::status::{EntryKind, StatusOptions, Untracked};
 
 /// How to commit.
@@ -20,7 +22,7 @@ impl Repository {
     /// Commits what is staged and returns the new commit's hash. Empty commits are refused; hooks run, and one that
     /// refuses gives `Error::HookFailed` with what it printed. There is no time limit, since hooks may run tests; the
     /// activity view can stop the process.
-    pub fn commit(&self, message: &str, options: CommitOptions) -> Result<String> {
+    pub fn commit(&self, message: &str, options: CommitOptions) -> Result<CommitId> {
         let keep_message = options.amend && message.trim().is_empty();
         if message.trim().is_empty() && !keep_message {
             return Err(Error::EmptyMessage);
@@ -42,14 +44,14 @@ impl Repository {
         };
         let (output, failed_hook) = crate::hooks::run(self.git(), call)?;
         if output.code != 0 {
-            return Err(self.commit_failure(&output, failed_hook)?);
+            return Err(self.commit_failure(&output, failed_hook, options.amend)?);
         }
         self.head()?.ok_or_else(|| Error::Unexpected {
             what: "no HEAD after commit".into(),
         })
     }
 
-    fn commit_failure(&self, output: &Output, failed_hook: Option<String>) -> Result<Error> {
+    fn commit_failure(&self, output: &Output, failed_hook: Option<String>, amend: bool) -> Result<Error> {
         if let Some(hook) = failed_hook {
             return Ok(Error::HookFailed {
                 hook,
@@ -57,17 +59,15 @@ impl Repository {
             });
         }
         let said = output.said();
-        if said.contains("nothing to commit") || said.contains("no changes added to commit") {
+        if !amend && !self.merging()? && !self.has_staged_changes()? {
             return Ok(Error::NothingToCommit);
         }
-        if said.contains("empty commit message") {
+        if Said::EmptyMessage.in_text(&said) {
             return Ok(Error::EmptyMessage);
         }
-        if said.contains("unmerged files") {
-            return Ok(Error::Conflicts {
-                paths: self.unmerged_paths()?,
-                output: said,
-            });
+        let paths = self.unmerged_paths()?;
+        if !paths.is_empty() {
+            return Ok(Error::Conflicts { paths, output: said });
         }
         Ok(crate::run::failure(output))
     }

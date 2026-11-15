@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use ide_process::Supervisor;
 
-use crate::helper::Helper;
+use ide_process::tool::Helper;
 
 /// A running process.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -15,7 +15,7 @@ pub struct Process {
     /// The name of its program.
     pub name: String,
     /// Its command line.
-    pub command: String,
+    pub(crate) command: String,
 }
 
 /// The processes of the current user except the app itself, newest first; blocks while `ps` runs.

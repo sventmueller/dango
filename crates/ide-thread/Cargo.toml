@@ -9,6 +9,10 @@ publish.workspace = true
 [lints]
 workspace = true
 
+[features]
+# The checks the agent connections' fuzz targets run on the thread they fill.
+fuzzing = []
+
 [dependencies]
 ide-core = { path = "../ide-core" }
 serde = { version = "1.0.229", features = ["derive"] }

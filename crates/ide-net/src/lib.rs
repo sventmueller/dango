@@ -1,6 +1,6 @@
 //! The one way onto the network: HTTPS checked against the system's certificate store, a [`Net`] that tests stand in
-//! for, downloads that hash what arrives while reporting progress and listening for [`Cancel`], and what the
-//! installers built on them share.
+//! for, downloads that hash what arrives while reporting progress and listening for [`Cancel`], what the installers
+//! built on them share, and the client for the providers of language models with their failures ([`api`]).
 //!
 //! ```
 //! use std::io::{self, Read};
@@ -27,13 +27,13 @@
 //! ```
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs, unreachable_pub)]
+#![warn(missing_docs)]
 
+pub mod api;
 mod download;
 pub mod install;
 mod net;
 
 pub use download::{DownloadError, download};
 pub use ide_core::Cancel;
-pub use net::{Client, Download, Http, Net, client};
-pub use ureq;
+pub use net::{Answer, Download, Http, Net, Service};

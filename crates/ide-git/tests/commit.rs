@@ -22,7 +22,7 @@ fn a_commit_returns_its_hash_and_takes_the_message_as_given() {
     repository.stage(&["a.txt"]).unwrap();
     let message = "First line with ümlauts\n\nBody with # hash and \"quotes\"\n";
     let hash = repository.commit(message, CommitOptions::default()).unwrap();
-    assert_eq!(repository.head().unwrap().as_deref(), Some(hash.as_str()));
+    assert_eq!(repository.head().unwrap(), Some(hash));
     let stored = scratch.raw(repository.root(), &["log", "-1", "--format=%B"]);
     assert_eq!(stored.trim_end(), message.trim_end());
 }

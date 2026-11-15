@@ -21,7 +21,7 @@ const LANGUAGE: Language = Language::Fr;
 const POST_PROCESSING: PostProcessingMode = PostProcessingMode::Cleanup;
 const TERMS: [&str; 2] = ["Kubernetes", "Traefik"];
 
-pub fn run() {
+pub(crate) fn run() {
     let (offered, _) = crate::settings::dictation_rows();
     let took = control(sel!(ideDictationLowspeakChoices:), Some(1)).is_some_and(|b| act(&b));
     let (still_offered, _) = crate::settings::dictation_rows();

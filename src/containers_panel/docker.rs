@@ -13,12 +13,8 @@ use splat_i18n::t;
 const LIMIT: Duration = Duration::from_secs(120);
 
 /// The `docker` program on the login shell's PATH.
-pub fn program(env: &[(String, String)]) -> Option<std::path::PathBuf> {
-    env.iter().find(|(k, _)| k == "PATH").and_then(|(_, path)| {
-        path.split(':')
-            .map(|d| std::path::Path::new(d).join("docker"))
-            .find(|p| p.is_file())
-    })
+pub(crate) fn program(env: &[(String, String)]) -> Option<std::path::PathBuf> {
+    ide_process::tool::which("docker", ide_process::tool::var(env, "PATH"))
 }
 
 fn command(program: &std::path::Path, args: &ide_docker::Command, env: &[(String, String)]) -> Command {
@@ -38,7 +34,7 @@ fn command(program: &std::path::Path, args: &ide_docker::Command, env: &[(String
 
 /// Why a docker command gave no answer.
 #[derive(Debug)]
-pub enum DockerError {
+pub(crate) enum DockerError {
     /// No `docker` on the user's PATH.
     Missing,
     /// It did not start.
@@ -64,7 +60,7 @@ impl Explain for DockerError {
 }
 
 /// Runs `args` to its end on the calling thread: its output, or what went wrong.
-pub fn run(args: &ide_docker::Command, env: &[(String, String)]) -> Result<String, DockerError> {
+pub(crate) fn run(args: &ide_docker::Command, env: &[(String, String)]) -> Result<String, DockerError> {
     let program = program(env).ok_or(DockerError::Missing)?;
     let label = format!("docker {}", args.args.get(2).cloned().unwrap_or_default());
     let mut spawned = Supervisor::global()
@@ -98,7 +94,7 @@ pub fn run(args: &ide_docker::Command, env: &[(String, String)]) -> Result<Strin
 }
 
 /// Starts `docker events` and calls `line` with each line it prints and `ended` once it ends, both on its thread.
-pub fn watch(
+pub(crate) fn watch(
     args: &ide_docker::Command,
     env: &[(String, String)],
     line: impl Fn(&str) + Send + 'static,

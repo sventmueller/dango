@@ -1,10 +1,10 @@
 //! The CI panel of one window: what it read, when it reads again, and the AppKit callbacks of its views.
 
 use std::cell::{Cell, OnceCell, RefCell};
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use ide_ci::State as RunState;
+use ide_ui_common::panel::{RowItem, RowItems};
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
@@ -12,7 +12,7 @@ use objc2_app_kit::{
     NSControlTextEditingDelegate, NSMenu, NSMenuDelegate, NSOutlineView, NSOutlineViewDataSource,
     NSOutlineViewDelegate, NSTableColumn, NSView,
 };
-use objc2_foundation::{NSNotification, NSObjectProtocol, NSPoint, NSString};
+use objc2_foundation::{NSNotification, NSObjectProtocol, NSPoint};
 
 use super::model::{Key, State, Tab};
 use super::ui::Ui;
@@ -20,15 +20,15 @@ use crate::context::{Registry, WindowPart};
 use crate::util::{guarded, ns};
 use crate::window::WindowController;
 
-pub struct PanelIvars {
+pub(crate) struct PanelIvars {
     id: u64,
     controller: Weak<WindowController>,
     root: PathBuf,
     ui: OnceCell<Ui>,
     state: RefCell<State>,
     /// The panel itself opens and closes rows, so the user's choices are not touched.
-    pub unfolding: Cell<bool>,
-    items: RefCell<HashMap<String, Retained<NSString>>>,
+    pub(crate) unfolding: Cell<bool>,
+    items: RowItems<Key>,
 }
 
 define_class!(
@@ -37,7 +37,7 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[name = "IDECiPanel"]
     #[ivars = PanelIvars]
-    pub struct CiPanel;
+    pub(crate) struct CiPanel;
 
     unsafe impl NSObjectProtocol for CiPanel {}
 
@@ -234,7 +234,7 @@ define_class!(
 
 /// The CI panels of every window.
 #[derive(Default)]
-pub struct CiPanels {
+pub(crate) struct CiPanels {
     pub(super) panels: Registry<Retained<CiPanel>>,
     /// What the self-test would have opened in the browser or put on the pasteboard, which belong to the user.
     pub(super) noted: RefCell<Vec<String>>,
@@ -242,22 +242,22 @@ pub struct CiPanels {
 }
 
 /// Runs `f` with the panel `id`, if its window is still open.
-pub fn with_panel(id: u64, f: impl FnOnce(&CiPanel)) {
+pub(crate) fn with_panel(id: u64, f: impl FnOnce(&CiPanel)) {
     crate::context::app().ci_panels().panels.with(id, f);
 }
 
 /// The panels of windows that show `root`.
-pub fn for_root(root: &Path) -> Vec<Retained<CiPanel>> {
+pub(crate) fn for_root(root: &Path) -> Vec<Retained<CiPanel>> {
     crate::context::app().ci_panels().panels.for_root(root)
 }
 
 /// The panels of all open windows.
-pub fn all() -> Vec<Retained<CiPanel>> {
+pub(crate) fn all() -> Vec<Retained<CiPanel>> {
     crate::context::app().ci_panels().panels.live()
 }
 
 /// The panel of `controller`'s window.
-pub fn of(controller: &WindowController) -> Option<Retained<CiPanel>> {
+pub(crate) fn of(controller: &WindowController) -> Option<Retained<CiPanel>> {
     controller.context().ci_panels().panels.of(controller.handle())
 }
 
@@ -280,7 +280,7 @@ impl CiPanel {
             ui: OnceCell::new(),
             unfolding: Cell::new(false),
             state: RefCell::new(State::new()),
-            items: RefCell::new(HashMap::new()),
+            items: RowItems::default(),
         };
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         let panel: Retained<CiPanel> = unsafe { msg_send![super(CiPanel::alloc(mtm).set_ivars(ivars)), init] };
@@ -288,33 +288,33 @@ impl CiPanel {
         panel
     }
 
-    pub fn id(&self) -> u64 {
+    pub(crate) fn id(&self) -> u64 {
         self.ivars().id
     }
 
-    pub fn root(&self) -> &Path {
+    pub(crate) fn root(&self) -> &Path {
         &self.ivars().root
     }
 
-    pub fn ui(&self) -> &Ui {
+    pub(crate) fn ui(&self) -> &Ui {
         self.ivars().ui.get().expect("the panel builds its views in `new`")
     }
 
-    pub fn state(&self) -> std::cell::RefMut<'_, State> {
+    pub(crate) fn state(&self) -> std::cell::RefMut<'_, State> {
         self.ivars().state.borrow_mut()
     }
 
-    pub fn read(&self) -> std::cell::Ref<'_, State> {
+    pub(crate) fn read(&self) -> std::cell::Ref<'_, State> {
         self.ivars().state.borrow()
     }
 
-    pub fn controller(&self) -> Option<Retained<WindowController>> {
+    pub(crate) fn controller(&self) -> Option<Retained<WindowController>> {
         self.ivars().controller.load()
     }
 
     /// The rows below `item`: runs at the top, then GitLab's stages, then jobs, then steps; or the open merge requests
     /// or issues.
-    pub fn children(&self, item: Option<&AnyObject>) -> Vec<Key> {
+    pub(crate) fn children(&self, item: Option<&AnyObject>) -> Vec<Key> {
         match item.map(super::rows::key_of) {
             None => self.read().children(None),
             Some(Some(key)) => self.read().children(Some(key)),
@@ -323,12 +323,7 @@ impl CiPanel {
     }
 
     /// The object that stands for `key`, the same one for as long as the panel lives.
-    pub fn item_for(&self, key: &Key) -> Retained<NSString> {
-        self.ivars()
-            .items
-            .borrow_mut()
-            .entry(key.encode())
-            .or_insert_with_key(|text| ns(text))
-            .clone()
+    pub(crate) fn item_for(&self, key: &Key) -> Retained<RowItem> {
+        self.ivars().items.item(self.mtm(), key)
     }
 }
