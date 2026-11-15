@@ -116,6 +116,37 @@ pub fn while_moving(preview: &Preview, change: impl FnOnce()) {
     preview.sync.moving.set(was);
 }
 
+/// Runs `change`, which replaces each range of the preview's text by text of the length beside it, keeping the line
+/// at the top of the preview where it stands, as the editor did not move.
+pub fn keeping_top(preview: &Preview, changes: &[(NSRange, usize)], change: impl FnOnce()) {
+    let views = &preview.views;
+    let visible = views.text.visibleRect().origin.y;
+    let top = char_at_top(views)
+        .filter(|&at| {
+            visible > 0.0
+                && !changes
+                    .iter()
+                    .any(|(range, _)| range.location <= at && at < range.end())
+        })
+        .and_then(|at| Some((at, y_of(views, at)? - visible)));
+    while_moving(preview, change);
+    let Some((at, offset)) = top else { return };
+    let before: usize = changes
+        .iter()
+        .filter(|(range, _)| range.end() <= at)
+        .map(|(range, _)| range.length)
+        .sum();
+    let after: usize = changes
+        .iter()
+        .filter(|(range, _)| range.end() <= at)
+        .map(|(_, len)| len)
+        .sum();
+    let Some(y) = y_of(views, at + after - before) else {
+        return;
+    };
+    while_moving(preview, || views.text.scrollPoint(NSPoint::new(0.0, y - offset)));
+}
+
 /// After a new text: the preview stands where the editor stands, or where it stood itself.
 pub fn keep_place(preview: &Preview) {
     match visible_editor(preview) {
@@ -149,7 +180,7 @@ fn editor_scrolled(preview: &Preview) {
     while_moving(preview, || {
         let y = {
             let shown = preview.shown.borrow();
-            let Some(anchors) = Anchors::new(&editor, &preview.views, &shown) else {
+            let Some(anchors) = Anchors::new(&editor, &preview.views, &shown, false) else {
                 return;
             };
             let guess = anchors.index.paras[..anchors.paras]
@@ -193,7 +224,7 @@ fn preview_scrolled(preview: &Preview) {
     while_moving(preview, || {
         let y = {
             let shown = preview.shown.borrow();
-            let Some(anchors) = Anchors::new(&editor, &preview.views, &shown) else {
+            let Some(anchors) = Anchors::new(&editor, &preview.views, &shown, true) else {
                 return;
             };
             let guess = char_at_top(&preview.views)
@@ -217,10 +248,18 @@ struct Anchors<'a> {
     index: &'a Index,
     /// The paragraphs before the footnote definitions comrak moved to the end.
     paras: usize,
+    /// Where a byte of the editor stands; the editor is scrolled to the answer only when it follows, which then must
+    /// not rest on estimated heights.
+    editor_y: fn(&EditorTextView, usize) -> Option<f64>,
 }
 
 impl<'a> Anchors<'a> {
-    fn new(editor: &'a EditorTextView, views: &'a Views, shown: &'a super::markdown::Shown) -> Option<Self> {
+    fn new(
+        editor: &'a EditorTextView,
+        views: &'a Views,
+        shown: &'a super::markdown::Shown,
+        editor_follows: bool,
+    ) -> Option<Self> {
         let laid = shown.layout.as_ref()?;
         let index = &shown.index;
         if laid.blocks.is_empty() || !index.fits(laid) {
@@ -233,6 +272,11 @@ impl<'a> Anchors<'a> {
             laid,
             index,
             paras,
+            editor_y: if editor_follows {
+                crate::editor::byte_y
+            } else {
+                crate::editor::byte_y_near
+            },
         })
     }
 
@@ -249,10 +293,7 @@ impl<'a> Anchors<'a> {
         }
         let place = self.index.paras.get(k - 1)?;
         let src = para_src(self.laid, place)?;
-        Some((
-            crate::editor::byte_y(self.editor, src)?,
-            y_of(self.views, place.start.get())?,
-        ))
+        Some(((self.editor_y)(self.editor, src)?, y_of(self.views, place.start.get())?))
     }
 
     /// The other side's y for `top` on the leading side, which `lead` puts first in each anchor; the search starts

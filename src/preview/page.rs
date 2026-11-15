@@ -24,7 +24,7 @@ pub const INSET: NSSize = NSSize::new(24.0, 20.0);
 const BAR_HEIGHT: f64 = 32.0;
 
 /// A change of width this large lays the pictures out anew, as they are no wider than the text.
-const WIDTH_STEP: f64 = 24.0;
+pub const WIDTH_STEP: f64 = 24.0;
 
 pub struct PageIvars {
     /// The preview it shows.
@@ -156,6 +156,11 @@ impl Views {
         self.bar_height.setConstant(if on { BAR_HEIGHT } else { 0.0 });
     }
 
+    /// Whether the offer shows.
+    pub fn offers_web_pictures(&self) -> bool {
+        !self.bar.isHidden()
+    }
+
     /// The widest a picture may be: the text's width.
     pub fn picture_width(&self) -> f64 {
         (self.scroll.contentSize().width - 2.0 * INSET.width - 4.0).max(80.0)
@@ -234,6 +239,3 @@ fn bar(mtm: MainThreadMarker, page: &Page) -> Retained<NSStackView> {
     });
     bar
 }
-
-#[cfg(feature = "selftest")]
-mod selftest_probe;

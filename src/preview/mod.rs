@@ -335,6 +335,12 @@ pub mod seen {
         Some((text, attachments))
     }
 
+    /// Whether the Markdown preview of `path` shows `needle`, asked without copying its text.
+    pub fn shows(path: &Path, needle: &str) -> bool {
+        find(|p| p.path() == path)
+            .is_some_and(|preview| preview.views.storage.string().containsString(&crate::util::ns(needle)))
+    }
+
     /// Whether the preview of `path` offers to load the pictures from the web.
     pub fn offers_web_pictures(path: &Path) -> Option<bool> {
         Some(find(|p| p.path() == path)?.views.offers_web_pictures())

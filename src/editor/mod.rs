@@ -110,12 +110,17 @@ pub fn top_byte(view: &EditorTextView) -> Option<usize> {
 
 /// The top of the line holding byte `byte`, in the view's coordinates.
 pub fn byte_y(view: &EditorTextView, byte: usize) -> Option<f64> {
+    lay_out_whole(view, &*view.textLayoutManager()?, &*view.textContentStorage()?);
+    byte_y_near(view, byte)
+}
+
+/// `byte_y` for a line beside those on screen, which TextKit 2 places as it placed them without laying out all text.
+pub fn byte_y_near(view: &EditorTextView, byte: usize) -> Option<f64> {
     let at = view.document().text().byte_to_utf16(byte).ok()?;
     let layout = view.textLayoutManager()?;
     let content = view.textContentStorage()?;
     let start = objc2_app_kit::NSTextElementProvider::documentRange(&*content).location();
     let location = content.locationFromLocation_withOffset(&start, isize::try_from(at).unwrap_or(isize::MAX))?;
-    lay_out_whole(view, &layout, &content);
     ensure_paragraph(&layout, &location);
     let fragment = layout.textLayoutFragmentForLocation(&location)?;
     Some(fragment.layoutFragmentFrame().origin.y + view.textContainerOrigin().y)

@@ -1,7 +1,8 @@
 //! The `snappy-recolor-markdown` scenario: a code fence opened at the top of 10 000 lines of Markdown turns every
 //! line below into code and deleting it turns them back, and the recolouring holds the main thread no longer than a
 //! keystroke inside a paragraph; scrolled to the end meanwhile, the lines on screen show the code's style. The preview
-//! that opens with the file is closed first, as it lays the whole text out again after every keystroke.
+//! that opens with the file is closed first, so this measures the editor alone; `snappy-preview-markdown` types with
+//! it open.
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -30,7 +31,7 @@ const KEYSTROKE: Duration = Duration::from_millis(500);
 const COLOURED: Duration = Duration::from_secs(20);
 
 /// Ten thousand lines of headings, paragraphs with bold, italic, struck and code text, and list items.
-fn markdown() -> String {
+pub(super) fn markdown() -> String {
     (0..SECTIONS)
         .map(|n| {
             format!(

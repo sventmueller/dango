@@ -3,6 +3,7 @@
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::collections::HashSet;
+use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -11,9 +12,9 @@ use std::time::{Duration, Instant};
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::NSAppearanceCustomization;
-use objc2_foundation::NSMutableAttributedString;
+use objc2_foundation::{NSMutableAttributedString, NSRange};
 use splat_file_state::Stamp;
-use splat_preview::layout::{Atom, Layout, RunMap, layout};
+use splat_preview::layout::{Atom, Layout, RunMap, TopBlock, layout};
 use splat_preview::map::Index;
 use splat_render::Viewer;
 use splat_render::images::{self, ImageFile, ImageStore};
@@ -45,6 +46,24 @@ pub struct Shown {
     web: Vec<String>,
 }
 
+/// What a block renders with besides itself: a block of the same key renders alike while this stays the same.
+struct Look {
+    dark: bool,
+    macros: Arc<str>,
+    width: f64,
+    web: bool,
+}
+
+impl PartialEq for Look {
+    /// A width that changed less than the page lays pictures out anew for, as when a scroller shows, is the same.
+    fn eq(&self, other: &Look) -> bool {
+        self.dark == other.dark
+            && self.macros == other.macros
+            && (self.width - other.width).abs() < super::page::WIDTH_STEP
+            && self.web == other.web
+    }
+}
+
 pub struct Preview {
     pub key: u64,
     mtm: MainThreadMarker,
@@ -58,6 +77,8 @@ pub struct Preview {
     viewer: OnceCell<Rc<dyn Viewer>>,
     owner: Cell<Option<Owner>>,
     pub shown: RefCell<Shown>,
+    /// What the whole text was last rendered with, which the blocks set since were rendered with too.
+    painted: RefCell<Option<Look>>,
     /// Counts the changes of the text; a layout of an older one does not replace that of a newer one.
     edits: Cell<u64>,
     laid_out: Cell<u64>,
@@ -96,6 +117,7 @@ impl Preview {
             viewer: OnceCell::new(),
             owner: Cell::new(None),
             shown: RefCell::default(),
+            painted: RefCell::default(),
             edits: Cell::new(0),
             laid_out: Cell::new(0),
             last_edit: Cell::new(Instant::now()),
@@ -212,16 +234,17 @@ impl Preview {
             return;
         }
         self.laid_out.set(edits);
+        let old;
         {
             let mut shown = self.shown.borrow_mut();
             shown.index = Index::new(&laid);
             shown.web = web_pictures(&laid);
-            shown.layout = Some(laid);
+            old = shown.layout.replace(laid);
             shown.keys = wanted.keys;
             shown.macros = wanted.macros;
             shown.dark = dark;
         }
-        self.render();
+        self.render_changes(old.as_ref());
         self.ask_when_quiet();
     }
 
@@ -255,7 +278,7 @@ impl Preview {
         renderer.request(owner, keys);
     }
 
-    /// Sets the text anew on a later turn of the run loop, once for any number of arrivals.
+    /// Sets the blocks that hold pictures anew on a later turn of the run loop, once for any number of arrivals.
     pub fn render_soon(&self) {
         if self.render_due.replace(true) {
             return;
@@ -264,46 +287,134 @@ impl Preview {
         main_soon(move || {
             super::with(key, |preview| {
                 preview.render_due.set(false);
-                preview.render();
+                preview.render_pictures();
             });
         });
     }
 
     /// Sets the whole layout as text, keeping the place the reader is at.
     pub fn render(self: &Rc<Self>) {
-        let viewer = self.viewer();
-        let web = self.loads_web_pictures();
-        let left_out = Cell::new(false);
-        let drawn = Pictures {
-            requester: &viewer,
-            web,
-            left_out: &left_out,
+        let Some(count) = self.shown.borrow().layout.as_ref().map(|laid| laid.blocks.len()) else {
+            return;
         };
-        let out = NSMutableAttributedString::new();
-        let local = {
+        self.paint(&[(0..count, NSRange::new(0, self.views.storage.length()))]);
+    }
+
+    /// Sets only the blocks of the shown layout that differ from those of `old`, which the text shows; all of them
+    /// when anything else they render with changed since.
+    fn render_changes(self: &Rc<Self>, old: Option<&Layout>) {
+        let part = {
+            let shown = self.shown.borrow();
+            old.filter(|old| self.shows(&shown, old))
+                .zip(shown.layout.as_ref())
+                .map(|(old, new)| changed(old, new))
+        };
+        match part {
+            Some(part) => self.paint(&[part]),
+            None => self.render(),
+        }
+    }
+
+    /// Sets only the blocks of the shown layout that hold pictures, which the text shows; all of them when anything
+    /// else they render with changed since.
+    fn render_pictures(self: &Rc<Self>) {
+        let parts = {
+            let shown = self.shown.borrow();
+            shown
+                .layout
+                .as_ref()
+                .filter(|laid| self.shows(&shown, laid) && shown.index.fits(laid))
+                .map(|laid| picture_parts(laid, &shown.index))
+        };
+        match parts {
+            Some(parts) if parts.is_empty() => {}
+            Some(parts) => self.paint(&parts),
+            None => self.render(),
+        }
+    }
+
+    /// Whether the text is `laid` as it would be rendered now.
+    fn shows(&self, shown: &Shown, laid: &Layout) -> bool {
+        self.painted.borrow().as_ref() == Some(&self.look(shown))
+            && text_len(&laid.blocks) == self.views.storage.length()
+    }
+
+    /// What the blocks of the shown layout render with besides themselves.
+    fn look(&self, shown: &Shown) -> Look {
+        Look {
+            dark: shown.dark,
+            macros: shown.macros.clone(),
+            width: self.views.picture_width(),
+            web: self.loads_web_pictures(),
+        }
+    }
+
+    /// Sets the blocks of the shown layout of each part in place of its range of the text, keeping the place the
+    /// reader is at; the parts in order and apart.
+    fn paint(self: &Rc<Self>, parts: &[Part]) {
+        let viewer = self.viewer();
+        let left_out = Cell::new(false);
+        let (look, set, local, names_web) = {
             let shown = self.shown.borrow();
             let Some(laid) = shown.layout.as_ref() else { return };
+            let look = self.look(&shown);
+            let drawn = Pictures {
+                requester: &viewer,
+                web: look.web,
+                left_out: &left_out,
+            };
             let ctx = RenderCtx {
                 mtm: self.mtm,
                 zoom: 1.0,
                 doc_dir: self.path.parent(),
                 images: &self.images,
-                max_image_width: self.views.picture_width(),
-                dark: shown.dark,
+                max_image_width: look.width,
+                dark: look.dark,
                 requester: Some(&viewer),
                 leaves_the_mac: None,
-                macros: shown.macros.clone(),
+                macros: look.macros.clone(),
                 drawn: &drawn,
             };
-            for block in &laid.blocks {
-                out.appendAttributedString(&ctx.render_block(block));
-            }
-            local_pictures(laid, self.path.parent())
+            let set: Vec<_> = parts
+                .iter()
+                .map(|(blocks, replaced)| {
+                    let out = NSMutableAttributedString::new();
+                    for block in &laid.blocks[blocks.clone()] {
+                        out.appendAttributedString(&ctx.render_block(block));
+                    }
+                    (*replaced, out)
+                })
+                .collect();
+            (
+                look,
+                set,
+                local_pictures(laid, self.path.parent()),
+                !shown.web.is_empty(),
+            )
         };
-        super::sync::while_moving(self, || self.views.storage.setAttributedString(&out));
+        let storage = &self.views.storage;
+        let whole = matches!(parts, [(_, all)] if all.location == 0 && all.length == storage.length());
+        let replace = || {
+            storage.beginEditing();
+            for (replaced, out) in set.iter().rev() {
+                storage.replaceCharactersInRange_withAttributedString(*replaced, out);
+            }
+            storage.endEditing();
+        };
+        if whole {
+            super::sync::while_moving(self, replace);
+        } else {
+            let changes: Vec<_> = set.iter().map(|(replaced, out)| (*replaced, out.length())).collect();
+            super::sync::keeping_top(self, &changes, replace);
+        }
         self.images.borrow_mut().keep_only(&local);
-        super::sync::keep_place(self);
-        self.views.offer_web_pictures(left_out.get());
+        if whole {
+            *self.painted.borrow_mut() = Some(look);
+            super::sync::keep_place(self);
+        }
+        // The blocks set again leave out the same pictures from the web as before.
+        let offer = left_out.get() || (!whole && names_web && self.views.offers_web_pictures());
+        self.views.offer_web_pictures(offer);
     }
 
     pub fn close(self: &Rc<Self>) {
@@ -326,6 +437,56 @@ impl Preview {
             images::read_again(path, self.path.parent(), &viewer);
         }
     }
+}
+
+/// The length of the text `blocks` are set as.
+fn text_len(blocks: &[Arc<TopBlock>]) -> usize {
+    blocks.iter().map(|block| block.len_u16).sum()
+}
+
+/// A run of blocks of a layout and the part of the preview's text they replace.
+type Part = (Range<usize>, NSRange);
+
+/// The blocks of `new` that differ from those of `old`, and the part of the text set from `old` they replace: those
+/// before the first change and after the last keep their text, though their source moved.
+fn changed(old: &Layout, new: &Layout) -> Part {
+    let same = |(a, b): &(&Arc<TopBlock>, &Arc<TopBlock>)| a.key == b.key && a.len_u16 == b.len_u16;
+    let prefix = old.blocks.iter().zip(&new.blocks).take_while(same).count();
+    let suffix = old.blocks[prefix..]
+        .iter()
+        .rev()
+        .zip(new.blocks[prefix..].iter().rev())
+        .take_while(same)
+        .count();
+    let start = text_len(&old.blocks[..prefix]);
+    let len = text_len(&old.blocks[prefix..old.blocks.len() - suffix]);
+    (prefix..new.blocks.len() - suffix, NSRange::new(start, len))
+}
+
+/// The runs of blocks of `laid` that hold pictures, each with the part of the text it is set as.
+fn picture_parts(laid: &Layout, index: &Index) -> Vec<Part> {
+    let mut parts: Vec<Part> = Vec::new();
+    let holding = laid.blocks.iter().enumerate().filter(|(_, block)| {
+        block.paras.iter().flat_map(|para| para.runs.iter()).any(|run| {
+            matches!(
+                &run.map,
+                RunMap::Atom {
+                    atom: Atom::Image(_),
+                    ..
+                }
+            )
+        })
+    });
+    for (at, block) in holding {
+        match parts.last_mut() {
+            Some((blocks, text)) if blocks.end == at => {
+                blocks.end += 1;
+                text.length += block.len_u16;
+            }
+            _ => parts.push((at..at + 1, NSRange::new(index.block_starts[at].get(), block.len_u16))),
+        }
+    }
+    parts
 }
 
 /// The remote addresses of the pictures in `laid`.
@@ -422,3 +583,58 @@ impl Viewer for Hears {
 
 #[cfg(feature = "selftest")]
 mod selftest_probe;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use splat_preview::layout::NoImages;
+
+    fn laid(text: &str) -> Layout {
+        layout(&splat_markdown::reader::parse(text), &NoImages, None)
+    }
+
+    #[test]
+    fn only_the_edited_block_is_set_again() {
+        let old = laid("# Title\n\nSome text.\n\n- an item\n");
+        let new = laid("# Title\n\nSome more text.\n\n- an item\n");
+        let first = old.blocks[0].len_u16;
+        assert_eq!(changed(&old, &new), (1..2, NSRange::new(first, old.blocks[1].len_u16)));
+    }
+
+    #[test]
+    fn a_block_added_in_front_moves_none_of_those_behind_it() {
+        let old = laid("Some text.\n\nMore text.\n");
+        let new = laid("# New\n\nSome text.\n\nMore text.\n");
+        assert_eq!(changed(&old, &new), (0..1, NSRange::new(0, 0)));
+    }
+
+    #[test]
+    fn a_block_deleted_at_the_end_takes_its_text_along() {
+        let old = laid("Some text.\n\nMore text.\n");
+        let new = laid("Some text.\n");
+        let first = old.blocks[0].len_u16;
+        assert_eq!(changed(&old, &new), (1..1, NSRange::new(first, old.blocks[1].len_u16)));
+        assert_eq!(text_len(&old.blocks), first + old.blocks[1].len_u16);
+    }
+
+    #[test]
+    fn the_empty_text_gives_way_to_all_blocks() {
+        let (old, new) = (laid(""), laid("Some text.\n\nMore text.\n"));
+        assert_eq!(changed(&old, &new), (0..2, NSRange::new(0, text_len(&old.blocks))));
+    }
+
+    #[test]
+    fn pictures_side_by_side_are_set_in_one_part() {
+        let laid = laid("Text.\n\n![a](a.png)\n\n![b](b.png)\n\nMore.\n\n![c](c.png)\n");
+        let index = Index::new(&laid);
+        let at = |block: usize| index.block_starts[block].get();
+        let len = |blocks: Range<usize>| text_len(&laid.blocks[blocks]);
+        assert_eq!(
+            picture_parts(&laid, &index),
+            [
+                (1..3, NSRange::new(at(1), len(1..3))),
+                (4..5, NSRange::new(at(4), len(4..5)))
+            ]
+        );
+    }
+}

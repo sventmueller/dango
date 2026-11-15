@@ -194,6 +194,7 @@ pub const SCENARIOS: &[Scenario] = &[
     plain("snappy-tabs", snappy_input::tabs),
     plain("snappy-recolor", snappy_recolor::run),
     plain("snappy-recolor-markdown", snappy_recolor_markdown::run),
+    plain("snappy-preview-markdown", snappy_preview::run),
     limited("snappy-tests", snappy_input::tests, Duration::from_secs(400)),
     plain("terminal", terminal::run),
     plain("terminal-view", terminal_view::run),
