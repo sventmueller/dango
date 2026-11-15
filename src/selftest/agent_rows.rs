@@ -4,6 +4,7 @@
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
+use ide_ui_agent::AgentKey;
 use serde_json::json;
 
 use super::agent::{NAME, controller_of, long_session, picture, tab_of};
@@ -44,7 +45,7 @@ pub(super) fn squeezed(root: PathBuf) {
 }
 
 /// The shell's output arrives, its card is built, and the next entry follows before the row took the card's height.
-fn squeezed_output(root: PathBuf, key: u64) {
+fn squeezed_output(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };

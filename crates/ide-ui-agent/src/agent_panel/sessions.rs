@@ -20,6 +20,7 @@ use objc2_foundation::{NSObjectProtocol, NSString};
 use splat_i18n::t;
 
 use super::rows::{self, Look};
+use crate::AgentKey;
 use crate::{AgentTab, Resume};
 use ide_ui_common::util::{guarded, item, ns, set_action, set_target};
 #[cfg(feature = "selftest")]
@@ -35,7 +36,7 @@ pub enum Node {
     /// A session of an AI tab: from the index, or open in a tab and not saved yet.
     Thread {
         entry: IndexEntry,
-        tab: Option<u64>,
+        tab: Option<AgentKey>,
         bookmarked: bool,
     },
     /// A session the CLI saved from a terminal, which the index does not know.

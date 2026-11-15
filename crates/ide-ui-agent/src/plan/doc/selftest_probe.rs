@@ -1,9 +1,10 @@
 //! The self-test's hooks of `doc.rs`.
 
 use super::*;
+use crate::AgentKey;
 
 /// What the document of plan `id` in the AI tab `agent` shows, for the self-test.
-pub fn inspect(agent: u64, id: u64) -> Option<DocSeen> {
+pub fn inspect(agent: AgentKey, id: u64) -> Option<DocSeen> {
     let doc = doc(agent, id)?;
     let storage = storage(&doc.text)?;
     let notes = doc

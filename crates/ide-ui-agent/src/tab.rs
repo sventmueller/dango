@@ -16,6 +16,7 @@ use objc2_app_kit::{NSColor, NSEvent, NSLayoutConstraint, NSResponder, NSStackVi
 use objc2_foundation::{NSObjectProtocol, NSRect};
 use splat_i18n::t;
 
+use super::AgentKey;
 use super::acp::Agent;
 use super::checkpoint::Store;
 use super::composer::Composer;
@@ -57,7 +58,7 @@ pub struct Inbox {
 }
 
 pub struct RootIvars {
-    key: u64,
+    key: AgentKey,
 }
 
 define_class!(
@@ -119,7 +120,7 @@ define_class!(
 );
 
 pub struct AgentTab {
-    pub key: u64,
+    pub key: AgentKey,
     /// The agent the tab runs, for good.
     pub(super) agent: Agent,
     pub(super) mtm: MainThreadMarker,
@@ -332,7 +333,7 @@ impl AgentTab {
     }
 
     pub fn tab_key(&self) -> String {
-        format!("agent:{}", self.key)
+        format!("agent:{}", self.key.get())
     }
 
     pub fn root(&self) -> Retained<NSView> {
@@ -684,7 +685,7 @@ fn input_constraints(bottom: &NSView, column: &NSView) -> Vec<Retained<NSLayoutC
 
 /// The composer of the AI tab with this key, as a field that dictation goes into.
 #[cfg(feature = "dictation")]
-struct ComposerField(u64);
+struct ComposerField(AgentKey);
 
 #[cfg(feature = "dictation")]
 impl ide_ui_dictation::DictationField for ComposerField {

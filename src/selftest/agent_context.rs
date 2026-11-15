@@ -4,6 +4,7 @@
 
 use std::path::PathBuf;
 
+use ide_ui_agent::AgentKey;
 use objc2_app_kit::{NSAppearanceNameAqua, NSAppearanceNameDarkAqua};
 use splat_i18n::t;
 
@@ -53,7 +54,7 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
     );
 }
 
-fn opened(root: PathBuf, key: u64, clicked: bool, then: fn(PathBuf)) {
+fn opened(root: PathBuf, key: AgentKey, clicked: bool, then: fn(PathBuf)) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
@@ -84,7 +85,7 @@ fn opened(root: PathBuf, key: u64, clicked: bool, then: fn(PathBuf)) {
     helpers::after(DRAWN, move || dark(root, key, then));
 }
 
-fn dark(root: PathBuf, key: u64, then: fn(PathBuf)) {
+fn dark(root: PathBuf, key: AgentKey, then: fn(PathBuf)) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };

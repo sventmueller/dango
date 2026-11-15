@@ -16,6 +16,7 @@ use super::super::markdown::{self, Tone};
 use super::super::tab::AgentTab;
 use super::super::{style, ui};
 use super::{PLAN_IN_DOC, PLAN_REJECT, PLAN_REVISE, PlanNote, locate};
+use crate::AgentKey;
 use ide_ui_common::util::{guarded, main_soon, ns};
 use ide_ui_common::window::{AsWindow, TabDecor, TabKind, Tabs, Window};
 
@@ -23,7 +24,7 @@ use ide_ui_common::window::{AsWindow, TabDecor, TabKind, Tabs, Window};
 const COLUMN: f64 = 320.0;
 
 pub struct RootIvars {
-    agent: u64,
+    agent: AgentKey,
     entry: u64,
 }
 
@@ -59,7 +60,7 @@ define_class!(
 
 /// An open plan document.
 struct PlanDoc {
-    agent: u64,
+    agent: AgentKey,
     entry: u64,
     root: Retained<DocRoot>,
     text: Retained<NSTextView>,
@@ -80,7 +81,7 @@ fn with_docs<R>(f: impl FnOnce(&RefCell<Vec<Rc<PlanDoc>>>) -> R) -> R {
     f(&crate::host::state().plan.docs.docs)
 }
 
-fn doc(agent: u64, entry: u64) -> Option<Rc<PlanDoc>> {
+fn doc(agent: AgentKey, entry: u64) -> Option<Rc<PlanDoc>> {
     with_docs(|docs| {
         docs.borrow()
             .iter()
@@ -315,12 +316,12 @@ fn state_text(plan: &PlanApproval) -> String {
 }
 
 /// What names the document tab of plan `id` in the AI tab `agent`.
-fn tab_key(agent: u64, id: u64) -> String {
-    format!("plan:{agent}:{id}")
+fn tab_key(agent: AgentKey, id: u64) -> String {
+    format!("plan:{}:{id}", agent.get())
 }
 
 /// Closes the document tabs of the AI tab `agent`, which closed, as their answers would go nowhere.
-pub fn close_all(controller: &(impl AsWindow + ?Sized), agent: u64) {
+pub fn close_all(controller: &(impl AsWindow + ?Sized), agent: AgentKey) {
     let controller = &controller.as_window();
     for id in open_entries(agent) {
         if let Some(tab) = controller.tab_with_key(&tab_key(agent, id)) {
@@ -354,7 +355,7 @@ pub fn open(tab: &AgentTab, id: u64) {
 }
 
 /// Puts the keyboard focus on the plan, where the keyboard marks passages to comment on.
-fn focus(controller: &Window, agent: u64, id: u64) {
+fn focus(controller: &Window, agent: AgentKey, id: u64) {
     if let (Some(window), Some(text)) = (controller.window(), text_of(agent, id)) {
         window.makeFirstResponder(Some(&text));
     }
@@ -368,7 +369,7 @@ pub fn show(tab: &AgentTab, id: u64, plan: &PlanApproval, notes: &[PlanNote]) {
 }
 
 /// The plans of the AI tab `agent` that are open as documents.
-pub fn open_entries(agent: u64) -> Vec<u64> {
+pub fn open_entries(agent: AgentKey) -> Vec<u64> {
     with_docs(|docs| {
         docs.borrow()
             .iter()
@@ -379,12 +380,12 @@ pub fn open_entries(agent: u64) -> Vec<u64> {
 }
 
 /// The text view of plan `id`'s document.
-pub fn text_of(agent: u64, id: u64) -> Option<Retained<NSTextView>> {
+pub fn text_of(agent: AgentKey, id: u64) -> Option<Retained<NSTextView>> {
     doc(agent, id).map(|d| d.text.clone())
 }
 
 /// Selects the passage of `note` in plan `id`'s document and points at it.
-pub fn reveal(agent: u64, id: u64, note: &PlanNote) {
+pub fn reveal(agent: AgentKey, id: u64, note: &PlanNote) {
     let Some(doc) = doc(agent, id) else { return };
     let units: Vec<u16> = doc.text.string().to_string().encode_utf16().collect();
     if let Some((at, length)) = locate(&units, note) {

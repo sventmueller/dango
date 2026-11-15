@@ -15,7 +15,7 @@ use super::{check, finish, helpers, snapshot};
 use crate::activity::Part;
 use crate::util::constant;
 use crate::window::{self, Panel, WindowController};
-use ide_ui_agent::AgentTab;
+use ide_ui_agent::{AgentKey, AgentTab};
 
 const SUBAGENT: &str = include_str!("../../crates/ide-claude/tests/fixtures/recorded_subagent_background.ndjson");
 const EDIT: &str = include_str!("../../crates/ide-claude/tests/fixtures/recorded_edit_diff.ndjson");
@@ -104,7 +104,7 @@ pub(super) fn long_session() -> String {
 /// Time for the window to draw what changed before its picture is taken; nothing reports when drawing is done.
 pub(super) const DRAWN: Duration = Duration::from_millis(400);
 
-pub(super) fn tab_of(key: u64) -> Option<Rc<AgentTab>> {
+pub(super) fn tab_of(key: AgentKey) -> Option<Rc<AgentTab>> {
     ide_ui_agent::all().into_iter().find(|t| t.key == key)
 }
 
@@ -240,7 +240,7 @@ fn opened(controller: objc2::rc::Retained<WindowController>) {
 /// The AI tab comes to the front and another one right after, before the sidebar the first got held at is let go, as
 /// when AppKit gives the window of a closing menu the focus back for a moment: the AI tab's sidebar is free to drag
 /// all the same.
-fn sidebar_let_go(root: PathBuf, key: u64) {
+fn sidebar_let_go(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
@@ -274,7 +274,7 @@ fn sidebar_let_go(root: PathBuf, key: u64) {
 }
 
 /// Whether the tab `key` shows one request on its last card, ready to answer, every row as tall as its card.
-fn asks_on_card(key: u64) -> bool {
+fn asks_on_card(key: AgentKey) -> bool {
     tab_of(key).is_some_and(|tab| {
         tab.snapshot().pending_requests().len() == 1
             && tab
@@ -450,7 +450,7 @@ fn follows_window(controller: &WindowController, tab: &AgentTab) {
 }
 
 /// A rich answer, file changes, and a permission that waits.
-fn permission(root: PathBuf, key: u64) {
+fn permission(root: PathBuf, key: AgentKey) {
     let (Some(_), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
@@ -499,7 +499,7 @@ fn scroller_rests_at_the_end(tab: &AgentTab) {
 }
 
 /// A subagent and a background shell that run.
-fn running(root: PathBuf, key: u64) {
+fn running(root: PathBuf, key: AgentKey) {
     let (Some(_), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
@@ -551,7 +551,7 @@ fn running(root: PathBuf, key: u64) {
     });
 }
 
-fn activity(root: PathBuf, key: u64) {
+fn activity(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
@@ -581,7 +581,7 @@ fn activity(root: PathBuf, key: u64) {
     });
 }
 
-fn panel(root: PathBuf, key: u64) {
+fn panel(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
@@ -638,7 +638,7 @@ fn panel(root: PathBuf, key: u64) {
     });
 }
 
-fn dark(root: PathBuf, key: u64) {
+fn dark(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
@@ -679,7 +679,7 @@ fn dark(root: PathBuf, key: u64) {
 }
 
 /// Questions, plans, to-dos and status notices in a second tab.
-fn requests(root: PathBuf, first: u64) {
+fn requests(root: PathBuf, first: AgentKey) {
     let (Some(controller), Some(first)) = (controller_of(&root), tab_of(first)) else {
         return finish(NAME);
     };
@@ -727,7 +727,7 @@ fn requests(root: PathBuf, first: u64) {
 }
 
 /// An Edit permission with its content editable, the hooks of a turn on one line, and the focus view.
-pub(super) fn context(root: PathBuf, key: u64, first: u64) {
+pub(super) fn context(root: PathBuf, key: AgentKey, first: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let (edit, _) = until(EDIT, "\"subtype\":\"can_use_tool\"");
     tab.feed(&edit);
@@ -778,7 +778,7 @@ pub(super) fn context(root: PathBuf, key: u64, first: u64) {
 }
 
 /// Completing `@` mentions, the editor's selection as context, and a terminal for `@terminal`.
-fn mentions(root: PathBuf, key: u64, first: u64) {
+fn mentions(root: PathBuf, key: AgentKey, first: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
@@ -825,7 +825,7 @@ fn mentions(root: PathBuf, key: u64, first: u64) {
 }
 
 /// The terminal's output for `@terminal`, its tab for its process, and a session's own task overview.
-fn terminal(root: PathBuf, first: u64) {
+fn terminal(root: PathBuf, first: AgentKey) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
@@ -881,7 +881,7 @@ fn terminal(root: PathBuf, first: u64) {
 }
 
 /// The head's lists of the session's subagents and of its background processes, each of its own kind.
-fn work_lists(root: PathBuf, key: u64) {
+fn work_lists(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };

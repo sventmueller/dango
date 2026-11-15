@@ -25,6 +25,7 @@ use splat_i18n::t;
 use super::cards::{self, Ctx, Inputs, Live, Part};
 use super::row::TimelineRow;
 use super::target::AgentTarget;
+use crate::AgentKey;
 use ide_ui_common::util::{guarded, live, main_soon, ns};
 
 /// Room on the leading side for the line and its dots.
@@ -36,7 +37,7 @@ pub(super) const TOP: f64 = 3.0;
 pub(super) const BOTTOM: f64 = 10.0;
 
 pub struct TableIvars {
-    key: u64,
+    key: AgentKey,
 }
 
 define_class!(
@@ -136,7 +137,7 @@ pub(super) struct Correction {
 
 pub struct Timeline {
     mtm: MainThreadMarker,
-    key: u64,
+    key: AgentKey,
     pub(super) scroll: Retained<NSScrollView>,
     pub(super) table: Retained<TimelineTable>,
     target: Retained<AgentTarget>,
@@ -176,7 +177,13 @@ impl Drop for Timeline {
 }
 
 impl Timeline {
-    pub fn new(mtm: MainThreadMarker, key: u64, target: &AgentTarget, thread: Rc<Thread>, cwd: PathBuf) -> Timeline {
+    pub fn new(
+        mtm: MainThreadMarker,
+        key: AgentKey,
+        target: &AgentTarget,
+        thread: Rc<Thread>,
+        cwd: PathBuf,
+    ) -> Timeline {
         let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(600.0, 400.0));
         let this = TimelineTable::alloc(mtm).set_ivars(TableIvars { key });
         // SAFETY: NSTableView's initializer, called once on the newly allocated object.

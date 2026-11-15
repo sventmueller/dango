@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use ide_thread::{EXTERNAL_NOTICE, UserMessage};
+use ide_ui_agent::AgentKey;
 use objc2::msg_send;
 use objc2::rc::Retained;
 use objc2_app_kit::{
@@ -137,7 +138,7 @@ pub fn run(root: PathBuf, then: fn(PathBuf)) {
 }
 
 /// The pasted picture opens large; then the picture goes to the agent.
-fn sent(root: PathBuf, key: u64, shot: Option<Vec<u8>>, then: fn(PathBuf)) {
+fn sent(root: PathBuf, key: AgentKey, shot: Option<Vec<u8>>, then: fn(PathBuf)) {
     let Some((controller, tab)) = controller_of(&root).zip(tab_of(key)) else {
         return finish(NAME);
     };
@@ -160,7 +161,7 @@ fn sent(root: PathBuf, key: u64, shot: Option<Vec<u8>>, then: fn(PathBuf)) {
 }
 
 /// The composer with the marked chips, in light and dark; then the tab closes.
-fn pictures(root: PathBuf, key: u64, then: fn(PathBuf)) {
+fn pictures(root: PathBuf, key: AgentKey, then: fn(PathBuf)) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };

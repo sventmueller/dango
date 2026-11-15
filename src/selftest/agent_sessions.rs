@@ -5,6 +5,7 @@
 use std::path::PathBuf;
 
 use ide_thread::EntryKind;
+use ide_ui_agent::AgentKey;
 use objc2::MainThreadMarker;
 use objc2_app_kit::NSAlertFirstButtonReturn;
 
@@ -17,7 +18,7 @@ use crate::window::Panel;
 const NAME: &str = "agent-actions";
 
 /// The AI panel's context menu renames, bookmarks and archives the session, and shows the archive.
-pub(super) fn panel(root: PathBuf, key: u64) {
+pub(super) fn panel(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
@@ -76,7 +77,7 @@ fn row_of_in(root: &PathBuf, title: &str) -> Option<isize> {
 }
 
 /// The archive: an archived session shows there and comes back from it.
-fn archive(root: PathBuf, key: u64, tabs: usize) {
+fn archive(root: PathBuf, key: AgentKey, tabs: usize) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
@@ -118,7 +119,7 @@ fn archive(root: PathBuf, key: u64, tabs: usize) {
 }
 
 /// The archive's own menu leads back to the sessions.
-fn leave(root: PathBuf, key: u64) {
+fn leave(root: PathBuf, key: AgentKey) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
@@ -137,7 +138,7 @@ fn leave(root: PathBuf, key: u64) {
 }
 
 /// An own-agent tab without a provider says what is missing and leads to the settings.
-fn no_model(root: PathBuf, key: u64) {
+fn no_model(root: PathBuf, key: AgentKey) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
@@ -161,7 +162,7 @@ fn no_model(root: PathBuf, key: u64) {
 }
 
 /// A CLI without a sign-in: the new tab says so, signs in in a terminal and starts once the CLI has one.
-fn signed_out(root: PathBuf, key: u64) {
+fn signed_out(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let answer = stand_in().dir.join("answer-initialize.json");
     let usual = std::fs::read_to_string(&answer).unwrap_or_default();
@@ -211,7 +212,7 @@ const TERMINAL_SESSION: &str = "51e1f7e5-6000-4000-8000-000000000001";
 
 /// Sessions without a tab open from the AI panel: one of the app's, resumed, and one the CLI saved from a terminal,
 /// with the conversation of its transcript.
-fn reopen(root: PathBuf, key: u64) {
+fn reopen(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };

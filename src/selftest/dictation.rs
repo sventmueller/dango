@@ -26,6 +26,7 @@ use super::helpers::wait_until;
 use super::{check, finish, helpers, snapshot};
 use crate::util::{constant, main_on_run_loop};
 use crate::window::{self, WindowController};
+use ide_ui_agent::AgentKey;
 use ide_ui_dictation::selftest::{self as dictation, Answer};
 
 const SCENARIO: &str = "dictation";
@@ -270,7 +271,7 @@ fn composer() {
 }
 
 /// Esc in the field ends a recording without text.
-fn escape_recording(target: Target, key: u64) {
+fn escape_recording(target: Target, key: AgentKey) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     if let Some(controller) = controller() {
         super::agent::appearance(&controller, constant!(NSAppearanceNameDarkAqua));
@@ -293,7 +294,7 @@ fn escape_recording(target: Target, key: u64) {
 }
 
 /// Esc while the recording is transcribed drops its text.
-fn escape_transcription(target: Target, key: u64) {
+fn escape_transcription(target: Target, key: AgentKey) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     dictation::answer([Answer {
         after: SLOW,

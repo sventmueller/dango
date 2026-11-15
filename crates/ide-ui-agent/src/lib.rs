@@ -77,9 +77,20 @@ pub struct AgentTabs {
     keys: ide_ui_common::registry::Serial,
 }
 
+/// The number of an AI tab; never reused while the app runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct AgentKey(u64);
+
+impl AgentKey {
+    /// The number under which the AI tab is known, for a tag or a name.
+    pub const fn get(self) -> u64 {
+        self.0
+    }
+}
+
 /// The key of an AI tab that opens now, which no tab had before.
-pub(crate) fn next_key() -> u64 {
-    crate::host::state().agent_tabs.keys.next()
+pub(crate) fn next_key() -> AgentKey {
+    AgentKey(crate::host::state().agent_tabs.keys.next())
 }
 
 /// The state of the AI tabs, what they show, and the Agents panels.
@@ -219,13 +230,13 @@ pub fn claude_program(env: &[(String, String)]) -> Option<std::path::PathBuf> {
 }
 
 /// The tab with `key`, if it is open.
-fn get(key: u64) -> Option<Rc<AgentTab>> {
+fn get(key: AgentKey) -> Option<Rc<AgentTab>> {
     with_tabs(|tabs| tabs.borrow().iter().find(|t| t.key == key).cloned())
 }
 
 /// The window of the AI tab with `key`, for a dictation whose composer closed.
 #[cfg(feature = "dictation")]
-pub fn controller_of(key: u64) -> Option<Window> {
+pub fn controller_of(key: AgentKey) -> Option<Window> {
     get(key)?.controller()
 }
 
@@ -249,7 +260,7 @@ pub fn find_session(controller: &(impl AsWindow + ?Sized), session: &str) -> Opt
 }
 
 /// Forgets the tab with `key` and ends its session.
-fn remove(key: u64) {
+fn remove(key: AgentKey) {
     let removed = with_tabs(|tabs| {
         let mut tabs = tabs.borrow_mut();
         let position = tabs.iter().position(|t| t.key == key)?;

@@ -4,6 +4,7 @@
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 
+use ide_ui_agent::AgentKey;
 use objc2::Message;
 use objc2::rc::Retained;
 use objc2_app_kit::{NSAccessibility, NSButton, NSView, NSWindow};
@@ -64,7 +65,7 @@ fn focus(root: &Path) -> (String, usize) {
     (label, buttons.len())
 }
 
-fn feed(key: u64, lines: Range<usize>) {
+fn feed(key: AgentKey, lines: Range<usize>) {
     let frames: String = SUBAGENT
         .lines()
         .skip(lines.start)
@@ -78,7 +79,7 @@ fn feed(key: u64, lines: Range<usize>) {
 
 /// With the focus on the background shell's Stop, the subagent above it ends: the focus stays on the shell's row.
 /// Then the shell stops: the focus goes to the nearest row left, the session's.
-pub fn rows_change(root: PathBuf, key: u64, then: fn(PathBuf)) {
+pub fn rows_change(root: PathBuf, key: AgentKey, then: fn(PathBuf)) {
     let shell = shown(&root).and_then(|(window, buttons)| {
         let (button, _) = buttons
             .into_iter()

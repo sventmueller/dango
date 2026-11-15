@@ -4,6 +4,7 @@
 use std::time::{Duration, SystemTime};
 
 use ide_thread::{BackgroundItem, Subagent, TaskStatus, Thread};
+use ide_ui_agent::AgentKey;
 use objc2_app_kit::NSColor;
 use splat_i18n::{t, tf};
 
@@ -12,7 +13,7 @@ use super::{Action, Line, background_symbol, task_status};
 pub use ide_ui_agent::work::Part;
 
 /// The lines of `part` of the session in tab `key`, what runs first.
-pub(super) fn lines(key: u64, thread: &Thread, part: Part, now: SystemTime) -> Vec<Line> {
+pub(super) fn lines(key: AgentKey, thread: &Thread, part: Part, now: SystemTime) -> Vec<Line> {
     let mut lines: Vec<(bool, Line)> = Vec::new();
     if part == Part::Subagents {
         for sub in thread.subagents() {
@@ -27,7 +28,7 @@ pub(super) fn lines(key: u64, thread: &Thread, part: Part, now: SystemTime) -> V
 }
 
 /// A subagent's line: its sort, how it stands, how long it ran, its tokens and its last tool.
-pub(super) fn subagent_line(key: u64, sub: &Subagent, now: SystemTime, indent: bool) -> Line {
+pub(super) fn subagent_line(key: AgentKey, sub: &Subagent, now: SystemTime, indent: bool) -> Line {
     let ran = match (sub.status.is_final(), sub.ended) {
         (false, _) => now.duration_since(sub.started).unwrap_or_default(),
         (true, Some(ended)) => ended.duration_since(sub.started).unwrap_or_default(),
@@ -68,7 +69,7 @@ pub(super) fn subagent_line(key: u64, sub: &Subagent, now: SystemTime, indent: b
 }
 
 /// A background item's line: how it stands, how long it ran and its last line of output.
-pub(super) fn background_line(key: u64, item: &BackgroundItem, now: SystemTime, indent: bool) -> Line {
+pub(super) fn background_line(key: AgentKey, item: &BackgroundItem, now: SystemTime, indent: bool) -> Line {
     let ended = item.status.is_final();
     let mut parts = vec![task_status(item.status).to_string()];
     let until = if ended { item.ended } else { Some(now) };

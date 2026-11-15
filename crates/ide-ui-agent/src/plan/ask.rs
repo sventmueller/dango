@@ -11,6 +11,7 @@ use splat_i18n::{t, tf};
 use super::super::tab::AgentTab;
 use super::super::{style, ui};
 use super::entry_tag;
+use crate::AgentKey;
 use ide_ui_common::util::{ns, set_action};
 
 const WIDTH: f64 = 300.0;
@@ -25,7 +26,7 @@ pub struct Asked {
 }
 
 struct Ask {
-    agent: u64,
+    agent: AgentKey,
     entry: u64,
     note: Option<u64>,
     location: usize,
@@ -110,7 +111,7 @@ pub fn open(
 }
 
 /// Closes the popover of plan `entry` in the AI tab `agent` and hands over what it holds.
-pub fn take(agent: u64, entry: u64) -> Option<Asked> {
+pub fn take(agent: AgentKey, entry: u64) -> Option<Asked> {
     let ask = with_ask(|a| {
         let mut a = a.borrow_mut();
         if a.as_ref().is_some_and(|ask| ask.agent == agent && ask.entry == entry) {

@@ -1,13 +1,14 @@
 //! What the self-test reads from and does with the parts of `context_view.rs`, kept out of its production code.
 
+use super::*;
 #[allow(
     unused_imports,
     reason = "the parts moved here use only some of their module's names"
 )]
-use super::*;
+use crate::AgentKey;
 
 /// Clicks the gauge of the tab with `key`, as the mouse would; whether it was there to click.
-pub fn click(key: u64) -> bool {
+pub fn click(key: AgentKey) -> bool {
     let gauge = with_gauges(|gauges| gauges.borrow().get(&key).and_then(Weak::load));
     match gauge {
         Some(gauge) if !gauge.isHidden() => {
@@ -29,7 +30,7 @@ pub struct Seen {
     pub view: Option<Retained<NSView>>,
 }
 
-pub fn seen(key: u64) -> Seen {
+pub fn seen(key: AgentKey) -> Seen {
     let offered = with_gauges(|gauges| {
         gauges
             .borrow()

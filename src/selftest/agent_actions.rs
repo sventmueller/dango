@@ -20,7 +20,7 @@ use super::agent::{controller_of, picture, tab_of};
 use super::agent_stand_in::{AREAS, COLOUR, EXTRAS, SESSION, StandIn, TESTS};
 use super::helpers::{alert_texts, answer_alert, in_any_mode_after};
 use super::{check, finish, helpers};
-use ide_ui_agent::{AgentTab, TabMenu};
+use ide_ui_agent::{AgentKey, AgentTab, TabMenu};
 
 const NAME: &str = "agent-actions";
 /// Time for the timeline to build and lay out the cards that scrolling or a press changed; it reports no end.
@@ -112,7 +112,7 @@ fn pending(tab: &AgentTab) -> Option<(u64, String)> {
 }
 
 /// Waits for the stand-in's request `request` to wait for an answer, then hands its entry to `then`.
-fn when_asked(key: u64, request: &'static str, then: impl FnOnce(u64) + 'static) {
+fn when_asked(key: AgentKey, request: &'static str, then: impl FnOnce(u64) + 'static) {
     soon(
         "the stand-in's request waits for an answer",
         move || tab_of(key).and_then(|t| pending(&t)).is_some_and(|(_, r)| r == request),
@@ -129,7 +129,7 @@ fn when_asked(key: u64, request: &'static str, then: impl FnOnce(u64) + 'static)
 }
 
 /// Waits for the app's answer to request `request`, then checks it.
-fn when_answered(key: u64, request: &'static str, then: impl FnOnce(Value) + 'static) {
+fn when_answered(key: AgentKey, request: &'static str, then: impl FnOnce(Value) + 'static) {
     soon(
         "the app answers the stand-in's request",
         move || stand_in().answer_to(request).is_some(),
@@ -275,7 +275,7 @@ fn tool_cards(root: PathBuf, controller: &crate::window::WindowController) {
 }
 
 /// Before the first prompt: the slash, model and mode menus, filled from what `initialize` answered.
-fn menus(root: PathBuf, key: u64) {
+fn menus(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let args = stand_in().args();
     check(
@@ -347,14 +347,14 @@ fn menus(root: PathBuf, key: u64) {
     );
 }
 
-fn first_prompt(root: PathBuf, key: u64) {
+fn first_prompt(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     tab.type_and_send("Schreib hello.txt neu");
     when_asked(key, "p1", move |id| rules(root, key, id));
 }
 
 /// Write offers two rules: the menu lists both, the second is stored; a prompt typed meanwhile waits in the queue.
-fn rules(root: PathBuf, key: u64, id: u64) {
+fn rules(root: PathBuf, key: AgentKey, id: u64) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     tab.type_and_send("Zuerst das");
     let queued = (tab.queued(), tab.queue_rows());
@@ -393,7 +393,7 @@ fn rules(root: PathBuf, key: u64, id: u64) {
 }
 
 /// WebFetch's input is edited as JSON: broken JSON is refused with an alert, valid JSON goes along.
-fn edited(root: PathBuf, key: u64, id: u64) {
+fn edited(root: PathBuf, key: AgentKey, id: u64) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let editable = tab.timeline().edit_input(id, "{ kaputt");
     answer_when_shown(NSAlertFirstButtonReturn, None);
@@ -421,7 +421,7 @@ fn edited(root: PathBuf, key: u64, id: u64) {
 }
 
 /// A command with one rule: its button stores it at once.
-fn always(root: PathBuf, key: u64) {
+fn always(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let pressed = tab.timeline().press_last("Immer erlauben: ", 0);
     when_answered(key, "p3", move |answer| {
@@ -435,7 +435,7 @@ fn always(root: PathBuf, key: u64) {
 }
 
 /// A destructive command offers no rule; the user refuses it.
-fn deny(root: PathBuf, key: u64) {
+fn deny(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let buttons = tab.timeline().last_card_buttons();
     tab.timeline().press_last("Ablehnen", 0);
@@ -452,7 +452,7 @@ fn deny(root: PathBuf, key: u64) {
 }
 
 /// Two questions: one option picked, which sends nothing yet; then options ticked and words of the user's own.
-fn questions(root: PathBuf, key: u64, id: u64) {
+fn questions(root: PathBuf, key: AgentKey, id: u64) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     tab.timeline().press_last("blue", 0);
     let early = stand_in().answer_to("q1");
@@ -478,7 +478,7 @@ fn questions(root: PathBuf, key: u64, id: u64) {
 }
 
 /// Two multiple-choice questions answered only in words: one button sends both.
-fn words(root: PathBuf, key: u64, id: u64) {
+fn words(root: PathBuf, key: AgentKey, id: u64) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let typed = tab.timeline().type_field(id, 0, "Alles") && tab.timeline().type_field(id, 1, "Nichts");
     let pressed = tab.timeline().press_last("Senden", 0);
@@ -494,7 +494,7 @@ fn words(root: PathBuf, key: u64, id: u64) {
 }
 
 /// The plan goes back with the user's comment.
-fn plan(root: PathBuf, key: u64, id: u64) {
+fn plan(root: PathBuf, key: AgentKey, id: u64) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let (in_card, in_tab) = keyboard_targets(&root, &tab, id);
     check(
@@ -569,7 +569,7 @@ fn call_entry(tab: &AgentTab, call: &str) -> Option<u64> {
 
 /// The background command's output is shown, it is moved to the background, the subagent is stopped, and the
 /// usage is asked for while the turn runs.
-fn work(root: PathBuf, key: u64) {
+fn work(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let entries = (
         call_entry(&tab, "toolu_bg"),
@@ -618,7 +618,7 @@ fn work(root: PathBuf, key: u64) {
 }
 
 /// The send button with an empty composer stops the turn; the queued prompt goes out once the session rests.
-fn stop(root: PathBuf, key: u64) {
+fn stop(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     if let Some(controller) = controller_of(&root) {
         controller.select_tab(&tab.tab_key());
@@ -642,7 +642,7 @@ fn stop(root: PathBuf, key: u64) {
 }
 
 /// The phone connects the session to Remote Control and its menu ends it again.
-fn remote(root: PathBuf, key: u64) {
+fn remote(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let before = tab.inspect().remote;
     tab.remote_control(&tab.root());
@@ -678,7 +678,7 @@ fn remote(root: PathBuf, key: u64) {
 }
 
 /// Renaming, bookmarking, the clock's menu, opening a file of a card and pasting.
-fn names(root: PathBuf, key: u64) {
+fn names(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     answer_when_shown(NSAlertFirstButtonReturn, Some("Aktionen im Test"));
     tab.rename();
@@ -704,7 +704,7 @@ fn names(root: PathBuf, key: u64) {
 }
 
 /// The clock's menu, opening a file of a card and the keyboard on a card.
-fn history(root: PathBuf, key: u64) {
+fn history(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let history = tab.menu(TabMenu::History);
     let past = titles(&history);
@@ -739,7 +739,7 @@ fn history(root: PathBuf, key: u64) {
 }
 
 /// A prompt sent with Return that takes a pasted file, picture and page along.
-fn attachments(root: PathBuf, key: u64) {
+fn attachments(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     paste(&tab, &root);
     tab.select();
@@ -768,7 +768,7 @@ fn attachments(root: PathBuf, key: u64) {
 
 /// The keyboard in the composer: the arrows and Tab pick a completion, Esc closes the list, ⌘Esc leaves the composer
 /// and comes back, and the window's menu commands show the session's work.
-fn keys(root: PathBuf, key: u64) {
+fn keys(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     tab.select();
     tab.type_in_composer("schau @REA");
@@ -804,7 +804,7 @@ fn keys(root: PathBuf, key: u64) {
 }
 
 /// ⌘Esc moves into the composer and out again, and the window's menu commands show the session's work.
-fn focus(root: PathBuf, key: u64) {
+fn focus(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
@@ -868,7 +868,7 @@ fn paste(tab: &AgentTab, root: &std::path::Path) {
 }
 
 /// The code and then the conversation go back to before the second prompt, which starts the stand-in again.
-fn rewind(root: PathBuf, key: u64) {
+fn rewind(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let prompts = tab.entry_ids(|kind| matches!(kind, EntryKind::UserMessage(_)));
     let Some(&second) = prompts.get(1) else {
@@ -927,7 +927,7 @@ fn rewind(root: PathBuf, key: u64) {
 
 /// The CLI refuses the rewind with the first prompt: the whole conversation comes back, the session resumes without
 /// the rewind, and the prompt goes out again.
-fn refused(root: PathBuf, key: u64) {
+fn refused(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let _ = super::agent_stand_in::next_start(
         &stand_in(),
@@ -963,7 +963,7 @@ fn refused(root: PathBuf, key: u64) {
 }
 
 /// The sandbox switch starts a resting session again with the sandbox on.
-fn sandbox(root: PathBuf, key: u64) {
+fn sandbox(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let _ = std::fs::remove_file(stand_in().dir.join("args.txt"));
     tab.toggle_sandbox();

@@ -9,7 +9,7 @@ use splat_i18n::t;
 
 use super::agent::{DRAWN, controller_of, picture, tab_of};
 use super::{check, finish, helpers};
-use ide_ui_agent::AgentTab;
+use ide_ui_agent::{AgentKey, AgentTab};
 
 const NAME: &str = "agent-live";
 /// How long a real turn of haiku may take.
@@ -42,7 +42,7 @@ pub fn live() {
 }
 
 /// Answers a permission request of the tab `key` as the user does; whether its turn ended with the answer "done".
-fn allowed_and_done(key: u64) -> bool {
+fn allowed_and_done(key: AgentKey) -> bool {
     let Some(tab) = tab_of(key) else { return true };
     let thread = tab.snapshot();
     if let Some(request) = thread.pending_requests().first() {
@@ -52,7 +52,7 @@ fn allowed_and_done(key: u64) -> bool {
     answered_with(&tab, "done")
 }
 
-fn live_turn(root: PathBuf, key: u64, done: bool) {
+fn live_turn(root: PathBuf, key: AgentKey, done: bool) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     if !done {
         let entries = tab.inspect().visible.join(" | ");
@@ -105,7 +105,7 @@ fn answered_with(tab: &AgentTab, word: &str) -> bool {
 }
 
 /// A second prompt goes out, the conversation rewinds to before it, and it goes out again.
-fn live_rewind(root: PathBuf, key: u64) {
+fn live_rewind(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     tab.type_and_send(SECOND);
     let second = move || tab_of(key).is_some_and(|tab| answered_with(&tab, "second"));

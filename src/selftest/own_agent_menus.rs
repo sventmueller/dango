@@ -7,7 +7,7 @@ use std::time::Duration;
 use super::agent::tab_of;
 use super::agent_actions::{index_of, titles};
 use super::{check, finish, helpers};
-use ide_ui_agent::TabMenu;
+use ide_ui_agent::{AgentKey, TabMenu};
 
 const NAME: &str = "own-agent";
 
@@ -23,7 +23,7 @@ fn soon(what: &'static str, ready: impl Fn() -> bool + 'static, then: impl FnOnc
 }
 
 /// Picks from the menus of the tab `key`, whose model is `model`, then ends the scenario.
-pub fn run(_root: PathBuf, key: u64, model: &'static str) {
+pub fn run(_root: PathBuf, key: AgentKey, model: &'static str) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let slash = tab.menu(TabMenu::Slash);
     check(
@@ -59,7 +59,7 @@ pub fn run(_root: PathBuf, key: u64, model: &'static str) {
     );
 }
 
-fn modes(key: u64) {
+fn modes(key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let menu = tab.menu(TabMenu::Mode);
     check(

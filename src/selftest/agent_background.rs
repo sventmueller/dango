@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 
 use super::agent::tab_of;
 use super::{check, finish, helpers, snapshot};
-use ide_ui_agent::AgentTab;
+use ide_ui_agent::{AgentKey, AgentTab};
 
 const NAME: &str = "agent-background";
 
@@ -27,7 +27,7 @@ pub fn run() {
 }
 
 /// Puts another tab in front, streams into the hidden AI tab and brings it back.
-fn to_background(root: PathBuf, key: u64, round: u32) {
+fn to_background(root: PathBuf, key: AgentKey, round: u32) {
     let (Some(controller), Some(tab)) = (helpers::window_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
@@ -59,7 +59,7 @@ fn to_background(root: PathBuf, key: u64, round: u32) {
     helpers::wait_until(back, move |_| returned(root, key, round, height));
 }
 
-fn returned(root: PathBuf, key: u64, round: u32, before: f64) {
+fn returned(root: PathBuf, key: AgentKey, round: u32, before: f64) {
     let Some(tab) = tab_of(key) else {
         return finish(NAME);
     };
@@ -111,7 +111,7 @@ fn returned(root: PathBuf, key: u64, round: u32, before: f64) {
 }
 
 /// A user who scrolls a little up while the answer streams stays where they scrolled, and follows again at the end.
-fn scroll_up_while_streaming(key: u64) {
+fn scroll_up_while_streaming(key: AgentKey) {
     let Some(tab) = tab_of(key) else {
         return finish(NAME);
     };
@@ -162,7 +162,7 @@ fn scroll_up_while_streaming(key: u64) {
 }
 
 /// Whether the tab `key` shows the end of its timeline, grown taller than `above`.
-fn followed(key: u64, above: f64) -> bool {
+fn followed(key: AgentKey, above: f64) -> bool {
     tab_of(key).is_some_and(|tab| tab.timeline().is_at_bottom() && table_height(&tab) > above)
 }
 

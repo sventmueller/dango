@@ -15,6 +15,7 @@ use super::notify;
 use super::rewind::Fork;
 use super::source::{self, Problem, Source};
 use super::tab::{AgentTab, Incoming};
+use crate::AgentKey;
 use ide_ui_common::util::{main_after, main_soon};
 
 impl AgentTab {
@@ -257,7 +258,7 @@ fn acp_problem_of(name: &str, ready: bool, error: &ide_acp::SessionError) -> Opt
 }
 
 /// One second of running time for the tab `key`, again while anything runs.
-fn tick(key: u64) {
+fn tick(key: AgentKey) {
     let Some(tab) = super::get(key) else { return };
     let live = tab.timeline.tick(SystemTime::now());
     let running = tab.status() != Status::Idle;

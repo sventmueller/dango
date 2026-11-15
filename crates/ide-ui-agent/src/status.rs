@@ -13,6 +13,7 @@ use splat_i18n::{t, tf};
 use super::format;
 use super::style;
 use super::ui;
+use crate::AgentKey;
 use ide_ui_common::util::{guarded, ns};
 
 #[derive(Default)]
@@ -103,7 +104,7 @@ pub struct StatusLine {
 }
 
 impl StatusLine {
-    pub fn new(mtm: MainThreadMarker, key: u64) -> StatusLine {
+    pub fn new(mtm: MainThreadMarker, key: AgentKey) -> StatusLine {
         let ring = ContextRing::new(mtm);
         let small = |color: Retained<NSColor>| {
             let label = ui::label(mtm, "", &style::small(), &color);

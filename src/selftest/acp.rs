@@ -9,6 +9,7 @@ use ide_thread::{EntryKind, Lane, Notice, Status, ToolOutput, ToolStatus};
 use objc2::MainThreadMarker;
 use objc2_app_kit::{NSAlertFirstButtonReturn, NSAppearanceNameAqua, NSAppearanceNameDarkAqua};
 
+use ide_ui_agent::AgentKey;
 use splat_i18n::t;
 
 use super::agent::{appearance, controller_of, picture, tab_of, view_picture};
@@ -88,7 +89,7 @@ pub fn run() {
 }
 
 /// The session is open: what the agent offers shows in the composer.
-fn ready(root: PathBuf, key: u64) {
+fn ready(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
@@ -137,7 +138,7 @@ fn ready(root: PathBuf, key: u64) {
     );
 }
 
-fn permission(root: PathBuf, key: u64) {
+fn permission(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
@@ -180,7 +181,7 @@ fn tool_status(tab: &ide_ui_agent::AgentTab, id: &str) -> Option<(ToolStatus, Op
 }
 
 /// The turn is over: its cards, the to-dos, the usage and the title.
-fn done(root: PathBuf, key: u64) {
+fn done(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
@@ -230,7 +231,7 @@ fn done(root: PathBuf, key: u64) {
 
 /// Taking the code back to before an ACP prompt (I6): the app's own checkpoint, with the question about the user's
 /// own changes since.
-fn code_rewind(root: PathBuf, key: u64) {
+fn code_rewind(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let edited = root.join(ide_acp::test_agent::EDITED.0);
     check(
@@ -288,7 +289,7 @@ fn code_rewind(root: PathBuf, key: u64) {
 }
 
 /// Model, mode and the sandbox, as the composer's pills change them.
-fn options(root: PathBuf, key: u64) {
+fn options(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     tab.choose_option("model", "deep");
     tab.choose_mode("code");
@@ -312,7 +313,7 @@ fn options(root: PathBuf, key: u64) {
 }
 
 /// A new session of the agent starts with the model and mode picked in the first.
-fn remembered(root: PathBuf, key: u64) {
+fn remembered(root: PathBuf, key: AgentKey) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
@@ -339,7 +340,7 @@ fn remembered(root: PathBuf, key: u64) {
     );
 }
 
-fn cancel(root: PathBuf, key: u64) {
+fn cancel(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     tab.type_and_send("go slow");
     soon(

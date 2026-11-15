@@ -9,6 +9,7 @@ use std::sync::{Arc, OnceLock};
 use objc2::MainThreadMarker;
 use objc2_app_kit::NSView;
 
+use crate::AgentKey;
 use crate::work::Part;
 
 /// What the AI tab needs of the app beside the window, which it reaches through `ide_ui_common::window`.
@@ -49,7 +50,7 @@ pub trait Host {
     /// The user trusts `folder` (E22).
     fn trust(&self, folder: &Path);
     /// Opens the activity view's list of `part` of the AI tab `key` below `anchor`.
-    fn show_work(&self, window: WindowId, key: u64, part: Part, anchor: &NSView);
+    fn show_work(&self, window: WindowId, key: AgentKey, part: Part, anchor: &NSView);
 }
 
 static HOST: OnceLock<&'static (dyn Host + Sync)> = OnceLock::new();

@@ -11,7 +11,7 @@ use objc2_app_kit::{NSAlertSecondButtonReturn, NSControlStateValueOn};
 use super::agent::{controller_of, tab_of};
 use super::agent_actions::{answer_when_shown, answered, index_of, titles};
 use super::{check, finish, helpers};
-use ide_ui_agent::TabMenu;
+use ide_ui_agent::{AgentKey, TabMenu};
 
 const NAME: &str = "acp-actions";
 const PROJECT: &str = "acp-actions-project";
@@ -77,7 +77,7 @@ pub fn run() {
 }
 
 /// The slash, model and mode menus list what the agent offers; picking from them switches the agent.
-fn menus(root: PathBuf, key: u64) {
+fn menus(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let slash = tab.menu(TabMenu::Slash);
     let tip = slash.itemAtIndex(0).and_then(|i| i.toolTip()).map(|t| t.to_string());
@@ -119,7 +119,7 @@ fn menus(root: PathBuf, key: u64) {
 }
 
 /// The agent's own rule allows the command for good.
-fn permission(root: PathBuf, key: u64) {
+fn permission(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     tab.type_and_send("list the files");
     soon(
@@ -188,7 +188,7 @@ fn missing(root: PathBuf) {
 
 /// The agent crashes mid-turn: the tab says it was ended with its last words, a prompt typed meanwhile waits, and
 /// starting it again sends that prompt.
-fn crashed(root: PathBuf, key: u64) {
+fn crashed(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     tab.type_and_send("please crash");
     soon(
@@ -233,7 +233,7 @@ fn crashed(root: PathBuf, key: u64) {
 }
 
 /// The agent ends on its own after a turn, without a word: the tab says so instead of looking busy.
-fn quit(root: PathBuf, key: u64) {
+fn quit(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     tab.timeline().press_last("Ablehnen", 0);
     tab.type_and_send("quit now");

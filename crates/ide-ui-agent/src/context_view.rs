@@ -19,6 +19,7 @@ use splat_i18n::{t, tf};
 
 use super::format::{dollars, elapsed, percent, tokens};
 use super::{style, ui};
+use crate::AgentKey;
 use ide_ui_common::util::{guarded, ns, set_action};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
@@ -40,11 +41,11 @@ thread_local! {
 #[derive(Default)]
 pub struct ContextGauges {
     /// The gauge of each tab, by the tab's key.
-    gauges: RefCell<HashMap<u64, Weak<NSButton>>>,
+    gauges: RefCell<HashMap<AgentKey, Weak<NSButton>>>,
     shown: RefCell<Option<Shown>>,
 }
 
-fn with_gauges<R>(f: impl FnOnce(&RefCell<HashMap<u64, Weak<NSButton>>>) -> R) -> R {
+fn with_gauges<R>(f: impl FnOnce(&RefCell<HashMap<AgentKey, Weak<NSButton>>>) -> R) -> R {
     f(&crate::host::state().context_gauges.gauges)
 }
 
@@ -54,7 +55,7 @@ fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Shown>>) -> R) -> R {
 
 /// The popover on show, the tab it belongs to and the breakdown it shows.
 struct Shown {
-    key: u64,
+    key: AgentKey,
     popover: Retained<NSPopover>,
     controller: Retained<NSViewController>,
     /// When the breakdown on show was answered, and whether it was counted.
@@ -75,7 +76,7 @@ define_class!(
         fn open(&self, sender: Option<&AnyObject>) {
             guarded((), || {
                 if let Some(button) = sender.and_then(|s| s.downcast_ref::<NSButton>()) {
-                    show(u64::try_from(button.tag()).unwrap_or(0), button);
+                    show(key_of(button), button);
                 }
             });
         }
@@ -94,12 +95,18 @@ fn opener(mtm: MainThreadMarker) -> Retained<Opener> {
 
 /// A button without a look of its own over the gauge, from `ring` to `text` in the status line `row`, that opens the
 /// breakdown of the tab with `key`; hidden until there is one.
-pub fn gauge(mtm: MainThreadMarker, key: u64, row: &NSStackView, ring: &NSView, text: &NSView) -> Retained<NSButton> {
+pub fn gauge(
+    mtm: MainThreadMarker,
+    key: AgentKey,
+    row: &NSStackView,
+    ring: &NSView,
+    text: &NSView,
+) -> Retained<NSButton> {
     // SAFETY: A nil target until `set_action` below, which checks that the opener answers the action.
     let button = unsafe { NSButton::buttonWithTitle_target_action(&ns(""), None, None, mtm) };
     button.setBordered(false);
     button.setTransparent(true);
-    button.setTag(isize::try_from(key).unwrap_or(0));
+    button.setTag(isize::try_from(key.get()).unwrap_or(0));
     set_action(&button, &opener(mtm), sel!(ideAgentContext:));
     ide_ui_common::util::set_label(&button, Some(t("Kontext aufschlüsseln")));
     button.setToolTip(Some(&ns(t("Was den Kontext füllt"))));
@@ -118,11 +125,16 @@ pub fn gauge(mtm: MainThreadMarker, key: u64, row: &NSStackView, ring: &NSView, 
     button
 }
 
+/// The AI tab `gauge` belongs to, from its tag.
+fn key_of(gauge: &NSButton) -> AgentKey {
+    AgentKey(u64::try_from(gauge.tag()).unwrap_or(0))
+}
+
 /// Lets `gauge` open the breakdown once `usage` has one, and shows a new one in the popover if it is open.
 pub fn follow(gauge: &NSButton, usage: &Usage) {
     gauge.setHidden(usage.breakdown.is_none());
     let Some(breakdown) = &usage.breakdown else { return };
-    let key = u64::try_from(gauge.tag()).unwrap_or(0);
+    let key = key_of(gauge);
     let answered = (breakdown.at, breakdown.exact);
     let open = with_shown(|shown| {
         let mut shown = shown.borrow_mut();
@@ -140,7 +152,7 @@ pub fn follow(gauge: &NSButton, usage: &Usage) {
 }
 
 /// Opens the breakdown of the tab with `key` at `anchor`, and has the CLI count every row exactly.
-fn show(key: u64, anchor: &NSView) {
+fn show(key: AgentKey, anchor: &NSView) {
     let Some(tab) = super::get(key) else { return };
     let thread = tab.snapshot();
     let Some(breakdown) = &thread.usage().breakdown else {

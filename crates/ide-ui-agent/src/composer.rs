@@ -16,6 +16,7 @@ use splat_i18n::{t, tf};
 use super::style;
 use super::target::AgentTarget;
 use super::ui;
+use crate::AgentKey;
 use ide_ui_common::constant;
 use ide_ui_common::util::{guarded, ns, symbol};
 
@@ -24,7 +25,7 @@ const MIN_TEXT: f64 = 20.0;
 const MAX_TEXT: f64 = 180.0;
 
 pub struct TextIvars {
-    key: u64,
+    key: AgentKey,
 }
 
 /// The key code of Tab.
@@ -187,7 +188,7 @@ fn pill(mtm: MainThreadMarker, target: &AgentTarget, action: objc2::runtime::Sel
 }
 
 impl Composer {
-    pub fn new(mtm: MainThreadMarker, key: u64, target: &AgentTarget) -> Composer {
+    pub fn new(mtm: MainThreadMarker, key: AgentKey, target: &AgentTarget) -> Composer {
         let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(400.0, MIN_TEXT));
         let text = text_view(mtm, key, target, frame);
         let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
@@ -385,7 +386,7 @@ impl Composer {
 }
 
 /// The growing text view the user types into.
-fn text_view(mtm: MainThreadMarker, key: u64, target: &AgentTarget, frame: NSRect) -> Retained<ComposerText> {
+fn text_view(mtm: MainThreadMarker, key: AgentKey, target: &AgentTarget, frame: NSRect) -> Retained<ComposerText> {
     let this = ComposerText::alloc(mtm).set_ivars(TextIvars { key });
     // SAFETY: NSTextView's initializer, called once on the newly allocated object.
     let text: Retained<ComposerText> = unsafe { msg_send![super(this), initWithFrame: frame] };

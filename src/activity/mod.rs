@@ -21,7 +21,7 @@ use splat_i18n::{t, tf};
 use crate::util::{guarded, main_after, main_soon, ns, set_action, symbol};
 use crate::window::WindowController;
 use crate::window::toolbar::kind_name;
-use ide_ui_agent::AgentTab;
+use ide_ui_agent::{AgentKey, AgentTab};
 
 mod session;
 
@@ -37,11 +37,11 @@ const WIDTH: f64 = 420.0;
 /// What a button of the popover does.
 #[derive(Clone, PartialEq)]
 enum Action {
-    ShowTab(u64),
-    StopTurn(u64),
-    Reveal(u64, String),
-    StopTask(u64, String),
-    ShowOutput(u64, String),
+    ShowTab(AgentKey),
+    StopTurn(AgentKey),
+    Reveal(AgentKey, String),
+    StopTask(AgentKey, String),
+    ShowOutput(AgentKey, String),
     StopProcess(ProcessId),
     /// Selects the terminal tab with this number.
     ShowTerminal(crate::window::TabId),
@@ -59,7 +59,7 @@ pub struct ActivityIvars {
     actions: RefCell<Vec<Action>>,
     scheduled: Cell<bool>,
     /// The tab whose work alone the popover shows, as the session's own list, and which of it.
-    only: Cell<Option<(u64, Part)>>,
+    only: Cell<Option<(AgentKey, Part)>>,
     /// The rows the popover shows, to change their texts in place.
     shown: RefCell<Option<Shown>>,
 }
@@ -377,7 +377,7 @@ fn agent_lines(tabs: &[std::rc::Rc<AgentTab>], now: SystemTime, all: bool) -> Ve
 }
 
 /// The lines of `part` of the session in tab `key`.
-fn session_lines(tabs: &[std::rc::Rc<AgentTab>], key: u64, part: Part, now: SystemTime) -> Vec<Line> {
+fn session_lines(tabs: &[std::rc::Rc<AgentTab>], key: AgentKey, part: Part, now: SystemTime) -> Vec<Line> {
     let tabs: Vec<std::rc::Rc<AgentTab>> = tabs.iter().filter(|tab| tab.key == key).cloned().collect();
     match part {
         Part::All => agent_lines(&tabs, now, true),
@@ -768,7 +768,7 @@ impl Activity {
 
     fn perform(&self, action: Action) {
         let Some(controller) = self.controller() else { return };
-        let tab = |key: u64| ide_ui_agent::of_window(&controller).into_iter().find(|t| t.key == key);
+        let tab = |key: AgentKey| ide_ui_agent::of_window(&controller).into_iter().find(|t| t.key == key);
         match action {
             Action::ShowTab(key) => {
                 if let Some(tab) = tab(key) {
@@ -806,7 +806,7 @@ impl Activity {
 }
 
 /// Opens the list of `part` of the AI tab `key`'s session below `anchor`.
-pub fn show_tab(controller: &WindowController, key: u64, part: Part, anchor: &NSView) {
+pub fn show_tab(controller: &WindowController, key: AgentKey, part: Part, anchor: &NSView) {
     if let Some(activity) = of(controller) {
         activity.ivars().only.set(Some((key, part)));
         activity.open(Some(anchor));

@@ -16,6 +16,7 @@ use super::super::helpers::{after, wait_until};
 use super::{flows, keys, name, picture, walk, window_of};
 use crate::selftest::{check, finish};
 use crate::window::{Panel, search_selftest};
+use ide_ui_agent::AgentKey;
 use ide_ui_git::selftest as git;
 
 /// The file of the editor state, in a language whose server is not installed, so its status bar offers it.
@@ -215,7 +216,7 @@ fn ai(root: PathBuf) {
 }
 
 /// `key` is the AI tab that plays the recording with a subagent and a background shell.
-fn ai_tab(root: PathBuf, key: u64) {
+fn ai_tab(root: PathBuf, key: AgentKey) {
     walk("the AI tab misses nothing");
     picture(&root, "ai");
     let Some(controller) = window_of(&root) else { return };
@@ -223,7 +224,7 @@ fn ai_tab(root: PathBuf, key: u64) {
     settled(root, move |root| agents_panel(root, key));
 }
 
-fn agents_panel(root: PathBuf, key: u64) {
+fn agents_panel(root: PathBuf, key: AgentKey) {
     walk("the AI panel misses nothing");
     let Some(controller) = window_of(&root) else { return };
     let (lines, _) = crate::activity::inspect(&controller);
@@ -238,7 +239,7 @@ fn agents_panel(root: PathBuf, key: u64) {
 /// How long the popover runs on while a button of it has the focus, past its updates each second.
 const TICKS: Duration = Duration::from_millis(2500);
 
-fn activity(root: PathBuf, key: u64) {
+fn activity(root: PathBuf, key: AgentKey) {
     walk("the activity popover misses nothing");
     let Some(controller) = window_of(&root) else { return };
     let button = crate::activity::popover_view(&controller).and_then(|view| first_button(&view));

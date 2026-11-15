@@ -14,8 +14,8 @@ use splat_i18n::t;
 use super::agent::{DRAWN, appearance, controller_of, picture, tab_of, view_picture};
 use super::{check, finish, helpers};
 use crate::util::constant;
-use ide_ui_agent::AgentTab;
 use ide_ui_agent::plan::{self, PLAN_IN_CARD, PLAN_IN_DOC, PLAN_REJECT, PLAN_REVISE};
+use ide_ui_agent::{AgentKey, AgentTab};
 
 const NAME: &str = "agent";
 const SESSION: &str = "22222222-2222-4222-8222-222222222222";
@@ -34,7 +34,7 @@ const FEEDBACK: &str = "> Add a failing test for a file without a trailing newli
                         > Lexer::next_line\n\nFix it in the tokenizer instead\n\nKeep the change small";
 
 /// The requests tab and the first tab, which the scenario goes on with, and where.
-type Next = (u64, u64, fn(PathBuf, u64, u64));
+type Next = (AgentKey, AgentKey, fn(PathBuf, AgentKey, AgentKey));
 
 /// Plan `n` as Claude presents it, written from the SDK's typings: the tool call, then the request that waits.
 fn plan_frames(n: u32, plan: &str) -> String {
@@ -107,7 +107,7 @@ fn comment_on(tab: &AgentTab, id: u64, place: u8, comment: &str) -> bool {
     typed
 }
 
-pub fn run(root: PathBuf, requests: u64, first: u64, then: fn(PathBuf, u64, u64)) {
+pub fn run(root: PathBuf, requests: AgentKey, first: AgentKey, then: fn(PathBuf, AgentKey, AgentKey)) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
@@ -127,7 +127,7 @@ pub fn run(root: PathBuf, requests: u64, first: u64, then: fn(PathBuf, u64, u64)
 }
 
 /// A comment on a passage marked in the plan's card.
-fn in_card(root: PathBuf, key: u64, id: u64, next: Next) {
+fn in_card(root: PathBuf, key: AgentKey, id: u64, next: Next) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let selected = plan::select(
         &tab,
@@ -149,7 +149,7 @@ fn in_card(root: PathBuf, key: u64, id: u64, next: Next) {
 }
 
 /// Comments in the plan's document: on two passages and on the whole plan.
-fn in_doc(root: PathBuf, key: u64, id: u64, next: Next) {
+fn in_doc(root: PathBuf, key: AgentKey, id: u64, next: Next) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     check(
         "the card marks the commented passage",
@@ -193,7 +193,7 @@ fn in_doc(root: PathBuf, key: u64, id: u64, next: Next) {
 }
 
 /// Editing a comment starts from its text; removing one unmarks its passage.
-fn edit(root: PathBuf, key: u64, id: u64, next: Next) {
+fn edit(root: PathBuf, key: AgentKey, id: u64, next: Next) {
     let (Some(tab), Some(anchor)) = (tab_of(key), plan::text_of(key, id)) else {
         return finish(NAME);
     };
@@ -224,7 +224,7 @@ fn edit(root: PathBuf, key: u64, id: u64, next: Next) {
 }
 
 /// The document and the card, in dark and in light.
-fn pictures(root: PathBuf, key: u64, id: u64, next: Next) {
+fn pictures(root: PathBuf, key: AgentKey, id: u64, next: Next) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
@@ -262,7 +262,7 @@ fn pictures(root: PathBuf, key: u64, id: u64, next: Next) {
 }
 
 /// "Mit Kommentaren überarbeiten lassen", then the CLI's answer and the revised plan.
-fn revise(root: PathBuf, key: u64, id: u64, next: Next) {
+fn revise(root: PathBuf, key: AgentKey, id: u64, next: Next) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let sent = tab.plan_feedback(id);
     tab.plan(id, PLAN_REVISE);
@@ -297,7 +297,7 @@ fn revise(root: PathBuf, key: u64, id: u64, next: Next) {
 }
 
 /// "Ablehnen" on the revised plan.
-fn reject(root: PathBuf, key: u64, id: u64, (requests, first, then): Next) {
+fn reject(root: PathBuf, key: AgentKey, id: u64, (requests, first, then): Next) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let visible = tab.inspect().visible;
     check(
@@ -342,16 +342,16 @@ fn reject(root: PathBuf, key: u64, id: u64, (requests, first, then): Next) {
 }
 
 /// Whether the tab `key` shows a row that reads `text`.
-fn shows(key: u64, text: &str) -> bool {
+fn shows(key: AgentKey, text: &str) -> bool {
     tab_of(key).is_some_and(|tab| tab.inspect().visible.iter().any(|v| v == text))
 }
 
 /// Closing the plan's AI tab takes its document with it, whose answers would go nowhere.
-fn closed(root: PathBuf, key: u64, id: u64, (requests, first, then): Next) {
+fn closed(root: PathBuf, key: AgentKey, id: u64, (requests, first, then): Next) {
     let Some(controller) = controller_of(&root) else {
         return finish(NAME);
     };
-    let doc = controller.tab_with_key(&format!("plan:{key}:{id}"));
+    let doc = controller.tab_with_key(&format!("plan:{}:{id}", key.get()));
     check(
         "the plan's document closes with its AI tab",
         tab_of(key).is_none() && doc.is_none() && plan::inspect(key, id).is_none(),

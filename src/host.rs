@@ -477,7 +477,13 @@ impl ide_ui_agent::Host for AppHost {
         crate::project::trust(folder);
     }
 
-    fn show_work(&self, window: WindowId, key: u64, part: ide_ui_agent::work::Part, anchor: &NSView) {
+    fn show_work(
+        &self,
+        window: WindowId,
+        key: ide_ui_agent::AgentKey,
+        part: ide_ui_agent::work::Part,
+        anchor: &NSView,
+    ) {
         if let Some(c) = self::window(window) {
             crate::activity::show_tab(&c, key, part, anchor);
         }

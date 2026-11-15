@@ -18,6 +18,7 @@ use serde_json::{Value, json};
 
 use super::agent::{controller_of, picture, tab_of};
 use super::{check, finish, helpers};
+use ide_ui_agent::AgentKey;
 use ide_ui_agent::own_agent::{self, ModelChoice};
 
 const NAME: &str = "own-agent";
@@ -325,7 +326,7 @@ fn open(root: PathBuf) {
     });
 }
 
-fn send(root: PathBuf, key: u64) {
+fn send(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let (model, mode, sandbox) = tab.pills();
     check(
@@ -345,7 +346,7 @@ fn send(root: PathBuf, key: u64) {
     );
 }
 
-fn approve(root: PathBuf, key: u64) {
+fn approve(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
@@ -381,7 +382,7 @@ fn card(thread: &ide_thread::Thread, id: &str) -> Option<(ToolStatus, Option<Too
     })
 }
 
-fn done(root: PathBuf, key: u64) {
+fn done(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
@@ -434,7 +435,7 @@ fn done(root: PathBuf, key: u64) {
 }
 
 /// The prompt's rewind menu takes the code back to before it (I6, E40), from the app's own checkpoint.
-fn code_rewind(root: PathBuf, key: u64) {
+fn code_rewind(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     let prompt = tab.snapshot().entries(&Lane::Main).iter().find_map(|e| match &e.kind {
         EntryKind::UserMessage(m) if m.message_id.as_deref().is_some_and(|id| id.starts_with("app-")) => {
@@ -508,7 +509,7 @@ fn set_notes(root: &PathBuf, text: &str) {
     crate::editor::update_dirty(&view);
 }
 
-fn close_and_reopen(root: PathBuf, key: u64) {
+fn close_and_reopen(root: PathBuf, key: AgentKey) {
     let (Some(controller), Some(tab)) = (controller_of(&root), tab_of(key)) else {
         return finish(NAME);
     };
@@ -570,7 +571,7 @@ fn reopen(root: PathBuf, thread_id: ide_thread::ThreadId) {
 }
 
 /// `/compact` summarizes the thread with the same model and says so in the timeline.
-fn compact(root: PathBuf, key: u64) {
+fn compact(root: PathBuf, key: AgentKey) {
     let Some(tab) = tab_of(key) else { return finish(NAME) };
     tab.type_and_send("/compact");
     soon(

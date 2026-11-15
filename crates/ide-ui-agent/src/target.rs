@@ -13,10 +13,11 @@ use objc2_quartz_core::CADisplayLink;
 
 use super::cards::{Part, unpack};
 use super::tab::AgentTab;
+use crate::AgentKey;
 use ide_ui_common::util::guarded;
 
 pub struct TargetIvars {
-    key: u64,
+    key: AgentKey,
 }
 
 /// The tag of the control or menu item that sent an action.
@@ -368,7 +369,7 @@ define_class!(
 );
 
 impl AgentTarget {
-    pub fn new(mtm: MainThreadMarker, key: u64) -> Retained<AgentTarget> {
+    pub fn new(mtm: MainThreadMarker, key: AgentKey) -> Retained<AgentTarget> {
         let this = Self::alloc(mtm).set_ivars(TargetIvars { key });
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         unsafe { msg_send![super(this), init] }

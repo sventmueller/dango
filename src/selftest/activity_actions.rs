@@ -7,6 +7,7 @@
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
 
+use ide_ui_agent::AgentKey;
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2::{MainThreadOnly, Message, sel};
@@ -46,7 +47,7 @@ pub fn run() {
     });
 }
 
-fn typed(root: PathBuf, key: u64) {
+fn typed(root: PathBuf, key: AgentKey) {
     let Some(controller) = helpers::window_of(&root) else {
         return finish(NAME);
     };
@@ -91,7 +92,7 @@ fn typed(root: PathBuf, key: u64) {
     );
 }
 
-fn popover(root: PathBuf, key: u64, terminal: Option<TabId>) {
+fn popover(root: PathBuf, key: AgentKey, terminal: Option<TabId>) {
     let Some(controller) = helpers::window_of(&root) else {
         return finish(NAME);
     };

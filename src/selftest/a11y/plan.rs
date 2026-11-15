@@ -12,8 +12,8 @@ use super::super::agent_plan::start_frames;
 use super::{keys, window_of};
 use crate::selftest::check;
 use crate::selftest::helpers::after;
-use ide_ui_agent::AgentTab;
 use ide_ui_agent::plan;
+use ide_ui_agent::{AgentKey, AgentTab};
 
 /// How long the timeline takes to build a card it was just fed, which it tells nothing about.
 const SETTLE: Duration = Duration::from_millis(600);
@@ -34,7 +34,7 @@ pub fn start(root: PathBuf, then: fn(PathBuf)) {
     after(SETTLE, move || whole(root, key, then));
 }
 
-fn tab_of(key: u64) -> Option<std::rc::Rc<AgentTab>> {
+fn tab_of(key: AgentKey) -> Option<std::rc::Rc<AgentTab>> {
     ide_ui_agent::all().into_iter().find(|tab| tab.key == key)
 }
 
@@ -64,7 +64,7 @@ fn comment(window: &NSWindow, comment: &str) -> String {
 }
 
 /// ⌥⌘K with the focus in the AI tab comments on the whole plan.
-fn whole(root: PathBuf, key: u64, then: fn(PathBuf)) {
+fn whole(root: PathBuf, key: AgentKey, then: fn(PathBuf)) {
     let (Some(window), Some(tab)) = (window_of(&root).and_then(|c| c.window()), tab_of(key)) else {
         return then(root);
     };
@@ -92,7 +92,7 @@ fn has_focus(window: &NSWindow, view: &NSView) -> bool {
 
 /// With the plan's row selected in the timeline, Tab reaches the plan's text in its card and ⇧Tab goes back; there
 /// ⇧⌥→ selects the first words and ⌥⌘K comments on them.
-fn in_card(root: PathBuf, key: u64, id: u64, then: fn(PathBuf)) {
+fn in_card(root: PathBuf, key: AgentKey, id: u64, then: fn(PathBuf)) {
     let (Some(window), Some(tab)) = (window_of(&root).and_then(|c| c.window()), tab_of(key)) else {
         return then(root);
     };
@@ -138,7 +138,7 @@ fn in_card(root: PathBuf, key: u64, id: u64, then: fn(PathBuf)) {
 }
 
 /// In the plan's document, ⇧⌥→ twice selects the first words and ⌥⌘K comments on them.
-fn passage(root: PathBuf, key: u64, id: u64, then: fn(PathBuf)) {
+fn passage(root: PathBuf, key: AgentKey, id: u64, then: fn(PathBuf)) {
     let (Some(window), Some(tab)) = (window_of(&root).and_then(|c| c.window()), tab_of(key)) else {
         return then(root);
     };
