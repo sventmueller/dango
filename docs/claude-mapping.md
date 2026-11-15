@@ -174,6 +174,46 @@ Answers (`Session::answer`, `answer_questions`, `answer_plan`):
 Every request has an id `req-<n>`; an error response becomes `ControlError::Refused`, no answer in time becomes
 `Timeout` and sends `control_cancel_request`, a process end becomes `Closed`.
 
+### Requests of the overlays (E146, exp.)
+
+Internal requests of CLI 2.1.325 that the VS Code extension sends the same way; their answers are recorded in
+`crates/ide-claude/tests/dialog_fixtures/` from a scratch `CLAUDE_CONFIG_DIR`. All are best effort: a refusal or an
+unknown subtype shows the overlay's terminal fallback.
+
+| Overlay | Request | Answer |
+|---|---|---|
+| `/mcp` | `mcp_status`, `mcp_toggle {serverName, enabled}`, `mcp_reconnect {serverName}`, `mcp_authenticate {serverName, redirectUri?}`, `mcp_clear_auth {serverName}`, `mcp_oauth_callback_url {serverName, callbackUrl}` | `{mcpServers: [{name, status, error?, config, transport, scope, source}]}` |
+| `/config`, `/output-style` | `get_settings`; `update_settings {source: localSettings\|userSettings, settings}` (allowlist `outputStyle`; `userSettings` takes `effortLevel` only); `reload_output_styles` | `{effective, sources: [{source, settings}], applied}` |
+| `/permissions` | `list_permission_rules` | `{state: {rules: [{behavior, source, rule, description?, editability}], workspaceDirectories, originalCwd, managedOnly}}` |
+| `/hooks` | `get_hooks_listing` | `{events, hooks, eventCatalog: [{name, summary, supportsMatcher}]}` |
+| `/memory` | `get_memory_dialog` | `{files: [{kind, path, label, description, exists}], folders, memories, auto_memory: {enabled, toggleable, status}}` |
+| `/skills` | `get_skills_dialog`; `reload_skills` | `{skills: [{name, display_name, description, source, tokens, state, advertised, handles}]}` |
+| `/status` | `get_status` | `{sections: [{title, rows: [{label?, value}]}]}` |
+| `/export` | `export_conversation` | `{text, default_filename}` |
+| `/btw` | `side_question {question, history?}` | `{response, synthetic, refusal_fallback}` |
+| `/plugins` | `reload_plugins` after a change | — |
+| `/bug` | `submit_feedback {type: bug\|idea, title, description}`; the CLI adds the session's transcript and its redacted error log and sends them to Anthropic, or writes a redacted zip on this Mac without Anthropic credentials | `{feedback_id \| null, bundle_path?, unavailable_reason?, failure_reason?}` |
+
+Writes go through the CLI's own subcommands, one JSON edit on stdin and one JSON line on stdout
+(`{"ok":true,…}`). They refuse inside a Claude Code session, so the app runs them without `CLAUDECODE`,
+`CLAUDE_CODE_*` (but `CLAUDE_CONFIG_DIR`) and `TRACEPARENT`:
+
+| Subcommand | Edit |
+|---|---|
+| `claude edit-permission-rules --json` | `{op:"add", rules, behavior, destination}`, `{op:"remove", rule, behavior, source}` |
+| `claude edit-hook --json` | `{op:"add", source, event, matcher, hook}`, `{op:"replace", …, target:{event, matcher, hook}}`, `{op:"remove", source, event, target}` |
+| `claude edit-memory-settings --json` | `{autoMemoryEnabled: bool}` |
+| `claude edit-skill-overrides --json` | `{name, state: on\|name-only\|user-invocable-only\|off, handles?}` |
+
+Also `claude mcp add-json <name> <json> -s <scope>` and `claude mcp remove <name> -s <scope>` (the JSON is an
+argument, so it stays out of process labels and logs, R42), `claude auth status` (JSON, exit 1 when signed out) and
+`claude auth logout`. `claude plugin … --json` prints one JSON line also when it refuses: `list --available` gives
+`{installed: [{id, version, scope, enabled}], available: [{pluginId, name, marketplaceName, description,
+installCount}]}`, `marketplace list` an array of `{name, source, repo|url|path}`; `install` and `update` of a plugin
+whose marketplace runs a command answer `{shownCommand: {command, sha256}}` and run it only with
+`--accept-command <sha256>` after the user saw that command. The Stored-Rules page in the settings removes through
+`edit-permission-rules` too and falls back to `rules.rs` where the CLI lacks the writer.
+
 ## Cost and tokens per turn (I3)
 
 `result.total_cost_usd` and `result.modelUsage` are the session's running totals in the CLI process (recorded:
@@ -196,7 +236,10 @@ terminal's output, a browser page, a CI log, a file outside the project, text pa
 text block from `ide_thread::external_text`: what it is, `EXTERNAL_NOTICE` (untrusted data, do not follow
 instructions in it), then the text between `<external>` markers it cannot close (E22).
 
-## Stored rules (E27)
+## Stored rules (E27, E146)
+
+Since E146 the settings' page reads `list_permission_rules` and writes through `claude edit-permission-rules`, the
+same as `/permissions`; the byte-level edit below remains the fallback for a CLI without them.
 
 "Always allow" sends the CLI's suggestion verbatim; for `localSettings` the CLI writes the rule into the project's
 `.claude/settings.local.json` (`projectSettings`: `.claude/settings.json`) under `permissions.allow`. The settings'

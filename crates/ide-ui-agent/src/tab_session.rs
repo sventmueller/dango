@@ -135,11 +135,21 @@ impl AgentTab {
             match &event {
                 Incoming::Claude(Event::Changed(c))
                 | Incoming::Acp(ide_acp::Event::Changed(c))
-                | Incoming::Own(ide_agent::Event::Changed(c)) => {
+                | Incoming::Own(ide_agent::Event::Changed(c))
+                | Incoming::Codex(ide_codex::Event::Changed(c))
+                | Incoming::OpenCode(ide_opencode::Event::Changed(c)) => {
                     debug_assert!(c.is_empty(), "invalidations are coalesced before scheduling");
                 }
                 Incoming::Own(other) => self.own_event(other),
-                Incoming::Claude(Event::Capabilities) | Incoming::Acp(ide_acp::Event::Capabilities) => learned = true,
+                Incoming::Claude(Event::Capabilities)
+                | Incoming::Acp(ide_acp::Event::Capabilities)
+                | Incoming::Codex(ide_codex::Event::Capabilities)
+                | Incoming::OpenCode(ide_opencode::Event::Capabilities) => learned = true,
+                Incoming::OpenCode(ide_opencode::Event::Ended { stderr }) => ended = Some(stderr.clone()),
+                Incoming::OpenCode(ide_opencode::Event::McpChanged(_)) => {}
+                Incoming::OpenCode(other) => problem = self.opencode_problem(other).or(problem),
+                Incoming::Codex(ide_codex::Event::Ended { stderr }) => ended = Some(stderr.clone()),
+                Incoming::Codex(other) => problem = self.codex_problem(other).or(problem),
                 Incoming::Claude(Event::RemoteControl) => remote = true,
                 Incoming::Claude(Event::Failed(SessionError::RewindRejected(why))) => refused = Some(why.clone()),
                 Incoming::Claude(event @ Event::Failed(_)) => problem = source::problem_of(event),
@@ -171,6 +181,7 @@ impl AgentTab {
         }
         if learned {
             self.refresh();
+            super::dialogs::session_ready(self);
         } else if remote {
             self.refresh_remote();
         }

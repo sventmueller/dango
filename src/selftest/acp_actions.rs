@@ -15,6 +15,8 @@ use super::{check, finish, give_up, give_up_saying, helpers};
 use ide_ui_agent::{AgentKey, TabMenu};
 
 const NAME: &str = "acp-actions";
+/// The overlays' commands the test agent's capabilities allow (E146), after its own.
+pub(crate) const ACP_LOCAL: [&str; 7] = ["/status", "/export", "/mcp", "/memory", "/config", "/logout", "/btw"];
 const PROJECT: &str = "acp-actions-project";
 const REGISTRY: &str = include_str!("../../crates/ide-acp/tests/fixtures/registry.json");
 /// The places of the agents in the "+" menu.
@@ -86,7 +88,11 @@ fn menus(root: PathBuf, key: AgentKey) {
     slash.performActionForItemAtIndex(0);
     check(
         "the slash menu lists the agent's commands, and picking one puts it into the composer",
-        titles(&slash) == ["/review"]
+        titles(&slash)
+            == ACP_LOCAL.iter().fold(vec!["/review".to_string()], |mut all, c| {
+                all.push((*c).to_string());
+                all
+            })
             && tip.as_deref() == Some("Review the changes")
             && tab.composer_text() == "/review ",
         format!("{:?}, {tip:?}, {:?}", titles(&slash), tab.composer_text()),

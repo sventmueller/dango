@@ -27,6 +27,8 @@ use crate::launch::Launch;
 use crate::mapping::Mapper;
 use crate::prompt;
 
+mod extras;
+
 /// What the stderr tail keeps.
 const STDERR_LIMIT: usize = 64 * 1024;
 
@@ -155,6 +157,8 @@ struct State {
     caps: Capabilities,
     session: Option<acp::SessionId>,
     asks: HashMap<String, Ask>,
+    /// The fork answering a question beside the conversation, while it does.
+    side: Option<extras::Side>,
 }
 
 type Sink = Box<dyn Fn(Event) + Send + Sync>;
@@ -211,6 +215,14 @@ impl Shared {
     fn on_update(&self, notification: acp::SessionNotification) {
         let (updates, learned) = {
             let mut state = self.state();
+            if let Some(side) = state
+                .side
+                .as_mut()
+                .filter(|side| side.session == notification.session_id)
+            {
+                side.take(&notification.update);
+                return;
+            }
             let State { mapper, caps, .. } = &mut *state;
             mapper.update(&notification.update, caps, now())
         };
@@ -225,8 +237,14 @@ impl Shared {
         request: acp::RequestPermissionRequest,
         responder: Responder<acp::RequestPermissionResponse>,
     ) {
-        if request.options.is_empty() {
-            // Nothing to choose from means nothing the user could allow; the request is refused (E21).
+        let aside = self
+            .state()
+            .side
+            .as_ref()
+            .is_some_and(|side| side.session == request.session_id);
+        if request.options.is_empty() || aside {
+            // Nothing to choose from means nothing the user could allow, and a question beside the conversation runs
+            // no tools; either request is refused (E21, E146).
             let _ = responder.respond(acp::RequestPermissionResponse::new(
                 acp::RequestPermissionOutcome::Cancelled,
             ));
@@ -430,6 +448,7 @@ impl Session {
                 caps: Capabilities::default(),
                 session: None,
                 asks: HashMap::new(),
+                side: None,
             }),
             sink: Box::new(sink),
             connection: Mutex::new(None),
@@ -782,10 +801,16 @@ async fn initialize(shared: &Shared, connection: &ConnectionTo<Agent>) -> Result
 async fn open(shared: &Shared, connection: &ConnectionTo<Agent>) -> Result<(), SessionError> {
     let launch = &shared.launch;
     let meta = launch.session_meta.as_ref().and_then(|m| m.as_object().cloned());
-    let can_load = shared.state().caps.load_session;
+    let (can_load, servers) = {
+        let state = shared.state();
+        let servers = extras::handover(&launch.mcp_servers, &state.caps, &launch.env);
+        (state.caps.load_session, servers)
+    };
     let opened = match launch.resume.clone().filter(|_| can_load) {
         Some(id) => {
-            let request = acp::LoadSessionRequest::new(id.clone(), launch.cwd.clone()).meta(meta);
+            let request = acp::LoadSessionRequest::new(id.clone(), launch.cwd.clone())
+                .mcp_servers(servers)
+                .meta(meta);
             let session = acp::SessionId::new(id);
             shared.state().session = Some(session.clone());
             // The agent replays the whole conversation while it loads, so what the thread showed goes first.
@@ -796,7 +821,9 @@ async fn open(shared: &Shared, connection: &ConnectionTo<Agent>) -> Result<(), S
                 .ok_or("session/load")
         }
         None => {
-            let request = acp::NewSessionRequest::new(launch.cwd.clone()).meta(meta);
+            let request = acp::NewSessionRequest::new(launch.cwd.clone())
+                .mcp_servers(servers)
+                .meta(meta);
             within(NEW_SESSION, connection.send_request(request).block_task())
                 .await
                 .map(|answer| answer.map(|r| (r.session_id, r.modes, r.config_options)))

@@ -137,8 +137,11 @@ fn start(root: PathBuf) {
             move || {
                 tab_of(key).is_some_and(|t| t.is_live())
                     && !stand_in().requests("initialize").is_empty()
-                    && tab_of(key)
-                        .is_some_and(|t| t.inspect().remote.is_some() && t.menu(TabMenu::Slash).numberOfItems() == 2)
+                    && tab_of(key).is_some_and(|t| {
+                        t.inspect().remote.is_some()
+                            && t.menu(TabMenu::Slash).numberOfItems()
+                                == 2 + super::agent_dialogs::LOCAL.len().cast_signed()
+                    })
             },
             move || menus(root, key),
         );
@@ -167,11 +170,11 @@ fn missing_program(controller: &crate::window::WindowController) {
     let history = tab.menu(TabMenu::History);
     let slash = tab.menu(TabMenu::Slash);
     check(
-        "before the CLI said anything, the menus say there are no models, sessions or commands yet",
+        "before the CLI said anything, the menus say there are no models or sessions yet, and offer only the overlays' commands",
         titles(&model).get(1).map(String::as_str) == Some("Standardmodell")
             && model.itemAtIndex(1).is_some_and(|i| !i.isEnabled())
             && titles(&history) == ["Keine früheren Sitzungen"]
-            && titles(&slash) == ["Noch keine Befehle bekannt"],
+            && titles(&slash) == super::agent_dialogs::LOCAL,
         format!("{:?} {:?} {:?}", titles(&model), titles(&history), titles(&slash)),
     );
 }
@@ -248,7 +251,9 @@ fn menus(root: PathBuf, key: AgentKey) {
     let tip = slash.itemAtIndex(0).and_then(|i| i.toolTip()).map(|t| t.to_string());
     check(
         "the slash menu lists the CLI's commands with what they do",
-        titles(&slash) == ["/deploy", "/compact"] && tip.as_deref() == Some("Deploy to staging"),
+        titles(&slash)[..2] == ["/deploy", "/compact"]
+            && titles(&slash)[2..] == super::agent_dialogs::LOCAL
+            && tip.as_deref() == Some("Deploy to staging"),
         format!("{:?}, {tip:?}", titles(&slash)),
     );
     slash.performActionForItemAtIndex(0);

@@ -106,6 +106,13 @@ impl AgentTab {
             self.show_work(crate::work::Part::All, None);
             return;
         }
+        if let Some(dialog) = super::dialogs::Dialog::from_typed(&typed)
+            && super::dialogs::offers(self, &dialog)
+        {
+            self.composer.clear();
+            self.open_dialog(dialog);
+            return;
+        }
         let attached = self.state.borrow_mut().take_attachments();
         if typed.trim().is_empty() && attached.is_empty() {
             return;

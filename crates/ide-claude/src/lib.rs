@@ -6,6 +6,7 @@
 #![warn(missing_docs)]
 
 pub mod capabilities;
+pub mod cli;
 pub mod control;
 pub mod history;
 pub mod hooks;

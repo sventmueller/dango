@@ -88,7 +88,10 @@ pub struct Capabilities {
     pub models: Vec<ModelInfo>,
     /// The signed-in account.
     pub account: Option<Account>,
-    pub(crate) output_style: Option<String>,
+    /// The output style in effect.
+    pub output_style: Option<String>,
+    /// The output styles the user can choose.
+    pub output_styles: Vec<String>,
 }
 
 impl Capabilities {
@@ -123,6 +126,7 @@ impl Capabilities {
         if !result.output_style.is_empty() {
             self.output_style = Some(result.output_style.clone());
         }
+        self.output_styles.clone_from(&result.available_output_styles);
     }
 
     /// Whether the CLI announced the protocol capability `name`.

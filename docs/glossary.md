@@ -185,6 +185,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | | |
 | Container | Containers | the panel that shows a Docker context's Compose projects, containers, images and volumes, eighth in the sidebar (⌘8), and its menu (E136) |
 | Docker-Kontext | Docker context | the Docker engine a window's Containers panel talks to, as `docker context` names it; chosen per window |
+| **Agent configuration (E146)** | | |
+| Rechte | Permissions | the overlay with an agent's permission rules; the rules are Freigaben in the sense of the Freigabe term |
+| Erlauben / Fragen / Verbieten | Allow / Ask / Deny | the effect of a permission rule; Verbieten is the language's word for denying or forbidding an action, Fragen the agent asking first |
+| Gedächtnis | Memory | what an agent keeps across sessions, and the overlay with its instruction files |
+| Anweisungen | Instructions | files such as `CLAUDE.md` and `AGENTS.md` an agent reads as standing instructions |
+| Ausgabestil | Output style | how an agent words its answers, a setting of Claude Code |
+| Auswahl | Matcher | the pattern of a hook that selects the tool calls it runs for |
+| Plugin, Plugins | plugin, plugins | an extension of an agent installed from a marketplace |
+| Marktplatz, Marktplätze | marketplace, marketplaces | a catalog plugins are installed from |
+| Frage nebenbei | Side question | `/btw`: a question the agent answers beside the conversation, which neither joins it |
+| Header | Headers | the HTTP headers sent to an MCP server |
+| Umgebung | Environment | the environment variables a program or MCP server starts with |
+| Bericht | Report | a bug report or idea sent to Anthropic or OpenAI with `/bug` |
+| Grenzen | Limits | the usage limits of a plan, as `/status` lists them |
 
 ## Languages
 
@@ -352,6 +366,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | الحاويات |
 | Docker-Kontext | سياق Docker |
+| Rechte | الأذونات |
+| Erlauben / Fragen / Verbieten | سماح / استئذان / رفض |
+| Gedächtnis | الذاكرة |
+| Anweisungen | التعليمات |
+| Ausgabestil | نمط الإخراج |
+| Auswahl | المطابِق |
+| Plugin, Plugins | إضافة، الإضافات |
+| Marktplatz, Marktplätze | سوق، الأسواق |
+| Frage nebenbei | سؤال جانبي |
+| Header | الترويسات |
+| Umgebung | البيئة |
+| Bericht | التقرير |
+| Grenzen | الحدود |
 
 ### Catalan (`ca`)
 - Address: informal "tu", as macOS Catalan does ("Vols desar els canvis?", "Torna‑ho a provar"); menu items and buttons
@@ -513,6 +540,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Contenidors |
 | Docker-Kontext | context de Docker |
+| Rechte | Permisos |
+| Erlauben / Fragen / Verbieten | Permet / Pregunta / Denega |
+| Gedächtnis | memòria |
+| Anweisungen | instruccions |
+| Ausgabestil | estil de sortida |
+| Auswahl | Patró |
+| Plugin, Plugins | connector, connectors |
+| Marktplatz, Marktplätze | mercat, mercats |
+| Frage nebenbei | pregunta al marge |
+| Header | capçaleres |
+| Umgebung | entorn |
+| Bericht | informe |
+| Grenzen | Límits |
+| Sitzung starten | Engega la sessió (not Inicia la sessió, which is signing in) |
 
 ### Czech (`cs`)
 - Address: formal "vy" (vykání) with plural imperatives ("Zadejte", "Vyberte"), as macOS Czech; menu items and buttons
@@ -673,6 +714,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Kontejnery |
 | Docker-Kontext | kontext Dockeru |
+| Rechte | Povolení |
+| Erlauben / Fragen / Verbieten | Povolit / Zeptat se / Zamítnout |
+| Gedächtnis | paměť |
+| Anweisungen | instrukce |
+| Ausgabestil | styl výstupu |
+| Auswahl | Vzor |
+| Plugin, Plugins | plugin, pluginy |
+| Marktplatz, Marktplätze | tržiště |
+| Frage nebenbei | vedlejší otázka |
+| Header | hlavičky |
+| Umgebung | prostředí |
+| Bericht | hlášení |
+| Grenzen | Limity |
 
 ### Danish (`da`)
 - Address: informal "du", as Danish macOS addresses the user
@@ -831,6 +885,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containere |
 | Docker-Kontext | Docker-kontekst |
+| Rechte | Tilladelser |
+| Erlauben / Fragen / Verbieten | Tillad / Spørg / Afvis |
+| Gedächtnis | hukommelse |
+| Anweisungen | instruktioner |
+| Ausgabestil | outputstil |
+| Auswahl | Mønster |
+| Plugin, Plugins | plugin, plugins |
+| Marktplatz, Marktplätze | markedsplads, markedspladser |
+| Frage nebenbei | sidespørgsmål |
+| Header | headere |
+| Umgebung | miljø |
+| Bericht | rapport |
+| Grenzen | Grænser |
 
 ### Greek (`el`)
 - Address: formal plural (εσείς), imperatives such as "Επιλέξτε", "Εισαγάγετε", "Δοκιμάστε ξανά", as macOS Greek does;
@@ -992,6 +1059,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container |
 | Docker-Kontext | Docker context |
+| Rechte | Άδειες |
+| Erlauben / Fragen / Verbieten | Να επιτρέπεται / Να ερωτάται / Άρνηση |
+| Gedächtnis | μνήμη |
+| Anweisungen | οδηγίες |
+| Ausgabestil | στυλ εξόδου |
+| Auswahl | Μοτίβο |
+| Plugin, Plugins | πρόσθετο, πρόσθετα |
+| Marktplatz, Marktplätze | αγορά, αγορές |
+| Frage nebenbei | παράπλευρη ερώτηση |
+| Header | κεφαλίδες |
+| Umgebung | περιβάλλον |
+| Bericht | αναφορά |
+| Grenzen | Όρια |
 
 ### Spanish (`es`)
 - Address: "tú", as macOS in Spanish (Spain) does: imperatives "Introduce", "Elige", "Abre"; possessives "tu", "tus"
@@ -1153,6 +1233,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Contenedores |
 | Docker-Kontext | contexto de Docker |
+| Rechte | Permisos |
+| Erlauben / Fragen / Verbieten | Permitir / Preguntar / Denegar |
+| Gedächtnis | memoria |
+| Anweisungen | instrucciones |
+| Ausgabestil | estilo de salida |
+| Auswahl | Patrón |
+| Plugin, Plugins | plugin, plugins |
+| Marktplatz, Marktplätze | marketplace, marketplaces |
+| Frage nebenbei | pregunta aparte |
+| Header | cabeceras |
+| Umgebung | entorno |
+| Bericht | informe |
+| Grenzen | Límites |
+| Sitzung starten | Arrancar la sesión (not Iniciar sesión, which is signing in) |
 
 ### Finnish (`fi`)
 - Address: informal singular "sinä", as Finnish macOS uses it ("Haluatko tallentaa…?", imperatives "Valitse", "Avaa");
@@ -1315,6 +1409,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Kontit |
 | Docker-Kontext | Docker-konteksti |
+| Rechte | Luvat |
+| Erlauben / Fragen / Verbieten | Salli / Kysy / Hylkää |
+| Gedächtnis | muisti |
+| Anweisungen | ohjeet |
+| Ausgabestil | tulostustyyli |
+| Auswahl | Kuvio |
+| Plugin, Plugins | lisäosa, lisäosat |
+| Marktplatz, Marktplätze | markkinapaikka, markkinapaikat |
+| Frage nebenbei | sivukysymys |
+| Header | otsakkeet |
+| Umgebung | ympäristö |
+| Bericht | raportti |
+| Grenzen | Rajat |
 
 ### French (`fr`)
 - Address: "vous", with "vous" imperatives ("Saisissez…", "Ouvrez…"), as macOS does
@@ -1474,6 +1581,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Conteneurs |
 | Docker-Kontext | contexte Docker |
+| Rechte | Autorisations |
+| Erlauben / Fragen / Verbieten | Autoriser / Demander / Refuser |
+| Gedächtnis | mémoire |
+| Anweisungen | instructions |
+| Ausgabestil | style de sortie |
+| Auswahl | Motif |
+| Plugin, Plugins | plug-in, plug-ins |
+| Marktplatz, Marktplätze | place de marché, places de marché |
+| Frage nebenbei | question annexe |
+| Header | en-têtes |
+| Umgebung | environnement |
+| Bericht | rapport |
+| Grenzen | Limites |
 
 ### Hebrew (`he`)
 - Address: neutral, as macOS Hebrew: commands and buttons as verbal nouns ("שמירה", "סגירת הכרטיסיה"), confirmation
@@ -1637,6 +1757,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containers |
 | Docker-Kontext | הקשר Docker |
+| Rechte | הרשאות |
+| Erlauben / Fragen / Verbieten | מתן גישה / בקשת אישור / סירוב |
+| Gedächtnis | זיכרון |
+| Anweisungen | הוראות |
+| Ausgabestil | סגנון פלט |
+| Auswahl | תבנית |
+| Plugin, Plugins | תוסף, תוספים |
+| Marktplatz, Marktplätze | שוק, שווקים |
+| Frage nebenbei | שאלה צדדית |
+| Header | כותרות |
+| Umgebung | סביבה |
+| Bericht | דיווח |
+| Grenzen | מגבלות |
 
 ### Hindi (`hi`)
 - Address: formal "आप", with polite "-ें/-एँ" imperatives ("खोलें", "दर्ज करें", "दिखाएँ"), as macOS does
@@ -1796,6 +1929,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | कंटेनर |
 | Docker-Kontext | Docker कॉन्टेक्स्ट |
+| Rechte | अनुमतियाँ |
+| Erlauben / Fragen / Verbieten | अनुमति दें / पूछें / अस्वीकार करें |
+| Gedächtnis | मेमोरी |
+| Anweisungen | निर्देश |
+| Ausgabestil | आउटपुट शैली |
+| Auswahl | पैटर्न |
+| Plugin, Plugins | प्लगइन |
+| Marktplatz, Marktplätze | मार्केटप्लेस |
+| Frage nebenbei | अलग से सवाल |
+| Header | हेडर |
+| Umgebung | एनवायरनमेंट |
+| Bericht | रिपोर्ट |
+| Grenzen | सीमाएँ |
 
 ### Croatian (`hr`)
 - Address: formal "vi" in sentences, lowercase as macOS writes it ("Želite li…", "Odaberite…", "vaš"); menu items and
@@ -1956,6 +2102,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Kontejneri |
 | Docker-Kontext | Docker kontekst |
+| Rechte | Dozvole |
+| Erlauben / Fragen / Verbieten | Dozvoli / Pitaj / Odbij |
+| Gedächtnis | memorija |
+| Anweisungen | upute |
+| Ausgabestil | stil izlaza |
+| Auswahl | Uzorak |
+| Plugin, Plugins | dodatak, dodaci |
+| Marktplatz, Marktplätze | tržište, tržišta |
+| Frage nebenbei | usputno pitanje |
+| Header | zaglavlja |
+| Umgebung | okruženje |
+| Bericht | izvješće |
+| Grenzen | Ograničenja |
 
 ### Hungarian (`hu`)
 - Address: formal, as Hungarian macOS: the polite third-person (Ön) verb forms with the pronoun left out ("Biztosan
@@ -2118,6 +2277,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Konténerek |
 | Docker-Kontext | Docker-kontextus |
+| Rechte | Engedélyek |
+| Erlauben / Fragen / Verbieten | Engedélyezés / Kérdezés / Tiltás |
+| Gedächtnis | memória |
+| Anweisungen | utasítások |
+| Ausgabestil | kimeneti stílus |
+| Auswahl | Szűrő |
+| Plugin, Plugins | plug-in, plug-inek |
+| Marktplatz, Marktplätze | piactér, piacterek |
+| Frage nebenbei | közbevetett kérdés |
+| Header | fejlécek |
+| Umgebung | környezet |
+| Bericht | jelentés |
+| Grenzen | Korlátok |
 
 ### Indonesian (`id`)
 - Address: formal "Anda", capitalized, as Indonesian macOS ("Apakah Anda ingin…", "Buka tautan hanya jika Anda
@@ -2278,6 +2450,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container |
 | Docker-Kontext | konteks Docker |
+| Rechte | Izin |
+| Erlauben / Fragen / Verbieten | Izinkan / Tanyakan / Larang |
+| Gedächtnis | memori |
+| Anweisungen | instruksi |
+| Ausgabestil | gaya keluaran |
+| Auswahl | Filter |
+| Plugin, Plugins | plugin |
+| Marktplatz, Marktplätze | marketplace |
+| Frage nebenbei | pertanyaan sampingan (title: Pertanyaan Sampingan) |
+| Header | header |
+| Umgebung | lingkungan |
+| Bericht | laporan |
+| Grenzen | Batas |
 
 ### Italian (`it`)
 - Address: "tu", as Italian macOS ("Vuoi riprovare?", "Apri il link solo se ti fidi della fonte"); menu items and
@@ -2438,6 +2623,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container |
 | Docker-Kontext | contesto Docker |
+| Rechte | Permessi |
+| Erlauben / Fragen / Verbieten | Consenti / Chiedi / Nega |
+| Gedächtnis | memoria |
+| Anweisungen | istruzioni |
+| Ausgabestil | stile di output |
+| Auswahl | Filtro |
+| Plugin, Plugins | plug-in |
+| Marktplatz, Marktplätze | marketplace |
+| Frage nebenbei | domanda a margine |
+| Header | intestazioni |
+| Umgebung | ambiente |
+| Bericht | rapporto |
+| Grenzen | Limiti |
 
 ### Japanese (`ja`)
 - Address: no pronoun; explanations and questions in the polite です/ます form ("保存しますか?", "…してください"); menu items and
@@ -2599,6 +2797,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | コンテナ |
 | Docker-Kontext | Dockerコンテキスト |
+| Rechte | 権限 |
+| Erlauben / Fragen / Verbieten | 許可 / 尋ねる / 拒否 |
+| Gedächtnis | メモリ |
+| Anweisungen | 指示 |
+| Ausgabestil | 出力スタイル |
+| Auswahl | フィルタ |
+| Plugin, Plugins | プラグイン |
+| Marktplatz, Marktplätze | マーケットプレイス |
+| Frage nebenbei | 別枠の質問 |
+| Header | ヘッダ |
+| Umgebung | 環境 |
+| Bericht | レポート |
+| Grenzen | 上限 |
 
 ### Korean (`ko`)
 - Address: no pronoun; sentences in the formal 합쇼체, as Korean macOS ("저장하겠습니까?", "…하십시오", "…합니다"); menu items and
@@ -2759,6 +2970,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | 컨테이너 |
 | Docker-Kontext | Docker 컨텍스트 |
+| Rechte | 권한 |
+| Erlauben / Fragen / Verbieten | 허용 / 묻기 / 거부 |
+| Gedächtnis | 메모리 |
+| Anweisungen | 지침 |
+| Ausgabestil | 출력 스타일 |
+| Auswahl | 필터 |
+| Plugin, Plugins | 플러그인 |
+| Marktplatz, Marktplätze | 마켓플레이스 |
+| Frage nebenbei | 별도 질문 |
+| Header | 헤더 |
+| Umgebung | 환경 |
+| Bericht | 보고서 |
+| Grenzen | 한도 |
 
 ### Malay (`ms`)
 - Address: "anda" in lower case, as Malay macOS ("Adakah anda ingin…", "Buka pautan hanya jika anda mempercayai
@@ -2918,6 +3142,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container |
 | Docker-Kontext | konteks Docker |
+| Rechte | Keizinan |
+| Erlauben / Fragen / Verbieten | Benarkan / Tanya / Larang |
+| Gedächtnis | memori |
+| Anweisungen | arahan |
+| Ausgabestil | gaya output |
+| Auswahl | Penapis |
+| Plugin, Plugins | plugin |
+| Marktplatz, Marktplätze | pasaran |
+| Frage nebenbei | soalan sampingan (title: Soalan Sampingan) |
+| Header | pengepala |
+| Umgebung | persekitaran |
+| Bericht | laporan |
+| Grenzen | Had |
 
 ### Dutch (`nl`)
 - Address: "je", as Dutch macOS ("Wil je…", "Weet je zeker dat…"); menu items and buttons as imperatives, verb first
@@ -3078,6 +3315,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containers |
 | Docker-Kontext | Docker-context |
+| Rechte | Toestemmingen |
+| Erlauben / Fragen / Verbieten | Sta toe / Vraag / Verbied |
+| Gedächtnis | geheugen |
+| Anweisungen | instructies |
+| Ausgabestil | uitvoerstijl |
+| Auswahl | Filter |
+| Plugin, Plugins | plug-in, plug-ins |
+| Marktplatz, Marktplätze | marketplace, marketplaces |
+| Frage nebenbei | tussenvraag |
+| Header | headers |
+| Umgebung | omgeving |
+| Bericht | rapport |
+| Grenzen | Limieten |
 
 ### Norwegian Bokmål (`no`)
 - Address: "du", as Norwegian macOS ("Vil du…", "Er du sikker på at…"); menu items and buttons as imperatives ("Åpne",
@@ -3238,6 +3488,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containere |
 | Docker-Kontext | Docker-kontekst |
+| Rechte | Tillatelser |
+| Erlauben / Fragen / Verbieten | Tillat / Spør / Nekt |
+| Gedächtnis | minne |
+| Anweisungen | instruksjoner |
+| Ausgabestil | utdatastil |
+| Auswahl | Filter |
+| Plugin, Plugins | plugin, plugins |
+| Marktplatz, Marktplätze | markedsplass, markedsplasser |
+| Frage nebenbei | sidespørsmål |
+| Header | headere |
+| Umgebung | miljø |
+| Bericht | rapport |
+| Grenzen | Grenser |
 
 ### Polish (`pl`)
 - Address: informal second person singular with the pronoun left out, as Polish macOS ("Czy chcesz…", "Otwieraj łącze
@@ -3398,6 +3661,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Kontenery |
 | Docker-Kontext | kontekst Dockera |
+| Rechte | Uprawnienia |
+| Erlauben / Fragen / Verbieten | Pozwól / Zapytaj / Zabroń |
+| Gedächtnis | pamięć |
+| Anweisungen | instrukcje |
+| Ausgabestil | styl odpowiedzi |
+| Auswahl | Filtr |
+| Plugin, Plugins | wtyczka, wtyczki |
+| Marktplatz, Marktplätze | marketplace, marketplace’y |
+| Frage nebenbei | pytanie na boku |
+| Header | nagłówki |
+| Umgebung | środowisko |
+| Bericht | zgłoszenie |
+| Grenzen | Limity |
 
 ### Portuguese (Brazil) (`pt_BR`)
 - Address: "você" with third-person verbs and "seu/sua", as Brazilian macOS ("Deseja tentar novamente?", "Abra o link
@@ -3559,6 +3835,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Contêineres |
 | Docker-Kontext | contexto do Docker |
+| Rechte | Permissões |
+| Erlauben / Fragen / Verbieten | Permitir / Perguntar / Proibir |
+| Gedächtnis | memória |
+| Anweisungen | instruções |
+| Ausgabestil | estilo de saída |
+| Auswahl | Filtro |
+| Plugin, Plugins | plug-in, plug-ins |
+| Marktplatz, Marktplätze | marketplace, marketplaces |
+| Frage nebenbei | pergunta à parte (title: Pergunta à Parte) |
+| Header | cabeçalhos |
+| Umgebung | ambiente |
+| Bericht | relatório |
+| Grenzen | Limites |
+| Sitzung starten | Iniciar a Sessão (with the article, apart from Iniciar Sessão, which is Anmelden) |
 
 ### Portuguese (Portugal) (`pt_PT`)
 - Address: formal third person with the pronoun left out, as European Portuguese macOS ("Pretende ignorar as
@@ -3720,6 +4010,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Contentores |
 | Docker-Kontext | contexto do Docker |
+| Rechte | Permissões |
+| Erlauben / Fragen / Verbieten | Permitir / Perguntar / Proibir |
+| Gedächtnis | memória |
+| Anweisungen | instruções |
+| Ausgabestil | estilo de saída |
+| Auswahl | Filtro |
+| Plugin, Plugins | plug-in, plug-ins |
+| Marktplatz, Marktplätze | marketplace, marketplaces |
+| Frage nebenbei | pergunta à parte |
+| Header | cabeçalhos |
+| Umgebung | ambiente |
+| Bericht | relatório |
+| Grenzen | Limites |
+| Sitzung starten | Iniciar a sessão (with the article, apart from Iniciar sessão, which is Anmelden) |
 
 ### Romanian (`ro`)
 - Address: formal "dumneavoastră" (written "dvs."), as macOS Romanian; menu items, buttons and instructions in the
@@ -3881,6 +4185,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containere |
 | Docker-Kontext | context Docker |
+| Rechte | Permisiuni |
+| Erlauben / Fragen / Verbieten | Permiteți / Întrebați / Refuzați (Verbieten as Ablehnen) |
+| Gedächtnis | memorie |
+| Anweisungen | instrucțiuni |
+| Ausgabestil | stil de ieșire |
+| Auswahl | Filtru |
+| Plugin, Plugins | plugin, pluginuri |
+| Marktplatz, Marktplätze | piață, piețe |
+| Frage nebenbei | întrebare separată |
+| Header | antete |
+| Umgebung | mediu |
+| Bericht | raport |
+| Grenzen | Limite |
 
 ### Russian (`ru`)
 - Address: formal "Вы", capitalized as macOS Russian writes it ("Вы", "Ваш"); menu items and buttons in the infinitive
@@ -4042,6 +4359,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Контейнеры |
 | Docker-Kontext | контекст Docker |
+| Rechte | Разрешения |
+| Erlauben / Fragen / Verbieten | Разрешить / Спрашивать / Запретить (Verbieten as Ablehnen) |
+| Gedächtnis | память |
+| Anweisungen | инструкции |
+| Ausgabestil | стиль вывода |
+| Auswahl | Фильтр |
+| Plugin, Plugins | плагин, плагины |
+| Marktplatz, Marktplätze | маркетплейс, маркетплейсы |
+| Frage nebenbei | попутный вопрос |
+| Header | заголовки |
+| Umgebung | окружение |
+| Bericht | отчет |
+| Grenzen | Лимиты |
+| Verbindung | Подключение (a network connection; splat's Связь means a diagram connector) |
 
 ### Slovak (`sk`)
 - Address: formal "vy" (vykanie), lowercase; menu items and buttons in the infinitive, as macOS Slovak has them
@@ -4203,6 +4534,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Kontajnery |
 | Docker-Kontext | kontext Dockera |
+| Rechte | Povolenia |
+| Erlauben / Fragen / Verbieten | Povoliť / Spýtať sa / Zamietnuť (Verbieten as Ablehnen) |
+| Gedächtnis | pamäť |
+| Anweisungen | pokyny |
+| Ausgabestil | štýl výstupu |
+| Auswahl | Filter |
+| Plugin, Plugins | plugin, pluginy |
+| Marktplatz, Marktplätze | trhovisko, trhoviská |
+| Frage nebenbei | otázka bokom |
+| Header | hlavičky |
+| Umgebung | prostredie |
+| Bericht | hlásenie |
+| Grenzen | Limity |
+| Verbindung | Pripojenie (a network connection; splat's Spojenie means a diagram connector) |
 
 ### Slovenian (`sl`)
 - Address: formal "vi" (vikanje), lowercase; menu items and buttons in the singular imperative, as macOS Slovenian has
@@ -4365,6 +4710,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Vsebniki |
 | Docker-Kontext | kontekst Docker |
+| Rechte | Dovoljenja |
+| Erlauben / Fragen / Verbieten | Dovoli / Vprašaj / Zavrni (Verbieten as Ablehnen) |
+| Gedächtnis | spomin |
+| Anweisungen | navodila |
+| Ausgabestil | slog izhoda |
+| Auswahl | Filter |
+| Plugin, Plugins | vtičnik, vtičniki |
+| Marktplatz, Marktplätze | tržnica, tržnice |
+| Frage nebenbei | vprašanje ob strani |
+| Header | glave |
+| Umgebung | okolje |
+| Bericht | poročilo |
+| Grenzen | Omejitve |
 
 ### Swedish (`sv`)
 - Address: "du", as macOS Swedish ("Vill du …?", "Välj …"); menu items and buttons in the imperative ("Spara", "Göm
@@ -4525,6 +4883,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containrar |
 | Docker-Kontext | Docker-kontext |
+| Rechte | Behörigheter |
+| Erlauben / Fragen / Verbieten | Tillåt / Fråga / Neka (Verbieten as Ablehnen) |
+| Gedächtnis | minne |
+| Anweisungen | instruktioner |
+| Ausgabestil | utdatastil |
+| Auswahl | Filter |
+| Plugin, Plugins | insticksprogram (macOS's word) |
+| Marktplatz, Marktplätze | marknadsplats, marknadsplatser |
+| Frage nebenbei | sidofråga |
+| Header | huvuden |
+| Umgebung | miljö |
+| Bericht | rapport |
+| Grenzen | Gränser |
+| Verbindung | Anslutning (a network connection; splat's Koppling means a diagram connector) |
 
 ### Thai (`th`)
 - Address: polite neutral "คุณ", as macOS Thai; menu items and buttons are bare verbs ("บันทึก", "ซ่อนแถบเครื่องมือ");
@@ -4686,6 +5058,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | คอนเทนเนอร์ |
 | Docker-Kontext | บริบท Docker |
+| Rechte | สิทธิ์ |
+| Erlauben / Fragen / Verbieten | อนุญาต / ถาม / ปฏิเสธ (Verbieten as Ablehnen) |
+| Gedächtnis | ความจำ |
+| Anweisungen | คำชี้แจง |
+| Ausgabestil | รูปแบบเอาต์พุต |
+| Auswahl | ตัวกรอง |
+| Plugin, Plugins | ปลั๊กอิน |
+| Marktplatz, Marktplätze | มาร์เก็ตเพลส |
+| Frage nebenbei | คำถามแทรก |
+| Header | เฮดเดอร์ |
+| Umgebung | สภาพแวดล้อม |
+| Bericht | รายงาน |
+| Grenzen | ขีดจำกัด |
+| Verbindung | การเชื่อมต่อ (a network connection; splat's เส้นเชื่อม means a diagram connector) |
 
 ### Turkish (`tr`)
 - Address: formal "siz", as macOS Turkish ("… istediğinizden emin misiniz?", "Seçin"); menu items and buttons in the
@@ -4848,6 +5234,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container’lar |
 | Docker-Kontext | Docker bağlamı |
+| Rechte | İzinler |
+| Erlauben / Fragen / Verbieten | İzin Ver / Sor / Reddet (Verbieten as Ablehnen) |
+| Gedächtnis | bellek |
+| Anweisungen | talimatlar |
+| Ausgabestil | çıktı stili (title: Çıktı Stili) |
+| Auswahl | Filtre |
+| Plugin, Plugins | eklenti, eklentiler |
+| Marktplatz, Marktplätze | pazar yeri, pazar yerleri |
+| Frage nebenbei | yan soru (title: Yan Soru) |
+| Header | üstbilgiler |
+| Umgebung | ortam |
+| Bericht | rapor |
+| Grenzen | Sınırlar |
 
 ### Ukrainian (`uk`)
 - Address: formal "ви", lowercase as macOS Ukrainian writes it ("ви", "ваш"); menu items and buttons in the infinitive
@@ -5008,6 +5407,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Контейнери |
 | Docker-Kontext | контекст Docker |
+| Rechte | Дозволи |
+| Erlauben / Fragen / Verbieten | Дозволити / Запитувати / Заборонити (Verbieten as Ablehnen) |
+| Gedächtnis | памʼять |
+| Anweisungen | інструкції |
+| Ausgabestil | стиль виводу |
+| Auswahl | Фільтр |
+| Plugin, Plugins | плагін, плагіни |
+| Marktplatz, Marktplätze | маркетплейс, маркетплейси |
+| Frage nebenbei | побіжне запитання |
+| Header | заголовки |
+| Umgebung | середовище |
+| Bericht | звіт |
+| Grenzen | Ліміти |
+| Verbindung | Підключення (a network connection; splat's Зʼєднання means a diagram connector) |
 
 ### Vietnamese (`vi`)
 - Address: "bạn", as macOS Vietnamese ("Bạn có chắc chắn muốn …?"); menu items and buttons are bare verbs ("Lưu", "Ẩn
@@ -5168,6 +5581,19 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container |
 | Docker-Kontext | ngữ cảnh Docker |
+| Rechte | Quyền |
+| Erlauben / Fragen / Verbieten | Cho phép / Hỏi / Từ chối (Verbieten as Ablehnen) |
+| Gedächtnis | bộ nhớ |
+| Anweisungen | hướng dẫn |
+| Ausgabestil | kiểu đầu ra |
+| Auswahl | Bộ lọc |
+| Plugin, Plugins | plugin |
+| Marktplatz, Marktplätze | marketplace |
+| Frage nebenbei | câu hỏi bên lề |
+| Header | header |
+| Umgebung | môi trường |
+| Bericht | báo cáo |
+| Grenzen | Giới hạn |
 
 ### Chinese, Simplified (`zh-Hans`)
 - Address: "你", as macOS Simplified Chinese (never "您"); menu items and buttons are bare verbs ("保存", "隐藏工具栏")
@@ -5327,6 +5753,20 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | 容器 |
 | Docker-Kontext | Docker 上下文 |
+| Rechte | 权限 |
+| Erlauben / Fragen / Verbieten | 允许 / 询问 / 拒绝 (Verbieten as Ablehnen) |
+| Gedächtnis | 记忆 |
+| Anweisungen | 指令 |
+| Ausgabestil | 输出样式 |
+| Auswahl | 匹配器 |
+| Plugin, Plugins | 插件 |
+| Marktplatz, Marktplätze | 市场 |
+| Frage nebenbei | 顺便提问 |
+| Header | 标头 |
+| Umgebung | 环境 |
+| Bericht | 报告 |
+| Grenzen | 限制 |
+| Verbindung | 连接 (a network connection; splat's 连线 means a diagram connector) |
 
 ### Chinese, Traditional (`zh-Hant`)
 - Address: "你", as macOS Traditional Chinese (never "您"); Taiwan usage and macOS's Taiwan words (檔案, 視窗, 設定, 打開); menu
@@ -5487,3 +5927,16 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | 容器 |
 | Docker-Kontext | Docker 上下文 |
+| Rechte | 權限 |
+| Erlauben / Fragen / Verbieten | 允許 / 詢問 / 拒絕 (Verbieten as Ablehnen) |
+| Gedächtnis | 記憶 |
+| Anweisungen | 指示 |
+| Ausgabestil | 輸出樣式 |
+| Auswahl | 比對器 |
+| Plugin, Plugins | 外掛模組 |
+| Marktplatz, Marktplätze | 市集 |
+| Frage nebenbei | 順便提問 |
+| Header | 標頭 |
+| Umgebung | 環境 |
+| Bericht | 報告 |
+| Grenzen | 限制 |

@@ -4,7 +4,9 @@
 //! Scenarios: `basic`; `auth`, which wants a sign-in before a session; `v2`, which only speaks protocol version 2.
 //! A prompt containing `slow` streams one chunk and waits to be cancelled; one containing `crash` streams a chunk, says
 //! [`CRASH`] on stderr and exits mid-turn; one containing `quit` ends its turn and then exits. Every prompt comes back as
-//! a user message chunk first, as Antigravity sends it.
+//! a user message chunk first, as Antigravity sends it. It forks a session for a question beside the conversation,
+//! whose answer asks for a tool the client must refuse, and signs out on request. With `ACP_TEST_RECORD` set it
+//! appends to that file the MCP servers it was handed, the sign-out and the client's answer in the fork.
 
 use std::collections::VecDeque;
 use std::io::{BufRead, Write};
@@ -26,6 +28,15 @@ const PERMISSION_ID: u64 = 900;
 /// The request id of the file read the client must refuse.
 const FS_ID: u64 = 901;
 
+/// The request id of the permission request in a fork.
+const ASIDE_ID: u64 = 902;
+
+/// The id of the fork the agent hands out.
+pub const FORK: &str = "test-fork-1";
+
+/// What the agent answers in a fork, after `Beside: ` and the question.
+pub const ASIDE_ANSWER: &str = "Beside: ";
+
 enum Step {
     /// A `session/update` with this update.
     Update(Value),
@@ -43,6 +54,8 @@ struct Agent<W: Write> {
     waiting: Option<u64>,
     steps: VecDeque<Step>,
     exit: bool,
+    /// The prompt in the fork, which waits for the client's answer to its permission request.
+    aside: Option<Value>,
 }
 
 fn update(update: Value) -> Step {
@@ -163,8 +176,36 @@ impl<W: Write> Agent<W> {
     }
 
     fn notify(&mut self, update: Value) {
+        self.notify_in(SESSION, update);
+    }
+
+    fn notify_in(&mut self, session: &str, update: Value) {
         self.send(json!({"jsonrpc": "2.0", "method": "session/update",
-                         "params": {"sessionId": SESSION, "update": update}}));
+                         "params": {"sessionId": session, "update": update}}));
+    }
+
+    fn record(line: &str) {
+        if let Some(path) = std::env::var_os("ACP_TEST_RECORD") {
+            let file = std::fs::OpenOptions::new().create(true).append(true).open(path);
+            if let Ok(mut file) = file {
+                let _ = writeln!(file, "{line}");
+            }
+        }
+    }
+
+    /// Answers a question in the fork: its words, then a tool call the client must refuse.
+    fn ask_aside(&mut self, id: Value, text: &str) {
+        self.notify_in(
+            FORK,
+            json!({"sessionUpdate": "agent_message_chunk",
+                                    "content": {"type": "text", "text": format!("{ASIDE_ANSWER}{text}")}}),
+        );
+        self.send(
+            json!({"jsonrpc": "2.0", "id": ASIDE_ID, "method": "session/request_permission",
+            "params": {"sessionId": FORK, "toolCall": {"toolCallId": "aside-1"}, "options": [
+                {"optionId": "allow", "name": "Allow", "kind": "allow_once"}]}}),
+        );
+        self.aside = Some(id);
     }
 
     fn initialize(&mut self, id: &Value) {
@@ -180,6 +221,9 @@ impl<W: Write> Agent<W> {
                    "agentInfo": {"name": "acp-test-agent", "title": "Test Agent", "version": "1.0.0"},
                    "agentCapabilities": {"loadSession": true,
                                          "promptCapabilities": {"image": true, "embeddedContext": true},
+                                         "mcpCapabilities": {"http": true},
+                                         "auth": {"logout": {}},
+                                         "sessionCapabilities": {"fork": {}, "close": {}},
                                          "_meta": {"test.vendor": {"on": true}}}}),
         );
     }
@@ -222,6 +266,9 @@ impl<W: Write> Agent<W> {
             .flatten()
             .filter_map(|b| b["text"].as_str())
             .collect();
+        if params["sessionId"] == FORK {
+            return self.ask_aside(id, &text);
+        }
         self.prompt = Some(id);
         self.notify(json!({"sessionUpdate": "user_message_chunk", "content": {"type": "text", "text": text}}));
         if self.scenario.starts_with("usage-") {
@@ -314,8 +361,23 @@ impl<W: Write> Agent<W> {
                 self.authed = params["methodId"] == "browser";
                 self.reply(&id, json!({}));
             }
-            "session/new" => self.new_session(&id),
-            "session/load" => self.load_session(&id),
+            "session/new" => {
+                Self::record(&format!("mcpServers: {}", params["mcpServers"]));
+                self.new_session(&id);
+            }
+            "session/load" => {
+                Self::record(&format!("mcpServers: {}", params["mcpServers"]));
+                self.load_session(&id);
+            }
+            "session/fork" => self.reply(&id, json!({"sessionId": FORK})),
+            "session/close" => {
+                Self::record(&format!("closed: {}", params["sessionId"]));
+                self.reply(&id, json!({}));
+            }
+            "logout" => {
+                Self::record("logout");
+                self.reply(&id, json!({}));
+            }
             "session/prompt" => self.prompt(id, params),
             "session/set_mode" => {
                 let mode = params["modeId"].clone();
@@ -341,6 +403,15 @@ impl<W: Write> Agent<W> {
                     self.reply(&id, json!({"stopReason": "cancelled"}));
                 }
             }
+            (Some(id), None) if id.as_u64() == Some(ASIDE_ID) => {
+                Self::record(&format!(
+                    "aside permission: {}",
+                    message["result"]["outcome"]["outcome"]
+                ));
+                if let Some(id) = self.aside.take() {
+                    self.reply(&id, json!({"stopReason": "end_turn"}));
+                }
+            }
             (Some(id), None) => {
                 if let Some(id) = id.as_u64() {
                     self.answered(id, message);
@@ -361,6 +432,7 @@ pub fn run(input: impl BufRead, output: impl Write, scenario: &str) {
         waiting: None,
         steps: VecDeque::new(),
         exit: false,
+        aside: None,
     };
     for line in input.lines().map_while(Result::ok) {
         if let Ok(message) = serde_json::from_str::<Value>(&line) {

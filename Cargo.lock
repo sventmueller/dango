@@ -1515,6 +1515,7 @@ dependencies = [
  "ide-agent",
  "ide-ci",
  "ide-claude",
+ "ide-codex",
  "ide-core",
  "ide-dap",
  "ide-docker",
@@ -1522,6 +1523,7 @@ dependencies = [
  "ide-git",
  "ide-lsp",
  "ide-net",
+ "ide-opencode",
  "ide-predict",
  "ide-process",
  "ide-product",
@@ -1594,6 +1596,18 @@ dependencies = [
  "serde",
  "serde_json",
  "splat-i18n",
+]
+
+[[package]]
+name = "ide-codex"
+version = "0.0.0"
+dependencies = [
+ "base64 0.23.1",
+ "ide-process",
+ "ide-product",
+ "ide-thread",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1697,6 +1711,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ide-opencode"
+version = "0.0.0"
+dependencies = [
+ "base64 0.23.1",
+ "ide-process",
+ "ide-thread",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "ide-predict"
 version = "0.0.0"
 dependencies = [
@@ -1796,12 +1821,15 @@ name = "ide-ui-agent"
 version = "0.0.0"
 dependencies = [
  "block2",
+ "dispatch2",
  "ide-acp",
  "ide-agent",
  "ide-claude",
+ "ide-codex",
  "ide-core",
  "ide-git",
  "ide-net",
+ "ide-opencode",
  "ide-process",
  "ide-product",
  "ide-project",

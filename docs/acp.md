@@ -23,6 +23,22 @@ client drops is answered `-32603` by the SDK. Raising the version means re-readi
 (`md/migration-v5.md` in the SDK's repository and later ones) and running the tests here and `make test-integration`
 against the real agents.
 
+### Unstable features (E146)
+
+The overlays switch on only `unstable_session_fork`: `/btw` forks the session (`session/fork`), prompts the fork,
+collects its `agent_message_chunk`s apart from the thread, refuses every permission request of the fork and closes
+it (`session/close`) where the agent announces that. `/status` reads what `initialize` and the session reported, so
+`unstable_auth_status` and `unstable_session_status` stay off. Stable and used when announced: `logout`
+(`agentCapabilities.auth.logout`). An agent without one of them gets no such command. The exact pin catches a change
+of the unstable feature in a minor release of the SDK.
+
+The client hands MCP servers to `session/new` and `session/load` (`ide-acp/src/session/extras.rs`): the project's
+`.mcp.json` with `${VAR}` and `${VAR:-default}` filled from the login shell (only in a trusted folder, E22, and
+switched off per project in the app's state) and the app's own list (`acpMcpServers` in the state, the values of
+environment and headers in the store of secrets under `mcp:<name>`, R42), only with the transports the agent
+announces (`mcpCapabilities.http`, `.sse`; stdio always, the program resolved to an absolute path). A change applies
+from the next session start.
+
 ## Process
 
 | Item | Value |

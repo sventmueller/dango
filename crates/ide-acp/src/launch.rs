@@ -46,6 +46,8 @@ pub struct Launch {
     pub resume: Option<String>,
     /// Where the program came from.
     pub origin: Origin,
+    /// The MCP servers handed over when the session opens (E146).
+    pub mcp_servers: Vec<ide_core::mcp_servers::McpServerSpec>,
 }
 
 impl Launch {
@@ -68,6 +70,7 @@ impl Launch {
             session_meta: None,
             resume: None,
             origin: Origin::Given,
+            mcp_servers: Vec::new(),
         }
     }
 

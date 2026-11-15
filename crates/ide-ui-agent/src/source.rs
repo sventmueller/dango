@@ -65,6 +65,10 @@ pub(crate) enum Source {
     Acp(ide_acp::Session),
     /// The app's own agent.
     Own(ide_agent::Session),
+    /// Codex over its app-server (E147).
+    Codex(ide_codex::Session),
+    /// OpenCode over its v2 HTTP API (E147).
+    OpenCode(ide_opencode::Session),
     #[cfg(feature = "selftest")]
     Replay(Box<Replay>),
 }
@@ -83,6 +87,8 @@ impl Source {
             Source::Live(session) => Some(session.snapshot()),
             Source::Acp(session) => Some(session.snapshot()),
             Source::Own(session) => Some(session.snapshot()),
+            Source::Codex(session) => Some(session.snapshot()),
+            Source::OpenCode(session) => Some(session.snapshot()),
             #[cfg(feature = "selftest")]
             Source::Replay(replay) => Some(replay.thread().clone()),
             Source::Idle | Source::Starting => None,
@@ -108,6 +114,8 @@ impl Source {
     pub(crate) fn is_live(&self) -> bool {
         match self {
             Source::Acp(session) => session.is_ready(),
+            Source::Codex(session) => session.is_ready() && !session.is_ended(),
+            Source::OpenCode(session) => session.is_ready() && !session.is_ended(),
             Source::Own(_) => true,
             _ => self.session().is_some_and(|s| !s.is_ended()),
         }
@@ -130,7 +138,29 @@ impl Source {
     }
 
     pub(crate) fn acp_capabilities(&self) -> Option<ide_acp::Capabilities> {
+        if let Some(session) = self.codex() {
+            return Some(crate::codex::capabilities(&session.capabilities()));
+        }
+        if let Some(session) = self.opencode() {
+            return Some(crate::opencode::capabilities(&session.capabilities()));
+        }
         self.acp().map(ide_acp::Session::capabilities)
+    }
+
+    /// The OpenCode session, when the tab runs one over its server.
+    pub(crate) fn opencode(&self) -> Option<&ide_opencode::Session> {
+        match self {
+            Source::OpenCode(session) => Some(session),
+            _ => None,
+        }
+    }
+
+    /// The Codex session, when the tab runs one over the app-server.
+    pub(crate) fn codex(&self) -> Option<&ide_codex::Session> {
+        match self {
+            Source::Codex(session) => Some(session),
+            _ => None,
+        }
     }
 
     pub(crate) fn authenticate(&self, method: &str) -> Result<(), ide_acp::SessionError> {
@@ -139,16 +169,46 @@ impl Source {
     }
 
     pub(crate) fn set_option(&self, option: &str, value: &str) -> Result<(), ide_acp::SessionError> {
+        if let Some(session) = self.opencode() {
+            return session
+                .set_option(option, value)
+                .map_err(|e| ide_acp::SessionError::Agent(crate::opencode::explained(&e)));
+        }
+        if let Some(session) = self.codex() {
+            return session
+                .set_option(option, value)
+                .map_err(|e| ide_acp::SessionError::Agent(crate::codex::explained(&e)));
+        }
         self.acp()
             .map_or(Err(ide_acp::SessionError::Closed), |s| s.set_option(option, value))
     }
 
     pub(crate) fn set_acp_mode(&self, mode: &str) -> Result<(), ide_acp::SessionError> {
+        if let Some(session) = self.opencode() {
+            return session
+                .set_mode(mode)
+                .map_err(|e| ide_acp::SessionError::Agent(crate::opencode::explained(&e)));
+        }
+        if let Some(session) = self.codex() {
+            return session
+                .set_mode(mode)
+                .map_err(|e| ide_acp::SessionError::Agent(crate::codex::explained(&e)));
+        }
         self.acp()
             .map_or(Err(ide_acp::SessionError::Closed), |s| s.set_mode(mode))
     }
 
     pub(crate) fn answer_acp(&self, request: &str, choice: ide_acp::Choice) -> Result<(), ide_acp::SessionError> {
+        if let Some(session) = self.opencode() {
+            return session
+                .answer(request, crate::opencode::choice_of(choice))
+                .map_err(|e| ide_acp::SessionError::Agent(crate::opencode::explained(&e)));
+        }
+        if let Some(session) = self.codex() {
+            return session
+                .answer(request, crate::codex::choice(choice))
+                .map_err(|e| ide_acp::SessionError::Agent(crate::codex::explained(&e)));
+        }
         self.acp()
             .map_or(Err(ide_acp::SessionError::Closed), |s| s.answer(request, choice))
     }
@@ -159,6 +219,14 @@ impl Source {
             Source::Live(session) => session.send(message).map(Some).map_err(|e| Explained::of(&e)),
             Source::Acp(session) => session.send(message).map(|()| None).map_err(|e| Explained::of(&e)),
             Source::Own(session) => session.send(message).map(|()| None).map_err(|e| Explained::of(&e)),
+            Source::Codex(session) => session
+                .send(message)
+                .map(|()| None)
+                .map_err(|e| Explained(crate::codex::explained(&e))),
+            Source::OpenCode(session) => session
+                .send(message)
+                .map(|()| None)
+                .map_err(|e| Explained(crate::opencode::explained(&e))),
             _ => Err(Explained::of(&SessionError::Closed)),
         }
     }
@@ -171,6 +239,12 @@ impl Source {
             session.cancel();
         }
         if let Some(session) = self.own() {
+            session.cancel();
+        }
+        if let Some(session) = self.codex() {
+            session.cancel();
+        }
+        if let Some(session) = self.opencode() {
             session.cancel();
         }
     }
@@ -247,6 +321,12 @@ impl Source {
         }
         if let Some(session) = self.own() {
             session.stop();
+        }
+        if let Some(session) = self.codex() {
+            session.stop(Duration::from_secs(2));
+        }
+        if let Some(session) = self.opencode() {
+            session.stop(Duration::from_secs(2));
         }
     }
 }

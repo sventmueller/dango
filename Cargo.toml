@@ -13,6 +13,8 @@ ide-acp = { path = "crates/ide-acp" }
 ide-agent = { path = "crates/ide-agent" }
 ide-claude = { path = "crates/ide-claude" }
 ide-ci = { path = "crates/ide-ci" }
+ide-codex = { path = "crates/ide-codex" }
+ide-opencode = { path = "crates/ide-opencode" }
 ide-core = { path = "crates/ide-core" }
 ide-dap = { path = "crates/ide-dap" }
 ide-document = { path = "crates/ide-document" }
@@ -112,6 +114,8 @@ workspace = true
 
 [dependencies]
 ide-acp.workspace = true
+ide-codex.workspace = true
+ide-opencode.workspace = true
 ide-agent.workspace = true
 ide-claude.workspace = true
 ide-ci.workspace = true

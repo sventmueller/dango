@@ -60,6 +60,8 @@ pub(crate) enum Incoming {
     Claude(Event),
     Acp(ide_acp::Event),
     Own(ide_agent::Event),
+    Codex(ide_codex::Event),
+    OpenCode(ide_opencode::Event),
 }
 
 /// Session events waiting for the main thread.
@@ -156,6 +158,14 @@ pub struct AgentTab {
     pub(super) ticking: std::cell::Cell<bool>,
     /// Where the keyboard focus was before ⌘Esc moved it into the composer.
     pub(super) previous_focus: RefCell<Option<Weak<NSResponder>>>,
+    /// The overlay open over the tab (E146).
+    pub(super) dialog: RefCell<Option<Rc<super::dialogs::Open>>>,
+    /// How many overlays the tab opened, which tells an answer for the open one from one for an earlier (E97).
+    pub(super) dialogs_opened: std::cell::Cell<u64>,
+    /// The questions asked beside the conversation with `/btw` and their answers, which the next one builds on.
+    pub(super) asides: RefCell<Vec<super::dialogs::model::Aside>>,
+    /// The tab itself, for what holds on to it without keeping it open, such as its overlay.
+    pub(super) me: RefCell<std::rc::Weak<AgentTab>>,
 }
 
 impl AgentTab {
@@ -174,7 +184,7 @@ impl AgentTab {
     ) -> Option<Rc<AgentTab>> {
         let thread_id = resume.as_ref().and_then(|r| r.thread.clone()).unwrap_or_default();
         let thread = Thread::new(thread_id.clone(), agent.id(), &cwd);
-        let tab = Rc::new(AgentTab::build(controller, agent, cwd, thread_id, thread, Source::Idle));
+        let tab = AgentTab::shared(AgentTab::build(controller, agent, cwd, thread_id, thread, Source::Idle));
         let bookmarked = crate::agent_panel::is_bookmarked(&tab.thread_id);
         tab.state.borrow_mut().opened(resume, bookmarked);
         crate::agent_panel::read_past(&tab.cwd);
@@ -242,8 +252,19 @@ impl AgentTab {
             inbox: RefCell::new(Arc::new(Inbox::default())),
             ticking: std::cell::Cell::new(false),
             previous_focus: RefCell::new(None),
+            dialog: RefCell::new(None),
+            dialogs_opened: std::cell::Cell::new(0),
+            asides: RefCell::new(Vec::new()),
+            me: RefCell::new(std::rc::Weak::new()),
         };
         tab.lay_out();
+        tab
+    }
+
+    /// `tab` shared, knowing itself.
+    pub(super) fn shared(tab: AgentTab) -> Rc<AgentTab> {
+        let tab = Rc::new(tab);
+        *tab.me.borrow_mut() = Rc::downgrade(&tab);
         tab
     }
 

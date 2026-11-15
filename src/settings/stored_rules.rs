@@ -1,6 +1,6 @@
 //! The rules Claude stored per project with "Immer erlauben" (E27), in the Agents tab of the settings: read from each
-//! project's `.claude` settings files and removable one by one. ACP agents keep theirs where the app cannot reach
-//! them, which the section says.
+//! project's `.claude` settings files and removed one by one through Claude's own writer (E146). ACP agents keep
+//! theirs where the app cannot reach them, which the section says.
 
 use std::cell::{OnceCell, RefCell};
 use std::path::{Path, PathBuf};
@@ -226,15 +226,19 @@ impl StoredRules {
 
     fn remove_selected(&self) {
         let Some(row) = self.selected() else { return };
-        if let Err(error) = rules::remove_allow_rule(&row.project, row.scope, &row.rule) {
-            Alert::new(self.mtm(), t("Die Regel ließ sich nicht entfernen."))
-                .informative(&format!(
-                    "{}\n{error}",
-                    crate::app::display_path(&row.scope.file(&row.project))
-                ))
-                .run_modal();
+        if let Some(remove) = self.ivars().remove.get() {
+            remove.setEnabled(false);
         }
-        self.reload();
+        let this = objc2::Message::retain(self);
+        let file = crate::app::display_path(&row.scope.file(&row.project));
+        ide_ui_agent::remove_claude_rule(self.mtm(), row.project, row.scope, row.rule, move |removed| {
+            if let Err(why) = removed {
+                Alert::new(this.mtm(), t("Die Regel ließ sich nicht entfernen."))
+                    .informative(&format!("{file}\n{}", why.0))
+                    .run_modal();
+            }
+            this.reload();
+        });
     }
 }
 

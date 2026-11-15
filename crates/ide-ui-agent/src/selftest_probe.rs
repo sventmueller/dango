@@ -7,6 +7,8 @@
 use super::*;
 
 pub use super::acp::{set_test_launch, set_test_register};
+pub use super::codex::set_test_codex;
+pub use super::opencode::set_test_opencode;
 
 pub use super::cards::window_name;
 

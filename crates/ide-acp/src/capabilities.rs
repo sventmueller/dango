@@ -150,7 +150,15 @@ pub struct Capabilities {
     /// Whether prompts may embed the content of files.
     pub embedded_context: bool,
     /// Whether MCP servers over HTTP can be handed over.
-    pub(crate) mcp_http: bool,
+    pub mcp_http: bool,
+    /// Whether MCP servers over server-sent events can be handed over.
+    pub mcp_sse: bool,
+    /// Whether the agent signs out on request (`logout`).
+    pub logout: bool,
+    /// Whether a session can be forked (`session/fork`, unstable).
+    pub fork: bool,
+    /// Whether a session can be closed without ending the agent (`session/close`).
+    pub close: bool,
     /// The ways to sign in.
     pub auth_methods: Vec<AuthMethod>,
     /// The modes of the session.
@@ -281,6 +289,10 @@ impl Capabilities {
         self.audio = caps.prompt_capabilities.audio;
         self.embedded_context = caps.prompt_capabilities.embedded_context;
         self.mcp_http = caps.mcp_capabilities.http;
+        self.mcp_sse = caps.mcp_capabilities.sse;
+        self.logout = caps.auth.logout.is_some();
+        self.fork = caps.session_capabilities.fork.is_some();
+        self.close = caps.session_capabilities.close.is_some();
         self.auth_methods = response.auth_methods.iter().filter_map(auth_method).collect();
         self.unknown = [
             meta_entries("", response.meta.as_ref()),

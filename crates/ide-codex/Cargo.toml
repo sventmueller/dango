@@ -1,0 +1,23 @@
+[package]
+name = "ide-codex"
+version = "0.0.0"
+description = "OpenAI Codex over its app-server protocol (E147): the connection, its management calls and the mapping onto the thread model"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "codex-test-server"
+path = "src/bin/codex-test-server.rs"
+test = false
+
+[dependencies]
+base64 = "0.23.1"
+ide-process = { path = "../ide-process" }
+ide-product = { path = "../ide-product" }
+ide-thread = { path = "../ide-thread" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"

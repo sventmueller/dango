@@ -294,8 +294,17 @@ impl AgentTab {
         pop_up(&self.slash_items(), view);
     }
 
-    /// The slash commands the agent offers, with their descriptions.
+    /// The slash commands the agent offers and the overlays' commands (E146), with their descriptions.
     pub(super) fn known_commands(&self) -> Vec<(String, String)> {
+        let (caps, codex) = {
+            let state = self.state.borrow();
+            (state.acp_caps().cloned(), state.source().codex().is_some())
+        };
+        super::dialogs::with_local(self.agent_commands(), &self.agent, caps.as_ref(), codex)
+    }
+
+    /// The slash commands the agent offers itself.
+    pub(crate) fn agent_commands(&self) -> Vec<(String, String)> {
         if self.agent.is_acp() {
             self.acp_commands()
         } else if self.agent.is_own() {

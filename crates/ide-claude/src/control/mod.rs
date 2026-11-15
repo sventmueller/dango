@@ -12,9 +12,17 @@ use crate::modes::{Effort, PermissionMode};
 use crate::protocol::{ModelUsage, typed};
 
 mod context;
+mod dialogs;
 mod error;
 
 pub use context::*;
+pub(crate) use dialogs::DialogRequest;
+pub use dialogs::{
+    ExportedConversation, FeedbackResult, HookEvent, HookRow, HookTarget, HooksListing, McpServerState, McpSignIn,
+    McpStatus, MemoryDialog, MemoryFile, MemoryFolder, MemoryToggle, PermissionRuleRow, PermissionRules,
+    PermissionState, RefusalFallback, RuleWording, SettingsReport, SettingsSource, SideAnswer, SideExchange, SkillRow,
+    SkillsDialog, StatusReport, StatusRow, StatusSection, WorkspaceFolder,
+};
 pub use error::ControlError;
 
 /// A request the app sends to the CLI.
@@ -59,6 +67,8 @@ pub(crate) enum Request {
     },
     /// Connects the session to Remote Control on claude.ai, or ends that; internal in the CLI (`docs/claude-mapping.md`).
     RemoteControl(bool),
+    /// A request of an overlay (E146).
+    Dialog(DialogRequest),
 }
 
 impl Request {
@@ -77,6 +87,7 @@ impl Request {
             Request::GetUsage => "get_usage",
             Request::RewindFiles { .. } => "rewind_files",
             Request::RemoteControl(_) => "remote_control",
+            Request::Dialog(request) => request.subtype(),
         }
     }
 
@@ -88,6 +99,7 @@ impl Request {
             | Request::GetUsage
             | Request::RewindFiles { .. }
             | Request::RemoteControl(_) => Duration::from_secs(30),
+            Request::Dialog(request) => request.timeout(),
             _ => Duration::from_secs(10),
         }
     }
@@ -124,6 +136,7 @@ impl Request {
                 dry_run,
             } => json!({ "user_message_id": user_message_id, "dry_run": dry_run }),
             Request::RemoteControl(enabled) => json!({ "enabled": enabled }),
+            Request::Dialog(request) => request.body(),
         };
         if let Value::Object(map) = &mut body {
             map.insert("subtype".into(), Value::from(self.subtype()));
@@ -163,6 +176,8 @@ pub(crate) struct InitializeResult {
     /// The signed-in account.
     pub(crate) account: Account,
     pub(crate) output_style: String,
+    /// The output styles the user can choose, built-in and their own.
+    pub(crate) available_output_styles: Vec<String>,
     pub(crate) claude_code_version: Option<String>,
     /// Whether the account and the organisation allow Remote Control; older CLIs leave it out.
     pub(crate) remote_control_available: Option<bool>,

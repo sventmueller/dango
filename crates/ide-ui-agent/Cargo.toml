@@ -10,9 +10,12 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+dispatch2.workspace = true
 ide-acp.workspace = true
 ide-agent.workspace = true
 ide-claude.workspace = true
+ide-codex.workspace = true
+ide-opencode.workspace = true
 ide-core.workspace = true
 ide-git.workspace = true
 ide-net.workspace = true

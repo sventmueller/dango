@@ -44,6 +44,30 @@ fn main() {
         ide_acp::test_agent::run(std::io::stdin().lock(), std::io::stdout().lock(), &scenario);
         return;
     }
+    // The self-test's Codex app-server is this program too, started with this variable (E147).
+    #[cfg(feature = "selftest")]
+    if std::env::var_os("IDE_CODEX_TEST_SERVER").is_some() {
+        let scenario = std::env::var("CODEX_TEST_SCENARIO").unwrap_or_else(|_| "basic".into());
+        if std::env::args().any(|a| a == "--version") {
+            println!("{}", ide_codex::test_server::VERSION);
+            return;
+        }
+        let log = std::env::var_os("CODEX_TEST_LOG").map(std::path::PathBuf::from);
+        ide_codex::test_server::run(std::io::stdin().lock(), std::io::stdout().lock(), &scenario, log);
+        return;
+    }
+    // The self-test's OpenCode server is this program too, started with this variable (E147).
+    #[cfg(feature = "selftest")]
+    if std::env::var_os("IDE_OPENCODE_TEST_SERVER").is_some() {
+        let scenario = std::env::var(ide_opencode::test_server::SCENARIO_VARIABLE).unwrap_or_else(|_| "basic".into());
+        if std::env::args().any(|a| a == "--version") {
+            println!("{}", ide_opencode::test_server::version(&scenario));
+            return;
+        }
+        let log = std::env::var_os(ide_opencode::test_server::LOG_VARIABLE).map(std::path::PathBuf::from);
+        ide_opencode::test_server::run(std::io::stdin(), std::io::stdout().lock(), &scenario, log);
+        return;
+    }
     i18n::install(&app::localized_strings());
     ide_ui_common::window::install(&host::AppHost);
     ide_ui_debug::install(&host::AppHost);

@@ -268,11 +268,25 @@ impl AgentTab {
         let cwd = self.cwd.clone();
         if let Err(why) = ide_ui_common::util::spawn("acp-start", move || {
             let env = ide_ui_common::window::environment(Duration::from_secs(15));
-            let launch = launch_of(&agent, &env, &cwd);
-            let missing = launch.is_none().then(|| availability(&agent, &env, &cwd));
+            let codex = crate::codex::launch_for(&agent.id, &env, &cwd);
+            let opencode = crate::opencode::launch_for(&agent, &env, &cwd);
+            let sdk = codex.is_some() || opencode.is_some();
+            let launch = (!sdk)
+                .then(|| launch_of(&agent, &env, &cwd))
+                .flatten()
+                .map(|mut launch| {
+                    // Sessions start only in a trusted folder, so the project's servers may go over (E22).
+                    launch.mcp_servers = crate::dialogs::mcp_for_launch(&cwd, &env);
+                    launch
+                });
+            let missing = (!sdk && launch.is_none()).then(|| availability(&agent, &env, &cwd));
             main_soon(move || {
                 if let Some(tab) = super::get(key) {
-                    tab.launch_acp(launch, missing, thread);
+                    match (codex, opencode) {
+                        (Some(codex), _) => tab.launch_codex(codex, thread),
+                        (None, Some(opencode)) => tab.launch_opencode(opencode, thread),
+                        (None, None) => tab.launch_acp(launch, missing, thread),
+                    }
                 }
             });
         }) {
@@ -318,12 +332,14 @@ impl AgentTab {
     pub(super) fn acp_ended(&self, stderr: &str) {
         let source = {
             let mut state = self.state.borrow_mut();
-            if !matches!(state.source(), Source::Acp(_)) {
+            if !matches!(state.source(), Source::Acp(_) | Source::Codex(_) | Source::OpenCode(_)) {
                 return;
             }
             state.end()
         };
-        let opened = source.acp().is_some_and(|s| s.session_id().is_some());
+        let opened = source.acp().is_some_and(|s| s.session_id().is_some())
+            || source.codex().is_some_and(|s| s.session_id().is_some())
+            || source.opencode().is_some_and(|s| s.session_id().is_some());
         source.end();
         self.set_problem(Some(ended_problem(opened, stderr)));
     }
@@ -347,7 +363,7 @@ impl AgentTab {
                     Source::Acp(_) | Source::Idle | Source::Starting => self.launch_program(),
                     #[cfg(feature = "selftest")]
                     Source::Replay(_) => None,
-                    Source::Live(_) | Source::Own(_) => None,
+                    Source::Live(_) | Source::Own(_) | Source::Codex(_) | Source::OpenCode(_) => None,
                 };
                 let Some(program) = program else { return };
                 let mut parts: Vec<String> = terminal.env.iter().map(|(k, v)| format!("{k}={v}")).collect();

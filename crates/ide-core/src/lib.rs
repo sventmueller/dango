@@ -14,6 +14,7 @@ pub mod explain;
 pub mod keymap;
 pub mod lane;
 pub mod layout;
+pub mod mcp_servers;
 pub mod panes;
 pub mod paths;
 pub mod settings;

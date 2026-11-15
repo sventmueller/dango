@@ -1,6 +1,8 @@
-//! A stand-in for `claude` for the `agent-actions` scenario: a shell script that keeps every line the app writes,
-//! answers its control requests from files and plays prepared frames when the app sends a prompt, answers a request
-//! or interrupts the turn. No real CLI starts and nothing leaves the Mac.
+//! A stand-in for `claude` for the `agent-actions` and `agent-dialogs` scenarios: a shell script that keeps every line
+//! the app writes, answers its control requests from files and plays prepared frames when the app sends a prompt,
+//! answers a request or interrupts the turn. Run with a writer or `mcp`, `plugin` or `auth` (E146), it keeps its
+//! arguments and stdin as `sub-<n>.args`/`.stdin` and prints `sub-<command>-<sub>.out` or `sub-<command>.out`, a `.err`
+//! file beside it on stderr, a `.once` file in its place once and failing, ending with the code in a `.code` file beside it. No real CLI starts and nothing leaves the Mac.
 
 use std::path::{Path, PathBuf};
 
@@ -11,6 +13,21 @@ pub(crate) const SESSION: &str = "51e1f7e5-4000-4000-8000-0000000000aa";
 
 const SCRIPT: &str = r#"#!/bin/sh
 dir='@DIR@'
+case "$1" in
+  edit-*|mcp|plugin|auth)
+    n=1
+    while [ -f "$dir/sub-$n.args" ]; do n=$((n + 1)); done
+    printf '%s\n' "$@" > "$dir/sub-$n.args"
+    /bin/cat > "$dir/sub-$n.stdin"
+    out="$dir/sub-$1-$2.out"
+    [ -f "$out" ] || out="$dir/sub-$1.out"
+    if [ -f "$out.once" ]; then /bin/cat "$out.once"; /bin/rm "$out.once"; exit 1; fi
+    [ -f "$out" ] && /bin/cat "$out"
+    [ -f "$out.err" ] && /bin/cat "$out.err" >&2
+    code=0
+    [ -f "$out.code" ] && code=$(/bin/cat "$out.code")
+    exit "$code";;
+esac
 printf '%s\n' "$@" > "$dir/args.txt"
 turns=0
 answers=0
@@ -22,15 +39,12 @@ while IFS= read -r line; do
       payload='{}'
       refused=''
       after=''
-      for kind in initialize interrupt set_permission_mode set_model apply_flag_settings stop_task background_tasks get_task_output get_context_usage get_usage rewind_files remote_control; do
-        case "$line" in
-          *"\"subtype\":\"$kind\""*)
-            [ -f "$dir/refuse-$kind.txt" ] && refused=$(/bin/cat "$dir/refuse-$kind.txt")
-            [ -f "$dir/answer-$kind.json" ] && payload=$(/bin/cat "$dir/answer-$kind.json")
-            after="$dir/on-$kind.ndjson"
-            break;;
-        esac
-      done
+      kind=$(printf '%s\n' "$line" | /usr/bin/sed -n 's/.*"subtype":"\([^"]*\)".*/\1/p')
+      if [ -n "$kind" ]; then
+        [ -f "$dir/refuse-$kind.txt" ] && refused=$(/bin/cat "$dir/refuse-$kind.txt")
+        [ -f "$dir/answer-$kind.json" ] && payload=$(/bin/cat "$dir/answer-$kind.json")
+        after="$dir/on-$kind.ndjson"
+      fi
       if [ -n "$refused" ]; then
         printf '{"type":"control_response","response":{"subtype":"error","request_id":"%s","error":"%s"}}\n' "$id" "$refused"
       else
@@ -108,7 +122,7 @@ impl StandIn {
         self.dir.join("claude")
     }
 
-    fn write(&self, name: &str, text: &str) -> std::io::Result<()> {
+    pub(crate) fn write(&self, name: &str, text: &str) -> std::io::Result<()> {
         std::fs::write(self.dir.join(name), text)
     }
 
@@ -180,6 +194,7 @@ fn initialize() -> Value {
         ],
         "account": {"email": "selftest@example.org", "subscriptionType": "max", "tokenSource": "claude.ai"},
         "output_style": "default",
+        "available_output_styles": ["default", "Explanatory", "Learning"],
         "remote_control_available": true,
         "remote_control_auto_enable": false
     })

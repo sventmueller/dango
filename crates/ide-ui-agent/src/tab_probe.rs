@@ -49,7 +49,7 @@ impl AgentTab {
         let thread_id = ThreadId::new();
         let thread = Thread::new(thread_id.clone(), ide_claude::AGENT, &cwd);
         let source = source::replay(thread.clone());
-        let tab = Rc::new(AgentTab::build(
+        let tab = AgentTab::shared(AgentTab::build(
             controller,
             Agent::Claude,
             cwd,

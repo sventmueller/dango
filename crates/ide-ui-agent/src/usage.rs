@@ -81,7 +81,8 @@ pub(crate) fn fetch(session: &Session) {
             let cx = crate::host::state();
             *cx.usage.report.borrow_mut() = Some((SystemTime::now(), report));
             cx.usage.asking.set(false);
-            for tab in super::all() {
+            let tabs = cx.agent_tabs.tabs.borrow().clone();
+            for tab in tabs {
                 tab.refresh();
             }
         });

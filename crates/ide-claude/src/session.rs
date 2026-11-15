@@ -4,6 +4,7 @@
 //! short lock, so the UI never waits for the CLI. Control requests the app sends expire on the app's timer thread
 //! (`ide_core::timer`) when the CLI does not answer in time.
 
+mod dialogs;
 mod reply;
 
 use ide_core::LockIgnoringPoison;

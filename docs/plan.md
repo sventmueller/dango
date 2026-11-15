@@ -122,7 +122,7 @@ eingearbeitet (markiert mit *Review*).
   Einträge mit Status, Laufzeit, Tokens, letzter Aktion, Ausgabe-Ende, Stopp. *Review:* Auf der Leitung ACP v1 (stabil),
   Fähigkeiten je Agent ausgehandelt; unbekannte Werte werden angezeigt, keine Fähigkeit wird erfunden. Crate-Version wird
   zu Beginn der ACP-Phase auf eine erprobte Version festgelegt (5.1.0 ist vom 2026-11-09), gekapselt in `ide-acp`.
-- **E21 Claude direkt wie das offizielle Plugin, ACP für alle anderen** *(entschieden)*. `claude` mit Stream-JSON
+- **E21 Claude direkt wie das offizielle Plugin, ACP für alle anderen** *(entschieden; seit E147: SDK-Protokoll zuerst, ACP als Rückfall)*. `claude` mit Stream-JSON
   (`--input-format/--output-format stream-json`, `--permission-prompt-tool stdio`, `--include-partial-messages`,
   `--include-hook-events`). Regeln von Anthropic: `claude` bleibt unverändert, Anmeldung nur über `claude` selbst,
   keine Ausgabe als VS-Code-Plugin, Menüname „Claude“. Nicht möglich (nur private Schnittstellen): Reiter „Web“.
@@ -143,7 +143,7 @@ eingearbeitet (markiert mit *Review*).
     die Oberfläche das Element aus.
   - Unbekannte Freigabe-Anfragen werden abgelehnt, nicht durchgewunken. Zu Phase 4 gehört eine Abbildungstabelle
     Stream-JSON → Thread-Modell; sie ist zugleich Spezifikation der Mitschnitt-Tests.
-- **E5 Agenten-Register** *(bestätigt)* aus der ACP-Registry (*Review:* 45 Einträge). Vorbelegt: Claude (E21; Rückfall
+- **E5 Agenten-Register** *(bestätigt; SDK-Wege mit erprobtem Versionsbereich seit E147)* aus der ACP-Registry (*Review:* 45 Einträge). Vorbelegt: Claude (E21; Rückfall
   `claude-agent-acp`), Codex (`codex-acp`), Gemini CLI (`gemini --acp`), Antigravity (`agy acp`, offizieller Weg;
   Registry-Binary als Alternative), OpenCode. *Review:* Installiert werden nur erprobte Kombinationen aus Adapter-,
   Laufzeit- und Agent-Version (kein unversioniertes `npx`), Updates mit Rückweg. Registry-Einträge ohne Prüfsumme
@@ -160,7 +160,8 @@ eingearbeitet (markiert mit *Review*).
   den Agenten zuletzt gewählt hat, auch nach einem Neustart (Vorgabe des Owners); beim ersten Mal im Modus „Manuell“.
   „Alles erlauben“ und „Umgehen“ ohne Sandbox zeigen ausdrücklich keinen Warnkasten im Thread (Vorgabe des Owners); den
   Modus nennt die Modus-Pille.
-  Gespeicherte Regeln gelten je Projekt und Agent und sind in den Einstellungen einsehbar und löschbar. Zerstörerische
+  Gespeicherte Regeln gelten je Projekt und Agent und sind in den Einstellungen einsehbar und löschbar (seit E146 über
+  den Schreibweg der CLI, denselben wie `/permissions`). Zerstörerische
   Git-Befehle (`push --force`, `reset --hard`, `clean -fd`) brauchen immer eine Freigabe, auch bei gespeicherten Regeln.
 
 ### Git, CI, Diktat
@@ -649,6 +650,25 @@ Code-Review 2026-11-14 *(nichtfunktional, vom Eigentümer beauftragt)*:
     - In der Dateiliste: ⌥-Klick und „Daneben öffnen“ für rechts, „Darunter öffnen“ für unten, ⌥⇧-Klick für die Wahl des Bereichs.
   - **Speichern:** Die Ansicht je Ordner speichert den Baum mit Anteilen und dem vorderen Dokument je Bereich (Layout-Version 4).
   - **Nicht übernommen:** Assistent-Modus, Sprungleiste und Verlauf je Bereich.
+- **E146 Overlays für die Einstellungen der Agenten** *(Entscheidung des Eigentümers, ändert E27)*:
+  - **Was:** Was die CLI eines Agenten nur im Terminal als Dialog zeigt, zeigt Dango als Overlay im AI-Tab: `/mcp`, `/plugins`, `/permissions`, `/hooks`, `/memory`, `/config`, `/output-style`, `/btw`, `/export`, `/status`, `/skills`, `/logout`, `/bug`.
+  - **Gleiche Funktion, gleiche Oberfläche:** ein Overlay je Funktion über einem neutralen Datenmodell, für Claude, ACP-Agenten, Codex und OpenCode gleich. Unterschiede zeigen sich nur als ausgegraute Aktion mit Begründung, nie als anderer Aufbau.
+  - **Geschrieben wird über die Schreibwege des Agenten**, nie direkt in seine Dateien:
+    - Claude: Steuernachrichten und die Unterbefehle `edit-permission-rules`, `edit-hook`, `edit-memory-settings` und `edit-skill-overrides`, die auch die VS-Code-Erweiterung nutzt;
+    - Codex: `config/*` des App-Servers.
+  - **Ändert E27:** Die Seite „Gespeicherte Regeln“ entfernt über `edit-permission-rules`, mit Rückfall auf `rules.rs`, wenn Claude Code fehlt oder den Schreiber nicht kennt. Sie liest weiter die Dateien selbst: Sie listet die Regeln aller Projekte, und `list_permission_rules` braucht eine laufende Sitzung im jeweiligen Projekt. `/permissions` zeigt die Regeln der Sitzung im Overlay. Ein Schreibweg, zwei Ansichten.
+  - **Grenzen:** Kann eine CLI-Version eine Funktion nicht, zeigt das Overlay das und bietet „Im Terminal öffnen“ an. Die Steuernachrichten gehören in E21 zur Stufe „Best effort“ (siehe docs/claude-mapping.md).
+- **E147 SDK zuerst, ACP als Rückfall** *(Entscheidung des Eigentümers, ändert E21 und E5)*:
+  - **Was:** Jeder Agent läuft über das offizielle SDK-Protokoll seines Herstellers, wo es eines gibt; ACP bleibt der Rückfall:
+    - Claude: Stream-JSON, wie bisher;
+    - Codex: `codex app-server`, die Grundlage des Codex SDK;
+    - OpenCode: `opencode serve`, die Grundlage von `@opencode-ai/sdk`.
+  - **Antigravity bleibt bei ACP:** `agy acp` ist der offizielle Weg; das SDK `google.antigravity` ist eine Bibliothek zum Bauen eigener Agenten, keine Fernsteuerung.
+  - **Ändert E21:** aus „Claude direkt, ACP für alle anderen“ wird „das offizielle SDK-Protokoll, wo vorhanden, sonst ACP“.
+  - **Ändert E5:** Je SDK-Weg gilt ein erprobter Versionsbereich (Codex app-server ab 0.167, OpenCode ab 2.2.6). Außerhalb davon, oder wenn der Handschlag scheitert, startet der Tab über den ACP-Adapter desselben Agenten und sagt warum.
+  - **Fortsetzen:** Eine fortgesetzte Sitzung behält ihren Weg.
+  - **Umsetzung Codex (abweichend vom ersten Entwurf):** kein eigener Agent-Typ, sondern ein zweiter Weg derselben Codex-Auswahl (Preset `codex-acp`): Beim Start prüft der Tab `codex --version` und nimmt bei 0.167 oder neuer den App-Server, sonst `codex-acp`. Modell, Aufwand und Modus erscheinen im Composer wie bei einem ACP-Agenten. Details in [codex.md](codex.md).
+  - **Umsetzung OpenCode:** ebenso ein zweiter Weg der OpenCode-Auswahl (Preset `opencode`). 2.2.6 bringt eine neue v2-API unter `/api/…` statt der v1-Routen; `opencode serve --stdio` öffnet trotz des Namens einen HTTP-Server auf 127.0.0.1 mit Einmal-Passwort je Start. Details in [opencode.md](opencode.md).
 
 Risiken aus Phase 12: **R23** `modalkit` 0.0.x mit einem Betreuer, **R24** Vim-Nutzer messen am Original, **R25**
 iCloud Drive langsam und nicht steuerbar, **R28** Emmet-Server kaum gepflegt, **R29** Testausgaben ohne festen
@@ -657,6 +677,13 @@ Docker-Socket entspricht Root-Rechten, **R38** ESLint-Server aus einem Upstream-
 Bausteinen gehören R26, R27, R30, R31, R34, R35, R36 und R39.
 
 - **Änderungen an splat und lowspeak** bleiben in deren Repos auf `vibeedit/*`-Branches, uncommittet bis zur Übernahme.
+
+Risiken aus E146 und E147:
+- **R40** Interne Schnittstellen von Claude: die Steuernachrichten mit `@internal` und die `edit-*`-Unterbefehle können sich mit jeder Version ändern. Abhilfe: nachsichtige Typen, Fixtures je Version, Rückfall aufs Terminal.
+- **R41** Unfertige SDK-Protokolle: Codex' App-Server ist „experimental“, OpenCodes API ändert sich je Release. Abhilfe: erprobter Bereich (E147), Schemata als Fixtures, Rückfall auf ACP.
+- **R42** Geheimnisse in MCP-Definitionen: Tokens nie in Prozessnamen oder Protokollen. Dangos eigene Liste hält sie im Schlüsselbund. `.mcp.json` wird geschrieben wie eingegeben, mit Hinweis.
+- **R43** Daten nach außen: `/bug` und Feedback senden an den Hersteller, nur nach einer Bestätigung, die nennt, was gesendet wird.
+- **R44** Umfang: Codex und OpenCode sind je ein neuer Agentenweg in der Größe von `ide-claude`. Sie kommen nach den Overlays für Claude und ACP, jeweils als eigene Phase.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des
 Claude-Kontos (keine Live-Läufe echter Agenten-CLIs in Tests), **R12** Selbsttest-Fenster dürfen nie den Fokus nehmen
