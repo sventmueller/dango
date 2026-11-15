@@ -144,6 +144,7 @@ pub const SCENARIOS: &[Scenario] = &[
     plain("preview", preview::run),
     plain("markdown", markdown::run),
     plain("panels", panels::run),
+    plain("panes", panes::run),
     limited("git", git::run, GIT),
     limited("git-stash", git::stash::run, GIT),
     limited("git-message", git::message::run, GIT),

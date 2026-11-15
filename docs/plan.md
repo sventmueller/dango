@@ -422,7 +422,7 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   Vorschau (E59) zeigen ein zweites Dokument im selben Tab, jedes dann mit einer Kopfzeile (seit E63 ein Schild);
   schließt eines, bleibt das andere allein. Die Seitenleiste gibt es je Ordner einmal; sie wandert in den Tab im Vordergrund und bleibt
   dabei, wie sie ist. Die Ansicht je Projekt (E24) speichert Tabs und Teilungen. Ersetzt die eigene Tableiste nach
-  dem Vorbild von Xcode und die Panels aus I10.
+  dem Vorbild von Xcode und die Panels aus I10. Seit E145 teilt sich ein Tab in Bereiche.
 - **E61 Das aktive Symbol klappt nicht ein** *(Entscheidung des Eigentümers, Abweichung von der Symbolspalte oben)*:
   Ein Klick auf das Symbol des Panels, das schon zu sehen ist, lässt die Seitenleiste offen. Ein- und ausgeklappt wird
   sie über den Seitenleisten-Knopf der Toolbar oder ⌃⌘S; ein Symbol bei eingeklappter Seitenleiste klappt sie auf.
@@ -632,6 +632,21 @@ Code-Review 2026-11-14 *(nichtfunktional, vom Eigentümer beauftragt)*:
   Editor ändert) und die App über ihren `Host`; Einblendungshinweise liefert sie als eigene Daten, die der Editor in
   seine Einblendungen (E81) übersetzt. Der Editor führt seine Nummer selbst und beobachtet sein Scrollen selbst.
   Selbsttest-Funktionen liegen in den `selftest_probe`-Modulen ihrer Datei, nie im Produktivcode.
+- **E145 Bereiche nach dem Vorbild von Xcode** *(Entscheidung des Eigentümers, ändert E60, E62 und E63)*:
+  - **Teilen:** Ein Fenstertab teilt sich in Bereiche, rechts oder unten und beliebig verschachtelt.
+    - Menü Darstellung › Bereiche, Kontextmenü eines Bereichs-Tabs, Ziehen eines Tabs an den rechten oder unteren Rand eines Bereichs.
+    - Jeder Bereich hält mehrere Dokumente hintereinander.
+    - Die Tableisten der Bereiche zeigen sich nur, solange ein Bereich mehr als ein Dokument hält. Sonst sieht der Tab aus wie bisher, und die Bereiche nach dem ersten tragen ihr Schild mit × (E63).
+  - **Öffnen:** Eine Datei geht in den aktiven Bereich, sobald der Tab vorn geteilt ist. Ein ungeteilter Tab öffnet sie wie bisher in einem eigenen Fenstertab (E62).
+    - Die Vorschau neben ihrem Editor (E59) zählt nicht als Teilung. Sie folgt ihrem Editor und verschwindet, solange er in seinem Bereich nicht vorn liegt.
+    - Eine Datei ist je Fenster höchstens einmal offen; eine offene kommt nach vorn, wo sie ist.
+  - **Befehle:** Teilen ⌃⌘T rechts und ⌃⌥⌘T unten. Hält der Bereich mehrere Dokumente, wandert das vordere in den neuen Bereich; sonst öffnet er leer und nimmt das nächste Dokument auf.
+    - Bereich schließen ⌃⇧⌘W, Bereich maximieren ⌃⇧⌘↩.
+    - Nächster und vorheriger Tab im Bereich ⌃⌥⌘] / ⌃⌥⌘[ (⌃⇥ bleibt dem Fokus vorbehalten, E101).
+    - ⌥⌘` geht zum nächsten Bereich.
+    - In der Dateiliste: ⌥-Klick und „Daneben öffnen“ für rechts, „Darunter öffnen“ für unten, ⌥⇧-Klick für die Wahl des Bereichs.
+  - **Speichern:** Die Ansicht je Ordner speichert den Baum mit Anteilen und dem vorderen Dokument je Bereich (Layout-Version 4).
+  - **Nicht übernommen:** Assistent-Modus, Sprungleiste und Verlauf je Bereich.
 
 Risiken aus Phase 12: **R23** `modalkit` 0.0.x mit einem Betreuer, **R24** Vim-Nutzer messen am Original, **R25**
 iCloud Drive langsam und nicht steuerbar, **R28** Emmet-Server kaum gepflegt, **R29** Testausgaben ohne festen

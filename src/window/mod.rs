@@ -16,7 +16,9 @@ pub mod layout;
 mod lifecycle;
 mod new_tab_button;
 mod notice;
+mod pane_commands;
 pub mod panels;
+pub mod panes;
 mod quick_open;
 mod registry;
 mod replace;
@@ -103,8 +105,8 @@ pub struct Ivars {
     current: RefCell<Option<Rc<TabWindow>>>,
     /// The number of the next document.
     next_id: Cell<isize>,
-    /// The document a document about to open goes beside, instead of into a window tab of its own.
-    beside: Cell<Option<TabId>>,
+    /// Where a document about to open goes instead of where it would by default (E145).
+    target: RefCell<Option<panes::Place>>,
     workspace: RefCell<Option<Rc<crate::project::Project>>>,
     files: RefCell<Option<FileTree>>,
     search: RefCell<Option<Retained<SearchPanel>>>,
@@ -297,18 +299,47 @@ define_class!(
         fn focus_next_panel_action(&self, _sender: Option<&AnyObject>) {
             guarded((), || {
                 if let Some(tab) = self.current_tab() {
-                    tab.focus_other();
+                    tab.focus_next_pane();
                 }
             });
         }
 
         #[unsafe(method(ideCloseTab:))]
         fn close_tab_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || {
-                if let Some(id) = self.selected_tab() {
-                    self.close_tab(id);
-                }
+            guarded((), || match self.selected_tab() {
+                Some(id) => self.close_tab(id),
+                None => self.close_active_pane(),
             });
+        }
+
+        #[unsafe(method(ideSplitRight:))]
+        fn split_right_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.split_active(panes::Side::Right));
+        }
+
+        #[unsafe(method(ideSplitBelow:))]
+        fn split_below_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.split_active(panes::Side::Below));
+        }
+
+        #[unsafe(method(ideClosePane:))]
+        fn close_pane_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || self.close_pane_by_tag(sender.map(|_| tag_of(sender))));
+        }
+
+        #[unsafe(method(ideZoomPane:))]
+        fn zoom_pane_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.toggle_zoom());
+        }
+
+        #[unsafe(method(ideNextPaneTab:))]
+        fn next_pane_tab_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.select_pane_tab_relative(1));
+        }
+
+        #[unsafe(method(idePreviousPaneTab:))]
+        fn previous_pane_tab_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.select_pane_tab_relative(-1));
         }
 
         #[unsafe(method(ideCloseWindow:))]
@@ -597,7 +628,7 @@ impl WindowController {
             tabs: RefCell::default(),
             current: RefCell::default(),
             next_id: Cell::new(1),
-            beside: Cell::default(),
+            target: RefCell::default(),
             workspace: RefCell::default(),
             files: RefCell::default(),
             search: RefCell::default(),
@@ -800,35 +831,6 @@ impl WindowController {
     pub fn is_trusted(&self) -> bool {
         self.project_root()
             .is_some_and(|root| crate::project::is_trusted(&root))
-    }
-
-    /// What the window shows, for the next launch: its folder, its editors and welcome pages in every tab and which
-    /// one is in front. The tabs of the other documents are the layout's, which `layout::restore` opens again.
-    pub fn record(&self) -> crate::session::WindowRecord {
-        use crate::session::TabRecord;
-        let selected = self.selected_tab();
-        let mut record = crate::session::WindowRecord {
-            project: self.project(),
-            ..Default::default()
-        };
-        for document in self.documents() {
-            let tab = match document.kind {
-                TabKind::Welcome => TabRecord::Welcome,
-                TabKind::Editor => match crate::editor::tab_document(self, document.id) {
-                    Some((path, recovery)) => TabRecord::Editor {
-                        path,
-                        recovery: recovery.as_str().to_string(),
-                    },
-                    None => continue,
-                },
-                _ => continue,
-            };
-            if selected == Some(document.id) {
-                record.selected = Some(record.tabs.len());
-            }
-            record.tabs.push(tab);
-        }
-        record
     }
 
     /// Shows `text` at the foot of the documents of the tab in front for a few seconds.

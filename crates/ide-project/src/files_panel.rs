@@ -29,8 +29,10 @@ pub enum Kind {
 /// A command of the context menu and the panel's title row.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
-    /// Open the file in the other half of the editor area.
+    /// Open the file in a new pane right of the document in front.
     OpenBeside,
+    /// Open the file in a new pane below the document in front.
+    OpenBelow,
     /// Open an SVG file's drawing.
     OpenAsPreview,
     /// Open an HTML page in a browser tab, served by the app (E131).
@@ -93,8 +95,10 @@ pub enum Effect {
     Preview(PathBuf),
     /// Open the file in a tab of its own.
     Open(PathBuf),
-    /// Open the file in the other half of the editor area.
+    /// Open the file in a new pane right of the document in front.
     OpenBeside(PathBuf),
+    /// Open the file in a new pane below the document in front.
+    OpenBelow(PathBuf),
     /// Open the drawing of an SVG file.
     OpenAsPreview(PathBuf),
     /// Open the page in a browser tab, served by the app.
@@ -198,6 +202,7 @@ impl Model {
         };
         let mut entries = vec![
             item(t("Daneben öffnen"), Command::OpenBeside, file),
+            item(t("Darunter öffnen"), Command::OpenBelow, file),
             MenuEntry::Separator,
             item(t("Neue Datei …"), Command::NewFile, true),
             item(t("Neuer Ordner …"), Command::NewFolder, true),
@@ -223,6 +228,7 @@ impl Model {
         let path = self.clicked.clone()?;
         Some(match command {
             Command::OpenBeside => Effect::OpenBeside(path),
+            Command::OpenBelow => Effect::OpenBelow(path),
             Command::OpenAsPreview => Effect::OpenAsPreview(path),
             Command::OpenInBrowserTab => Effect::OpenInBrowserTab(path),
             Command::NewFile | Command::NewFolder => {

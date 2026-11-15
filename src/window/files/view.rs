@@ -161,8 +161,13 @@ define_class!(
         fn row_clicked_action(&self, sender: Option<&AnyObject>) {
             guarded((), || {
                 let Some(view) = sender.and_then(|s| s.downcast_ref::<NSOutlineView>()) else { return };
-                if !extends_selection(self.mtm()) {
-                    self.row_clicked(view, view.clickedRow());
+                let row = view.clickedRow();
+                let handled = match pane_click(self.mtm()) {
+                    Some(choose) => self.row_alt_clicked(view, row, choose),
+                    None => false,
+                };
+                if !handled && !extends_selection(self.mtm()) {
+                    self.row_clicked(view, row);
                 }
             });
         }
@@ -178,6 +183,21 @@ define_class!(
         #[unsafe(method(ideOpenBesideClicked:))]
         fn open_beside(&self, _sender: Option<&AnyObject>) {
             guarded((), || self.command(Command::OpenBeside));
+        }
+
+        #[unsafe(method(ideOpenBelowClicked:))]
+        fn open_below(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.command(Command::OpenBelow));
+        }
+
+        #[unsafe(method(ideOpenInPaneChosen:))]
+        fn open_in_pane_chosen(&self, sender: Option<&AnyObject>) {
+            guarded((), || {
+                let tag = sender
+                    .and_then(|sender| sender.downcast_ref::<objc2_app_kit::NSMenuItem>())
+                    .map_or(0, |item| item.tag());
+                self.open_in_chosen_pane(tag);
+            });
         }
 
         #[unsafe(method(ideOpenAsPreview:))]
@@ -332,6 +352,7 @@ impl FileTreeSource {
 fn action(command: Command) -> Sel {
     match command {
         Command::OpenBeside => sel!(ideOpenBesideClicked:),
+        Command::OpenBelow => sel!(ideOpenBelowClicked:),
         Command::OpenAsPreview => sel!(ideOpenAsPreview:),
         Command::OpenInBrowserTab => sel!(ideOpenInBrowserTab:),
         Command::NewFile => sel!(ideNewFile:),
@@ -352,6 +373,21 @@ fn extends_selection(mtm: MainThreadMarker) -> bool {
             .modifierFlags()
             .intersects(objc2_app_kit::NSEventModifierFlags::Shift | objc2_app_kit::NSEventModifierFlags::Command)
     })
+}
+
+/// Whether the click that is being handled opens a file in a pane: beside the one in front with Option, or in a pane
+/// the user chooses with Option and Shift (E145).
+fn pane_click(mtm: MainThreadMarker) -> Option<bool> {
+    use objc2_app_kit::NSEventModifierFlags as Flags;
+    let event = NSApplication::sharedApplication(mtm).currentEvent()?;
+    let flags = event.modifierFlags() & (Flags::Option | Flags::Shift | Flags::Command | Flags::Control);
+    if flags == Flags::Option {
+        Some(false)
+    } else if flags == Flags::Option | Flags::Shift {
+        Some(true)
+    } else {
+        None
+    }
 }
 
 pub(super) fn path_of(item: &AnyObject) -> Option<PathBuf> {

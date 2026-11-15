@@ -1,4 +1,5 @@
-//! Saving a folder's window tabs and their documents, and opening them again when the folder opens (E24, E60).
+//! Saving a folder's window tabs, their panes and their documents, and opening them again when the folder opens (E24,
+//! E60, E145).
 //!
 //! Documents come back by opening what they showed: files, a new shell in the terminal's last folder, a page, an AI
 //! session; a CLI thread of an older version comes back as a terminal. Terminals and AI sessions run what the folder
@@ -21,7 +22,7 @@ pub enum Document<'a> {
     Untitled(&'a str),
 }
 
-/// Opens a document's editor in a tab, or beside the document `open_beside` names; whether it did.
+/// Opens a document's editor where the window's open target says; whether it did.
 pub type Opener<'a> = dyn FnMut(&WindowController, Document) -> bool + 'a;
 
 /// Saves the window tabs of `controller`'s window for its folder; a window without a folder keeps nothing.
@@ -33,21 +34,16 @@ pub fn save(controller: &WindowController) {
     let selected = controller.selected_tab();
     let mut layout = Layout::default();
     for tab in controller.ordered_tabs() {
-        let documents = tab.documents();
-        let reopened: Vec<Tab> = documents
-            .iter()
-            .filter_map(|document| reopenable(controller, document.id, document.kind, document.key.as_deref()))
-            .collect();
-        if reopened.is_empty() {
+        let reopen = |document: &super::tabs::Document| {
+            reopenable(controller, document.id, document.kind, document.key.as_deref())
+        };
+        let Some(root) = tab.panes.layout(&reopen) else {
             continue;
-        }
-        if documents.iter().any(|document| Some(document.id) == selected) {
+        };
+        if tab.documents().iter().any(|document| Some(document.id) == selected) {
             layout.selected = Some(layout.tabs.len());
         }
-        layout.tabs.push(WindowTab {
-            share: tab.share().unwrap_or(0.5),
-            documents: reopened,
-        });
+        layout.tabs.push(WindowTab { root });
     }
     controller
         .context()
@@ -105,31 +101,8 @@ pub fn restore(controller: &WindowController, editor: &mut Opener) {
         editor: RefCell::new(editor),
     };
     let mut firsts = Vec::with_capacity(layout.tabs.len());
-    let mut shares = Vec::new();
     for window_tab in &layout.tabs {
-        let mut anchor: Option<TabId> = None;
-        for document in &window_tab.documents {
-            match anchor {
-                None => {
-                    if opener.open(controller, document) {
-                        anchor = controller.selected_tab();
-                    }
-                }
-                Some(anchor) => {
-                    controller.open_beside(anchor, || {
-                        opener.open(controller, document);
-                    });
-                    shares.push((anchor, window_tab.share));
-                }
-            }
-        }
-        // A preview is not saved, as it opens with its Markdown editor when nothing else is beside it.
-        if window_tab.documents.len() == 1
-            && let Some(view) = anchor.and_then(|id| crate::editor::editor_of_tab(controller, id))
-        {
-            crate::markdown::opened(&view);
-        }
-        firsts.push(anchor);
+        firsts.push(restore_tab(controller, &opener, window_tab));
     }
     if let Some(id) = layout.selected.and_then(|index| firsts.get(index).copied().flatten()) {
         controller.select_tab_by_id(id);
@@ -140,14 +113,44 @@ pub fn restore(controller: &WindowController, editor: &mut Opener) {
     {
         controller.close_tab(welcome);
     }
-    // A tab that is being built gets its size only once it shows.
-    controller.later(move |controller| {
-        for (anchor, share) in shares {
-            if let Some(tab) = controller.tab_of_document(anchor) {
-                tab.set_share(share);
+}
+
+/// Opens the window tab `window_tab` with its panes, in the tab in front while that one is empty; the document in
+/// front of its active pane, if any opened.
+fn restore_tab(controller: &WindowController, opener: &Documents, window_tab: &WindowTab) -> Option<TabId> {
+    let tab = match controller.current_tab() {
+        Some(current) if current.is_empty() && current.panes.all().len() == 1 => current,
+        _ => controller.new_tab_after_current(),
+    };
+    for (pane, saved) in tab.panes.build(&window_tab.root) {
+        let mut front = None;
+        for (index, document) in saved.documents.iter().enumerate() {
+            let before = pane.count();
+            controller.open_into(&pane, || {
+                opener.open(controller, document);
+            });
+            if index == saved.selected && pane.count() > before {
+                front = pane.front().map(|doc| doc.id);
             }
         }
-    });
+        if let Some(front) = front {
+            pane.select(front);
+        }
+    }
+    tab.panes.prune();
+    if tab.is_empty() {
+        tab.window.close();
+        return None;
+    }
+    tab.refresh();
+    let first = tab.focused().map(|doc| doc.id);
+    // A preview is not saved, as it opens with its Markdown editor when nothing else is beside it.
+    if tab.documents().len() == 1
+        && let Some(view) = first.and_then(|id| crate::editor::editor_of_tab(controller, id))
+    {
+        crate::markdown::opened(&view);
+    }
+    first
 }
 
 /// How the documents of a layout open.
@@ -205,7 +208,38 @@ fn resume_agent(controller: &WindowController, root: &Path, session: &str) -> bo
 }
 
 /// The session `session` of the folder `root` and the agent that ran it. Read at once, unlike the AI panel's: the
-/// restore opens the tabs in their saved order, each beside the one before.
+/// restore opens the tabs in their saved order, each in its pane.
 pub(crate) fn past_session(root: &Path, session: &str) -> Option<(ide_ui_agent::Agent, ide_ui_agent::Resume)> {
     ide_ui_agent::agent_panel::past_session(root, session)
+}
+
+impl WindowController {
+    /// What the window shows, for the next launch: its folder, its editors and welcome pages in every tab and which
+    /// one is in front. The tabs of the other documents are the layout's, which `layout::restore` opens again.
+    pub fn record(&self) -> crate::session::WindowRecord {
+        use crate::session::TabRecord;
+        let selected = self.selected_tab();
+        let mut record = crate::session::WindowRecord {
+            project: self.project(),
+            ..Default::default()
+        };
+        for document in self.documents() {
+            let tab = match document.kind {
+                TabKind::Welcome => TabRecord::Welcome,
+                TabKind::Editor => match crate::editor::tab_document(self, document.id) {
+                    Some((path, recovery)) => TabRecord::Editor {
+                        path,
+                        recovery: recovery.as_str().to_string(),
+                    },
+                    None => continue,
+                },
+                _ => continue,
+            };
+            if selected == Some(document.id) {
+                record.selected = Some(record.tabs.len());
+            }
+            record.tabs.push(tab);
+        }
+        record
+    }
 }

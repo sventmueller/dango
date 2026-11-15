@@ -211,7 +211,7 @@ mod tests {
         assert_eq!(load_from(file.clone()), sample());
         assert_eq!(crate::layout::tests::load_layout(file.clone()), Some(layout));
         let text = std::fs::read_to_string(&file).unwrap();
-        assert!(text.contains(r#""version": 3"#), "{text}");
+        assert!(text.contains(r#""version": 4"#), "{text}");
         assert!(text.contains(r#""kind": "debug""#), "{text}");
         assert!(text.contains(r#""log_message": "n = {n}""#), "{text}");
     }

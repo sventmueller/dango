@@ -1,6 +1,7 @@
 //! Window tabs (E60): every document gets a native macOS tab, an `NSWindow` of its own in the folder's tab group with
-//! its own toolbar and split view; the folder's one sidebar moves into the tab in front. A window tab shows one
-//! document, or two side by side, the second then with a small badge at its top that names it and closes it.
+//! its own toolbar and split view; the folder's one sidebar moves into the tab in front. A window tab shows its
+//! documents in panes (E145); while no pane holds more than one, the documents after the first have a small badge at
+//! their top that names them and closes them.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -8,13 +9,13 @@ use std::rc::Rc;
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{ProtocolObject, Sel};
 use objc2::{AnyThread, MainThreadMarker, MainThreadOnly, sel};
-use objc2_app_kit::{NSAttributedStringAttachmentConveniences, NSLayoutConstraint, NSTextAttachment};
+use objc2_app_kit::{NSAttributedStringAttachmentConveniences, NSTextAttachment};
 use objc2_app_kit::{
     NSBackingStoreType, NSBox, NSButton, NSColor, NSFont, NSFontManager, NSFontTraitMask, NSImage, NSImageAlignment,
     NSImageScaling, NSImageSymbolConfiguration, NSImageView, NSLineBreakMode, NSMenu, NSMenuItem, NSResponder,
-    NSSplitViewController, NSSplitViewDividerStyle, NSSplitViewItem, NSStackView, NSTextField,
-    NSTitlebarSeparatorStyle, NSToolbar, NSToolbarDisplayMode, NSUserInterfaceLayoutOrientation, NSView,
-    NSViewController, NSWindow, NSWindowStyleMask, NSWindowToolbarStyle,
+    NSSplitViewController, NSSplitViewItem, NSStackView, NSTextField, NSTitlebarSeparatorStyle, NSToolbar,
+    NSToolbarDisplayMode, NSUserInterfaceLayoutOrientation, NSView, NSViewController, NSWindow, NSWindowStyleMask,
+    NSWindowToolbarStyle,
 };
 use objc2_foundation::{
     NSAttributedString, NSDictionary, NSMutableAttributedString, NSNotificationCenter, NSObjectProtocol, NSPoint,
@@ -24,7 +25,7 @@ use splat_i18n::{t, tf};
 
 use super::WindowController;
 use super::agent_choices::AgentChoices;
-use super::document_area::DocumentArea;
+use super::panes::{Pane, Panes, Place};
 use crate::util::{item, ns, pin_edges, separator, submenu, symbol, symbol_button};
 
 const WINDOW_SIZE: NSSize = NSSize::new(1240.0, 780.0);
@@ -33,10 +34,6 @@ const MIN_WINDOW_SIZE: NSSize = NSSize::new(720.0, 440.0);
 const BADGE_INSET: f64 = 8.0;
 /// The height of the icon before a tab's title.
 const ICON_HEIGHT: f64 = 14.0;
-/// The priority that holds the share: above the split view's holding priority, below a drag of its divider.
-const SHARE_PRIORITY: f32 = 260.0;
-/// The narrowest a document gets beside another.
-const MIN_SIDE: f64 = 220.0;
 
 pub use ide_ui_common::window::{TabId, TabKind};
 #[cfg(feature = "selftest")]
@@ -49,8 +46,8 @@ pub struct Document {
     /// What the document shows, such as a file's path, so it opens once.
     pub key: Option<String>,
     pub view: Retained<NSView>,
-    /// `view` with the badge over it, which sit side by side with another document's.
-    host: Retained<NSView>,
+    /// `view` with the badge over it, which sits in a pane.
+    pub(super) host: Retained<NSView>,
     badge: Retained<NSBox>,
     badge_title: Retained<NSTextField>,
     badge_icon: Retained<NSImageView>,
@@ -147,6 +144,14 @@ impl Document {
         self.dirty.set(dirty);
     }
 
+    pub(super) fn dirty(&self) -> bool {
+        self.dirty.get()
+    }
+
+    pub(super) fn status_colour(&self) -> Option<Retained<NSColor>> {
+        self.status.borrow().clone()
+    }
+
     pub fn set_status(&self, color: Option<&NSColor>) {
         *self.status.borrow_mut() = color.map(objc2::Message::retain);
     }
@@ -163,7 +168,7 @@ impl Document {
 
     /// The small picture before the title of its tab: a file's icon, else a symbol of what it shows in the colour of
     /// its agent or worktree.
-    fn icon(&self) -> Option<Retained<NSImage>> {
+    pub(super) fn icon(&self) -> Option<Retained<NSImage>> {
         let tint = self.tint.borrow().clone();
         let path = self.key.as_deref().map(std::path::Path::new);
         let name = match self.kind {
@@ -200,8 +205,9 @@ impl Document {
         view.isDescendantOf(&self.host)
     }
 
-    /// Shows the badge, which names the document and closes it, while it is the second of two in its window tab.
-    fn set_badge(&self, shown: bool, focused: bool) {
+    /// Shows the badge, which names the document and closes it, while it is in front in a pane after the first and no
+    /// pane shows a tab bar.
+    pub(super) fn set_badge(&self, shown: bool, focused: bool) {
         self.badge.setHidden(!shown);
         let color = if focused {
             NSColor::labelColor()
@@ -235,7 +241,7 @@ impl Document {
     }
 
     /// The view to give the keyboard focus: the one that had it last, else the first in the document that takes it.
-    fn focus_target(&self) -> Option<Retained<NSView>> {
+    pub(super) fn focus_target(&self) -> Option<Retained<NSView>> {
         let remembered = self
             .focus
             .borrow()
@@ -284,7 +290,7 @@ fn badge(mtm: MainThreadMarker, close: &NSButton) -> (Retained<NSBox>, Retained<
     (plate, title, icon)
 }
 
-/// A window tab: its window and the documents it shows, left to right.
+/// A window tab: its window and the panes of the documents it shows.
 pub struct TabWindow {
     pub window: Retained<NSWindow>,
     split: Retained<NSSplitViewController>,
@@ -298,13 +304,9 @@ pub struct TabWindow {
     picture: Retained<NSImageView>,
     /// The documents' area and the notes over it.
     content: Retained<NSView>,
-    /// The left document's share of the width while there are two, which a resize keeps and only a drag changes.
-    ratio: Cell<f64>,
-    /// The constraints that hold the share and the documents' least width.
-    holding: RefCell<Vec<Retained<NSLayoutConstraint>>>,
-    area: Retained<DocumentArea>,
-    documents: RefCell<Vec<Rc<Document>>>,
-    focused: Cell<usize>,
+    pub(super) panes: Panes,
+    /// What the tab's controller is, for the panes' bars.
+    controller: Weak<WindowController>,
     /// The dot of the tab's state beside its title.
     status: Retained<NSImageView>,
     /// The watch that keeps the toolbar clear above the sidebar in full screen.
@@ -368,12 +370,10 @@ impl TabWindow {
         sidebar.setHoldingPriority(260.0);
 
         let content = NSView::new(mtm);
-        let area = DocumentArea::new(mtm);
-        area.setVertical(true);
-        area.setDividerStyle(NSSplitViewDividerStyle::Thin);
+        let area = NSView::new(mtm);
         content.addSubview(&area);
         area.setTranslatesAutoresizingMaskIntoConstraints(false);
-        // Below the title bar and the tab bar, which the content reaches under, so the badge of a second document shows.
+        // Below the title bar and the tab bar, which the content reaches under, so the panes' bars and badges show.
         for constraint in [
             area.topAnchor()
                 .constraintEqualToAnchor(&content.safeAreaLayoutGuide().topAnchor()),
@@ -383,6 +383,7 @@ impl TabWindow {
         ] {
             constraint.setActive(true);
         }
+        let panes = Panes::new(mtm, area);
         let content_controller = NSViewController::new(mtm);
         content_controller.setView(&content);
         let content_item = NSSplitViewItem::splitViewItemWithViewController(&content_controller);
@@ -409,7 +410,7 @@ impl TabWindow {
         };
         let mut toolbar_watch = super::full_screen::follow_frames(&[&content, &top], follow.clone());
         toolbar_watch.push(super::full_screen::follow_toolbar_window(&window, follow));
-        let tab = Rc::new(TabWindow {
+        Rc::new(TabWindow {
             window,
             split,
             sidebar,
@@ -418,39 +419,34 @@ impl TabWindow {
             slot,
             picture,
             content,
-            ratio: Cell::new(0.5),
-            holding: RefCell::new(Vec::new()),
-            area,
-            documents: RefCell::new(Vec::new()),
-            focused: Cell::new(0),
+            panes,
+            controller: Weak::from(controller),
             status,
             sidebar_watch,
             toolbar_watch,
-        });
-        TabWindow::follow_drags(&tab);
-        tab
+        })
     }
 
+    /// The documents, pane by pane, left to right and top to bottom.
     pub fn documents(&self) -> Vec<Rc<Document>> {
-        self.documents.borrow().clone()
+        self.panes.documents()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.documents.borrow().is_empty()
+        self.panes.all().iter().all(|pane| pane.count() == 0)
     }
 
     pub fn holds(&self, id: TabId) -> bool {
-        self.documents.borrow().iter().any(|doc| doc.id == id)
+        self.panes.of_document(id).is_some()
     }
 
     pub fn document(&self, id: TabId) -> Option<Rc<Document>> {
-        self.documents.borrow().iter().find(|doc| doc.id == id).cloned()
+        self.documents().into_iter().find(|doc| doc.id == id)
     }
 
-    /// The document commands act on: the one with the keyboard focus, else the one that had it last.
+    /// The document commands act on: the one in front in the active pane.
     pub fn focused(&self) -> Option<Rc<Document>> {
-        let documents = self.documents.borrow();
-        documents.get(self.focused.get()).or_else(|| documents.first()).cloned()
+        self.panes.active().front()
     }
 
     /// The area under the documents, where notes show.
@@ -458,159 +454,99 @@ impl TabWindow {
         &self.content
     }
 
-    /// Puts `document` at `index` of the documents, or last; two at most share a window tab.
-    pub fn insert(&self, document: Rc<Document>, index: Option<usize>) {
-        let count = self.documents.borrow().len();
-        let index = index.unwrap_or(count).min(count);
-        match self.documents.borrow().get(index) {
-            Some(after) => self.area.addSubview_positioned_relativeTo(
-                &document.host,
-                objc2_app_kit::NSWindowOrderingMode::Below,
-                Some(&after.host),
-            ),
-            None => self.area.addSubview(&document.host),
-        }
-        self.documents.borrow_mut().insert(index, document);
-        self.focused.set(index);
-        self.area.adjustSubviews();
-        if count == 1 {
-            self.set_share(0.5);
-        }
+    /// Puts `document` where `place` says and brings it to the front of its pane.
+    pub fn insert(&self, document: Rc<Document>, place: Place) {
+        self.panes.insert(document, place);
         self.refresh();
     }
 
-    /// Takes the document `id` out of the window tab.
+    /// Takes the document `id` out of the window tab; a pane left empty goes with it.
     pub fn remove(&self, id: TabId) -> Option<Rc<Document>> {
-        let index = self.documents.borrow().iter().position(|doc| doc.id == id)?;
-        let document = self.documents.borrow_mut().remove(index);
-        document.host.removeFromSuperview();
-        let focused = self.focused.get();
-        if focused >= index && focused > 0 {
-            self.focused.set(focused - 1);
-        }
-        self.hold_share();
-        self.area.adjustSubviews();
+        let document = self.panes.take(id);
         self.refresh();
-        Some(document)
+        document
     }
 
-    /// The left document's share of the width while there are two.
-    pub fn share(&self) -> Option<f64> {
-        let documents = self.documents.borrow();
-        let (Some(left), Some(_)) = (documents.first(), documents.get(1)) else {
-            return None;
-        };
-        let total = self.area.bounds().size.width;
-        (total > 1.0).then(|| (left.host.frame().size.width / total).clamp(0.1, 0.9))
-    }
-
-    /// Gives the left of two documents `share` of the width, which it keeps as the tab changes size.
-    pub fn set_share(&self, share: f64) {
-        self.ratio.set(share.clamp(0.1, 0.9));
-        self.hold_share();
-    }
-
-    /// Holds the left document at the kept share of the width, above the split view's own sizing, which shrinks one
-    /// side only, and below a drag of the divider.
-    fn hold_share(&self) {
-        for constraint in self.holding.borrow_mut().drain(..) {
-            constraint.setActive(false);
-        }
-        let documents = self.documents.borrow();
-        let (Some(left), Some(right)) = (documents.first(), documents.get(1)) else {
-            return;
-        };
-        let share = left
-            .host
-            .widthAnchor()
-            .constraintEqualToAnchor_multiplier(&self.area.widthAnchor(), self.ratio.get());
-        share.setPriority(SHARE_PRIORITY);
-        let mut holding = vec![share];
-        for side in [left, right] {
-            let least = side.host.widthAnchor().constraintGreaterThanOrEqualToConstant(MIN_SIDE);
-            least.setPriority(SHARE_PRIORITY + 10.0);
-            holding.push(least);
-        }
-        for constraint in &holding {
-            constraint.setActive(true);
-        }
-        *self.holding.borrow_mut() = holding;
-    }
-
-    /// Takes the share the user drags the divider to.
-    fn follow_drags(tab: &Rc<TabWindow>) {
-        let dragged = Rc::downgrade(tab);
-        tab.area.on_drag(move || {
-            if let Some(tab) = dragged.upgrade()
-                && let Some(share) = tab.share()
-            {
-                tab.set_share(share);
-            }
-        });
-    }
-
-    /// Makes the document at `index` the one commands act on, as the keyboard focus moves into it.
-    fn set_focused(&self, index: usize) {
-        if self.focused.replace(index) != index {
-            self.refresh();
-        }
-    }
-
-    /// Follows the keyboard focus: the document that has it becomes the focused one and remembers where it was.
+    /// Follows the keyboard focus: the pane that has it becomes the active one, and the document remembers where it
+    /// was.
     pub fn follow_focus(&self) {
         let responder = self.window.firstResponder();
         let Some(view) = responder.and_then(|r| Retained::downcast::<NSView>(r).ok()) else {
             return;
         };
-        let found = self.documents.borrow().iter().position(|doc| doc.holds(&view));
-        if let Some(index) = found {
-            if let Some(doc) = self.documents.borrow().get(index) {
-                *doc.focus.borrow_mut() = Some(Weak::from(&*view));
-            }
-            self.set_focused(index);
+        let Some(pane) = self.panes.all().into_iter().find(|pane| pane.holds_view(&view)) else {
+            return;
+        };
+        if let Some(doc) = pane.front().filter(|doc| doc.holds(&view)) {
+            *doc.focus.borrow_mut() = Some(Weak::from(&*view));
+        }
+        if !Rc::ptr_eq(&self.panes.active(), &pane) {
+            self.panes.set_active(&pane);
+            self.refresh();
         }
     }
 
-    /// Makes the document `id` the one commands act on, without moving the keyboard focus.
+    /// Makes the document `id` the one commands act on, in front of its pane, without moving the keyboard focus.
     pub fn mark_focused(&self, id: TabId) {
-        let found = self.documents.borrow().iter().position(|doc| doc.id == id);
-        if let Some(index) = found {
-            self.set_focused(index);
+        if let Some(pane) = self.panes.of_document(id) {
+            pane.select(id);
+            self.panes.set_active(&pane);
+            self.refresh();
         }
     }
 
-    /// Gives the keyboard focus to the document `id`.
+    /// Gives the keyboard focus to the document `id`, bringing it to the front of its pane.
     pub fn activate(&self, id: TabId) {
-        let found = self.documents.borrow().iter().position(|doc| doc.id == id);
-        let Some(index) = found else { return };
-        self.set_focused(index);
-        let target = self.documents.borrow().get(index).and_then(|doc| doc.focus_target());
-        match target {
+        let Some(pane) = self.panes.of_document(id) else { return };
+        pane.select(id);
+        self.activate_pane(&pane);
+    }
+
+    /// Makes `pane` the active one and gives the keyboard focus to its document in front.
+    pub(super) fn activate_pane(&self, pane: &Rc<Pane>) {
+        self.panes.set_active(pane);
+        self.refresh();
+        match pane.focus_target() {
             Some(view) => self.window.makeFirstResponder(Some(&view)),
             None => self.window.makeFirstResponder(None),
         };
     }
 
-    /// Gives the keyboard focus to the other document of two.
-    pub fn focus_other(&self) {
-        let documents = self.documents();
-        if documents.len() < 2 {
+    /// Gives the keyboard focus to the next pane that shows, after the last the first.
+    pub fn focus_next_pane(&self) {
+        if self.panes.is_zoomed() {
+            self.panes.toggle_zoom(&self.panes.active());
+        }
+        let panes: Vec<Rc<Pane>> = self
+            .panes
+            .all()
+            .into_iter()
+            .filter(|pane| pane.companion_of.get().is_none() || pane.count() > 0)
+            .collect();
+        if panes.len() < 2 {
             return;
         }
-        let next = (self.focused.get() + 1) % documents.len();
-        self.activate(documents[next].id);
+        let active = self.panes.active();
+        let index = panes.iter().position(|pane| Rc::ptr_eq(pane, &active)).unwrap_or(0);
+        self.refresh();
+        let next = (1..=panes.len())
+            .map(|step| &panes[(index + step) % panes.len()])
+            .find(|pane| !pane.host.isHidden());
+        if let Some(next) = next.cloned() {
+            self.activate_pane(&next);
+        }
     }
 
-    /// Says on the tab what the focused document is and whether a document has unsaved changes, and shows the
-    /// badge of the second document while two share the tab.
+    /// Says on the tab what the focused document is and whether a document has unsaved changes, and shows the panes'
+    /// bars or the badges.
     pub fn refresh(&self) {
-        let documents = self.documents.borrow();
-        let focused = self.focused.get().min(documents.len().saturating_sub(1));
-        let two = documents.len() > 1;
-        for (index, doc) in documents.iter().enumerate() {
-            doc.set_badge(two && index > 0, index == focused);
+        if let Some(controller) = self.controller.load() {
+            self.panes.settle(&controller);
         }
-        let Some(doc) = documents.get(focused) else { return };
+        let documents = self.documents();
+        let Some(doc) = self.focused().or_else(|| documents.first().cloned()) else {
+            return;
+        };
         let title = doc.title();
         let tab = self.window.tab();
         let font = NSFont::systemFontOfSize(NSFont::systemFontSize());

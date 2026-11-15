@@ -258,6 +258,8 @@ fn view_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
                 Some(sel!(ideShowPreview:)),
                 &keys.get("view.preview"),
             ),
+            separator(mtm),
+            pane_menu(mtm, keys),
             item(
                 mtm,
                 t("Seitenleiste ein-/ausblenden"),
@@ -399,6 +401,30 @@ fn code_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
     .0
 }
 
+/// The commands on the panes of a window tab (E145).
+fn pane_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
+    let entry = |title: &str, action, command: &str| item(mtm, title, Some(action), &keys.get(command));
+    submenu(
+        mtm,
+        t("Bereiche"),
+        vec![
+            entry(t("Rechts teilen"), sel!(ideSplitRight:), "pane.splitRight"),
+            entry(t("Unten teilen"), sel!(ideSplitBelow:), "pane.splitBelow"),
+            separator(mtm),
+            entry(t("Nächster Tab im Bereich"), sel!(ideNextPaneTab:), "pane.nextTab"),
+            entry(
+                t("Vorheriger Tab im Bereich"),
+                sel!(idePreviousPaneTab:),
+                "pane.previousTab",
+            ),
+            entry(t("Bereich maximieren"), sel!(ideZoomPane:), "pane.zoom"),
+            separator(mtm),
+            entry(t("Bereich schließen"), sel!(ideClosePane:), "pane.close"),
+        ],
+    )
+    .0
+}
+
 fn window_menu(mtm: MainThreadMarker, keys: &Keys) -> (Retained<NSMenuItem>, Retained<NSMenu>) {
     submenu(
         mtm,
@@ -421,7 +447,7 @@ fn window_menu(mtm: MainThreadMarker, keys: &Keys) -> (Retained<NSMenuItem>, Ret
             ),
             item(
                 mtm,
-                t("Zum Dokument daneben"),
+                t("Zum nächsten Bereich"),
                 Some(sel!(ideFocusNextPanel:)),
                 &keys.get("window.nextPanel"),
             ),

@@ -65,6 +65,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | panel | a part of the window beside the editor, such as the Git panel |
 | Seitenleiste | sidebar | files, agents, Git, CI on the left |
 | Vorschau | preview | a tab opened by a single click, replaced by the next one; also the rendered view of a Markdown, diagram or PDF file |
+| Bereich | pane | a part of a window tab beside or above another, holding documents behind one another, with its own tab bar while one pane holds more than one document (E145) |
 | Aktivität | Activity | the list of running processes, sessions and tasks |
 | Projekt / Ordner | project / folder | the folder a window shows |
 | Vertrauen, vertrauen | trust | the user allows a folder to run what it configures |
@@ -232,6 +233,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | لوحة |
 | Seitenleiste | الشريط الجانبي |
 | Vorschau | معاينة |
+| Bereich | جزء |
 | Aktivität | النشاط |
 | Projekt / Ordner | مشروع / مجلد |
 | Vertrauen, vertrauen | الثقة، الوثوق (يثق) |
@@ -391,6 +393,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | tauler |
 | Seitenleiste | barra lateral |
 | Vorschau | previsualització |
+| Bereich | àrea |
 | Aktivität | Activitat |
 | Projekt / Ordner | projecte / carpeta |
 | Vertrauen, vertrauen | confiança, confiar (“Confia‑hi”) |
@@ -549,6 +552,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | podokno |
 | Seitenleiste | boční panel |
 | Vorschau | náhled |
+| Bereich | oblast |
 | Aktivität | Aktivita |
 | Projekt / Ordner | projekt / složka |
 | Vertrauen, vertrauen | důvěra, důvěřovat |
@@ -705,6 +709,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | panel |
 | Seitenleiste | indholdsoversigt |
 | Vorschau | eksempel (eksempelfane) |
+| Bereich | rude |
 | Aktivität | Aktivitet |
 | Projekt / Ordner | projekt / mappe |
 | Vertrauen, vertrauen | tillid, stole på (betroet mappe) |
@@ -864,6 +869,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | πλαίσιο |
 | Seitenleiste | πλαϊνή στήλη |
 | Vorschau | προεπισκόπηση |
+| Bereich | περιοχή |
 | Aktivität | Δραστηριότητα |
 | Projekt / Ordner | έργο / φάκελος |
 | Vertrauen, vertrauen | εμπιστοσύνη, εμπιστεύομαι |
@@ -1023,6 +1029,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | panel |
 | Seitenleiste | barra lateral |
 | Vorschau | vista previa |
+| Bereich | área |
 | Aktivität | Actividad |
 | Projekt / Ordner | proyecto / carpeta |
 | Vertrauen, vertrauen | confianza, confiar en (carpeta de confianza) |
@@ -1183,6 +1190,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | paneeli |
 | Seitenleiste | sivupalkki |
 | Vorschau | esikatselu |
+| Bereich | ruutu |
 | Aktivität | Toiminta |
 | Projekt / Ordner | projekti / kansio |
 | Vertrauen, vertrauen | luottamus, luottaa (button "Luota") |
@@ -1340,6 +1348,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | panneau |
 | Seitenleiste | barre latérale |
 | Vorschau | aperçu (onglet d’aperçu) |
+| Bereich | zone |
 | Aktivität | Activité |
 | Projekt / Ordner | projet / dossier |
 | Vertrauen, vertrauen | confiance, faire confiance (dossier de confiance; not trusted: non approuvé) |
@@ -1501,6 +1510,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | חלונית |
 | Seitenleiste | סרגל צד |
 | Vorschau | תצוגה מקדימה |
+| Bereich | אזור |
 | Aktivität | פעילות |
 | Projekt / Ordner | פרויקט / תיקיה |
 | Vertrauen, vertrauen | אמון, לתת אמון (תיקיה מהימנה) |
@@ -1658,6 +1668,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | पैनल |
 | Seitenleiste | साइडबार |
 | Vorschau | प्रीव्यू |
+| Bereich | फलक |
 | Aktivität | ऐक्टिविटी |
 | Projekt / Ordner | प्रोजेक्ट / फ़ोल्डर |
 | Vertrauen, vertrauen | भरोसा, भरोसा करना (भरोसेमंद फ़ोल्डर) |
@@ -1816,6 +1827,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | okno |
 | Seitenleiste | rubni stupac |
 | Vorschau | pregled |
+| Bereich | područje |
 | Aktivität | Aktivnost |
 | Projekt / Ordner | projekt / mapa |
 | Vertrauen, vertrauen | povjerenje, vjerovati (trusted: pouzdan) |
@@ -1976,6 +1988,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | panel |
 | Seitenleiste | oldalsáv |
 | Vorschau | előnézet |
+| Bereich | ablaktábla |
 | Aktivität | Tevékenység |
 | Projekt / Ordner | projekt / mappa |
 | Vertrauen, vertrauen | bizalom, megbízik (megbízható mappa) |
@@ -2134,6 +2147,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | panel |
 | Seitenleiste | bar samping |
 | Vorschau | pratinjau |
+| Bereich | area |
 | Aktivität | Aktivitas |
 | Projekt / Ordner | proyek / folder |
 | Vertrauen, vertrauen | kepercayaan, memercayai (folder tepercaya; button: Percayai) |
@@ -2292,6 +2306,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | riquadro (pannello is the tab) |
 | Seitenleiste | barra laterale |
 | Vorschau | anteprima |
+| Bereich | area |
 | Aktivität | Attività |
 | Projekt / Ordner | progetto / cartella |
 | Vertrauen, vertrauen | fiducia, fidarsi di (cartella attendibile) |
@@ -2451,6 +2466,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | パネル |
 | Seitenleiste | サイドバー |
 | Vorschau | プレビュー |
+| Bereich | ペイン |
 | Aktivität | アクティビティ |
 | Projekt / Ordner | プロジェクト / フォルダ |
 | Vertrauen, vertrauen | 信頼, 信頼する (信頼済みのフォルダ) |
@@ -2609,6 +2625,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | 패널 |
 | Seitenleiste | 사이드바 |
 | Vorschau | 미리보기 |
+| Bereich | 분할 창 |
 | Aktivität | 활동 |
 | Projekt / Ordner | 프로젝트 / 폴더 |
 | Vertrauen, vertrauen | 신뢰, 신뢰하다 (신뢰하는 폴더) |
@@ -2766,6 +2783,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | panel |
 | Seitenleiste | bar sisi |
 | Vorschau | pratonton |
+| Bereich | kawasan |
 | Aktivität | Aktiviti |
 | Projekt / Ordner | projek / folder |
 | Vertrauen, vertrauen | percaya, mempercayai (folder yang dipercayai; button: Percaya) |
@@ -2924,6 +2942,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | paneel |
 | Seitenleiste | navigatiekolom |
 | Vorschau | voorvertoning |
+| Bereich | deelvenster |
 | Aktivität | Activiteit |
 | Projekt / Ordner | project / map |
 | Vertrauen, vertrauen | vertrouwen (vertrouwde map; button: Vertrouw) |
@@ -3082,6 +3101,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | panel |
 | Seitenleiste | sidepanel |
 | Vorschau | forhåndsvisning |
+| Bereich | rute |
 | Aktivität | Aktivitet |
 | Projekt / Ordner | prosjekt / mappe |
 | Vertrauen, vertrauen | tillit, stole på (mappe du stoler på; button: Stol på) |
@@ -3240,6 +3260,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | panel |
 | Seitenleiste | pasek boczny |
 | Vorschau | podgląd |
+| Bereich | okienko |
 | Aktivität | Aktywność |
 | Projekt / Ordner | projekt / folder |
 | Vertrauen, vertrauen | zaufanie, ufać (zaufany folder; button: Zaufaj) |
@@ -3399,6 +3420,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | painel |
 | Seitenleiste | barra lateral |
 | Vorschau | pré-visualização |
+| Bereich | área |
 | Aktivität | Atividade |
 | Projekt / Ordner | projeto / pasta |
 | Vertrauen, vertrauen | confiança, confiar (pasta confiável; button: Confiar) |
@@ -3558,6 +3580,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | painel |
 | Seitenleiste | barra lateral |
 | Vorschau | pré-visualização |
+| Bereich | área |
 | Aktivität | Atividade |
 | Projekt / Ordner | projeto / pasta |
 | Vertrauen, vertrauen | confiança, confiar (pasta de confiança; button: Confiar) |
@@ -3717,6 +3740,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | panou |
 | Seitenleiste | bară laterală |
 | Vorschau | previzualizare |
+| Bereich | secțiune |
 | Aktivität | Activitate |
 | Projekt / Ordner | proiect / dosar |
 | Vertrauen, vertrauen | încredere, a avea încredere în |
@@ -3876,6 +3900,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | панель |
 | Seitenleiste | боковое меню |
 | Vorschau | просмотр |
+| Bereich | область |
 | Aktivität | Активность |
 | Projekt / Ordner | проект / папка |
 | Vertrauen, vertrauen | доверие, доверять |
@@ -4035,6 +4060,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | panel |
 | Seitenleiste | postranný panel |
 | Vorschau | náhľad |
+| Bereich | oblasť |
 | Aktivität | Aktivita |
 | Projekt / Ordner | projekt / priečinok |
 | Vertrauen, vertrauen | dôvera, dôverovať |
@@ -4195,6 +4221,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | podokno |
 | Seitenleiste | stranska vrstica |
 | Vorschau | predogled |
+| Bereich | območje |
 | Aktivität | Aktivnost |
 | Projekt / Ordner | projekt / mapa |
 | Vertrauen, vertrauen | zaupanje, zaupati |
@@ -4353,6 +4380,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | panel |
 | Seitenleiste | sidofält |
 | Vorschau | förhandsvisning |
+| Bereich | ruta |
 | Aktivität | Aktivitet |
 | Projekt / Ordner | projekt / mapp |
 | Vertrauen, vertrauen | förtroende, lita på |
@@ -4512,6 +4540,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | แผง |
 | Seitenleiste | แถบด้านข้าง |
 | Vorschau | แสดงตัวอย่าง |
+| Bereich | บานหน้าต่าง |
 | Aktivität | กิจกรรม |
 | Projekt / Ordner | โปรเจ็กต์ / โฟลเดอร์ |
 | Vertrauen, vertrauen | ความเชื่อถือ, เชื่อถือ |
@@ -4672,6 +4701,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | panel |
 | Seitenleiste | kenar çubuğu |
 | Vorschau | önizleme |
+| Bereich | bölme |
 | Aktivität | Etkinlik |
 | Projekt / Ordner | proje / klasör |
 | Vertrauen, vertrauen | güven, güvenmek |
@@ -4830,6 +4860,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | панель |
 | Seitenleiste | бічна панель |
 | Vorschau | попередній перегляд |
+| Bereich | область |
 | Aktivität | Активність |
 | Projekt / Ordner | проєкт / папка |
 | Vertrauen, vertrauen | довіра, довіряти |
@@ -4988,6 +5019,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | khung |
 | Seitenleiste | thanh bên |
 | Vorschau | xem trước |
+| Bereich | ngăn |
 | Aktivität | Hoạt động |
 | Projekt / Ordner | dự án / thư mục |
 | Vertrauen, vertrauen | sự tin cậy, tin cậy |
@@ -5145,6 +5177,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | 面板 |
 | Seitenleiste | 边栏 |
 | Vorschau | 预览 |
+| Bereich | 窗格 |
 | Aktivität | 活动 |
 | Projekt / Ordner | 项目 / 文件夹 |
 | Vertrauen, vertrauen | 信任 |
@@ -5303,6 +5336,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | 面板 |
 | Seitenleiste | 側邊欄 |
 | Vorschau | 預覽 |
+| Bereich | 窗格 |
 | Aktivität | 活動 |
 | Projekt / Ordner | 專案 / 檔案夾 |
 | Vertrauen, vertrauen | 信任 |

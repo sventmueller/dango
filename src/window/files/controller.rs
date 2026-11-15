@@ -240,7 +240,12 @@ impl FileTreeSource {
             }
             Effect::OpenBeside(path) => {
                 if let Some(controller) = controller {
-                    controller.open_file_beside(&path);
+                    controller.open_file_beside(&path, crate::window::panes::Side::Right);
+                }
+            }
+            Effect::OpenBelow(path) => {
+                if let Some(controller) = controller {
+                    controller.open_file_beside(&path, crate::window::panes::Side::Below);
                 }
             }
             Effect::OpenAsPreview(path) => {

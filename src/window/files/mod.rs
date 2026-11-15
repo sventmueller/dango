@@ -2,6 +2,7 @@
 //! draws, the controller carries out (E98).
 
 mod controller;
+mod pane_choice;
 use ide_project::files_panel as model;
 mod view;
 

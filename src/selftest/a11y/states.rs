@@ -313,7 +313,7 @@ fn browser(root: PathBuf, ok: bool) {
     check("the browser tab loads the page", ok, "");
     walk("the browser tab misses nothing");
     let Some(controller) = window_of(&root) else { return };
-    controller.open_file_beside(&root.join("notes.txt"));
+    controller.open_file_beside(&root.join("notes.txt"), crate::window::panes::Side::Right);
     when(root, |c| c.window_tab_ids().iter().any(|ids| ids.len() == 2), beside);
 }
 

@@ -225,7 +225,7 @@ fn beside(root: PathBuf) {
     }
     let a = tab_of(&controller, &root, "a.rs");
     let windows = controller.tab_windows().len();
-    controller.open_file_beside(&root.join("d.rs"));
+    controller.open_file_beside(&root.join("d.rs"), crate::window::panes::Side::Right);
     let d = tab_of(&controller, &root, "d.rs");
     check(
         "a file opens beside the one in front, in its tab",
@@ -278,12 +278,20 @@ fn closing_side(root: PathBuf) {
     );
     let a = tab_of(&controller, &root, "a.rs");
     select(&controller, a);
-    controller.open_file_beside(&root.join("d.rs"));
+    controller.open_file_beside(&root.join("d.rs"), crate::window::panes::Side::Right);
     if let Some(a) = a {
         controller.set_share_of(a, SHARE);
     }
     let replayed = replay_agent(&controller, SESSION) && has_session(&controller, SESSION);
-    check("an AI thread opens in a tab of its own", replayed, shown(&controller));
+    check(
+        "an AI thread opened in a split tab joins its active pane, beside a.rs's other pane (E145)",
+        replayed
+            && controller
+                .window_tabs()
+                .iter()
+                .any(|docs| docs.len() == 3 && docs[0] == "a.rs" && docs[2] == "d.rs"),
+        shown(&controller),
+    );
     helpers::after(PAUSE, move || closing(root));
 }
 
@@ -325,7 +333,9 @@ fn reopen(root: PathBuf, expected: Vec<Vec<String>>, share: Option<f64>) {
                 && layout.has(&ide_core::layout::Tab::Agent {
                     session: SESSION.into(),
                 })
-                && layout.tabs.iter().any(|tab| tab.documents.len() == 2)
+                && layout.tabs.iter().any(
+                    |tab| matches!(&tab.root, ide_core::layout::Node::Split { children, .. } if children.len() == 2),
+                )
         }),
         format!("{saved:?}"),
     );
@@ -342,8 +352,11 @@ fn restored(root: PathBuf, expected: Vec<Vec<String>>, share: Option<f64>) {
     let Some(controller) = window_of(&root) else { return };
     let tabs = controller.window_tabs();
     check(
-        "the tabs come back in their order when the folder opens again, a.rs with d.rs beside it",
-        tabs == expected && tabs.iter().any(|docs| docs == &["a.rs", "d.rs"]),
+        "the tabs come back in their order when the folder opens again, a.rs and the thread with d.rs beside them",
+        tabs == expected
+            && tabs
+                .iter()
+                .any(|docs| docs.len() == 3 && docs[0] == "a.rs" && docs[2] == "d.rs"),
         format!("{} after {expected:?}", shown(&controller)),
     );
     check(

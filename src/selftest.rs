@@ -29,6 +29,7 @@ mod markdown;
 mod markdown_commands;
 mod markdown_editor;
 mod panels;
+mod panes;
 mod paste_cli;
 mod preview;
 mod tabs;

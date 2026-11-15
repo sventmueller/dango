@@ -251,7 +251,7 @@ impl WindowController {
     /// Moves the keyboard focus to the other document of the tab in front, as the menu command does.
     pub fn focus_next_panel(&self) {
         if let Some(tab) = self.current_tab() {
-            tab.focus_other();
+            tab.focus_next_pane();
         }
     }
 

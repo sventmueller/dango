@@ -10,13 +10,14 @@ use objc2::rc::Retained;
 use objc2_app_kit::{NSColor, NSView, NSWindow, NSWindowOrderingMode, NSWindowTabGroup};
 use objc2_foundation::NSNotification;
 
+use super::panes::{Pane, Place, Side};
 use super::tabs::{Document, TabWindow};
 use super::{TabId, TabKind, WindowController, layout, show_tab_bar};
 
 impl WindowController {
-    /// Shows `view` as a document of `kind` and brings it to the front: in a window tab of its own, or in the tab
-    /// in front if that one is empty, or beside a document for `open_beside`. `key` names
-    /// what it shows, so `select_tab` finds it again. The document's number.
+    /// Shows `view` as a document of `kind` and brings it to the front: where `open_beside` or `open_into` say, else
+    /// in the active pane of the tab in front if that one is split or empty, else in a window tab of its own (E145).
+    /// `key` names what it shows, so `select_tab` finds it again. The document's number.
     pub fn add_tab(&self, kind: TabKind, key: Option<String>, title: &str, view: Retained<NSView>) -> TabId {
         let document = self.new_document(kind, key, title, view);
         let id = document.id;
@@ -33,14 +34,15 @@ impl WindowController {
         let old = self.documents().into_iter().find(|doc| doc.is_preview());
         if let Some(old) = old {
             let tab = self.tab_of_document(old.id);
-            match tab {
-                Some(tab) if crate::editor::may_close(self, old.id) => {
-                    let index = tab.documents().iter().position(|doc| doc.id == old.id);
-                    self.forget_document(&tab, old.id);
+            let pane = tab.as_ref().and_then(|tab| tab.panes.of_document(old.id));
+            match (tab, pane) {
+                (Some(tab), Some(pane)) if crate::editor::may_close(self, old.id) => {
+                    let index = pane.documents().iter().position(|doc| doc.id == old.id);
                     let document = self.new_document(kind, key, title, view);
                     document.set_preview(true);
                     let id = document.id;
-                    tab.insert(document, index);
+                    tab.insert(document, Place::Into(pane, index));
+                    self.forget_document(&tab, old.id);
                     self.select(&tab);
                     crate::session::changed();
                     return id;
@@ -116,23 +118,60 @@ impl WindowController {
         }
     }
 
-    /// Runs `open`, which opens a document, so that the document shows beside the document `anchor` in its tab.
-    pub fn open_beside(&self, anchor: TabId, open: impl FnOnce()) {
-        let before = self.ivars().beside.replace(Some(anchor));
-        open();
-        self.ivars().beside.set(before);
+    /// Runs `open`, which opens the preview of the document `anchor`, so that it shows in a new pane right of it,
+    /// which follows that document and does not count as a split (E59).
+    pub fn open_companion(&self, anchor: TabId, open: impl FnOnce()) {
+        self.open_at(
+            Place::Beside {
+                anchor,
+                side: Side::Right,
+                companion: true,
+            },
+            open,
+        );
     }
 
-    /// Opens `path` beside the document in front, as the folder tree's "Daneben öffnen" does; a file already open
-    /// comes to the front where it is.
-    pub fn open_file_beside(&self, path: &Path) {
+    /// Runs `open`, which opens a document, so that the document shows in `pane`.
+    pub(super) fn open_into(&self, pane: &Rc<Pane>, open: impl FnOnce()) {
+        self.open_at(Place::Into(pane.clone(), None), open);
+    }
+
+    pub(super) fn open_at(&self, place: Place, open: impl FnOnce()) {
+        let before = self.ivars().target.replace(Some(place));
+        open();
+        *self.ivars().target.borrow_mut() = before;
+    }
+
+    /// Opens `path` in a new pane at `side` of the document in front, as the folder tree's "Daneben öffnen" and
+    /// "Darunter öffnen" do; a file already open comes to the front where it is.
+    pub fn open_file_beside(&self, path: &Path, side: Side) {
         if let Some(id) = self.tab_with_key(&path.to_string_lossy()) {
             self.select_tab_by_id(id);
             return;
         }
         match self.selected_tab() {
-            Some(anchor) => self.open_beside(anchor, || self.open_file(path)),
+            Some(anchor) => self.open_at(
+                Place::Beside {
+                    anchor,
+                    side,
+                    companion: false,
+                },
+                || self.open_file(path),
+            ),
             None => self.open_file(path),
+        }
+    }
+
+    /// Opens `path` in the pane numbered `number` of the tab in front, or in a window tab of its own without one.
+    pub fn open_file_in_pane(&self, path: &Path, number: Option<usize>) {
+        if let Some(id) = self.tab_with_key(&path.to_string_lossy()) {
+            self.select_tab_by_id(id);
+            return;
+        }
+        let pane = number.and_then(|number| self.current_tab()?.panes.by_number(number));
+        match pane {
+            Some(pane) => self.open_into(&pane, || self.open_file(path)),
+            None => self.in_window_tab_of_its_own(|| self.open_file(path)),
         }
     }
 
@@ -184,7 +223,7 @@ impl WindowController {
 
     /// Closes the document `id` without asking; its window tab goes with it when it was the tab's only one, and the
     /// window with its last tab.
-    fn close_tab_now(&self, id: TabId) {
+    pub(super) fn close_tab_now(&self, id: TabId) {
         let Some(tab) = self.tab_of_document(id) else { return };
         self.forget_document(&tab, id);
         if tab.is_empty() {
@@ -216,7 +255,7 @@ impl WindowController {
         }
     }
 
-    /// The documents' numbers, tab by tab in the order of the tab bar, left to right in a tab.
+    /// The documents' numbers, tab by tab in the order of the tab bar, pane by pane in a tab.
     pub fn tab_ids(&self) -> Vec<TabId> {
         self.documents().iter().map(|doc| doc.id).collect()
     }
@@ -296,6 +335,15 @@ impl WindowController {
         self.ivars().tabs.borrow().iter().find(|tab| tab.holds(id)).cloned()
     }
 
+    fn tab_of_pane(&self, pane: &Rc<Pane>) -> Option<Rc<TabWindow>> {
+        self.ivars()
+            .tabs
+            .borrow()
+            .iter()
+            .find(|tab| tab.panes.all().iter().any(|own| Rc::ptr_eq(own, pane)))
+            .cloned()
+    }
+
     fn find_document(&self, id: TabId) -> Option<(Rc<TabWindow>, Rc<Document>)> {
         let tab = self.tab_of_document(id)?;
         let document = tab.document(id)?;
@@ -354,25 +402,36 @@ impl WindowController {
 
     /// Shows `document` where `add_tab` says.
     fn place(&self, document: Rc<Document>) {
-        let anchor = self.ivars().beside.get();
-        if let Some(anchor) = anchor
-            && let Some((tab, _)) = self.find_document(anchor)
-        {
-            self.put_beside(&tab, anchor, document);
+        let target = self.ivars().target.borrow().clone();
+        let found = match &target {
+            Some(Place::Beside { anchor, .. }) => self.tab_of_document(*anchor),
+            Some(Place::Into(pane, _)) => self.tab_of_pane(pane),
+            _ => None,
+        };
+        if let (Some(tab), Some(place)) = (found, target) {
+            let anchor = match &place {
+                Place::Beside { anchor, .. } => Some(*anchor),
+                _ => None,
+            };
+            tab.insert(document, place);
+            if let Some(anchor) = anchor {
+                tab.mark_focused(anchor);
+            }
+            self.select(&tab);
             crate::session::changed();
             return;
         }
         let current = self.current_tab();
         if let Some(tab) = &current
-            && tab.is_empty()
+            && (tab.is_empty() || tab.panes.is_split())
         {
-            tab.insert(document, None);
+            tab.insert(document, Place::Active);
             self.select(tab);
             crate::session::changed();
             return;
         }
         let tab = self.new_tab_window();
-        tab.insert(document, None);
+        tab.insert(document, Place::Active);
         if let Some(current) = &current {
             current
                 .window
@@ -382,20 +441,26 @@ impl WindowController {
         crate::session::changed();
     }
 
-    /// Puts `document` right of the document `anchor` in `tab`; a document there before gets a tab of its own.
-    fn put_beside(&self, tab: &Rc<TabWindow>, anchor: TabId, document: Rc<Document>) {
-        let others: Vec<Rc<Document>> = tab.documents().into_iter().filter(|doc| doc.id != anchor).collect();
-        for other in others {
-            tab.remove(other.id);
-            let own = self.new_tab_window();
-            own.insert(other, None);
-            tab.window
-                .addTabbedWindow_ordered(&own.window, NSWindowOrderingMode::Above);
-            own.refresh();
+    /// Runs `open`, which opens a document, so that it gets a window tab of its own also while the tab in front is
+    /// split.
+    pub(super) fn in_window_tab_of_its_own(&self, open: impl FnOnce()) {
+        let tab = self.new_tab_after_current();
+        let first = tab.panes.active();
+        self.open_into(&first, open);
+        if tab.is_empty() {
+            tab.window.close();
         }
-        tab.insert(document, None);
-        tab.mark_focused(anchor);
-        self.select(tab);
+    }
+
+    /// A new window tab after the one in front, in its tab group, for the layout to fill.
+    pub(super) fn new_tab_after_current(&self) -> Rc<TabWindow> {
+        let tab = self.new_tab_window();
+        if let Some(current) = self.current_tab() {
+            current
+                .window
+                .addTabbedWindow_ordered(&tab.window, NSWindowOrderingMode::Above);
+        }
+        tab
     }
 
     /// Brings `tab` to the front of its tab group and gives it the sidebar.

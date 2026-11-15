@@ -28,3 +28,15 @@ impl FileTree {
         }
     }
 }
+
+impl FileTree {
+    /// The titles of the menu an Option-Shift click on a file opens, for the panes `panes`.
+    pub fn pane_menu_titles(&self, panes: &[(usize, Option<String>)]) -> Vec<String> {
+        let menu = self.source.pane_menu(panes);
+        menu.itemArray()
+            .iter()
+            .filter(|item| !item.isSeparatorItem())
+            .map(|item| item.title().to_string())
+            .collect()
+    }
+}

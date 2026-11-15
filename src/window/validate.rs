@@ -1,5 +1,6 @@
 //! Which of the window's menu commands work right now; unavailable ones show greyed out (E101).
 
+use objc2::runtime::Sel;
 use objc2::{DefinedClass, sel};
 use objc2_app_kit::{NSControlStateValueOff, NSControlStateValueOn, NSMenuItem};
 
@@ -73,9 +74,27 @@ impl WindowController {
                 .and_then(|window| window.tabbedWindows())
                 .is_some_and(|tabbed| tabbed.count() > 1);
         }
-        if action == Some(sel!(ideFocusNextPanel:)) {
-            return self.current_tab().is_some_and(|tab| tab.documents().len() > 1);
+        if let Some(answer) = self.validate_pane_command(action) {
+            return answer;
         }
         true
+    }
+}
+
+impl WindowController {
+    /// Whether a command on the panes of the tab in front can run: moving through panes needs two, closing one needs
+    /// two or a document in it, filling the tab with one needs two, moving through a pane's tabs needs two in it.
+    fn validate_pane_command(&self, action: Option<Sel>) -> Option<bool> {
+        let action = action?;
+        let (panes, documents, zoomed) = self.pane_commands().unwrap_or((0, 0, false));
+        let answer = match action {
+            a if a == sel!(ideFocusNextPanel:) => panes > 1,
+            a if a == sel!(ideClosePane:) => panes > 1 || documents > 0,
+            a if a == sel!(ideZoomPane:) => panes > 1 || zoomed,
+            a if a == sel!(ideNextPaneTab:) || a == sel!(idePreviousPaneTab:) => documents > 1,
+            a if a == sel!(ideSplitRight:) || a == sel!(ideSplitBelow:) => panes > 0,
+            _ => return None,
+        };
+        Some(answer)
     }
 }

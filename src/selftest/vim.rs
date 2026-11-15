@@ -179,7 +179,7 @@ fn control_keys(view: &EditorTextView) {
     let redone = text(view);
     check("⌃R redoes in Normal mode", redone != before, format!("{redone:?}"));
     if let Some(controller) = window::for_project(&root()) {
-        controller.open_file_beside(&root().join(OTHER));
+        controller.open_file_beside(&root().join(OTHER), crate::window::panes::Side::Right);
     }
     let Some(main) = editor_of(FILE) else {
         return finish(SCENARIO);

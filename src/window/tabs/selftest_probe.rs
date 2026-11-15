@@ -13,11 +13,20 @@ impl Document {
 }
 
 impl TabWindow {
+    /// The share of the first of two parts side by side.
+    pub fn share(&self) -> Option<f64> {
+        self.panes.first_share()
+    }
+
+    /// Gives the first of two parts side by side `share` of the width, which it keeps as the tab changes size.
+    pub fn set_share(&self, share: f64) {
+        self.panes.set_first_share(share);
+    }
+
     /// What the documents' badges say, left to right: the name and the close button's label of those that show.
     pub fn badges(&self) -> Vec<Option<(String, String)>> {
         use objc2_app_kit::NSAccessibility;
-        self.documents
-            .borrow()
+        self.documents()
             .iter()
             .map(|doc| {
                 (!doc.badge.isHidden()).then(|| {
@@ -42,16 +51,17 @@ impl TabWindow {
     pub fn drag_share(&self, share: f64) {
         use objc2_app_kit::{NSApplication, NSEvent, NSEventModifierFlags, NSEventType};
 
-        let Some(left) = self.documents.borrow().first().map(|doc| doc.host.frame().size.width) else {
+        let Some(area) = self.panes.root_area() else { return };
+        let Some(left) = area.subviews().iter().next().map(|first| first.frame().size.width) else {
             return;
         };
-        let bounds = self.area.bounds();
+        let bounds = area.bounds();
         let target = bounds.size.width * share;
         let y = bounds.size.height / 2.0;
         let event = |kind: NSEventType, x: f64| {
             NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure(
                 kind,
-                self.area.convertPoint_toView(NSPoint::new(x, y), None),
+                area.convertPoint_toView(NSPoint::new(x, y), None),
                 NSEventModifierFlags::empty(),
                 0.0,
                 self.window.windowNumber(),
@@ -73,7 +83,7 @@ impl TabWindow {
         }
         if let Some(down) = event(NSEventType::LeftMouseDown, left + 0.5) {
             // SAFETY: The split view takes the press, which lives for the call.
-            let () = unsafe { objc2::msg_send![&*self.area, mouseDown: &*down] };
+            let () = unsafe { objc2::msg_send![&*area, mouseDown: &*down] };
         }
     }
 

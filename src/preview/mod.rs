@@ -215,10 +215,11 @@ fn open_html(controller: &WindowController, path: &Path, editor_tab: Option<TabI
     });
 }
 
-/// Runs `open` beside the editor's tab, or where documents open by default for an editor not in a tab yet.
+/// Runs `open` in a pane beside the editor's, which follows the editor (E145), or where documents open by default for
+/// an editor not in a tab yet.
 fn beside(controller: &WindowController, editor_tab: Option<TabId>, open: impl FnOnce()) {
     match editor_tab {
-        Some(tab) => controller.open_beside(tab, open),
+        Some(tab) => controller.open_companion(tab, open),
         None => open(),
     }
 }
