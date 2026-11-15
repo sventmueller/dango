@@ -81,15 +81,23 @@ fn pressed(event: &NSEvent) -> bool {
     true
 }
 
-/// Opens the menu of what a tab can show below the "+" of `controller`'s window in front, or at the top of its
-/// documents when the tab bar has no "+".
+/// Opens the menu of what a tab can show below the "+" of the active pane of a split window (E145), else below the
+/// "+" of `controller`'s window in front, or at the top of its documents when the tab bar has no "+".
 pub(super) fn open(controller: &WindowController) {
     let Some(window) = controller.window() else { return };
-    if let Some(button) = plus_button(&window) {
+    let pane_plus = controller.current_tab().and_then(|tab| tab.panes.active_plus());
+    if let Some(button) = pane_plus {
+        show_menu(controller, &button, true);
+    } else if let Some(button) = plus_button(&window) {
         show_menu(controller, &button, true);
     } else if let Some(content) = window.contentView() {
         show_menu(controller, &content, false);
     }
+}
+
+/// Opens the menu below `button`, a pane's "+" (E145), whose entries open in the active pane.
+pub(super) fn open_below(controller: &WindowController, button: &NSView) {
+    show_menu(controller, button, true);
 }
 
 /// Opens the menu below `view`; a press still held drags through it, a click leaves it open.

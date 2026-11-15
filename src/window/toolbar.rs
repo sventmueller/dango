@@ -1,4 +1,5 @@
-//! The toolbar of each window tab; its activity item is `crate::activity`'s. New tabs come from the tab bar's "+".
+//! The toolbar of each window tab; its activity item is `crate::activity`'s. New tabs come from the tab bar's "+", a
+//! split from the toolbar's split button (E145).
 
 use ide_process::Kind;
 use objc2::MainThreadOnly;
@@ -15,6 +16,7 @@ use crate::util::{constant, ns};
 
 const ACTIVITY: &str = "ide.activity";
 const QUICK_OPEN: &str = "ide.quickOpen";
+pub(crate) const SPLIT: &str = "ide.split";
 
 pub fn default_identifiers() -> Retained<NSArray<NSToolbarItemIdentifier>> {
     let ids = [
@@ -23,6 +25,7 @@ pub fn default_identifiers() -> Retained<NSArray<NSToolbarItemIdentifier>> {
         ns(crate::navigation::TOOLBAR_ID),
         ns(ide_ui_git::TOOLBAR_ID),
         constant!(NSToolbarFlexibleSpaceItemIdentifier).to_owned(),
+        ns(SPLIT),
         ns(QUICK_OPEN),
         ns(ACTIVITY),
     ];
@@ -33,6 +36,7 @@ pub fn make(controller: &WindowController, id: &str) -> Option<Retained<NSToolba
     match id {
         ACTIVITY => Some(crate::activity::toolbar_item(controller)),
         QUICK_OPEN => Some(quick_open(controller)),
+        SPLIT => Some(split(controller)),
         _ if id == crate::navigation::TOOLBAR_ID => Some(crate::navigation::toolbar_item(controller)),
         _ if id == ide_ui_git::TOOLBAR_ID => Some(ide_ui_git::toolbar_item(controller)),
         _ => None,
@@ -48,6 +52,18 @@ fn quick_open(controller: &WindowController) -> Retained<NSToolbarItem> {
     item.setToolTip(Some(&ns(t("Schnell öffnen"))));
     // SAFETY: Without a target the item sends its action along the responder chain, where the window answers it.
     unsafe { item.setAction(Some(objc2::sel!(ideQuickOpen:))) };
+    item
+}
+
+/// The button that splits the active pane, as Xcode's "Add Editor" does: right, or below with Option (E145).
+fn split(controller: &WindowController) -> Retained<NSToolbarItem> {
+    let mtm = controller.mtm();
+    let item = NSToolbarItem::initWithItemIdentifier(NSToolbarItem::alloc(mtm), &ns(SPLIT));
+    item.setImage(crate::util::symbol("rectangle.split.2x1", t("Rechts teilen")).as_deref());
+    item.setLabel(&ns(t("Rechts teilen")));
+    item.setToolTip(Some(&ns(&tf("{} (⌥: {})", &[t("Rechts teilen"), t("Unten teilen")]))));
+    // SAFETY: Without a target the item sends its action along the responder chain, where the window answers it.
+    unsafe { item.setAction(Some(objc2::sel!(ideSplitRight:))) };
     item
 }
 

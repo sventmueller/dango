@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "Kawasan {} daripada {}";
 "Rechts teilen" = "Pisah ke Kanan";
 "Unten teilen" = "Pisah ke Bawah";
-"In eigenen Tab verschieben" = "Alih ke Tab Sendiri";
 "Andere Tabs schließen" = "Tutup Tab Lain";
 "Tab behalten" = "Kekalkan Tab";
 "{}, Vorschau" = "{}, Pratonton";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "Pergi ke Kawasan Seterusnya";
 "Tabs" = "Tab";
 "Kopiert" = "Disalin";
+"{} (⌥: {})" = "{} (⌥: {})";

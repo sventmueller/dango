@@ -16,7 +16,7 @@ use splat_i18n::t;
 
 use super::Side;
 use super::bar::{PaneBar, drop_highlight};
-use crate::util::{guarded, ns, pin_edges, symbol_button};
+use crate::util::{guarded, ns, pin_edges};
 use crate::window::tabs::Document;
 use crate::window::{TabId, WindowController};
 
@@ -48,7 +48,7 @@ define_class!(
 );
 
 impl EmptyPane {
-    fn new(mtm: MainThreadMarker, number: usize) -> Retained<EmptyPane> {
+    fn new(mtm: MainThreadMarker) -> Retained<EmptyPane> {
         let this = Self::alloc(mtm).set_ivars(());
         // SAFETY: NSView's initializer, called once on the newly allocated object.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -67,30 +67,11 @@ impl EmptyPane {
         for view in [&*note as &NSView, &open, &new] {
             column.addArrangedSubview(view);
         }
-        let close = symbol_button(
-            mtm,
-            "xmark",
-            t("Bereich schließen"),
-            ide_ui_common::style::symbol::TAB_CLOSE,
-            None,
-            sel!(ideClosePane:),
-        );
-        close.setTag(isize::try_from(number).unwrap_or(0));
-        close.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
-        crate::util::set_label(&close, Some(t("Bereich schließen")));
-        for view in [&*column as &NSView, &close] {
-            this.addSubview(view);
-            view.setTranslatesAutoresizingMaskIntoConstraints(false);
-        }
+        this.addSubview(&column);
+        column.setTranslatesAutoresizingMaskIntoConstraints(false);
         for constraint in [
             column.centerXAnchor().constraintEqualToAnchor(&this.centerXAnchor()),
             column.centerYAnchor().constraintEqualToAnchor(&this.centerYAnchor()),
-            close
-                .topAnchor()
-                .constraintEqualToAnchor_constant(&this.topAnchor(), 8.0),
-            close
-                .trailingAnchor()
-                .constraintEqualToAnchor_constant(&this.trailingAnchor(), -8.0),
         ] {
             constraint.setActive(true);
         }
@@ -120,9 +101,9 @@ impl Pane {
         // A group of its own, so VoiceOver keeps a pane's controls apart from the sidebar's and other panes'.
         host.setAccessibilityElement(true);
         host.setAccessibilityRole(Some(crate::util::constant!(objc2_app_kit::NSAccessibilityGroupRole)));
-        let bar = PaneBar::new(mtm);
+        let bar = PaneBar::new(mtm, number);
         let content = NSView::new(mtm);
-        let empty = EmptyPane::new(mtm, number);
+        let empty = EmptyPane::new(mtm);
         content.addSubview(&empty);
         pin_edges(&empty, &content);
         let drop = drop_highlight(mtm);
@@ -182,7 +163,7 @@ impl Pane {
     }
 
     /// Puts `document` at `index`, or after the one in front, and brings it to the front.
-    pub(super) fn insert(&self, document: Rc<Document>, index: Option<usize>) {
+    pub(in crate::window) fn insert(&self, document: Rc<Document>, index: Option<usize>) {
         let count = self.count();
         let index = index
             .unwrap_or(if count == 0 { 0 } else { self.selected.get() + 1 })

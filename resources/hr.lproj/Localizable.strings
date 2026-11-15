@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "Područje {} od {}";
 "Rechts teilen" = "Podijeli desno";
 "Unten teilen" = "Podijeli dolje";
-"In eigenen Tab verschieben" = "Premjesti u zasebnu karticu";
 "Andere Tabs schließen" = "Zatvori ostale kartice";
 "Tab behalten" = "Zadrži karticu";
 "{}, Vorschau" = "{}, pregled";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "Idi na sljedeće područje";
 "Tabs" = "Kartice";
 "Kopiert" = "Kopirano";
+"{} (⌥: {})" = "{} (⌥: {})";

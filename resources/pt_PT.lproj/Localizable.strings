@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "Área {} de {}";
 "Rechts teilen" = "Dividir à direita";
 "Unten teilen" = "Dividir para baixo";
-"In eigenen Tab verschieben" = "Mover para separador próprio";
 "Andere Tabs schließen" = "Fechar outros separadores";
 "Tab behalten" = "Manter separador";
 "{}, Vorschau" = "{}, pré-visualização";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "Ir para a área seguinte";
 "Tabs" = "Separadores";
 "Kopiert" = "Copiado";
+"{} (⌥: {})" = "{} (⌥: {})";

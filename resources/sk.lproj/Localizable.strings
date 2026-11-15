@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "Oblasť {} z {}";
 "Rechts teilen" = "Rozdeliť doprava";
 "Unten teilen" = "Rozdeliť nadol";
-"In eigenen Tab verschieben" = "Presunúť do vlastného tabu";
 "Andere Tabs schließen" = "Zatvoriť ostatné taby";
 "Tab behalten" = "Ponechať tab";
 "{}, Vorschau" = "{}, náhľad";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "Prejsť na ďalšiu oblasť";
 "Tabs" = "Taby";
 "Kopiert" = "Skopírované";
+"{} (⌥: {})" = "{} (⌥: {})";

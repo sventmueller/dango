@@ -228,10 +228,16 @@ fn beside(root: PathBuf) {
     controller.open_file_beside(&root.join("d.rs"), crate::window::panes::Side::Right);
     let d = tab_of(&controller, &root, "d.rs");
     check(
-        "a file opens beside the one in front, in its tab",
-        controller.window_tabs().iter().any(|docs| docs == &["a.rs", "d.rs"])
-            && controller.tab_windows().len() == windows,
-        shown(&controller),
+        "a file opens beside the one in front, which takes the window's tabs into the panes and hides its tab bar (E145)",
+        windows > 1
+            && controller.tab_windows().len() == 1
+            && controller.pane_bars().len() == 2
+            && !controller.tab_bar_visible()
+            && controller
+                .window_tabs()
+                .first()
+                .is_some_and(|docs| docs.last().is_some_and(|last| last == "d.rs")),
+        format!("{} {}", shown(&controller), controller.pane_shape()),
     );
     select(&controller, a);
     controller.focus_next_panel();
@@ -258,22 +264,24 @@ fn closing_side(root: PathBuf) {
     if let Some(window) = controller.window() {
         snapshot(&window, "panels-beside");
     }
-    let windows = controller.tab_windows().len();
     if let Some(b) = tab_of(&controller, &root, "b.rs") {
         controller.close_tab(b);
     }
     check(
-        "closing a tab's only document closes the tab",
-        controller.tab_windows().len() == windows - 1 && tab_of(&controller, &root, "b.rs").is_none(),
-        shown(&controller),
+        "closing a document of a pane leaves the pane and the split",
+        controller.tab_windows().len() == 1
+            && tab_of(&controller, &root, "b.rs").is_none()
+            && controller.pane_bars().len() == 2,
+        format!("{} {}", shown(&controller), controller.pane_shape()),
     );
-    let windows = controller.tab_windows().len();
     if let Some(d) = tab_of(&controller, &root, "d.rs") {
         controller.close_tab(d);
     }
     check(
-        "closing one of two documents leaves the other alone in the tab",
-        controller.window_tabs().iter().any(|docs| docs == &["a.rs"]) && controller.tab_windows().len() == windows,
+        "closing the other pane's only document gives every document a native tab of its own again",
+        controller.window_tabs().iter().all(|docs| docs.len() == 1)
+            && controller.tab_windows().len() == 3
+            && controller.tab_bar_visible(),
         shown(&controller),
     );
     let a = tab_of(&controller, &root, "a.rs");
@@ -284,12 +292,11 @@ fn closing_side(root: PathBuf) {
     }
     let replayed = replay_agent(&controller, SESSION) && has_session(&controller, SESSION);
     check(
-        "an AI thread opened in a split tab joins its active pane, beside a.rs's other pane (E145)",
+        "an AI thread opened in a split window joins the active pane, a.rs's (E145)",
         replayed
-            && controller
-                .window_tabs()
-                .iter()
-                .any(|docs| docs.len() == 3 && docs[0] == "a.rs" && docs[2] == "d.rs"),
+            && controller.window_tabs().len() == 1
+            && tab_of(&controller, &root, "a.rs").and_then(|a| controller.pane_of(a))
+                == controller.selected_tab().and_then(|agent| controller.pane_of(agent)),
         shown(&controller),
     );
     helpers::after(PAUSE, move || closing(root));
@@ -352,11 +359,8 @@ fn restored(root: PathBuf, expected: Vec<Vec<String>>, share: Option<f64>) {
     let Some(controller) = window_of(&root) else { return };
     let tabs = controller.window_tabs();
     check(
-        "the tabs come back in their order when the folder opens again, a.rs and the thread with d.rs beside them",
-        tabs == expected
-            && tabs
-                .iter()
-                .any(|docs| docs.len() == 3 && docs[0] == "a.rs" && docs[2] == "d.rs"),
+        "the panes come back with their documents in their order when the folder opens again, d.rs beside the others",
+        tabs == expected && tabs.len() == 1 && tabs[0].last().is_some_and(|last| last == "d.rs"),
         format!("{} after {expected:?}", shown(&controller)),
     );
     check(

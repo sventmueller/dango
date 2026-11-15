@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "Área {} de {}";
 "Rechts teilen" = "Dividir a la derecha";
 "Unten teilen" = "Dividir hacia abajo";
-"In eigenen Tab verschieben" = "Mover a una pestaña propia";
 "Andere Tabs schließen" = "Cerrar otras pestañas";
 "Tab behalten" = "Mantener pestaña";
 "{}, Vorschau" = "{}, vista previa";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "Ir al área siguiente";
 "Tabs" = "Pestañas";
 "Kopiert" = "Copiado";
+"{} (⌥: {})" = "{} (⌥: {})";

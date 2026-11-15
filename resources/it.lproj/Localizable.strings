@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "Area {} di {}";
 "Rechts teilen" = "Dividi a destra";
 "Unten teilen" = "Dividi in basso";
-"In eigenen Tab verschieben" = "Sposta in un pannello a parte";
 "Andere Tabs schließen" = "Chiudi gli altri pannelli";
 "Tab behalten" = "Mantieni pannello";
 "{}, Vorschau" = "{}, anteprima";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "Vai all’area successiva";
 "Tabs" = "Pannelli";
 "Kopiert" = "Copiato";
+"{} (⌥: {})" = "{} (⌥: {})";

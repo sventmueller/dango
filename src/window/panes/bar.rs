@@ -22,11 +22,13 @@ use crate::util::{constant, guarded, item, ns, separator, set_target, symbol, sy
 use crate::window::tabs::Document;
 use crate::window::{TabId, WindowController};
 
-pub(super) const BAR_HEIGHT: f64 = 30.0;
-const TAB_HEIGHT: f64 = 22.0;
-const MIN_TAB_WIDTH: f64 = 90.0;
-const MAX_TAB_WIDTH: f64 = 240.0;
-const TITLE_POINTS: f64 = 12.0;
+/// The height of a pane's bar, the window's own tab bar's: its capsule and the room around it.
+pub(super) const BAR_HEIGHT: f64 = 40.0;
+/// The capsule that holds the tabs.
+const TRACK_HEIGHT: f64 = 30.0;
+const TAB_HEIGHT: f64 = 26.0;
+const MIN_TAB_WIDTH: f64 = 60.0;
+const TITLE_POINTS: f64 = 13.0;
 
 pub struct TabIvars {
     id: TabId,
@@ -142,11 +144,6 @@ define_class!(
             guarded((), || self.with_target(|target, id| target.split_off(id, Side::Below)));
         }
 
-        #[unsafe(method(ideMoveTabToWindowTab:))]
-        fn move_to_window_tab(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.with_target(|target, id| target.move_to_window_tab(id)));
-        }
-
         #[unsafe(method(accessibilityPerformPress))]
         fn accessibility_press(&self) -> bool {
             guarded(false, || {
@@ -213,30 +210,41 @@ impl PaneTab {
         this
     }
 
+    /// The icon, title and state in the middle, the close button at the leading edge, as the window's own tabs have
+    /// them.
     fn lay_out(&self) {
         let ivars = self.ivars();
         let stack = NSStackView::new(self.mtm());
         stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
         stack.setSpacing(ide_ui_common::style::space::SNUG);
-        for view in [&*ivars.close as &NSView, &ivars.icon, &ivars.title, &ivars.status] {
+        for view in [&*ivars.icon as &NSView, &ivars.title, &ivars.status] {
             stack.addArrangedSubview(view);
         }
-        self.addSubview(&stack);
-        stack.setTranslatesAutoresizingMaskIntoConstraints(false);
-        let widest = self.widthAnchor().constraintLessThanOrEqualToConstant(MAX_TAB_WIDTH);
-        widest.setPriority(750.0);
+        for view in [&*stack as &NSView, &ivars.close] {
+            self.addSubview(view);
+            view.setTranslatesAutoresizingMaskIntoConstraints(false);
+        }
+        let centred = stack.centerXAnchor().constraintEqualToAnchor(&self.centerXAnchor());
+        centred.setPriority(700.0);
         for constraint in [
+            ivars
+                .close
+                .leadingAnchor()
+                .constraintEqualToAnchor_constant(&self.leadingAnchor(), 8.0),
+            ivars
+                .close
+                .centerYAnchor()
+                .constraintEqualToAnchor(&self.centerYAnchor()),
             stack.centerYAnchor().constraintEqualToAnchor(&self.centerYAnchor()),
-            stack.centerXAnchor().constraintEqualToAnchor(&self.centerXAnchor()),
+            centred,
             stack
                 .leadingAnchor()
-                .constraintGreaterThanOrEqualToAnchor_constant(&self.leadingAnchor(), 6.0),
+                .constraintGreaterThanOrEqualToAnchor_constant(&ivars.close.trailingAnchor(), 4.0),
             stack
                 .trailingAnchor()
-                .constraintLessThanOrEqualToAnchor_constant(&self.trailingAnchor(), -6.0),
+                .constraintLessThanOrEqualToAnchor_constant(&self.trailingAnchor(), -8.0),
             self.heightAnchor().constraintEqualToConstant(TAB_HEIGHT),
             self.widthAnchor().constraintGreaterThanOrEqualToConstant(MIN_TAB_WIDTH),
-            widest,
         ] {
             constraint.setActive(true);
         }
@@ -325,28 +333,38 @@ impl PaneTab {
         ivars.close.setImage(symbol(name, t("Schließen")).as_deref());
         ivars.close.setHidden(!visible);
         ivars.close.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
-        let color = match (ivars.selected.get(), ivars.active_bar.get()) {
-            (true, true) => NSColor::controlAccentColor(),
-            (true, false) => NSColor::labelColor(),
-            (false, _) => NSColor::secondaryLabelColor(),
+        let color = if ivars.selected.get() {
+            NSColor::labelColor()
+        } else {
+            NSColor::secondaryLabelColor()
         };
         ivars.title.setTextColor(Some(&color));
         self.setNeedsDisplay(true);
     }
 
+    /// The tab in front of its pane on a raised plate, as the window's own tab bar draws it, fainter in a pane that is
+    /// not the active one; a tab under the pointer slightly shaded.
     fn draw_background(&self) {
         let ivars = self.ivars();
-        let fill = if ivars.selected.get() && ivars.active_bar.get() {
-            NSColor::controlAccentColor().colorWithAlphaComponent(0.16)
-        } else if ivars.selected.get() {
-            NSColor::quaternaryLabelColor()
+        let bounds = self.bounds();
+        let radius = bounds.size.height / 2.0;
+        let path = NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(bounds, radius, radius);
+        if ivars.selected.get() {
+            let plate = NSColor::controlBackgroundColor();
+            let plate = if ivars.active_bar.get() {
+                plate
+            } else {
+                plate.colorWithAlphaComponent(0.6)
+            };
+            plate.setFill();
+            path.fill();
+            NSColor::separatorColor().setStroke();
+            path.setLineWidth(0.5);
+            path.stroke();
         } else if ivars.hovered.get() {
-            NSColor::quinaryLabelColor()
-        } else {
-            return;
-        };
-        fill.setFill();
-        NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(self.bounds(), 6.0, 6.0).fill();
+            NSColor::quaternarySystemFillColor().setFill();
+            path.fill();
+        }
     }
 
     fn track(&self) {
@@ -393,7 +411,6 @@ impl PaneTab {
         menu.addItem(&separator(mtm));
         add(t("Rechts teilen"), sel!(ideSplitTabRight:), several);
         add(t("Unten teilen"), sel!(ideSplitTabBelow:), several);
-        add(t("In eigenen Tab verschieben"), sel!(ideMoveTabToWindowTab:), true);
         menu
     }
 }
@@ -412,6 +429,8 @@ pub(super) fn drop_highlight(mtm: MainThreadMarker) -> Retained<NSBox> {
 
 pub(super) struct PaneBar {
     pub(super) view: Retained<NSView>,
+    /// The "+" that opens a new tab in the pane.
+    pub(super) plus: Retained<NSButton>,
     strip: Retained<NSStackView>,
     items: RefCell<Vec<Retained<PaneTab>>>,
     drop: Retained<NSBox>,
@@ -419,39 +438,73 @@ pub(super) struct PaneBar {
 }
 
 impl PaneBar {
-    pub(super) fn new(mtm: MainThreadMarker) -> PaneBar {
+    /// The bar of the pane numbered `number`, whose × closes the pane and whose "+" opens a new tab in it: a capsule
+    /// of tabs of equal width between them, drawn like the window's own tab bar, with a line below.
+    pub(super) fn new(mtm: MainThreadMarker, number: usize) -> PaneBar {
         let view = NSView::new(mtm);
         view.setAccessibilityElement(true);
         view.setAccessibilityRole(Some(constant!(NSAccessibilityTabGroupRole)));
         view.setAccessibilityLabel(Some(&ns(t("Tabs"))));
+        let close = symbol_button(mtm, "xmark", t("Bereich schließen"), 11.0, None, sel!(ideClosePane:));
+        close.setTag(isize::try_from(number).unwrap_or(0));
+        close.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
+        crate::util::set_label(&close, Some(t("Bereich schließen")));
+        let plus = symbol_button(mtm, "plus", t("Neuer Tab …"), 13.0, None, sel!(ideNewTabInPane:));
+        plus.setTag(isize::try_from(number).unwrap_or(0));
+        plus.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
+        crate::util::set_label(&plus, Some(t("Neuer Tab …")));
+        let track = NSBox::new(mtm);
+        track.setBoxType(NSBoxType::Custom);
+        track.setBorderWidth(0.0);
+        track.setCornerRadius(TRACK_HEIGHT / 2.0);
+        track.setFillColor(&NSColor::quaternarySystemFillColor());
+        track.setTitlePosition(objc2_app_kit::NSTitlePosition::NoTitle);
+        track.setContentViewMargins(objc2_foundation::NSSize::new(0.0, 0.0));
         let strip = NSStackView::new(mtm);
         strip.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        strip.setDistribution(NSStackViewDistribution::FillProportionally);
-        strip.setSpacing(ide_ui_common::style::space::XS);
+        strip.setDistribution(NSStackViewDistribution::FillEqually);
+        strip.setSpacing(ide_ui_common::style::space::XXS);
+        let line = NSBox::new(mtm);
+        line.setBoxType(NSBoxType::Separator);
         let drop = drop_highlight(mtm);
-        view.addSubview(&drop);
-        view.addSubview(&strip);
-        for part in [&*strip as &NSView, &drop] {
+        for part in [&*drop as &NSView, &close, &track, &strip, &plus, &line] {
+            view.addSubview(part);
             part.setTranslatesAutoresizingMaskIntoConstraints(false);
         }
         let height = view.heightAnchor().constraintEqualToConstant(0.0);
-        let trailing = strip
-            .trailingAnchor()
-            .constraintLessThanOrEqualToAnchor_constant(&view.trailingAnchor(), -8.0);
+        let inset = (TRACK_HEIGHT - TAB_HEIGHT) / 2.0;
         for constraint in [
-            drop.leadingAnchor()
-                .constraintEqualToAnchor_constant(&view.leadingAnchor(), 4.0),
-            drop.trailingAnchor()
-                .constraintEqualToAnchor_constant(&view.trailingAnchor(), -4.0),
-            drop.topAnchor()
-                .constraintEqualToAnchor_constant(&view.topAnchor(), 2.0),
-            drop.bottomAnchor()
-                .constraintEqualToAnchor_constant(&view.bottomAnchor(), -2.0),
+            drop.leadingAnchor().constraintEqualToAnchor(&track.leadingAnchor()),
+            drop.trailingAnchor().constraintEqualToAnchor(&track.trailingAnchor()),
+            drop.topAnchor().constraintEqualToAnchor(&track.topAnchor()),
+            drop.bottomAnchor().constraintEqualToAnchor(&track.bottomAnchor()),
+            close
+                .leadingAnchor()
+                .constraintEqualToAnchor_constant(&view.leadingAnchor(), 10.0),
+            close.centerYAnchor().constraintEqualToAnchor(&track.centerYAnchor()),
+            track
+                .leadingAnchor()
+                .constraintEqualToAnchor_constant(&close.trailingAnchor(), 8.0),
+            track
+                .trailingAnchor()
+                .constraintEqualToAnchor_constant(&plus.leadingAnchor(), -8.0),
+            plus.trailingAnchor()
+                .constraintEqualToAnchor_constant(&view.trailingAnchor(), -10.0),
+            plus.centerYAnchor().constraintEqualToAnchor(&track.centerYAnchor()),
+            track
+                .topAnchor()
+                .constraintEqualToAnchor_constant(&view.topAnchor(), 4.0),
+            track.heightAnchor().constraintEqualToConstant(TRACK_HEIGHT),
             strip
                 .leadingAnchor()
-                .constraintEqualToAnchor_constant(&view.leadingAnchor(), 6.0),
-            strip.centerYAnchor().constraintEqualToAnchor(&view.centerYAnchor()),
-            trailing,
+                .constraintEqualToAnchor_constant(&track.leadingAnchor(), inset),
+            strip
+                .trailingAnchor()
+                .constraintEqualToAnchor_constant(&track.trailingAnchor(), -inset),
+            strip.centerYAnchor().constraintEqualToAnchor(&track.centerYAnchor()),
+            line.leadingAnchor().constraintEqualToAnchor(&view.leadingAnchor()),
+            line.trailingAnchor().constraintEqualToAnchor(&view.trailingAnchor()),
+            line.bottomAnchor().constraintEqualToAnchor(&view.bottomAnchor()),
             height.clone(),
         ] {
             constraint.setActive(true);
@@ -459,6 +512,7 @@ impl PaneBar {
         view.setHidden(true);
         PaneBar {
             view,
+            plus,
             strip,
             items: RefCell::new(Vec::new()),
             drop,

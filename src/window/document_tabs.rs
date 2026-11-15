@@ -12,7 +12,7 @@ use objc2_foundation::NSNotification;
 
 use super::panes::{Pane, Place, Side};
 use super::tabs::{Document, TabWindow};
-use super::{TabId, TabKind, WindowController, layout, show_tab_bar};
+use super::{TabId, TabKind, WindowController, layout};
 
 impl WindowController {
     /// Shows `view` as a document of `kind` and brings it to the front: where `open_beside` or `open_into` say, else
@@ -160,6 +160,7 @@ impl WindowController {
             ),
             None => self.open_file(path),
         }
+        self.settle_split();
     }
 
     /// Opens `path` in the pane numbered `number` of the tab in front, or in a window tab of its own without one.
@@ -173,6 +174,7 @@ impl WindowController {
             Some(pane) => self.open_into(&pane, || self.open_file(path)),
             None => self.in_window_tab_of_its_own(|| self.open_file(path)),
         }
+        self.settle_split();
     }
 
     /// Opens `path` in an editor tab, or selects the tab that has it and keeps it if it is the preview tab; a PDF,
@@ -225,7 +227,11 @@ impl WindowController {
     /// window with its last tab.
     pub(super) fn close_tab_now(&self, id: TabId) {
         let Some(tab) = self.tab_of_document(id) else { return };
+        let split = tab.panes.is_split();
         self.forget_document(&tab, id);
+        if split && !tab.panes.is_split() && self.current_tab().is_some_and(|current| Rc::ptr_eq(&current, &tab)) {
+            self.settle_split();
+        }
         if tab.is_empty() {
             // A closing window has left its tab group already when AppKit tells its delegate.
             let next = self.neighbour(&tab);
@@ -472,7 +478,7 @@ impl WindowController {
         tab.refresh();
         if self.current_tab().is_some_and(|current| current.window.isVisible()) || tab.window.isVisible() {
             tab.window.makeKeyAndOrderFront(None);
-            show_tab_bar(&tab.window);
+            self.sync_tab_bar(tab);
         }
         self.make_current(tab);
         crate::session::changed();

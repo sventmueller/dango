@@ -2,7 +2,8 @@
 
 use objc2::DefinedClass;
 
-use super::{Place, Side, TabId, WindowController};
+use super::{Side, TabId, WindowController};
+use crate::window::panes::Place;
 
 impl WindowController {
     /// The panes of the tab in front in a line, as `Panes::shape` writes them.
@@ -67,5 +68,6 @@ impl WindowController {
             },
             open,
         );
+        self.settle_split();
     }
 }

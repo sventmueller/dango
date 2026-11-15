@@ -1,7 +1,6 @@
 //! The panes of a window tab (E145): parts side by side or one above the other, nested as deep as the user splits,
-//! each holding documents behind one another. The panes' tab bars show only while one of them holds more than one
-//! document; until then a window tab looks as with one document or two side by side (E63), the documents after the
-//! first with a badge.
+//! each holding documents behind one another with a tab bar of its own while the tab is split, in place of the
+//! window's. A preview beside its document is no split; it keeps its badge (E63).
 
 mod bar;
 mod drag;
@@ -146,6 +145,29 @@ impl Panes {
 
     pub fn set_active(&self, pane: &Rc<Pane>) {
         *self.active.borrow_mut() = Rc::downgrade(pane);
+    }
+
+    /// The first pane that is not a preview's, which holds the documents of a tab that is not split.
+    pub fn main(&self) -> Rc<Pane> {
+        let panes = self.all();
+        panes
+            .iter()
+            .find(|pane| pane.companion_of.get().is_none())
+            .or_else(|| panes.first())
+            .cloned()
+            .expect("a window tab keeps a pane")
+    }
+
+    /// The "+" of the active pane while the window tab is split and the panes show their bars.
+    pub fn active_plus(&self) -> Option<Retained<objc2_app_kit::NSButton>> {
+        self.is_split().then(|| self.active().bar.plus.clone())
+    }
+
+    /// The pane of the preview that follows the document `owner`.
+    pub fn companion_of(&self, owner: TabId) -> Option<Rc<Pane>> {
+        self.all()
+            .into_iter()
+            .find(|pane| pane.companion_of.get() == Some(owner))
     }
 
     /// Whether the user split the window tab: two panes or more besides the previews that follow a document.
@@ -338,8 +360,8 @@ impl Panes {
         *self.zoomed.borrow_mut() = RcWeak::new();
     }
 
-    /// Shows what holds now: which panes show, the tab bars while a pane holds more than one document, else the
-    /// badges of the documents after the first, and which pane is the active one.
+    /// Shows what holds now: which panes show, every pane's tab bar while the window tab is split, else the badge of
+    /// a preview beside its document, and which pane is the active one.
     pub fn settle(&self, target: &WindowController) {
         let zoomed = self.zoomed.borrow().upgrade();
         let following = |pane: &Pane| {
@@ -354,7 +376,7 @@ impl Panes {
         };
         show_node(&self.root.borrow(), &shown);
         let panes = self.all();
-        let bars = panes.iter().any(|pane| pane.count() > 1);
+        let bars = self.is_split();
         let active = self.active();
         let several = panes.len() > 1;
         let mut first = true;

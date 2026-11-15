@@ -267,10 +267,11 @@ fn navigation(root: PathBuf) {
         .map(|t| t.items().iter().map(|i| i.itemIdentifier().to_string()).collect())
         .unwrap_or_default();
     check(
-        "the toolbar holds back and forward, the branch and Open Quickly beside the activity",
+        "the toolbar holds back and forward, the branch, the split button and Open Quickly beside the activity",
         [
             crate::navigation::TOOLBAR_ID,
             ide_ui_git::TOOLBAR_ID,
+            crate::window::toolbar::SPLIT,
             "ide.quickOpen",
             "ide.activity",
         ]

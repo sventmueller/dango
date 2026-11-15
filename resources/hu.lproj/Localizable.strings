@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "{}. ablaktábla / {}";
 "Rechts teilen" = "Felosztás jobbra";
 "Unten teilen" = "Felosztás lefelé";
-"In eigenen Tab verschieben" = "Áthelyezés saját lapra";
 "Andere Tabs schließen" = "Többi lap bezárása";
 "Tab behalten" = "Lap megtartása";
 "{}, Vorschau" = "{}, előnézet";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "Ugrás a következő ablaktáblára";
 "Tabs" = "Lapok";
 "Kopiert" = "Másolva";
+"{} (⌥: {})" = "{} (⌥: {})";

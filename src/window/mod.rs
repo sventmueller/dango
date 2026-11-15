@@ -26,6 +26,7 @@ mod search;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 mod sidebar;
+mod split_mode;
 mod tabs;
 pub mod toolbar;
 mod validate;
@@ -314,7 +315,7 @@ define_class!(
 
         #[unsafe(method(ideSplitRight:))]
         fn split_right_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || self.split_active(panes::Side::Right));
+            guarded((), || self.split_active(pane_commands::side_with_option()));
         }
 
         #[unsafe(method(ideSplitBelow:))]
@@ -325,6 +326,11 @@ define_class!(
         #[unsafe(method(ideClosePane:))]
         fn close_pane_action(&self, sender: Option<&AnyObject>) {
             guarded((), || self.close_pane_by_tag(sender.map(|_| tag_of(sender))));
+        }
+
+        #[unsafe(method(ideNewTabInPane:))]
+        fn new_tab_in_pane_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || self.new_tab_in_pane(tag_of(sender), sender.and_then(|s| s.downcast_ref::<NSView>())));
         }
 
         #[unsafe(method(ideZoomPane:))]
@@ -605,7 +611,7 @@ impl WindowController {
         controller.bring_to_front();
         if let Some(tab) = controller.current_tab() {
             controller.fit_sidebar(&tab, controller.saved_sidebar().collapsed);
-            show_tab_bar(&tab.window);
+            controller.sync_tab_bar(&tab);
         }
         crate::session::changed();
         controller
@@ -960,13 +966,6 @@ impl WindowController {
 }
 
 pub use ide_ui_common::panel::in_front;
-
-/// Shows the tab bar of `window` also while it has one tab: a folder's documents always show as tabs (E60).
-fn show_tab_bar(window: &NSWindow) {
-    if window.tabGroup().is_some_and(|group| !group.isTabBarVisible()) {
-        window.toggleTabBar(None);
-    }
-}
 
 fn folder_name(path: &Path) -> String {
     path.file_name().map_or_else(

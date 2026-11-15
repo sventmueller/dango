@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "ペイン{}/{}";
 "Rechts teilen" = "右に分割";
 "Unten teilen" = "下に分割";
-"In eigenen Tab verschieben" = "独立したタブに移動";
 "Andere Tabs schließen" = "ほかのタブを閉じる";
 "Tab behalten" = "タブを保持";
 "{}, Vorschau" = "{}、プレビュー";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "次のペインに移動";
 "Tabs" = "タブ";
 "Kopiert" = "コピーしました";
+"{} (⌥: {})" = "{} (⌥: {})";

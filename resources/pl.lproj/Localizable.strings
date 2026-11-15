@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "Okienko {} z {}";
 "Rechts teilen" = "Podziel w prawo";
 "Unten teilen" = "Podziel w dół";
-"In eigenen Tab verschieben" = "Przenieś do osobnej karty";
 "Andere Tabs schließen" = "Zamknij inne karty";
 "Tab behalten" = "Zachowaj kartę";
 "{}, Vorschau" = "{}, podgląd";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "Przejdź do następnego okienka";
 "Tabs" = "Karty";
 "Kopiert" = "Skopiowano";
+"{} (⌥: {})" = "{} (⌥: {})";

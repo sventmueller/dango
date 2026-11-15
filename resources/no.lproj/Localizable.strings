@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "Rute {} av {}";
 "Rechts teilen" = "Del til høyre";
 "Unten teilen" = "Del nedover";
-"In eigenen Tab verschieben" = "Flytt til egen fane";
 "Andere Tabs schließen" = "Lukk andre faner";
 "Tab behalten" = "Behold fane";
 "{}, Vorschau" = "{}, forhåndsvisning";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "Gå til neste rute";
 "Tabs" = "Faner";
 "Kopiert" = "Kopiert";
+"{} (⌥: {})" = "{} (⌥: {})";

@@ -1,8 +1,8 @@
-//! The `panes` scenario (E145): a window tab splits into panes right and below, nested; a file opens in a native tab of
-//! its own while the tab in front is not split and in the active pane once it is; the panes show tab bars only while
-//! one holds more than one document; tabs move between panes and to a pane's edge; a pane fills the tab and closes;
-//! a terminal and an AI thread keep running behind another document; and the panes come back when the folder opens
-//! again.
+//! The `panes` scenario (E145): splitting takes the window's tabs into panes, right and below, nested, each with a bar of
+//! its own in place of the window's; a file opens in a native tab of its own while the window is not split and in the
+//! active pane once it is; tabs move between panes and to a pane's edge; a pane fills the window and closes; a terminal
+//! and an AI thread keep running behind another document; the panes come back when the folder opens again; and the
+//! last pane but one closing gives the documents native tabs again.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -59,7 +59,8 @@ pub(super) fn run() {
     helpers::open_project(SCENARIO, PROJECT, &files, |_| opened(helpers::root(PROJECT)));
 }
 
-/// Splitting right gives an empty active pane, which the next file fills; a second file in a pane brings the bars.
+/// Splitting right takes the window's tabs into the first pane, hides the window's tab bar and gives every pane a
+/// bar of its own; the empty new pane is the active one, which the next file fills.
 fn opened(root: PathBuf) {
     let Some(controller) = window_of(&root) else { return };
     let welcome = controller.selected_tab();
@@ -69,45 +70,34 @@ fn opened(root: PathBuf) {
     }
     controller.open_file(&root.join("b.rs"));
     check(
-        "a file opens in a native tab of its own while the tab in front is not split",
-        controller.window_tabs() == [vec!["a.rs".to_string()], vec!["b.rs".to_string()]],
+        "a file opens in a native tab of its own while the window is not split",
+        controller.window_tabs() == [vec!["a.rs".to_string()], vec!["b.rs".to_string()]]
+            && controller.tab_bar_visible(),
         format!("{:?}", controller.window_tabs()),
     );
     select(&controller, tab_of(&controller, &root, "a.rs"));
     controller.split_pane(Side::Right);
-    let empty = controller.pane_shape();
-    controller.open_file(&root.join("c.rs"));
     lay_out(&controller);
+    let empty = controller.pane_shape();
     check(
-        "splitting right gives an empty active pane, where the next file opens instead of in a tab of its own",
-        empty == "H([a.rs] []!)"
-            && controller.pane_shape() == "H([a.rs] [c.rs]!)"
-            && controller.tab_windows().len() == 2,
-        format!("{empty} then {}", controller.pane_shape()),
+        "splitting takes the window's tabs into the first pane, hides the window's tab bar and shows every pane's bar",
+        empty == "H([a.rs*, b.rs] []!)"
+            && controller.tab_windows().len() == 1
+            && !controller.tab_bar_visible()
+            && controller.pane_bars().iter().all(|(bar, _)| *bar),
+        format!(
+            "{empty} {:?}, bar {}",
+            controller.pane_bars(),
+            controller.tab_bar_visible()
+        ),
     );
-    let badges = tab_of(&controller, &root, "c.rs")
-        .map(|c| controller.badges_of(c))
-        .unwrap_or_default();
-    let no_bars = controller.pane_bars().iter().all(|(bar, _)| !bar);
-    check(
-        "while every pane holds one document there are no tab bars, and the second pane has its badge",
-        no_bars
-            && badges.len() == 2
-            && badges[0].is_none()
-            && badges[1].as_ref().is_some_and(|(name, _)| name == "c.rs"),
-        format!("{:?} {badges:?}", controller.pane_bars()),
-    );
+    controller.open_file(&root.join("c.rs"));
     controller.open_file(&root.join("d.rs"));
     lay_out(&controller);
-    let badges = tab_of(&controller, &root, "d.rs")
-        .map(|d| controller.badges_of(d))
-        .unwrap_or_default();
     check(
-        "a second document in a pane brings the tab bars of all panes, and the badges go",
-        controller.pane_shape() == "H([a.rs] [c.rs, d.rs*]!)"
-            && controller.pane_bars().iter().all(|(bar, _)| *bar)
-            && badges.iter().all(Option::is_none),
-        format!("{} {:?} {badges:?}", controller.pane_shape(), controller.pane_bars()),
+        "a file opened in a split window lands in the active pane, also the empty one",
+        controller.pane_shape() == "H([a.rs*, b.rs] [c.rs, d.rs*]!)" && controller.tab_windows().len() == 1,
+        controller.pane_shape(),
     );
     helpers::after(PAUSE, move || below(root));
 }
@@ -123,22 +113,24 @@ fn below(root: PathBuf) {
     lay_out(&controller);
     check(
         "splitting below moves the document in front into a new pane under it, nested in the split",
-        controller.pane_shape() == "H([a.rs] V([c.rs] [d.rs]!))" && controller.pane_bars().iter().all(|(bar, _)| !bar),
-        format!("{} {:?}", controller.pane_shape(), controller.pane_bars()),
+        controller.pane_shape() == "H([a.rs*, b.rs] V([c.rs] [d.rs]!))",
+        controller.pane_shape(),
     );
     let b = tab_of(&controller, &root, "b.rs");
     controller.open_file(&root.join("b.rs"));
     check(
-        "a file already open comes to the front where it is, also from a split tab",
-        b.is_some() && controller.selected_tab() == b && controller.tab_windows().len() == 2,
-        format!("{:?} of {:?}", controller.selected_tab(), controller.window_tabs()),
+        "a file already open comes to the front of its pane",
+        b.is_some()
+            && controller.selected_tab() == b
+            && controller.pane_shape() == "H([a.rs, b.rs*]! V([c.rs] [d.rs]))",
+        format!("{:?} in {}", controller.selected_tab(), controller.pane_shape()),
     );
     select(&controller, tab_of(&controller, &root, "d.rs"));
     let menu = controller.file_pane_menu();
-    let first = tf("Im Bereich {}: {}", &["1", "a.rs"]);
+    let first = tf("Im Bereich {}: {}", &["1", "b.rs"]);
     check(
-        "Option-Shift on a file offers each pane by its document, beside, below and a tab of its own",
-        menu.len() == 6 && menu.first() == Some(&first),
+        "Option-Shift on a file offers each pane by its document, beside and below",
+        menu.len() == 5 && menu.first() == Some(&first),
         format!("{menu:?}"),
     );
     helpers::after(PAUSE, move || dragging(root));
@@ -170,7 +162,7 @@ fn dragging(root: PathBuf) {
     lay_out(&controller);
     check(
         "a tab dropped into another pane moves there, the pane it leaves goes; at a pane's right edge it gets its own",
-        moved == "H([a.rs, c.rs*]! [d.rs])" && controller.pane_shape() == "H([a.rs] [d.rs] [c.rs]!)",
+        moved == "H([a.rs, b.rs, c.rs*]! [d.rs])" && controller.pane_shape() == "H([a.rs, b.rs*] [d.rs] [c.rs]!)",
         format!("{moved} then {}", controller.pane_shape()),
     );
     controller.zoom_pane();
@@ -187,7 +179,7 @@ fn dragging(root: PathBuf) {
     controller.close_pane();
     check(
         "closing a pane gives its room to the one before",
-        controller.pane_shape() == "H([a.rs] [d.rs]!)" && tab_of(&controller, &root, "c.rs").is_none(),
+        controller.pane_shape() == "H([a.rs, b.rs*] [d.rs]!)" && tab_of(&controller, &root, "c.rs").is_none(),
         controller.pane_shape(),
     );
     behind(root, a);
@@ -254,7 +246,9 @@ fn saving(root: PathBuf) {
             crate::app::open_project(mtm, root.clone());
             let probe = root.clone();
             helpers::wait_until(
-                move || helpers::window_of(&probe).is_some_and(|c| c.tab_windows().len() == 2),
+                move || {
+                    helpers::window_of(&probe).is_some_and(|c| c.tab_windows().len() == 1 && c.tab_ids().len() == 4)
+                },
                 move |_| helpers::after(PAUSE, move || restored(root, shape, share)),
             );
         },
@@ -269,7 +263,7 @@ fn restored(root: PathBuf, shape: String, share: Option<f64>) {
     let share_now = controller.tab_shares().into_iter().flatten().next();
     check(
         "the panes come back nested as they were, with their shares, when the folder opens again",
-        shape == "H([a.rs] V([d.rs] [e.rs]))"
+        shape.starts_with("H([a.rs*, b.rs] V([d.rs] [e.rs]")
             && now == shape
             && share
                 .zip(share_now)
@@ -279,5 +273,16 @@ fn restored(root: PathBuf, shape: String, share: Option<f64>) {
     if let Some(window) = controller.window() {
         snapshot(&window, "panes-restored");
     }
+    for name in ["e.rs", "d.rs"] {
+        if let Some(id) = tab_of(&controller, &root, name) {
+            controller.close_tab(id);
+        }
+    }
+    check(
+        "closing the last pane but one gives every document a native tab of its own again, with the window's bar",
+        controller.window_tabs() == [vec!["a.rs".to_string()], vec!["b.rs".to_string()]]
+            && controller.tab_bar_visible(),
+        format!("{:?}, bar {}", controller.window_tabs(), controller.tab_bar_visible()),
+    );
     finish(SCENARIO);
 }

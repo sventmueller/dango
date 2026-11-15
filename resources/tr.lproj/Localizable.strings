@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "Bölme {} / {}";
 "Rechts teilen" = "Sağa Böl";
 "Unten teilen" = "Aşağı Böl";
-"In eigenen Tab verschieben" = "Ayrı Sekmeye Taşı";
 "Andere Tabs schließen" = "Diğer Sekmeleri Kapat";
 "Tab behalten" = "Sekmeyi Koru";
 "{}, Vorschau" = "{}, Önizleme";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "Sonraki Bölmeye Git";
 "Tabs" = "Sekmeler";
 "Kopiert" = "Kopyalandı";
+"{} (⌥: {})" = "{} (⌥: {})";

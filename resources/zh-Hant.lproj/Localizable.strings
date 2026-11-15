@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "窗格 {}/{}";
 "Rechts teilen" = "向右分割";
 "Unten teilen" = "向下分割";
-"In eigenen Tab verschieben" = "移到獨立的標籤頁";
 "Andere Tabs schließen" = "關閉其他標籤頁";
 "Tab behalten" = "保留標籤頁";
 "{}, Vorschau" = "{}，預覽";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "前往下一個窗格";
 "Tabs" = "標籤頁";
 "Kopiert" = "已拷貝";
+"{} (⌥: {})" = "{} (⌥: {})";

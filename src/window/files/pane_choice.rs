@@ -40,8 +40,8 @@ impl FileTreeSource {
         true
     }
 
-    /// The menu of where a file opens: each pane of the tab in front by its number and the document it shows, beside
-    /// and below the document in front, and a window tab of its own.
+    /// The menu of where a file opens: each pane of a split tab in front by its number and the document it shows,
+    /// beside and below the document in front, and a window tab of its own while the tab is not split.
     pub(super) fn pane_menu(&self, panes: &[(usize, Option<String>)]) -> Retained<NSMenu> {
         let mtm = self.mtm();
         let menu = NSMenu::new(mtm);
@@ -66,7 +66,9 @@ impl FileTreeSource {
         }
         add(t("Daneben öffnen"), sel!(ideOpenBesideClicked:), 0);
         add(t("Darunter öffnen"), sel!(ideOpenBelowClicked:), 0);
-        add(t("In neuem Tab öffnen"), sel!(ideOpenInPaneChosen:), 0);
+        if panes.len() < 2 {
+            add(t("In neuem Tab öffnen"), sel!(ideOpenInPaneChosen:), 0);
+        }
         menu
     }
 

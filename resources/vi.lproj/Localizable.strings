@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "Ngăn {} trong số {}";
 "Rechts teilen" = "Chia sang Phải";
 "Unten teilen" = "Chia xuống Dưới";
-"In eigenen Tab verschieben" = "Chuyển sang Tab Riêng";
 "Andere Tabs schließen" = "Đóng các Tab Khác";
 "Tab behalten" = "Giữ Tab";
 "{}, Vorschau" = "{}, Xem trước";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "Đi tới Ngăn Tiếp theo";
 "Tabs" = "Tab";
 "Kopiert" = "Đã sao chép";
+"{} (⌥: {})" = "{} (⌥: {})";

@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "Àrea {} de {}";
 "Rechts teilen" = "Divideix a la dreta";
 "Unten teilen" = "Divideix cap avall";
-"In eigenen Tab verschieben" = "Mou a una pestanya pròpia";
 "Andere Tabs schließen" = "Tanca les altres pestanyes";
 "Tab behalten" = "Conserva la pestanya";
 "{}, Vorschau" = "{}, previsualització";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "Ves a l’àrea següent";
 "Tabs" = "Pestanyes";
 "Kopiert" = "Copiat";
+"{} (⌥: {})" = "{} (⌥: {})";

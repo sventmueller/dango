@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "फलक {} / {}";
 "Rechts teilen" = "दाईं ओर विभाजित करें";
 "Unten teilen" = "नीचे विभाजित करें";
-"In eigenen Tab verschieben" = "अलग टैब में ले जाएँ";
 "Andere Tabs schließen" = "अन्य टैब बंद करें";
 "Tab behalten" = "टैब रखें";
 "{}, Vorschau" = "{}, प्रीव्यू";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "अगले फलक पर जाएँ";
 "Tabs" = "टैब";
 "Kopiert" = "कॉपी हो गया";
+"{} (⌥: {})" = "{} (⌥: {})";

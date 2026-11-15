@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "Oblast {} z {}";
 "Rechts teilen" = "Rozdělit doprava";
 "Unten teilen" = "Rozdělit dolů";
-"In eigenen Tab verschieben" = "Přesunout do vlastního panelu";
 "Andere Tabs schließen" = "Zavřít ostatní panely";
 "Tab behalten" = "Ponechat panel";
 "{}, Vorschau" = "{}, náhled";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "Přejít na další oblast";
 "Tabs" = "Panely";
 "Kopiert" = "Zkopírováno";
+"{} (⌥: {})" = "{} (⌥: {})";

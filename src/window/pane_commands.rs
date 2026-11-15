@@ -3,7 +3,7 @@
 
 use objc2_foundation::NSPoint;
 
-use super::panes::{Place, Side};
+use super::panes::Side;
 use super::{TabId, WindowController};
 
 #[cfg(feature = "selftest")]
@@ -30,7 +30,10 @@ impl WindowController {
     pub(super) fn drop_pane_tab(&self, id: TabId, point: NSPoint) {
         let Some(tab) = self.tab_of_document(id) else { return };
         if tab.panes.drop(id, point) {
-            tab.activate(id);
+            self.settle_split();
+            if let Some(tab) = self.tab_of_document(id) {
+                tab.activate(id);
+            }
             crate::session::changed();
         }
     }
@@ -56,25 +59,10 @@ impl WindowController {
     pub(super) fn split_off(&self, id: TabId, side: Side) {
         let Some(tab) = self.tab_of_document(id) else { return };
         if tab.panes.split_off(id, side) {
+            self.settle_split();
             tab.activate(id);
             crate::session::changed();
         }
-    }
-
-    /// Moves the document `id` out of its pane into a window tab of its own.
-    pub(super) fn move_to_window_tab(&self, id: TabId) {
-        let Some(from) = self.tab_of_document(id) else { return };
-        let Some(document) = from.remove(id) else { return };
-        let tab = self.new_tab_after_current();
-        tab.insert(document, Place::Active);
-        if from.is_empty() {
-            from.window.close();
-        }
-        self.select_tab_by_id(id);
-        if let Some(tab) = self.tab_of_document(id) {
-            tab.activate(id);
-        }
-        crate::session::changed();
     }
 
     /// Splits the active pane of the tab in front at `side`: its document in front moves into the new pane while it
@@ -86,6 +74,7 @@ impl WindowController {
             Some(front) if pane.count() > 1 => self.split_off(front.id, side),
             _ => {
                 let new = tab.panes.add_beside(&pane, side);
+                self.settle_split();
                 tab.activate_pane(&new);
                 crate::session::changed();
             }
@@ -109,6 +98,7 @@ impl WindowController {
         let documents = pane.documents();
         if documents.is_empty() {
             tab.panes.remove_pane(&pane);
+            self.settle_split();
             let active = tab.panes.active();
             tab.activate_pane(&active);
             return;
@@ -118,6 +108,22 @@ impl WindowController {
         }
         for document in documents {
             self.close_tab_now(document.id);
+        }
+    }
+
+    /// Makes the pane numbered `number` the active one and opens the menu of new tabs below its "+" `button`, so what
+    /// the user picks opens in that pane.
+    pub(super) fn new_tab_in_pane(&self, number: isize, button: Option<&objc2_app_kit::NSView>) {
+        let Some(tab) = self.current_tab() else { return };
+        let pane = usize::try_from(number)
+            .ok()
+            .and_then(|number| tab.panes.by_number(number));
+        if let Some(pane) = pane {
+            tab.activate_pane(&pane);
+        }
+        match button {
+            Some(button) => super::new_tab_button::open_below(self, button),
+            None => super::new_tab_button::open(self),
         }
     }
 
@@ -159,4 +165,18 @@ impl WindowController {
             .map(|pane| (pane.number, pane.front().map(|doc| doc.title())))
             .collect()
     }
+}
+
+/// The side a split from the toolbar or the menu goes to: below with Option held, else right, as Xcode's "Add Editor"
+/// does.
+pub(super) fn side_with_option() -> Side {
+    let mtm = objc2::MainThreadMarker::new();
+    let held = mtm
+        .and_then(|mtm| objc2_app_kit::NSApplication::sharedApplication(mtm).currentEvent())
+        .is_some_and(|event| {
+            event
+                .modifierFlags()
+                .contains(objc2_app_kit::NSEventModifierFlags::Option)
+        });
+    if held { Side::Below } else { Side::Right }
 }

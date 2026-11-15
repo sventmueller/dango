@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "Zone {} sur {}";
 "Rechts teilen" = "Diviser à droite";
 "Unten teilen" = "Diviser vers le bas";
-"In eigenen Tab verschieben" = "Déplacer dans un onglet distinct";
 "Andere Tabs schließen" = "Fermer les autres onglets";
 "Tab behalten" = "Garder l’onglet";
 "{}, Vorschau" = "{}, aperçu";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "Aller à la zone suivante";
 "Tabs" = "Onglets";
 "Kopiert" = "Copié";
+"{} (⌥: {})" = "{} (⌥: {})";

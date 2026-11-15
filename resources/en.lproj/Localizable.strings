@@ -1755,7 +1755,6 @@
 "Bereich {} von {}" = "Pane {} of {}";
 "Rechts teilen" = "Split Right";
 "Unten teilen" = "Split Down";
-"In eigenen Tab verschieben" = "Move to Own Tab";
 "Andere Tabs schließen" = "Close Other Tabs";
 "Tab behalten" = "Keep Tab";
 "{}, Vorschau" = "{}, Preview";
@@ -1768,3 +1767,4 @@
 "Bereich maximieren" = "Maximize Pane";
 "Zum nächsten Bereich" = "Go to Next Pane";
 "Tabs" = "Tabs";
+"{} (⌥: {})" = "{} (⌥: {})";

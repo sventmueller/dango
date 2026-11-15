@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "บานหน้าต่าง {} จาก {}";
 "Rechts teilen" = "แยกไปทางขวา";
 "Unten teilen" = "แยกลงด้านล่าง";
-"In eigenen Tab verschieben" = "ย้ายไปยังแถบของตัวเอง";
 "Andere Tabs schließen" = "ปิดแถบอื่น";
 "Tab behalten" = "เก็บแถบไว้";
 "{}, Vorschau" = "{}, แสดงตัวอย่าง";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "ไปยังบานหน้าต่างถัดไป";
 "Tabs" = "แถบ";
 "Kopiert" = "คัดลอกแล้ว";
+"{} (⌥: {})" = "{} (⌥: {})";

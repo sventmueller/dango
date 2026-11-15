@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "Ruutu {}/{}";
 "Rechts teilen" = "Jaa oikealle";
 "Unten teilen" = "Jaa alas";
-"In eigenen Tab verschieben" = "Siirrä omaan välilehteen";
 "Andere Tabs schließen" = "Sulje muut välilehdet";
 "Tab behalten" = "Säilytä välilehti";
 "{}, Vorschau" = "{}, esikatselu";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "Siirry seuraavaan ruutuun";
 "Tabs" = "Välilehdet";
 "Kopiert" = "Kopioitu";
+"{} (⌥: {})" = "{} (⌥: {})";

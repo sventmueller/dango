@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "Deelvenster {} van {}";
 "Rechts teilen" = "Splits naar rechts";
 "Unten teilen" = "Splits naar beneden";
-"In eigenen Tab verschieben" = "Verplaats naar eigen tabblad";
 "Andere Tabs schließen" = "Sluit andere tabbladen";
 "Tab behalten" = "Behoud tabblad";
 "{}, Vorschau" = "{}, voorvertoning";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "Ga naar volgende deelvenster";
 "Tabs" = "Tabbladen";
 "Kopiert" = "Gekopieerd";
+"{} (⌥: {})" = "{} (⌥: {})";

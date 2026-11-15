@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "אזור {} מתוך {}";
 "Rechts teilen" = "פיצול לצד";
 "Unten teilen" = "פיצול למטה";
-"In eigenen Tab verschieben" = "העברה לכרטיסיה נפרדת";
 "Andere Tabs schließen" = "סגירת הכרטיסיות האחרות";
 "Tab behalten" = "השארת הכרטיסיה";
 "{}, Vorschau" = "‏{}, תצוגה מקדימה";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "מעבר לאזור הבא";
 "Tabs" = "כרטיסיות";
 "Kopiert" = "הועתק";
+"{} (⌥: {})" = "{} (⌥: {})";

@@ -1717,7 +1717,6 @@
 "Bereich {} von {}" = "Zona {} din {}";
 "Rechts teilen" = "Împărțiți la dreapta";
 "Unten teilen" = "Împărțiți în jos";
-"In eigenen Tab verschieben" = "Mutați într-o filă proprie";
 "Andere Tabs schließen" = "Închideți celelalte file";
 "Tab behalten" = "Păstrați fila";
 "{}, Vorschau" = "{}, previzualizare";
@@ -1731,3 +1730,4 @@
 "Zum nächsten Bereich" = "Mergeți la zona următoare";
 "Tabs" = "File";
 "Kopiert" = "Copiat";
+"{} (⌥: {})" = "{} (⌥: {})";

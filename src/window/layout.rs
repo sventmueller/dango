@@ -113,6 +113,7 @@ pub fn restore(controller: &WindowController, editor: &mut Opener) {
     {
         controller.close_tab(welcome);
     }
+    controller.settle_restored();
 }
 
 /// Opens the window tab `window_tab` with its panes, in the tab in front while that one is empty; the document in

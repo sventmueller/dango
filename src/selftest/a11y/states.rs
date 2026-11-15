@@ -314,18 +314,18 @@ fn browser(root: PathBuf, ok: bool) {
     walk("the browser tab misses nothing");
     let Some(controller) = window_of(&root) else { return };
     controller.open_file_beside(&root.join("notes.txt"), crate::window::panes::Side::Right);
-    when(root, |c| c.window_tab_ids().iter().any(|ids| ids.len() == 2), beside);
+    when(root, |c| c.pane_bars().len() == 2, beside);
 }
 
 fn beside(root: PathBuf, ok: bool) {
-    check("a file opens beside the browser in its tab", ok, "");
+    check("a file opens beside the browser in a pane of its own", ok, "");
     walk("two documents side by side miss nothing");
     picture(&root, "beside");
     if let Some(controller) = window_of(&root) {
         check(
-            "the native tab bar shows",
-            controller.tab_bar_visible(),
-            format!("{:?}", controller.window_tabs()),
+            "every pane shows its own tab bar in place of the window's (E145)",
+            !controller.tab_bar_visible() && controller.pane_bars().iter().all(|(bar, _)| *bar),
+            format!("{:?} {:?}", controller.window_tabs(), controller.pane_bars()),
         );
     }
     let Some(mtm) = MainThreadMarker::new() else { return };

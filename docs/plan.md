@@ -633,14 +633,16 @@ Code-Review 2026-11-14 *(nichtfunktional, vom Eigentümer beauftragt)*:
   seine Einblendungen (E81) übersetzt. Der Editor führt seine Nummer selbst und beobachtet sein Scrollen selbst.
   Selbsttest-Funktionen liegen in den `selftest_probe`-Modulen ihrer Datei, nie im Produktivcode.
 - **E145 Bereiche nach dem Vorbild von Xcode** *(Entscheidung des Eigentümers, ändert E60, E62 und E63)*:
-  - **Teilen:** Ein Fenstertab teilt sich in Bereiche, rechts oder unten und beliebig verschachtelt.
-    - Menü Darstellung › Bereiche, Kontextmenü eines Bereichs-Tabs, Ziehen eines Tabs an den rechten oder unteren Rand eines Bereichs.
-    - Jeder Bereich hält mehrere Dokumente hintereinander.
-    - Die Tableisten der Bereiche zeigen sich nur, solange ein Bereich mehr als ein Dokument hält. Sonst sieht der Tab aus wie bisher, und die Bereiche nach dem ersten tragen ihr Schild mit × (E63).
-  - **Öffnen:** Eine Datei geht in den aktiven Bereich, sobald der Tab vorn geteilt ist. Ein ungeteilter Tab öffnet sie wie bisher in einem eigenen Fenstertab (E62).
-    - Die Vorschau neben ihrem Editor (E59) zählt nicht als Teilung. Sie folgt ihrem Editor und verschwindet, solange er in seinem Bereich nicht vorn liegt.
+  - **Teilen:** Ein Fenster teilt sich in Bereiche, rechts oder unten und beliebig verschachtelt.
+    - Werkzeugleiste (Klick rechts, mit ⌥ unten), Menü Darstellung › Bereiche, Kontextmenü eines Bereichs-Tabs, Ziehen eines Tabs an den rechten oder unteren Rand.
+  - **Echte Teilung:** Beim Teilen ziehen alle Tabs des Fensters in den ersten Bereich, und die native Tableiste verschwindet.
+    - Jeder Bereich trägt oben seine eigene Leiste im Look der nativen, mit × links zum Schließen des Bereichs. Die Trennlinie reicht bis unter die Werkzeugleiste.
+    - Bleibt nur ein Bereich übrig, bekommt jedes Dokument wieder einen eigenen nativen Tab (E60).
+  - **Öffnen:** Ungeteilt öffnet eine Datei wie bisher einen eigenen Tab (E62); geteilt geht sie in den aktiven Bereich.
     - Eine Datei ist je Fenster höchstens einmal offen; eine offene kommt nach vorn, wo sie ist.
-  - **Befehle:** Teilen ⌃⌘T rechts und ⌃⌥⌘T unten. Hält der Bereich mehrere Dokumente, wandert das vordere in den neuen Bereich; sonst öffnet er leer und nimmt das nächste Dokument auf.
+    - Die Vorschau neben ihrem Editor (E59) ist keine Teilung. Sie folgt ihrem Editor und behält ungeteilt ihr Schild (E63).
+  - **Befehle:**
+    - Teilen ⌃⌘T rechts und ⌃⌥⌘T unten. Hält der Bereich mehrere Dokumente, wandert das vordere in den neuen Bereich; sonst öffnet er leer und nimmt das nächste Dokument auf.
     - Bereich schließen ⌃⇧⌘W, Bereich maximieren ⌃⇧⌘↩.
     - Nächster und vorheriger Tab im Bereich ⌃⌥⌘] / ⌃⌥⌘[ (⌃⇥ bleibt dem Fokus vorbehalten, E101).
     - ⌥⌘` geht zum nächsten Bereich.
