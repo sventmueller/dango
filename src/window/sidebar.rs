@@ -40,8 +40,14 @@ impl WindowController {
         } else {
             ACTIVITY_WIDTH
         };
-        // A tab laid out at that width already keeps it, and pinning it again would lay out its window anew.
+        // A tab laid out at that width already keeps it, and pinning it again would lay out its window anew; one that
+        // came laid out so, as a new window tab does, still needs the range the user may drag it in.
         if tab.sidebar_collapsed() == collapsed && (tab.sidebar_width() - width).abs() < 0.5 {
+            if open {
+                tab.release_sidebar(ACTIVITY_WIDTH + PANEL_MIN_WIDTH, ACTIVITY_WIDTH + PANEL_MAX_WIDTH);
+            } else {
+                tab.release_sidebar(width, width);
+            }
             return;
         }
         tab.pin_sidebar(width, collapsed);

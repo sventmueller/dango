@@ -710,8 +710,12 @@ impl TabWindow {
 
     /// Lets the user drag the sidebar between `min` and `max` again.
     pub fn release_sidebar(&self, min: f64, max: f64) {
-        self.sidebar.setMinimumThickness(min);
-        self.sidebar.setMaximumThickness(max);
+        if self.sidebar.minimumThickness() != min {
+            self.sidebar.setMinimumThickness(min);
+        }
+        if self.sidebar.maximumThickness() != max {
+            self.sidebar.setMaximumThickness(max);
+        }
     }
 }
 
