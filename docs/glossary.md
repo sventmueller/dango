@@ -3740,7 +3740,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Panel | panou |
 | Seitenleiste | bară laterală |
 | Vorschau | previzualizare |
-| Bereich | secțiune |
+| Bereich | zonă (as "Bereich" of a fold, which German names alike) |
 | Aktivität | Activitate |
 | Projekt / Ordner | proiect / dosar |
 | Vertrauen, vertrauen | încredere, a avea încredere în |

@@ -1715,7 +1715,7 @@
 "Leerer Bereich" = "אזור ריק";
 "Bereich schließen" = "סגירת האזור";
 "Bereich {} von {}" = "אזור {} מתוך {}";
-"Rechts teilen" = "פיצול ימינה";
+"Rechts teilen" = "פיצול לצד";
 "Unten teilen" = "פיצול למטה";
 "In eigenen Tab verschieben" = "העברה לכרטיסיה נפרדת";
 "Andere Tabs schließen" = "סגירת הכרטיסיות האחרות";
@@ -1730,3 +1730,4 @@
 "Bereich maximieren" = "הגדלת האזור למקסימום";
 "Zum nächsten Bereich" = "מעבר לאזור הבא";
 "Tabs" = "כרטיסיות";
+"Kopiert" = "הועתק";

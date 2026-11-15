@@ -1715,7 +1715,7 @@
 "Leerer Bereich" = "جزء فارغ";
 "Bereich schließen" = "إغلاق الجزء";
 "Bereich {} von {}" = "الجزء {} من {}";
-"Rechts teilen" = "تقسيم إلى اليمين";
+"Rechts teilen" = "تقسيم إلى الجانب";
 "Unten teilen" = "تقسيم إلى الأسفل";
 "In eigenen Tab verschieben" = "نقل إلى علامة تبويب مستقلة";
 "Andere Tabs schließen" = "إغلاق علامات التبويب الأخرى";
@@ -1730,3 +1730,4 @@
 "Bereich maximieren" = "تكبير الجزء إلى الحد الأقصى";
 "Zum nächsten Bereich" = "الانتقال إلى الجزء التالي";
 "Tabs" = "علامات التبويب";
+"Kopiert" = "تم النسخ";
