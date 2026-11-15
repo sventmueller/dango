@@ -55,6 +55,8 @@ pub struct Launch {
     pub model: Option<String>,
     /// OpenCode's id of a session to resume instead of creating one, such as `ses_…`.
     pub resume: Option<String>,
+    /// The release `version::probe` already read for this program; the handshake reads it itself when `None`.
+    pub version: Option<crate::version::Version>,
 }
 
 impl Launch {
@@ -68,6 +70,7 @@ impl Launch {
             agent: None,
             model: None,
             resume: None,
+            version: None,
         }
     }
 

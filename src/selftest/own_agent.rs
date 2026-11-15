@@ -536,6 +536,7 @@ fn reopen(root: PathBuf, thread_id: ide_thread::ThreadId) {
         thread: Some(thread_id),
         title: None,
         transcript: None,
+        agent: None,
     };
     let Some(tab) = ide_ui_agent::open_agent(&controller, ide_ui_agent::Agent::Own, Some(resume)) else {
         return give_up(NAME, "the AI tab opens");

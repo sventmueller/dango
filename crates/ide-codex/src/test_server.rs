@@ -5,7 +5,7 @@
 //!
 //! The scenario comes from `CODEX_TEST_SCENARIO`: `basic`, `signin` (no account), `old` (an unsupported release).
 //! A message containing `slow` streams one delta and waits for `turn/interrupt`; `crash` says [`CRASH`] on stderr
-//! and exits mid-turn; `ask` asks a question; `fail` ends the turn with an error. With `CODEX_TEST_LOG` set, every
+//! and exits mid-turn; `refuse` gets an error answer to `turn/start`; `ask` asks a question; `fail` ends the turn with an error. With `CODEX_TEST_LOG` set, every
 //! line the client sends is appended to that file.
 
 use std::collections::VecDeque;
@@ -15,6 +15,9 @@ use serde_json::{Value, json};
 
 /// The id of the thread the server opens.
 pub const THREAD: &str = "thr_test";
+
+/// The id of a stored thread `thread/list` names besides it, as one begun outside the app.
+pub const OLDER_THREAD: &str = "thr_older";
 
 /// The output of the command the user allowed.
 pub const COMMAND_OUTPUT: &str = "a.txt\nb.txt";
@@ -103,8 +106,6 @@ impl<W: Write> Server<W> {
     }
 
     fn turn_start(&mut self, id: &Value, params: &Value) {
-        self.turns += 1;
-        self.turn = Some(format!("turn-{}", self.turns));
         let input = params.get("input").cloned().unwrap_or(json!([]));
         let text: String = input
             .as_array()
@@ -112,6 +113,12 @@ impl<W: Write> Server<W> {
             .flatten()
             .filter_map(|i| i["text"].as_str())
             .collect();
+        if text.contains("refuse") {
+            self.error(id, -32600, "the turn was refused");
+            return;
+        }
+        self.turns += 1;
+        self.turn = Some(format!("turn-{}", self.turns));
         let started = self.turn_value("inProgress");
         self.reply(id, json!({"turn": started}));
         self.note("turn/started", json!({"turn": started}));
@@ -217,7 +224,12 @@ impl<W: Write> Server<W> {
                  "hidden": false, "isDefault": false, "defaultReasoningEffort": "low",
                  "supportedReasoningEfforts": [{"reasoningEffort": "low", "description": ""}]}],
                 "nextCursor": null}),
-            "thread/list" => json!({"data": [thread(json!([]), Some("Earlier"))], "nextCursor": null}),
+            "thread/list" => {
+                let mut older = thread(json!([]), Some("Begun in the terminal"));
+                older["id"] = json!(OLDER_THREAD);
+                json!({"data": [thread(json!([]), Some("Earlier")), older], "nextCursor": null})
+            }
+            "thread/revert" => json!({"thread": thread(json!([]), None)}),
             "thread/fork" => json!({"thread": {"id": "thr_fork", "preview": "", "cwd": "/work", "createdAt": 3,
                                     "updatedAt": 3, "forkedFromId": params["threadId"]}}),
             "config/read" => json!({"config": {"model": "gpt-5.5"}, "origins": {}}),

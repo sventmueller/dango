@@ -35,9 +35,78 @@ pub(crate) fn launch_for(agent: &str, env: &[(String, String)], cwd: &Path) -> O
     #[cfg(not(feature = "selftest"))]
     {
         let program = ide_process::tool::which("codex", ide_process::tool::var(env, "PATH"))?;
-        ide_codex::version::probe(Supervisor::global(), &program, env).ok()?;
-        Some(ide_codex::Launch::new(program, env.to_vec(), cwd))
+        let version = ide_codex::version::probe(Supervisor::global(), &program, env).ok()?;
+        let mut launch = ide_codex::Launch::new(program, env.to_vec(), cwd);
+        launch.version = Some(version);
+        Some(launch)
     }
+}
+
+/// The file that keeps the Codex threads of each folder as `thread/list` last named them, for the Agents panel.
+fn history_file() -> std::path::PathBuf {
+    ide_core::paths::data_dir().join("codex-threads.json")
+}
+
+/// Asks the running Codex for the stored threads of `cwd`, also those begun outside the app, and keeps them for the
+/// Agents panel, which lists them as sessions to continue.
+pub(crate) fn remember_threads(session: &ide_codex::Session, cwd: &Path) {
+    let query = ide_codex::ThreadQuery {
+        cwd: Some(cwd.to_path_buf()),
+        limit: Some(50),
+        ..ide_codex::ThreadQuery::default()
+    };
+    let folder = cwd.to_string_lossy().into_owned();
+    session.threads(&query).then(move |page| {
+        let Ok(page) = page else { return };
+        let threads: Vec<serde_json::Value> = page
+            .threads
+            .iter()
+            .map(|t| {
+                let title = t
+                    .name
+                    .clone()
+                    .filter(|n| !n.is_empty())
+                    .unwrap_or_else(|| t.preview.clone());
+                serde_json::json!({"id": t.id, "title": title, "updated": t.updated_at})
+            })
+            .collect();
+        let file = history_file();
+        let mut all: serde_json::Map<String, serde_json::Value> = std::fs::read(&file)
+            .ok()
+            .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+            .unwrap_or_default();
+        all.insert(folder, serde_json::Value::from(threads));
+        let bytes = serde_json::to_vec(&all).unwrap_or_default();
+        if let Err(error) = ide_core::atomic_write::write(&file, &bytes) {
+            ide_ui_common::diag::report("keeping the Codex threads", error);
+        }
+    });
+}
+
+/// The Codex threads of `cwd` the running Codex last named, newest first, as sessions to continue.
+pub(crate) fn past_threads(cwd: &Path) -> Vec<(crate::Resume, std::time::SystemTime)> {
+    let all: serde_json::Value = std::fs::read(history_file())
+        .ok()
+        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+        .unwrap_or_default();
+    all[cwd.to_string_lossy().as_ref()]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|t| {
+            let updated = u64::try_from(t["updated"].as_i64()?).ok()?;
+            Some((
+                crate::Resume {
+                    session: t["id"].as_str()?.to_string(),
+                    thread: None,
+                    title: t["title"].as_str().map(str::to_string).filter(|s| !s.is_empty()),
+                    transcript: None,
+                    agent: Some(PRESET.to_string()),
+                },
+                std::time::UNIX_EPOCH + std::time::Duration::from_secs(updated),
+            ))
+        })
+        .collect()
 }
 
 /// Codex's settings as an ACP agent's: its approval presets as modes, the model and the model's efforts as options.
@@ -148,10 +217,14 @@ impl AgentTab {
     pub(crate) fn launch_codex(&self, mut launch: ide_codex::Launch, thread: Thread) {
         {
             let state = self.state.borrow();
-            launch.resume = thread
-                .session()
-                .map(str::to_string)
-                .or_else(|| state.resume().map(|r| r.session.clone()));
+            launch.resume = match state.fork() {
+                // A rewind continues the thread the agent cut, or one before the first prompt starts anew.
+                Some(fork) => fork.rewind.is_some().then(|| fork.session.clone()),
+                None => thread
+                    .session()
+                    .map(str::to_string)
+                    .or_else(|| state.resume().map(|r| r.session.clone())),
+            };
         }
         let sink = self.sink(Incoming::Codex);
         match ide_codex::Session::start(Supervisor::global(), launch, thread.clone(), sink) {

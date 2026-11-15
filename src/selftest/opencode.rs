@@ -174,6 +174,95 @@ fn status(key: AgentKey) {
             if let Some(tab) = tab_of(key) {
                 tab.dismiss_dialog();
             }
+            question(key);
+        },
+    );
+}
+
+/// A question of OpenCode is answered from its card, and the turn goes on.
+fn question(key: AgentKey) {
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
+    tab.type_and_send("ask me");
+    soon(
+        "OpenCode asks a question",
+        move || {
+            tab_of(key).is_some_and(|t| {
+                t.snapshot()
+                    .pending_requests()
+                    .iter()
+                    .any(|e| matches!(e.kind, ide_thread::EntryKind::Question(_)))
+            })
+        },
+        move || {
+            press_answer(key, move |pressed| {
+                soon(
+                    "the answer reaches OpenCode",
+                    || std::fs::read_to_string(log()).is_ok_and(|l| l.contains("/form/")),
+                    move || {
+                        let waiting = tab_of(key).is_some_and(|t| !t.snapshot().pending_requests().is_empty());
+                        check(
+                            "a question of OpenCode is answered from its card",
+                            pressed && !waiting,
+                            "",
+                        );
+                        rewind(key);
+                    },
+                );
+            });
+        },
+    );
+}
+
+/// Presses the option Blue on the newest question card.
+fn press_answer(key: AgentKey, then: impl FnOnce(bool) + 'static) {
+    if let Some(tab) = tab_of(key) {
+        tab.timeline().scroll_to_end();
+    }
+    helpers::after(SCROLL_SETTLE, move || {
+        then(tab_of(key).is_some_and(|t| t.timeline().press_last("Blue", 0)));
+    });
+}
+
+/// Rewinding the conversation to before the second prompt has OpenCode revert its session to before that message,
+/// without its files, then resumes it; the prompt's text is back in the composer.
+fn rewind(key: AgentKey) {
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
+    let prompts = tab.entry_ids(|kind| matches!(kind, ide_thread::EntryKind::UserMessage(_)));
+    let Some(&second) = prompts.get(1) else {
+        return give_up_saying(NAME, "both prompts are in the conversation", format!("{prompts:?}"));
+    };
+    if let Some(menu) = tab.rewind_menu_of(second) {
+        menu.performActionForItemAtIndex(0);
+    }
+    soon(
+        "OpenCode reverts and the session resumes",
+        || {
+            let sent = std::fs::read_to_string(log()).unwrap_or_default();
+            let lines: Vec<&str> = sent.lines().collect();
+            let commit = lines.iter().position(|l| l.contains("/revert/commit"));
+            commit.is_some_and(|at| {
+                lines[at..]
+                    .iter()
+                    .any(|l| l.contains(r#""path":"/api/session/ses_test""#))
+            })
+        },
+        move || {
+            let sent = std::fs::read_to_string(log()).unwrap_or_default();
+            let stage = sent
+                .lines()
+                .find(|l| l.contains("/revert/stage"))
+                .unwrap_or_default()
+                .to_string();
+            let text = tab_of(key).map(|t| t.composer_text()).unwrap_or_default();
+            check(
+                "rewinding a later prompt has OpenCode revert before it without its files and gives the prompt back",
+                stage.contains(r#""files":false"#) && text == "ask me",
+                format!("{stage} {text:?}"),
+            );
             finish(NAME);
         },
     );

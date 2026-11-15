@@ -111,6 +111,8 @@ pub struct Launch {
     pub sandbox: Option<SandboxMode>,
     /// Codex's id of a thread to resume instead of starting a new one.
     pub resume: Option<String>,
+    /// The release `version::probe` already read for this program; the handshake reads it itself when `None`.
+    pub version: Option<crate::version::Version>,
     /// `-c key=value` overrides of `config.toml`, the value in TOML.
     pub config: Vec<(String, String)>,
 }
@@ -128,6 +130,7 @@ impl Launch {
             approval: None,
             sandbox: None,
             resume: None,
+            version: None,
             config: Vec::new(),
         }
     }

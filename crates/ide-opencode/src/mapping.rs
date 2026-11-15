@@ -127,6 +127,28 @@ fn is_list(name: &str) -> bool {
     name == "todowrite"
 }
 
+/// Names OpenCode's message `id` for the user message `key`, which `revert/stage` takes to drop it and every later
+/// one.
+pub(crate) fn chain(key: String, id: &str) -> Update {
+    Update::Chain {
+        key,
+        uuid: id.to_string(),
+        follows: Some(String::new()),
+    }
+}
+
+/// The key of the user message among `updates`, as `begin_turn` and `steered` put it.
+pub(crate) fn user_key(updates: &[Update]) -> Option<String> {
+    updates.iter().find_map(|update| match update {
+        Update::Put {
+            key,
+            entry: EntryKind::UserMessage(_),
+            ..
+        } => key.clone(),
+        _ => None,
+    })
+}
+
 pub(crate) fn tool_key(message: &str, id: &str) -> String {
     format!("tool:{message}:{id}")
 }

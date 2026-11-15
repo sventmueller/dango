@@ -64,7 +64,7 @@ impl Backend for Acp {
     fn export(&self, done: Done<Exported>) {
         done(Ok(Exported {
             text: export(&self.thread),
-            file_name: format!("{}.txt", self.thread.title().replace(['/', ':'], "-").trim()),
+            file_name: super::export_name(&self.thread),
         }));
     }
 
@@ -86,6 +86,7 @@ impl Backend for Acp {
             sign_in: Some(t("Über ACP gibt es keine Anmeldung bei einem Server.")),
             add: None,
             remove: None,
+            restart: (!self.caps.load_session).then(|| t("Dieser Agent kann eine Sitzung nicht fortsetzen.")),
             transports,
             scopes: vec![Scope::User],
         }

@@ -1916,3 +1916,11 @@
 "OpenCode hat noch kein Modell. Verbinde einen Anbieter mit „opencode auth login“ im Terminal." = "OpenCode chưa có mô hình. Hãy kết nối một nhà cung cấp bằng “opencode auth login” trong Terminal.";
 "OpenCode meldet sich bei einem Server mit „opencode mcp auth“ im Terminal an." = "OpenCode đăng nhập vào máy chủ bằng “opencode mcp auth” trong Terminal.";
 "OpenCode: {}" = "OpenCode: {}";
+"Unterhaltung" = "Cuộc hội thoại";
+"Der Agent wartet auf deine Antwort." = "Tác nhân đang chờ câu trả lời của bạn.";
+"Zur Anfrage" = "Đi tới Yêu cầu";
+"Filtern" = "Lọc";
+"Sitzung neu starten" = "Khởi động lại phiên";
+"Änderungen gelten sofort." = "Thay đổi có hiệu lực ngay.";
+"Dieser Agent kann eine Sitzung nicht fortsetzen." = "Tác nhân này không thể tiếp tục một phiên.";
+"Erst wenn der Agent fertig ist." = "Chỉ khi tác nhân xong.";

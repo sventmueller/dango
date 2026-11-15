@@ -1953,3 +1953,11 @@
 "OpenCode hat noch kein Modell. Verbinde einen Anbieter mit „opencode auth login“ im Terminal." = "OpenCode has no model yet. Connect a provider with “opencode auth login” in the terminal.";
 "OpenCode meldet sich bei einem Server mit „opencode mcp auth“ im Terminal an." = "OpenCode signs in to a server with “opencode mcp auth” in the terminal.";
 "OpenCode: {}" = "OpenCode: {}";
+"Unterhaltung" = "Conversation";
+"Der Agent wartet auf deine Antwort." = "The agent is waiting for your answer.";
+"Zur Anfrage" = "Go to Request";
+"Filtern" = "Filter";
+"Sitzung neu starten" = "Restart Session";
+"Änderungen gelten sofort." = "Changes apply at once.";
+"Dieser Agent kann eine Sitzung nicht fortsetzen." = "This agent cannot continue a session.";
+"Erst wenn der Agent fertig ist." = "Only once the agent is done.";

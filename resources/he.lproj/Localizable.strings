@@ -1916,3 +1916,11 @@
 "OpenCode hat noch kein Modell. Verbinde einen Anbieter mit „opencode auth login“ im Terminal." = "ל-OpenCode עדיין אין מודל. יש לחבר ספק עם ״opencode auth login״ במסוף.";
 "OpenCode meldet sich bei einem Server mit „opencode mcp auth“ im Terminal an." = "‏OpenCode מתחבר לשרת עם ״opencode mcp auth״ במסוף.";
 "OpenCode: {}" = "‏OpenCode: {}";
+"Unterhaltung" = "שיחה";
+"Der Agent wartet auf deine Antwort." = "הסוכן ממתין לתשובה שלך.";
+"Zur Anfrage" = "מעבר לבקשה";
+"Filtern" = "סינון";
+"Sitzung neu starten" = "הפעלה מחדש של הסשן";
+"Änderungen gelten sofort." = "השינויים חלים מיד.";
+"Dieser Agent kann eine Sitzung nicht fortsetzen." = "סוכן זה אינו יכול להמשיך סשן.";
+"Erst wenn der Agent fertig ist." = "רק לאחר שהסוכן יסיים.";

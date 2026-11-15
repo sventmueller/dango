@@ -169,6 +169,9 @@ impl AgentTab {
             }
             state.source().snapshot()
         };
+        if learned && let Some(session) = self.state.borrow().source().codex() {
+            crate::codex::remember_threads(session, &self.cwd);
+        }
         if learned && self.agent.is_acp() {
             self.acp_apply_choice();
             self.send_queued();
@@ -178,6 +181,7 @@ impl AgentTab {
         }
         if let Some(snapshot) = snapshot {
             self.absorb(snapshot, &changes);
+            super::dialogs::requests_changed(self);
         }
         if learned {
             self.refresh();

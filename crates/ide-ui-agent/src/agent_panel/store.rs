@@ -151,7 +151,9 @@ pub fn past_session(root: &Path, session: &str) -> Option<(Agent, Resume)> {
         .thread
         .as_ref()
         .and_then(|id| index.get(id))
-        .map_or(Agent::Claude, |entry| Agent::of_thread(&entry.agent));
+        .map(|entry| Agent::of_thread(&entry.agent))
+        .or_else(|| resume.agent.as_deref().map(Agent::of_thread))
+        .unwrap_or(Agent::Claude);
     Some((agent, resume))
 }
 

@@ -1916,3 +1916,11 @@
 "OpenCode hat noch kein Modell. Verbinde einen Anbieter mit „opencode auth login“ im Terminal." = "OpenCodella ei ole vielä mallia. Yhdistä palveluntarjoaja komennolla ”opencode auth login” Päätteessä.";
 "OpenCode meldet sich bei einem Server mit „opencode mcp auth“ im Terminal an." = "OpenCode kirjautuu palvelimelle komennolla ”opencode mcp auth” Päätteessä.";
 "OpenCode: {}" = "OpenCode: {}";
+"Unterhaltung" = "Keskustelu";
+"Der Agent wartet auf deine Antwort." = "Agentti odottaa vastaustasi.";
+"Zur Anfrage" = "Siirry pyyntöön";
+"Filtern" = "Suodata";
+"Sitzung neu starten" = "Käynnistä istunto uudelleen";
+"Änderungen gelten sofort." = "Muutokset tulevat voimaan heti.";
+"Dieser Agent kann eine Sitzung nicht fortsetzen." = "Tämä agentti ei voi jatkaa istuntoa.";
+"Erst wenn der Agent fertig ist." = "Vasta kun agentti on valmis.";

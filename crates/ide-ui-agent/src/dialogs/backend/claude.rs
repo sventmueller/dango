@@ -177,6 +177,7 @@ impl Backend for Claude {
             sign_in: None,
             add: None,
             remove: None,
+            restart: Some(splat_i18n::t("Änderungen gelten sofort.")),
             transports: Transport::ALL.to_vec(),
             scopes: Scope::ALL.to_vec(),
         }

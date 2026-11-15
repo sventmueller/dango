@@ -65,9 +65,58 @@ pub(crate) fn run() {
             move || {
                 tab_of(key).is_some_and(|t| t.is_live() && t.acp_capabilities().is_some_and(|c| !c.modes.is_empty()))
             },
-            move || menus(root, key),
+            move || history(root, key),
         );
     });
+}
+
+/// The Agents panel lists the stored Codex threads of the folder that the app has not seen, as `thread/list` names
+/// them, to continue with Codex.
+fn history(root: PathBuf, key: AgentKey) {
+    let Some(controller) = controller_of(&root) else {
+        return give_up(NAME, "the folder's window is open");
+    };
+    controller.activate_panel(crate::window::Panel::Agents);
+    let folder = root.clone();
+    soon(
+        "the Agents panel lists the earlier Codex thread",
+        move || {
+            controller_of(&folder)
+                .and_then(|c| ide_ui_agent::agent_panel::inspect(&c))
+                .is_some_and(|seen| seen.rows.iter().any(|(_, _, title)| title == "Begun in the terminal"))
+        },
+        move || {
+            let Some(controller) = controller_of(&root) else {
+                return give_up(NAME, "the folder's window is open");
+            };
+            let row = ide_ui_agent::agent_panel::inspect(&controller)
+                .and_then(|seen| seen.rows.iter().position(|(_, _, t)| t == "Begun in the terminal"));
+            if let Some(row) = row {
+                ide_ui_agent::agent_panel::open_session_row(&controller, row);
+            }
+            soon(
+                "the earlier thread continues with Codex",
+                || {
+                    std::fs::read_to_string(log()).is_ok_and(|l| {
+                        l.lines().any(|line| {
+                            line.contains("thread/resume") && line.contains(ide_codex::test_server::OLDER_THREAD)
+                        })
+                    })
+                },
+                move || {
+                    check(
+                        "the Agents panel lists Codex threads begun outside the app and continues them with Codex",
+                        true,
+                        "",
+                    );
+                    if let Some(tab) = tab_of(key) {
+                        tab.select();
+                    }
+                    menus(root, key);
+                },
+            );
+        },
+    );
 }
 
 /// The composer's menus offer Codex's models and approval presets, and the `/` menu the overlays Codex can fill.
@@ -180,6 +229,83 @@ fn status(key: AgentKey) {
             if let Some(tab) = tab_of(key) {
                 tab.dismiss_dialog();
             }
+            question(key);
+        },
+    );
+}
+
+/// A question of Codex is answered from its card, and the turn goes on.
+fn question(key: AgentKey) {
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
+    tab.type_and_send("ask me");
+    soon(
+        "Codex asks a question",
+        move || {
+            tab_of(key).is_some_and(|t| {
+                t.snapshot()
+                    .pending_requests()
+                    .iter()
+                    .any(|e| matches!(e.kind, ide_thread::EntryKind::Question(_)))
+            })
+        },
+        move || {
+            press_answer(key, move |pressed| {
+                soon(
+                    "the answer reaches Codex",
+                    || std::fs::read_to_string(log()).is_ok_and(|l| l.contains("Blue")),
+                    move || {
+                        let waiting = tab_of(key).is_some_and(|t| !t.snapshot().pending_requests().is_empty());
+                        check("a question of Codex is answered from its card", pressed && !waiting, "");
+                        rewind(key);
+                    },
+                );
+            });
+        },
+    );
+}
+
+/// Presses the option Blue on the newest question card.
+fn press_answer(key: AgentKey, then: impl FnOnce(bool) + 'static) {
+    if let Some(tab) = tab_of(key) {
+        tab.timeline().scroll_to_end();
+    }
+    helpers::after(SCROLL_SETTLE, move || {
+        then(tab_of(key).is_some_and(|t| t.timeline().press_last("Blue", 0)));
+    });
+}
+
+/// Rewinding the conversation to before the second prompt has Codex drop that turn from its stored thread, then
+/// resumes it; the prompt's text is back in the composer.
+fn rewind(key: AgentKey) {
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
+    let prompts = tab.entry_ids(|kind| matches!(kind, ide_thread::EntryKind::UserMessage(_)));
+    let Some(&second) = prompts.get(1) else {
+        return give_up_saying(NAME, "both prompts are in the conversation", format!("{prompts:?}"));
+    };
+    let offered = tab.rewind_titles(second);
+    if let Some(menu) = tab.rewind_menu_of(second) {
+        menu.performActionForItemAtIndex(0);
+    }
+    soon(
+        "Codex drops the turn and the session resumes",
+        || {
+            let sent = std::fs::read_to_string(log()).unwrap_or_default();
+            let reverted = sent
+                .lines()
+                .position(|l| l.contains("thread/revert") && l.contains("turn-2"));
+            reverted.is_some_and(|at| sent.lines().skip(at).any(|l| l.contains("thread/resume")))
+        },
+        move || {
+            let text = tab_of(key).map(|t| t.composer_text()).unwrap_or_default();
+            check(
+                "rewinding a later prompt has Codex drop its turn, resumes the thread and gives the prompt back",
+                offered.iter().any(|t| t.contains("Unterhaltung")) && text == "ask me",
+                format!("{offered:?} {text:?}"),
+            );
             finish(NAME);
         },
     );

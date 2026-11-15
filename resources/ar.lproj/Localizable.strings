@@ -1916,3 +1916,11 @@
 "OpenCode hat noch kein Modell. Verbinde einen Anbieter mit „opencode auth login“ im Terminal." = "لا يملك OpenCode نموذجًا بعد. اربط مزوّدًا باستخدام “opencode auth login” في الوحدة الطرفية.";
 "OpenCode meldet sich bei einem Server mit „opencode mcp auth“ im Terminal an." = "يسجّل OpenCode الدخول إلى خادم باستخدام “opencode mcp auth” في الوحدة الطرفية.";
 "OpenCode: {}" = "‏OpenCode: {}";
+"Unterhaltung" = "محادثة";
+"Der Agent wartet auf deine Antwort." = "ينتظر الوكيل ردك.";
+"Zur Anfrage" = "الانتقال إلى الطلب";
+"Filtern" = "تصفية";
+"Sitzung neu starten" = "إعادة تشغيل الجلسة";
+"Änderungen gelten sofort." = "تسري التغييرات فورًا.";
+"Dieser Agent kann eine Sitzung nicht fortsetzen." = "لا يمكن لهذا الوكيل متابعة جلسة.";
+"Erst wenn der Agent fertig ist." = "فقط بعد انتهاء الوكيل.";

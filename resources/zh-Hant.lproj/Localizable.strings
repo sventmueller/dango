@@ -1916,3 +1916,11 @@
 "OpenCode hat noch kein Modell. Verbinde einen Anbieter mit „opencode auth login“ im Terminal." = "OpenCode 尚無模型。請在「終端機」中使用「opencode auth login」連接供應商。";
 "OpenCode meldet sich bei einem Server mit „opencode mcp auth“ im Terminal an." = "OpenCode 在「終端機」中透過「opencode mcp auth」登入伺服器。";
 "OpenCode: {}" = "OpenCode：{}";
+"Unterhaltung" = "對話內容";
+"Der Agent wartet auf deine Antwort." = "代理程式正在等待你的回答。";
+"Zur Anfrage" = "前往請求";
+"Filtern" = "過濾";
+"Sitzung neu starten" = "重新啟動工作階段";
+"Änderungen gelten sofort." = "變更會立即生效。";
+"Dieser Agent kann eine Sitzung nicht fortsetzen." = "此代理程式無法繼續工作階段。";
+"Erst wenn der Agent fertig ist." = "要等到代理程式完成後。";

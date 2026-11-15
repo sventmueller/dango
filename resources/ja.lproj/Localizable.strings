@@ -1916,3 +1916,11 @@
 "OpenCode hat noch kein Modell. Verbinde einen Anbieter mit „opencode auth login“ im Terminal." = "OpenCodeにはまだモデルがありません。ターミナルで“opencode auth login”を使ってプロバイダを接続してください。";
 "OpenCode meldet sich bei einem Server mit „opencode mcp auth“ im Terminal an." = "OpenCodeはターミナルで“opencode mcp auth”を使ってサーバにサインインします。";
 "OpenCode: {}" = "OpenCode: {}";
+"Unterhaltung" = "会話";
+"Der Agent wartet auf deine Antwort." = "エージェントが応答を待っています。";
+"Zur Anfrage" = "リクエストに移動";
+"Filtern" = "絞り込み";
+"Sitzung neu starten" = "セッションを再起動";
+"Änderungen gelten sofort." = "変更はすぐに反映されます。";
+"Dieser Agent kann eine Sitzung nicht fortsetzen." = "このエージェントはセッションを続行できません。";
+"Erst wenn der Agent fertig ist." = "エージェントが完了してから行われます。";

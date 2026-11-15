@@ -37,7 +37,7 @@ fn button_in(view: &NSView, title: &str) -> Option<Retained<NSButton>> {
 }
 
 /// The controls under `view` in order, each as a token: `switch`, `popup`, `field`, or a button's title; the
-/// overlay's close button and hidden views left out.
+/// frame's own buttons (close, the way to a waiting request) and hidden views left out.
 fn controls_in(view: &NSView, into: &mut Vec<String>) {
     use objc2_app_kit::NSAccessibility;
     let object: &objc2::runtime::AnyObject = view;
@@ -50,7 +50,7 @@ fn controls_in(view: &NSView, into: &mut Vec<String>) {
         let label = button.accessibilityLabel().map(|l| l.to_string()).unwrap_or_default();
         if title.is_empty() && label != splat_i18n::t("Schließen") {
             into.push(label);
-        } else if !title.is_empty() {
+        } else if !title.is_empty() && title != splat_i18n::t("Zur Anfrage") {
             into.push(title);
         }
     } else if let Some(field) = object.downcast_ref::<NSTextField>()
@@ -186,5 +186,24 @@ impl AgentTab {
         let Some(popup) = found else { return false };
         popup.selectItemWithTitle(&ide_ui_common::util::ns(title));
         popup.titleOfSelectedItem().is_some_and(|t| t.to_string() == title)
+    }
+
+    /// Sends the Find item's action as ⌘F does, then searches the overlay for `text`; whether ⌘F reached the
+    /// overlay and showed its search.
+    pub fn search_dialog(&self, text: &str) -> bool {
+        // The menu item sends its action along the key window's responder chain; the self-test's window need not be
+        // key, so the chain starts at the focus of the tab's window.
+        let responder = self.root.window().and_then(|w| w.firstResponder());
+        // SAFETY: The selector names an action method taking a sender, sent without one as the menu may.
+        let sent =
+            responder.is_some_and(|r| unsafe { r.tryToPerform_with(objc2::sel!(performTextFinderAction:), None) });
+        let Some(open) = self.dialog.borrow().clone() else {
+            return false;
+        };
+        let found = find_in::<objc2_app_kit::NSSearchField>(&open.frame.shade, &|field| !field.isHidden());
+        let Some(field) = found else { return false };
+        field.setStringValue(&ide_ui_common::util::ns(text));
+        open.frame.filter();
+        sent
     }
 }

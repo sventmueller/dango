@@ -1916,3 +1916,11 @@
 "OpenCode hat noch kein Modell. Verbinde einen Anbieter mit „opencode auth login“ im Terminal." = "OpenCode još nema model. Povežite pružatelja naredbom “opencode auth login” u Terminalu.";
 "OpenCode meldet sich bei einem Server mit „opencode mcp auth“ im Terminal an." = "OpenCode se prijavljuje na poslužitelj naredbom “opencode mcp auth” u Terminalu.";
 "OpenCode: {}" = "OpenCode: {}";
+"Unterhaltung" = "Razgovor";
+"Der Agent wartet auf deine Antwort." = "Agent čeka vaš odgovor.";
+"Zur Anfrage" = "Idi na zahtjev";
+"Filtern" = "Filtriraj";
+"Sitzung neu starten" = "Ponovno pokreni sesiju";
+"Änderungen gelten sofort." = "Promjene vrijede odmah.";
+"Dieser Agent kann eine Sitzung nicht fortsetzen." = "Ovaj agent ne može nastaviti sesiju.";
+"Erst wenn der Agent fertig ist." = "Tek kad agent završi.";

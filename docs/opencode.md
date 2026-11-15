@@ -30,6 +30,11 @@ routes of the older documentation. The schema the crate is built and tested agai
 | `/config` | the agent as mode, the model and its variant as choices; `opencode.json` of the project to open |
 | `/memory` | `AGENTS.md` of the project |
 
+Rewinding (I6): each user message is chained to OpenCode's message id from the answer to its prompt (or from the
+history on resume). Rewinding before a later prompt sends `POST /api/session/{id}/revert/stage {messageID, files:
+false}` and `/revert/commit`, then resumes the session; files go back through Dango's own checkpoints (E40). Before
+the first prompt a new session starts.
+
 Not offered: `/btw` (a fork's turn would need a second session on the stream), `/logout` (no sign-out route in
 the API; providers are connected with `opencode auth login`), `/skills`, `/plugins`, `/permissions`, `/hooks`,
 `/bug`.

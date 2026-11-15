@@ -164,6 +164,7 @@ pub(crate) fn past_sessions(cwd: &Path, limit: usize) -> Vec<(Resume, SystemTime
                     session,
                     thread: Some(e.id.clone()),
                     title: Some(e.title.clone()).filter(|t| !t.is_empty()),
+                    agent: None,
                 },
                 e.last_activity,
             ))
@@ -181,10 +182,17 @@ pub(crate) fn past_sessions(cwd: &Path, limit: usize) -> Vec<(Resume, SystemTime
                 thread: None,
                 title,
                 transcript: Some(session.path.clone()),
+                agent: None,
             },
             session.modified,
         ));
     }
+    let known: BTreeSet<String> = past.iter().map(|(r, _)| r.session.clone()).collect();
+    past.extend(
+        crate::codex::past_threads(cwd)
+            .into_iter()
+            .filter(|(r, _)| !known.contains(&r.session)),
+    );
     past.sort_by_key(|(_, when)| std::cmp::Reverse(*when));
     past.truncate(limit);
     past
@@ -287,6 +295,7 @@ impl AgentPanel {
             tabs: &tabs,
             archived: lists.archived,
             terminal: lists.terminal,
+            codex: lists.codex,
             bookmarks: &lists.bookmarks,
         });
         self.sessions_source.show(&self.sessions, model);
@@ -302,6 +311,8 @@ struct Lists {
     index: ThreadIndex,
     archived: bool,
     terminal: Vec<ide_claude::history::PastSession>,
+    /// The Codex threads of the folder the running Codex last named.
+    codex: Vec<(Resume, SystemTime)>,
     bookmarks: BTreeSet<String>,
 }
 
@@ -311,6 +322,11 @@ impl Lists {
             index: ThreadIndex::open(&ThreadIndex::default_dir()),
             archived,
             terminal: if archived { Vec::new() } else { terminal_sessions(root) },
+            codex: if archived {
+                Vec::new()
+            } else {
+                crate::codex::past_threads(root)
+            },
             bookmarks: bookmarks(),
         }
     }

@@ -1916,3 +1916,11 @@
 "OpenCode hat noch kein Modell. Verbinde einen Anbieter mit „opencode auth login“ im Terminal." = "OpenCode belum memiliki model. Hubungkan penyedia dengan “opencode auth login” di Terminal.";
 "OpenCode meldet sich bei einem Server mit „opencode mcp auth“ im Terminal an." = "OpenCode masuk ke server dengan “opencode mcp auth” di Terminal.";
 "OpenCode: {}" = "OpenCode: {}";
+"Unterhaltung" = "Percakapan";
+"Der Agent wartet auf deine Antwort." = "Agen menunggu jawaban Anda.";
+"Zur Anfrage" = "Pindah ke Permintaan";
+"Filtern" = "Saring";
+"Sitzung neu starten" = "Mulai Ulang Sesi";
+"Änderungen gelten sofort." = "Perubahan langsung berlaku.";
+"Dieser Agent kann eine Sitzung nicht fortsetzen." = "Agen ini tidak dapat melanjutkan sesi.";
+"Erst wenn der Agent fertig ist." = "Hanya setelah agen selesai.";

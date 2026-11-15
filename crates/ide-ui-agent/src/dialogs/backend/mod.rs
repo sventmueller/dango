@@ -101,6 +101,7 @@ pub(crate) trait Backend {
             sign_in: no,
             add: no,
             remove: no,
+            restart: no,
             transports: Vec::new(),
             scopes: Vec::new(),
         }
@@ -278,5 +279,28 @@ pub(super) fn on_work<T: Send + 'static>(work: impl FnOnce() -> Result<T, Explai
         done(Err(Explained(
             splat_i18n::t("Die App ist gerade ausgelastet. Versuch es gleich noch einmal.").to_string(),
         )));
+    }
+}
+
+/// The file name an exported conversation is offered under: its title without what a file name cannot hold, or a
+/// plain word for a conversation without a title.
+pub(super) fn export_name(thread: &ide_thread::Thread) -> String {
+    let title = thread.title().replace(['/', ':'], "-");
+    let title = title.trim().trim_start_matches('.');
+    if title.is_empty() {
+        format!("{}.txt", splat_i18n::t("Unterhaltung"))
+    } else {
+        format!("{title}.txt")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ide_thread::{Thread, ThreadId};
+
+    #[test]
+    fn a_conversation_without_a_title_is_exported_under_a_plain_name() {
+        let thread = Thread::new(ThreadId::from("t"), "agent", "/p");
+        assert!(!super::export_name(&thread).starts_with('.'));
     }
 }

@@ -1916,3 +1916,11 @@
 "OpenCode hat noch kein Modell. Verbinde einen Anbieter mit „opencode auth login“ im Terminal." = "OpenCode के पास अभी कोई मॉडल नहीं है। टर्मिनल में “opencode auth login” से कोई प्रदाता कनेक्ट करें।";
 "OpenCode meldet sich bei einem Server mit „opencode mcp auth“ im Terminal an." = "OpenCode टर्मिनल में “opencode mcp auth” से किसी सर्वर में साइन इन करता है।";
 "OpenCode: {}" = "OpenCode : {}";
+"Unterhaltung" = "बातचीत";
+"Der Agent wartet auf deine Antwort." = "एजेंट आपके जवाब की प्रतीक्षा कर रहा है।";
+"Zur Anfrage" = "अनुरोध पर जाएँ";
+"Filtern" = "फ़िल्टर करें";
+"Sitzung neu starten" = "सेशन रीस्टार्ट करें";
+"Änderungen gelten sofort." = "बदलाव तुरंत लागू होते हैं।";
+"Dieser Agent kann eine Sitzung nicht fortsetzen." = "यह एजेंट किसी सेशन को जारी नहीं रख सकता।";
+"Erst wenn der Agent fertig ist." = "एजेंट का काम पूरा होने के बाद ही।";

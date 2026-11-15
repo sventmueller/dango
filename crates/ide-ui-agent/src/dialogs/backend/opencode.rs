@@ -60,7 +60,7 @@ impl Backend for OpenCode {
     fn export(&self, done: Done<Exported>) {
         done(Ok(Exported {
             text: acp::export(&self.thread),
-            file_name: format!("{}.txt", self.thread.title().replace(['/', ':'], "-").trim()),
+            file_name: super::export_name(&self.thread),
         }));
     }
 
@@ -74,6 +74,7 @@ impl Backend for OpenCode {
             )),
             add: None,
             remove: None,
+            restart: Some(t("Änderungen gelten sofort.")),
             transports: vec![Transport::Stdio, Transport::Http],
             scopes: vec![Scope::User],
         }

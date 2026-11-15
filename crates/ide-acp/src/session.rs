@@ -215,11 +215,7 @@ impl Shared {
     fn on_update(&self, notification: acp::SessionNotification) {
         let (updates, learned) = {
             let mut state = self.state();
-            if let Some(side) = state
-                .side
-                .as_mut()
-                .filter(|side| side.session == notification.session_id)
-            {
+            if let Some(side) = state.side.as_mut().filter(|side| side.is(&notification.session_id)) {
                 side.take(&notification.update);
                 return;
             }
@@ -241,7 +237,7 @@ impl Shared {
             .state()
             .side
             .as_ref()
-            .is_some_and(|side| side.session == request.session_id);
+            .is_some_and(|side| side.is(&request.session_id));
         if request.options.is_empty() || aside {
             // Nothing to choose from means nothing the user could allow, and a question beside the conversation runs
             // no tools; either request is refused (E21, E146).
@@ -803,7 +799,7 @@ async fn open(shared: &Shared, connection: &ConnectionTo<Agent>) -> Result<(), S
     let meta = launch.session_meta.as_ref().and_then(|m| m.as_object().cloned());
     let (can_load, servers) = {
         let state = shared.state();
-        let servers = extras::handover(&launch.mcp_servers, &state.caps, &launch.env);
+        let servers = extras::handover(&launch.mcp_servers, &state.caps, &launch.env, &launch.cwd);
         (state.caps.load_session, servers)
     };
     let opened = match launch.resume.clone().filter(|_| can_load) {

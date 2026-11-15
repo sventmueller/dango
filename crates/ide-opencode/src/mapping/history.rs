@@ -25,6 +25,7 @@ impl Mapper {
                         ..UserMessage::default()
                     };
                     out.push(put(format!("user:{id}"), created, EntryKind::UserMessage(user)));
+                    out.push(super::chain(format!("user:{id}"), id));
                 }
                 Some("assistant") => out.extend(self.assistant(message, id, created)),
                 Some("compaction") if text(message, "status") == Some("completed") => {

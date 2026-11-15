@@ -48,6 +48,8 @@ pub struct Mapper {
     open: HashMap<String, Open>,
     /// An error notice was shown for the running turn, so its failed end adds no second one.
     failed: bool,
+    /// The turn of the user message chained last, which the next one follows.
+    chained: Option<String>,
     usage: usage::Tally,
     diff: Option<String>,
 }
@@ -340,16 +342,37 @@ impl Mapper {
         }
     }
 
-    fn user_item(&mut self, key: String, content: &[Value], client: Option<&str>, at: SystemTime) -> Vec<Update> {
-        if client.is_some_and(|c| self.sent.iter().any(|s| s == c)) {
-            return Vec::new();
+    fn user_item(
+        &mut self,
+        key: String,
+        turn: &str,
+        content: &[Value],
+        client: Option<&str>,
+        at: SystemTime,
+    ) -> Vec<Update> {
+        if let Some(sent) = client.filter(|c| self.sent.iter().any(|s| s == c)) {
+            return vec![self.chain(sent.to_string(), turn)];
         }
         let message = UserMessage {
             text: user_text(content),
             ..UserMessage::default()
         };
         let key = client.map_or(key, |c| format!("user:{c}"));
-        vec![put(key, at, EntryKind::UserMessage(message))]
+        vec![
+            put(key.clone(), at, EntryKind::UserMessage(message)),
+            self.chain(key, turn),
+        ]
+    }
+
+    /// Names the turn the user message `key` began, which `thread/revert` takes to drop it and every later one.
+    fn chain(&mut self, key: String, turn: &str) -> Update {
+        let follows = self.chained.clone().filter(|last| last != turn).unwrap_or_default();
+        self.chained = Some(turn.to_string());
+        Update::Chain {
+            key,
+            uuid: turn.to_string(),
+            follows: Some(follows),
+        }
     }
 
     fn item_started(&mut self, item: &Item, turn: &str, at: SystemTime) -> Vec<Update> {
@@ -357,7 +380,9 @@ impl Mapper {
             return Vec::new();
         };
         match item {
-            Item::UserMessage { content, client_id, .. } => self.user_item(key, content, client_id.as_deref(), at),
+            Item::UserMessage { content, client_id, .. } => {
+                self.user_item(key, turn, content, client_id.as_deref(), at)
+            }
             Item::AgentMessage { text, .. } | Item::Plan { text, .. } => {
                 self.open.insert(key.clone(), Open::Text);
                 let entry = EntryKind::AgentMessage(AgentMessage {
@@ -403,7 +428,9 @@ impl Mapper {
         };
         let known = self.open.remove(&key);
         match item {
-            Item::UserMessage { content, client_id, .. } => self.user_item(key, content, client_id.as_deref(), at),
+            Item::UserMessage { content, client_id, .. } => {
+                self.user_item(key, turn, content, client_id.as_deref(), at)
+            }
             Item::AgentMessage { text, .. } | Item::Plan { text, .. } => {
                 let mut out = Vec::new();
                 if known.is_none() {

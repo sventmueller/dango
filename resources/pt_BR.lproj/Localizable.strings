@@ -1916,3 +1916,11 @@
 "OpenCode hat noch kein Modell. Verbinde einen Anbieter mit „opencode auth login“ im Terminal." = "O OpenCode ainda não tem um modelo. Conecte um provedor com “opencode auth login” no Terminal.";
 "OpenCode meldet sich bei einem Server mit „opencode mcp auth“ im Terminal an." = "O OpenCode inicia sessão em um servidor com “opencode mcp auth” no Terminal.";
 "OpenCode: {}" = "OpenCode: {}";
+"Unterhaltung" = "Conversa";
+"Der Agent wartet auf deine Antwort." = "O agente está aguardando sua resposta.";
+"Zur Anfrage" = "Ir para a Solicitação";
+"Filtern" = "Filtrar";
+"Sitzung neu starten" = "Reiniciar Sessão";
+"Änderungen gelten sofort." = "As alterações entram em vigor imediatamente.";
+"Dieser Agent kann eine Sitzung nicht fortsetzen." = "Este agente não pode continuar uma sessão.";
+"Erst wenn der Agent fertig ist." = "Só quando o agente terminar.";

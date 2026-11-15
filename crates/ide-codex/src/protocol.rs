@@ -16,6 +16,8 @@ pub mod method {
     pub const THREAD_RESUME: &str = "thread/resume";
     /// Copies a thread into a new one.
     pub const THREAD_FORK: &str = "thread/fork";
+    /// Replaces the stored history with the turns before one; files stay as they are.
+    pub const THREAD_REVERT: &str = "thread/revert";
     /// Lists stored threads.
     pub const THREAD_LIST: &str = "thread/list";
     /// Starts a turn.

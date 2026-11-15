@@ -1916,3 +1916,11 @@
 "OpenCode hat noch kein Modell. Verbinde einen Anbieter mit „opencode auth login“ im Terminal." = "OpenCode zatím nemá žádný model. Připojte poskytovatele příkazem „opencode auth login“ v Terminálu.";
 "OpenCode meldet sich bei einem Server mit „opencode mcp auth“ im Terminal an." = "OpenCode se přihlašuje k serveru příkazem „opencode mcp auth“ v Terminálu.";
 "OpenCode: {}" = "OpenCode: {}";
+"Unterhaltung" = "Konverzace";
+"Der Agent wartet auf deine Antwort." = "Agent čeká na vaši odpověď.";
+"Zur Anfrage" = "Přejít na požadavek";
+"Filtern" = "Filtrovat";
+"Sitzung neu starten" = "Restartovat relaci";
+"Änderungen gelten sofort." = "Změny platí okamžitě.";
+"Dieser Agent kann eine Sitzung nicht fortsetzen." = "Tento agent nedokáže pokračovat v relaci.";
+"Erst wenn der Agent fertig ist." = "Až agent dokončí práci.";

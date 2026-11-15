@@ -470,9 +470,34 @@ fn feedback_overlay(root: PathBuf, key: AgentKey) {
     });
 }
 
+/// A request of the agent that arrives while an overlay is open is said in the overlay, whose button closes it to
+/// answer the request.
+pub(super) fn asking_overlay(first: AgentKey, second: AgentKey) {
+    open(first, "/status", "2.1.325", move || {
+        let quiet = !shows(first, "Der Agent wartet auf deine Antwort.");
+        if let Some(tab) = tab_of(first) {
+            tab.type_and_send("write hello");
+        }
+        soon(
+            "the overlay says the agent waits",
+            move || shows(first, "Der Agent wartet auf deine Antwort."),
+            move || {
+                let closed =
+                    tab_of(first).is_some_and(|t| t.press_dialog_button("Zur Anfrage") && t.dialog_texts().is_none());
+                check(
+                    "a request that arrives while an overlay is open is said there, and its button leads to it",
+                    quiet && closed,
+                    format!("{:?}", texts(first)),
+                );
+                logout_overlay(first, second);
+            },
+        );
+    });
+}
+
 /// `/logout` shows who is signed in; signing out asks first, runs `claude auth logout`, and every Claude tab then
 /// asks for signing in again.
-pub(super) fn logout_overlay(first: AgentKey, second: AgentKey) {
+fn logout_overlay(first: AgentKey, second: AgentKey) {
     let status = json!({"loggedIn": true, "authMethod": "claude.ai", "email": "selftest@example.org"});
     let written = stand_in().write("sub-auth-status.out", &status.to_string()).is_ok()
         && stand_in()

@@ -271,6 +271,8 @@ impl AgentTab {
             fields: RefCell::new(Vec::new()),
         });
         open.frame.show(&self.root());
+        open.frame
+            .set_asking(!self.state.borrow().thread().pending_requests().is_empty());
         *self.dialog.borrow_mut() = Some(open.clone());
         let backend = backend::of(self);
         match dialog {
@@ -333,7 +335,17 @@ pub(crate) fn needs_session(tab: &AgentTab, open: &Open, backend: &dyn backend::
     }
     let mtm = tab.mtm;
     open.waiting.set(true);
-    let starting = matches!(tab.state.borrow().source(), crate::source::Source::Starting);
+    // A session that opens, or waits for a sign-in, is no session to start again: its process runs.
+    let starting = {
+        use crate::source::Source;
+        match tab.state.borrow().source() {
+            Source::Starting => true,
+            Source::Acp(session) => !session.is_ended(),
+            Source::Codex(session) => !session.is_ended(),
+            Source::OpenCode(session) => !session.is_ended(),
+            _ => false,
+        }
+    };
     if starting {
         open.frame.set_rows(&[rows::waiting(mtm)]);
         open.frame.set_notice(Some(t("Startet die Sitzung …")));
@@ -344,11 +356,41 @@ pub(crate) fn needs_session(tab: &AgentTab, open: &Open, backend: &dyn backend::
         t("Die Sitzung läuft nicht. Starte sie, um das hier zu sehen."),
     )]);
     let start = rows::button(mtm, open, t("Sitzung starten"), |tab| {
-        tab.start();
+        let idle = matches!(tab.state.borrow().source(), crate::source::Source::Idle);
+        if idle {
+            tab.start();
+        }
         tab.refill_dialog();
     });
     open.frame.set_buttons(&[crate::ui::view(&start)]);
     false
+}
+
+impl AgentTab {
+    /// Ends the session and starts it again, continuing its conversation, so what applies from the next start
+    /// applies now; not while a turn runs.
+    pub(crate) fn restart_session(&self) {
+        let running = self.state.borrow().thread().status() != ide_thread::Status::Idle;
+        if running {
+            if let Some(open) = self.dialog.borrow().clone() {
+                open.frame.set_notice(Some(t("Erst wenn der Agent fertig ist.")));
+            }
+            return;
+        }
+        let source = self.state.borrow_mut().end();
+        source.end();
+        self.start();
+        self.refill_dialog();
+    }
+}
+
+/// Says in the open overlay of `tab` whether the agent waits for an answer in the conversation.
+pub(crate) fn requests_changed(tab: &AgentTab) {
+    let Some(open) = tab.dialog.borrow().clone() else {
+        return;
+    };
+    let waits = !tab.state.borrow().thread().pending_requests().is_empty();
+    open.frame.set_asking(waits);
 }
 
 /// The session of `tab` is ready: an overlay that waited for it fills itself now.

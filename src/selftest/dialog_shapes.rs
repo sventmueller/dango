@@ -44,7 +44,7 @@ fn fits(function: Function, controls: &[String]) -> bool {
     }
 }
 
-/// Each server: its switch, Reconnect, Sign in or out where it has a sign-in, Remove; then Add.
+/// Each server: its switch, Reconnect, Sign in or out where it has a sign-in, Remove; then Restart and Add.
 fn mcp(tokens: &[&str]) -> bool {
     let mut rest = tokens;
     while let ["switch", "Neu verbinden", more @ ..] = rest {
@@ -53,7 +53,7 @@ fn mcp(tokens: &[&str]) -> bool {
             _ => return false,
         };
     }
-    rest == ["Hinzufügen …"]
+    rest == ["Sitzung neu starten", "Hinzufügen …"]
 }
 
 /// Checks the open overlay of `key` against the reference of `function`.

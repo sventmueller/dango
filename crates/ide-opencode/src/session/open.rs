@@ -40,7 +40,10 @@ pub(super) fn open(shared: &Arc<Shared>, url: &Receiver<String>) {
 
 fn handshake(shared: &Arc<Shared>, url: &Receiver<String>) -> Result<(), SessionError> {
     let launch = &shared.launch;
-    let version = crate::version::probe(&shared.supervisor, &launch.program, &launch.env)?;
+    let version = match launch.version {
+        Some(known) => crate::version::check(Some(known))?,
+        None => crate::version::probe(&shared.supervisor, &launch.program, &launch.env)?,
+    };
     shared.state().caps.version = Some(version);
     let address = url
         .recv_timeout(URL_TIMEOUT)

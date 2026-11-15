@@ -1916,3 +1916,11 @@
 "OpenCode hat noch kein Modell. Verbinde einen Anbieter mit „opencode auth login“ im Terminal." = "Το OpenCode δεν έχει ακόμη μοντέλο. Συνδέστε έναν πάροχο με «opencode auth login» στο Τερματικό.";
 "OpenCode meldet sich bei einem Server mit „opencode mcp auth“ im Terminal an." = "Το OpenCode συνδέεται σε έναν διακομιστή με «opencode mcp auth» στο Τερματικό.";
 "OpenCode: {}" = "OpenCode: {}";
+"Unterhaltung" = "Συνομιλία";
+"Der Agent wartet auf deine Antwort." = "Ο πράκτορας περιμένει την απάντησή σας.";
+"Zur Anfrage" = "Μετάβαση στο αίτημα";
+"Filtern" = "Φιλτράρισμα";
+"Sitzung neu starten" = "Επανεκκίνηση συνεδρίας";
+"Änderungen gelten sofort." = "Οι αλλαγές ισχύουν αμέσως.";
+"Dieser Agent kann eine Sitzung nicht fortsetzen." = "Αυτός ο πράκτορας δεν μπορεί να συνεχίσει μια συνεδρία.";
+"Erst wenn der Agent fertig ist." = "Μόνο αφού ολοκληρώσει ο πράκτορας.";

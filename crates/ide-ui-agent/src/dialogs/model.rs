@@ -147,6 +147,8 @@ pub(crate) struct McpCaps {
     pub(crate) sign_in: Blocked,
     pub(crate) add: Blocked,
     pub(crate) remove: Blocked,
+    /// Starting the session again, continuing its conversation, which servers that apply from the next start need.
+    pub(crate) restart: Blocked,
     /// The transports a new server may use.
     pub(crate) transports: Vec<Transport>,
     /// The places a new server may go.

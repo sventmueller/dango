@@ -201,6 +201,15 @@ fn mcp_overlay(root: PathBuf, key: AgentKey) {
                 picture(&controller, "agent-dialog-mcp");
             }
             super::dialog_shapes::check_shape(key, super::dialog_shapes::Function::Mcp);
+            let searched = tab_of(key).is_some_and(|t| t.search_dialog("broken"));
+            check(
+                "⌘F searches the overlay and leaves only the rows that match",
+                searched && shows(key, "broken") && !shows(key, "remote"),
+                format!("{:?}", texts(key)),
+            );
+            if let Some(tab) = tab_of(key) {
+                tab.search_dialog("");
+            }
             let Some(tab) = tab_of(key) else {
                 return give_up(NAME, "the AI tab is open");
             };
@@ -365,7 +374,7 @@ fn two_tabs(root: PathBuf, first: AgentKey) {
                         texts(second).is_empty() && shows(first, "Im Terminal öffnen"),
                         format!("{:?} / {:?}", texts(first), texts(second)),
                     );
-                    settings::logout_overlay(first, second);
+                    settings::asking_overlay(first, second);
                 },
             );
         },

@@ -1916,3 +1916,11 @@
 "OpenCode hat noch kein Modell. Verbinde einen Anbieter mit „opencode auth login“ im Terminal." = "У OpenCode еще нет модели. Подключите провайдера командой «opencode auth login» в Терминале.";
 "OpenCode meldet sich bei einem Server mit „opencode mcp auth“ im Terminal an." = "OpenCode входит на сервер с помощью команды «opencode mcp auth» в Терминале.";
 "OpenCode: {}" = "OpenCode: {}";
+"Unterhaltung" = "Диалог";
+"Der Agent wartet auf deine Antwort." = "Агент ждет Вашего ответа.";
+"Zur Anfrage" = "Перейти к запросу";
+"Filtern" = "Фильтровать";
+"Sitzung neu starten" = "Перезапустить сеанс";
+"Änderungen gelten sofort." = "Изменения применяются сразу.";
+"Dieser Agent kann eine Sitzung nicht fortsetzen." = "Этот агент не может продолжить сеанс.";
+"Erst wenn der Agent fertig ist." = "Только когда агент закончит работу.";

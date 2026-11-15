@@ -89,6 +89,10 @@ fn a_question_beside_the_conversation_stays_out_of_the_thread_and_runs_no_tools(
     session
         .ask_aside("why red?", move |answer| tx.send(answer).unwrap())
         .unwrap();
+    assert!(
+        session.ask_aside("why blue?", |_| {}).is_err(),
+        "a second question while the first forks must wait"
+    );
     let answer = rx.recv_timeout(Duration::from_secs(15)).unwrap().unwrap();
     assert_eq!(answer, format!("{ASIDE_ANSWER}why red?"));
     let entries = format!("{:?}", session.snapshot());

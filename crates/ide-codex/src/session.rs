@@ -699,6 +699,8 @@ impl Session {
                         Vec::new()
                     }
                     Err(error) => {
+                        // A stop asked for while this turn was starting has nothing left to stop.
+                        state.interrupt = false;
                         state.overrides.restore(overrides);
                         let kind = error.data.as_ref().map_or(ErrorKind::Api, crate::mapping::error_kind);
                         let mut updates = state.mapper.error(kind, error.message.clone(), now());

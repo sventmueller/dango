@@ -517,3 +517,30 @@ fn stopping_ends_the_session_quietly() {
     assert!(!kinds(&run.session).iter().any(|k| matches!(k, EntryKind::Notice(_))));
     assert_eq!(run.session.models(false).wait(), Err(SessionError::Closed));
 }
+
+#[test]
+fn a_stop_while_a_refused_turn_starts_leaves_the_next_turn_alone() {
+    let run = ready("basic", "refused-stop");
+    run.session.send(message("refuse this")).unwrap();
+    run.session.cancel();
+    wait("the refusal", || {
+        run.session.snapshot().status() == Status::Idle && run.sent_methods().iter().any(|m| m == "turn/start")
+    });
+    run.session.send(message("list the files")).unwrap();
+    wait("the next turn asks for its command", || {
+        pending_request(&run.session).is_some()
+    });
+    let methods = run.sent_methods();
+    assert!(!methods.iter().any(|m| m == "turn/interrupt"), "{methods:?}");
+}
+
+#[test]
+fn a_version_read_before_the_start_is_not_read_again() {
+    let (mut launch, log) = launch("basic", "known-version");
+    launch.version = ide_codex::Version::parse("codex-cli 0.100.0");
+    let run = start(launch, log);
+    wait("the refusal", || {
+        run.events
+            .has(|e| matches!(e, Event::Failed(SessionError::Unsupported { .. })))
+    });
+}

@@ -37,7 +37,9 @@ The client hands MCP servers to `session/new` and `session/load` (`ide-acp/src/s
 switched off per project in the app's state) and the app's own list (`acpMcpServers` in the state, the values of
 environment and headers in the store of secrets under `mcp:<name>`, R42), only with the transports the agent
 announces (`mcpCapabilities.http`, `.sse`; stdio always, the program resolved to an absolute path). A change applies
-from the next session start.
+from the next session start; `/mcp` offers to restart the session at once where the agent can load it again
+(`loadSession`). A project's server shadows the app's own server of the same name, as in Claude Code, and a
+relative program such as `./bin/mcp` is found in the project folder.
 
 ## Process
 

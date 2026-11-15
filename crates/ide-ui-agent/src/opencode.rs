@@ -39,8 +39,10 @@ pub(crate) fn launch_for(
     #[cfg(not(feature = "selftest"))]
     {
         let program = crate::acp::launch_of(agent, env, cwd)?.program;
-        ide_opencode::version::probe(Supervisor::global(), &program, env).ok()?;
-        Some(ide_opencode::Launch::new(program, env.to_vec(), cwd))
+        let version = ide_opencode::version::probe(Supervisor::global(), &program, env).ok()?;
+        let mut launch = ide_opencode::Launch::new(program, env.to_vec(), cwd);
+        launch.version = Some(version);
+        Some(launch)
     }
 }
 
@@ -148,10 +150,14 @@ impl AgentTab {
     pub(crate) fn launch_opencode(&self, mut launch: ide_opencode::Launch, thread: Thread) {
         {
             let state = self.state.borrow();
-            launch.resume = thread
-                .session()
-                .map(str::to_string)
-                .or_else(|| state.resume().map(|r| r.session.clone()));
+            launch.resume = match state.fork() {
+                // A rewind continues the thread the agent cut, or one before the first prompt starts anew.
+                Some(fork) => fork.rewind.is_some().then(|| fork.session.clone()),
+                None => thread
+                    .session()
+                    .map(str::to_string)
+                    .or_else(|| state.resume().map(|r| r.session.clone())),
+            };
         }
         let sink = self.sink(Incoming::OpenCode);
         match ide_opencode::Session::start(Supervisor::global(), launch, thread.clone(), sink) {

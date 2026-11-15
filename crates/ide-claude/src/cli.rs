@@ -238,13 +238,13 @@ impl Cli {
 
     /// Who is signed in.
     pub fn auth_status(&self) -> Result<AuthStatus, CliError> {
-        let out = match self.run(&["auth", "status"], None, "claude auth status") {
-            Ok(out) => out,
-            // Not signed in ends with 1 and still prints the status.
-            Err(CliError::Failed(said)) => said,
-            Err(error) => return Err(error),
-        };
-        serde_json::from_str(out.trim()).map_err(|e| CliError::Failed(e.to_string()))
+        let (ending, out, err) = self.run_raw(&["auth", "status"], None, "claude auth status")?;
+        // Not signed in ends with 1 and still prints the status on stdout, whatever it warns on stderr.
+        if let Some(status) = last_json(&out) {
+            return serde_json::from_value(status).map_err(|e| CliError::Failed(e.to_string()));
+        }
+        let out = outcome(ending, out, err)?;
+        Err(CliError::Failed(out.trim().to_string()))
     }
 
     /// Signs out of Claude Code.
@@ -469,5 +469,17 @@ mod tests {
             silent.plugin(&["enable", "x"]),
             Err(CliError::Failed("no such plugin".into()))
         );
+    }
+
+    #[test]
+    fn a_signed_out_status_reads_from_stdout_whatever_the_cli_warns() {
+        let (dir, _) = stand_in("auth-warn", "", 0);
+        let script = "#!/bin/sh\nprintf '%s\\n' '{\"loggedIn\":false,\"authMethod\":\"none\"}'\n\
+             echo 'a newer version is available' >&2\nexit 1\n";
+        std::fs::write(dir.join("claude"), script).unwrap();
+        let cli = Cli::new(dir.join("claude"), Vec::new(), dir.clone());
+        let status = cli.auth_status().unwrap();
+        assert!(!status.logged_in);
+        assert_eq!(status.auth_method, "none");
     }
 }

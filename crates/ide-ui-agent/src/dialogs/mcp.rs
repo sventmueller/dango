@@ -87,7 +87,9 @@ fn show(tab: &AgentTab, open: &Open, servers: &[McpServer], caps: &McpCaps) {
         }
     });
     rows::block(&add, caps.add);
-    open.frame.set_buttons(&[ui::view(&add)]);
+    let restart = rows::button(mtm, open, t("Sitzung neu starten"), |tab| tab.restart_session());
+    rows::block(&restart, caps.restart);
+    open.frame.set_buttons(&[ui::view(&restart), ui::view(&add)]);
 }
 
 fn server_row(tab: &AgentTab, open: &Open, server: &McpServer, caps: &McpCaps) -> Retained<NSView> {

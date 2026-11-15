@@ -597,3 +597,14 @@ fn stopping_closes_the_input_and_the_server_ends() {
     assert!(!run.events.has(|e| matches!(e, Event::Failed(_))));
     assert_eq!(run.session.set_mode("plan"), Err(SessionError::Closed));
 }
+
+#[test]
+fn a_version_read_before_the_start_is_not_read_again() {
+    let (mut launch, log) = launch("basic", "known-version");
+    launch.version = ide_opencode::Version::parse("opencode v1.0.0");
+    let run = start(launch, log);
+    wait("the refusal", || {
+        run.events
+            .has(|e| matches!(e, Event::Failed(SessionError::Unsupported { .. })))
+    });
+}

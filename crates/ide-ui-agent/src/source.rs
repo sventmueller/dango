@@ -30,6 +30,9 @@ pub struct Resume {
     pub title: Option<String>,
     /// The transcript the CLI saved, whose conversation is shown before it continues.
     pub transcript: Option<PathBuf>,
+    /// The register's id of the agent of a session the app keeps no thread of, such as a Codex thread from outside
+    /// the app; Claude's when none.
+    pub agent: Option<String>,
 }
 
 /// What keeps a tab from running a session.
@@ -254,9 +257,27 @@ impl Source {
             .map_or(Err(SessionError::Closed), |s| s.answer(request, answer))
     }
 
-    pub(crate) fn answer_questions(&self, request: &str, answers: Vec<Answer>) -> Result<(), SessionError> {
+    /// Answers the questions of request `request`, whichever agent asked them; an MCP server's form of Codex takes
+    /// the answers as its fields.
+    pub(crate) fn answer_questions(&self, request: &str, answers: Vec<Answer>) -> Result<(), Explained> {
+        if let Some(session) = self.codex() {
+            let form: serde_json::Map<String, serde_json::Value> = answers
+                .iter()
+                .map(|a| (a.question.clone(), serde_json::Value::from(a.answer.clone())))
+                .collect();
+            return session
+                .answer_questions(request, answers)
+                .or_else(|_| session.answer_form(request, serde_json::Value::Object(form)))
+                .map_err(|e| Explained(crate::codex::explained(&e)));
+        }
+        if let Some(session) = self.opencode() {
+            return session
+                .answer_questions(request, answers)
+                .map_err(|e| Explained(crate::opencode::explained(&e)));
+        }
         self.session()
             .map_or(Err(SessionError::Closed), |s| s.answer_questions(request, answers))
+            .map_err(|e| Explained::of(&e))
     }
 
     /// Answers a plan; what a recording played for the self-test changed, which a session reports as an event.

@@ -1916,3 +1916,11 @@
 "OpenCode hat noch kein Modell. Verbinde einen Anbieter mit „opencode auth login“ im Terminal." = "OpenCode ยังไม่มีโมเดล เชื่อมต่อผู้ให้บริการด้วย “opencode auth login” ในเทอร์มินัล";
 "OpenCode meldet sich bei einem Server mit „opencode mcp auth“ im Terminal an." = "OpenCode ลงชื่อเข้าเซิร์ฟเวอร์ด้วย “opencode mcp auth” ในเทอร์มินัล";
 "OpenCode: {}" = "OpenCode: {}";
+"Unterhaltung" = "บทสนทนา";
+"Der Agent wartet auf deine Antwort." = "เอเจนต์กำลังรอคำตอบจากคุณ";
+"Zur Anfrage" = "ไปยังคำขอ";
+"Filtern" = "กรอง";
+"Sitzung neu starten" = "เริ่มเซสชันใหม่";
+"Änderungen gelten sofort." = "การเปลี่ยนแปลงมีผลทันที";
+"Dieser Agent kann eine Sitzung nicht fortsetzen." = "เอเจนต์นี้ไม่สามารถทำเซสชันต่อได้";
+"Erst wenn der Agent fertig ist." = "เมื่อเอเจนต์เสร็จแล้วเท่านั้น";

@@ -47,15 +47,23 @@ impl AgentTab {
         menu
     }
 
-    /// What the rewind menu of user message `entry` offers: the conversation, the code (I6), both; an agent over ACP
-    /// and the own agent can only take the code back, from the app's own checkpoint (E40).
+    /// Whether the agent can go back in its own conversation: Claude, and Codex and OpenCode over their own protocols,
+    /// which cut their stored thread (E147).
+    fn rewinds_conversation(&self) -> bool {
+        let state = self.state.borrow();
+        matches!(self.agent, Agent::Claude) || state.source().codex().is_some() || state.source().opencode().is_some()
+    }
+
+    /// What the rewind menu of user message `entry` offers: the conversation, the code (I6), both; another agent over
+    /// ACP and the own agent can only take the code back, from the app's own checkpoint (E40).
     pub(super) fn rewind_choices(&self, entry: &Entry, uuid: &str) -> Vec<(&'static str, u8, bool)> {
         let state = self.state.borrow();
-        if !matches!(self.agent, Agent::Claude) {
+        if !self.rewinds_conversation() {
             let has_code = state.checkpoints().contains_key(uuid);
             return vec![(t("Code auf den Stand vor dieser Nachricht"), 2, has_code)];
         }
-        let has_code = state.checkpoints().contains_key(uuid) || state.source().is_live();
+        let cli = matches!(self.agent, Agent::Claude) && state.source().is_live();
+        let has_code = state.checkpoints().contains_key(uuid) || cli;
         drop(state);
         let has_conversation = self.conversation_rewindable(entry);
         vec![
@@ -67,7 +75,7 @@ impl AgentTab {
 
     /// Rewinds to before user message `id`: `what` 1 the conversation, 2 the code, 3 both.
     pub fn rewind(&self, id: u64, what: u8) {
-        if self.status() != Status::Idle || (!matches!(self.agent, Agent::Claude) && what != 2) {
+        if self.status() != Status::Idle || (!self.rewinds_conversation() && what != 2) {
             return;
         }
         if what == 2 || what == 3 {

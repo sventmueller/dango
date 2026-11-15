@@ -34,6 +34,8 @@ Dango runs Codex through `codex app-server`, the protocol the Codex SDK builds o
 | Approval cards | `item/commandExecution/requestApproval`, `item/fileChange/requestApproval`, `item/permissions/requestApproval`; the answer's `decision` is `accept`, `acceptForSession`, `decline` or `cancel` |
 | Questions | `item/tool/requestUserInput`, `mcpServer/elicitation/request` |
 | Usage | `thread/tokenUsage/updated`, `account/rateLimits/updated` |
+| Rewind (I6) | each user message is chained to its turn; rewinding before a later prompt sends `thread/revert {threadId, beforeTurnId}` and resumes the cut thread, before the first prompt a new thread starts; files go back through Dango's own checkpoints (E40), as `thread/revert` leaves them |
+| History | `thread/list` of the folder after each start, kept in `codex-threads.json` of the data folder; the Agents panel lists the threads the app has not seen and continues them with Codex |
 
 The items `agentMessage`, `reasoning`, `plan`, `commandExecution`, `fileChange`, `mcpToolCall`, `webSearch` and
 `contextCompaction` become the thread model's entries (`mapping.rs`, `mapping/cards.rs`). Tool cards carry the names
@@ -43,7 +45,7 @@ Claude Code uses (`Bash`, `Edit`, `Write`, `WebSearch`), so every agent's cards 
 
 | Command | Codex |
 |---|---|
-| `/status` | release, account and plan, model, effort, folder, `account/rateLimits/read` |
+| `/status` | release, account and plan, model, effort, folder, `account/rateLimits/read` (without limits for a key or a provider) |
 | `/export` | Dango's own thread as text |
 | `/mcp` | `mcpServerStatus/list`; Reconnect `config/mcpServer/reload`; Sign in `mcpServer/oauth/login`; Add `config/value/write` on `mcp_servers.<name>` and a reload. Switching and removing stay in `config.toml` (greyed) |
 | `/config` | the model, effort and mode as choices; `config.toml` to open |

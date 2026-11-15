@@ -1916,3 +1916,11 @@
 "OpenCode hat noch kein Modell. Verbinde einen Anbieter mit „opencode auth login“ im Terminal." = "OpenCode에 아직 모델이 없습니다. 터미널에서 ‘opencode auth login’으로 제공자를 연결하십시오.";
 "OpenCode meldet sich bei einem Server mit „opencode mcp auth“ im Terminal an." = "OpenCode는 터미널에서 ‘opencode mcp auth’로 서버에 로그인합니다.";
 "OpenCode: {}" = "OpenCode: {}";
+"Unterhaltung" = "대화";
+"Der Agent wartet auf deine Antwort." = "에이전트가 응답을 기다리고 있습니다.";
+"Zur Anfrage" = "요청으로 이동";
+"Filtern" = "필터링";
+"Sitzung neu starten" = "세션 재시작";
+"Änderungen gelten sofort." = "변경 사항이 즉시 적용됩니다.";
+"Dieser Agent kann eine Sitzung nicht fortsetzen." = "이 에이전트는 세션을 이어갈 수 없습니다.";
+"Erst wenn der Agent fertig ist." = "에이전트가 완료된 후에만 진행됩니다.";

@@ -1,6 +1,7 @@
 //! The frame every overlay of an AI tab shares (E146): a dimmed layer over the tab and a card in its middle with a
 //! title, a close button, a scrolling list and a row of buttons. The layer keeps clicks beside the card from reaching
-//! the tab, Esc closes it from anywhere in it, and VoiceOver reads the card as a modal group.
+//! the tab, Esc closes it from anywhere in it, ⌘F shows a search that filters the list, and VoiceOver reads the card
+//! as a modal group.
 
 use std::cell::RefCell;
 use std::rc::Weak as RcWeak;
@@ -95,6 +96,25 @@ define_class!(
             guarded((), || self.close());
         }
 
+        /// ⌘F of the menu's Find item, while the overlay has the keyboard focus.
+        #[unsafe(method(performTextFinderAction:))]
+        fn find(&self, _sender: Option<&AnyObject>) {
+            guarded((), || {
+                if let Some(open) = self.ivars().tab.upgrade().and_then(|tab| tab.dialog.borrow().clone()) {
+                    open.frame.reveal_search();
+                }
+            });
+        }
+
+        #[unsafe(method(ideDialogSearch:))]
+        fn search(&self, _sender: Option<&AnyObject>) {
+            guarded((), || {
+                if let Some(open) = self.ivars().tab.upgrade().and_then(|tab| tab.dialog.borrow().clone()) {
+                    open.frame.filter();
+                }
+            });
+        }
+
         #[unsafe(method(ideDialogAction:))]
         fn action(&self, sender: Option<&AnyObject>) {
             guarded((), || {
@@ -132,6 +152,10 @@ pub(crate) struct Frame {
     pub(crate) list: Retained<NSStackView>,
     /// The line above the list that says what keeps it waiting or what went wrong.
     notice: Retained<NSTextField>,
+    /// The line that says the agent waits for an answer in the conversation, with the way there.
+    asking: Retained<NSStackView>,
+    /// The search over the list's rows, shown by ⌘F.
+    search: Retained<objc2_app_kit::NSSearchField>,
     /// The row of buttons below the list.
     footer: Retained<NSStackView>,
 }
@@ -162,10 +186,24 @@ impl Frame {
             WIDTH - 40.0,
         );
         notice.setHidden(true);
+        let asking = asking_line(mtm, &shade);
+        let search = objc2_app_kit::NSSearchField::new(mtm);
+        search.setPlaceholderString(Some(&ide_ui_common::util::ns(t("Filtern"))));
+        ide_ui_common::util::set_label(&search, Some(t("Filtern")));
+        // SAFETY: The shade outlives the field, which it holds through the card.
+        unsafe {
+            search.setTarget(Some(&shade));
+            search.setAction(Some(sel!(ideDialogSearch:)));
+        }
+        search.setHidden(true);
         let list = ui::column(mtm, 6.0, &[]);
         let scroll = scrolling(mtm, &list);
         let footer = ui::row(mtm, 8.0, &[&ui::spacer(mtm)]);
-        let column = ui::column(mtm, 10.0, &[&head, &ui::separator(mtm), &notice, &scroll, &footer]);
+        let column = ui::column(
+            mtm,
+            10.0,
+            &[&head, &ui::separator(mtm), &search, &asking, &notice, &scroll, &footer],
+        );
         let card = ui::framed(
             mtm,
             &column,
@@ -202,6 +240,8 @@ impl Frame {
             title: title.to_string(),
             list,
             notice,
+            asking,
+            search,
             footer,
         }
     }
@@ -228,6 +268,17 @@ impl Frame {
         self.notice.setHidden(text.is_none());
     }
 
+    /// Shows or hides the line that says the agent waits for an answer; VoiceOver hears it when it appears.
+    pub(crate) fn set_asking(&self, waits: bool) {
+        if self.asking.isHidden() == !waits {
+            return;
+        }
+        self.asking.setHidden(!waits);
+        if waits {
+            ide_ui_common::panel::announce(self.shade.mtm(), t("Der Agent wartet auf deine Antwort."));
+        }
+    }
+
     /// Puts `rows` in the list in place of the ones before.
     pub(crate) fn set_rows(&self, rows: &[Retained<NSView>]) {
         for old in self.list.arrangedSubviews().iter() {
@@ -236,6 +287,27 @@ impl Frame {
         }
         for row in rows {
             ui::add_full_width(&self.list, row);
+        }
+        self.filter();
+    }
+
+    /// Shows the search and moves the keyboard focus into it.
+    pub(crate) fn reveal_search(&self) {
+        self.search.setHidden(false);
+        if let Some(window) = self.shade.window() {
+            window.makeFirstResponder(Some(&self.search));
+        }
+    }
+
+    /// Hides the rows whose texts do not hold what the search holds, in any case.
+    pub(crate) fn filter(&self) {
+        let query = self.search.stringValue().to_string().to_lowercase();
+        let query = query.trim();
+        for row in self.list.arrangedSubviews().iter() {
+            let mut texts = Vec::new();
+            texts_of(&row, &mut texts);
+            let shown = query.is_empty() || texts.iter().any(|text| text.to_lowercase().contains(query));
+            row.setHidden(!shown);
         }
     }
 
@@ -272,4 +344,32 @@ fn scrolling(mtm: MainThreadMarker, list: &NSStackView) -> Retained<NSScrollView
         .widthAnchor()
         .constraintEqualToAnchor(&scroll.contentView().widthAnchor())]);
     scroll
+}
+
+/// The line for a request of the agent that waits while the overlay is open: what it says, and a button that closes
+/// the overlay to answer it.
+fn asking_line(mtm: MainThreadMarker, shade: &Shade) -> Retained<NSStackView> {
+    let said = ui::label(
+        mtm,
+        t("Der Agent wartet auf deine Antwort."),
+        &crate::style::bold(12.0),
+        &NSColor::systemOrangeColor(),
+    );
+    let go = ui::button(mtm, t("Zur Anfrage"), shade, sel!(ideDialogClose:), 0);
+    let line = ui::row(mtm, 8.0, &[&said, &ui::spacer(mtm), &go]);
+    line.setHidden(true);
+    line
+}
+
+/// The texts of the labels and buttons under `view`.
+fn texts_of(view: &NSView, into: &mut Vec<String>) {
+    let object: &AnyObject = view;
+    if let Some(field) = object.downcast_ref::<NSTextField>() {
+        into.push(field.stringValue().to_string());
+    } else if let Some(button) = object.downcast_ref::<objc2_app_kit::NSButton>() {
+        into.push(button.title().to_string());
+    }
+    for sub in view.subviews().iter() {
+        texts_of(&sub, into);
+    }
 }

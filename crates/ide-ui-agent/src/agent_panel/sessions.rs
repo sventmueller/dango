@@ -68,6 +68,8 @@ pub(crate) struct Inputs<'a> {
     pub(crate) tabs: &'a [Rc<AgentTab>],
     pub(crate) archived: bool,
     pub(crate) terminal: Vec<ide_claude::history::PastSession>,
+    /// The Codex threads of the folder begun outside the app, as `thread/list` named them.
+    pub(crate) codex: Vec<(Resume, SystemTime)>,
     pub(crate) bookmarks: &'a BTreeSet<String>,
 }
 
@@ -129,12 +131,26 @@ impl Model {
                     thread: None,
                     title: session.heading(),
                     transcript: Some(session.path.clone()),
+                    agent: None,
                 };
                 let node = Node::Past {
                     resume,
                     when: session.modified,
                 };
                 rows.push((false, session.modified, format!("past:{}", session.id), node));
+            }
+            for (resume, when) in inputs
+                .codex
+                .iter()
+                .filter(|(r, _)| !known.contains(r.session.as_str()))
+                .take(30)
+            {
+                let id = format!("past:{}", resume.session);
+                let node = Node::Past {
+                    resume: resume.clone(),
+                    when: *when,
+                };
+                rows.push((false, *when, id, node));
             }
         }
         rows.sort_by(|a, b| b.0.cmp(&a.0).then(b.1.cmp(&a.1)));
@@ -392,12 +408,18 @@ impl Source {
                     session,
                     thread: Some(entry.id.clone()),
                     title: Some(entry.title.clone()).filter(|t| !t.is_empty()),
+                    agent: None,
                 };
                 crate::open_agent(&controller, crate::Agent::of_thread(&entry.agent), Some(resume));
             }
-            Node::Past { resume, .. } => {
-                crate::open_tab(&controller, Some(resume));
-            }
+            Node::Past { resume, .. } => match resume.agent.as_deref().and_then(crate::AcpAgent::find) {
+                Some(agent) => {
+                    crate::open_agent(&controller, crate::Agent::Acp(agent), Some(resume));
+                }
+                None => {
+                    crate::open_tab(&controller, Some(resume));
+                }
+            },
         }
     }
 
@@ -551,6 +573,7 @@ mod tests {
             tabs: &[],
             archived,
             terminal,
+            codex: Vec::new(),
             bookmarks: &bookmarks,
         })
     }

@@ -55,15 +55,16 @@ impl Backend for Codex {
     fn status(&self, done: Done<Vec<StatusSection>>) {
         let caps = self.session.capabilities();
         let cwd = self.cwd.clone();
-        answer(self.session.rate_limits(), done, move |limits| {
-            status(&caps, &cwd, &limits)
-        });
+        // Signed in with a key or a provider there are no plan limits, which leaves the rest of the status as it is.
+        self.session
+            .rate_limits()
+            .then(move |limits| done(Ok(status(&caps, &cwd, &limits.unwrap_or_default()))));
     }
 
     fn export(&self, done: Done<Exported>) {
         done(Ok(Exported {
             text: acp::export(&self.thread),
-            file_name: format!("{}.txt", self.thread.title().replace(['/', ':'], "-").trim()),
+            file_name: super::export_name(&self.thread),
         }));
     }
 
@@ -76,6 +77,7 @@ impl Backend for Codex {
             sign_in: None,
             add: None,
             remove: toml,
+            restart: Some(t("Änderungen gelten sofort.")),
             transports: vec![Transport::Stdio, Transport::Http],
             scopes: vec![Scope::User],
         }

@@ -19,13 +19,18 @@ type Answered = Box<dyn FnOnce(Result<String, SessionError>) + Send>;
 
 /// A fork of the session that answers a question beside the conversation.
 pub(super) struct Side {
-    /// The fork's id.
-    pub(super) session: acp::SessionId,
+    /// The fork's id, once the agent forked; none while it forks.
+    pub(super) session: Option<acp::SessionId>,
     /// What the agent said in it so far.
     text: String,
 }
 
 impl Side {
+    /// Whether `session` is this fork.
+    pub(super) fn is(&self, session: &acp::SessionId) -> bool {
+        self.session.as_ref() == Some(session)
+    }
+
     /// Takes in `update` of the fork: its words; the rest stays out of the thread.
     pub(super) fn take(&mut self, update: &acp::SessionUpdate) {
         if let acp::SessionUpdate::AgentMessageChunk(chunk) = update
@@ -59,22 +64,29 @@ impl Session {
         if !self.capabilities().fork {
             return Err(SessionError::Agent("session/fork is not offered".to_string()));
         }
-        if self.shared.state().side.is_some() {
-            return Err(SessionError::Agent(
-                "a question beside the conversation is still open".to_string(),
-            ));
-        }
         let (connection, session) = self.ready()?;
+        {
+            // Taken before the fork is asked for, so a second question waits for this one to end.
+            let mut state = self.shared.state();
+            if state.side.is_some() {
+                return Err(SessionError::Agent(
+                    "a question beside the conversation is still open".to_string(),
+                ));
+            }
+            state.side = Some(Side {
+                session: None,
+                text: String::new(),
+            });
+        }
         let shared = self.shared.clone();
         let question = question.to_string();
         let done: Answered = Box::new(done);
         let fork = acp::ForkSessionRequest::new(session, self.shared.launch.cwd.clone());
         ask(&connection, fork, Some(SETTING), move |result| match result {
             Ok(forked) => {
-                shared.state().side = Some(Side {
-                    session: forked.session_id.clone(),
-                    text: String::new(),
-                });
+                if let Some(side) = shared.state().side.as_mut() {
+                    side.session = Some(forked.session_id.clone());
+                }
                 let prompt = acp::PromptRequest::new(
                     forked.session_id.clone(),
                     vec![acp::ContentBlock::Text(acp::TextContent::new(question))],
@@ -86,7 +98,7 @@ impl Session {
                 let close = shared.state().caps.close;
                 let closing = connection.clone();
                 ask(&connection, prompt, Some(ASIDE), move |result| {
-                    let side = shared.state().side.take();
+                    let side = shared.state().side.take_if(|side| side.is(&forked.session_id));
                     if close {
                         ask(
                             &closing,
@@ -99,7 +111,10 @@ impl Session {
                     done(result.map(|_| text).map_err(|e| SessionError::Agent(e.message)));
                 });
             }
-            Err(error) => done(Err(SessionError::Agent(error.message))),
+            Err(error) => {
+                shared.state().side = None;
+                done(Err(SessionError::Agent(error.message)));
+            }
         });
         Ok(())
     }
@@ -111,13 +126,14 @@ pub(super) fn handover(
     servers: &[McpServerSpec],
     caps: &Capabilities,
     env: &[(String, String)],
+    cwd: &Path,
 ) -> Vec<acp::McpServer> {
     servers
         .iter()
         .filter(|server| server.enabled)
         .filter_map(|server| match server.transport {
             McpTransport::Stdio => {
-                let command = program(&server.command, env)?;
+                let command = program(&server.command, env, cwd)?;
                 let env = server
                     .env
                     .iter()
@@ -148,13 +164,17 @@ fn headers(server: &McpServerSpec) -> Vec<acp::HttpHeader> {
         .collect()
 }
 
-/// `command` as an absolute path: itself when it is one, else the first match on `env`'s PATH.
-fn program(command: &str, env: &[(String, String)]) -> Option<PathBuf> {
+/// `command` as an absolute path: itself when it is one, against the project folder `cwd` when it names a folder
+/// (`./bin/mcp`), as Claude Code reads `.mcp.json`, else the first match on `env`'s PATH.
+fn program(command: &str, env: &[(String, String)], cwd: &Path) -> Option<PathBuf> {
     if command.is_empty() {
         return None;
     }
     if Path::new(command).is_absolute() {
         return Some(PathBuf::from(command));
+    }
+    if command.contains('/') {
+        return Some(cwd.join(command)).filter(|path| path.is_file());
     }
     let path = env
         .iter()
@@ -200,12 +220,26 @@ mod tests {
             mcp_http: true,
             ..Capabilities::default()
         };
-        let sent = handover(&servers, &caps, &env);
+        let sent = handover(&servers, &caps, &env, Path::new("/"));
         assert_eq!(sent.len(), 2);
         let json = serde_json::to_value(&sent).unwrap();
         assert!(json[0]["command"].as_str().unwrap().ends_with("/sh"));
         assert_eq!(json[0]["env"][0]["name"], "K");
         assert_eq!(json[1]["type"], "http");
         assert_eq!(json[1]["headers"][0]["value"], "b");
+    }
+
+    #[test]
+    fn a_program_named_by_a_folder_is_found_in_the_project() {
+        let project = ide_core::testing::scratch("acp-mcp-relative");
+        std::fs::create_dir_all(project.join("scripts")).unwrap();
+        std::fs::write(project.join("scripts/mcp"), "#!/bin/sh\n").unwrap();
+        let env = vec![("PATH".to_string(), "/usr/bin:/bin".to_string())];
+        assert_eq!(
+            program("./scripts/mcp", &env, &project),
+            Some(project.join("./scripts/mcp"))
+        );
+        assert_eq!(program("./scripts/missing", &env, &project), None);
+        assert_eq!(program("sh", &env, &project), Some(PathBuf::from("/bin/sh")));
     }
 }

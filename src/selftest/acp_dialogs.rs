@@ -177,7 +177,7 @@ fn mcp_add(root: PathBuf, key: AgentKey) {
     };
     let filled = tab.press_dialog_button("Hinzufügen …")
         && tab.fill_dialog_field("docs", "web")
-        && tab.fill_dialog_field("npx -y docs-mcp", "npx -y web-mcp")
+        && tab.fill_dialog_field("npx -y docs-mcp", "sh -c web-mcp")
         && tab.fill_dialog_field("NAME=Wert, NAME2=Wert", "TOKEN=geheim");
     let added = tab.press_dialog_button("Hinzufügen");
     soon(
@@ -199,6 +199,32 @@ fn mcp_add(root: PathBuf, key: AgentKey) {
                     && !state.contains("geheim")
                     && secret.contains("geheim"),
                 format!("{state} / {secret}"),
+            );
+            restart(root, key);
+        },
+    );
+}
+
+/// Starting the session again from `/mcp` continues the conversation and hands over the servers as they are now:
+/// the user's new one, without the project's server switched off.
+fn restart(root: PathBuf, key: AgentKey) {
+    let before = recorded().matches("mcpServers: ").count();
+    let pressed = tab_of(key).is_some_and(|t| t.press_dialog_button("Sitzung neu starten"));
+    soon(
+        "the session starts again",
+        move || recorded().matches("mcpServers: ").count() > before && tab_of(key).is_some_and(|t| t.is_live()),
+        move || {
+            let sent = recorded();
+            let last = sent
+                .lines()
+                .rev()
+                .find(|l| l.starts_with("mcpServers: "))
+                .unwrap_or_default()
+                .to_string();
+            check(
+                "restarting from /mcp hands over the servers as they are now",
+                pressed && last.contains(r#""name":"web""#) && !last.contains(r#""name":"docs""#),
+                last,
             );
             dismiss(key);
             memory(root, key);

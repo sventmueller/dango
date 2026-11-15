@@ -93,19 +93,77 @@ impl AgentTab {
         let Some(entry) = thread.entries(&Lane::Main).iter().find(|e| e.id.get() == id).cloned() else {
             return;
         };
+        if !matches!(entry.kind, EntryKind::UserMessage(_)) || !self.conversation_rewindable(&entry) {
+            return;
+        }
+        // Codex and OpenCode cut their stored thread themselves, before the session resumes it.
+        if let Some(point) = thread.rewind_before(entry.id)
+            && self.revert_in_agent(&point.drops_turn, id)
+        {
+            return;
+        }
+        self.cut_conversation(&thread, &entry);
+    }
+
+    /// Asks Codex or OpenCode to drop the turn `turn` and every later one from its stored thread, then cuts the
+    /// conversation before prompt `id`; false for an agent that keeps no such thread.
+    fn revert_in_agent(&self, turn: &str, id: u64) -> bool {
+        let bound = dispatch2::MainThreadBound::new(self.me.borrow().clone(), self.mtm);
+        let then = move |result: Result<(), ide_core::explain::Explained>| {
+            ide_ui_common::util::main_soon(move || {
+                let Some(mtm) = objc2::MainThreadMarker::new() else {
+                    return;
+                };
+                let Some(tab) = bound.into_inner(mtm).upgrade() else {
+                    return;
+                };
+                match result {
+                    Ok(()) => {
+                        let thread = tab.snapshot();
+                        let entry = thread.entries(&Lane::Main).iter().find(|e| e.id.get() == id).cloned();
+                        if let Some(entry) = entry {
+                            tab.cut_conversation(&thread, &entry);
+                        }
+                    }
+                    Err(why) => ide_ui_common::diag::report("rewinding the agent's thread", why.0),
+                }
+            });
+        };
+        let state = self.state.borrow();
+        if let Some(session) = state.source().codex() {
+            match session.revert(turn) {
+                Ok(reply) => {
+                    reply.then(move |r| then(r.map_err(|e| ide_core::explain::Explained(crate::codex::explained(&e)))))
+                }
+                Err(error) => then(Err(ide_core::explain::Explained(crate::codex::explained(&error)))),
+            }
+            return true;
+        }
+        if let Some(session) = state.source().opencode() {
+            let commit = session.clone();
+            session.revert_stage(turn, false).then(move |staged| match staged {
+                Ok(_) => commit
+                    .revert_commit()
+                    .then(move |r| then(r.map_err(|e| ide_core::explain::Explained(crate::opencode::explained(&e))))),
+                Err(error) => then(Err(ide_core::explain::Explained(crate::opencode::explained(&error)))),
+            });
+            return true;
+        }
+        false
+    }
+
+    /// Ends the session and starts it again as a branch before the prompt `entry` of `thread`.
+    fn cut_conversation(&self, thread: &Thread, entry: &Entry) {
         let EntryKind::UserMessage(message) = &entry.kind else {
             return;
         };
-        if !self.conversation_rewindable(&entry) {
-            return;
-        }
         let session = thread
             .session()
             .map(str::to_string)
             .or_else(|| self.state.borrow().resume().map(|r| r.session.clone()))
             .unwrap_or_default();
         let rewind = thread.rewind_before(entry.id);
-        let kept = kept_before(&thread, entry.id);
+        let kept = kept_before(thread, entry.id);
         let kept_entry = self.keep_in_history(&session);
         let replaying = {
             let mut state = self.state.borrow_mut();

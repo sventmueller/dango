@@ -30,7 +30,7 @@ pub(crate) fn servers(project: &Path, env: &[(String, String)], trusted: bool) -
         Vec::new()
     };
     let store = crate::own_agent::secrets();
-    for stored in state.get(&USER_SERVERS) {
+    for stored in unshadowed(state.get(&USER_SERVERS), &servers) {
         let secrets = store
             .get(&secret_account(&stored.name))
             .ok()
@@ -45,14 +45,43 @@ pub(crate) fn servers(project: &Path, env: &[(String, String)], trusted: bool) -
 /// Switches the server `name` on or off: in the user's list, or for the project.
 pub(crate) fn toggle(project: &Path, name: &str, enabled: bool) -> Result<(), Explained> {
     let mut state = State::load_user();
+    let in_project = mcp_servers::project_servers(project, &[])
+        .iter()
+        .any(|s| s.name == name);
     let mut users = state.get(&USER_SERVERS);
-    if let Some(user) = users.iter_mut().find(|s| s.name == name) {
-        user.disabled = !enabled;
-        return state.set(&USER_SERVERS, &users).map_err(|e| Explained::of(&e));
-    }
     let mut off = state.get(&SWITCHED_OFF);
-    mcp_servers::switch(&mut off, project, name, enabled);
-    state.set(&SWITCHED_OFF, &off).map_err(|e| Explained::of(&e))
+    if switch(&mut users, &mut off, project, in_project, name, enabled) {
+        state.set(&USER_SERVERS, &users).map_err(|e| Explained::of(&e))
+    } else {
+        state.set(&SWITCHED_OFF, &off).map_err(|e| Explained::of(&e))
+    }
+}
+
+/// The user's servers `project` does not shadow: as in Claude Code, a project's server wins over the user's server
+/// of the same name.
+fn unshadowed(users: Vec<StoredMcpServer>, project: &[McpServerSpec]) -> Vec<StoredMcpServer> {
+    users
+        .into_iter()
+        .filter(|user| !project.iter().any(|p| p.name == user.name))
+        .collect()
+}
+
+/// Switches the server `name` in the user's list `users` or, when the project has it (`in_project`), in the
+/// projects' list `off`; whether `users` changed.
+fn switch(
+    users: &mut [StoredMcpServer],
+    off: &mut Vec<String>,
+    project: &Path,
+    in_project: bool,
+    name: &str,
+    enabled: bool,
+) -> bool {
+    if !in_project && let Some(user) = users.iter_mut().find(|s| s.name == name) {
+        user.disabled = !enabled;
+        return true;
+    }
+    mcp_servers::switch(off, project, name, enabled);
+    false
 }
 
 /// Adds `draft` to the user's list, its values to the store of secrets.
@@ -109,5 +138,33 @@ pub(crate) fn scope(server: &McpServerSpec) -> Scope {
     match server.origin {
         McpOrigin::Project => Scope::Project,
         McpOrigin::User => Scope::User,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn user(name: &str) -> StoredMcpServer {
+        StoredMcpServer {
+            name: name.into(),
+            command: "npx".into(),
+            ..StoredMcpServer::default()
+        }
+    }
+
+    #[test]
+    fn a_project_server_shadows_the_users_server_of_its_name_and_takes_the_switch() {
+        let mut project = mcp_servers::user_server(&user("docs"), &Value::Null);
+        project.origin = McpOrigin::Project;
+        let kept = unshadowed(vec![user("docs"), user("web")], &[project]);
+        assert_eq!(kept.iter().map(|u| u.name.as_str()).collect::<Vec<_>>(), ["web"]);
+        let mut users = vec![user("docs")];
+        let mut off = Vec::new();
+        let changed = switch(&mut users, &mut off, Path::new("/p"), true, "docs", false);
+        assert!(!changed && !users[0].disabled, "the user's server stays as it was");
+        assert!(mcp_servers::switched_off(&off, Path::new("/p"), "docs"));
+        assert!(switch(&mut users, &mut off, Path::new("/p"), false, "docs", false));
+        assert!(users[0].disabled);
     }
 }

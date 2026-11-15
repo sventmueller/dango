@@ -56,6 +56,14 @@ impl Session {
         Ok(self.shared.call(method::THREAD_FORK, params, None, forked))
     }
 
+    /// Drops the turn `before_turn` and every later one from the stored thread, so resuming it continues before
+    /// them; local files stay as they are.
+    pub fn revert(&self, before_turn: &str) -> Result<Reply<()>, SessionError> {
+        let thread = self.thread_id()?;
+        let params = json!({"threadId": thread, "beforeTurnId": before_turn});
+        Ok(self.shared.call(method::THREAD_REVERT, params, None, reply::unit))
+    }
+
     /// The models, which the capabilities then list too.
     pub fn models(&self, include_hidden: bool) -> Reply<Vec<Model>> {
         let after: After = Box::new(|result, shared| {

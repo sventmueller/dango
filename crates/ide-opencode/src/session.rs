@@ -570,6 +570,7 @@ impl Session {
             }
             (body, updates)
         };
+        let user = crate::mapping::user_key(&updates);
         self.shared.apply(updates);
         let after: After = Box::new(move |result, shared| {
             let updates = {
@@ -578,7 +579,13 @@ impl Session {
                     state.starting = false;
                 }
                 match result {
-                    Ok(_) => Vec::new(),
+                    Ok(answer) => {
+                        let id = answer.pointer("/data/id").and_then(Value::as_str);
+                        user.zip(id)
+                            .map(|(key, id)| crate::mapping::chain(key, id))
+                            .into_iter()
+                            .collect()
+                    }
                     Err(error) => {
                         let mut updates = state.mapper.error(ErrorKind::Api, error.to_string(), now());
                         if !running && !state.mapper.is_running() {

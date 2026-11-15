@@ -1916,3 +1916,11 @@
 "OpenCode hat noch kein Modell. Verbinde einen Anbieter mit „opencode auth login“ im Terminal." = "OpenCode’un henüz modeli yok. Terminal’de “opencode auth login” ile bir sağlayıcı bağlayın.";
 "OpenCode meldet sich bei einem Server mit „opencode mcp auth“ im Terminal an." = "OpenCode, Terminal’de “opencode mcp auth” ile bir sunucuya giriş yapar.";
 "OpenCode: {}" = "OpenCode: {}";
+"Unterhaltung" = "Konuşma";
+"Der Agent wartet auf deine Antwort." = "Ajan yanıtınızı bekliyor.";
+"Zur Anfrage" = "İsteğe Git";
+"Filtern" = "Filtrele";
+"Sitzung neu starten" = "Oturumu Yeniden Başlat";
+"Änderungen gelten sofort." = "Değişiklikler hemen geçerli olur.";
+"Dieser Agent kann eine Sitzung nicht fortsetzen." = "Bu ajan bir oturumu sürdüremez.";
+"Erst wenn der Agent fertig ist." = "Ancak ajan bitirince.";
