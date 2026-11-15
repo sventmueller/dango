@@ -21,6 +21,8 @@ const SCENARIO: &str = "inlay-hints";
 const ASK_AGAIN: Duration = Duration::from_secs(2);
 /// The longest a server may take to start and answer with hints.
 const WAIT: Duration = Duration::from_secs(150);
+/// How long the overlay may take to draw hints that arrived.
+const DRAWN: Duration = Duration::from_secs(5);
 /// The whole scenario's time, below the runner's limit for it in `xtask/src/selftest.rs`.
 const BUDGET: Duration = Duration::from_secs(560);
 
@@ -174,11 +176,29 @@ fn rust_hints(ok: bool, waited: Duration) {
             .any(|(at, text, _)| Some(*at) == param && text.contains("value")),
         format!("after {:.1} s: {found:?}", waited.as_secs_f64()),
     );
+    // The overlay finds where the insets are as it draws, and its layer draws when the run loop commits the frame, not
+    // in `displayIfNeeded`.
+    let probe = root.clone();
+    helpers::wait_within(
+        DRAWN,
+        move || self::view(&probe, "src/main.rs").is_some_and(|v| in_gap(&v)),
+        move |_| rust_drawn(&root),
+    );
+}
+
+fn in_gap(view: &EditorTextView) -> bool {
+    insets::shown(view).iter().any(|s| s.layer == Layer::Inlay && s.in_gap)
+}
+
+fn rust_drawn(root: &Path) {
+    let Some(view) = view(root, "src/main.rs") else {
+        return finish(SCENARIO);
+    };
     let total = offset_of(&view, "total", 5);
     let drawn = insets::shown(&view);
     check(
         "the hint shows in a gap after its name, smaller and apart from the text",
-        drawn.iter().any(|s| s.layer == Layer::Inlay && s.in_gap)
+        in_gap(&view)
             && insets::kerns(&view)
                 .iter()
                 .any(|(range, width)| Some(range.end) == total && *width > 10.0),
@@ -192,7 +212,7 @@ fn rust_hints(ok: bool, waited: Duration) {
             .any(|item| item.label.contains("u32") && item.label.contains('8')),
         format!("{rotor:?}"),
     );
-    picture(&root, "inlay-rust");
+    picture(root, "inlay-rust");
     tooltips(&view);
     jump(&view);
 }
@@ -572,7 +592,6 @@ fn go() {
                     .any(|(at, text, _)| Some(*at) == total && text.contains("int")),
                 format!("after {:.1} s: {found:?}", waited.as_secs_f64()),
             );
-            let in_gap = |v: &EditorTextView| insets::shown(v).iter().any(|s| s.layer == Layer::Inlay && s.in_gap);
             let probe = root.clone();
             helpers::wait_until(
                 move || self::view(&probe, "main.go").is_some_and(|v| in_gap(&v)),
