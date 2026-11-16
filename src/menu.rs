@@ -102,6 +102,7 @@ fn file_menu(delegate: &AppDelegate, mtm: MainThreadMarker, keys: &Keys) -> Reta
     let (recent_item, recent_menu) = submenu(mtm, t("Zuletzt geöffnet"), vec![]);
     recent_menu.setDelegate(Some(ProtocolObject::from_ref(delegate)));
     let entry = |title: &str, action: Sel, command: &str| item(mtm, title, Some(action), &keys.get(command));
+    let orders = crate::leitstand_ui::file_items(mtm, &|command| keys.get(command), delegate.context().factory_ui());
     submenu(
         mtm,
         t("Ablage"),
@@ -114,11 +115,15 @@ fn file_menu(delegate: &AppDelegate, mtm: MainThreadMarker, keys: &Keys) -> Reta
             recent_item,
             entry(t("Schnell öffnen …"), sel!(ideQuickOpen:), "project.quickOpen"),
             separator(mtm),
+        ]
+        .into_iter()
+        .chain(orders)
+        .chain([
+            separator(mtm),
             entry(t("Sichern"), sel!(ideSave:), "file.save"),
             entry(t("Sichern unter …"), sel!(ideSaveAs:), "file.saveAs"),
             separator(mtm),
-        ]
-        .into_iter()
+        ])
         .chain(crate::markdown::file_items(mtm))
         .chain([
             separator(mtm),
@@ -220,6 +225,7 @@ fn view_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
             panel(Panel::Debug, "panel.debug"),
             panel(Panel::Ci, "panel.ci"),
             panel(Panel::Containers, "panel.containers"),
+            panel(Panel::Leitstand, "panel.leitstand"),
             separator(mtm),
             item(
                 mtm,

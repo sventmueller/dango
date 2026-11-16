@@ -1,0 +1,213 @@
+//! The panel "Leitstand" as lines (E175): the folder's orders grouped by station, each with title, station, agent and
+//! model and runtime, a red dot while it waits for the user; and the words of the panel's symbol (E69).
+
+use ide_factory::OrderId;
+use ide_factory::panel::{Panel, Row};
+use ide_factory::station::Station;
+use splat_i18n::{t, tf};
+
+use super::words::{self, Tone};
+
+/// One order's line in the panel.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OrderLine {
+    id: OrderId,
+    title: String,
+    tone: Tone,
+    detail: String,
+    spoken: String,
+}
+
+impl OrderLine {
+    fn of(row: &Row) -> OrderLine {
+        let tone = Tone::of(row.station(), row.condition());
+        let agent = agent(row.agent(), row.model());
+        let condition = words::condition(row.station(), row.condition());
+        let runtime = words::duration(row.runtime_ms());
+        let detail = [agent.as_str(), runtime.as_str()]
+            .into_iter()
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join(" · ");
+        let spoken = tf(
+            "{}, {}, {}, {}",
+            &[row.title(), words::station(row.station()), &condition, &detail],
+        );
+        OrderLine {
+            id: row.id().clone(),
+            title: row.title().to_string(),
+            tone,
+            detail,
+            spoken,
+        }
+    }
+
+    /// The order.
+    pub fn id(&self) -> &OrderId {
+        &self.id
+    }
+
+    /// Its title.
+    pub fn title(&self) -> &str {
+        &self.title
+    }
+
+    /// Its condition's shape and word.
+    pub fn tone(&self) -> Tone {
+        self.tone
+    }
+
+    /// Agent and model, then runtime.
+    pub fn detail(&self) -> &str {
+        &self.detail
+    }
+
+    /// What VoiceOver reads for the line: title, station, condition with its reason, agent and runtime.
+    pub fn spoken(&self) -> &str {
+        &self.spoken
+    }
+
+    /// Whether it waits for the user, which the red dot shows (E71).
+    pub fn waits(&self) -> bool {
+        self.tone == Tone::Waiting
+    }
+}
+
+/// "claude · opus", "claude", or nothing before any agent worked.
+pub fn agent(agent: Option<&str>, model: Option<&str>) -> String {
+    match (agent, model) {
+        (Some(agent), Some(model)) => format!("{agent} · {model}"),
+        (Some(agent), None) => agent.to_string(),
+        (None, _) => String::new(),
+    }
+}
+
+/// A line of the panel's list.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Line {
+    /// The heading of a station with how many orders stand there.
+    Station(Station, usize),
+    /// An order.
+    Order(OrderLine),
+}
+
+impl Line {
+    /// What tells the line apart from the others, so the list keeps it open and selected.
+    pub fn key(&self) -> Key {
+        match self {
+            Line::Station(station, _) => Key::Station(*station),
+            Line::Order(order) => Key::Order(order.id.clone()),
+        }
+    }
+}
+
+/// What a line stands for.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Key {
+    /// A station's heading.
+    Station(Station),
+    /// An order.
+    Order(OrderId),
+}
+
+/// The panel's list.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct List {
+    lines: Vec<Line>,
+    waiting: usize,
+}
+
+impl List {
+    /// The list of `panel`: a heading per station that has orders, its orders below it.
+    pub fn new(panel: &Panel) -> List {
+        let mut lines = Vec::new();
+        for (station, rows) in panel.groups() {
+            lines.push(Line::Station(*station, rows.len()));
+            lines.extend(rows.iter().map(|row| Line::Order(OrderLine::of(row))));
+        }
+        List {
+            lines,
+            waiting: panel.waiting(),
+        }
+    }
+
+    /// Every line, each heading before its orders.
+    pub fn lines(&self) -> &[Line] {
+        &self.lines
+    }
+
+    /// The headings.
+    pub fn stations(&self) -> Vec<Station> {
+        self.lines
+            .iter()
+            .filter_map(|line| match line {
+                Line::Station(station, _) => Some(*station),
+                Line::Order(_) => None,
+            })
+            .collect()
+    }
+
+    /// The orders below the heading of `station`.
+    pub fn orders_in(&self, station: Station) -> Vec<&OrderLine> {
+        let mut inside = false;
+        let mut orders = Vec::new();
+        for line in &self.lines {
+            match line {
+                Line::Station(s, _) => inside = *s == station,
+                Line::Order(order) if inside => orders.push(order),
+                Line::Order(_) => {}
+            }
+        }
+        orders
+    }
+
+    /// The line of the order `id`.
+    pub fn order(&self, id: &OrderId) -> Option<&OrderLine> {
+        self.lines.iter().find_map(|line| match line {
+            Line::Order(order) if order.id == *id => Some(order),
+            _ => None,
+        })
+    }
+
+    /// Whether the folder has no order that is still open.
+    pub fn is_empty(&self) -> bool {
+        self.lines.is_empty()
+    }
+
+    /// How many orders wait for the user.
+    pub fn waiting(&self) -> usize {
+        self.waiting
+    }
+
+    /// What the panel's symbol says beside its name: "1 Auftrag wartet"; none while no order waits (E69).
+    pub fn symbol_words(&self) -> Option<String> {
+        match self.waiting {
+            0 => None,
+            1 => Some(t("1 Auftrag wartet").into()),
+            n => Some(tf("{} Aufträge warten", &[&n.to_string()])),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_symbol_names_waiting_orders_only() {
+        let list = List::default();
+        assert_eq!(list.symbol_words(), None);
+        let one = List {
+            waiting: 1,
+            ..List::default()
+        };
+        assert_eq!(one.symbol_words().as_deref(), Some(t("1 Auftrag wartet")));
+    }
+
+    #[test]
+    fn agent_and_model_join_as_one() {
+        assert_eq!(agent(Some("claude"), Some("opus")), "claude · opus");
+        assert_eq!(agent(Some("codex"), None), "codex");
+        assert_eq!(agent(None, Some("x")), "");
+    }
+}

@@ -185,6 +185,23 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | | |
 | Container | Containers | the panel that shows a Docker context's Compose projects, containers, images and volumes, eighth in the sidebar (⌘8), and its menu (E136) |
 | Docker-Kontext | Docker context | the Docker engine a window's Containers panel talks to, as `docker context` names it; chosen per window |
+| **Leitstand (phase 13)** | | |
+| Leitstand | Control Room | the ninth panel (⌘9) and the tab with every work order of a folder, and the factory behind them (E175) |
+| Auftrag (Leitstand) | work order | a goal with testable criteria that the factory plans, builds and checks in a worktree of its own; distinct from Auftrag, what a subagent was asked to do |
+| Nachweis | evidence | what proves a work order's state: gates, the reviewer's findings, cost and provenance, its deviations first (E163) |
+| Abweichung | deviation | something the evidence names before everything else, such as secrets not checked |
+| Abnahme, abnehmen | acceptance, accept | G2: the user accepts the evidence, whole or hunk by hunk (C55); also the station of that name |
+| Freigeben (Spezifikation) | approve | G1: the user approves the specification |
+| Planer | planner | the role that writes the specification, read only (E162) |
+| Builder | builder | the role that writes in the work order's worktree |
+| Prüfer | reviewer | the role that judges against the criteria, read only, of another vendor than the builders |
+| Späher | scout | the role that reads and sums up, cheap or local |
+| Prüfstation, Gate | gate | an automatic check of the review: path scope, secrets, gate commands (E163) |
+| Prüfbefehl | gate command | a command `.dango/factory.toml` names, which a gate runs in the sandbox |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Intake / Specification / Build / Review / Acceptance / Take-Over / Done | the stations of a work order, in their order (E166) |
+| Risikoklasse | risk class | low, medium or high, expected by the user and measured from the diff |
+| Pfadbereich | path scope | the paths a work order may change |
+| Herkunft | provenance | which role, agent and model made each commit of a work order |
 | **Agent configuration (E146)** | | |
 | Rechte | Permissions | the overlay with an agent's permission rules; the rules are Freigaben in the sense of the Freigabe term |
 | Erlauben / Fragen / Verbieten | Allow / Ask / Deny | the effect of a permission rule; Verbieten is the language's word for denying or forbidding an action, Fragen the agent asking first |

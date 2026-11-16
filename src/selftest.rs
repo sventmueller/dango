@@ -29,6 +29,7 @@ mod browser_view;
 mod codex;
 mod containers;
 mod dialog_shapes;
+mod leitstand;
 mod markdown;
 mod markdown_commands;
 mod markdown_editor;
@@ -441,6 +442,7 @@ fn probe_symbol_menu(controller: &window::WindowController) {
         Panel::Tests,
         Panel::Debug,
         Panel::Containers,
+        Panel::Leitstand,
     ] {
         window::toggle_activity_symbol(panel);
     }
@@ -465,6 +467,7 @@ fn probe_symbol_menu(controller: &window::WindowController) {
         Panel::Tests,
         Panel::Debug,
         Panel::Containers,
+        Panel::Leitstand,
     ] {
         window::toggle_activity_symbol(panel);
     }

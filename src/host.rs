@@ -206,6 +206,12 @@ impl window::PanelsHost for AppHost {
         }
     }
 
+    fn set_symbol_status(&self, window: WindowId, panel: Panel, words: Option<&str>) {
+        if let Some(c) = self::window(window) {
+            c.set_symbol_status(panel, words);
+        }
+    }
+
     fn set_panel_accessory(&self, window: WindowId, panel: Panel, view: &NSView) {
         if let Some(c) = self::window(window) {
             c.set_panel_accessory(panel, view);

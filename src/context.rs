@@ -47,6 +47,7 @@ pub(crate) struct AppContext {
     ci_panels: crate::ci_panel::CiPanels,
     ci_log_tabs: crate::ci_panel::LogTabs,
     debug: Rc<ide_ui_debug::State>,
+    factory_ui: Rc<ide_ui_factory::State>,
     debug_rotors: crate::debug::Rotors,
     browser: Rc<ide_ui_browser::State>,
     secrets: Secrets,
@@ -168,6 +169,10 @@ impl AppContext {
 
     pub(crate) fn debug(&self) -> &Rc<ide_ui_debug::State> {
         &self.debug
+    }
+
+    pub(crate) fn factory_ui(&self) -> &Rc<ide_ui_factory::State> {
+        &self.factory_ui
     }
 
     pub(crate) fn debug_rotors(&self) -> &crate::debug::Rotors {

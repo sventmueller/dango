@@ -1,0 +1,95 @@
+//! The app as the Leitstand's views reach it: the orders of a folder as models, the user's commands, the diff of an
+//! order, the user's defaults and the project's workflow file, and notifications (E99).
+
+use std::cell::{OnceCell, RefCell};
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
+
+use ide_core::explain::Explained;
+use ide_factory::options::NewOrder;
+use ide_factory::panel::{Board, Fleet, Panel};
+use ide_factory::workflow::UserDefaults;
+use ide_factory::{InputKind, OrderId, Refusal};
+use ide_ui_common::registry::Registry;
+use ide_ui_common::window::WindowId;
+use objc2::rc::{Retained, Weak};
+
+use crate::model::detail::Detail;
+use crate::model::notices::Notices;
+use crate::model::settings::ProjectFile;
+use crate::model::sheet::SheetContext;
+
+/// The Leitstand's panels, tabs and menu target of every window, and what it last told the user per folder.
+#[derive(Default)]
+pub struct State {
+    pub(crate) panels: Registry<Retained<crate::panel::FactoryPanel>>,
+    pub(crate) boards: Registry<Weak<crate::board::BoardTab>>,
+    pub(crate) orders: Registry<Weak<crate::order::OrderTab>>,
+    pub(crate) commands: OnceCell<Retained<crate::commands::OrderCommands>>,
+    pub(crate) notices: RefCell<HashMap<PathBuf, Notices>>,
+}
+
+/// A notification about an order (E175), which the app posts as its other notifications (I9), never as a Dock
+/// count (E72).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Notification {
+    /// The order.
+    pub order: OrderId,
+    /// The order's title.
+    pub title: String,
+    /// What happened, in the user's language.
+    pub body: String,
+}
+
+/// What the Leitstand needs of the app's orchestrator and settings; the rest of a window it reaches through
+/// `ide_ui_common::window`. Every folder is a window's project root.
+pub trait Host {
+    /// The orders of `root` as the panel lists them; empty while the folder has none.
+    fn panel(&self, root: &Path) -> Panel;
+    /// Every order of `root` as the Leitstand tab's strip and table show them, before the tab's filter and sort;
+    /// `None` while the folder has no factory yet.
+    fn board(&self, root: &Path) -> Option<Board>;
+    /// The fleet line above the table; `None` while the folder has no factory yet.
+    fn fleet(&self, root: &Path) -> Option<Fleet>;
+    /// The order `order` of `root` as its tab shows it, built with [`Detail::new`] from the factory's order and the
+    /// sections of its diff; `None` for an order the folder does not know.
+    fn order(&self, root: &Path, order: &OrderId) -> Option<Detail>;
+    /// What the sheet "Neuer Auftrag" checks against: the stage, the rules, whether the working copy has uncommitted
+    /// changes, and what the app knows about each path (E185).
+    fn sheet(&self, root: &Path) -> SheetContext;
+    /// Starts the order `order` in `root`, with an id and base commit the app chooses; its id, or why the factory
+    /// refused it.
+    fn new_order(&self, root: &Path, order: NewOrder) -> Result<OrderId, Vec<Refusal>>;
+    /// Hands the user's command `command`, one of `InputKind`'s user commands, to the factory of `root`; what it
+    /// refused, empty when it took the command.
+    fn send(&self, root: &Path, command: InputKind) -> Vec<Refusal>;
+    /// Opens the diff of the order `order` against its base in `window`, in the diff tab of its worktree (C55).
+    fn open_diff(&self, window: WindowId, root: &Path, order: &OrderId);
+    /// Opens the session of `order`'s current role to read, as far as stage 1 allows (E175).
+    fn open_session(&self, window: WindowId, root: &Path, order: &OrderId);
+    /// Posts `notification` about an order of `root` (E175, I9); nothing while a self-test runs (R12).
+    fn notify(&self, root: &Path, notification: Notification);
+    /// The user's defaults for all projects (E183), as stored per Mac (E113).
+    fn defaults(&self) -> UserDefaults;
+    /// Stores `defaults` as the user's defaults and hands them to every factory.
+    fn set_defaults(&self, defaults: UserDefaults);
+    /// The workflow file of `root` as the project dialog edits it (E183).
+    fn project_file(&self, root: &Path) -> ProjectFile;
+    /// Writes `text` as the workflow file of `root` and has the factory read its rules again; the words of the
+    /// failure.
+    fn save_project_file(&self, root: &Path, text: &str) -> Result<(), Explained>;
+}
+
+static HOST: OnceLock<&'static (dyn Host + Sync)> = OnceLock::new();
+
+/// Makes `host` the app the Leitstand belongs to; once, before the first window opens.
+pub fn install(host: &'static (dyn Host + Sync)) {
+    let _ = HOST.set(host);
+}
+
+pub(crate) fn host() -> &'static (dyn Host + Sync) {
+    *HOST
+        .get()
+        .expect("the app installs its host before the first Leitstand")
+}

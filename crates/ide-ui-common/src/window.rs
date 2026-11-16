@@ -20,10 +20,12 @@ pub enum Panel {
     Debug,
     Tests,
     Containers,
+    /// The Leitstand's orders of the folder (E175).
+    Leitstand,
 }
 
 impl Panel {
-    pub const ALL: [Panel; 8] = [
+    pub const ALL: [Panel; 9] = [
         Panel::Files,
         Panel::Search,
         Panel::Agents,
@@ -31,6 +33,7 @@ impl Panel {
         Panel::Tests,
         Panel::Debug,
         Panel::Containers,
+        Panel::Leitstand,
         Panel::Ci,
     ];
 
@@ -45,6 +48,7 @@ impl Panel {
             Panel::Debug => 6,
             Panel::Tests => 7,
             Panel::Containers => 8,
+            Panel::Leitstand => 9,
         }
     }
 
@@ -62,6 +66,7 @@ impl Panel {
             Panel::Debug => t("Debuggen"),
             Panel::Tests => t("Tests"),
             Panel::Containers => t("Container"),
+            Panel::Leitstand => t("Leitstand"),
         }
     }
 
@@ -76,6 +81,7 @@ impl Panel {
             Panel::Debug => "debug",
             Panel::Tests => "tests",
             Panel::Containers => "containers",
+            Panel::Leitstand => "leitstand",
         }
     }
 
@@ -89,6 +95,7 @@ impl Panel {
             Panel::Debug => "ladybug",
             Panel::Tests => "checklist",
             Panel::Containers => "shippingbox",
+            Panel::Leitstand => "gauge.with.dots.needle.67percent",
         }
     }
 }
@@ -109,6 +116,10 @@ pub enum TabKind {
     Preview,
     /// A debug console (E94).
     Console,
+    /// The Leitstand: every work order of the folder (E175).
+    Leitstand,
+    /// One work order with its timeline and evidence (E175).
+    Order,
 }
 
 impl TabKind {
@@ -124,6 +135,8 @@ impl TabKind {
             TabKind::Plan => "list.bullet.clipboard",
             TabKind::Preview => "eye",
             TabKind::Console => "ladybug",
+            TabKind::Leitstand => "gauge.with.dots.needle.67percent",
+            TabKind::Order => "wrench.and.screwdriver",
         }
     }
 }
@@ -204,6 +217,9 @@ pub trait PanelsHost {
     fn set_panel_page(&self, window: WindowId, panel: Panel, page: &NSView);
     /// Shows `count` on `panel`'s symbol in the activity bar; none for 0.
     fn set_symbol_count(&self, window: WindowId, panel: Panel, count: usize);
+    /// Names `words` with the label and tooltip of `panel`'s symbol, such as waiting orders; `None` names only the
+    /// panel (E69).
+    fn set_symbol_status(&self, window: WindowId, panel: Panel, words: Option<&str>);
     /// Puts `view` at the trailing end of `panel`'s title row.
     fn set_panel_accessory(&self, window: WindowId, panel: Panel, view: &NSView);
 }
@@ -475,6 +491,10 @@ pub trait Panels: AsWindow {
 
     fn set_symbol_count(&self, panel: Panel, count: usize) {
         host().set_symbol_count(self.as_window().0, panel, count);
+    }
+
+    fn set_symbol_status(&self, panel: Panel, words: Option<&str>) {
+        host().set_symbol_status(self.as_window().0, panel, words);
     }
 
     fn set_panel_accessory(&self, panel: Panel, view: &NSView) {

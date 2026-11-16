@@ -56,6 +56,11 @@ const PARTS: &[Part] = &[
         ..Part::NONE
     },
     Part {
+        attached: crate::leitstand_ui::attach,
+        closed: crate::leitstand_ui::window_closed,
+        ..Part::NONE
+    },
+    Part {
         attached: crate::debug::attach,
         trust_changed: crate::debug::trust_changed,
         closed: crate::debug::window_closed,

@@ -52,16 +52,12 @@ fn arm() {
     let Some(next) = with_due(|due| due.borrow().next_due()) else {
         return;
     };
-    if crate::context::app()
-        .editor()
-        .recovery_copies
-        .timer
-        .get()
-        .is_some_and(|set| set <= next)
-    {
+    let cx = crate::context::app();
+    let timer = &cx.editor().recovery_copies.timer;
+    if timer.get().is_some_and(|set| set <= next) {
         return;
     }
-    crate::context::app().editor().recovery_copies.timer.set(Some(next));
+    timer.set(Some(next));
     main_after(next.saturating_duration_since(Instant::now()), fire);
 }
 

@@ -9,6 +9,7 @@ pub(crate) mod dictation;
 mod editor;
 mod form;
 mod list_bar;
+mod orders;
 mod predict;
 mod servers;
 mod stored_rules;
@@ -38,16 +39,17 @@ const CI_TAB: isize = 1;
 /// Where the Agents tab sits in the toolbar.
 const AGENTS_TAB: isize = 2;
 /// Where the own agent's tab sits in the toolbar.
-const AGENT_TAB: isize = 3;
+const AGENT_TAB: isize = 4;
 /// Where the dictation tab sits in the toolbar.
 #[cfg(feature = "dictation")]
-const DICTATION_TAB: isize = 5;
+const DICTATION_TAB: isize = 6;
 
 pub(crate) struct Ivars {
     settings: RefCell<Settings>,
     font_label: RefCell<Option<Retained<NSTextField>>>,
     ci: Retained<ci::CiSettings>,
     agents: Retained<agents::AgentsSettings>,
+    orders: Retained<orders::OrdersSettings>,
     agent: Retained<agent::AgentSettings>,
     servers: Retained<servers::ServersSettings>,
     #[cfg(feature = "dictation")]
@@ -203,6 +205,7 @@ impl SettingsController {
             font_label: RefCell::new(None),
             ci: ci::CiSettings::new(mtm),
             agents: agents::AgentsSettings::new(mtm),
+            orders: orders::OrdersSettings::new(mtm),
             agent: agent::AgentSettings::new(mtm),
             servers: servers::ServersSettings::new(mtm),
             #[cfg(feature = "dictation")]
@@ -229,6 +232,7 @@ pub(crate) fn show(mtm: MainThreadMarker) {
         let (window, controller) = cell.get_or_insert_with(|| build(mtm));
         controller.ivars().ci.reload();
         controller.ivars().agents.reload();
+        controller.ivars().orders.reload();
         controller.ivars().agent.reload();
         controller.ivars().servers.reload();
         #[cfg(feature = "dictation")]
@@ -242,7 +246,7 @@ pub(crate) fn show(mtm: MainThreadMarker) {
 }
 
 /// Where the tab of edit prediction sits in the toolbar: the last.
-const PREDICTION_TAB: isize = if cfg!(feature = "dictation") { 6 } else { 5 };
+const PREDICTION_TAB: isize = if cfg!(feature = "dictation") { 7 } else { 6 };
 
 /// Brings the settings window to the front on the tab of edit prediction.
 pub(crate) fn show_prediction(mtm: MainThreadMarker) {
@@ -383,6 +387,11 @@ fn build(mtm: MainThreadMarker) -> (Retained<NSWindow>, Retained<SettingsControl
         Page::of(general_view(mtm, &controller), t("Allgemein"), "gearshape"),
         Page::of(controller.ivars().ci.view(), t("CI"), "checkmark.seal"),
         Page::of(controller.ivars().agents.view(), t("Agenten"), "person.2"),
+        Page::of(
+            controller.ivars().orders.view(),
+            t("Aufträge"),
+            "gauge.with.dots.needle.67percent",
+        ),
         Page {
             sized: true,
             ..Page::of(controller.ivars().agent.view(), t("Eigener Agent"), "sparkles")

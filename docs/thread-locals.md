@@ -162,6 +162,7 @@ whose static is gone.
 | `crates/ide-ui-lsp/src/host.rs` | `HOST` | the language servers' `Host` | install-once hook |
 | `crates/ide-ui-dictation/src/hub.rs` | `HOST` | the dictation's `Host` | install-once hook |
 | `crates/ide-ui-export/src/lib.rs` | `HOST` | the export's `Host` | install-once hook |
+| `crates/ide-ui-factory/src/host.rs` | `HOST` | the Leitstand's `Host` | install-once hook |
 | `crates/ide-ui-git/src/host.rs` | `HOST` | the Git panel's `Host` | install-once hook |
 | `crates/ide-ui-git/src/message/claude.rs` | `NEXT` | the number of the next empty folder `claude` runs in | serial |
 | `crates/ide-ui-git/src/work.rs` | `GIT` | the git program and its environment | once per process |

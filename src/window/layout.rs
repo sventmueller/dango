@@ -83,6 +83,12 @@ fn reopenable(controller: &WindowController, id: TabId, kind: TabKind, key: Opti
         }
         TabKind::Console => crate::debug::console_of_tab(controller, id)
             .and_then(|(title, history)| Tab::new(&crate::debug::KeptConsole { title, history })),
+        TabKind::Leitstand => Tab::new(&ide_ui_factory::KeptLeitstand {}),
+        TabKind::Order => ide_ui_factory::order_of_tab_key(key?).and_then(|order| {
+            Tab::new(&ide_ui_factory::KeptOrder {
+                order: order.to_string(),
+            })
+        }),
         TabKind::Diff | TabKind::Log | TabKind::Plan | TabKind::Preview => None,
     }
 }
@@ -186,6 +192,13 @@ impl Documents<'_, '_> {
         if let Some(crate::browser::KeptPage { url }) = tab.read() {
             crate::browser::open_tab(controller, Some(&url));
             return true;
+        }
+        // The Leitstand's tabs only show what the factory knows; orders come back paused on their own (E167).
+        if tab.is::<ide_ui_factory::KeptLeitstand>() {
+            return crate::leitstand_ui::reopen_leitstand(controller);
+        }
+        if let Some(ide_ui_factory::KeptOrder { order }) = tab.read() {
+            return crate::leitstand_ui::reopen_order(controller, &order);
         }
         // Only the history comes back; no session starts or attaches (Review C18).
         if let Some(crate::debug::KeptConsole { title, history }) = tab.read() {

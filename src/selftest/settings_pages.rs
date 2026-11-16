@@ -667,7 +667,7 @@ fn stored_rule(f: Fixture) {
     let led = press(sel!(ideAgentsOwnSettings:));
     check(
         "the Agents tab leads to the own agent's tab",
-        led && tabs().is_some_and(|t| t.selectedTabViewItemIndex() == 3),
+        led && tabs().is_some_and(|t| t.selectedTabViewItemIndex() == 4),
         "",
     );
     sheet_gone(move || general(f));

@@ -10,6 +10,7 @@ mod diag;
 mod editor;
 mod environment;
 mod host;
+mod leitstand_ui;
 mod markdown;
 mod menu;
 mod navigation;
@@ -66,6 +67,7 @@ fn main() {
     ide_ui_common::window::install(&host::AppHost);
     ide_ui_debug::install(&host::AppHost);
     ide_ui_export::install(&host::AppHost);
+    ide_ui_factory::install(&host::AppHost);
     ide_ui_git::install(&host::AppHost);
     ide_ui_agent::install(&host::AppHost);
     ide_ui_browser::install(&host::AppHost);
