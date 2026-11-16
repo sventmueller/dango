@@ -187,7 +187,36 @@ beschrieben, gilt so, wie es hier steht:
     Ausgaben zählen als „unbekannt“.
   - **Der Worktree** beginnt an der Spitze des Basis-Branches, nicht genau am gemerkten Commit.
   - **Das Einfrieren der Agenten-Konfiguration** geht höchstens 6 Ebenen tief und überspringt `node_modules`,
-    `target` und Ähnliches; die Sitzungen lesen die eingefrorene Ablage noch nicht (E172, offen).
+    `target` und Ähnliches.
+  - **Eingefrorene Konfiguration je Weg (E172):**
+    - Claude startet mit `--setting-sources=user`; die eingefrorene Ablage kommt über `--add-dir` mit
+      `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1` (CLAUDE.md, `.claude/rules/`). Von ihren Projekt-Einstellungen gelten
+      nur Deny- und Ask-Regeln; Hooks, Allow-Regeln, MCP und `CLAUDE.local.md` werden nicht geladen.
+    - Codex bekommt `project_doc_max_bytes=0`, beide Ordner als nicht vertraut, und die eingefrorene AGENTS.md als
+      `developerInstructions`. Die eingefrorene `.codex/config.toml` gilt nicht, weil sie sich nur über `CODEX_HOME`
+      umlenken ließe, das die Anmeldung hält.
+    - Der eigene Agent liest seine Regeln aus der eingefrorenen Ablage.
+  - **Fortsetzen (A15):** Claude startet unter einer vorab erzeugten `--session-id`, der eigene Agent setzt über seine
+    Thread-Id fort.
+  - **Stufe 2 (B40, B41b, B46):** Ein Ordner läuft in Stufe 2, solange ein bereiter Builder und ein bereiter Prüfer
+    verschiedener Hersteller in den Ranglisten stehen; jeder Auftrag behält die Stufe, in der er entstand. Planer und
+    Prüfer laufen als Leser; Codex bekommt das Schema des Urteils, Claude und der eigene Agent antworten mit einem
+    JSON-Block. Der eigene Agent ist bereit, sobald ein Endpunkt mit Modell eingerichtet ist; sein Hersteller kommt vom
+    Endpunkt. In den vorgegebenen Ranglisten steht er nicht.
+  - **Git im eigenen Worktree (C47):** umgesetzt, wirkt aber erst mit O1. Claudes Ask-Regeln greifen nach Präfix, ein
+    `git reset -q --hard` rutscht durch; Codex kann solche Befehle nie an den Nutzer geben.
+  - **Pfad-Abhängigkeiten (E188):** Neben dem Worktree entsteht für jedes `../name` ein Symlink auf den Ordner neben
+    dem Repository. Eine Abhängigkeit zwei Ebenen höher wird übersprungen, weil sie im gemeinsamen Worktree-Ordner läge.
+  - **AI-Tab (B37b):** Nur die Sitzung eines Auftrags läuft im Tab über den Treiber (`Source::Driven`, Claude und
+    Skript-Sitzung). Normale Tabs bleiben auf dem bisherigen Weg; ihr Umzug braucht im Treiber noch Remote Control,
+    Zurückspulen, eigene Fehlerarten, bearbeitete Eingaben und „Immer erlauben“ bei Freigaben, Checkpoints je
+    Nachricht, Nachrichten in den laufenden Zug und Mitschnitte.
+    - Der Tab eines Auftrags trägt das Schild „Auftrag … · Rolle“. Modus, Sandbox und Denktiefe sind gesperrt;
+      Nachrichten gehen in die Warteschlange des Treibers und stehen als Eingriff im Protokoll; Schließen beendet nur
+      das Abonnement.
+    - „Zurück an den Leitstand“ startet Claude unter neuer Sitzung; ein offener Tab zeigt dann die alte als beendet.
+  - **G1 (E178):** Die Spezifikation erscheint mit Inline-Kommentaren im Auftrag-Tab, aus dem Text der Fabrik.
+    „Verwerfen“ bricht den Auftrag nach dem Sheet ab.
   - **Bilder der Gates** kommen über die Umgebungsvariable `GATE_IMAGES_DIR`.
   - **Aufbewahrung:** Protokolle, Spezifikation, eingefrorene Konfiguration, Bestätigungen, Tageskonto und Kontingente
     liegen im Datenordner unter `leitstand/`; die Vorgaben des Nutzers in der Einstellung `factoryDefaults` (PerMac).
