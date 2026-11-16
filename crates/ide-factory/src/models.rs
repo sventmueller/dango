@@ -18,7 +18,7 @@ use serde_json::Value;
 
 use crate::routing::Agent;
 
-/// The aliases Claude Code takes for the newest model of each family.
+/// The aliases Claude Code takes for the newest model of each family, offered until a session told its models.
 const CLAUDE_MODELS: [&str; 3] = ["opus", "sonnet", "haiku"];
 
 /// The efforts Claude Code's `--effort` takes.
@@ -27,6 +27,8 @@ const CLAUDE_EFFORTS: [&str; 5] = ["low", "medium", "high", "xhigh", "max"];
 /// What the CLIs keep that names their models, as text.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Sources {
+    /// The models Claude Code offered in its last session, each with its efforts.
+    pub claude_models: Vec<(String, Vec<String>)>,
     /// `ANTHROPIC_MODEL` of the login shell.
     pub claude_env_model: Option<String>,
     /// Claude Code's settings files, the one that wins first: the project's local and shared ones, then the user's.
@@ -101,14 +103,29 @@ fn claude(sources: &Sources) -> Catalog {
             .find_map(|s| named(s.get("env").and_then(|e| e.get("ANTHROPIC_MODEL"))))
     })
     .or_else(|| settings.iter().find_map(|s| named(s.get("model"))));
-    Catalog {
-        models: CLAUDE_MODELS
+    // The CLI lists "default" for whatever the account defaults to, which an entry without a model already means.
+    let offered: Vec<ModelOption> = sources
+        .claude_models
+        .iter()
+        .filter(|(value, _)| value != "default")
+        .map(|(value, offered)| ModelOption {
+            value: value.clone(),
+            efforts: offered.clone(),
+        })
+        .collect();
+    let models = if offered.is_empty() {
+        CLAUDE_MODELS
             .iter()
             .map(|value| ModelOption {
                 value: (*value).to_string(),
                 efforts: efforts.clone(),
             })
-            .collect(),
+            .collect()
+    } else {
+        offered
+    };
+    Catalog {
+        models,
         default_model: model,
         default_effort: None,
         efforts,
@@ -217,6 +234,23 @@ mod tests {
             catalog(&Agent::Claude, &sources).default_model.as_deref(),
             Some("opus[1m]")
         );
+    }
+
+    #[test]
+    fn claude_offers_the_models_its_last_session_told_and_else_the_aliases() {
+        let aliases = catalog(&Agent::Claude, &Sources::default());
+        assert_eq!(aliases.models.len(), CLAUDE_MODELS.len());
+        let sources = Sources {
+            claude_models: vec![
+                ("default".into(), Vec::new()),
+                ("claude-fable-5-2[1m]".into(), vec!["high".into(), "max".into()]),
+            ],
+            ..Sources::default()
+        };
+        let told = catalog(&Agent::Claude, &sources);
+        let values: Vec<&str> = told.models.iter().map(|m| m.value.as_str()).collect();
+        assert_eq!(values, ["claude-fable-5-2[1m]"]);
+        assert_eq!(told.efforts_of(Some("claude-fable-5-2[1m]")), ["high", "max"]);
     }
 
     #[test]

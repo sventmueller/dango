@@ -278,10 +278,12 @@ beschrieben, gilt so, wie es hier steht:
   - **Herkunft je Einstellung (E183):** Der Dialog „Software Factory für <Ordner>“ zeigt für jeden Wert „Vorgabe“ oder
     „factory.toml“ mit „Zurücksetzen“. Risikomuster, prüfrelevante Dateien und die Ranglisten aller vier Rollen mit
     Modell und Denktiefe sind dort bearbeitbar; eine geänderte Rangliste schreibt die ganze Liste der Rolle in die
-    Datei. Der Tab „Aufträge“ deckt alle vier Rollen mit Modell und Denktiefe, die Prüfer-Regel und API-Budgets je
+    Datei. Der Tab „Software Factory“ (vorher „Aufträge“) deckt alle vier Rollen mit Modell und Denktiefe, die Prüfer-Regel und API-Budgets je
     Tag für Claude, Codex und den eigenen Agenten ab.
   - **Modellwahl:** Modell und Denktiefe sind Auswahllisten, in die sich auch ein eigener Name tippen lässt. Claude
-    bietet die Aliasse opus, sonnet und haiku, Codex die Modelle seines `models_cache.json` mit ihren Denktiefen.
+    bietet die Modelle, die seine CLI in der letzten Sitzung eines AI-Tabs genannt hat, bis dahin die Aliasse opus,
+    sonnet und haiku; Codex die Modelle seines `models_cache.json` mit ihren Denktiefen. Der Tab heißt „Software
+    Factory“ mit dem Fabriksymbol und scrollt.
     Ohne Eintrag nennt die Liste das Modell, das die CLI dann nimmt: bei Claude `ANTHROPIC_MODEL`, sonst `model` aus
     den Einstellungen des Projekts oder des Nutzers, bei Codex `model` aus seiner `config.toml`.
   - **Issue-Änderungen (E176):** Ein geändertes Issue zeigt im Auftrag-Tab „Issue geändert“ mit Zeilen-Diff; erst

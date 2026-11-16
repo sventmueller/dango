@@ -18,6 +18,9 @@ pub const FACTORY_SYMBOL: &str = "ide.factory";
 /// The size of the drawing at 16 points, which is as large as an SF Symbol of that point size.
 const BOX: NSSize = NSSize::new(20.0, 18.0);
 
+/// How much of the box the drawing fills, so it looks as large as the SF Symbols beside it, which leave room in theirs.
+const INK: f64 = 0.8;
+
 /// Pixels per point of the bitmap, as many as a Retina display has.
 const PIXELS_PER_POINT: f64 = 2.0;
 
@@ -81,8 +84,11 @@ fn render(name: &str, description: &str, points: f64, color: &NSColor) -> Option
 /// A chimney, a sawtooth roof of three bays and a window in each, stroked as SF Symbols' regular weight is, in the
 /// colour set.
 fn draw_factory(rect: NSRect) {
-    let scale = rect.size.width / BOX.width;
-    let at = |x: f64, y: f64| NSPoint::new(rect.origin.x + x * scale, rect.origin.y + y * scale);
+    let full = rect.size.width / BOX.width;
+    let scale = full * INK;
+    let x0 = rect.origin.x + rect.size.width * (1.0 - INK) / 2.0;
+    let y0 = rect.origin.y + rect.size.height * (1.0 - INK) / 2.0;
+    let at = |x: f64, y: f64| NSPoint::new(x0 + x * scale, y0 + y * scale);
     let bay = (19.0 - 4.5) / 3.0;
     let outline = NSBezierPath::bezierPath();
     outline.moveToPoint(at(1.0, 0.75));
@@ -95,7 +101,7 @@ fn draw_factory(rect: NSRect) {
     }
     outline.lineToPoint(at(19.0, 0.75));
     outline.closePath();
-    outline.setLineWidth(1.5 * scale);
+    outline.setLineWidth(1.4 * full);
     outline.setLineJoinStyle(NSLineJoinStyle::Round);
     outline.setLineCapStyle(NSLineCapStyle::Round);
     outline.stroke();

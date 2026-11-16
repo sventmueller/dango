@@ -353,6 +353,15 @@ impl State {
         match &mut self.run.known {
             Known::Claude(caps) => {
                 if let Some(learned) = self.run.source.capabilities() {
+                    let models = learned
+                        .models
+                        .iter()
+                        .map(|m| ide_core::settings::KnownModel {
+                            value: m.value.clone(),
+                            efforts: m.supported_effort_levels.clone(),
+                        })
+                        .collect();
+                    super::choices::remember_claude_models(models);
                     *caps = learned;
                 }
             }

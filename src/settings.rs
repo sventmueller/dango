@@ -389,8 +389,8 @@ fn build(mtm: MainThreadMarker) -> (Retained<NSWindow>, Retained<SettingsControl
         Page::of(controller.ivars().agents.view(), t("Agenten"), "person.2"),
         Page::of(
             controller.ivars().orders.view(),
-            t("Aufträge"),
-            "gauge.with.dots.needle.67percent",
+            t("Software Factory"),
+            ide_ui_common::util::FACTORY_SYMBOL,
         ),
         Page {
             sized: true,

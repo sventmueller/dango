@@ -1,4 +1,4 @@
-//! The user's defaults for all projects (E183, Einstellungen ▸ Aufträge): ranked lists per role, the reviewer rule,
+//! The user's defaults for all projects (E183, Einstellungen ▸ Software Factory): ranked lists per role, the reviewer rule,
 //! limits and budgets, and how orders behave after a restart and on battery. The app stores them per Mac (E113).
 
 use std::collections::BTreeMap;

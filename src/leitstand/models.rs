@@ -1,6 +1,6 @@
-//! The files of the agents' CLIs that name their models, read for the role lists (`ide_factory::models`): Claude
-//! Code's settings of the project and the user and `ANTHROPIC_MODEL` of the login shell, Codex's `config.toml` and
-//! the model list it caches.
+//! What names the agents' models, read for the role lists (`ide_factory::models`): the models Claude Code offered in
+//! an AI tab's last session, Claude Code's settings of the project and the user and `ANTHROPIC_MODEL` of the login
+//! shell, Codex's `config.toml` and the model list it caches.
 
 use std::path::{Path, PathBuf};
 
@@ -28,7 +28,9 @@ fn sources(agent: &Agent, root: Option<&Path>) -> Sources {
                 files.push(root.join(".claude/settings.json"));
             }
             files.push(user.join("settings.json"));
+            let told = ide_core::settings::State::load_user().get(&ide_core::settings::remembered::CLAUDE_MODELS);
             Sources {
+                claude_models: told.into_iter().map(|m| (m.value, m.efforts)).collect(),
                 claude_env_model: env("ANTHROPIC_MODEL"),
                 claude_settings: files.into_iter().filter_map(read).collect(),
                 ..Sources::default()

@@ -287,6 +287,19 @@ pub mod remembered {
 
     /// What the user picked last for each agent, by the agent's id, which its next sessions start with.
     pub const AGENT_CHOICES: StateKey<BTreeMap<String, AgentChoice>> = StateKey::new("agentChoices", BTreeMap::new);
+
+    /// The models Claude Code offered in its last session, which the Software Factory's roles offer in turn.
+    pub const CLAUDE_MODELS: StateKey<Vec<super::KnownModel>> = StateKey::new("claudeModels", Vec::new);
+}
+
+/// A model an agent's CLI offered, with the efforts it takes.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct KnownModel {
+    /// What the CLI takes.
+    pub value: String,
+    /// The efforts it offered for it.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub efforts: Vec<String>,
 }
 
 /// The model, reasoning effort and permission mode the user picked for an agent, each as the agent names it; unset

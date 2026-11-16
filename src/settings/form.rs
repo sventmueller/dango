@@ -250,6 +250,33 @@ pub(crate) fn page(mtm: MainThreadMarker, content: &NSView) -> Retained<NSView> 
     view
 }
 
+/// `content`, a stack of [`stack`], in a page `height` tall that scrolls, for a tab taller than a screen leaves room
+/// for; the stack is the scroll view's document, and a stack view draws from its top.
+pub(crate) fn scrolling_page(mtm: MainThreadMarker, content: &NSStackView, height: f64) -> Retained<NSView> {
+    content.setEdgeInsets(objc2_foundation::NSEdgeInsets {
+        top: MARGIN,
+        left: MARGIN,
+        bottom: MARGIN,
+        right: MARGIN,
+    });
+    let width = WIDTH + 2.0 * MARGIN;
+    let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(width, height));
+    let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
+    scroll.setHasVerticalScroller(true);
+    scroll.setAutohidesScrollers(true);
+    scroll.setDrawsBackground(false);
+    content.setTranslatesAutoresizingMaskIntoConstraints(false);
+    scroll.setDocumentView(Some(content));
+    let clip = scroll.contentView();
+    activate([
+        content.topAnchor().constraintEqualToAnchor(&clip.topAnchor()),
+        content.leadingAnchor().constraintEqualToAnchor(&clip.leadingAnchor()),
+        content.widthAnchor().constraintEqualToAnchor(&clip.widthAnchor()),
+    ]);
+    fixed_size(&scroll, width, height);
+    scroll.into_super()
+}
+
 /// A list `height` tall with the columns `columns`, titles and widths, the last one taking the room left; `owner`
 /// gives its rows.
 pub(crate) fn table<T>(

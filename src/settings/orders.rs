@@ -1,4 +1,4 @@
-//! The Orders tab (Einstellungen ▸ Aufträge, E183): the user's defaults for the Leitstand in every project. It offers
+//! The Software Factory tab (Einstellungen ▸ Software Factory, E183): the user's defaults for the Leitstand in every project. It offers
 //! the ranked list of every role (planner, builder, reviewer, scout) with model and effort per entry, the reviewer
 //! rule, the limits, the budgets per order, per day and per provider, and how orders behave after a restart and on
 //! battery; a project's `.dango/factory.toml` can only tighten them (E190). The values are stored per Mac (E113)
@@ -27,6 +27,9 @@ use splat_i18n::t;
 
 use super::form::{self, Row};
 use crate::util::{guarded, ns, set_action};
+
+/// How tall the tab is; its content scrolls, since it is taller than many screens.
+const PAGE_HEIGHT: f64 = 560.0;
 
 /// The tag of the order budget's field; the day's is one more.
 const ORDER_BUDGET: isize = 100;
@@ -374,7 +377,7 @@ impl OrdersSettings {
         ]);
         let content = form::stack(mtm, &views);
         OrdersUi {
-            view: form::page(mtm, &content),
+            view: form::scrolling_page(mtm, &content, PAGE_HEIGHT),
             role: roles.role,
             table: roles.table,
             model: roles.model,

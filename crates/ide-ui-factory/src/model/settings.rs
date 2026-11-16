@@ -1,4 +1,4 @@
-//! The Leitstand's settings (E183): the user's defaults for all projects in "Einstellungen ▸ Aufträge", and the
+//! The Leitstand's settings (E183): the user's defaults for all projects in "Einstellungen ▸ Software Factory", and the
 //! project's workflow file in "Software Factory für <Ordner>", each value with where it comes from and a way back to the
 //! default: every role with model and effort, the reviewer rule, limits, budgets per order, day and provider, gates,
 //! copying and setup, risk patterns and the files that count for the review.
