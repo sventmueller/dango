@@ -126,7 +126,15 @@ fn profile(job: &Job, temp: &Path, private: Option<&ide_git::GateGitDir>) -> Pro
 fn environment(job: &Job, temp: &Path, private: Option<&ide_git::GateGitDir>) -> Vec<(String, String)> {
     let mut env = job.env.clone();
     env.extend(job.run.env.iter().map(|(k, v)| (k.clone(), v.clone())));
-    let mut own = vec![("TMPDIR".to_string(), temp.to_string_lossy().into_owned())];
+    let mut own = vec![
+        ("TMPDIR".to_string(), temp.to_string_lossy().into_owned()),
+        // xcrun keeps its tool cache under the user's temp folder, which the gate cannot write; without its own
+        // cache every call of Apple's git, cc or ld through xcrun costs about a second.
+        (
+            "xcrun_db".to_string(),
+            temp.join("xcrun_db").to_string_lossy().into_owned(),
+        ),
+    ];
     if let Some(images) = &job.images {
         own.push((IMAGES_VARIABLE.into(), images.to_string_lossy().into_owned()));
     }

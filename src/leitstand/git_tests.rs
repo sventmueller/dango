@@ -445,6 +445,10 @@ fn git_inside_a_gate_reads_a_private_copy_of_the_repository_and_none_of_its_conf
     assert_eq!(printed(output, "updated"), Some("yes"), "{output}");
     assert_eq!(printed(output, "committed"), Some("yes"), "{output}");
     assert!(
+        !output.contains("xcrun_db"),
+        "xcrun keeps its cache in the gate: {output}"
+    );
+    assert!(
         !marker.exists(),
         "the filter of the real configuration never ran: {output}"
     );

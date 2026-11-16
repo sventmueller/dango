@@ -347,7 +347,8 @@ beschrieben, gilt so, wie es hier steht:
       <gate@invalid>`, `GIT_TERMINAL_PROMPT=0`; die Variablen der Workflow-Datei ersetzen sie nicht. Was git im Gate
       schreibt (Index, Commits, Refs), bleibt in der Kopie; das echte Repository und der Auftragsbranch ändern sich
       nicht. Ein Repository mit Refs in reftable bekommt keine Kopie, dort scheitert git im Gate weiter. Kosten: etwa
-      0,1 ms je loser Ref, `packed-refs` und Index als eine Kopie.
+      0,1 ms je loser Ref, `packed-refs` und Index als eine Kopie. `xcrun` bekommt über `xcrun_db` einen Cache im
+      temporären Ordner des Gates; ohne ihn kostet jeder Aufruf von Apples git, `cc` oder `ld` etwa eine Sekunde.
   - **Secrets-Prüfung (C52):** Der Diff liest jede Datei als Text, ohne Attribute, Textconv und externe Diffs; Zeilen
     mit NUL-Bytes werden auch ohne sie geprüft (UTF-16, Binärdateien).
   - **Ereignisprotokoll (E167):**
