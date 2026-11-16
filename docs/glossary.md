@@ -217,6 +217,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | interval | how often a recurring work order comes: täglich, wöchentlich, alle {} Tage |
 | eingereiht | queued | a work order that waits its turn: for a free slot, for a work order whose path scope overlaps, or for the take-over into the same branch ahead of it (E174) |
 | Rolle | role | planner, builder, reviewer or scout, the part an agent plays in a work order |
+| Einwand | objection | the builder's answer in its first turn that the criteria do not hold; the work order waits until the user changes them, continues or aborts (E178) |
+| Rangliste | ranked list | a role's ordered entries of agent, model and effort; a work order takes the first one that is ready (E183) |
+| Prüfer-Regel | reviewer rule | whether the reviewer must (Pflicht) or should (bevorzugt) be of another vendor than the builders (E183) |
+| Vorgabe, auf Vorgabe zurücksetzen | default, reset to default | a value from the user's settings, as against one the workflow file sets; the dialog of a folder's Leitstand names it as the value's origin (E183) |
+| Mitkopieren / Einrichtung | copy along / setup | the files copied into a work order's worktree, and the command that prepares the worktree (E188) |
+| Prüfrelevante Dateien | files that matter for the review | path patterns of tests and configuration whose changes raise the measured risk class to high (E183) |
+| Issue | issue | an issue on GitHub or GitLab, which a work order can come from (E176) |
+| Merge Request | merge request | what an accepted work order is submitted as: GitLab's merge request, GitHub's pull request; worded as the language's CI panel words it (E177) |
 | **Agent configuration (E146)** | | |
 | Rechte | Permissions | the overlay with an agent's permission rules; the rules are Freigaben in the sense of the Freigabe term |
 | Erlauben / Fragen / Verbieten | Allow / Ask / Deny | the effect of a permission rule; Verbieten is the language's word for denying or forbidding an action, Fragen the agent asking first |
@@ -430,6 +438,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | الفاصل الزمني |
 | eingereiht | في قائمة الانتظار |
 | Rolle | الدور |
+| Einwand | اعتراض (اعتراض المنفّذ) |
+| Rangliste | قائمة الأولوية |
+| Prüfer-Regel | قاعدة المراجِع (إلزامي / مفضَّل) |
+| Vorgabe, auf Vorgabe zurücksetzen | افتراضي، استعادة الافتراضي |
+| Mitkopieren / Einrichtung | نسخ أيضًا / الإعداد |
+| Prüfrelevante Dateien | الملفات المهمة للمراجعة |
+| Issue | Issue (in Latin script) |
+| Merge Request | Merge Request (in Latin script, masculine; "إرسال كـ Merge Request") |
 | Rechte | الأذونات |
 | Erlauben / Fragen / Verbieten | سماح / استئذان / رفض |
 | Gedächtnis | الذاكرة |
@@ -636,6 +652,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | interval |
 | eingereiht | a la cua |
 | Rolle | rol |
+| Einwand | objecció |
+| Rangliste | llista de prioritat |
+| Prüfer-Regel | regla del revisor (obligatori / preferit) |
+| Vorgabe, auf Vorgabe zurücksetzen | per omissió, restableix el valor per omissió |
+| Mitkopieren / Einrichtung | copia també / inicialització |
+| Prüfrelevante Dateien | fitxers rellevants per a la revisió |
+| Issue | issue (feminine: la issue) |
+| Merge Request | merge request (feminine: la merge request) |
 | Rechte | Permisos |
 | Erlauben / Fragen / Verbieten | Permet / Pregunta / Denega |
 | Gedächtnis | memòria |
@@ -842,6 +866,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | interval |
 | eingereiht | ve frontě |
 | Rolle | role |
+| Einwand | námitka |
+| Rangliste | žebříček |
+| Prüfer-Regel | pravidlo recenzenta (povinně / přednostně) |
+| Vorgabe, auf Vorgabe zurücksetzen | výchozí, vrátit na výchozí |
+| Mitkopieren / Einrichtung | kopírovat s sebou / příprava |
+| Prüfrelevante Dateien | soubory důležité pro revizi |
+| Issue | issue (neuter, indeclinable) |
+| Merge Request | merge request (masculine: merge requestu, merge requesty) |
 | Rechte | Povolení |
 | Erlauben / Fragen / Verbieten | Povolit / Zeptat se / Zamítnout |
 | Gedächtnis | paměť |
@@ -1045,6 +1077,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | interval |
 | eingereiht | i kø |
 | Rolle | rolle |
+| Einwand | indsigelse |
+| Rangliste | rangliste |
+| Prüfer-Regel | reviewer-regel (påkrævet / foretrukket) |
+| Vorgabe, auf Vorgabe zurücksetzen | standard, gendan standard |
+| Mitkopieren / Einrichtung | kopiér med / opsætning |
+| Prüfrelevante Dateien | review-relevante arkiver |
+| Issue | issue (et issue, issuet) |
+| Merge Request | merge request (en merge request) |
 | Rechte | Tilladelser |
 | Erlauben / Fragen / Verbieten | Tillad / Spørg / Afvis |
 | Gedächtnis | hukommelse |
@@ -1251,6 +1291,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | διάστημα |
 | eingereiht | σε αναμονή |
 | Rolle | ρόλος |
+| Einwand | ένσταση |
+| Rangliste | κατάταξη |
+| Prüfer-Regel | κανόνας αξιολογητή (υποχρεωτικά / κατά προτίμηση) |
+| Vorgabe, auf Vorgabe zurücksetzen | προεπιλογή, επαναφορά προεπιλογής |
+| Mitkopieren / Einrichtung | αντιγραφή επίσης / προετοιμασία |
+| Prüfrelevante Dateien | αρχεία σημαντικά για την αξιολόγηση |
+| Issue | issue (indeclinable neuter) |
+| Merge Request | merge request (indeclinable neuter) |
 | Rechte | Άδειες |
 | Erlauben / Fragen / Verbieten | Να επιτρέπεται / Να ερωτάται / Άρνηση |
 | Gedächtnis | μνήμη |
@@ -1457,6 +1505,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | intervalo |
 | eingereiht | en cola |
 | Rolle | rol |
+| Einwand | objeción |
+| Rangliste | lista de prioridad |
+| Prüfer-Regel | regla del revisor (obligatorio / preferido) |
+| Vorgabe, auf Vorgabe zurücksetzen | por omisión, restaurar valor por omisión |
+| Mitkopieren / Einrichtung | copiar también / inicialización |
+| Prüfrelevante Dateien | archivos relevantes para la revisión |
+| Issue | issue (masculine: el issue) |
+| Merge Request | merge request (masculine: el merge request) |
 | Rechte | Permisos |
 | Erlauben / Fragen / Verbieten | Permitir / Preguntar / Denegar |
 | Gedächtnis | memoria |
@@ -1665,6 +1721,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | aikaväli |
 | eingereiht | jonossa |
 | Rolle | rooli |
+| Einwand | vastalause (rakentaja vastustaa kriteerejä) |
+| Rangliste | paremmuusjärjestys |
+| Prüfer-Regel | katselmoijan sääntö |
+| Vorgabe, auf Vorgabe zurücksetzen | oletus, palauta oletus |
+| Mitkopieren / Einrichtung | kopioi mukana / asennus |
+| Prüfrelevante Dateien | katselmoinnin kannalta olennaiset tiedostot |
+| Issue | issue (issuesta, issueta) |
+| Merge Request | merge request (merge requestina; GitHub: pull request) |
 | Rechte | Luvat |
 | Erlauben / Fragen / Verbieten | Salli / Kysy / Hylkää |
 | Gedächtnis | muisti |
@@ -1869,6 +1933,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | intervalle |
 | eingereiht | en file d’attente |
 | Rolle | rôle |
+| Einwand | objection (du builder) |
+| Rangliste | liste de priorité |
+| Prüfer-Regel | règle du relecteur |
+| Vorgabe, auf Vorgabe zurücksetzen | par défaut, rétablir la valeur par défaut |
+| Mitkopieren / Einrichtung | copier aussi / préparation |
+| Prüfrelevante Dateien | fichiers importants pour la relecture |
+| Issue | issue (f.) |
+| Merge Request | merge request (f.; GitHub: pull request) |
 | Rechte | Autorisations |
 | Erlauben / Fragen / Verbieten | Autoriser / Demander / Refuser |
 | Gedächtnis | mémoire |
@@ -2077,6 +2149,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | מרווח |
 | eingereiht | בתור |
 | Rolle | תפקיד |
+| Einwand | התנגדות (הבונה מתנגד לקריטריונים) |
+| Rangliste | דירוג עדיפות |
+| Prüfer-Regel | כלל הסוקר |
+| Vorgabe, auf Vorgabe zurücksetzen | ברירת מחדל, חזרה לברירת המחדל |
+| Mitkopieren / Einrichtung | העתקה נלווית / הגדרה |
+| Prüfrelevante Dateien | קבצים רלוונטיים לסקירה |
+| Issue | Issue (ה-Issue) |
+| Merge Request | Merge Request (GitHub: Pull Request) |
 | Rechte | הרשאות |
 | Erlauben / Fragen / Verbieten | מתן גישה / בקשת אישור / סירוב |
 | Gedächtnis | זיכרון |
@@ -2281,6 +2361,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | अंतराल |
 | eingereiht | कतार में |
 | Rolle | भूमिका |
+| Einwand | आपत्ति (बिल्डर को मानदंडों पर आपत्ति है) |
+| Rangliste | रैंकिंग सूची |
+| Prüfer-Regel | समीक्षक नियम |
+| Vorgabe, auf Vorgabe zurücksetzen | डिफ़ॉल्ट, डिफ़ॉल्ट पर रीसेट करें |
+| Mitkopieren / Einrichtung | साथ में कॉपी करें / सेटअप |
+| Prüfrelevante Dateien | समीक्षा के लिए अहम फ़ाइलें |
+| Issue | Issue (Latin script, as the CI panel writes it) |
+| Merge Request | Merge Request (Latin script; GitHub: Pull Request) |
 | Rechte | अनुमतियाँ |
 | Erlauben / Fragen / Verbieten | अनुमति दें / पूछें / अस्वीकार करें |
 | Gedächtnis | मेमोरी |
@@ -2486,6 +2574,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | interval |
 | eingereiht | u redu čekanja |
 | Rolle | uloga |
+| Einwand | prigovor (izvođač ima prigovor na kriterije) |
+| Rangliste | ljestvica prioriteta |
+| Prüfer-Regel | pravilo recenzenta |
+| Vorgabe, auf Vorgabe zurücksetzen | standardno, vrati na standardno |
+| Mitkopieren / Einrichtung | kopiraj i ovo / postavljanje |
+| Prüfrelevante Dateien | datoteke važne za pregled |
+| Issue | issue (issuea, issuei) |
+| Merge Request | merge request (merge requestovi; GitHub: pull request) |
 | Rechte | Dozvole |
 | Erlauben / Fragen / Verbieten | Dozvoli / Pitaj / Odbij |
 | Gedächtnis | memorija |
@@ -2693,6 +2789,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | időköz |
 | eingereiht | sorban áll |
 | Rolle | szerep |
+| Einwand | kifogás (az építő kifogásolja a kritériumokat) |
+| Rangliste | rangsor |
+| Prüfer-Regel | ellenőrszabály |
+| Vorgabe, auf Vorgabe zurücksetzen | alapértelmezett, visszaállítás alapértelmezettre |
+| Mitkopieren / Einrichtung | átmásolandó / beállítás |
+| Prüfrelevante Dateien | az ellenőrzés szempontjából fontos fájlok |
+| Issue | issue (issue-k, issue-hoz) |
+| Merge Request | merge request (merge requestként; GitHub: pull request) |
 | Rechte | Engedélyek |
 | Erlauben / Fragen / Verbieten | Engedélyezés / Kérdezés / Tiltás |
 | Gedächtnis | memória |
@@ -2898,6 +3002,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | interval |
 | eingereiht | dalam antrean |
 | Rolle | peran |
+| Einwand | keberatan (Keberatan Builder) |
+| Rangliste | daftar peringkat |
+| Prüfer-Regel | aturan peninjau (Vendor lain wajib / Vendor lain diutamakan) |
+| Vorgabe, auf Vorgabe zurücksetzen | Default, Kembalikan ke Default |
+| Mitkopieren / Einrichtung | ikut disalin / penyiapan |
+| Prüfrelevante Dateien | File Penting untuk Tinjauan |
+| Issue | issue |
+| Merge Request | merge request (title and button: Merge Request) |
 | Rechte | Izin |
 | Erlauben / Fragen / Verbieten | Izinkan / Tanyakan / Larang |
 | Gedächtnis | memori |
@@ -3103,6 +3215,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | intervallo |
 | eingereiht | in coda |
 | Rolle | ruolo |
+| Einwand | obiezione |
+| Rangliste | lista di priorità |
+| Prüfer-Regel | regola del revisore (Altro produttore obbligatorio / preferito) |
+| Vorgabe, auf Vorgabe zurücksetzen | predefinito, Ripristina predefinito |
+| Mitkopieren / Einrichtung | copia anche / configurazione (Konfiguration: file di configurazione) |
+| Prüfrelevante Dateien | file rilevanti per la revisione |
+| Issue | issue (la issue) |
+| Merge Request | merge request (la merge request) |
 | Rechte | Permessi |
 | Erlauben / Fragen / Verbieten | Consenti / Chiedi / Nega |
 | Gedächtnis | memoria |
@@ -3309,6 +3429,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | 間隔 |
 | eingereiht | 待機中 |
 | Rolle | ロール |
+| Einwand | 異議 |
+| Rangliste | 優先順位リスト |
+| Prüfer-Regel | レビュアーのルール (別ベンダー必須 / 別ベンダー優先) |
+| Vorgabe, auf Vorgabe zurücksetzen | デフォルト, デフォルトに戻す |
+| Mitkopieren / Einrichtung | 一緒にコピー / セットアップ |
+| Prüfrelevante Dateien | レビューに関わるファイル |
+| Issue | Issue |
+| Merge Request | Merge Request |
 | Rechte | 権限 |
 | Erlauben / Fragen / Verbieten | 許可 / 尋ねる / 拒否 |
 | Gedächtnis | メモリ |
@@ -3514,6 +3642,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | 간격 |
 | eingereiht | 대기 중 |
 | Rolle | 역할 |
+| Einwand | 이의 |
+| Rangliste | 우선순위 목록 |
+| Prüfer-Regel | 검토자 규칙 (다른 벤더 필수 / 다른 벤더 우선) |
+| Vorgabe, auf Vorgabe zurücksetzen | 기본값, 기본값으로 되돌리기 |
+| Mitkopieren / Einrichtung | 함께 복사 / 환경 구성 |
+| Prüfrelevante Dateien | 검토에 중요한 파일 |
+| Issue | Issue |
+| Merge Request | Merge Request |
 | Rechte | 권한 |
 | Erlauben / Fragen / Verbieten | 허용 / 묻기 / 거부 |
 | Gedächtnis | 메모리 |
@@ -3718,6 +3854,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | selang |
 | eingereiht | dalam baris gilir |
 | Rolle | peranan |
+| Einwand | bantahan (Bantahan Pembina) |
+| Rangliste | senarai kedudukan |
+| Prüfer-Regel | peraturan penyemak (Vendor lain wajib / Vendor lain diutamakan) |
+| Vorgabe, auf Vorgabe zurücksetzen | Lalai, Kembalikan kepada Lalai |
+| Mitkopieren / Einrichtung | turut disalin / persediaan |
+| Prüfrelevante Dateien | Fail Penting untuk Semakan |
+| Issue | issue |
+| Merge Request | merge request (title and button: Merge Request) |
 | Rechte | Keizinan |
 | Erlauben / Fragen / Verbieten | Benarkan / Tanya / Larang |
 | Gedächtnis | memori |
@@ -3923,6 +4067,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | interval |
 | eingereiht | in wachtrij |
 | Rolle | rol |
+| Einwand | bezwaar |
+| Rangliste | ranglijst |
+| Prüfer-Regel | reviewerregel (Andere leverancier verplicht / bij voorkeur) |
+| Vorgabe, auf Vorgabe zurücksetzen | standaard, Zet terug naar standaard |
+| Mitkopieren / Einrichtung | meekopiëren / instellen |
+| Prüfrelevante Dateien | bestanden die tellen voor de review |
+| Issue | issue (de issue) |
+| Merge Request | merge request (de merge request) |
 | Rechte | Toestemmingen |
 | Erlauben / Fragen / Verbieten | Sta toe / Vraag / Verbied |
 | Gedächtnis | geheugen |
@@ -4128,6 +4280,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | intervall |
 | eingereiht | i kø |
 | Rolle | rolle |
+| Einwand | innvending |
+| Rangliste | rangering |
+| Prüfer-Regel | kontrollørregel (Annen produsent påkrevd / foretrukket) |
+| Vorgabe, auf Vorgabe zurücksetzen | standard, tilbakestill til standard |
+| Mitkopieren / Einrichtung | kopier med / oppsett |
+| Prüfrelevante Dateien | filer som teller for gjennomgangen |
+| Issue | issue (issuen) |
+| Merge Request | merge request |
 | Rechte | Tillatelser |
 | Erlauben / Fragen / Verbieten | Tillat / Spør / Nekt |
 | Gedächtnis | minne |
@@ -4333,6 +4493,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | interwał |
 | eingereiht | w kolejce |
 | Rolle | rola |
+| Einwand | zastrzeżenie |
+| Rangliste | ranking |
+| Prüfer-Regel | reguła recenzenta (Inny producent wymagany / preferowany) |
+| Vorgabe, auf Vorgabe zurücksetzen | domyślne, przywróć domyślne |
+| Mitkopieren / Einrichtung | kopiuj także / przygotowanie |
+| Prüfrelevante Dateien | pliki istotne dla recenzji |
+| Issue | issue (nieodmienne) |
+| Merge Request | merge request (merge requestu, merge requesty) |
 | Rechte | Uprawnienia |
 | Erlauben / Fragen / Verbieten | Pozwól / Zapytaj / Zabroń |
 | Gedächtnis | pamięć |
@@ -4539,6 +4707,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | intervalo |
 | eingereiht | na fila |
 | Rolle | função |
+| Einwand | objeção |
+| Rangliste | lista de prioridade |
+| Prüfer-Regel | regra do revisor (Outro fabricante obrigatório / preferido) |
+| Vorgabe, auf Vorgabe zurücksetzen | padrão, restaurar padrão |
+| Mitkopieren / Einrichtung | copiar junto / configuração |
+| Prüfrelevante Dateien | arquivos relevantes para a revisão (arquivos de teste, arquivos de configuração) |
+| Issue | issue (a issue) |
+| Merge Request | merge request (o merge request; Merge Request in titles) |
 | Rechte | Permissões |
 | Erlauben / Fragen / Verbieten | Permitir / Perguntar / Proibir |
 | Gedächtnis | memória |
@@ -4746,6 +4922,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | intervalo |
 | eingereiht | em fila |
 | Rolle | função |
+| Einwand | objeção |
+| Rangliste | lista de prioridade |
+| Prüfer-Regel | regra do revisor (Outro fabricante obrigatório / preferido) |
+| Vorgabe, auf Vorgabe zurücksetzen | predefinição, repor predefinição |
+| Mitkopieren / Einrichtung | copiar também / configuração |
+| Prüfrelevante Dateien | ficheiros relevantes para a revisão (ficheiros de teste, ficheiros de configuração) |
+| Issue | issue (a issue) |
+| Merge Request | merge request (o merge request) |
 | Rechte | Permissões |
 | Erlauben / Fragen / Verbieten | Permitir / Perguntar / Proibir |
 | Gedächtnis | memória |
@@ -4953,6 +5137,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | interval |
 | eingereiht | în coadă |
 | Rolle | rol |
+| Einwand | obiecție |
+| Rangliste | clasament |
+| Prüfer-Regel | regula evaluatorului (Alt producător obligatoriu / preferat) |
+| Vorgabe, auf Vorgabe zurücksetzen | implicit, reveniți la valoarea implicită |
+| Mitkopieren / Einrichtung | copiate în plus / configurare |
+| Prüfrelevante Dateien | fișiere relevante pentru evaluare (fișiere de test, fișiere de configurație) |
+| Issue | issue (issue-ul, issue-uri) |
+| Merge Request | merge request (merge requestul, merge requesturi) |
 | Rechte | Permisiuni |
 | Erlauben / Fragen / Verbieten | Permiteți / Întrebați / Refuzați (Verbieten as Ablehnen) |
 | Gedächtnis | memorie |
@@ -5159,6 +5351,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | интервал |
 | eingereiht | в очереди |
 | Rolle | роль |
+| Einwand | возражение (Возражение исполнителя) |
+| Rangliste | список приоритетов |
+| Prüfer-Regel | правило рецензента (обязателен / предпочтителен) |
+| Vorgabe, auf Vorgabe zurücksetzen | по умолчанию, вернуть значение по умолчанию |
+| Mitkopieren / Einrichtung | копировать также / подготовка |
+| Prüfrelevante Dateien | файлы, важные для проверок |
+| Issue | issue (masculine, in Latin letters) |
+| Merge Request | merge request |
 | Rechte | Разрешения |
 | Erlauben / Fragen / Verbieten | Разрешить / Спрашивать / Запретить (Verbieten as Ablehnen) |
 | Gedächtnis | память |
@@ -5366,6 +5566,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | interval |
 | eingereiht | vo fronte |
 | Rolle | rola |
+| Einwand | námietka |
+| Rangliste | rebríček |
+| Prüfer-Regel | pravidlo recenzenta (povinný / uprednostnený) |
+| Vorgabe, auf Vorgabe zurücksetzen | predvolené, vrátiť na predvolené |
+| Mitkopieren / Einrichtung | kopírovať so sebou / príprava |
+| Prüfrelevante Dateien | súbory dôležité pre kontroly |
+| Issue | issue (neuter, plural issues) |
+| Merge Request | merge request (plural merge requesty) |
 | Rechte | Povolenia |
 | Erlauben / Fragen / Verbieten | Povoliť / Spýtať sa / Zamietnuť (Verbieten as Ablehnen) |
 | Gedächtnis | pamäť |
@@ -5574,6 +5782,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | interval |
 | eingereiht | v čakalni vrsti |
 | Rolle | vloga |
+| Einwand | ugovor |
+| Rangliste | razvrstitev |
+| Prüfer-Regel | pravilo pregledovalca (obvezen / zaželen) |
+| Vorgabe, auf Vorgabe zurücksetzen | privzeto, ponastavi na privzeto |
+| Mitkopieren / Einrichtung | kopiraj zraven / priprava |
+| Prüfrelevante Dateien | datoteke, pomembne za preverjanje |
+| Issue | issue (masculine, plural issues) |
+| Merge Request | merge request (plural merge requesti) |
 | Rechte | Dovoljenja |
 | Erlauben / Fragen / Verbieten | Dovoli / Vprašaj / Zavrni (Verbieten as Ablehnen) |
 | Gedächtnis | spomin |
@@ -5779,6 +5995,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | intervall |
 | eingereiht | i kö |
 | Rolle | roll |
+| Einwand | invändning |
+| Rangliste | rangordning |
+| Prüfer-Regel | granskarregel (krävs / föredras) |
+| Vorgabe, auf Vorgabe zurücksetzen | förval, återställ till förval |
+| Mitkopieren / Einrichtung | kopiera med / konfigurering |
+| Prüfrelevante Dateien | filer som påverkar kontrollerna |
+| Issue | issue (issuen, issues) |
+| Merge Request | merge request |
 | Rechte | Behörigheter |
 | Erlauben / Fragen / Verbieten | Tillåt / Fråga / Neka (Verbieten as Ablehnen) |
 | Gedächtnis | minne |
@@ -5986,6 +6210,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | ช่วงเวลา |
 | eingereiht | อยู่ในคิว |
 | Rolle | บทบาท |
+| Einwand | ข้อคัดค้าน, คัดค้าน |
+| Rangliste | การจัดอันดับ |
+| Prüfer-Regel | กฎผู้ตรวจทาน (ต้องเป็น / ควรเป็นผู้ผลิตรายอื่น) |
+| Vorgabe, auf Vorgabe zurücksetzen | ค่าเริ่มต้น, คืนค่าเป็นค่าเริ่มต้น |
+| Mitkopieren / Einrichtung | คัดลอกไปด้วย / การตั้งค่า |
+| Prüfrelevante Dateien | ไฟล์ที่เกี่ยวข้องกับการตรวจสอบ |
+| Issue | Issue |
+| Merge Request | Merge Request |
 | Rechte | สิทธิ์ |
 | Erlauben / Fragen / Verbieten | อนุญาต / ถาม / ปฏิเสธ (Verbieten as Ablehnen) |
 | Gedächtnis | ความจำ |
@@ -6194,6 +6426,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | aralık |
 | eingereiht | sırada |
 | Rolle | rol |
+| Einwand | itiraz |
+| Rangliste | öncelik sırası |
+| Prüfer-Regel | inceleyici kuralı (zorunlu / tercih edilir) |
+| Vorgabe, auf Vorgabe zurücksetzen | Saptanmış, Saptanmışa Döndür |
+| Mitkopieren / Einrichtung | birlikte kopyala / kurulum |
+| Prüfrelevante Dateien | inceleme için önemli dosyalar |
+| Issue | issue (issue’dan, issue’ya) |
+| Merge Request | merge request (as the CI panel; Merge Request in titles) |
 | Rechte | İzinler |
 | Erlauben / Fragen / Verbieten | İzin Ver / Sor / Reddet (Verbieten as Ablehnen) |
 | Gedächtnis | bellek |
@@ -6399,6 +6639,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | інтервал |
 | eingereiht | у черзі |
 | Rolle | роль |
+| Einwand | заперечення |
+| Rangliste | список пріоритетів |
+| Prüfer-Regel | правило рецензента (обовʼязково / бажано) |
+| Vorgabe, auf Vorgabe zurücksetzen | типове, повернути типове значення |
+| Mitkopieren / Einrichtung | копіювати також / підготовка |
+| Prüfrelevante Dateien | файли, важливі для перевірки |
+| Issue | issue |
+| Merge Request | merge request (as the CI panel) |
 | Rechte | Дозволи |
 | Erlauben / Fragen / Verbieten | Дозволити / Запитувати / Заборонити (Verbieten as Ablehnen) |
 | Gedächtnis | памʼять |
@@ -6605,6 +6853,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | khoảng thời gian |
 | eingereiht | đang chờ |
 | Rolle | vai trò |
+| Einwand | phản đối |
+| Rangliste | bảng xếp hạng |
+| Prüfer-Regel | quy tắc người xem xét (bắt buộc / ưu tiên) |
+| Vorgabe, auf Vorgabe zurücksetzen | mặc định, đặt lại về mặc định |
+| Mitkopieren / Einrichtung | sao chép kèm / thiết lập |
+| Prüfrelevante Dateien | tệp quan trọng cho việc xem xét |
+| Issue | issue |
+| Merge Request | merge request (as the CI panel) |
 | Rechte | Quyền |
 | Erlauben / Fragen / Verbieten | Cho phép / Hỏi / Từ chối (Verbieten as Ablehnen) |
 | Gedächtnis | bộ nhớ |
@@ -6809,6 +7065,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | 间隔 |
 | eingereiht | 排队中 |
 | Rolle | 角色 |
+| Einwand | 异议 |
+| Rangliste | 优先级列表 |
+| Prüfer-Regel | 审查者规则（必须 / 优先） |
+| Vorgabe, auf Vorgabe zurücksetzen | 默认, 还原为默认 |
+| Mitkopieren / Einrichtung | 一并拷贝 / 准备 |
+| Prüfrelevante Dateien | 对审查重要的文件 |
+| Issue | Issue |
+| Merge Request | Merge Request (as the CI panel; submitting is 发起, since 提交 is commit) |
 | Rechte | 权限 |
 | Erlauben / Fragen / Verbieten | 允许 / 询问 / 拒绝 (Verbieten as Ablehnen) |
 | Gedächtnis | 记忆 |
@@ -7015,6 +7279,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Abstand (wiederkehrender Auftrag) | 間隔 |
 | eingereiht | 排隊中 |
 | Rolle | 角色 |
+| Einwand | 異議 |
+| Rangliste | 優先順序清單 |
+| Prüfer-Regel | 審查者規則（必須 / 優先） |
+| Vorgabe, auf Vorgabe zurücksetzen | 預設, 回復為預設 |
+| Mitkopieren / Einrichtung | 一併拷貝 / 準備 |
+| Prüfrelevante Dateien | 對審查重要的檔案 |
+| Issue | Issue (commenting on it: 留言) |
+| Merge Request | Merge Request (as the CI panel; submitting is 發起, since 提交 is commit) |
 | Rechte | 權限 |
 | Erlauben / Fragen / Verbieten | 允許 / 詢問 / 拒絕 (Verbieten as Ablehnen) |
 | Gedächtnis | 記憶 |
