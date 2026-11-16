@@ -66,6 +66,10 @@ impl Factory {
 
     /// The next step of the review.
     pub(super) fn review_next(&mut self, cx: &mut Cx, id: &OrderId) {
+        if !self.moves(id) {
+            self.set_phase(cx, id, Phase::Idle);
+            return;
+        }
         let Some(order) = self.orders.get(id) else { return };
         if !self.rules.has_gates() {
             self.wait(cx, id, WaitReason::NoGatePlan);
