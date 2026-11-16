@@ -68,8 +68,8 @@ pub(crate) fn run(target: &Target, detail: &Detail, command: Command, rejected: 
         }
         return;
     }
-    if let Some(input) = detail.input(command) {
-        send(target, input);
+    if let Some(input) = detail.input(command, rejected) {
+        confirm_rejected(target, input);
         return;
     }
     let id = detail.id().clone();
@@ -135,9 +135,17 @@ fn tell(target: &Target, words: &str) {
 }
 
 fn accept(target: &Target, detail: &Detail, rejected: &BTreeSet<HunkId>) {
-    let Some(input) = detail.accept(rejected) else { return };
+    if let Some(input) = detail.accept(rejected) {
+        confirm_rejected(target, input);
+    }
+}
+
+/// Sends `input`, after asking first when its G2 turns sections down (C55).
+fn confirm_rejected(target: &Target, input: InputKind) {
     let count = match &input {
-        InputKind::Accept { rejected, .. } => rejected.len(),
+        InputKind::Accept { rejected, .. }
+        | InputKind::KeepBranch { rejected, .. }
+        | InputKind::Publish { rejected, .. } => rejected.len(),
         _ => 0,
     };
     if count == 0 {

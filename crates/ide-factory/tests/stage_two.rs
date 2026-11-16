@@ -269,3 +269,40 @@ fn an_order_keeps_the_stage_it_was_created_in() {
     assert!(app.get(&first).g1_skipped(), "stage 1 skips the specification");
     assert_eq!(app.station(&first), Station::Build);
 }
+
+#[test]
+fn two_review_rounds_that_do_not_pass_escalate_to_the_user() {
+    let mut app = App::new(Stage::Two, rules(&format!("{WORKFLOW}[limits]\nreview_rounds = 2\n")));
+    let not_met = r#"{"criteria":[{"id":"K1","verdict":"not_met","reason":"no header"}],"findings":[]}"#;
+    app.verdicts.extend([not_met.to_string(), not_met.to_string()]);
+    let id = app.order("o1");
+    app.settle();
+    app.send(InputKind::Approve(id.clone()));
+    app.effects.clear();
+    app.settle();
+    assert_eq!(app.station(&id), Station::Review);
+    assert_eq!(app.condition(&id), Condition::Waiting(WaitReason::ReviewRoundsSpent));
+    assert_eq!(app.get(&id).review_rounds(), 2);
+    assert_eq!(app.get(&id).review_log().len(), 2);
+    let reworks = app
+        .effects
+        .iter()
+        .filter(|e| matches!(e, Effect::SendPrompt { text, .. } if text.contains("did not accept")))
+        .count();
+    assert_eq!(
+        reworks, 1,
+        "the first round goes back to the builder, the second to the user"
+    );
+    assert!(app.effects.iter().any(|e| matches!(
+        e,
+        Effect::Notify {
+            notice: ide_factory::effect::Notice::Waiting,
+            ..
+        }
+    )));
+    app.send(InputKind::Continue(id.clone()));
+    app.settle();
+    assert_eq!(app.condition(&id), Condition::Waiting(WaitReason::Acceptance));
+    let evidence = app.get(&id).evidence().expect("sealed");
+    assert_eq!(evidence.rounds().len(), 3, "every round stands in the evidence");
+}

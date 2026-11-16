@@ -127,9 +127,14 @@ impl Factory {
         }
     }
 
-    /// Whether the worktree and the frozen configuration are there; asks for what is missing.
+    /// Whether the worktree and the frozen configuration are there; asks for what is missing. A setup command is part
+    /// of the gate set, so it waits for the set's confirmation like the gates (E190).
     fn ready(&mut self, cx: &mut Cx, id: &OrderId) -> bool {
         let Some(order) = self.orders.get(id) else { return false };
+        if order.worktree().is_none() && self.rules.setup().is_some() && !self.rules.gates_confirmed() {
+            self.wait(cx, id, WaitReason::GateCommandsChanged);
+            return false;
+        }
         if order.worktree().is_none() {
             let op = order.next_op();
             let action = Action::PrepareWorktree {
@@ -263,7 +268,7 @@ impl Factory {
             return;
         }
         let Some(order) = self.orders.get(id) else { return };
-        if order.turns_in(Station::Build) >= self.rules.limits().turns_per_station() {
+        if order.visit_turns() >= self.rules.limits().turns_per_station() {
             self.fail(cx, id, FailReason::TurnsSpent);
             return;
         }

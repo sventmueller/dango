@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Kontrollkommando uten kommando";
 "Zwei Prüfbefehle heißen „{}“" = "To kontrollkommandoer heter «{}»";
 "„{}“ liegt außerhalb des Repositorys" = "«{}» ligger utenfor repositoryet";
+"„{}“ ist das ganze Repository" = "«{}» er hele repositoryet";
 "„{}“ liegt im Repository" = "«{}» ligger i repositoryet";
 "„{}“ ist kein gültiger Variablenname" = "«{}» er ikke et gyldig variabelnavn";
 "{} (Zeile {}): {}" = "{} (linje {}): {}";

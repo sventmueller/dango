@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Kontrolni ukaz brez ukaza";
 "Zwei Prüfbefehle heißen „{}“" = "Dva kontrolna ukaza se imenujeta »{}«";
 "„{}“ liegt außerhalb des Repositorys" = "»{}« je zunaj repozitorija";
+"„{}“ ist das ganze Repository" = "»{}« je celoten repozitorij";
 "„{}“ liegt im Repository" = "»{}« je v repozitoriju";
 "„{}“ ist kein gültiger Variablenname" = "»{}« ni veljavno ime spremenljivke";
 "{} (Zeile {}): {}" = "{} (vrstica {}): {}";

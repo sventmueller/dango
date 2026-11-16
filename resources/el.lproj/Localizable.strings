@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Εντολή ελέγχου χωρίς εντολή";
 "Zwei Prüfbefehle heißen „{}“" = "Δύο εντολές ελέγχου ονομάζονται «{}»";
 "„{}“ liegt außerhalb des Repositorys" = "Το «{}» βρίσκεται εκτός του αποθετηρίου";
+"„{}“ ist das ganze Repository" = "Το «{}» είναι ολόκληρο το αποθετήριο";
 "„{}“ liegt im Repository" = "Το «{}» βρίσκεται μέσα στο αποθετήριο";
 "„{}“ ist kein gültiger Variablenname" = "Το «{}» δεν είναι έγκυρο όνομα μεταβλητής";
 "{} (Zeile {}): {}" = "{} (γραμμή {}): {}";

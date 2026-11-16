@@ -43,15 +43,18 @@ pub(crate) enum Command {
         fingerprint: String,
         rejected: Vec<HunkId>,
     },
-    /// G2 with the order's branch kept instead of taken over (E177 without O2).
+    /// G2 with the order's branch kept instead of taken over (E177 without O2), without the `rejected` hunks.
     KeepBranch {
         order: OrderId,
         fingerprint: String,
+        rejected: Vec<HunkId>,
     },
-    /// Push the kept branch, open a merge request and comment the issue, with G2 when `fingerprint` is given (E177).
+    /// Push the kept branch, open a merge request and comment the issue, with G2 when `fingerprint` is given (E177),
+    /// which rejects the `rejected` hunks.
     Publish {
         order: OrderId,
         fingerprint: Option<String>,
+        rejected: Vec<HunkId>,
         texts: ide_factory::publish::Outgoing,
     },
     BackToBuilder(OrderId, String),
@@ -195,14 +198,24 @@ impl Leitstand {
                 fingerprint,
                 rejected,
             },
-            Command::KeepBranch { order, fingerprint } => InputKind::KeepBranch { order, fingerprint },
+            Command::KeepBranch {
+                order,
+                fingerprint,
+                rejected,
+            } => InputKind::KeepBranch {
+                order,
+                fingerprint,
+                rejected,
+            },
             Command::Publish {
                 order,
                 fingerprint,
+                rejected,
                 texts,
             } => InputKind::Publish {
                 order,
                 fingerprint,
+                rejected,
                 texts,
             },
             Command::BackToBuilder(order, text) => InputKind::BackToBuilder(order, text),

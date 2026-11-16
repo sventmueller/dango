@@ -92,6 +92,11 @@ pub enum WorkflowErrorKind {
         /// The path.
         path: String,
     },
+    /// A path to copy names the whole repository.
+    CopyWholeRepository {
+        /// The path.
+        path: String,
+    },
     /// The folder for gate pictures lies inside the repository.
     ImagesInsideRepository {
         /// The path.
@@ -501,10 +506,13 @@ fn read_worktree(r: &mut Reader<'_>, worktree: &dyn TableLike, workflow: &mut Wo
         }
     });
     for path in r.texts(worktree, "worktree", "copy") {
-        let leaves = path.starts_with('/') || path.split('/').any(|part| part == "..") || path.is_empty();
+        let leaves = path.starts_with('/') || path.split('/').any(|part| part == "..");
+        let whole = path.split('/').all(|part| part.is_empty() || part == ".");
+        let span = worktree.get("copy").and_then(Item::span);
         if leaves {
-            let span = worktree.get("copy").and_then(Item::span);
             r.error("worktree.copy", span, WorkflowErrorKind::CopyOutsideRepository { path });
+        } else if whole {
+            r.error("worktree.copy", span, WorkflowErrorKind::CopyWholeRepository { path });
         } else {
             workflow.copy.push(path);
         }

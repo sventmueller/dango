@@ -1,4 +1,4 @@
-use super::rules::{Confirmations, Loosening, Rules, holds_credentials};
+use super::rules::{Confirmations, Loosening, Rules, copies_along, holds_credentials};
 use super::*;
 use crate::budget::Spend;
 use crate::routing::{Agent, ReviewerRule};
@@ -300,4 +300,53 @@ fn credential_files_are_recognised_by_name() {
     for path in ["node_modules", "environment.rs", ".envrc-docs/readme.md", "target"] {
         assert!(!holds_credentials(path), "{path}");
     }
+}
+
+#[test]
+fn copying_the_whole_repository_is_refused() {
+    for path in [".", "./", "./.", ""] {
+        let text = format!("[worktree]\ncopy = [\"{path}\"]\n");
+        let got: Vec<WorkflowErrorKind> = kinds(&text).into_iter().map(|(_, _, kind)| kind).collect();
+        assert_eq!(
+            got,
+            [WorkflowErrorKind::CopyWholeRepository { path: path.into() }],
+            "{path:?}"
+        );
+    }
+    assert_eq!(parsed("[worktree]\ncopy = [\"./config\"]\n").copy(), ["./config"]);
+}
+
+#[test]
+fn credentials_inside_a_listed_folder_go_along_only_when_listed_on_their_own() {
+    assert!(holds_credentials("config/secrets/token"));
+    let copy = |list: &[&str]| list.iter().map(|p| p.to_string()).collect::<Vec<String>>();
+    assert!(copies_along(&copy(&["config"]), "config", "config/app.toml"));
+    assert!(!copies_along(&copy(&["config"]), "config", "config/.env"));
+    assert!(!copies_along(&copy(&["config"]), "config", "config/secrets/token"));
+    assert!(copies_along(&copy(&["config", "config/.env"]), "config", "config/.env"));
+    assert!(copies_along(&copy(&["secrets"]), "secrets", "secrets/id_rsa"));
+    let workflow = parsed("[worktree]\ncopy = [\"config/.env\", \"config\"]\n");
+    let rules = Rules::new(&UserDefaults::default(), Some(&workflow), &Confirmations::default());
+    assert_eq!(
+        rules.copy(),
+        ["config"],
+        "the file named on its own waits for its confirmation"
+    );
+    assert!(
+        rules
+            .pending()
+            .iter()
+            .any(|l| matches!(l, Loosening::CopyCredentials { paths } if paths == &["config/.env"]))
+    );
+}
+
+#[test]
+fn the_pictures_folder_is_part_of_the_confirmed_gate_set() {
+    let defaults = UserDefaults::default();
+    let first = Rules::new(&defaults, Some(&parsed(FULL)), &Confirmations::default());
+    let confirmed = Confirmations::new([first.gate_hash().to_string()]);
+    let moved = FULL.replace("~/Library/Caches/factory-images", "~/Desktop");
+    let changed = Rules::new(&defaults, Some(&parsed(&moved)), &confirmed);
+    assert_ne!(changed.gate_hash(), first.gate_hash());
+    assert!(!changed.gates_confirmed());
 }

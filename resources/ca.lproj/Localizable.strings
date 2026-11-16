@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Control sense ordre";
 "Zwei Prüfbefehle heißen „{}“" = "Dos controls es diuen “{}”";
 "„{}“ liegt außerhalb des Repositorys" = "“{}” és fora del repositori";
+"„{}“ ist das ganze Repository" = "“{}” és tot el repositori";
 "„{}“ liegt im Repository" = "“{}” és dins del repositori";
 "„{}“ ist kein gültiger Variablenname" = "“{}” no és un nom de variable vàlid";
 "{} (Zeile {}): {}" = "{} (línia {}): {}";

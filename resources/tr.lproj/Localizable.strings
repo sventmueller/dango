@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Komutu olmayan geçit";
 "Zwei Prüfbefehle heißen „{}“" = "İki geçidin adı “{}”";
 "„{}“ liegt außerhalb des Repositorys" = "“{}” deponun dışında";
+"„{}“ ist das ganze Repository" = "“{}” deponun tamamı";
 "„{}“ liegt im Repository" = "“{}” deponun içinde";
 "„{}“ ist kein gültiger Variablenname" = "“{}” geçerli bir değişken adı değil";
 "{} (Zeile {}): {}" = "{} (satır {}): {}";

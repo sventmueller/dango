@@ -10,6 +10,7 @@ use crate::event::{Event, Phase, PromptKind, TurnOutcome};
 use crate::evidence::Deviation;
 use crate::ids::{OrderId, SessionKey};
 use crate::input::{RequestKind, SessionEvent};
+use crate::limits::Overdue;
 use crate::order::Order;
 use crate::prompt::{has_placeholder, render, untrusted};
 use crate::quota::{QuotaObservation, QuotaState};
@@ -58,7 +59,7 @@ impl Factory {
     }
 
     fn route_for(&self, order: &Order, role: Role, list: &[RankEntry], excluded: &[usize]) -> Route {
-        let fresh = order.turns_in(order.station()) == 0;
+        let fresh = order.visit_turns() == 0;
         let start_limit = if fresh {
             self.rules.limits().window_start_share()
         } else {
@@ -145,6 +146,10 @@ impl Factory {
         resume: Option<String>,
     ) {
         let Some(order) = self.orders.get(id) else { return };
+        if !self.rules.network().is_empty() && !self.rules.gates_confirmed() {
+            self.wait(cx, id, WaitReason::GateCommandsChanged);
+            return;
+        }
         let capabilities = self.agents.get(&choice.entry.agent).map_or_else(
             || crate::routing::Capabilities::of(&choice.entry.agent),
             |s| s.capabilities,
@@ -266,7 +271,7 @@ impl Factory {
             self.pause(cx, id, PauseReason::Budget { scope });
             return;
         }
-        if order.turns_in(order.station()) >= self.rules.limits().turns_per_station() {
+        if order.visit_turns() >= self.rules.limits().turns_per_station() {
             self.fail(cx, id, FailReason::TurnsSpent);
             return;
         }
@@ -390,8 +395,7 @@ impl Factory {
                 if prompt != Some(turn.prompt()) || turn.role() != role {
                     return;
                 }
-                let busy = turn.watch().subagents() > 0 || turn.queued() > 0;
-                if outcome == TurnOutcome::Succeeded && busy {
+                if outcome == TurnOutcome::Succeeded && busy(turn) {
                     order.hold_outcome(outcome, answer);
                 } else {
                     self.turn_over(cx, id, role, outcome, answer);
@@ -445,12 +449,13 @@ impl Factory {
         }
     }
 
-    /// Ends a turn whose success came while subagents or queued messages still ran, once they are done (E184, E189).
+    /// Ends a turn whose success came while subagents, background entries or queued messages still ran, once they are
+    /// done (E184, E189).
     fn settle(&mut self, cx: &mut Cx, id: &OrderId) {
         let Some(order) = self.orders.get_mut(id) else { return };
         let Some(turn) = order.turn() else { return };
         let Some(outcome) = turn.ended().cloned() else { return };
-        if turn.watch().subagents() > 0 || turn.queued() > 0 {
+        if busy(turn) {
             return;
         }
         let role = turn.role();
@@ -725,6 +730,91 @@ impl Factory {
         }
     }
 
+    /// Takes the daily account the app keeps; a new day lets orders go on that paused for the old day's budgets.
+    pub(super) fn set_day(&mut self, cx: &mut Cx, day: crate::budget::DailyAccount) {
+        let new = day.day() != self.day.day();
+        self.day = day;
+        self.roll_day(cx);
+        if new {
+            self.retry_day_budgets(cx);
+        }
+    }
+
+    /// Starts the day afresh once the account's day is over on the wall clock, even while nothing spends, and lets
+    /// orders paused for the old day's budgets go on (E168).
+    pub(super) fn roll_day(&mut self, cx: &mut Cx) {
+        if self.day.current(cx.now.wall) {
+            return;
+        }
+        self.day = crate::budget::DailyAccount::default();
+        self.retry_day_budgets(cx);
+    }
+
+    /// Resumes orders paused for the day's budget or a service's, once it is no longer reached.
+    fn retry_day_budgets(&mut self, cx: &mut Cx) {
+        let ids: Vec<OrderId> = self
+            .orders
+            .values()
+            .filter(|o| match o.condition() {
+                Condition::Paused(PauseReason::Budget {
+                    scope: BudgetScope::Day,
+                }) => self.budget_reached(o, None).is_none(),
+                Condition::Paused(PauseReason::Budget {
+                    scope: BudgetScope::Provider(service),
+                }) => self.budget_reached(o, Some(service)).is_none(),
+                _ => false,
+            })
+            .map(|o| o.id().clone())
+            .collect();
+        for id in ids {
+            self.resume(cx, &id);
+        }
+    }
+
+    /// Whether an order waits for a new day: paused for the day's budget or a service's, which only the clock lifts.
+    pub fn waits_for_day(&self) -> bool {
+        self.orders.values().any(|o| {
+            matches!(
+                o.condition(),
+                Condition::Paused(PauseReason::Budget {
+                    scope: BudgetScope::Day | BudgetScope::Provider(_)
+                })
+            )
+        })
+    }
+
+    /// Stops the turn of `prompt` once it is past a limit (E168). A turn whose agent reported success and that waits
+    /// only for background entries ends at the turn limit instead, with what still runs stopped and logged (E189).
+    fn overdue_turn(&mut self, cx: &mut Cx, id: &OrderId, prompt: crate::ids::PromptId) {
+        let Some(order) = self.orders.get(id) else { return };
+        let Some(turn) = order.turn() else { return };
+        let Some(why) = turn.watch().overdue(cx.now.mono, self.rules.limits()) else {
+            return;
+        };
+        let role = turn.role();
+        let held = turn.ended().cloned();
+        let only_background = turn.watch().subagents() == 0 && turn.queued() == 0;
+        if let Some(outcome) = held.filter(|_| why == Overdue::Turn && only_background) {
+            let answer = self.orders.get_mut(id).and_then(Order::take_answer);
+            self.turn_over(cx, id, role, outcome, answer);
+            return;
+        }
+        if let Some(slot) = order.session(role) {
+            let session = slot.session().clone();
+            cx.effect(Effect::StopTurn {
+                order: id.clone(),
+                session: session.clone(),
+            });
+            cx.effect(Effect::EndSession {
+                order: id.clone(),
+                session,
+            });
+        }
+        self.emit(cx, id, Event::TurnStopped { prompt, why: Some(why) });
+        self.emit(cx, id, Event::SessionEnded { role });
+        self.failure(cx, id);
+    }
+
     /// Time passed: overdue turns are stopped, due retries start, a gate past its deadline is stopped (E168, C67).
     pub(super) fn tick(&mut self, cx: &mut Cx) {
         let now = cx.now.mono;
@@ -735,27 +825,7 @@ impl Factory {
                 continue;
             }
             match order.phase().clone() {
-                Phase::Turn { prompt } => {
-                    let Some(turn) = order.turn() else { continue };
-                    let Some(why) = turn.watch().overdue(now, self.rules.limits()) else {
-                        continue;
-                    };
-                    let role = turn.role();
-                    if let Some(slot) = order.session(role) {
-                        let session = slot.session().clone();
-                        cx.effect(Effect::StopTurn {
-                            order: id.clone(),
-                            session: session.clone(),
-                        });
-                        cx.effect(Effect::EndSession {
-                            order: id.clone(),
-                            session,
-                        });
-                    }
-                    self.emit(cx, &id, Event::TurnStopped { prompt, why: Some(why) });
-                    self.emit(cx, &id, Event::SessionEnded { role });
-                    self.failure(cx, &id);
-                }
+                Phase::Turn { prompt } => self.overdue_turn(cx, &id, prompt),
                 Phase::Retrying => {
                     if order.retry_due().is_none_or(|due| due <= now) {
                         self.set_phase(cx, &id, Phase::Idle);
@@ -776,6 +846,11 @@ impl Factory {
         }
         self.retry_quota(cx);
     }
+}
+
+/// Whether a turn whose agent reported its end still has work running that its end waits for (E184, E189).
+fn busy(turn: &crate::order::Turn) -> bool {
+    turn.watch().subagents() > 0 || turn.watch().background() > 0 || turn.queued() > 0
 }
 
 /// The role whose session works in `order`'s station.

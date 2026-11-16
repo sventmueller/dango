@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Brána bez príkazu";
 "Zwei Prüfbefehle heißen „{}“" = "Dve brány sa volajú „{}“";
 "„{}“ liegt außerhalb des Repositorys" = "„{}“ sa nachádza mimo repozitára";
+"„{}“ ist das ganze Repository" = "„{}“ je celý repozitár";
 "„{}“ liegt im Repository" = "„{}“ sa nachádza v repozitári";
 "„{}“ ist kein gültiger Variablenname" = "„{}“ nie je platný názov premennej";
 "{} (Zeile {}): {}" = "{} (riadok {}): {}";

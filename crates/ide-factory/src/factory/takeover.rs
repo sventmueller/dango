@@ -12,24 +12,47 @@ use crate::order::Order;
 use crate::station::{Condition, FailReason, Station, WaitReason};
 
 impl Factory {
-    /// Whether another order is ahead of `order` in the take-over queue of its target branch (E174).
+    /// Whether another order is ahead of `order` in the take-over queue of its target branch (E174): one that runs its
+    /// take-over now, or runs and entered the take-over before it. An order that waits, pauses or failed holds no place,
+    /// so the queue goes on without it and it queues again when it goes on.
     fn queued_behind(&self, order: &Order) -> bool {
-        let entered = |o: &Order| {
-            o.visits()
-                .iter()
-                .rev()
-                .find(|v| v.station == Station::TakeOver)
-                .map(|v| v.at)
+        let Some(mine) = entered_take_over(order) else {
+            return false;
         };
-        let Some(mine) = entered(order) else { return false };
         self.orders.values().any(|other| {
             other.id() != order.id()
                 && other.station() == Station::TakeOver
+                && *other.condition() == Condition::Running
                 && !other.finished()
                 && !other.branch_kept()
+                && !other.taken_over()
                 && other.base().branch == order.base().branch
-                && entered(other).is_some_and(|at| (at.wall, at.mono, other.id()) < (mine.wall, mine.mono, order.id()))
+                && (!matches!(other.phase(), Phase::Queue | Phase::Idle)
+                    || entered_take_over(other)
+                        .is_some_and(|at| (at.wall, at.mono, other.id()) < (mine.wall, mine.mono, order.id())))
         })
+    }
+
+    /// Lets every queued order go on whose queue has no order ahead of it any more, oldest first: the head may have
+    /// left by any way, done, aborted, paused, waiting or back in the review. Runs after every input.
+    pub(super) fn release_queue(&mut self, cx: &mut Cx) {
+        let mut queued: Vec<(crate::time::Stamp, OrderId)> = self
+            .orders
+            .values()
+            .filter(|o| *o.phase() == Phase::Queue && *o.condition() == Condition::Running)
+            .filter_map(|o| entered_take_over(o).map(|at| (at, o.id().clone())))
+            .collect();
+        queued.sort_by_key(|(at, id)| (at.wall, at.mono, id.clone()));
+        for (_, id) in queued {
+            let free = self
+                .orders
+                .get(&id)
+                .is_some_and(|o| *o.phase() == Phase::Queue && !self.queued_behind(o));
+            if free {
+                self.set_phase(cx, &id, Phase::Idle);
+                self.advance(cx, &id);
+            }
+        }
     }
 
     /// The next step of the take-over.
@@ -41,7 +64,6 @@ impl Factory {
         }
         if self.queued_behind(order) {
             self.set_phase(cx, id, Phase::Queue);
-            self.wake_head(cx, id);
             return;
         }
         let head = order.head().map_or_else(String::new, |(c, _)| c.to_string());
@@ -68,7 +90,9 @@ impl Factory {
             return;
         };
         let now = self.bound(order, manifest);
-        let valid = order.evidence().is_some_and(|e| e.valid_for(&now)) && order.accepted().is_some();
+        let valid = order
+            .evidence()
+            .is_some_and(|e| e.valid_for(&now) && order.accepted() == Some(e.fingerprint()));
         if !valid {
             let why = order
                 .evidence()
@@ -143,58 +167,18 @@ impl Factory {
                 order: id.clone(),
                 notice: Notice::Done,
             });
-            self.wake_queue(cx);
             self.publish_when_done(cx, id);
         }
     }
 
-    /// Lets the head of the queue `id` joined go on if it waits: an order that re-enters the take-over after its
-    /// re-check queues behind orders that were queued behind it before, and nothing else would wake them.
-    fn wake_head(&mut self, cx: &mut Cx, id: &OrderId) {
-        let Some(branch) = self.orders.get(id).map(|o| o.base().branch.clone()) else {
-            return;
-        };
-        let head = self
-            .orders
-            .values()
-            .filter(|o| {
-                o.station() == Station::TakeOver
-                    && !o.finished()
-                    && !o.branch_kept()
-                    && o.base().branch == branch
-                    && *o.condition() == Condition::Running
-            })
-            .find(|o| !self.queued_behind(o))
-            .map(|o| o.id().clone());
-        if let Some(head) = head
-            && head != *id
-            && self.orders.get(&head).is_some_and(|o| *o.phase() == Phase::Queue)
-        {
-            self.set_phase(cx, &head, Phase::Idle);
-            self.advance(cx, &head);
-        }
-    }
-
-    /// Lets the next order of each take-over queue go on.
-    fn wake_queue(&mut self, cx: &mut Cx) {
-        let ids: Vec<OrderId> = self
-            .orders
-            .values()
-            .filter(|o| *o.phase() == Phase::Queue && *o.condition() == Condition::Running)
-            .map(|o| o.id().clone())
-            .collect();
-        for id in ids {
-            self.set_phase(cx, &id, Phase::Idle);
-            self.advance(cx, &id);
-        }
-    }
-
-    /// An operation finished.
+    /// An operation finished. Its result leads on only while the order still waits for it; one that comes after a
+    /// command of the user moved the order elsewhere is recorded and goes no further.
     pub(super) fn done(&mut self, cx: &mut Cx, id: &OrderId, op: OperationId, result: OpResult) {
         let Some(order) = self.orders.get(id) else { return };
         let Some(action) = order.open_ops().get(&op).cloned() else {
             return;
         };
+        let awaited = phase_op(order.phase()) == Some(&op);
         self.emit(
             cx,
             id,
@@ -203,6 +187,9 @@ impl Factory {
                 result: result.clone(),
             },
         );
+        if !awaited {
+            return;
+        }
         if action.publishes() {
             self.published_step(cx, id, &action, result);
             return;
@@ -403,6 +390,30 @@ impl Factory {
             }
         }
     }
+}
+
+/// The operation `phase` waits for.
+fn phase_op(phase: &Phase) -> Option<&OperationId> {
+    match phase {
+        Phase::Preparing { op }
+        | Phase::Committing { op }
+        | Phase::Merging { op }
+        | Phase::TakingOver { op }
+        | Phase::Cleaning { op }
+        | Phase::Publishing { op }
+        | Phase::Verifying { op } => Some(op),
+        _ => None,
+    }
+}
+
+/// When `order` last entered the take-over.
+fn entered_take_over(order: &Order) -> Option<crate::time::Stamp> {
+    order
+        .visits()
+        .iter()
+        .rev()
+        .find(|v| v.station == Station::TakeOver)
+        .map(|v| v.at)
 }
 
 /// Where an order goes on when `action` did not happen: a commit is preceded by its secrets scan, everything else

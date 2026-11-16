@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Gate sem comando";
 "Zwei Prüfbefehle heißen „{}“" = "Dois gates chamam-se “{}”";
 "„{}“ liegt außerhalb des Repositorys" = "“{}” está fora do repositório";
+"„{}“ ist das ganze Repository" = "“{}” é o repositório inteiro";
 "„{}“ liegt im Repository" = "“{}” está dentro do repositório";
 "„{}“ ist kein gültiger Variablenname" = "“{}” não é um nome de variável válido";
 "{} (Zeile {}): {}" = "{} (linha {}): {}";

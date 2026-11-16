@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "门禁命令没有命令";
 "Zwei Prüfbefehle heißen „{}“" = "有两个门禁命令都名为“{}”";
 "„{}“ liegt außerhalb des Repositorys" = "“{}”位于仓库之外";
+"„{}“ ist das ganze Repository" = "“{}”是整个仓库";
 "„{}“ liegt im Repository" = "“{}”位于仓库之内";
 "„{}“ ist kein gültiger Variablenname" = "“{}”不是有效的变量名";
 "{} (Zeile {}): {}" = "{}（第 {} 行）：{}";

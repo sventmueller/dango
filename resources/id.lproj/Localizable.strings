@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Gerbang tanpa perintah";
 "Zwei Prüfbefehle heißen „{}“" = "Dua gerbang bernama “{}”";
 "„{}“ liegt außerhalb des Repositorys" = "“{}” berada di luar repositori";
+"„{}“ ist das ganze Repository" = "“{}” adalah seluruh repositori";
 "„{}“ liegt im Repository" = "“{}” berada di dalam repositori";
 "„{}“ ist kein gültiger Variablenname" = "“{}” bukan nama variabel yang valid";
 "{} (Zeile {}): {}" = "{} (baris {}): {}";

@@ -252,6 +252,12 @@ pub struct DailyAccount {
     day: String,
     total: Spend,
     providers: BTreeMap<String, Spend>,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    ends: u64,
+}
+
+fn is_zero(n: &u64) -> bool {
+    *n == 0
 }
 
 impl DailyAccount {
@@ -261,6 +267,22 @@ impl DailyAccount {
             day: day.into(),
             ..DailyAccount::default()
         }
+    }
+
+    /// The account with its day ending at the wall clock `ends`, the start of the next local day.
+    pub fn until(mut self, ends: u64) -> DailyAccount {
+        self.ends = ends;
+        self
+    }
+
+    /// When its day ends on the wall clock; zero when the app did not say.
+    pub fn ends(&self) -> u64 {
+        self.ends
+    }
+
+    /// Whether its day still runs at the wall clock `wall`; an account without an end never runs out by itself.
+    pub fn current(&self, wall: u64) -> bool {
+        self.ends == 0 || wall < self.ends
     }
 
     /// The day.
@@ -331,6 +353,20 @@ mod tests {
         account.add("2026-11-17", None, &Spend::new(0.5, 0, 0.0));
         assert_eq!((account.day(), account.total().dollars()), ("2026-11-17", 0.5));
         assert_eq!(budgets.reached(&Spend::default(), &account), None);
+    }
+
+    #[test]
+    fn an_account_with_an_end_runs_out_at_it_and_one_without_never() {
+        let account = DailyAccount::new("2026-11-16").until(5_000);
+        assert!(account.current(4_999) && !account.current(5_000));
+        assert!(DailyAccount::new("2026-11-16").current(u64::MAX));
+        let text = serde_json::to_string(&account).unwrap();
+        assert_eq!(serde_json::from_str::<DailyAccount>(&text).unwrap(), account);
+        let mut old = DailyAccount::new("2026-11-16");
+        old.add("2026-11-16", None, &Spend::new(1.0, 0, 0.0));
+        let text = serde_json::to_string(&old).unwrap();
+        assert!(!text.contains("ends"), "{text}");
+        assert_eq!(serde_json::from_str::<DailyAccount>(&text).unwrap().ends(), 0);
     }
 
     #[test]

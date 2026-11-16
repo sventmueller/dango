@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Tarkistuskomento ilman komentoa";
 "Zwei Prüfbefehle heißen „{}“" = "Kahden tarkistuskomennon nimi on ”{}”";
 "„{}“ liegt außerhalb des Repositorys" = "”{}” on repositorion ulkopuolella";
+"„{}“ ist das ganze Repository" = "”{}” on koko repositorio";
 "„{}“ liegt im Repository" = "”{}” on repositoriossa";
 "„{}“ ist kein gültiger Variablenname" = "”{}” ei ole kelvollinen muuttujan nimi";
 "{} (Zeile {}): {}" = "{} (rivi {}): {}";

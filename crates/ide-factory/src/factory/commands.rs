@@ -27,12 +27,17 @@ impl Factory {
                 fingerprint,
                 rejected,
             } => self.accept(cx, &order, fingerprint, rejected),
-            InputKind::KeepBranch { order, fingerprint } => self.keep_branch(cx, &order, fingerprint),
+            InputKind::KeepBranch {
+                order,
+                fingerprint,
+                rejected,
+            } => self.keep_branch(cx, &order, fingerprint, rejected),
             InputKind::Publish {
                 order,
                 fingerprint,
+                rejected,
                 texts,
-            } => self.publish(cx, &order, fingerprint, texts),
+            } => self.publish(cx, &order, fingerprint, rejected, texts),
             InputKind::BackToBuilder(id, text) => self.back_to_builder(cx, &id, text),
             InputKind::ChangeCriteria(id, text) => self.change_criteria(cx, &id, &text),
             InputKind::ChangeOption(id, change) => self.change_option(cx, &id, change),
@@ -152,7 +157,11 @@ impl Factory {
         cx.step.log.push(entry);
         self.orders.insert(id.clone(), created);
         self.scratch.insert(id.clone(), super::Scratch::default());
-        self.advance(cx, &id);
+        if self.windows {
+            self.advance(cx, &id);
+        } else {
+            self.pause(cx, &id, crate::station::PauseReason::NoWindow);
+        }
     }
 
     fn approve(&mut self, cx: &mut Cx, id: &OrderId) {
@@ -217,6 +226,12 @@ impl Factory {
         }
         let partial = !rejected.is_empty();
         self.emit(cx, id, Event::Accepted { fingerprint, rejected });
+        self.accepted_on(cx, id, partial);
+    }
+
+    /// After G2: on to the take-over, or with hunks rejected first to their reversal and a review of what is left,
+    /// which closes the acceptance for exactly that state (C55).
+    pub(super) fn accepted_on(&mut self, cx: &mut Cx, id: &OrderId, partial: bool) {
         self.run(cx, id);
         if partial {
             self.reject_hunks(cx, id);
@@ -227,16 +242,14 @@ impl Factory {
     }
 
     /// G2 with the branch kept: the worktree goes, the branch stays, and the order is done without a take-over.
-    fn keep_branch(&mut self, cx: &mut Cx, id: &OrderId, fingerprint: String) {
+    fn keep_branch(&mut self, cx: &mut Cx, id: &OrderId, fingerprint: String, rejected: Vec<HunkId>) {
         if !self.acceptable(cx, id, &fingerprint) {
             return;
         }
-        let rejected = Vec::new();
+        let partial = !rejected.is_empty();
         self.emit(cx, id, Event::Accepted { fingerprint, rejected });
         self.emit(cx, id, Event::BranchKept);
-        self.run(cx, id);
-        self.enter(cx, id, Station::TakeOver);
-        self.advance(cx, id);
+        self.accepted_on(cx, id, partial);
     }
 
     fn back_to_builder(&mut self, cx: &mut Cx, id: &OrderId, text: String) {

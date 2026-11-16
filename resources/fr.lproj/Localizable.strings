@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Contrôle sans commande";
 "Zwei Prüfbefehle heißen „{}“" = "Deux contrôles s’appellent « {} »";
 "„{}“ liegt außerhalb des Repositorys" = "« {} » se trouve hors du dépôt";
+"„{}“ ist das ganze Repository" = "« {} » est le dépôt entier";
 "„{}“ liegt im Repository" = "« {} » se trouve dans le dépôt";
 "„{}“ ist kein gültiger Variablenname" = "« {} » n’est pas un nom de variable valide";
 "{} (Zeile {}): {}" = "{} (ligne {}) : {}";

@@ -208,6 +208,10 @@ pub struct GateRecord {
     pub step: GateStep,
     /// Its name, such as the gate command's.
     pub name: String,
+    /// The command that ran, for gate commands; with the name it tells whether the record still belongs to the gate
+    /// set after the rules changed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub run: Option<String>,
     /// The failure, if it failed.
     pub failure: Option<GateFailure>,
     /// What the command did, for gate commands.

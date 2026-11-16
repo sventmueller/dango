@@ -6,7 +6,8 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
-use globset::{Glob, GlobSet, GlobSetBuilder};
+use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
+use ide_factory::workflow::rules::copies_along;
 
 /// Folders a walk for the group does not enter: what they hold is no configuration of the project and can be huge.
 const SKIPPED: &[&str] = &[
@@ -23,11 +24,12 @@ const SKIPPED: &[&str] = &[
 /// How deep the walk goes, which keeps a monorepo's walk short.
 const DEPTH: usize = 6;
 
-/// The patterns as one set; a pattern that does not parse matches nothing.
+/// The patterns as one set, matching without regard to case as the Mac's volumes do; a pattern that does not parse
+/// matches nothing.
 fn set(patterns: &[String]) -> GlobSet {
     let mut builder = GlobSetBuilder::new();
     for pattern in patterns {
-        if let Ok(glob) = Glob::new(pattern) {
+        if let Ok(glob) = GlobBuilder::new(pattern).case_insensitive(true).build() {
             builder.add(glob);
         }
     }
@@ -81,6 +83,48 @@ pub(super) fn clone(from: &Path, to: &Path) -> io::Result<()> {
     Err(error)
 }
 
+/// Clones the path `listed` of the worktree list `copy` from the working copy `root` into the worktree `into`, what is
+/// there already kept. A folder that holds files with credentials goes file by file without them, unless `copy` names
+/// them on their own, which needs their own confirmation (C50).
+pub(super) fn copy_listed(root: &Path, into: &Path, listed: &str, copy: &[String]) -> io::Result<()> {
+    let (from, target) = (root.join(listed), into.join(listed));
+    if from.is_dir() && (target.exists() || leaves_out(root, Path::new(listed), listed, copy)) {
+        return copy_folder(root, into, Path::new(listed), listed, copy);
+    }
+    if target.exists() {
+        return Ok(());
+    }
+    clone(&from, &target)
+}
+
+/// Whether the folder `relative` of `root` holds a file that may not go along with `listed`.
+fn leaves_out(root: &Path, relative: &Path, listed: &str, copy: &[String]) -> bool {
+    let Ok(entries) = std::fs::read_dir(root.join(relative)) else {
+        return false;
+    };
+    entries.flatten().any(|entry| {
+        let path = relative.join(entry.file_name());
+        if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
+            leaves_out(root, &path, listed, copy)
+        } else {
+            !copies_along(copy, listed, &path.to_string_lossy())
+        }
+    })
+}
+
+fn copy_folder(root: &Path, into: &Path, relative: &Path, listed: &str, copy: &[String]) -> io::Result<()> {
+    std::fs::create_dir_all(into.join(relative))?;
+    for entry in std::fs::read_dir(root.join(relative))?.flatten() {
+        let path = relative.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_folder(root, into, &path, listed, copy)?;
+        } else if copies_along(copy, listed, &path.to_string_lossy()) && !into.join(&path).exists() {
+            clone(&root.join(&path), &into.join(&path))?;
+        }
+    }
+    Ok(())
+}
+
 /// Copies `from` to `to` byte for byte, for a volume that cannot clone.
 fn copy(from: &Path, to: &Path) -> io::Result<()> {
     if from.is_dir() {
@@ -126,6 +170,7 @@ mod tests {
         for (path, text) in [
             ("CLAUDE.md", "rules"),
             ("crates/a/CLAUDE.md", "more rules"),
+            ("crates/b/Claude.md", "rules in another case"),
             (".claude/settings.json", "{}"),
             (".gitleaks.toml", "[allowlist]"),
             ("node_modules/x/CLAUDE.md", "not this"),
@@ -147,12 +192,59 @@ mod tests {
                 ".claude/settings.json",
                 ".gitleaks.toml",
                 "CLAUDE.md",
-                "crates/a/CLAUDE.md"
+                "crates/a/CLAUDE.md",
+                "crates/b/Claude.md"
             ]
         );
         assert_eq!(std::fs::read_to_string(into.join("CLAUDE.md")).unwrap(), "rules");
         let rules = frozen_rules(&into);
         assert!(rules.config.is_some() && rules.ignore.is_none());
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    fn files(root: &Path) -> Vec<String> {
+        matching(root, &["**".to_string()])
+            .iter()
+            .filter_map(|p| p.to_str().map(str::to_string))
+            .collect()
+    }
+
+    #[test]
+    fn a_listed_folder_goes_without_credentials_that_are_not_listed_on_their_own() {
+        let base = std::env::temp_dir().join(format!("leitstand-copy-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        let root = base.join("repo");
+        for path in [
+            "config/app.toml",
+            "config/.env",
+            "config/secrets/token",
+            "plain/readme.md",
+            "keys/id_ed25519",
+            "secrets/id_ed25519",
+        ] {
+            std::fs::create_dir_all(root.join(path).parent().unwrap()).unwrap();
+            std::fs::write(root.join(path), path).unwrap();
+        }
+        let copy = |list: &[&str], into: &str| {
+            let list: Vec<String> = list.iter().map(|p| p.to_string()).collect();
+            let into = base.join(into);
+            for listed in &list {
+                copy_listed(&root, &into, listed, &list).unwrap();
+            }
+            files(&into)
+        };
+        assert_eq!(copy(&["config", "plain"], "a"), ["config/app.toml", "plain/readme.md"]);
+        assert_eq!(
+            copy(&["config/.env", "config"], "b"),
+            ["config/.env", "config/app.toml"],
+            "a file named on its own goes along, whatever the order"
+        );
+        assert!(copy(&["keys"], "c").is_empty(), "a key goes only when named on its own");
+        assert_eq!(
+            copy(&["secrets"], "d"),
+            ["secrets/id_ed25519"],
+            "a folder named like credentials was confirmed as a whole"
+        );
         let _ = std::fs::remove_dir_all(&base);
     }
 }

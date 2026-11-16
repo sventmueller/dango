@@ -15,18 +15,23 @@ use crate::station::Station;
 impl Factory {
     /// The user's click: with `fingerprint` G2 that keeps the branch and publishes once the order is done, without it
     /// publishing a done order whose branch was kept, or trying again.
-    pub(super) fn publish(&mut self, cx: &mut Cx, id: &OrderId, fingerprint: Option<String>, texts: Outgoing) {
+    pub(super) fn publish(
+        &mut self,
+        cx: &mut Cx,
+        id: &OrderId,
+        fingerprint: Option<String>,
+        rejected: Vec<crate::ids::HunkId>,
+        texts: Outgoing,
+    ) {
         if let Some(fingerprint) = fingerprint {
             if !self.acceptable(cx, id, &fingerprint) {
                 return;
             }
-            let rejected = Vec::new();
+            let partial = !rejected.is_empty();
             self.emit(cx, id, Event::Accepted { fingerprint, rejected });
             self.emit(cx, id, Event::BranchKept);
             self.emit(cx, id, Event::PublishRequested { texts });
-            self.run(cx, id);
-            self.enter(cx, id, Station::TakeOver);
-            self.advance(cx, id);
+            self.accepted_on(cx, id, partial);
             return;
         }
         if !self.known(cx, id) {

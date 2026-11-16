@@ -247,6 +247,7 @@ fn keeping_the_branch_accepts_removes_the_worktree_and_takes_nothing_over() {
     app.send(InputKind::KeepBranch {
         order: id.clone(),
         fingerprint,
+        rejected: Vec::new(),
     });
     app.settle();
     assert_eq!(app.station(&id), Station::Done);

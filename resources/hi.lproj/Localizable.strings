@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "बिना कमांड का गेट";
 "Zwei Prüfbefehle heißen „{}“" = "दो गेट का नाम “{}” है";
 "„{}“ liegt außerhalb des Repositorys" = "“{}” रिपॉज़िटरी के बाहर है";
+"„{}“ ist das ganze Repository" = "“{}” पूरी रिपॉज़िटरी है";
 "„{}“ liegt im Repository" = "“{}” रिपॉज़िटरी के अंदर है";
 "„{}“ ist kein gültiger Variablenname" = "“{}” मान्य वैरिएबल नाम नहीं है";
 "{} (Zeile {}): {}" = "{} (पंक्ति {}) : {}";

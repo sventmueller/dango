@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "بوابة بلا أمر";
 "Zwei Prüfbefehle heißen „{}“" = "بوابتان باسم “{}”";
 "„{}“ liegt außerhalb des Repositorys" = "يقع “{}” خارج المستودع";
+"„{}“ ist das ganze Repository" = "“{}” هو المستودع بأكمله";
 "„{}“ liegt im Repository" = "يقع “{}” داخل المستودع";
 "„{}“ ist kein gültiger Variablenname" = "ليس “{}” اسم متغير صالحًا";
 "{} (Zeile {}): {}" = "‏{} (السطر {}): {}";

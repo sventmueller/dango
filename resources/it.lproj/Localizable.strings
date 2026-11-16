@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Gate senza comando";
 "Zwei Prüfbefehle heißen „{}“" = "Due gate si chiamano “{}”";
 "„{}“ liegt außerhalb des Repositorys" = "“{}” si trova fuori dal repository";
+"„{}“ ist das ganze Repository" = "“{}” è l’intero repository";
 "„{}“ liegt im Repository" = "“{}” si trova nel repository";
 "„{}“ ist kein gültiger Variablenname" = "“{}” non è un nome di variabile valido";
 "{} (Zeile {}): {}" = "{} (riga {}): {}";

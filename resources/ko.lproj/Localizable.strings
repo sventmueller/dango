@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "명령이 없는 게이트";
 "Zwei Prüfbefehle heißen „{}“" = "두 게이트의 이름이 ‘{}’입니다";
 "„{}“ liegt außerhalb des Repositorys" = "‘{}’이(가) 저장소 밖에 있습니다";
+"„{}“ ist das ganze Repository" = "‘{}’은(는) 저장소 전체입니다";
 "„{}“ liegt im Repository" = "‘{}’이(가) 저장소 안에 있습니다";
 "„{}“ ist kein gültiger Variablenname" = "‘{}’은(는) 유효한 변수 이름이 아닙니다";
 "{} (Zeile {}): {}" = "{}({}행): {}";

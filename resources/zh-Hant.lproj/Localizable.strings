@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "關卡指令沒有指令";
 "Zwei Prüfbefehle heißen „{}“" = "有兩個關卡指令都名為「{}」";
 "„{}“ liegt außerhalb des Repositorys" = "「{}」位於儲存庫之外";
+"„{}“ ist das ganze Repository" = "「{}」是整個儲存庫";
 "„{}“ liegt im Repository" = "「{}」位於儲存庫之內";
 "„{}“ ist kein gültiger Variablenname" = "「{}」不是有效的變數名稱";
 "{} (Zeile {}): {}" = "{}（第 {} 行）：{}";

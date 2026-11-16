@@ -538,23 +538,34 @@ impl Detail {
         })
     }
 
-    /// The input of `command` that needs nothing more from the user; `None` for those that ask first.
-    pub fn input(&self, command: Command) -> Option<InputKind> {
+    /// The input of `command` that needs nothing more from the user, G2 without the sections in `rejected`; `None` for
+    /// those that ask first.
+    pub fn input(&self, command: Command, rejected: &BTreeSet<HunkId>) -> Option<InputKind> {
         let id = self.id.clone();
+        let turned_down = || -> Vec<HunkId> {
+            self.sections
+                .iter()
+                .filter(|s| rejected.contains(&s.id))
+                .map(|s| s.id.clone())
+                .collect()
+        };
         match command {
             Command::Approve => Some(InputKind::Approve(id)),
             Command::KeepBranch => Some(InputKind::KeepBranch {
                 order: id,
                 fingerprint: self.fingerprint.clone()?,
+                rejected: turned_down(),
             }),
             Command::AcceptAsChange => Some(InputKind::Publish {
                 order: id,
                 fingerprint: Some(self.fingerprint.clone()?),
+                rejected: turned_down(),
                 texts: self.outgoing.clone(),
             }),
             Command::Publish => Some(InputKind::Publish {
                 order: id,
                 fingerprint: None,
+                rejected: Vec::new(),
                 texts: self.outgoing.clone(),
             }),
             Command::ByHand => Some(InputKind::ByHand(id)),

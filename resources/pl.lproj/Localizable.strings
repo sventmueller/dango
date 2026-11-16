@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Bramka bez polecenia";
 "Zwei Prüfbefehle heißen „{}“" = "Dwie bramki mają nazwę „{}”";
 "„{}“ liegt außerhalb des Repositorys" = "„{}” znajduje się poza repozytorium";
+"„{}“ ist das ganze Repository" = "„{}” to całe repozytorium";
 "„{}“ liegt im Repository" = "„{}” znajduje się w repozytorium";
 "„{}“ ist kein gültiger Variablenname" = "„{}” nie jest prawidłową nazwą zmiennej";
 "{} (Zeile {}): {}" = "{} (wiersz {}): {}";
