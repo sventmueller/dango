@@ -210,6 +210,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | quota | how much of a service's usage window is left, as the service reports it |
 | Workflow-Datei | workflow file | `.dango/factory.toml`, the project's rules for its work orders, shared with the team |
 | Stand | state | the commit of a work order that gates, reviewer and acceptance refer to |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | first-pass rate, first pass, rate | the share of work orders whose first review round passed, by role, agent, model and risk class; work orders with interventions or a change of agent do not count; routing uses it to break a tie (E180) |
+| Kennzahlen | figures | the table of the Leitstand tab with first-pass rate, review rounds, cost and runtime, and the median wait for the user (E180) |
+| Regelvorschlag | rule proposal | a work order in which a scout proposes a change to AGENTS.md or CLAUDE.md from recurring findings, waiting for approval and acceptance like any other |
+| wiederkehrender Auftrag | recurring work order | a work order the workflow file creates by itself at an interval, only while the app runs |
+| Abstand (wiederkehrender Auftrag) | interval | how often a recurring work order comes: täglich, wöchentlich, alle {} Tage |
+| eingereiht | queued | a work order that waits its turn: for a free slot, for a work order whose path scope overlaps, or for the take-over into the same branch ahead of it (E174) |
+| Rolle | role | planner, builder, reviewer or scout, the part an agent plays in a work order |
 | **Agent configuration (E146)** | | |
 | Rechte | Permissions | the overlay with an agent's permission rules; the rules are Freigaben in the sense of the Freigabe term |
 | Erlauben / Fragen / Verbieten | Allow / Ask / Deny | the effect of a permission rule; Verbieten is the language's word for denying or forbidding an action, Fragen the agent asking first |
@@ -416,6 +423,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | الحصة |
 | Workflow-Datei | ملف سير العمل |
 | Stand | الحالة |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | نسبة النجاح من المرة الأولى، المرة الأولى، النسبة |
+| Kennzahlen | المؤشرات |
+| Regelvorschlag | اقتراح قاعدة |
+| wiederkehrender Auftrag | أمر عمل متكرر |
+| Abstand (wiederkehrender Auftrag) | الفاصل الزمني |
+| eingereiht | في قائمة الانتظار |
+| Rolle | الدور |
 | Rechte | الأذونات |
 | Erlauben / Fragen / Verbieten | سماح / استئذان / رفض |
 | Gedächtnis | الذاكرة |
@@ -615,6 +629,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | quota |
 | Workflow-Datei | fitxer de flux de treball |
 | Stand | estat |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | taxa de primera passada, primera passada, taxa |
+| Kennzahlen | mètriques |
+| Regelvorschlag | proposta de regla |
+| wiederkehrender Auftrag | ordre de treball recurrent |
+| Abstand (wiederkehrender Auftrag) | interval |
+| eingereiht | a la cua |
+| Rolle | rol |
 | Rechte | Permisos |
 | Erlauben / Fragen / Verbieten | Permet / Pregunta / Denega |
 | Gedächtnis | memòria |
@@ -814,6 +835,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | kvóta |
 | Workflow-Datei | soubor pracovního postupu |
 | Stand | stav |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | podíl úspěchu napoprvé, napoprvé, podíl |
+| Kennzahlen | metriky |
+| Regelvorschlag | návrh pravidla |
+| wiederkehrender Auftrag | opakovaná zakázka |
+| Abstand (wiederkehrender Auftrag) | interval |
+| eingereiht | ve frontě |
+| Rolle | role |
 | Rechte | Povolení |
 | Erlauben / Fragen / Verbieten | Povolit / Zeptat se / Zamítnout |
 | Gedächtnis | paměť |
@@ -1010,6 +1038,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | kvote |
 | Workflow-Datei | workflow-arkiv |
 | Stand | tilstand |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | førsteforsøgsrate, første forsøg, rate |
+| Kennzahlen | nøgletal |
+| Regelvorschlag | regelforslag |
+| wiederkehrender Auftrag | tilbagevendende arbejdsordre |
+| Abstand (wiederkehrender Auftrag) | interval |
+| eingereiht | i kø |
+| Rolle | rolle |
 | Rechte | Tilladelser |
 | Erlauben / Fragen / Verbieten | Tillad / Spørg / Afvis |
 | Gedächtnis | hukommelse |
@@ -1209,6 +1244,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | ποσόστωση |
 | Workflow-Datei | αρχείο workflow |
 | Stand | κατάσταση |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | ποσοστό επιτυχίας με την πρώτη, με την πρώτη, ποσοστό |
+| Kennzahlen | δείκτες |
+| Regelvorschlag | πρόταση κανόνα |
+| wiederkehrender Auftrag | επαναλαμβανόμενο δελτίο εργασίας |
+| Abstand (wiederkehrender Auftrag) | διάστημα |
+| eingereiht | σε αναμονή |
+| Rolle | ρόλος |
 | Rechte | Άδειες |
 | Erlauben / Fragen / Verbieten | Να επιτρέπεται / Να ερωτάται / Άρνηση |
 | Gedächtnis | μνήμη |
@@ -1408,6 +1450,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | cuota |
 | Workflow-Datei | archivo de flujo de trabajo |
 | Stand | estado |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | tasa de primera pasada, primera pasada, tasa |
+| Kennzahlen | métricas |
+| Regelvorschlag | propuesta de regla |
+| wiederkehrender Auftrag | orden de trabajo recurrente |
+| Abstand (wiederkehrender Auftrag) | intervalo |
+| eingereiht | en cola |
+| Rolle | rol |
 | Rechte | Permisos |
 | Erlauben / Fragen / Verbieten | Permitir / Preguntar / Denegar |
 | Gedächtnis | memoria |
@@ -1609,6 +1658,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | kiintiö |
 | Workflow-Datei | työnkulkutiedosto |
 | Stand | tila |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | ensikierroksen läpäisyaste, ensikierros, läpäisyaste |
+| Kennzahlen | tunnusluvut |
+| Regelvorschlag | sääntöehdotus |
+| wiederkehrender Auftrag | toistuva työtilaus |
+| Abstand (wiederkehrender Auftrag) | aikaväli |
+| eingereiht | jonossa |
+| Rolle | rooli |
 | Rechte | Luvat |
 | Erlauben / Fragen / Verbieten | Salli / Kysy / Hylkää |
 | Gedächtnis | muisti |
@@ -1806,6 +1862,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | quota |
 | Workflow-Datei | fichier de workflow |
 | Stand | état |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | taux de premier passage, premier passage, taux |
+| Kennzahlen | indicateurs |
+| Regelvorschlag | proposition de règle |
+| wiederkehrender Auftrag | ordre de travail récurrent |
+| Abstand (wiederkehrender Auftrag) | intervalle |
+| eingereiht | en file d’attente |
+| Rolle | rôle |
 | Rechte | Autorisations |
 | Erlauben / Fragen / Verbieten | Autoriser / Demander / Refuser |
 | Gedächtnis | mémoire |
@@ -2007,6 +2070,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | מכסה |
 | Workflow-Datei | קובץ תהליך העבודה |
 | Stand | מצב |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | שיעור המעבר בסבב הראשון, סבב ראשון, שיעור |
+| Kennzahlen | מדדים |
+| Regelvorschlag | הצעת כלל |
+| wiederkehrender Auftrag | הזמנת עבודה חוזרת |
+| Abstand (wiederkehrender Auftrag) | מרווח |
+| eingereiht | בתור |
+| Rolle | תפקיד |
 | Rechte | הרשאות |
 | Erlauben / Fragen / Verbieten | מתן גישה / בקשת אישור / סירוב |
 | Gedächtnis | זיכרון |
@@ -2204,6 +2274,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | कोटा |
 | Workflow-Datei | वर्कफ़्लो फ़ाइल |
 | Stand | स्थिति |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | पहली बार में पास दर, पहली बार में पास, दर |
+| Kennzahlen | मेट्रिक्स |
+| Regelvorschlag | नियम प्रस्ताव |
+| wiederkehrender Auftrag | आवर्ती वर्क ऑर्डर |
+| Abstand (wiederkehrender Auftrag) | अंतराल |
+| eingereiht | कतार में |
+| Rolle | भूमिका |
 | Rechte | अनुमतियाँ |
 | Erlauben / Fragen / Verbieten | अनुमति दें / पूछें / अस्वीकार करें |
 | Gedächtnis | मेमोरी |
@@ -2402,6 +2479,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | kvota |
 | Workflow-Datei | datoteka tijeka rada |
 | Stand | stanje |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | udio prolaza iz prve, iz prve, udio |
+| Kennzahlen | pokazatelji |
+| Regelvorschlag | prijedlog pravila |
+| wiederkehrender Auftrag | ponavljajući radni nalog |
+| Abstand (wiederkehrender Auftrag) | interval |
+| eingereiht | u redu čekanja |
+| Rolle | uloga |
 | Rechte | Dozvole |
 | Erlauben / Fragen / Verbieten | Dozvoli / Pitaj / Odbij |
 | Gedächtnis | memorija |
@@ -2602,6 +2686,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | kvóta |
 | Workflow-Datei | munkafolyamatfájl |
 | Stand | állapot |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | elsőkörös sikerarány, első kör, arány |
+| Kennzahlen | mutatók |
+| Regelvorschlag | szabályjavaslat |
+| wiederkehrender Auftrag | ismétlődő munkarendelés |
+| Abstand (wiederkehrender Auftrag) | időköz |
+| eingereiht | sorban áll |
+| Rolle | szerep |
 | Rechte | Engedélyek |
 | Erlauben / Fragen / Verbieten | Engedélyezés / Kérdezés / Tiltás |
 | Gedächtnis | memória |
@@ -2800,6 +2891,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | kuota |
 | Workflow-Datei | file workflow |
 | Stand | keadaan |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | tingkat lolos pertama, lolos pertama, tingkat |
+| Kennzahlen | metrik |
+| Regelvorschlag | usulan aturan |
+| wiederkehrender Auftrag | order kerja berulang |
+| Abstand (wiederkehrender Auftrag) | interval |
+| eingereiht | dalam antrean |
+| Rolle | peran |
 | Rechte | Izin |
 | Erlauben / Fragen / Verbieten | Izinkan / Tanyakan / Larang |
 | Gedächtnis | memori |
@@ -2998,6 +3096,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | quota |
 | Workflow-Datei | file del workflow |
 | Stand | stato |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | tasso di primo passaggio, primo passaggio, tasso |
+| Kennzahlen | metriche |
+| Regelvorschlag | proposta di regola |
+| wiederkehrender Auftrag | ordine di lavoro ricorrente |
+| Abstand (wiederkehrender Auftrag) | intervallo |
+| eingereiht | in coda |
+| Rolle | ruolo |
 | Rechte | Permessi |
 | Erlauben / Fragen / Verbieten | Consenti / Chiedi / Nega |
 | Gedächtnis | memoria |
@@ -3197,6 +3302,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | クォータ |
 | Workflow-Datei | ワークフローファイル |
 | Stand | 状態 |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | 初回通過率, 初回通過, 率 |
+| Kennzahlen | 指標 |
+| Regelvorschlag | ルール提案 |
+| wiederkehrender Auftrag | 定期的な作業指示 |
+| Abstand (wiederkehrender Auftrag) | 間隔 |
+| eingereiht | 待機中 |
+| Rolle | ロール |
 | Rechte | 権限 |
 | Erlauben / Fragen / Verbieten | 許可 / 尋ねる / 拒否 |
 | Gedächtnis | メモリ |
@@ -3395,6 +3507,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | 할당량 |
 | Workflow-Datei | 워크플로 파일 |
 | Stand | 상태 |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | 1차 통과율, 1차 통과, 비율 |
+| Kennzahlen | 지표 |
+| Regelvorschlag | 규칙 제안 |
+| wiederkehrender Auftrag | 반복 작업 주문 |
+| Abstand (wiederkehrender Auftrag) | 간격 |
+| eingereiht | 대기 중 |
+| Rolle | 역할 |
 | Rechte | 권한 |
 | Erlauben / Fragen / Verbieten | 허용 / 묻기 / 거부 |
 | Gedächtnis | 메모리 |
@@ -3592,6 +3711,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | kuota |
 | Workflow-Datei | fail aliran kerja |
 | Stand | keadaan |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | kadar lulus pertama, lulus pertama, kadar |
+| Kennzahlen | metrik |
+| Regelvorschlag | cadangan peraturan |
+| wiederkehrender Auftrag | pesanan kerja berulang |
+| Abstand (wiederkehrender Auftrag) | selang |
+| eingereiht | dalam baris gilir |
+| Rolle | peranan |
 | Rechte | Keizinan |
 | Erlauben / Fragen / Verbieten | Benarkan / Tanya / Larang |
 | Gedächtnis | memori |
@@ -3790,6 +3916,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | quotum |
 | Workflow-Datei | workflowbestand |
 | Stand | toestand |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | percentage eerste doorloop, eerste doorloop, percentage |
+| Kennzahlen | kengetallen |
+| Regelvorschlag | regelvoorstel |
+| wiederkehrender Auftrag | terugkerende werkorder |
+| Abstand (wiederkehrender Auftrag) | interval |
+| eingereiht | in wachtrij |
+| Rolle | rol |
 | Rechte | Toestemmingen |
 | Erlauben / Fragen / Verbieten | Sta toe / Vraag / Verbied |
 | Gedächtnis | geheugen |
@@ -3988,6 +4121,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | kvote |
 | Workflow-Datei | arbeidsflytfil |
 | Stand | tilstand |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | førstegangsandel, første runde, andel |
+| Kennzahlen | nøkkeltall |
+| Regelvorschlag | regelforslag |
+| wiederkehrender Auftrag | gjentakende arbeidsordre |
+| Abstand (wiederkehrender Auftrag) | intervall |
+| eingereiht | i kø |
+| Rolle | rolle |
 | Rechte | Tillatelser |
 | Erlauben / Fragen / Verbieten | Tillat / Spør / Nekt |
 | Gedächtnis | minne |
@@ -4186,6 +4326,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | przydział |
 | Workflow-Datei | plik przepływu pracy |
 | Stand | stan |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | odsetek pierwszego podejścia, pierwsze podejście, odsetek |
+| Kennzahlen | metryki |
+| Regelvorschlag | propozycja reguły |
+| wiederkehrender Auftrag | cykliczne zamówienie |
+| Abstand (wiederkehrender Auftrag) | interwał |
+| eingereiht | w kolejce |
+| Rolle | rola |
 | Rechte | Uprawnienia |
 | Erlauben / Fragen / Verbieten | Pozwól / Zapytaj / Zabroń |
 | Gedächtnis | pamięć |
@@ -4385,6 +4532,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | cota |
 | Workflow-Datei | arquivo de workflow |
 | Stand | estado |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | taxa de primeira passagem, primeira passagem, taxa |
+| Kennzahlen | métricas |
+| Regelvorschlag | proposta de regra |
+| wiederkehrender Auftrag | ordem de serviço recorrente |
+| Abstand (wiederkehrender Auftrag) | intervalo |
+| eingereiht | na fila |
+| Rolle | função |
 | Rechte | Permissões |
 | Erlauben / Fragen / Verbieten | Permitir / Perguntar / Proibir |
 | Gedächtnis | memória |
@@ -4585,6 +4739,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | quota |
 | Workflow-Datei | ficheiro de workflow |
 | Stand | estado |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | taxa de primeira passagem, primeira passagem, taxa |
+| Kennzahlen | métricas |
+| Regelvorschlag | proposta de regra |
+| wiederkehrender Auftrag | ordem de trabalho recorrente |
+| Abstand (wiederkehrender Auftrag) | intervalo |
+| eingereiht | em fila |
+| Rolle | função |
 | Rechte | Permissões |
 | Erlauben / Fragen / Verbieten | Permitir / Perguntar / Proibir |
 | Gedächtnis | memória |
@@ -4785,6 +4946,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | cotă |
 | Workflow-Datei | fișier workflow |
 | Stand | stare |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | rata primei treceri, prima trecere, rată |
+| Kennzahlen | indicatori |
+| Regelvorschlag | propunere de regulă |
+| wiederkehrender Auftrag | ordin de lucru recurent |
+| Abstand (wiederkehrender Auftrag) | interval |
+| eingereiht | în coadă |
+| Rolle | rol |
 | Rechte | Permisiuni |
 | Erlauben / Fragen / Verbieten | Permiteți / Întrebați / Refuzați (Verbieten as Ablehnen) |
 | Gedächtnis | memorie |
@@ -4984,6 +5152,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | квота |
 | Workflow-Datei | файл рабочего процесса |
 | Stand | состояние |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | доля успеха с первого раза, с первого раза, доля |
+| Kennzahlen | показатели |
+| Regelvorschlag | предложение правила |
+| wiederkehrender Auftrag | повторяющийся заказ |
+| Abstand (wiederkehrender Auftrag) | интервал |
+| eingereiht | в очереди |
+| Rolle | роль |
 | Rechte | Разрешения |
 | Erlauben / Fragen / Verbieten | Разрешить / Спрашивать / Запретить (Verbieten as Ablehnen) |
 | Gedächtnis | память |
@@ -5184,6 +5359,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | kvóta |
 | Workflow-Datei | súbor pracovného postupu |
 | Stand | stav |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | podiel úspechu na prvý raz, na prvý raz, podiel |
+| Kennzahlen | metriky |
+| Regelvorschlag | návrh pravidla |
+| wiederkehrender Auftrag | opakovaná zákazka |
+| Abstand (wiederkehrender Auftrag) | interval |
+| eingereiht | vo fronte |
+| Rolle | rola |
 | Rechte | Povolenia |
 | Erlauben / Fragen / Verbieten | Povoliť / Spýtať sa / Zamietnuť (Verbieten as Ablehnen) |
 | Gedächtnis | pamäť |
@@ -5385,6 +5567,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | kvota |
 | Workflow-Datei | datoteka poteka dela |
 | Stand | stanje |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | delež uspeha v prvem poskusu, prvi poskus, delež |
+| Kennzahlen | kazalniki |
+| Regelvorschlag | predlog pravila |
+| wiederkehrender Auftrag | ponavljajoči se delovni nalog |
+| Abstand (wiederkehrender Auftrag) | interval |
+| eingereiht | v čakalni vrsti |
+| Rolle | vloga |
 | Rechte | Dovoljenja |
 | Erlauben / Fragen / Verbieten | Dovoli / Vprašaj / Zavrni (Verbieten as Ablehnen) |
 | Gedächtnis | spomin |
@@ -5583,6 +5772,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | kvot |
 | Workflow-Datei | workflowfil |
 | Stand | tillstånd |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | förstagångsandel, första omgången, andel |
+| Kennzahlen | nyckeltal |
+| Regelvorschlag | regelförslag |
+| wiederkehrender Auftrag | återkommande arbetsorder |
+| Abstand (wiederkehrender Auftrag) | intervall |
+| eingereiht | i kö |
+| Rolle | roll |
 | Rechte | Behörigheter |
 | Erlauben / Fragen / Verbieten | Tillåt / Fråga / Neka (Verbieten as Ablehnen) |
 | Gedächtnis | minne |
@@ -5783,6 +5979,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | โควตา |
 | Workflow-Datei | ไฟล์เวิร์กโฟลว์ |
 | Stand | สถานะ |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | อัตราผ่านในรอบแรก, ผ่านในรอบแรก, อัตรา |
+| Kennzahlen | ตัวชี้วัด |
+| Regelvorschlag | ข้อเสนอกฎ |
+| wiederkehrender Auftrag | ใบสั่งงานที่เกิดซ้ำ |
+| Abstand (wiederkehrender Auftrag) | ช่วงเวลา |
+| eingereiht | อยู่ในคิว |
+| Rolle | บทบาท |
 | Rechte | สิทธิ์ |
 | Erlauben / Fragen / Verbieten | อนุญาต / ถาม / ปฏิเสธ (Verbieten as Ablehnen) |
 | Gedächtnis | ความจำ |
@@ -5984,6 +6187,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | kota |
 | Workflow-Datei | iş akışı dosyası |
 | Stand | durum |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | ilk geçiş oranı, ilk geçiş, oran |
+| Kennzahlen | metrikler |
+| Regelvorschlag | kural önerisi |
+| wiederkehrender Auftrag | yinelenen iş emri |
+| Abstand (wiederkehrender Auftrag) | aralık |
+| eingereiht | sırada |
+| Rolle | rol |
 | Rechte | İzinler |
 | Erlauben / Fragen / Verbieten | İzin Ver / Sor / Reddet (Verbieten as Ablehnen) |
 | Gedächtnis | bellek |
@@ -6182,6 +6392,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | квота |
 | Workflow-Datei | файл робочого процесу |
 | Stand | стан |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | частка успіху з першого разу, з першого разу, частка |
+| Kennzahlen | показники |
+| Regelvorschlag | пропозиція правила |
+| wiederkehrender Auftrag | повторюване замовлення |
+| Abstand (wiederkehrender Auftrag) | інтервал |
+| eingereiht | у черзі |
+| Rolle | роль |
 | Rechte | Дозволи |
 | Erlauben / Fragen / Verbieten | Дозволити / Запитувати / Заборонити (Verbieten as Ablehnen) |
 | Gedächtnis | памʼять |
@@ -6381,6 +6598,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | hạn mức |
 | Workflow-Datei | tệp quy trình |
 | Stand | trạng thái |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | tỷ lệ đạt ngay lần đầu, đạt lần đầu, tỷ lệ |
+| Kennzahlen | chỉ số |
+| Regelvorschlag | đề xuất quy tắc |
+| wiederkehrender Auftrag | phiếu công việc định kỳ |
+| Abstand (wiederkehrender Auftrag) | khoảng thời gian |
+| eingereiht | đang chờ |
+| Rolle | vai trò |
 | Rechte | Quyền |
 | Erlauben / Fragen / Verbieten | Cho phép / Hỏi / Từ chối (Verbieten as Ablehnen) |
 | Gedächtnis | bộ nhớ |
@@ -6578,6 +6802,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | 配额 |
 | Workflow-Datei | 工作流文件 |
 | Stand | 状态 |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | 一次通过率, 一次通过, 通过率 |
+| Kennzahlen | 指标 |
+| Regelvorschlag | 规则提议 |
+| wiederkehrender Auftrag | 定期工单 |
+| Abstand (wiederkehrender Auftrag) | 间隔 |
+| eingereiht | 排队中 |
+| Rolle | 角色 |
 | Rechte | 权限 |
 | Erlauben / Fragen / Verbieten | 允许 / 询问 / 拒绝 (Verbieten as Ablehnen) |
 | Gedächtnis | 记忆 |
@@ -6777,6 +7008,13 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Kontingent | 配額 |
 | Workflow-Datei | 工作流程檔案 |
 | Stand | 狀態 |
+| Erstdurchlaufquote, Erstdurchlauf, Quote | 一次通過率, 一次通過, 通過率 |
+| Kennzahlen | 指標 |
+| Regelvorschlag | 規則提議 |
+| wiederkehrender Auftrag | 定期工單 |
+| Abstand (wiederkehrender Auftrag) | 間隔 |
+| eingereiht | 排隊中 |
+| Rolle | 角色 |
 | Rechte | 權限 |
 | Erlauben / Fragen / Verbieten | 允許 / 詢問 / 拒絕 (Verbieten as Ablehnen) |
 | Gedächtnis | 記憶 |
