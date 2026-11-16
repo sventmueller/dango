@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Meluluskan akan membuangnya. “Hantar Ulasan” memberikannya kepada perancang, yang kemudian menyemak semula spesifikasi.";
 "Ohne Kommentare freigeben" = "Luluskan Tanpa Ulasan";
 "{},{} $" = "${}.{}";
+"Tests von {} lassen sich nicht debuggen" = "Ujian {} tidak boleh dinyahpepijat";

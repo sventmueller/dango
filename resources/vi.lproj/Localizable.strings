@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Phê duyệt sẽ bỏ các nhận xét này. “Gửi nhận xét” chuyển chúng cho người lập kế hoạch, sau đó người này sửa lại đặc tả.";
 "Ohne Kommentare freigeben" = "Phê duyệt không kèm nhận xét";
 "{},{} $" = "{},{} $";
+"Tests von {} lassen sich nicht debuggen" = "Không thể gỡ lỗi kiểm thử của {}";

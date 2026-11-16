@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "L’approbation les abandonne. « Envoyer les commentaires » les transmet au planificateur, qui révise ensuite la spécification.";
 "Ohne Kommentare freigeben" = "Approuver sans les commentaires";
 "{},{} $" = "{},{} $";
+"Tests von {} lassen sich nicht debuggen" = "Les tests de {} ne peuvent pas être débogués";

@@ -2357,3 +2357,5 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Zatwierdzenie je odrzuci. „Wyślij komentarze” przekazuje je planiście, który następnie poprawia specyfikację.";
 "Ohne Kommentare freigeben" = "Zatwierdź bez komentarzy";
 "{},{} $" = "{},{} $";
+"Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Zamówienie nie ma zaakceptowanego commitu, który push mógłby wysłać.";
+"Tests von {} lassen sich nicht debuggen" = "Testów {} nie można debugować";

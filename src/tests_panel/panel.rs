@@ -39,7 +39,8 @@ pub(crate) struct PanelIvars {
     window: WindowId,
     root: PathBuf,
     pub(super) board: RefCell<Board>,
-    tools: RefCell<Vec<Tool>>,
+    /// The tools found, each with the folder it runs in.
+    tools: RefCell<Vec<(Tool, PathBuf)>>,
     runs: RefCell<Vec<(Tool, Running)>>,
     /// Every row of the tree, packages before their files and tests.
     rows: RefCell<Vec<Row>>,
@@ -231,6 +232,16 @@ impl TestsPanel {
         &self.ivars().root
     }
 
+    /// The folder `tool` runs in: where its files are, the panel's folder until the tools are found.
+    pub(crate) fn folder(&self, tool: Tool) -> PathBuf {
+        self.ivars()
+            .tools
+            .borrow()
+            .iter()
+            .find(|(found, _)| *found == tool)
+            .map_or_else(|| self.root().to_path_buf(), |(_, folder)| folder.clone())
+    }
+
     /// The page and its header, for the window's sidebar.
     pub(crate) fn build(&self) -> (Retained<NSView>, Retained<NSStackView>) {
         let mtm = self.mtm();
@@ -310,13 +321,13 @@ impl TestsPanel {
             self.say(t("Keine Tests gefunden"));
             return;
         }
-        let waiting = !all && tools.iter().all(|tool| tool.lists_by_building());
-        for tool in tools {
+        let waiting = !all && tools.iter().all(|(tool, _)| tool.lists_by_building());
+        for (tool, folder) in tools {
             if tool.lists_by_building() && !all {
-                self.find_in_sources(tool);
+                self.find_in_sources(tool, folder);
                 continue;
             }
-            let command = tool.list(self.root(), &self.scratch());
+            let command = tool.list(&folder, &self.scratch());
             self.launch(tool, command, None);
         }
         self.show();
@@ -326,11 +337,10 @@ impl TestsPanel {
     }
 
     /// Reads the tests of `tool` from the sources on the disk lane, to show them until a listing or a run comes.
-    fn find_in_sources(&self, tool: Tool) {
+    fn find_in_sources(&self, tool: Tool, folder: PathBuf) {
         let id = self.id();
-        let root = self.root().to_path_buf();
         let _ = ide_core::lane::DISK.ask(
-            move || tool.from_source(&root),
+            move || tool.from_source(&folder),
             move |tests| {
                 main_soon(move || {
                     super::with_panel(id, |panel| panel.found_in_sources(tool, tests.unwrap_or_default()));
@@ -355,7 +365,7 @@ impl TestsPanel {
             self.say(t("Tests nur in vertrauten Ordnern"));
             return;
         }
-        let command = tool.run(self.root(), &scope, Some(&self.scratch()));
+        let command = tool.run(&self.folder(tool), &scope, Some(&self.scratch()));
         self.ivars().board.borrow_mut().started(tool, &scope);
         self.launch(tool, command, Some(scope));
         self.show();
@@ -375,7 +385,7 @@ impl TestsPanel {
 
     fn run_known(&self) {
         let tools = self.ivars().tools.borrow().clone();
-        for tool in tools {
+        for (tool, _) in tools {
             self.run(tool, Scope::All);
         }
     }

@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::{Report, Tool, cargo, go, js, nextest, pytest};
+use crate::{Report, Tool, bun, cargo, go, js, nextest, pytest};
 
 /// The places in a parser's reports that changed since they were last taken.
 #[derive(Debug, Default)]
@@ -40,6 +40,7 @@ enum Parser {
     Go(go::Lines),
     Pytest(pytest::Lines),
     Js(js::Lines),
+    Bun(bun::Lines),
 }
 
 /// What a run of a tool printed so far, or wrote to its results file, read line by line.
@@ -63,6 +64,7 @@ impl Reading {
             Tool::Go => Parser::Go(go::Lines::new(root)),
             Tool::Pytest => Parser::Pytest(pytest::Lines::default()),
             Tool::Vitest | Tool::Jest => Parser::Js(js::Lines::default()),
+            Tool::Bun => Parser::Bun(bun::Lines::default()),
         };
         Reading {
             tool,
@@ -100,6 +102,7 @@ impl Reading {
             Parser::Go(lines) => lines.line(root, line, out, changes),
             Parser::Pytest(lines) => lines.line(root, line, out, changes),
             Parser::Js(lines) => lines.line(line, out, changes),
+            Parser::Bun(lines) => lines.line(root, line, out, changes),
         }
     }
 

@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "मंज़ूर करने पर ये छूट जाएँगी। “टिप्पणियाँ भेजें” इन्हें योजनाकार को देता है, जो फिर स्पेसिफ़िकेशन संशोधित करता है।";
 "Ohne Kommentare freigeben" = "टिप्पणियों के बिना मंज़ूर करें";
 "{},{} $" = "${}.{}";
+"Tests von {} lassen sich nicht debuggen" = "{} के टेस्ट डीबग नहीं किए जा सकते";

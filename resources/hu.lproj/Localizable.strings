@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Jóváhagyáskor elvesznek. A „Megjegyzések küldése” átadja őket a tervezőnek, aki aztán átdolgozza a specifikációt.";
 "Ohne Kommentare freigeben" = "Jóváhagyás megjegyzések nélkül";
 "{},{} $" = "{},{} $";
+"Tests von {} lassen sich nicht debuggen" = "A(z) {} tesztjei nem hibakereshetők";

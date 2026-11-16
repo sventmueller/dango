@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Onaylamak bunları atar. “Yorumları Gönder” bunları planlayıcıya verir; planlayıcı ardından belirtimi gözden geçirir.";
 "Ohne Kommentare freigeben" = "Yorumlar Olmadan Onayla";
 "{},{} $" = "${},{}";
+"Tests von {} lassen sich nicht debuggen" = "{} testlerinde hata ayıklanamaz";

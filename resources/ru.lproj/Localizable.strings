@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "При утверждении они пропадут. «Отправить комментарии» передает их планировщику, который затем дорабатывает спецификацию.";
 "Ohne Kommentare freigeben" = "Утвердить без комментариев";
 "{},{} $" = "{},{} $";
+"Tests von {} lassen sich nicht debuggen" = "Тесты {} нельзя отладить";

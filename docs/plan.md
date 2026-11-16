@@ -608,7 +608,11 @@ B34 C#- und Java-Debugger (E134, E135).
 - **E107 Minimap** neben dem Editor, Standard aus *(umgesetzt)*.
 - **E108 Sticky Scroll,** Standard an, höchstens 5 Kopfzeilen, aus Dokument-Symbolen oder Einrückungs-Faltungen.
 - **E109 Emmet** als zweiter Server je Dokument über `@olrtg/emmet-language-server`.
-- **E110 Crate `ide-test`** mit einem Adapter je Werkzeug (cargo test, nextest, Go, pytest, Vitest, Jest).
+- **E110 Crate `ide-test`** mit einem Adapter je Werkzeug (cargo test, nextest, Go, pytest, Vitest, Jest, `bun test`).
+  Liegen die Dateien eines Werkzeugs nicht im Projektordner, sucht Dango bis zwei Ebenen tiefer und führt es dort aus
+  (ein Ordner je Werkzeug). `bun test` gilt, wo das `test`-Script mit bun läuft: ist es `bun test`, ruft Dango bun
+  direkt; ist es ein eigener Runner, ruft Dango das Script, das die Flags von `bun test` annimmt und mit `--list` seine
+  Testdateien nennt. Ergebnisse als JUnit-XML; bun-Tests lassen sich nicht debuggen (WebKit-Inspector statt CDP).
 - **E111 Panel „Tests“** vor „Debuggen“ (Tests ⌘5, Debuggen ⌘6, CI ⌘7; ändert E94), Randspalte, ⌃⌥⌘U und ⌃⌥⌘G.
 - **E112 Einstellungen über einen Ordner in iCloud Drive,** nicht CloudKit; vorher ein Besitzer der Einstellungen.
 - **E113 Abgleich je Schlüssel festgelegt,** `sync` als Pflichtargument der Konstruktoren.

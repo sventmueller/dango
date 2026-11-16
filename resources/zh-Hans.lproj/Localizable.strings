@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "批准会丢弃这些评论。“发送评论”会把它们交给规划者，由其修改规格。";
 "Ohne Kommentare freigeben" = "不带评论批准";
 "{},{} $" = "${}.{}";
+"Tests von {} lassen sich nicht debuggen" = "无法调试 {} 的测试";

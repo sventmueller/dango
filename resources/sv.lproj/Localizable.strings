@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Godkännande kastar dem. ”Skicka kommentarer” ger dem till planeraren, som sedan omarbetar specifikationen.";
 "Ohne Kommentare freigeben" = "Godkänn utan kommentarer";
 "{},{} $" = "{},{} $";
+"Tests von {} lassen sich nicht debuggen" = "Tester från {} kan inte felsökas";

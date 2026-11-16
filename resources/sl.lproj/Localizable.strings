@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Z odobritvijo se izgubijo. »Pošlji komentarje« jih preda načrtovalcu, ki nato popravi specifikacijo.";
 "Ohne Kommentare freigeben" = "Odobri brez komentarjev";
 "{},{} $" = "{},{} $";
+"Tests von {} lassen sich nicht debuggen" = "Napak v testih orodja {} ni mogoče odpravljati";

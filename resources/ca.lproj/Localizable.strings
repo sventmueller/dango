@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "En aprovar es perden. “Envia els comentaris” els fa arribar al planificador, que després revisa l’especificació.";
 "Ohne Kommentare freigeben" = "Aprova sense els comentaris";
 "{},{} $" = "{},{} $";
+"Tests von {} lassen sich nicht debuggen" = "Les proves de {} no es poden depurar";

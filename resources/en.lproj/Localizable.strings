@@ -2394,3 +2394,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Approving drops them. “Send Comments” gives them to the planner, who then revises the specification.";
 "Ohne Kommentare freigeben" = "Approve Without Comments";
 "{},{} $" = "${}.{}";
+"Tests von {} lassen sich nicht debuggen" = "Tests of {} cannot be debugged";

@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "승인하면 이 댓글은 사라집니다. ‘댓글 보내기’를 누르면 플래너에게 전달되고, 플래너가 사양을 수정합니다.";
 "Ohne Kommentare freigeben" = "댓글 없이 승인";
 "{},{} $" = "${}.{}";
+"Tests von {} lassen sich nicht debuggen" = "{} 테스트는 디버그할 수 없습니다";

@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "يؤدي الاعتماد إلى فقدانها. “إرسال التعليقات” يسلّمها إلى المخطِّط، فيراجع المواصفة بعد ذلك.";
 "Ohne Kommentare freigeben" = "اعتماد دون التعليقات";
 "{},{} $" = "{}.{} $";
+"Tests von {} lassen sich nicht debuggen" = "لا يمكن تصحيح اختبارات {}";

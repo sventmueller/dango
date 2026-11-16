@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Με την έγκριση χάνονται. Το «Αποστολή σχολίων» τα δίνει στον σχεδιαστή, ο οποίος έπειτα αναθεωρεί την προδιαγραφή.";
 "Ohne Kommentare freigeben" = "Έγκριση χωρίς τα σχόλια";
 "{},{} $" = "{},{} $";
+"Tests von {} lassen sich nicht debuggen" = "Οι δοκιμές του {} δεν μπορούν να αποσφαλματωθούν";

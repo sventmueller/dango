@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Hyväksyminen hylkää ne. ”Lähetä kommentit” antaa ne suunnittelijalle, joka sitten muokkaa määrittelyä.";
 "Ohne Kommentare freigeben" = "Hyväksy ilman kommentteja";
 "{},{} $" = "{},{} $";
+"Tests von {} lassen sich nicht debuggen" = "Työkalun {} testien virheenjäljitys ei ole mahdollista";

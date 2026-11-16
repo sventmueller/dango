@@ -267,6 +267,74 @@ fn jest_lists_files_and_takes_its_tests_from_dangos_reporter_with_30_5() {
 }
 
 #[test]
+fn bun_lists_files_and_reads_the_junit_parts_of_1_4() {
+    let root = sample("bun");
+    let files = Tool::Bun.tests(&root, &fixture("bun", "list-runner.txt"));
+    let files: Vec<_> = files.iter().map(|t| (t.id.file.clone(), t.id.name.as_str())).collect();
+    assert_eq!(
+        files,
+        [
+            (Some(root.join("src/math.test.ts")), ""),
+            (Some(root.join("src/view.test.tsx")), "")
+        ],
+        "a runner's own columns and summary are no files"
+    );
+    let reports = Tool::Bun.reports(&root, &fixture("bun", "run-1.4.xml"));
+    assert_eq!(state(&reports, "math & <stuff> > adds"), State::Passed);
+    assert_eq!(state(&reports, "math & <stuff> > skipped"), State::Skipped);
+    assert_eq!(state(&reports, "math & <stuff> > inner > deep"), State::Passed);
+    assert_eq!(state(&reports, "later"), State::Skipped);
+    let failed = report(&reports, "math & <stuff> > fails \"quoted\"");
+    assert_eq!(failed.state, State::Failed);
+    assert_eq!(failed.location.as_ref().map(|l| l.line), Some(4));
+    assert_eq!(failed.failure.as_ref().map(|f| f.line), Some(4));
+    assert!(
+        failed.message.as_deref().is_some_and(|m| m.contains("Received: 1")),
+        "{failed:?}"
+    );
+    let second = report(&reports, "x");
+    assert_eq!(
+        second.failure.as_ref().map(|f| f.path.clone()),
+        Some(root.join("other_test.ts"))
+    );
+    assert_eq!(
+        second.message.as_deref(),
+        Some("boom"),
+        "the second document of the file counts too"
+    );
+}
+
+#[test]
+fn bun_runs_its_test_script_or_bun_test_itself() {
+    let root = ide_core::testing::scratch("test-bun-modes");
+    std::fs::create_dir_all(&root).unwrap();
+    let scratch = Path::new("/tmp/s");
+    let test = TestId {
+        package: String::new(),
+        file: Some(root.join("a.test.ts")),
+        name: "math > adds".into(),
+    };
+    std::fs::write(root.join("package.json"), r#"{"scripts":{"test":"bun test"}}"#).unwrap();
+    assert_eq!(tools(&root, None), [(Tool::Bun, root.to_path_buf())]);
+    let direct = Tool::Bun.run(&root, &Scope::Test(test.clone()), Some(scratch));
+    assert_eq!(direct.args[..2], ["test", "--reporter=junit"]);
+    assert!(
+        direct.args.ends_with(&["-t".into(), "^math adds$".into()]),
+        "{:?}",
+        direct.args
+    );
+    assert_eq!(direct.results.as_deref(), Some(Path::new("/tmp/s/dango-bun-junit.xml")));
+    assert_eq!(Tool::Bun.list(&root, scratch).args, ["/tmp/s/dango_bun_list.mjs"]);
+    std::fs::write(root.join("package.json"), r#"{"scripts":{"test":"bun tools/run.mjs"}}"#).unwrap();
+    let script = Tool::Bun.run(&root, &Scope::All, Some(scratch));
+    assert_eq!(script.args[..3], ["run", "test", "--reporter=junit"]);
+    assert_eq!(Tool::Bun.list(&root, scratch).args, ["run", "test", "--list"]);
+    assert!(Tool::Bun.debug(&root, &test).is_none());
+    std::fs::write(root.join("package.json"), r#"{"scripts":{"test":"node --test"}}"#).unwrap();
+    assert!(tools(&root, None).is_empty());
+}
+
+#[test]
 fn one_test_runs_and_debugs_with_its_own_filter() {
     let root = Path::new("/p");
     let rust = TestId {
@@ -278,7 +346,7 @@ fn one_test_runs_and_debugs_with_its_own_filter() {
         Tool::Cargo.run(root, &Scope::Test(rust.clone()), None).args[2..],
         ["--", "api_works", "--exact"]
     );
-    match Tool::Cargo.debug(root, &rust) {
+    match Tool::Cargo.debug(root, &rust).unwrap() {
         DebugTarget::Native { build, args } => {
             assert!(build.args.contains(&"ide-debug".to_string()) && build.args.contains(&"api".to_string()));
             assert_eq!(args, ["api_works", "--exact", "--nocapture"]);
@@ -292,7 +360,7 @@ fn one_test_runs_and_debugs_with_its_own_filter() {
     };
     let module = ide_core::testing::scratch("test-go");
     std::fs::write(module.join("go.mod"), "module example.com/m\n").unwrap();
-    match Tool::Go.debug(&module, &go) {
+    match Tool::Go.debug(&module, &go).unwrap() {
         DebugTarget::Go { package, args } => {
             assert_eq!(package, module.join("sub"));
             assert_eq!(args, ["-test.run", "^TestTable$/^case_one$"]);
@@ -305,7 +373,7 @@ fn one_test_runs_and_debugs_with_its_own_filter() {
         name: "t.py::test_a[1]".into(),
     };
     assert!(
-        matches!(Tool::Pytest.debug(root, &py), DebugTarget::PythonModule { module, args, .. }
+        matches!(Tool::Pytest.debug(root, &py).unwrap(), DebugTarget::PythonModule { module, args, .. }
         if module == "pytest" && args == ["t.py::test_a[1]"])
     );
     let js = TestId {
@@ -313,7 +381,7 @@ fn one_test_runs_and_debugs_with_its_own_filter() {
         file: Some("/p/a.test.js".into()),
         name: "math > adds".into(),
     };
-    match Tool::Jest.debug(root, &js) {
+    match Tool::Jest.debug(root, &js).unwrap() {
         DebugTarget::Node { program, args, .. } => {
             assert_eq!(program, Path::new("/p/node_modules/jest/bin/jest.js"));
             assert_eq!(args, ["--runInBand", "/p/a.test.js", "-t", "^math adds$"]);
@@ -329,10 +397,32 @@ fn the_tools_of_a_project_follow_its_files() {
     std::fs::write(root.join("Cargo.toml"), "").unwrap();
     std::fs::write(root.join("go.mod"), "module m\n").unwrap();
     std::fs::write(root.join("package.json"), r#"{"devDependencies":{"vitest":"^5"}}"#).unwrap();
-    assert_eq!(tools(&root, None), [Tool::Cargo, Tool::Go, Tool::Vitest]);
+    let found = |path: Option<&str>| tools(&root, path).into_iter().map(|(tool, _)| tool).collect::<Vec<_>>();
+    assert_eq!(found(None), [Tool::Cargo, Tool::Go, Tool::Vitest]);
     std::fs::write(root.join("bin/cargo-nextest"), "").unwrap();
     let path = root.join("bin").display().to_string();
-    assert_eq!(tools(&root, Some(&path))[0], Tool::Nextest);
+    assert_eq!(found(Some(&path))[0], Tool::Nextest);
+}
+
+#[test]
+fn a_tool_whose_files_are_in_a_subfolder_runs_there() {
+    let root = ide_core::testing::scratch("test-tools-below");
+    for folder in ["backend", "tools/gg", "frontend/node_modules/dep", "testdata/go"] {
+        std::fs::create_dir_all(root.join(folder)).unwrap();
+    }
+    std::fs::write(root.join("package.json"), "{}").unwrap();
+    std::fs::write(root.join("backend/go.mod"), "module example.com/backend\n").unwrap();
+    std::fs::write(root.join("tools/gg/go.mod"), "module example.com/gg\n").unwrap();
+    std::fs::write(root.join("testdata/go/go.mod"), "module example.com/data\n").unwrap();
+    let dep = r#"{"devDependencies":{"vitest":"^5"}}"#;
+    std::fs::write(root.join("frontend/node_modules/dep/package.json"), dep).unwrap();
+    assert_eq!(tools(&root, None), [(Tool::Go, root.join("backend"))]);
+    std::fs::write(root.join("go.mod"), "module example.com/root\n").unwrap();
+    assert_eq!(
+        tools(&root, None),
+        [(Tool::Go, root.to_path_buf())],
+        "the project's own folder comes first"
+    );
 }
 
 #[test]
@@ -344,6 +434,7 @@ fn a_run_read_in_pieces_ends_with_the_reports_of_the_whole() {
         (Tool::Pytest, "pytest", "run-9.2.jsonl"),
         (Tool::Vitest, "vitest", "run-5.1.jsonl"),
         (Tool::Jest, "jest", "run-30.5.jsonl"),
+        (Tool::Bun, "bun", "run-1.4.xml"),
     ] {
         let text = fixture(dir, name);
         let root = ide_core::testing::scratch(&format!("test-{dir}-in-pieces"));

@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Approvando vanno persi. “Invia commenti” li passa al pianificatore, che poi rivede la specifica.";
 "Ohne Kommentare freigeben" = "Approva senza commenti";
 "{},{} $" = "{},{} $";
+"Tests von {} lassen sich nicht debuggen" = "Non è possibile eseguire il debug dei test di {}";

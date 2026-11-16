@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "האישור מוותר עליהן. ״שליחת ההערות״ מעבירה אותן למתכנן, שמעדכן אחר כך את המפרט.";
 "Ohne Kommentare freigeben" = "אישור ללא ההערות";
 "{},{} $" = "{}.{} $";
+"Tests von {} lassen sich nicht debuggen" = "לא ניתן לנפות באגים בבדיקות של {}";

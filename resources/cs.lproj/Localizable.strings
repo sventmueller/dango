@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Schválením se ztratí. „Odeslat komentáře“ je předá plánovači, který pak specifikaci přepracuje.";
 "Ohne Kommentare freigeben" = "Schválit bez komentářů";
 "{},{} $" = "{},{} $";
+"Tests von {} lassen sich nicht debuggen" = "Testy nástroje {} nelze ladit";

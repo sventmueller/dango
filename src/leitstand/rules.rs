@@ -67,17 +67,26 @@ fn command(tool: Tool) -> &'static str {
         Tool::Pytest => "python3 -m pytest",
         Tool::Vitest => "npx vitest run",
         Tool::Jest => "npx jest",
+        Tool::Bun => "bun run test",
     }
 }
 
-/// The gate commands of the tools `ide-test` finds in the project (E110).
+/// The gate commands of the tools `ide-test` finds in the project (E110), each run in the tool's folder.
 fn detected(root: &Path, path: Option<&str>) -> Vec<GateCommand> {
     ide_test::tools(root, path)
         .into_iter()
-        .map(|tool| GateCommand {
-            name: tool.name().to_string(),
-            run: command(tool).to_string(),
-            classes: Vec::new(),
+        .map(|(tool, folder)| {
+            let below = folder.strip_prefix(root).unwrap_or(&folder).to_string_lossy();
+            let run = if below.is_empty() {
+                command(tool).to_string()
+            } else {
+                format!("cd '{}' && {}", below.replace('\'', r"'\''"), command(tool))
+            };
+            GateCommand {
+                name: tool.name().to_string(),
+                run,
+                classes: Vec::new(),
+            }
         })
         .collect()
 }

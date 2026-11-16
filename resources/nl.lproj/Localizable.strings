@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Goedkeuren laat ze vervallen. 'Verstuur opmerkingen' geeft ze aan de planner, die de specificatie daarna herziet.";
 "Ohne Kommentare freigeben" = "Keur goed zonder opmerkingen";
 "{},{} $" = "$ {},{}";
+"Tests von {} lassen sich nicht debuggen" = "Tests van {} kunnen niet worden gedebugd";

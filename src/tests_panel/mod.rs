@@ -12,7 +12,7 @@ use ide_test::{DebugTarget, Scope, State, TestId, Tool};
 use objc2::rc::Retained;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::NSMenuItem;
-use splat_i18n::t;
+use splat_i18n::{t, tf};
 
 use crate::editor::EditorTextView;
 use crate::window::{Panel, WindowController};
@@ -144,7 +144,11 @@ pub(crate) fn run_all(controller: &WindowController) {
 
 /// Debugs the test `id` of `tool` in the panel's window, as the Debug panel does a program (C31, F27).
 pub(crate) fn debug(panel: &TestsPanel, tool: Tool, id: &TestId) {
-    let target = tool.debug(panel.root(), id);
+    let Some(target) = tool.debug(&panel.folder(tool), id) else {
+        let text = tf("Tests von {} lassen sich nicht debuggen", &[tool.name()]);
+        ide_ui_common::alert::warn(panel.mtm(), &text, "");
+        return;
+    };
     let program = match target {
         DebugTarget::Native { build, args } => {
             let target = id.package.clone();

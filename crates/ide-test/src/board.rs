@@ -211,11 +211,16 @@ impl Board {
     }
 
     /// `tool` reported `reports`: known tests take them, tests seen first in a run join the list and take the place
-    /// of a test the sources showed by the same name.
+    /// of a test the sources showed by the same name. A skip outside the scope of the tool's last run is the run's
+    /// filter leaving the test out, as bun reports it, and changes nothing a test already showed.
     pub fn reported(&mut self, tool: Tool, reports: Vec<Report>) {
         if reports.is_empty() {
             return;
         }
+        let narrowed = match &self.last_run {
+            Some((last, scope)) if *last == tool && *scope != Scope::All => Some(scope.clone()),
+            _ => None,
+        };
         if let Some(heard) = self.sweeping.get_mut(&tool) {
             *heard = true;
         }
@@ -223,18 +228,26 @@ impl Board {
         let mut index = self.index.take().unwrap_or_else(|| Index::of(&self.entries));
         let mut dropped: HashSet<usize> = HashSet::new();
         let mut placeholders: HashSet<Option<PathBuf>> = HashSet::new();
-        for report in reports {
+        for mut report in reports {
             if report.id.name.is_empty() {
                 continue;
             }
+            let left_out =
+                report.state == State::Skipped && narrowed.as_ref().is_some_and(|scope| !in_scope(&report.id, scope));
             let key = (tool, report.id.package.clone(), report.id.name.clone());
             let found = index
                 .by_name
                 .get(&key)
                 .and_then(|at| at.iter().copied().find(|i| same(&self.entries[*i].test.id, &report.id)));
             if let Some(i) = found {
-                self.entries[i].take(report);
+                if !left_out {
+                    self.entries[i].take(report);
+                }
                 continue;
+            }
+            if left_out {
+                report.state = State::NotRun;
+                report.message = None;
             }
             if index.blanks.contains(&tool) {
                 placeholders.insert(report.id.file.clone());
@@ -735,6 +748,26 @@ mod tests {
                 ("TestA/two", State::Passed),
             ]
         );
+    }
+
+    #[test]
+    fn a_skip_the_filter_of_a_narrower_run_caused_changes_nothing() {
+        let mut board = Board::default();
+        let passed = |name: &str| {
+            let mut found = report("", name, State::Passed);
+            found.id.file = Some(PathBuf::from("/p/a.test.ts"));
+            found
+        };
+        board.reported(Tool::Bun, vec![passed("adds"), passed("subtracts")]);
+        let target = board.entries()[0].test.id.clone();
+        board.started(Tool::Bun, &Scope::Test(target));
+        let mut other = passed("subtracts");
+        other.state = State::Skipped;
+        let mut unknown = passed("divides");
+        unknown.state = State::Skipped;
+        board.reported(Tool::Bun, vec![passed("adds"), other, unknown]);
+        let states: Vec<State> = board.entries().iter().map(|e| e.state).collect();
+        assert_eq!(states, [State::Passed, State::Passed, State::NotRun]);
     }
 
     #[test]

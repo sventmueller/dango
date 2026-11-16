@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "承認するとこれらは破棄されます。“コメントを送信”でプランナーに渡すと、プランナーが仕様を修正します。";
 "Ohne Kommentare freigeben" = "コメントなしで承認";
 "{},{} $" = "${}.{}";
+"Tests von {} lassen sich nicht debuggen" = "{} のテストはデバッグできません";

@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "核准會捨棄這些註解。「傳送註解」會將它們交給規劃者，由其修訂規格。";
 "Ohne Kommentare freigeben" = "不含註解直接核准";
 "{},{} $" = "${}.{}";
+"Tests von {} lassen sich nicht debuggen" = "無法除錯 {} 的測試";

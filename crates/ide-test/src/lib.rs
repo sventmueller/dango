@@ -1,5 +1,5 @@
 //! Finding, running and debugging tests (E110): one adapter per tool — `cargo test`, cargo-nextest, Go, pytest,
-//! Vitest and Jest — that says which commands to run and reads what they print. A test's identity (package, file,
+//! Vitest, Jest and `bun test` — that says which commands to run and reads what they print. A test's identity (package, file,
 //! name with its parameters) is kept apart from where it is in the source, which a test may not have. Only stable
 //! outputs are read, but for nextest's libtest JSON, which nextest still calls experimental; the crate starts no
 //! processes itself, the app runs the commands through its supervisor. A run's output that grows is read with a
@@ -19,6 +19,7 @@
 #![warn(missing_docs)]
 
 pub mod board;
+mod bun;
 mod cargo;
 mod go;
 mod js;
@@ -46,6 +47,8 @@ pub enum Tool {
     Vitest,
     /// Jest with Dango's reporter.
     Jest,
+    /// `bun test` with its JUnit report, directly or through the project's own runner.
+    Bun,
 }
 
 /// Who a test is, apart from where its source is.
@@ -178,9 +181,63 @@ pub enum DebugTarget {
 /// Dango's pytest plugin, which reports collection, starts and results as JSON lines.
 pub(crate) const PYTEST_PLUGIN: &str = include_str!("dango_pytest.py");
 
-/// The tools whose tests the project at `root` has, the ones found on `path` taken into account: cargo-nextest
-/// in place of `cargo test` where it is installed.
-pub fn tools(root: &Path, path: Option<&str>) -> Vec<Tool> {
+/// How deep below the project's folder a tool's own folder is looked for, as in `backend/` or `tools/gg/`.
+const TOOL_DEPTH: usize = 2;
+
+/// Folders that hold no project of their own: dependencies, build output and test data.
+const NOT_PROJECTS: [&str; 7] = [
+    "node_modules",
+    "target",
+    "vendor",
+    "dist",
+    "build",
+    "testdata",
+    "fixtures",
+];
+
+/// The tools whose tests the project at `root` has, each with the folder its commands run in, the ones found on
+/// `path` taken into account: cargo-nextest in place of `cargo test` where it is installed. A tool whose files are
+/// not in `root` itself is looked for in its subfolders, the shallowest first, so a repository with its Go module
+/// in `backend/` has its tests; a tool runs in one folder only.
+pub fn tools(root: &Path, path: Option<&str>) -> Vec<(Tool, PathBuf)> {
+    let mut out: Vec<(Tool, PathBuf)> = Vec::new();
+    let mut level = vec![root.to_path_buf()];
+    for depth in 0..=TOOL_DEPTH {
+        for folder in &level {
+            for tool in tools_in(folder, path) {
+                if !out.iter().any(|(known, _)| *known == tool) {
+                    out.push((tool, folder.clone()));
+                }
+            }
+        }
+        if depth < TOOL_DEPTH {
+            level = level.iter().flat_map(|folder| subfolders(folder)).collect();
+        }
+    }
+    out
+}
+
+/// The folders in `folder` that may hold a project, in name order.
+fn subfolders(folder: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = std::fs::read_dir(folder) else {
+        return Vec::new();
+    };
+    let mut out: Vec<PathBuf> = entries
+        .flatten()
+        .filter(|e| e.file_type().is_ok_and(|t| t.is_dir()))
+        .filter(|e| {
+            let name = e.file_name();
+            let name = name.to_string_lossy();
+            !name.starts_with('.') && !NOT_PROJECTS.contains(&name.as_ref())
+        })
+        .map(|e| e.path())
+        .collect();
+    out.sort();
+    out
+}
+
+/// The tools whose files are in `folder` itself.
+fn tools_in(root: &Path, path: Option<&str>) -> Vec<Tool> {
     let on_path = |name: &str| path.is_some_and(|p| p.split(':').any(|d| Path::new(d).join(name).is_file()));
     let mut out = Vec::new();
     if root.join("Cargo.toml").is_file() {
@@ -206,6 +263,9 @@ pub fn tools(root: &Path, path: Option<&str>) -> Vec<Tool> {
     if package.contains("\"jest\"") {
         out.push(Tool::Jest);
     }
+    if bun::found(root) {
+        out.push(Tool::Bun);
+    }
     out
 }
 
@@ -219,13 +279,14 @@ impl Tool {
             Tool::Pytest => "pytest",
             Tool::Vitest => "Vitest",
             Tool::Jest => "Jest",
+            Tool::Bun => "bun test",
         }
     }
 
     /// Whether a run reports each test as it starts; without, the panel shows the whole run as running. Every
     /// tool's output reads as the reports of the tests that ended so far.
     pub(crate) fn reports_starts(self) -> bool {
-        !matches!(self, Tool::Cargo)
+        !matches!(self, Tool::Cargo | Tool::Bun)
     }
 
     /// Whether listing builds the project, which `cargo test -- --list` and `cargo nextest list` do for every test
@@ -240,7 +301,7 @@ impl Tool {
     pub fn from_source(self, root: &Path) -> Vec<Test> {
         match self {
             Tool::Cargo | Tool::Nextest => source::tests(self, root),
-            Tool::Go | Tool::Pytest | Tool::Vitest | Tool::Jest => Vec::new(),
+            Tool::Go | Tool::Pytest | Tool::Vitest | Tool::Jest | Tool::Bun => Vec::new(),
         }
     }
 
@@ -253,6 +314,7 @@ impl Tool {
             Tool::Pytest => pytest::list(root, scratch),
             Tool::Vitest => js::vitest_list(root),
             Tool::Jest => js::jest_list(root),
+            Tool::Bun => bun::list(root, scratch),
         }
     }
 
@@ -265,6 +327,7 @@ impl Tool {
             Tool::Pytest => pytest::tests(root, output),
             Tool::Vitest => js::vitest_tests(output),
             Tool::Jest => js::jest_tests(output),
+            Tool::Bun => bun::tests(root, output),
         }
     }
 
@@ -278,6 +341,7 @@ impl Tool {
             Tool::Pytest => pytest::run(root, scope, &scratch),
             Tool::Vitest => js::vitest_run(root, scope, &scratch),
             Tool::Jest => js::jest_run(root, scope, &scratch),
+            Tool::Bun => bun::run(root, scope, &scratch),
         }
     }
 
@@ -290,15 +354,17 @@ impl Tool {
         reading.reports()
     }
 
-    /// How to debug `test` of the project at `root`.
-    pub fn debug(self, root: &Path, test: &TestId) -> DebugTarget {
-        match self {
+    /// How to debug `test` of the project at `root`; `None` for bun, whose inspector speaks WebKit's protocol,
+    /// which the Node debug adapter does not.
+    pub fn debug(self, root: &Path, test: &TestId) -> Option<DebugTarget> {
+        Some(match self {
             Tool::Cargo | Tool::Nextest => cargo::debug(root, test),
             Tool::Go => go::debug(root, test),
             Tool::Pytest => pytest::debug(root, test),
             Tool::Vitest => js::vitest_debug(root, test),
             Tool::Jest => js::jest_debug(root, test),
-        }
+            Tool::Bun => return None,
+        })
     }
 }
 

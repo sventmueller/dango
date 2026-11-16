@@ -2357,3 +2357,4 @@
 "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Ao aprovar, eles se perdem. “Enviar Comentários” os entrega ao planejador, que então revisa a especificação.";
 "Ohne Kommentare freigeben" = "Aprovar sem Comentários";
 "{},{} $" = "US$ {},{}";
+"Tests von {} lassen sich nicht debuggen" = "Os testes do {} não podem ser depurados";

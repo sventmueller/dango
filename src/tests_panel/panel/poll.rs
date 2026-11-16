@@ -104,13 +104,20 @@ impl TestsPanel {
 
     /// Reads the runs again on a worker: what each said since the last poll, a listing once it ended.
     fn poll(&self, listing: bool) {
-        let root = self.root().to_path_buf();
+        let folders: Vec<PathBuf> = self
+            .ivars()
+            .runs
+            .borrow()
+            .iter()
+            .map(|(tool, _)| self.folder(*tool))
+            .collect();
         let looks: Vec<run::Look> = self
             .ivars()
             .runs
             .borrow_mut()
             .iter_mut()
-            .filter_map(|(tool, running)| running.look(*tool, &root))
+            .zip(&folders)
+            .filter_map(|((tool, running), folder)| running.look(*tool, folder))
             .collect();
         let id = self.id();
         let queued = ide_core::lane::WORK.ask(

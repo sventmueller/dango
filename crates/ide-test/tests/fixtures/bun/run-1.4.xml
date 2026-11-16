@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="bun test" tests="6" assertions="2" failures="1" skipped="2" time="0.024099">
+  <testsuite name="math.test.ts" file="math.test.ts" tests="6" assertions="2" failures="1" skipped="2" time="0.009921">
+    <testsuite name="math &amp; &lt;stuff&gt;" file="math.test.ts" line="2" tests="4" assertions="2" failures="1" skipped="1" time="0.003">
+      <testcase name="adds" classname="math &amp; &lt;stuff&gt;" time="0.000471" file="math.test.ts" line="3" assertions="1" />
+      <testcase name="fails &quot;quoted&quot;" classname="math &amp; &lt;stuff&gt;" time="0.003108" file="math.test.ts" line="4" assertions="1">
+        <failure type="AssertionError" message="expect(received).toBe(expected)&#10;&#10;Expected: 2&#10;Received: 1&#10;">AssertionError: expect(received).toBe(expected)&#10;&#10;Expected: 2&#10;Received: 1&#10;&#10;      at math.test.ts:4:46&#10;</failure>
+      </testcase>
+      <testcase name="skipped" classname="math &amp; &lt;stuff&gt;" time="0" file="math.test.ts" line="5" assertions="0">
+        <skipped />
+      </testcase>
+      <testsuite name="inner" file="math.test.ts" line="6" tests="1" assertions="0" failures="0" skipped="0" time="0">
+        <testcase name="deep" classname="inner &gt; math &amp; &lt;stuff&gt;" time="0.000015" file="math.test.ts" line="6" assertions="0" />
+      </testsuite>
+    </testsuite>
+    <testcase name="top" classname="" time="0.000002" file="math.test.ts" line="8" assertions="0" />
+    <testcase name="later" classname="" time="0" file="math.test.ts" line="9" assertions="0">
+      <skipped message="TODO" />
+    </testcase>
+  </testsuite>
+</testsuites>
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="bun test" tests="1" assertions="0" failures="1" skipped="0" time="0.004497">
+  <testsuite name="other_test.ts" file="other_test.ts" tests="1" assertions="0" failures="1" skipped="0" time="0.001104">
+    <testcase name="x" classname="" time="0.000194" file="other_test.ts" line="2" assertions="0">
+      <failure type="Error" message="boom">Error: boom&#10;      at other_test.ts:2:41&#10;</failure>
+    </testcase>
+  </testsuite>
+</testsuites>
