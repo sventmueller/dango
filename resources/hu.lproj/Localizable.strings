@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Ellenőrző parancs parancs nélkül";
 "Zwei Prüfbefehle heißen „{}“" = "Két ellenőrző parancs neve „{}”";
 "„{}“ liegt außerhalb des Repositorys" = "„{}” a tárolón kívül van";
+"„{}“ ist das ganze Repository" = "„{}” a teljes tároló";
 "„{}“ liegt im Repository" = "„{}” a tárolóban van";
 "„{}“ ist kein gültiger Variablenname" = "„{}” nem érvényes változónév";
 "{} (Zeile {}): {}" = "{} ({}. sor): {}";

@@ -357,9 +357,18 @@ impl Leitstand {
         })
     }
 
-    /// Starts the ticks while an order runs (E168); they stop by themselves once none does.
+    /// Whether an order of any folder waits for a new day, which only the ticks bring (E168).
+    fn any_waits_for_day(&self) -> bool {
+        self.folders
+            .borrow()
+            .values()
+            .any(|folder| folder.factory.waits_for_day())
+    }
+
+    /// Starts the ticks while an order runs or waits for a new day's budget (E168); they stop by themselves once none
+    /// does.
     fn keep_ticking(&self) {
-        if self.shared.borrow().ticking || !self.any_running() {
+        if self.shared.borrow().ticking || !(self.any_running() || self.any_waits_for_day()) {
             return;
         }
         self.shared.borrow_mut().ticking = true;
@@ -377,6 +386,7 @@ impl Leitstand {
             return;
         }
         power::poll_battery(self, cx);
+        self.roll_day(cx);
         let roots: Vec<PathBuf> = self.folders.borrow().keys().cloned().collect();
         for root in &roots {
             self.input(cx, root, InputKind::Tick);

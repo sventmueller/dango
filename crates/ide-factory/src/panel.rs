@@ -397,7 +397,11 @@ impl Fleet {
             failed,
             parallel: factory.parallel_limit(),
             quotas,
-            day_spent: *factory.day().total(),
+            day_spent: if factory.day().current(now.wall) {
+                *factory.day().total()
+            } else {
+                Spend::default()
+            },
             day_budget: factory.rules().budgets().day().clone(),
             done_today,
             median_wait_ms,

@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Шлюз без команды";
 "Zwei Prüfbefehle heißen „{}“" = "Два шлюза называются «{}»";
 "„{}“ liegt außerhalb des Repositorys" = "«{}» находится вне репозитория";
+"„{}“ ist das ganze Repository" = "«{}» — это весь репозиторий";
 "„{}“ liegt im Repository" = "«{}» находится внутри репозитория";
 "„{}“ ist kein gültiger Variablenname" = "«{}» — недопустимое имя переменной";
 "{} (Zeile {}): {}" = "{} (строка {}): {}";

@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Cổng kiểm tra không có lệnh";
 "Zwei Prüfbefehle heißen „{}“" = "Có hai cổng kiểm tra cùng tên “{}”";
 "„{}“ liegt außerhalb des Repositorys" = "“{}” nằm ngoài kho lưu trữ";
+"„{}“ ist das ganze Repository" = "“{}” là toàn bộ kho lưu trữ";
 "„{}“ liegt im Repository" = "“{}” nằm trong kho lưu trữ";
 "„{}“ ist kein gültiger Variablenname" = "“{}” không phải là tên biến hợp lệ";
 "{} (Zeile {}): {}" = "{} (dòng {}): {}";

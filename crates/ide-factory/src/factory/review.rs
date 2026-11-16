@@ -26,6 +26,37 @@ impl Factory {
         steps
     }
 
+    /// The steps of the review row for `order` that are done; a gate command's only while a record of it is of the
+    /// command the current rules give it, so a changed gate set runs again what changed (E163).
+    fn done_steps(&self, order: &Order) -> Vec<GateStep> {
+        let gates = self.rules.gates_for(order.risk());
+        let mut done: Vec<GateStep> = order
+            .gates()
+            .iter()
+            .filter(|r| !matches!(r.step, GateStep::Command(_)))
+            .map(|r| r.step)
+            .collect();
+        done.extend(
+            gates
+                .iter()
+                .enumerate()
+                .filter(|(_, gate)| order.gates().iter().any(|r| ran(r, gate)))
+                .map(|(index, _)| GateStep::Command(index)),
+        );
+        done
+    }
+
+    /// The records of the review row that hold under the current rules, for the evidence.
+    fn current_records(&self, order: &Order) -> Vec<GateRecord> {
+        let gates = self.rules.gates_for(order.risk());
+        order
+            .gates()
+            .iter()
+            .filter(|r| !matches!(r.step, GateStep::Command(_)) || gates.iter().any(|g| ran(r, g)))
+            .cloned()
+            .collect()
+    }
+
     fn head(order: &Order) -> (String, String) {
         order.head().map_or_else(
             || (order.base().commit.clone(), String::new()),
@@ -60,7 +91,7 @@ impl Factory {
             });
             return;
         }
-        let done: Vec<GateStep> = order.gates().iter().map(|g| g.step).collect();
+        let done = self.done_steps(order);
         let next = self.steps(order).into_iter().find(|step| !done.contains(step));
         match next {
             None => self.seal_or_read_manifest(cx, id),
@@ -170,6 +201,7 @@ impl Factory {
         let record = GateRecord {
             step,
             name: name.to_string(),
+            run: None,
             failure,
             command,
             scan,
@@ -244,35 +276,42 @@ impl Factory {
         let scratch = self.scratch(id);
         scratch.gate_started = Some(cx.now.mono);
         scratch.gate_stopping = false;
+        scratch.gate_running = Some(gate.clone());
         cx.effect(effect);
     }
 
-    /// A gate command ended.
+    /// A gate command ended; a failure of a gate the rules dropped meanwhile sends nothing back to the builder.
     pub(super) fn gate_done(&mut self, cx: &mut Cx, id: &OrderId, index: usize, outcome: CommandOutcome) {
         let Some(order) = self.orders.get(id) else { return };
         if *order.phase() != (Phase::Gate { index }) {
             return;
         }
-        let name = self
-            .rules
-            .gates_for(order.risk())
-            .get(index)
+        let gates = self.rules.gates_for(order.risk());
+        let started = self.scratch.get(id).and_then(|s| s.gate_running.clone());
+        let gate = started.or_else(|| gates.get(index).cloned());
+        let name = gate
+            .as_ref()
             .map_or_else(|| format!("gate {index}"), |g| g.name.clone());
+        let current = gate
+            .as_ref()
+            .is_some_and(|g| gates.iter().any(|c| c.name == g.name && c.run == g.run));
         let failure = judge_command(&outcome).err();
         let excerpt = outcome.excerpt.clone();
-        self.record(
-            cx,
-            id,
-            GateStep::Command(index),
-            &name,
-            failure.clone(),
-            Some(outcome),
-            None,
-            false,
-        );
-        self.scratch(id).gate_started = None;
+        let record = GateRecord {
+            step: GateStep::Command(index),
+            name: name.clone(),
+            run: gate.map(|g| g.run),
+            failure: failure.clone(),
+            command: Some(outcome),
+            scan: None,
+            skipped: false,
+        };
+        self.emit(cx, id, Event::Gate { record });
+        let scratch = self.scratch(id);
+        scratch.gate_started = None;
+        scratch.gate_running = None;
         self.set_phase(cx, id, Phase::Idle);
-        match failure {
+        match failure.filter(|_| current) {
             Some(failure) => {
                 let log = untrusted("the gate's log", &excerpt);
                 self.rework(cx, id, &format!("Gate `{name}` failed: {failure:?}\n\n{log}"));
@@ -411,11 +450,11 @@ impl Factory {
         }
         let station = order.station();
         self.set_phase(cx, id, Phase::Idle);
+        self.scratch(id).manifest = Some(manifest);
         if station == Station::TakeOver {
-            self.scratch(id).manifest = Some(manifest);
             self.take_over_next(cx, id);
         } else {
-            self.seal(cx, id, manifest);
+            self.review_next(cx, id);
         }
     }
 
@@ -432,7 +471,7 @@ impl Factory {
 
     fn seal(&mut self, cx: &mut Cx, id: &OrderId, manifest: Manifest) {
         let Some(order) = self.orders.get(id) else { return };
-        let (commit, _) = Factory::head(order);
+        let (commit, tree) = Factory::head(order);
         let credentials = manifest.entries().iter().any(|e| match e {
             ManifestEntry::Copied { path, .. } => holds_credentials(path),
             ManifestEntry::Dependency { .. } => false,
@@ -457,14 +496,14 @@ impl Factory {
             deviations.push(Deviation::CredentialsCopied);
         }
         let evidence = Evidence::new(bound, &commit, deviations).with_details(
-            order.gates().to_vec(),
+            self.current_records(order),
             order.review_log().to_vec(),
             order.costs(),
             order.provenance().to_vec(),
             order.metering(),
         );
         let fingerprint = evidence.fingerprint().to_string();
-        let closes = order.partial() || order.kept();
+        let closes = (order.partial() && order.partial_tree() == Some(tree.as_str())) || order.kept();
         self.emit(
             cx,
             id,
@@ -487,6 +526,14 @@ impl Factory {
         }
         self.advance(cx, id);
     }
+}
+
+/// Whether `record` is a result of `gate`: the same name and command; a record from before commands were recorded
+/// goes by its name.
+fn ran(record: &GateRecord, gate: &crate::workflow::GateCommand) -> bool {
+    matches!(record.step, GateStep::Command(_))
+        && record.name == gate.name
+        && record.run.as_deref().is_none_or(|run| run == gate.run)
 }
 
 /// The message of the commit after a turn; role, agent and model stand in the log (E163).

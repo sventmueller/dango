@@ -141,6 +141,14 @@ fn left_behind(copy: &ide_git::Repository) -> Vec<String> {
     }
 }
 
+/// The folder for a gate's pictures as the workflow file names it, a leading `~/` standing for `home` (C69).
+pub(super) fn images_folder(images: &str, home: &Path) -> PathBuf {
+    match images.strip_prefix("~/") {
+        Some(rest) => home.join(rest),
+        None => PathBuf::from(images),
+    }
+}
+
 /// The pictures a gate wrote into its folder.
 fn pictures(folder: &Path) -> Vec<String> {
     let Ok(entries) = std::fs::read_dir(folder) else {
@@ -203,6 +211,16 @@ pub(super) fn count_tests(output: &str) -> Option<TestCount> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_pictures_folder_under_the_home_folder_is_expanded() {
+        let home = Path::new("/Users/me");
+        assert_eq!(
+            images_folder("~/gate-pictures/o1/5", home),
+            PathBuf::from("/Users/me/gate-pictures/o1/5")
+        );
+        assert_eq!(images_folder("/tmp/pictures", home), PathBuf::from("/tmp/pictures"));
+    }
 
     #[test]
     fn the_summaries_of_the_usual_tools_are_counted() {

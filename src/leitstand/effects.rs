@@ -443,7 +443,7 @@ impl Leitstand {
                 env: ide_process::order_env::for_orders(&login, &[]),
                 common_dir: copy.as_ref().map(|c| c.common_dir().to_path_buf()),
                 dependencies: siblings::targets(&root),
-                images: images.map(PathBuf::from),
+                images: images.map(|dir| gates::images_folder(&dir, &ide_core::paths::home())),
                 worktree,
                 folder,
                 run,
@@ -478,10 +478,32 @@ impl Leitstand {
     fn add_to_day(&self, cx: &Rc<AppContext>, service: Option<&str>, spend: &Spend) {
         let day = {
             let mut shared = self.shared.borrow_mut();
-            let (today, _) = super::clock::local_day(self.clock.now().wall);
+            shared.day = super::clock::today(&shared.day, self.clock.now().wall);
+            let today = shared.day.day().to_string();
             shared.day.add(&today, service, spend);
             shared.day.clone()
         };
+        self.keep_day(cx, day);
+    }
+
+    /// Starts the daily account afresh once its day is over, and tells every folder, even while nothing spends: orders
+    /// paused for yesterday's budget go on (E168).
+    pub(super) fn roll_day(&self, cx: &Rc<AppContext>) {
+        let rolled = {
+            let mut shared = self.shared.borrow_mut();
+            let day = super::clock::today(&shared.day, self.clock.now().wall);
+            (day != shared.day).then(|| {
+                shared.day = day.clone();
+                day
+            })
+        };
+        if let Some(day) = rolled {
+            self.keep_day(cx, day);
+        }
+    }
+
+    /// Keeps `day` as the daily account and hands it to every folder.
+    fn keep_day(&self, cx: &Rc<AppContext>, day: ide_factory::budget::DailyAccount) {
         let kept = day.clone();
         let queued = ide_core::lane::DISK.try_run(move || store::save_day(&store::base(), &kept));
         if queued.is_err() {
@@ -527,10 +549,7 @@ fn prepared(
     siblings::link(root, &tree.path);
     let mut copied = Vec::new();
     for path in copy {
-        let target = tree.path.join(path);
-        if !target.exists()
-            && let Err(error) = freeze::clone(&root.join(path), &target)
-        {
+        if let Err(error) = freeze::copy_listed(root, &tree.path, path, copy) {
             return git::failed(&error);
         }
         copied.push(ManifestEntry::Copied {

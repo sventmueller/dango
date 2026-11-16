@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Provjera bez naredbe";
 "Zwei Prüfbefehle heißen „{}“" = "Dvije provjere zovu se “{}”";
 "„{}“ liegt außerhalb des Repositorys" = "“{}” se nalazi izvan repozitorija";
+"„{}“ ist das ganze Repository" = "“{}” je cijeli repozitorij";
 "„{}“ liegt im Repository" = "“{}” se nalazi u repozitoriju";
 "„{}“ ist kein gültiger Variablenname" = "“{}” nije valjani naziv varijable";
 "{} (Zeile {}): {}" = "{} (redak {}): {}";

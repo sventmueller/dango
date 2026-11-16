@@ -2206,6 +2206,7 @@
 "Prüfbefehl ohne Befehl" = "Gate without a command";
 "Zwei Prüfbefehle heißen „{}“" = "Two gates are called “{}”";
 "„{}“ liegt außerhalb des Repositorys" = "“{}” lies outside the repository";
+"„{}“ ist das ganze Repository" = "“{}” is the whole repository";
 "„{}“ liegt im Repository" = "“{}” lies inside the repository";
 "„{}“ ist kein gültiger Variablenname" = "“{}” is not a valid variable name";
 "{} (Zeile {}): {}" = "{} (line {}): {}";

@@ -52,6 +52,7 @@ fn accept_as_change(app: &mut App, id: &OrderId) {
     app.send(InputKind::Publish {
         order: id.clone(),
         fingerprint,
+        rejected: Vec::new(),
         texts: texts(),
     });
     app.settle();
@@ -144,6 +145,7 @@ fn accepting_as_a_merge_request_scans_pushes_opens_and_comments_the_issue() {
     app.send(InputKind::Publish {
         order: id.clone(),
         fingerprint: None,
+        rejected: Vec::new(),
         texts: texts(),
     });
     assert!(
@@ -169,6 +171,7 @@ fn an_order_without_an_issue_is_published_after_keeping_its_branch_and_gets_no_c
     app.send(InputKind::KeepBranch {
         order: id.clone(),
         fingerprint,
+        rejected: Vec::new(),
     });
     app.settle();
     assert_eq!(app.station(&id), Station::Done);
@@ -180,6 +183,7 @@ fn an_order_without_an_issue_is_published_after_keeping_its_branch_and_gets_no_c
     app.send(InputKind::Publish {
         order: id.clone(),
         fingerprint: None,
+        rejected: Vec::new(),
         texts: texts(),
     });
     scanned(&mut app, &id, SecretScan::Clean);
@@ -242,6 +246,7 @@ fn a_failed_step_names_its_reason_and_a_retry_goes_on_where_it_stopped() {
     app.send(InputKind::Publish {
         order: id.clone(),
         fingerprint: None,
+        rejected: Vec::new(),
         texts: texts(),
     });
     assert_eq!(app.get(&id).publication().unwrap().failure(), None);
@@ -294,6 +299,7 @@ fn a_restart_verifies_a_begun_step_and_sends_nothing_until_the_next_click() {
     next.send(InputKind::Publish {
         order: id.clone(),
         fingerprint: None,
+        rejected: Vec::new(),
         texts: texts(),
     });
     scanned(&mut next, &id, SecretScan::Clean);
@@ -309,6 +315,7 @@ fn publishing_waits_for_g2_and_a_kept_branch() {
     app.send(InputKind::Publish {
         order: id.clone(),
         fingerprint: None,
+        rejected: Vec::new(),
         texts: texts(),
     });
     assert!(app.refusals.iter().any(|r| r.why == Refused::NotNow));
@@ -318,7 +325,87 @@ fn publishing_waits_for_g2_and_a_kept_branch() {
     app.send(InputKind::Publish {
         order: id.clone(),
         fingerprint: None,
+        rejected: Vec::new(),
         texts: texts(),
     });
     assert_eq!(app.asked("scan_outgoing"), 0, "a taken-over order is not published");
+}
+
+fn section() -> Vec<ide_factory::HunkId> {
+    vec![ide_factory::HunkId("src/lib.rs#2".into())]
+}
+
+#[test]
+fn keeping_the_branch_with_a_section_rejected_reviews_what_is_left_first() {
+    let mut app = app();
+    let id = app.order("o1");
+    app.settle();
+    let fingerprint = app.fingerprint(&id);
+    app.send(InputKind::KeepBranch {
+        order: id.clone(),
+        fingerprint: fingerprint.clone(),
+        rejected: section(),
+    });
+    app.settle();
+    assert_eq!(app.station(&id), Station::Done);
+    assert!(app.get(&id).branch_kept() && !app.get(&id).taken_over());
+    assert_eq!(app.asked("reject_hunks"), 1);
+    assert_eq!(app.asked("run_gate"), 2, "the gates ran for what is left");
+    let sealed = app.get(&id).evidence().unwrap().fingerprint().to_string();
+    assert_ne!(sealed, fingerprint);
+    assert_eq!(app.get(&id).accepted(), Some(sealed.as_str()));
+}
+
+#[test]
+fn accepting_as_a_merge_request_with_a_section_rejected_publishes_what_is_left() {
+    let mut app = app();
+    let id = app.order("o1");
+    app.settle();
+    let fingerprint = Some(app.fingerprint(&id));
+    app.send(InputKind::Publish {
+        order: id.clone(),
+        fingerprint,
+        rejected: section(),
+        texts: texts(),
+    });
+    app.settle();
+    assert_eq!(app.station(&id), Station::Done);
+    assert_eq!(app.asked("reject_hunks"), 1);
+    let accepted = app.get(&id).evidence().unwrap().commit().to_string();
+    scanned(&mut app, &id, SecretScan::Clean);
+    let Some(Effect::Push { commit, .. }) = app.take("push") else {
+        panic!("no push");
+    };
+    assert_eq!(commit, accepted, "the commit without the rejected section goes out");
+}
+
+#[test]
+fn a_partial_acceptance_voided_before_it_closes_drops_keeping_and_publishing() {
+    let mut app = app();
+    let id = app.order("o1");
+    app.settle();
+    let fingerprint = Some(app.fingerprint(&id));
+    app.hold.insert("run_gate");
+    app.send(InputKind::Publish {
+        order: id.clone(),
+        fingerprint,
+        rejected: section(),
+        texts: texts(),
+    });
+    app.settle();
+    assert!(app.get(&id).branch_kept() && app.get(&id).publication().is_some());
+    app.pending.clear();
+    app.hold.remove("run_gate");
+    app.send(InputKind::BackToBuilder(id.clone(), "Keep the header.".into()));
+    app.settle();
+    assert!(!app.get(&id).branch_kept() && app.get(&id).publication().is_none());
+    assert_eq!(app.get(&id).accepted(), None);
+    app.accept(&id);
+    app.settle();
+    assert_eq!(app.station(&id), Station::Done);
+    assert!(
+        app.get(&id).taken_over(),
+        "the plain G2 that followed takes the order over"
+    );
+    assert_eq!(app.asked("scan_outgoing"), 0);
 }

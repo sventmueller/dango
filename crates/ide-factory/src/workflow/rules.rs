@@ -99,13 +99,21 @@ const CREDENTIAL_NAMES: &[&str] = &[
 ];
 const CREDENTIAL_ENDINGS: &[&str] = &[".pem", ".key", ".p12", ".pfx", ".keychain", ".keychain-db"];
 
-/// Whether `path` looks like a file with credentials.
+/// Whether `path` looks like a file with credentials, or lies in a folder named like one.
 pub fn holds_credentials(path: &str) -> bool {
-    let name = path.trim_end_matches('/').rsplit('/').next().unwrap_or(path);
-    CREDENTIAL_NAMES
-        .iter()
-        .any(|known| name == *known || name.starts_with(&format!("{known}.")))
-        || CREDENTIAL_ENDINGS.iter().any(|ending| name.ends_with(ending))
+    path.split('/').any(|name| {
+        CREDENTIAL_NAMES
+            .iter()
+            .any(|known| name == *known || name.starts_with(&format!("{known}.")))
+            || CREDENTIAL_ENDINGS.iter().any(|ending| name.ends_with(ending))
+    })
+}
+
+/// Whether the file at `path`, found inside the listed folder `listed` of `copy`, is copied with it: a file with
+/// credentials only when the folder or the file is listed on its own, which needs its confirmation (C50).
+pub fn copies_along(copy: &[String], listed: &str, path: &str) -> bool {
+    let named = |p: &str| copy.iter().any(|c| c.trim_end_matches('/') == p.trim_end_matches('/'));
+    !holds_credentials(path) || (holds_credentials(listed) && named(listed)) || named(path)
 }
 
 /// What gates and setup run: the set whose hash the user confirms (E190).
@@ -116,6 +124,8 @@ struct GateSet<'a> {
     setup: Option<&'a str>,
     network: &'a [String],
     sockets: &'a [String],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    images: Option<&'a str>,
 }
 
 /// The effective rule set of a project.
@@ -302,6 +312,7 @@ impl Rules {
             setup: self.setup.as_deref(),
             network: &self.network,
             sockets: &self.sockets,
+            images: self.images.as_deref(),
         })
     }
 
@@ -394,7 +405,8 @@ impl Rules {
         &self.gate_env
     }
 
-    /// The folder for gate pictures.
+    /// The folder for gate pictures, which gates may write to; a leading `~/` stands for the user's home folder, which
+    /// the app puts in.
     pub fn images(&self) -> Option<&str> {
         self.images.as_deref()
     }

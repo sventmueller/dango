@@ -209,7 +209,8 @@ impl Leitstand {
         self.refresh_metrics(&root);
         self.keep_recurring();
         let (day, quotas) = {
-            let shared = self.shared.borrow();
+            let mut shared = self.shared.borrow_mut();
+            shared.day = super::clock::today(&shared.day, self.clock.now().wall);
             (
                 shared.day.clone(),
                 shared.quotas.observations().cloned().collect::<Vec<_>>(),

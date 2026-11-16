@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "コマンドのないゲート";
 "Zwei Prüfbefehle heißen „{}“" = "“{}”という名前のゲートが2つあります";
 "„{}“ liegt außerhalb des Repositorys" = "“{}”はリポジトリの外にあります";
+"„{}“ ist das ganze Repository" = "“{}”はリポジトリ全体です";
 "„{}“ liegt im Repository" = "“{}”はリポジトリ内にあります";
 "„{}“ ist kein gültiger Variablenname" = "“{}”は有効な変数名ではありません";
 "{} (Zeile {}): {}" = "{}（{}行目）: {}";

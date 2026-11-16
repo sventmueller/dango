@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Comandă de control fără comandă";
 "Zwei Prüfbefehle heißen „{}“" = "Două comenzi de control se numesc „{}”";
 "„{}“ liegt außerhalb des Repositorys" = "„{}” se află în afara depozitului";
+"„{}“ ist das ganze Repository" = "„{}” este întregul depozit";
 "„{}“ liegt im Repository" = "„{}” se află în depozit";
 "„{}“ ist kein gültiger Variablenname" = "„{}” nu este un nume de variabilă valid";
 "{} (Zeile {}): {}" = "{} (linia {}): {}";

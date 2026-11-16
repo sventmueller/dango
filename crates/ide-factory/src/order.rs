@@ -104,7 +104,8 @@ impl Turn {
         self.queued
     }
 
-    /// The outcome, once the agent reported it while subagents still ran (E189).
+    /// The outcome, once the agent reported it while subagents, background entries or queued messages still ran
+    /// (E184, E189).
     pub fn ended(&self) -> Option<&TurnOutcome> {
         self.ended.as_ref()
     }
@@ -144,6 +145,7 @@ pub struct Order {
     next_prompt: u64,
     next_op: u64,
     turns: BTreeMap<Station, u32>,
+    visit_turns: u32,
     attempts: u32,
     excluded: Vec<usize>,
     retry_due: Option<Millis>,
@@ -156,6 +158,7 @@ pub struct Order {
     accepted: Option<String>,
     rejected: Vec<HunkId>,
     partial: bool,
+    partial_tree: Option<String>,
     kept: bool,
     diff_opened: bool,
     findings: Option<String>,
@@ -227,6 +230,7 @@ impl Order {
             next_prompt: 1,
             next_op: 1,
             turns: BTreeMap::new(),
+            visit_turns: 0,
             attempts: 0,
             excluded: Vec::new(),
             retry_due: None,
@@ -239,6 +243,7 @@ impl Order {
             accepted: None,
             rejected: Vec::new(),
             partial: false,
+            partial_tree: None,
             kept: false,
             diff_opened: false,
             findings: None,
@@ -487,6 +492,12 @@ impl Order {
         self.turns.get(&station).copied().unwrap_or(0)
     }
 
+    /// The turns taken since the order last entered its station, which the turn limit and the window rule count
+    /// (E168, R11).
+    pub fn visit_turns(&self) -> u32 {
+        self.visit_turns
+    }
+
     /// The failed attempts of the current station run.
     pub fn attempts(&self) -> u32 {
         self.attempts
@@ -545,6 +556,11 @@ impl Order {
     /// Whether the acceptance rejected hunks, so it closes once the new state passes (C55).
     pub fn partial(&self) -> bool {
         self.partial
+    }
+
+    /// The tree the partial acceptance closes for: the state committed after its hunks were reversed (C55).
+    pub(crate) fn partial_tree(&self) -> Option<&str> {
+        self.partial_tree.as_deref()
     }
 
     /// Whether G2 stands after the base moved without changing the diff (C56).

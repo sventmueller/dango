@@ -80,14 +80,24 @@ fn command(kind: InputKind) -> Option<Command> {
             fingerprint,
             rejected,
         },
-        InputKind::KeepBranch { order, fingerprint } => Command::KeepBranch { order, fingerprint },
+        InputKind::KeepBranch {
+            order,
+            fingerprint,
+            rejected,
+        } => Command::KeepBranch {
+            order,
+            fingerprint,
+            rejected,
+        },
         InputKind::Publish {
             order,
             fingerprint,
+            rejected,
             texts,
         } => Command::Publish {
             order,
             fingerprint,
+            rejected,
             texts,
         },
         InputKind::BackToBuilder(id, text) => Command::BackToBuilder(id, text),

@@ -192,10 +192,21 @@ pub struct PatternError {
 
 /// Builds one set from `patterns`; `*` does not cross `/`, `**` does.
 pub fn glob_set<'a>(patterns: impl IntoIterator<Item = &'a str>) -> Result<GlobSet, PatternError> {
+    build_set(patterns, false)
+}
+
+/// Builds one set from `patterns` that matches without regard to case, as the Mac's volumes find files: an agent
+/// reads `src/Claude.md` as `CLAUDE.md`.
+fn folded_set<'a>(patterns: impl IntoIterator<Item = &'a str>) -> Result<GlobSet, PatternError> {
+    build_set(patterns, true)
+}
+
+fn build_set<'a>(patterns: impl IntoIterator<Item = &'a str>, fold: bool) -> Result<GlobSet, PatternError> {
     let mut builder = GlobSetBuilder::new();
     for pattern in patterns {
         let glob = GlobBuilder::new(pattern)
             .literal_separator(true)
+            .case_insensitive(fold)
             .build()
             .map_err(|error| PatternError {
                 pattern: pattern.to_string(),
@@ -249,11 +260,11 @@ impl Relevance {
             .chain(CI_CONFIG.iter().copied())
             .chain(WORKFLOW_PATHS.iter().copied());
         Ok(Relevance {
-            agent: glob_set(AGENT_CONFIG.iter().copied())?,
-            tests: glob_set(tests.chain(patterns.tests.iter().map(String::as_str)))?,
-            config: glob_set(config.chain(patterns.config.iter().map(String::as_str)))?,
-            high: glob_set(patterns.high.iter().map(String::as_str))?,
-            medium: glob_set(patterns.medium.iter().map(String::as_str))?,
+            agent: folded_set(AGENT_CONFIG.iter().copied())?,
+            tests: folded_set(tests.chain(patterns.tests.iter().map(String::as_str)))?,
+            config: folded_set(config.chain(patterns.config.iter().map(String::as_str)))?,
+            high: folded_set(patterns.high.iter().map(String::as_str))?,
+            medium: folded_set(patterns.medium.iter().map(String::as_str))?,
         })
     }
 
@@ -375,6 +386,27 @@ mod tests {
         .unwrap()
         .classify(&[Change::new(".gitleaksignore", ChangeKind::Added)]);
         assert_eq!(got.agent_config, [".gitleaksignore"]);
+    }
+
+    #[test]
+    fn paths_match_without_regard_to_case_as_on_the_macs_volumes() {
+        for (path, group) in [
+            ("src/Claude.md", "agent"),
+            (".Claude/settings.json", "agent"),
+            ("Agents.md", "agent"),
+            ("crates/x/CARGO.toml", "config"),
+        ] {
+            let got = relevance().classify(&[Change::new(path, ChangeKind::Modified)]);
+            let found = if group == "agent" {
+                &got.agent_config
+            } else {
+                &got.config
+            };
+            assert_eq!(found.as_slice(), [path], "{path}");
+            assert_eq!(got.measured, RiskClass::High, "{path}");
+        }
+        let got = relevance().classify(&[Change::new("SRC/Auth/login.rs", ChangeKind::Modified)]);
+        assert_eq!(got.measured, RiskClass::High, "the risk patterns too");
     }
 
     #[test]

@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "שער ללא פקודה";
 "Zwei Prüfbefehle heißen „{}“" = "שני שערים נקראים ״{}״";
 "„{}“ liegt außerhalb des Repositorys" = "״{}״ נמצא מחוץ למאגר";
+"„{}“ ist das ganze Repository" = "״{}״ הוא המאגר כולו";
 "„{}“ liegt im Repository" = "״{}״ נמצא בתוך המאגר";
 "„{}“ ist kein gültiger Variablenname" = "״{}״ אינו שם משתנה תקין";
 "{} (Zeile {}): {}" = "‏{} (שורה {}): {}";

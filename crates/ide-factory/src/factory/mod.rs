@@ -110,6 +110,8 @@ struct Scratch {
     gate_started: Option<Millis>,
     /// A stop of the running gate was asked for.
     gate_stopping: bool,
+    /// The gate command that runs, as it was when it started.
+    gate_running: Option<crate::workflow::GateCommand>,
 }
 
 /// All orders of one project folder.
@@ -235,7 +237,9 @@ impl Factory {
             now: input.at,
             step: Step::default(),
         };
+        self.roll_day(&mut cx);
         self.dispatch(&mut cx, input.kind);
+        self.release_queue(&mut cx);
         self.fill_slots(&mut cx);
         self.update_lock(&mut cx);
         cx.step
@@ -264,7 +268,7 @@ impl Factory {
                 }
             }
             InputKind::Quota(observation) => self.quota(cx, observation),
-            InputKind::Day(day) => self.day = day,
+            InputKind::Day(day) => self.set_day(cx, day),
             InputKind::Metrics(metrics) => self.metrics = *metrics,
             InputKind::Sleep => self.sleep(cx),
             InputKind::Wake => self.wake(cx),

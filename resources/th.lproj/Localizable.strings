@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "ด่านตรวจที่ไม่มีคำสั่ง";
 "Zwei Prüfbefehle heißen „{}“" = "มีด่านตรวจสองรายการที่ชื่อ “{}”";
 "„{}“ liegt außerhalb des Repositorys" = "“{}” อยู่นอก Repository";
+"„{}“ ist das ganze Repository" = "“{}” คือ Repository ทั้งหมด";
 "„{}“ liegt im Repository" = "“{}” อยู่ใน Repository";
 "„{}“ ist kein gültiger Variablenname" = "“{}” ไม่ใช่ชื่อตัวแปรที่ถูกต้อง";
 "{} (Zeile {}): {}" = "{} (บรรทัด {}): {}";

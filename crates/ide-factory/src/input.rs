@@ -154,6 +154,8 @@ pub enum InputKind {
         order: OrderId,
         /// The fingerprint the user saw.
         fingerprint: String,
+        /// The hunks rejected, as with [`InputKind::Accept`].
+        rejected: Vec<HunkId>,
     },
     /// The user's click on "Als Merge Request" (E177): with `fingerprint`, G2 that keeps the branch like
     /// [`InputKind::KeepBranch`] and publishes once the worktree is gone; without, publishing an order that is done
@@ -164,6 +166,8 @@ pub enum InputKind {
         order: OrderId,
         /// The fingerprint the user saw, for G2 in the same click.
         fingerprint: Option<String>,
+        /// The hunks G2 rejects, as with [`InputKind::Accept`]; only with `fingerprint`.
+        rejected: Vec<HunkId>,
         /// The texts in the user's words.
         texts: crate::publish::Outgoing,
     },

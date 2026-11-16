@@ -457,6 +457,7 @@ pub fn workflow_error(error: &WorkflowError) -> String {
         WorkflowErrorKind::EmptyCommand => t("Prüfbefehl ohne Befehl").into(),
         WorkflowErrorKind::DuplicateGate { name } => tf("Zwei Prüfbefehle heißen „{}“", &[name]),
         WorkflowErrorKind::CopyOutsideRepository { path } => tf("„{}“ liegt außerhalb des Repositorys", &[path]),
+        WorkflowErrorKind::CopyWholeRepository { path } => tf("„{}“ ist das ganze Repository", &[path]),
         WorkflowErrorKind::ImagesInsideRepository { path } => tf("„{}“ liegt im Repository", &[path]),
         WorkflowErrorKind::BadVariableName { name } => tf("„{}“ ist kein gültiger Variablenname", &[name]),
         WorkflowErrorKind::Missing => t("Fehlt oder ist leer").into(),

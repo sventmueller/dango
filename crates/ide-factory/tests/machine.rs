@@ -488,21 +488,24 @@ fn a_turn_the_user_cancelled_waits_and_continue_resumes() {
     assert_eq!(app.station(&id), Station::Acceptance);
 }
 
-#[test]
-fn a_successful_turn_waits_for_its_subagents_and_stops_background_work_before_the_gate() {
+fn activity(subagents: u32, background: u32) -> SessionEvent {
+    SessionEvent::Activity {
+        running: true,
+        tool_since: None,
+        subagents,
+        background,
+        queued: 0,
+    }
+}
+
+/// An app whose order `o1` reported success while a subagent and a background entry still run.
+fn ended_while_busy() -> (App, ide_factory::OrderId, ide_factory::SessionKey) {
     let mut app = app();
     app.hold.insert("send_prompt");
     let id = app.order("o1");
     app.settle();
     let session = app.turn_session(&id);
     let prompt = app.get(&id).turn().expect("turn").prompt();
-    let activity = |subagents, background| SessionEvent::Activity {
-        running: true,
-        tool_since: None,
-        subagents,
-        background,
-        queued: 0,
-    };
     app.send(InputKind::Session(id.clone(), session.clone(), activity(1, 1)));
     app.send(InputKind::Session(
         id.clone(),
@@ -517,9 +520,38 @@ fn a_successful_turn_waits_for_its_subagents_and_stops_background_work_before_th
         matches!(app.get(&id).phase(), Phase::Turn { .. }),
         "a subagent still runs"
     );
-    app.send(InputKind::Session(id.clone(), session, activity(0, 1)));
+    (app, id, session)
+}
+
+#[test]
+fn a_successful_turn_ends_once_its_subagents_and_background_entries_are_done() {
+    let (mut app, id, session) = ended_while_busy();
+    app.send(InputKind::Session(id.clone(), session.clone(), activity(0, 1)));
+    assert!(
+        matches!(app.get(&id).phase(), Phase::Turn { .. }),
+        "a background entry still runs (E189)"
+    );
+    app.send(InputKind::Session(id.clone(), session, activity(0, 0)));
     assert_eq!(*app.get(&id).phase(), Phase::TurnScan);
+    assert_eq!(app.asked("stop_background"), 0);
+}
+
+#[test]
+fn background_entries_past_the_turn_limit_are_stopped_and_logged_before_the_gate() {
+    let (mut app, id, session) = ended_while_busy();
+    app.send(InputKind::Session(id.clone(), session, activity(0, 1)));
+    app.pass(30 * 60_000);
+    app.send(InputKind::Tick);
+    assert!(matches!(app.get(&id).phase(), Phase::Turn { .. }), "within the limit");
+    app.pass(31 * 60_000);
+    app.send(InputKind::Tick);
+    assert_eq!(*app.get(&id).phase(), Phase::TurnScan, "the success stands");
     assert_eq!(app.asked("stop_background"), 1);
+    assert!(
+        events(&app, &id)
+            .iter()
+            .any(|e| matches!(e, Event::LeftoversStopped { background: 1 }))
+    );
 }
 
 #[test]

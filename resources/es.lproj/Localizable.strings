@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Control sin comando";
 "Zwei Prüfbefehle heißen „{}“" = "Dos controles se llaman «{}»";
 "„{}“ liegt außerhalb des Repositorys" = "«{}» está fuera del repositorio";
+"„{}“ ist das ganze Repository" = "«{}» es todo el repositorio";
 "„{}“ liegt im Repository" = "«{}» está dentro del repositorio";
 "„{}“ ist kein gültiger Variablenname" = "«{}» no es un nombre de variable válido";
 "{} (Zeile {}): {}" = "{} (línea {}): {}";

@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Grind utan kommando";
 "Zwei Prüfbefehle heißen „{}“" = "Två grindar heter ”{}”";
 "„{}“ liegt außerhalb des Repositorys" = "”{}” ligger utanför repot";
+"„{}“ ist das ganze Repository" = "”{}” är hela repot";
 "„{}“ liegt im Repository" = "”{}” ligger i repot";
 "„{}“ ist kein gültiger Variablenname" = "”{}” är inte ett giltigt variabelnamn";
 "{} (Zeile {}): {}" = "{} (rad {}): {}";

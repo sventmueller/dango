@@ -434,3 +434,85 @@ fn a_gate_past_its_deadline_is_stopped() {
     tick(&mut app);
     assert_eq!(app.asked("stop_gate"), 1, "asked once");
 }
+
+#[test]
+fn the_turn_limit_counts_per_visit_of_the_build() {
+    let mut app = App::new(
+        Stage::One,
+        rules(&format!("{WORKFLOW}[limits]\nturns_per_station = 1\n")),
+    );
+    app.gates.push_back(ide_factory::gates::CommandOutcome {
+        exit: Some(1),
+        ..ide_factory::gates::CommandOutcome::default()
+    });
+    let id = app.order("o1");
+    app.settle();
+    assert_eq!(app.station(&id), Station::Acceptance, "{:?}", app.condition(&id));
+    assert_eq!(app.get(&id).turns_in(Station::Build), 2);
+    assert_eq!(app.get(&id).review_rounds(), 1);
+}
+
+#[test]
+fn the_window_rule_applies_again_when_the_build_is_entered_anew() {
+    let mut app = app();
+    with_accounts(&mut app);
+    app.gates.push_back(ide_factory::gates::CommandOutcome {
+        exit: Some(1),
+        ..ide_factory::gates::CommandOutcome::default()
+    });
+    app.hold.insert("run_gate");
+    let id = app.order("o1");
+    app.settle();
+    let builder = |app: &App| {
+        app.get(&id)
+            .session(ide_factory::Role::Builder)
+            .unwrap()
+            .entry()
+            .agent
+            .clone()
+    };
+    assert_eq!(builder(&app), Agent::Claude);
+    let observation = quota(&app, "claude-subscription", 0.75);
+    app.send(InputKind::Quota(observation));
+    app.hold.clear();
+    app.settle();
+    assert_eq!(app.station(&id), Station::Acceptance);
+    assert_eq!(
+        builder(&app),
+        Agent::Codex,
+        "the rework is a new visit, which begins under the 70 % rule (R11)"
+    );
+}
+
+#[test]
+fn a_new_day_lifts_yesterday_s_day_budget_without_any_spending() {
+    let mut app = App::new(Stage::One, rules(&format!("{WORKFLOW}[budget.day]\ndollars = 1.0\n")));
+    let mut day = ide_factory::budget::DailyAccount::new("2026-11-16");
+    day.add("2026-11-16", None, &ide_factory::budget::Spend::new(1.0, 0, 0.0));
+    let midnight = app.wall + 10 * SECOND;
+    app.send(InputKind::Day(day.until(midnight)));
+    let id = app.order("o1");
+    app.settle();
+    assert_eq!(
+        app.condition(&id),
+        Condition::Paused(PauseReason::Budget {
+            scope: BudgetScope::Day
+        })
+    );
+    assert!(app.factory.waits_for_day());
+    let fleet = |app: &App| {
+        let now = app.at();
+        ide_factory::panel::Fleet::new(&app.factory, &Default::default(), now, now.wall, 0)
+    };
+    assert!(fleet(&app).day_spent().dollars() > 0.0);
+    app.pass(20 * SECOND);
+    assert_eq!(
+        fleet(&app).day_spent().dollars(),
+        0.0,
+        "the line shows the new day before any input"
+    );
+    tick(&mut app);
+    app.settle();
+    assert_eq!(app.station(&id), Station::Acceptance);
+    assert!(!app.factory.waits_for_day());
+}

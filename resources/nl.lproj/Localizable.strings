@@ -2161,6 +2161,7 @@
 "Prüfbefehl ohne Befehl" = "Gate zonder commando";
 "Zwei Prüfbefehle heißen „{}“" = "Twee gates heten '{}'";
 "„{}“ liegt außerhalb des Repositorys" = "'{}' ligt buiten de repository";
+"„{}“ ist das ganze Repository" = "'{}' is de hele repository";
 "„{}“ liegt im Repository" = "'{}' ligt in de repository";
 "„{}“ ist kein gültiger Variablenname" = "'{}' is geen geldige variabelenaam";
 "{} (Zeile {}): {}" = "{} (regel {}): {}";

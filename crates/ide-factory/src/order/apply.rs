@@ -3,7 +3,7 @@
 
 use super::{Order, Slot, Turn, Visit};
 use crate::event::{Action, Event, OpResult, PromptKind, TurnOutcome};
-use crate::evidence::{Deviation, Provenance, order_deviations};
+use crate::evidence::{Deviation, Invalidation, Provenance, order_deviations};
 use crate::ids::{OperationId, PromptId, SessionKey};
 use crate::limits::TurnWatch;
 use crate::log::LogEntry;
@@ -208,12 +208,18 @@ impl Order {
             Event::Findings { text, round } => {
                 self.findings = Some(text.clone());
                 self.rounds += u32::from(*round);
-                self.partial = false;
+                self.drop_partial();
             }
             Event::Sealed { evidence } => self.evidence = Some((**evidence).clone()),
             Event::Invalidated { why } => {
                 if let Some(evidence) = &mut self.evidence {
                     evidence.invalidate(*why);
+                }
+                if *why != Invalidation::PartialAcceptance {
+                    self.drop_partial();
+                }
+                if *why != Invalidation::Base {
+                    self.kept = false;
                 }
                 if !self.kept {
                     self.accepted = None;
@@ -242,6 +248,7 @@ impl Order {
             Event::Accepted { fingerprint, rejected } => {
                 self.accepted = Some(fingerprint.clone());
                 self.partial = !rejected.is_empty();
+                self.partial_tree = None;
                 self.rejected.clone_from(rejected);
             }
             Event::AcceptanceKept => {
@@ -277,6 +284,7 @@ impl Order {
     fn enter(&mut self, station: Station, at: Stamp) {
         self.station = station;
         self.reached = self.reached.max(station);
+        self.visit_turns = 0;
         self.attempts = 0;
         self.excluded.clear();
         self.retry_due = None;
@@ -286,6 +294,18 @@ impl Order {
         }
         if station == Station::Build {
             self.kept = false;
+            self.drop_partial();
+        }
+    }
+
+    /// Voids a partial acceptance that has not closed yet, and with it the choice of keeping or publishing the branch
+    /// made in the same click (C55, E177): the state it was given for is gone.
+    fn drop_partial(&mut self) {
+        if self.partial {
+            self.partial = false;
+            self.partial_tree = None;
+            self.branch_kept = false;
+            self.publication = None;
         }
     }
 
@@ -317,9 +337,15 @@ impl Order {
             }
             OpResult::Committed { commit, tree } => {
                 self.head = Some((commit.clone(), tree.clone()));
+                if self.partial && self.station == Station::Acceptance {
+                    self.partial_tree = Some(tree.clone());
+                }
                 if let Some(last) = self.provenance.last_mut() {
                     last.commit = Some(commit.clone());
                 }
+            }
+            OpResult::NothingToCommit if self.partial && self.station == Station::Acceptance => {
+                self.partial_tree = self.head.as_ref().map(|(_, tree)| tree.clone());
             }
             OpResult::Merged { head, tree, base, .. } => {
                 self.head = Some((head.clone(), tree.clone()));
@@ -393,6 +419,7 @@ impl Order {
         });
         self.next_prompt = self.next_prompt.max(prompt.0 + 1);
         *self.turns.entry(self.station).or_default() += 1;
+        self.visit_turns += 1;
         if matches!(kind, PromptKind::Rework | PromptKind::Plan | PromptKind::Handoff) {
             self.findings = None;
             self.comment = None;
