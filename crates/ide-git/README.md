@@ -32,8 +32,10 @@ lanes, and its words for git's errors; `ThreadTree` and `TreeState` describe the
 work order (F50), and `thread_trees` makes, lists, reads, takes over and removes them (F49), so the orchestrator of
 work orders, which may not depend on a UI crate (E99), uses the same logic as the Git panel.
 
-For that orchestrator (phase 13) the crate also has git without the repository's hooks, with a given environment
-and a deadline (`Git::unattended`, E192); snapshots of every ref for the ref watch (`Repository::ref_snapshot`, E173);
+For that orchestrator (phase 13) the crate also has git without the repository's hooks, remotes, signing and
+editors, with a given environment and a deadline, which finds a worktree only through the shared git folder's records
+and names its git folder in every call (`Git::unattended`, `Git::bound_to`, E192); the diff a secrets check reads,
+binary files included and the working tree's attributes ignored (`Repository::diff_since_as_text`); snapshots of every ref for the ref watch (`Repository::ref_snapshot`, E173);
 the secrets check with rules frozen from the user's working copy (`Git::scan_text_frozen`, C52); a byte-exact diff
 between two commits (`Repository::full_diff`, C56), the files changed between them (`changes_between`, C54) and a
 branch's head with parents, tree and message (`branch_head`, C66).

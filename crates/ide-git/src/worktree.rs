@@ -95,7 +95,13 @@ impl Repository {
 
     /// Whether the working tree at `path` has changes or untracked files, as `git worktree remove` counts them.
     fn has_changes(&self, path: &Path) -> Result<bool> {
-        let call = crate::run::Call::new(path, ["status", "--porcelain", "-z", "--ignore-submodules=none"]);
+        let pinned = if self.is_unattended() {
+            self.git().discover(path)?.pinned()
+        } else {
+            Vec::new()
+        };
+        let call =
+            crate::run::Call::new(path, ["status", "--porcelain", "-z", "--ignore-submodules=none"]).envs(&pinned);
         let output = self.git().run(call)?;
         Ok(output.code == 0 && !output.stdout.is_empty())
     }

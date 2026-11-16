@@ -145,7 +145,7 @@ impl Checkpoints {
         let space = Space {
             git: repository.git().clone(),
             root: repository.root().to_path_buf(),
-            env: Vec::new(),
+            env: repository.pinned(),
             index: repository.index_file(),
             keeps_index: false,
             repository: true,

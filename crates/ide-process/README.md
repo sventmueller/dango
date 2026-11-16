@@ -13,7 +13,9 @@ For work orders (phase 13) it runs gate commands as `Kind::Gate` (`gate`): with 
 past which the whole process group ends, and a run that returns only once that end is confirmed, also for what a
 gate left behind in its group. `sandbox` builds the `sandbox-exec` profiles of the own agent's shell tool and of gates
 (E187): writing only in given folders and a per-run temp folder, the network off or on (`sandbox-exec` cannot limit it
-to domains), the home folder hidden except the tool folders, Unix sockets closed except a list. `order_env` narrows
+to domains), the home folder, other users', volumes and the user's temporary folder hidden except the tool folders,
+credential files unreadable, the `.git` of the worktree unwritable, Unix sockets closed except a list and the gate's
+own temporary folder, Apple events, LaunchServices and every Mach service but a list closed. `order_env` narrows
 the login shell's environment for orders (E186): a list of names, no SSH agent, nothing named like a credential, and
 an empty `credential.helper` for git.
 

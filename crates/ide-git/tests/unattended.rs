@@ -9,7 +9,8 @@ use std::path::Path;
 use std::time::{Duration, Instant};
 
 use common::{Scratch, write};
-use ide_git::{CommitOptions, Error};
+use ide_git::{CommitOptions, Error, Git};
+use ide_process::Supervisor;
 
 /// Installs `hook` in `folder`; it leaves a file named after itself in `marks` when it runs, and refuses.
 fn hook(folder: &Path, hook: &str, marks: &Path) {
@@ -69,6 +70,73 @@ fn the_orchestrators_commits_merges_and_worktrees_run_no_hook() {
         .collect();
     assert!(ran.is_empty(), "hooks ran: {ran:?}");
     assert!(unattended.is_unattended() && added.is_unattended() && !repository.is_unattended());
+}
+
+/// Points the worktree at `root`'s `.git` file to a git folder `.x` of its own, whose configuration has a clean filter
+/// and a textconv for every file that leave `marks/filter` and `marks/textconv` when they run, as a gate or a builder
+/// could (E192).
+fn redirect(scratch: &Scratch, root: &Path, marks: &Path) {
+    let planted = scratch.path("planted");
+    std::fs::create_dir_all(&planted).unwrap();
+    scratch.raw(&planted, &["init", "--quiet"]);
+    std::fs::rename(planted.join(".git"), root.join(".x")).unwrap();
+    let x = root.join(".x");
+    let x = x.to_str().unwrap();
+    let filter = format!("touch '{}'; cat", marks.join("filter").display());
+    let textconv = format!("touch '{}'; cat", marks.join("textconv").display());
+    scratch.raw(root, &["--git-dir", x, "config", "filter.evil.clean", &filter]);
+    scratch.raw(root, &["--git-dir", x, "config", "diff.evil.textconv", &textconv]);
+    write(root, ".gitattributes", "* filter=evil diff=evil\n");
+    write(root, ".git", "gitdir: .x\n");
+}
+
+#[test]
+fn a_redirected_worktree_points_the_orchestrators_git_nowhere_else() {
+    let scratch = Scratch::new("unattended-redirect");
+    let repository = scratch.repository("r", &[("a.txt", "a\n")]);
+    let marks = scratch.path("marks");
+    std::fs::create_dir_all(&marks).unwrap();
+    let deadline = Instant::now() + Duration::from_secs(120);
+    let unattended = repository.unattended(scratch.environment(), deadline);
+    let copy = unattended.add_worktree(&scratch.path("wt"), "order/x", None).unwrap();
+    let admin = copy.git_dir().to_path_buf();
+    assert!(admin.starts_with(repository.common_dir().canonicalize().unwrap()));
+
+    redirect(&scratch, copy.root(), &marks);
+    write(copy.root(), "a.txt", "changed by the builder\n");
+    copy.status(ide_git::StatusOptions::default()).unwrap();
+    copy.diff_since_as_text("HEAD").unwrap();
+    copy.diff(ide_git::DiffSource::Unstaged, &["a.txt"]).unwrap();
+    copy.stage_all().unwrap();
+    copy.commit("orchestrator", CommitOptions::default()).unwrap();
+
+    let bound = Git::new(&Supervisor::new(), scratch.environment())
+        .unattended(scratch.environment(), deadline)
+        .bound_to(repository.root());
+    let found = bound.discover(copy.root()).unwrap();
+    assert_eq!(found.git_dir(), admin, "found through the shared git folder's records");
+    found.diff_since_as_text("HEAD~1").unwrap();
+    assert!(
+        matches!(
+            bound.discover(&scratch.path("planted")),
+            Err(Error::NotARepository { .. })
+        ),
+        "a bound git finds nothing outside its repository"
+    );
+    let loose = Git::new(&Supervisor::new(), scratch.environment()).unattended(scratch.environment(), deadline);
+    assert!(
+        matches!(loose.discover(copy.root()), Err(Error::NotARepository { .. })),
+        "a git folder inside the worktree is not taken"
+    );
+
+    let ran: Vec<String> = std::fs::read_dir(&marks)
+        .unwrap()
+        .flatten()
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .collect();
+    assert!(ran.is_empty(), "the planted configuration ran: {ran:?}");
+    let log = scratch.raw(repository.root(), &["log", "--format=%s", "-1", "order/x"]);
+    assert_eq!(log.trim(), "orchestrator", "the commit landed on the order's branch");
 }
 
 #[test]

@@ -140,3 +140,45 @@ fn the_ref_watch_tells_what_dango_made_from_what_others_did() {
         "the order's own branch moves only by its commits"
     );
 }
+
+#[test]
+fn the_secrets_scan_reads_undiffed_and_utf16_files_through_the_worktrees_own_git_folder() {
+    let (_scratch, root, repos) = repository("scan-text");
+    let order = OrderId("o-9".into());
+    let tree = make_worktree(&repos, &root, &order, "order/o-9", "main").unwrap();
+    let base = open_in(&repos, &tree.path)
+        .unwrap()
+        .head()
+        .unwrap()
+        .unwrap()
+        .to_string();
+    std::fs::write(tree.path.join(".gitattributes"), "*.txt -diff\n").unwrap();
+    std::fs::write(tree.path.join("plain.txt"), "key = one\n").unwrap();
+    let wide: Vec<u8> = [0xff, 0xfe]
+        .into_iter()
+        .chain("key = two\n".bytes().flat_map(|byte| [byte, 0]))
+        .collect();
+    std::fs::write(tree.path.join("wide.bin"), wide).unwrap();
+    std::fs::write(tree.path.join(".git"), "gitdir: .x\n").unwrap();
+    let copy = open_in(&repos, &tree.path).unwrap();
+    assert!(
+        copy.git_dir().starts_with(repos.common_dir()),
+        "{:?} is found through the shared git folder, whatever the worktree's .git says",
+        copy.git_dir()
+    );
+    let (text, places) = added_text(&copy, &base).unwrap();
+    assert!(text.contains("key = one"), "{text:?}");
+    assert!(text.contains("key = two"), "{text:?}");
+    assert!(places.iter().any(|place| place == "wide.bin:1"), "{places:?}");
+    assert_eq!(text.lines().count(), places.len());
+}
+
+#[test]
+fn a_line_with_nul_bytes_is_also_read_without_them_and_in_its_pieces() {
+    assert_eq!(scanned_lines(b"plain\r"), ["plain "]);
+    assert_eq!(scanned_lines(b"k\0e\0y\0"), ["key", "k", "e", "y"].map(String::from));
+    assert_eq!(
+        scanned_lines(b"\x01\x02\0token = x\0\0"),
+        ["\u{1}\u{2}token = x", "\u{1}\u{2}", "token = x"].map(String::from)
+    );
+}
