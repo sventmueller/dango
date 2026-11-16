@@ -644,6 +644,8 @@ impl Session {
         if !launch.program.is_file() {
             return Err(SessionError::NotFound(launch.program.clone()));
         }
+        let mut launch = launch;
+        launch.shared = launch.joins_shared();
         let spawned = supervisor
             .spawn(launch.command(), Kind::Agent, launch.name.clone())
             .map_err(|e| SessionError::Start(e.to_string()))?;
@@ -773,12 +775,25 @@ impl Session {
 
     /// Sends `message`: it starts a turn, or while one runs, is added to it (`turn/steer`).
     pub fn send(&self, message: UserMessage) -> Result<(), SessionError> {
+        self.send_turn(message, None)
+    }
+
+    /// Starts a turn whose final answer follows the JSON schema `schema` (`outputSchema` of `turn/start`, C63);
+    /// while a turn runs it is `Busy`, as steering takes no schema.
+    pub fn send_with_schema(&self, message: UserMessage, schema: Value) -> Result<(), SessionError> {
+        self.send_turn(message, Some(schema))
+    }
+
+    fn send_turn(&self, message: UserMessage, schema: Option<Value>) -> Result<(), SessionError> {
         let thread = self.thread_id()?;
         let (running, starting) = {
             let state = self.shared.state();
             (state.mapper.turn().map(str::to_string), state.starting)
         };
         if let Some(turn) = running {
+            if schema.is_some() {
+                return Err(SessionError::Busy);
+            }
             return self.steer(&thread, &turn, &message);
         }
         if starting {
@@ -799,6 +814,12 @@ impl Session {
             let overrides = std::mem::take(&mut state.overrides);
             let mut params = json!({"threadId": thread, "input": input, "clientUserMessageId": key});
             overrides.write(&mut params);
+            if let Some(bounds) = &self.shared.launch.confinement {
+                bounds.bound_turn(&mut params);
+            }
+            if let Some(schema) = schema {
+                params["outputSchema"] = schema;
+            }
             state.starting = true;
             (params, overrides, updates)
         };

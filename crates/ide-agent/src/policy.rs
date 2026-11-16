@@ -142,6 +142,18 @@ pub struct Policy {
 }
 
 impl Policy {
+    /// The policy of a work order's session (docs/phase-13.md, E173): the sandbox on, so what lies outside the
+    /// project and its allowed folders and the network are refused, and everything else runs without asking but
+    /// destructive git commands; a builder writes, a reader gets the tools of "Nur fragen". No stored rule applies.
+    pub fn order(builds: bool) -> Policy {
+        Policy {
+            profile: if builds { Profile::Write } else { Profile::Ask },
+            approval: Approval::All,
+            sandbox: true,
+            rules: Vec::new(),
+        }
+    }
+
     /// What happens to a call that does `action`.
     pub(crate) fn decide(&self, action: &Action) -> Verdict {
         match action {
@@ -434,5 +446,39 @@ mod tests {
         };
         assert!(matches!(reader.decide(&write(true)), Verdict::Deny(_)));
         assert!(matches!(reader.decide(&Action::Command("ls".into())), Verdict::Deny(_)));
+    }
+
+    #[test]
+    fn an_order_builder_works_in_the_project_without_asking_and_is_refused_outside_it() {
+        let builder = Policy::order(true);
+        let inside = Action::Write {
+            path: "src/a.rs".into(),
+            inside: true,
+        };
+        let outside = Action::Read {
+            path: "~/.ssh/id_ed25519".into(),
+            inside: false,
+        };
+        assert_eq!(builder.decide(&inside), Verdict::Allow);
+        assert_eq!(builder.decide(&Action::Command("cargo build".into())), Verdict::Allow);
+        assert!(matches!(
+            builder.decide(&outside),
+            Verdict::Deny(Refusal::OutsideSandbox(_))
+        ));
+        let fetch = Action::Fetch { host: "docs.rs".into() };
+        assert_eq!(builder.decide(&fetch), Verdict::Deny(Refusal::NoNetwork));
+        let reader = Policy::order(false);
+        assert_eq!(reader.decide(&inside), Verdict::Deny(Refusal::ReadOnly));
+        assert_eq!(
+            reader.decide(&Action::Command("ls".into())),
+            Verdict::Deny(Refusal::ReadOnly)
+        );
+        assert_eq!(
+            reader.decide(&Action::Read {
+                path: "src/a.rs".into(),
+                inside: true
+            }),
+            Verdict::Allow
+        );
     }
 }

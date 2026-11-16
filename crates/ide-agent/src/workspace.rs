@@ -88,8 +88,13 @@ impl Workspace {
     }
 
     /// The project folder.
-    pub(crate) fn root(&self) -> &Path {
+    pub fn root(&self) -> &Path {
         &self.root
+    }
+
+    /// The folders reachable besides the project.
+    pub fn allowed(&self) -> &[PathBuf] {
+        &self.allowed
     }
 
     /// The login shell's environment.

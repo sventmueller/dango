@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use ide_opencode::test_server::{COMMAND_OUTPUT, CRASH, FORK, FORM, PERMISSION, SESSION};
+use ide_opencode::test_server::{COMMAND_OUTPUT, CRASH, FORK, FORM, GAP_ANSWER, PERMISSION, SESSION};
 use ide_opencode::{
     Choice, CredentialKind, Event, Launch, McpConfig, McpStatus, ServerError, Session, SessionError, SessionQuery,
     TESTED,
@@ -374,6 +374,41 @@ fn a_form_is_answered_by_its_fields_or_cancelled() {
         run.routes()
             .contains(&format!("DELETE /api/session/{SESSION}/form/{FORM}"))
     );
+    run.conforms();
+}
+
+#[test]
+fn a_gap_in_the_event_stream_is_reported_and_reading_the_session_again_ends_the_turn_it_swallowed() {
+    let run = ready("basic", "gap");
+    run.session.send(message("mind the gap")).unwrap();
+    wait("the gap", || run.events.has(|e| *e == Event::StreamGap));
+    wait("the stream again", || run.events.has(|e| *e == Event::StreamResumed));
+    assert!(!idle(&run.session), "the end of the turn came while no stream was open");
+    run.session.resync().wait().unwrap();
+    assert!(idle(&run.session));
+    let kinds = kinds(&run.session);
+    assert!(
+        kinds
+            .iter()
+            .any(|k| matches!(k, EntryKind::AgentMessage(m) if m.markdown == GAP_ANSWER)),
+        "{kinds:?}"
+    );
+    assert!(
+        !kinds
+            .iter()
+            .any(|k| matches!(k, EntryKind::Notice(Notice::Error { .. })))
+    );
+    assert_eq!(
+        run.session.with_thread(|t| t
+            .entries(&Lane::Main)
+            .iter()
+            .filter(|e| matches!(e.kind, EntryKind::UserMessage(_)))
+            .count()),
+        1
+    );
+    assert_eq!(run.session.with_thread(|t| t.usage().cost_usd), Some(0.02));
+    assert_eq!(run.session.with_thread(|t| t.usage().output_tokens), 40);
+    assert!(run.routes().contains(&format!("GET /api/session/{SESSION}/message")));
     run.conforms();
 }
 

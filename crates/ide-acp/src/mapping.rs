@@ -557,6 +557,15 @@ impl Mapper {
             Err(_) => (Vec::new(), false),
         }
     }
+
+    /// Maps the answer to `session/prompt` as JSON, such as `{"stopReason": "max_tokens"}`, which ends the turn; an
+    /// answer of another shape changes nothing.
+    pub fn prompt_answered_json(&mut self, response: &Value, at: SystemTime) -> Vec<Update> {
+        match serde_json::from_value::<acp::PromptResponse>(response.clone()) {
+            Ok(response) => self.end_turn(response.stop_reason, at),
+            Err(_) => Vec::new(),
+        }
+    }
 }
 
 /// The protocol's name for `reason`, such as `max_tokens`.

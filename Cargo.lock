@@ -1805,10 +1805,13 @@ dependencies = [
  "ide-agent",
  "ide-claude",
  "ide-codex",
+ "ide-core",
  "ide-git",
  "ide-opencode",
  "ide-process",
+ "ide-session",
  "ide-thread",
+ "serde_json",
 ]
 
 [[package]]

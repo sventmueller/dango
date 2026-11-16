@@ -90,6 +90,74 @@ impl SandboxMode {
     }
 }
 
+/// The features of Codex 0.167 (`codex features list`) that bring tools with sign-ins of their own or reach past the
+/// sandbox's network block, or subagents that show only as tool cards (E189, E191); off in an order session.
+const ORDER_FEATURES_OFF: [&str; 9] = [
+    "apps",
+    "plugins",
+    "remote_plugin",
+    "browser_use",
+    "browser_use_external",
+    "computer_use",
+    "in_app_browser",
+    "image_generation",
+    "multi_agent",
+];
+
+/// The bounds of a work order's session (docs/phase-13.md, E173, E193): a server of its own, never the shared one;
+/// no approvals, so what the sandbox refuses fails; writes only in the project folder and the write roots; no
+/// network; web search, apps, plugins, MCP servers and subagents off.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Confinement {
+    /// Whether commands and edits may write: in the project folder and `write_roots` (`workspace-write`); a reader
+    /// gets `read-only`.
+    pub writes: bool,
+    /// Folders writable besides the project folder, such as the build folder.
+    pub write_roots: Vec<PathBuf>,
+}
+
+impl Confinement {
+    /// The `sandboxPolicy` every `turn/start` of the session carries, which unlike `thread/start` names write roots
+    /// and the network.
+    pub fn sandbox_policy(&self) -> Value {
+        if self.writes {
+            let roots: Vec<String> = self
+                .write_roots
+                .iter()
+                .map(|root| root.to_string_lossy().into_owned())
+                .collect();
+            json!({"type": "workspaceWrite", "writableRoots": roots, "networkAccess": false})
+        } else {
+            json!({"type": "readOnly", "networkAccess": false})
+        }
+    }
+
+    fn mode(&self) -> SandboxMode {
+        if self.writes {
+            SandboxMode::WorkspaceWrite
+        } else {
+            SandboxMode::ReadOnly
+        }
+    }
+
+    /// The `-c` overrides: the features off, web search off, no MCP server.
+    fn overrides(&self) -> Vec<(String, String)> {
+        let mut overrides: Vec<(String, String)> = ORDER_FEATURES_OFF
+            .iter()
+            .map(|feature| (format!("features.{feature}"), "false".to_string()))
+            .collect();
+        overrides.push(("web_search".into(), "\"disabled\"".into()));
+        overrides.push(("mcp_servers".into(), "{}".into()));
+        overrides
+    }
+
+    /// Puts the bounds into the parameters of a `turn/start`, over any mode the session switched to.
+    pub(crate) fn bound_turn(&self, params: &mut Value) {
+        params["approvalPolicy"] = json!(ApprovalPolicy::Never.wire());
+        params["sandboxPolicy"] = self.sandbox_policy();
+    }
+}
+
 /// Everything needed to start Codex and open its thread.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Launch {
@@ -119,6 +187,9 @@ pub struct Launch {
     /// Whether the session joins Codex's shared app-server, the daemon Remote Control reaches (E148), through
     /// `codex app-server proxy` instead of starting a server of its own.
     pub shared: bool,
+    /// The bounds of a work order's session; with them the session never joins the shared server (E193), the
+    /// approval policy and the sandbox give way to them, and their overrides come after `config`.
+    pub confinement: Option<Confinement>,
 }
 
 impl Launch {
@@ -137,17 +208,28 @@ impl Launch {
             version: None,
             config: Vec::new(),
             shared: false,
+            confinement: None,
         }
+    }
+
+    /// Whether the session goes through `codex app-server proxy` to the shared server; never with bounds.
+    pub fn joins_shared(&self) -> bool {
+        self.shared && self.confinement.is_none()
     }
 
     /// The arguments: the app-server on stdio, which is its default transport, and the overrides; or the proxy that
     /// connects stdio to the shared server.
     pub fn args(&self) -> Vec<String> {
-        if self.shared {
+        if self.joins_shared() {
             return vec!["app-server".to_string(), "proxy".to_string()];
         }
         let mut args = vec!["app-server".to_string()];
-        for (key, value) in &self.config {
+        let bounds = self
+            .confinement
+            .as_ref()
+            .map(Confinement::overrides)
+            .unwrap_or_default();
+        for (key, value) in self.config.iter().chain(&bounds) {
             args.push("-c".into());
             args.push(format!("{key}={value}"));
         }
@@ -177,10 +259,14 @@ impl Launch {
         if let Some(model) = &self.model {
             params["model"] = json!(model);
         }
-        if let Some(approval) = self.approval {
+        let (approval, sandbox) = match &self.confinement {
+            Some(bounds) => (Some(ApprovalPolicy::Never), Some(bounds.mode())),
+            None => (self.approval, self.sandbox),
+        };
+        if let Some(approval) = approval {
             params["approvalPolicy"] = json!(approval.wire());
         }
-        if let Some(sandbox) = self.sandbox {
+        if let Some(sandbox) = sandbox {
             params["sandbox"] = json!(sandbox.wire());
         }
         if let Some(effort) = &self.effort {
@@ -220,5 +306,56 @@ mod tests {
         );
         assert_eq!(ApprovalPolicy::from_wire("on-request"), Some(ApprovalPolicy::OnRequest));
         assert_eq!(ApprovalPolicy::from_wire("on-failure"), None);
+    }
+
+    #[test]
+    fn an_order_session_has_a_server_of_its_own_with_no_approvals_tools_or_network() {
+        let mut launch = Launch::new("/bin/codex", vec![("PATH".into(), "/bin".into())], "/work");
+        launch.shared = true;
+        launch.approval = Some(ApprovalPolicy::OnRequest);
+        launch.sandbox = Some(SandboxMode::DangerFullAccess);
+        launch.confinement = Some(Confinement {
+            writes: true,
+            write_roots: vec!["/builds/o1".into()],
+        });
+        assert!(!launch.joins_shared());
+        let args = launch.args();
+        assert_eq!(args[0], "app-server");
+        assert!(!args.contains(&"proxy".to_string()));
+        for wanted in [
+            "features.apps=false",
+            "features.plugins=false",
+            "features.multi_agent=false",
+            "features.browser_use=false",
+            "web_search=\"disabled\"",
+            "mcp_servers={}",
+        ] {
+            assert!(args.iter().any(|a| a == wanted), "{wanted} is missing from {args:?}");
+        }
+        let params = launch.open_params();
+        assert_eq!(params["approvalPolicy"], "never");
+        assert_eq!(params["sandbox"], "workspace-write");
+        let mut turn = json!({"threadId": "thr_1"});
+        launch.confinement.as_ref().unwrap().bound_turn(&mut turn);
+        assert_eq!(
+            turn,
+            json!({"threadId": "thr_1", "approvalPolicy": "never", "sandboxPolicy": {"type": "workspaceWrite",
+                   "writableRoots": ["/builds/o1"], "networkAccess": false}})
+        );
+    }
+
+    #[test]
+    fn a_reader_of_an_order_reads_only() {
+        let mut launch = Launch::new("/bin/codex", Vec::new(), "/work");
+        let reader = Confinement {
+            writes: false,
+            write_roots: vec!["/builds/o1".into()],
+        };
+        assert_eq!(
+            reader.sandbox_policy(),
+            json!({"type": "readOnly", "networkAccess": false})
+        );
+        launch.confinement = Some(reader);
+        assert_eq!(launch.open_params()["sandbox"], "read-only");
     }
 }

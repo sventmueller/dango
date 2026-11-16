@@ -7,7 +7,9 @@
 //! The scenario comes from `OPENCODE_TEST_SCENARIO`: `basic`, `nomodel` (no provider has a model), `locked` (a
 //! password nobody knows), `old` (an unsupported release, which only `--version` shows). A prompt containing `slow`
 //! streams one delta and waits for the interrupt; `crash` says [`CRASH`] on stderr and exits mid-turn; `ask` asks a
-//! form; `fail` ends the turn with an error; any other plays a turn with reasoning, text, to-dos, a read, a command
+//! form; `fail` ends the turn with an error; `gap` streams one text, then ends every event stream and plays the end
+//! of the turn while none is open, after which the session's info and messages show the turn as done
+//! ([`GAP_ANSWER`]); any other plays a turn with reasoning, text, to-dos, a read, a command
 //! that asks for permission, an edit, usage and a new title. With `OPENCODE_TEST_LOG` set, every request is appended
 //! to that file as one JSON line with its method, path, query, body and whether it was authorized.
 
@@ -45,6 +47,9 @@ pub const COMMAND_OUTPUT: &str = "a.txt\nb.txt";
 
 /// What the server writes on stderr before it exits mid-turn.
 pub const CRASH: &str = "the model crashed";
+
+/// The answer of the turn whose end a gap in the event stream swallowed, as the session's messages keep it.
+pub const GAP_ANSWER: &str = "Working, and done.";
 
 /// What `--version` prints, unless the scenario is `old`.
 pub const VERSION: &str = "opencode v2.2.6";
@@ -100,6 +105,17 @@ enum Wait {
     Interrupt,
 }
 
+/// Where playing the steps stopped.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Played {
+    /// The steps ran out or one waits.
+    Rests,
+    /// The server is to crash.
+    Crash,
+    /// The event streams are to break off before the rest is played.
+    Gap,
+}
+
 struct World {
     scenario: String,
     directory: String,
@@ -109,6 +125,10 @@ struct World {
     waiting: Option<Wait>,
     agent: String,
     model: Value,
+    /// Counts the gaps; an event stream ends when it changes.
+    generation: u64,
+    /// The messages of a turn whose end a gap swallowed, which the session's history then lists.
+    recorded: Option<Value>,
 }
 
 struct Hub {
@@ -142,29 +162,31 @@ impl World {
             .push(format!("id: evt_{n:04}\nevent: {kind}\ndata: {event}\n\n"));
     }
 
-    /// Plays the steps until one waits; true when the server is to crash.
-    fn play(&mut self) -> bool {
+    /// Plays the steps until one waits, the server is to crash or the streams are to break off.
+    fn play(&mut self) -> Played {
         while let Some(step) = self.steps.pop_front() {
             match step {
                 Step::Event(kind, data) => self.emit(kind, data),
                 Step::Permission(data) => {
                     self.emit("permission.asked", data);
                     self.waiting = Some(Wait::Permission);
-                    return false;
+                    return Played::Rests;
                 }
                 Step::Form(form) => {
                     self.emit("form.created", json!({"form": form}));
                     self.waiting = Some(Wait::Form);
-                    return false;
+                    return Played::Rests;
                 }
                 Step::Hang => {
                     self.waiting = Some(Wait::Interrupt);
-                    return false;
+                    return Played::Rests;
                 }
-                Step::Crash => return true,
+                Step::Crash => return Played::Crash,
+                Step::Gap => return Played::Gap,
+                Step::Record(messages) => self.recorded = Some(messages),
             }
         }
-        false
+        Played::Rests
     }
 
     /// Goes on after the turn waited for `wait`; false when it did not.
@@ -227,8 +249,12 @@ impl Hub {
         }
         let mut world = self.world();
         let mut sent = world.events.len();
+        let generation = world.generation;
         while !self.closed.load(Ordering::SeqCst) {
             while sent < world.events.len() {
+                if world.generation != generation {
+                    return;
+                }
                 let frame = world.events[sent].clone();
                 sent += 1;
                 drop(world);
@@ -236,6 +262,9 @@ impl Hub {
                     return;
                 }
                 world = self.world();
+            }
+            if world.generation != generation {
+                return;
             }
             world = self
                 .changed
@@ -263,6 +292,9 @@ impl Hub {
             (world.location(), world.scenario.clone(), world.directory.clone())
         };
         let ok = |body: Value| (200, Some(body), false);
+        if let Some(answer) = self.recorded(method, &parts, &directory) {
+            return ok(answer);
+        }
         match (method, parts.as_slice()) {
             ("GET", ["info"]) => ok(json!({"version": "2.2.6", "pid": std::process::id(),
                 "urls": [format!("http://{}", self.address)], "paths": {"tmp": "/tmp"}})),
@@ -355,7 +387,7 @@ impl Hub {
         let user = json!({"data": {"id": "msg_u1", "sessionID": SESSION, "time": {"created": CLOCK},
             "type": "user", "payload": {"text": text},
             "delivery": if steer { "steer" } else { "queue" }}});
-        let crash = {
+        let played = {
             let mut world = self.world();
             if steer || world.waiting.is_some() || !world.steps.is_empty() {
                 return (200, Some(user), false);
@@ -364,21 +396,60 @@ impl Hub {
             world.play()
         };
         self.changed.notify_all();
-        if crash {
-            let hub = self.clone();
-            let spawned = std::thread::Builder::new()
-                .name("opencode-test-crash".into())
-                .spawn(move || {
-                    std::thread::sleep(Duration::from_millis(300));
-                    eprintln!("{CRASH}");
-                    hub.close();
-                });
-            if spawned.is_err() {
+        match played {
+            Played::Crash => self.in_a_moment(|hub| {
                 eprintln!("{CRASH}");
-                self.close();
-            }
+                hub.close();
+            }),
+            Played::Gap => self.in_a_moment(Hub::gap),
+            Played::Rests => {}
         }
         (200, Some(user), false)
+    }
+
+    /// Runs `then` after the streams had time to send what came before, or at once when no thread starts.
+    fn in_a_moment(self: &Arc<Self>, then: fn(&Hub)) {
+        let hub = self.clone();
+        let spawned = std::thread::Builder::new()
+            .name("opencode-test-later".into())
+            .spawn(move || {
+                std::thread::sleep(Duration::from_millis(300));
+                then(&hub);
+            });
+        if spawned.is_err() {
+            then(self);
+        }
+    }
+
+    /// Ends every event stream and plays the rest of the turn while none is open, so the client misses it.
+    fn gap(&self) {
+        {
+            let mut world = self.world();
+            world.generation += 1;
+            world.play();
+        }
+        self.changed.notify_all();
+    }
+
+    /// The session's info and messages once a gap swallowed the end of its turn, as the server keeps them.
+    fn recorded(&self, method: &str, parts: &[&str], directory: &str) -> Option<Value> {
+        let world = self.world();
+        let messages = world.recorded.clone()?;
+        match (method, parts) {
+            ("GET", ["session", id]) if *id == SESSION => {
+                let mut info = data::session(SESSION, directory, "After a gap", &world.agent, &world.model);
+                info["time"]["busy"] = json!(CLOCK);
+                info["time"]["idle"] = json!(CLOCK + 10_000);
+                info["outcome"] = json!("succeeded");
+                info["cost"] = json!(0.02);
+                info["tokens"] = json!({"input": 300, "output": 40, "reasoning": 0, "cache": {"read": 0, "write": 0}});
+                Some(json!({"data": info}))
+            }
+            ("GET", ["session", id, "message"]) if *id == SESSION => {
+                Some(json!({"data": messages, "cursor": {"previous": null, "next": null}}))
+            }
+            _ => None,
+        }
     }
 
     fn switch(&self, request: &Request, what: &str) -> (u16, Option<Value>, bool) {
@@ -449,6 +520,8 @@ pub fn run(input: impl Read + Send + 'static, mut output: impl Write, scenario: 
             waiting: None,
             agent: "build".into(),
             model: json!({"providerID": "anthropic", "id": "claude-sonnet-4"}),
+            generation: 0,
+            recorded: None,
         }),
         changed: Condvar::new(),
         closed: AtomicBool::new(false),

@@ -19,6 +19,10 @@ pub(super) enum Step {
     Hang,
     /// The server says `CRASH` on stderr and exits.
     Crash,
+    /// Every event stream ends; the rest is played while none is open.
+    Gap,
+    /// The session's messages from now on, as a page's `data`.
+    Record(Value),
 }
 
 fn event(kind: &'static str, mut data: Value) -> Step {
@@ -130,6 +134,10 @@ pub(super) fn turn(text: &str) -> VecDeque<Step> {
             on("msg_a1", json!({"ordinal": 0, "delta": "Working"})),
         ));
         steps.push(Step::Hang);
+    } else if text.contains("gap") {
+        steps.extend(streamed("text", "msg_a1", 0, &["Working"]));
+        steps.push(Step::Gap);
+        steps.extend(gap_ending(text));
     } else if text.contains("ask") {
         steps.extend(question());
     } else if text.contains("fail") {
@@ -231,6 +239,21 @@ fn ending(message: &str, text: &str) -> Vec<Step> {
     steps.push(event("session.renamed", json!({"title": "Listing files"})));
     steps.push(event("session.execution.succeeded", json!({})));
     steps.push(event("session.idle", json!({})));
+    steps
+}
+
+/// The end of the `gap` turn, which no client hears, and the messages the session keeps of the turn.
+fn gap_ending(prompt: &str) -> Vec<Step> {
+    let mut steps = streamed("text", "msg_a1", 1, &[", and done."]);
+    steps.push(step_ended("msg_a1", "stop", 0.02, tokens(300, 40, 0, 0, 0)));
+    steps.push(event("session.execution.succeeded", json!({})));
+    steps.push(event("session.idle", json!({})));
+    steps.push(Step::Record(json!([
+        {"id": "msg_u1", "type": "user", "time": {"created": super::CLOCK}, "text": prompt},
+        {"id": "msg_a1", "type": "assistant", "time": {"created": super::CLOCK + 100, "completed": super::CLOCK + 900},
+         "agent": "build", "model": model(), "content": [{"type": "text", "text": super::GAP_ANSWER}]},
+        {"id": "msg_i1", "type": "idle", "time": {"created": super::CLOCK + 1000}, "outcome": "succeeded"},
+    ])));
     steps
 }
 

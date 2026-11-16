@@ -1,0 +1,306 @@
+//! The driver over the scripted session (F61): an order's turn in its worktree with a checkpoint and the order's
+//! rule, every kind of turn end, background work, and the fan-out to a slow subscriber at a high event rate (C71).
+
+mod support;
+
+use std::time::Duration;
+
+use ide_session::rule::{NO_PLANS, OUTSIDE_ORDER};
+use ide_session::{
+    AgentPath, Contract, End, Launch, Order, Outcome, Prompt, RequestKind, Role, Script, ScriptTurn, SendError,
+    SessionId, Signal, Step, UserChoices, Verdict,
+};
+use ide_thread::{Answer, Decision, EntryKind, Lane, RequestState};
+use serde_json::json;
+use support::{Harness, failed_with, folder, waiting};
+
+fn order(worktree: &std::path::Path) -> Order {
+    Order {
+        order: "o-7".into(),
+        role: Role::Builder,
+        worktree: worktree.to_path_buf(),
+        build_dir: None,
+        read_roots: Vec::new(),
+        allowed_domains: Vec::new(),
+        refuse_outside: true,
+    }
+}
+
+fn git_env(home: &std::path::Path) -> Vec<(String, String)> {
+    vec![
+        ("PATH".into(), "/usr/bin:/bin:/usr/sbin:/sbin".into()),
+        ("HOME".into(), home.to_string_lossy().into_owned()),
+        ("GIT_CONFIG_GLOBAL".into(), "/dev/null".into()),
+        ("GIT_CONFIG_NOSYSTEM".into(), "1".into()),
+    ]
+}
+
+fn scripted(harness: &mut Harness, folder: &std::path::Path, turns: Vec<ScriptTurn>, contract: Contract) -> SessionId {
+    let script = Script {
+        turns,
+        pace: Duration::ZERO,
+    };
+    let rule = ide_session::rule::for_contract(&contract);
+    let launch = Launch::new(AgentPath::Scripted(script), folder, Vec::new(), contract);
+    harness.registry.start(launch, rule).unwrap()
+}
+
+fn user() -> Contract {
+    Contract::User(UserChoices::default())
+}
+
+#[test]
+fn an_order_runs_in_its_worktree_after_a_checkpoint_and_its_rule_answers_what_lies_outside() {
+    let scratch = folder("order");
+    let worktree = scratch.join("wt");
+    std::fs::create_dir_all(&worktree).unwrap();
+    std::fs::create_dir_all(scratch.join("home")).unwrap();
+    let git = ide_git::Git::new(&ide_process::Supervisor::new(), git_env(&scratch.join("home")));
+    git.init(&worktree).unwrap();
+    let turn = ScriptTurn::new(
+        vec![
+            Step::Say("Reading.".into()),
+            Step::Write {
+                path: "src/lib.rs".into(),
+                contents: "pub fn f() {}\n".into(),
+            },
+            Step::Ask {
+                tool: "Bash".into(),
+                input: json!({"command": "git push origin main"}),
+            },
+            Step::Question("Which name?".into()),
+            Step::Plan("1. Rename it".into()),
+            Step::Say("Done.".into()),
+        ],
+        End::Succeed,
+    );
+    let mut harness = Harness::new();
+    let contract = Contract::Order(order(&worktree));
+    let rule = ide_session::rule::for_contract(&contract);
+    let script = Script {
+        turns: vec![turn],
+        pace: Duration::ZERO,
+    };
+    let mut launch = Launch::new(AgentPath::Scripted(script), &worktree, Vec::new(), contract);
+    launch.git = Some(git.clone());
+    let session = harness.registry.start(launch, rule).unwrap();
+    let watcher = harness.follow(session);
+    let driver = harness.registry.get_mut(session).unwrap();
+    let first = driver.send(Prompt::new("Build it")).unwrap();
+    harness.until(watcher, "the question", |s| waiting(s).is_some());
+    let question = waiting(&harness.signals(watcher)).unwrap();
+    let driver = harness.registry.get_mut(session).unwrap();
+    assert!(driver.waits_for_user());
+    assert!(
+        driver.answer_permission(&question, true, None).is_err(),
+        "a question takes no permission"
+    );
+    let answer = Answer {
+        question: "Which name?".into(),
+        answer: "f".into(),
+    };
+    driver.answer_questions(&question, vec![answer]).unwrap();
+    let end = harness.end_of(watcher, first);
+    assert_eq!(end.outcome, Outcome::Succeeded);
+    let checkpoint = end.checkpoint.expect("a checkpoint before the prompt");
+    assert_eq!(checkpoint.thread.as_str(), "o-7-builder");
+    assert_eq!(
+        std::fs::read_to_string(worktree.join("src/lib.rs")).unwrap(),
+        "pub fn f() {}\n"
+    );
+    let signals = harness.signals(watcher);
+    let decided: Vec<&Verdict> = signals
+        .iter()
+        .filter_map(|s| match s {
+            Signal::Decided { verdict, .. } => Some(verdict),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        decided,
+        [&Verdict::Deny(OUTSIDE_ORDER.into()), &Verdict::Deny(NO_PLANS.into())]
+    );
+    let waited: Vec<RequestKind> = signals
+        .iter()
+        .filter_map(|s| match s {
+            Signal::Waiting { kind, .. } => Some(*kind),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(waited, [RequestKind::Question]);
+    let started = signals.iter().position(|s| *s == Signal::TurnStarted(first)).unwrap();
+    let ended = signals.iter().position(|s| matches!(s, Signal::TurnEnded(_))).unwrap();
+    assert!(started < ended);
+    let thread = harness.registry.get(session).unwrap().thread().clone();
+    let denied = thread.entries(&Lane::Main).iter().any(|e| {
+        matches!(&e.kind, EntryKind::PermissionRequest(r)
+            if matches!(&r.state, RequestState::Decided(Decision::Denied { message: Some(m) }) if m == OUTSIDE_ORDER))
+    });
+    assert!(denied, "the agent hears why");
+    let second = harness
+        .registry
+        .get_mut(session)
+        .unwrap()
+        .send(Prompt::new("Again"))
+        .unwrap();
+    assert_eq!(harness.end_of(watcher, second).outcome, Outcome::Succeeded);
+    let checkpoints = ide_git::Checkpoints::open(&git, &worktree).unwrap();
+    let thread = ide_git::CheckpointThread::new("o-7-builder").unwrap();
+    assert_eq!(checkpoints.list(Some(&thread)).unwrap().len(), 2);
+}
+
+#[test]
+fn every_kind_of_turn_end_is_typed() {
+    let scratch = folder("endings");
+    let turns = vec![
+        ScriptTurn::new(vec![Step::Say("Trying.".into())], End::Fail("the model refused".into())),
+        ScriptTurn::new(vec![Step::Say("Thinking.".into())], End::Hang),
+        ScriptTurn::new(vec![Step::Say("Done.".into())], End::Succeed),
+        ScriptTurn::new(vec![Step::Say("Working".into())], End::Crash("the agent died".into())),
+    ];
+    let mut harness = Harness::new();
+    let session = scripted(&mut harness, &scratch, turns, user());
+    let watcher = harness.follow(session);
+    let send = |harness: &mut Harness, text: &str| {
+        harness
+            .registry
+            .get_mut(session)
+            .unwrap()
+            .send(Prompt::new(text))
+            .unwrap()
+    };
+    let failing = send(&mut harness, "fail");
+    assert!(failed_with(
+        &harness.end_of(watcher, failing).outcome,
+        "the model refused"
+    ));
+    let hanging = send(&mut harness, "hang");
+    harness.until(watcher, "the hanging turn", |s| {
+        s.contains(&Signal::TurnStarted(hanging))
+    });
+    harness.registry.get_mut(session).unwrap().stop_turn();
+    assert_eq!(harness.end_of(watcher, hanging).outcome, Outcome::Cancelled);
+    let fine = send(&mut harness, "fine");
+    let queued = send(&mut harness, "crash");
+    assert_eq!(harness.end_of(watcher, fine).outcome, Outcome::Succeeded);
+    assert_eq!(harness.end_of(watcher, queued).outcome, Outcome::ConnectionLost);
+    harness.until(watcher, "the end of the process", |s| {
+        s.iter()
+            .any(|s| matches!(s, Signal::Ended { stderr } if stderr == "the agent died"))
+    });
+    let driver = harness.registry.get_mut(session).unwrap();
+    assert!(driver.is_ended());
+    assert_eq!(driver.send(Prompt::new("hello?")), Err(SendError::Ended));
+    let mut prompt = Prompt::new("with a schema");
+    prompt.schema = Some(json!({"type": "object"}));
+    assert!(matches!(
+        driver.send(prompt),
+        Err(SendError::Ended | SendError::NoSchema(_))
+    ));
+}
+
+#[test]
+fn background_work_counts_until_it_is_stopped_and_stopping_the_session_cancels_what_waits() {
+    let scratch = folder("background");
+    let turns = vec![
+        ScriptTurn::new(vec![Step::Background("dev server".into())], End::Succeed),
+        ScriptTurn::new(Vec::new(), End::Hang),
+    ];
+    let mut harness = Harness::new();
+    let session = scripted(&mut harness, &scratch, turns, user());
+    let watcher = harness.follow(session);
+    let first = harness
+        .registry
+        .get_mut(session)
+        .unwrap()
+        .send(Prompt::new("serve"))
+        .unwrap();
+    let end = harness.end_of(watcher, first);
+    assert_eq!((end.outcome, end.running_work), (Outcome::Succeeded, 1));
+    let driver = harness.registry.get_mut(session).unwrap();
+    assert!(driver.is_working());
+    assert_eq!(driver.stop_background(), 1);
+    harness.until_state("the stopped server", |r| r.get(session).unwrap().running_work() == 0);
+    assert!(harness.registry.working().is_empty());
+    let driver = harness.registry.get_mut(session).unwrap();
+    let hanging = driver.send(Prompt::new("hang")).unwrap();
+    let waiting = driver.send(Prompt::new("never sent")).unwrap();
+    harness.until(watcher, "the hanging turn", |s| {
+        s.contains(&Signal::TurnStarted(hanging))
+    });
+    assert_eq!(harness.registry.working(), [session]);
+    assert_eq!(harness.registry.working_in(&scratch), [session]);
+    let driver = harness.registry.remove(session).unwrap();
+    assert!(driver.is_ended());
+    assert!(harness.registry.is_empty());
+    let _ = waiting;
+}
+
+#[test]
+fn a_slow_subscriber_at_a_high_event_rate_gets_every_control_event_in_order_and_a_redraw_for_its_backlog() {
+    let scratch = folder("fan-out");
+    let mut steps: Vec<Step> = (0..5000).map(|n| Step::Say(format!("line {n}"))).collect();
+    steps.push(Step::Stream {
+        text: "x".into(),
+        chunks: 20_000,
+    });
+    let mut harness = Harness::new();
+    let session = scripted(
+        &mut harness,
+        &scratch,
+        vec![ScriptTurn::new(steps, End::Succeed)],
+        user(),
+    );
+    let fast = harness.follow(session);
+    let slow = harness.registry.get_mut(session).unwrap().subscribe();
+    assert!(
+        harness.take(session, slow).unwrap().is_redraw(),
+        "it starts with the snapshot"
+    );
+    let turn = harness
+        .registry
+        .get_mut(session)
+        .unwrap()
+        .send(Prompt::new("flood"))
+        .unwrap();
+    harness.until(fast, "the turn", |s| s.contains(&Signal::TurnStarted(turn)));
+    let late = harness.registry.get_mut(session).unwrap().subscribe();
+    let joined = harness.take(session, late).unwrap();
+    assert!(joined.is_redraw(), "a view opened mid-run starts from the snapshot");
+    assert!(harness.registry.get_mut(session).unwrap().unsubscribe(late));
+    let end = harness.end_of(fast, turn);
+    assert_eq!(end.outcome, Outcome::Succeeded, "closing a view ends no session");
+    let backlog = harness.take(session, slow).unwrap();
+    assert!(backlog.is_redraw(), "a backlog of {} changes", backlog.changes.len());
+    let control = |signals: &[Signal]| -> Vec<Signal> {
+        signals
+            .iter()
+            .filter(|s| matches!(s, Signal::Ready | Signal::TurnStarted(_) | Signal::TurnEnded(_)))
+            .cloned()
+            .collect()
+    };
+    let wanted = vec![Signal::Ready, Signal::TurnStarted(turn), Signal::TurnEnded(end)];
+    assert_eq!(control(&backlog.signals), wanted);
+    assert_eq!(control(&harness.signals(fast)), wanted);
+    let said = backlog
+        .thread
+        .entries(&Lane::Main)
+        .iter()
+        .filter(|e| matches!(e.kind, EntryKind::AgentMessage(_)))
+        .count();
+    assert_eq!(said, 5001);
+    let streamed = backlog
+        .thread
+        .entries(&Lane::Main)
+        .iter()
+        .rev()
+        .find_map(|e| match &e.kind {
+            EntryKind::AgentMessage(m) => Some(m.markdown.len()),
+            _ => None,
+        });
+    assert_eq!(streamed, Some(20_000));
+    assert!(
+        harness.take(session, slow).unwrap().signals.is_empty(),
+        "each signal once"
+    );
+}

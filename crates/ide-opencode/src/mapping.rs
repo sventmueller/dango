@@ -20,6 +20,10 @@ use crate::capabilities::{Capabilities, ModelRef};
 
 pub(crate) use usage::rate_limits;
 
+/// How the notice of a turn the server stopped for another reason than the user, such as its shutdown, begins; the
+/// reason follows.
+pub const OTHER_INTERRUPTION: &str = "interrupted: ";
+
 /// The most command output a card keeps while it streams; older output is dropped from the front.
 const OUTPUT_LIMIT: usize = 512 * 1024;
 
@@ -243,6 +247,26 @@ impl Mapper {
         out
     }
 
+    /// The thread's state after its history was read again following a gap in the event stream: running when the
+    /// server's `Session.Info` says the session is busy, else at rest, with the totals `info` names.
+    pub(crate) fn resynced(&mut self, info: &Value, at: SystemTime) -> Vec<Update> {
+        let time = info.get("time").unwrap_or(&Value::Null);
+        let since = |name: &str| time.get(name).and_then(Value::as_f64);
+        let busy = match (since("busy"), since("idle")) {
+            (Some(busy), Some(idle)) => busy > idle,
+            (Some(_), None) => true,
+            _ => false,
+        };
+        let mut out = if busy {
+            self.running = true;
+            vec![Update::Status(Status::Running)]
+        } else {
+            self.abandon(at)
+        };
+        out.extend(self.usage.totals(info));
+        out
+    }
+
     /// A failure to show in the thread, such as a prompt the server refused.
     pub(crate) fn error(&mut self, kind: ErrorKind, message: String, at: SystemTime) -> Vec<Update> {
         let mut out = self.settle(at);
@@ -354,7 +378,7 @@ impl Mapper {
                 let key = self.key("notice");
                 out.push(put(key, at, EntryKind::Notice(Notice::Interrupted)));
             }
-            Some(reason) => out.push(self.notice(InfoLevel::Notice, format!("interrupted: {reason}"), at)),
+            Some(reason) => out.push(self.notice(InfoLevel::Notice, format!("{OTHER_INTERRUPTION}{reason}"), at)),
             None => {}
         }
         if self.running {

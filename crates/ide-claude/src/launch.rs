@@ -6,6 +6,8 @@ use std::time::Duration;
 
 use ide_thread::Rewind;
 
+use crate::order::OrderBounds;
+
 /// How much the model thinks before it answers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Thinking {
@@ -71,6 +73,9 @@ pub struct Launch {
     /// The longest a control request waits for its answer, where that is shorter than the request's own timeout
     /// (`control::Request::timeout`); for tests of a CLI that does not answer.
     pub control_timeout: Option<Duration>,
+    /// The bounds of a work order's session; they take the place of the permission mode, the sandbox switch and
+    /// `allow_bypass`, and leave out MCP servers and Claude in Chrome.
+    pub order: Option<OrderBounds>,
 }
 
 /// The variable the CLI reads to know who started it; it is left for the CLI to choose, so the app never passes
@@ -104,6 +109,7 @@ impl Launch {
             forward_subagent_text: true,
             remote_control: None,
             control_timeout: None,
+            order: None,
         }
     }
 
@@ -135,7 +141,11 @@ impl Launch {
         if let Some(model) = &self.model {
             flag("model", model);
         }
-        if let Some(mode) = &self.permission_mode {
+        let mode = match &self.order {
+            Some(order) => Some(order.permission_mode()),
+            None => self.permission_mode.as_deref(),
+        };
+        if let Some(mode) = mode {
             flag("permission-mode", mode);
         }
         if let Some(effort) = &self.effort {
@@ -163,20 +173,8 @@ impl Launch {
                 }
             }
         }
-        if !self.allowed_tools.is_empty() {
-            flag("allowedTools", &self.allowed_tools.join(","));
-        }
-        if !self.disallowed_tools.is_empty() {
-            flag("disallowedTools", &self.disallowed_tools.join(","));
-        }
-        for dir in &self.add_dirs {
-            flag("add-dir", &dir.to_string_lossy());
-        }
-        if self.sandbox {
-            // The CLI's sandbox covers shell commands only; failIfUnavailable keeps it from silently running without.
-            flag("settings", r#"{"sandbox":{"enabled":true,"failIfUnavailable":true}}"#);
-        }
-        if self.allow_bypass {
+        self.rules(&mut args);
+        if self.allow_bypass && self.order.is_none() {
             args.push("--allow-dangerously-skip-permissions".into());
         }
         if !self.persist {
@@ -186,6 +184,36 @@ impl Launch {
             args.push("--fork-session".into());
         }
         args
+    }
+
+    /// The tool rules, the extra folders and the settings, with those of the order when there is one.
+    fn rules(&self, args: &mut Vec<String>) {
+        let order = self.order.as_ref();
+        let allowed: Vec<String> = (self.allowed_tools.iter().cloned())
+            .chain(order.map(OrderBounds::allowed_tools).unwrap_or_default())
+            .collect();
+        let disallowed: Vec<String> = (self.disallowed_tools.iter().cloned())
+            .chain(order.map(OrderBounds::disallowed_tools).unwrap_or_default())
+            .collect();
+        if !allowed.is_empty() {
+            args.push(format!("--allowedTools={}", allowed.join(",")));
+        }
+        if !disallowed.is_empty() {
+            args.push(format!("--disallowedTools={}", disallowed.join(",")));
+        }
+        let dirs = (self.add_dirs.iter().cloned()).chain(order.map(OrderBounds::extra_dirs).unwrap_or_default());
+        for dir in dirs {
+            args.push(format!("--add-dir={}", dir.to_string_lossy()));
+        }
+        if let Some(order) = order {
+            args.push(format!("--settings={}", order.settings()));
+            // Without --mcp-config this loads no MCP server at all (E191).
+            args.push("--strict-mcp-config".into());
+            args.push("--no-chrome".into());
+        } else if self.sandbox {
+            // The CLI's sandbox covers shell commands only; failIfUnavailable keeps it from silently running without.
+            args.push(r#"--settings={"sandbox":{"enabled":true,"failIfUnavailable":true}}"#.into());
+        }
     }
 
     /// The environment: the login shell's, without a client name, with file backups when asked for.
@@ -354,6 +382,112 @@ mod tests {
             !launch.arguments().iter().any(|a| a.starts_with("--resume-drops-turn")),
             "the guard only applies to a resume up to a message"
         );
+    }
+
+    fn order(builds: bool, asks: bool) -> OrderBounds {
+        OrderBounds {
+            builds,
+            asks,
+            worktree: "/data/orders/o1".into(),
+            build_dir: Some("/data/builds/o1".into()),
+            read_roots: vec!["/Users/me/.rustup".into()],
+            allowed_domains: vec!["crates.io".into()],
+        }
+    }
+
+    fn value_of<'a>(args: &'a [String], name: &str) -> &'a str {
+        args.iter()
+            .find_map(|a| a.strip_prefix(&format!("--{name}=")))
+            .unwrap_or_else(|| panic!("--{name} is missing from {args:?}"))
+    }
+
+    #[test]
+    fn a_builder_of_an_order_edits_only_its_folders_in_the_sandbox_and_never_asks() {
+        let mut launch = launch();
+        launch.permission_mode = Some("acceptEdits".into());
+        launch.allow_bypass = true;
+        launch.order = Some(order(true, false));
+        let args = launch.arguments();
+        assert_eq!(value_of(&args, "permission-mode"), "dontAsk");
+        assert!(!args.iter().any(|a| a.contains("dangerously")), "{args:?}");
+        assert!(args.contains(&"--strict-mcp-config".to_string()));
+        assert!(args.contains(&"--no-chrome".to_string()));
+        assert!(!args.iter().any(|a| a.starts_with("--mcp-config")));
+        assert_eq!(value_of(&args, "add-dir"), "/data/builds/o1");
+        let allowed: Vec<&str> = value_of(&args, "allowedTools").split(',').collect();
+        for rule in [
+            "Read(//data/orders/o1/**)",
+            "Edit(//data/orders/o1/**)",
+            "Edit(//data/builds/o1/**)",
+            "Bash",
+        ] {
+            assert!(allowed.contains(&rule), "{rule} is not allowed: {allowed:?}");
+        }
+        let denied: Vec<&str> = value_of(&args, "disallowedTools").split(',').collect();
+        for rule in [
+            "Bash(git push:*)",
+            "Bash(git update-ref:*)",
+            "Bash(git branch -D:*)",
+            "Bash(git branch -d:*)",
+            "Bash(git stash:*)",
+            "Bash(git worktree:*)",
+            "Bash(git -C:*)",
+            "WebFetch",
+            "WebSearch",
+        ] {
+            assert!(denied.contains(&rule), "{rule} is not denied: {denied:?}");
+        }
+        assert!(!denied.contains(&"Edit"), "a builder edits");
+        let settings: serde_json::Value = serde_json::from_str(value_of(&args, "settings")).unwrap();
+        let sandbox = &settings["sandbox"];
+        assert_eq!(sandbox["enabled"], true);
+        assert_eq!(sandbox["failIfUnavailable"], true);
+        assert_eq!(sandbox["allowUnsandboxedCommands"], false);
+        assert_eq!(sandbox["network"]["allowedDomains"], serde_json::json!(["crates.io"]));
+        assert_eq!(sandbox["filesystem"]["denyRead"], serde_json::json!(["~"]));
+        assert_eq!(
+            sandbox["filesystem"]["allowRead"],
+            serde_json::json!(["/data/orders/o1", "/data/builds/o1", "/Users/me/.rustup"])
+        );
+        assert_eq!(
+            sandbox["filesystem"]["allowWrite"],
+            serde_json::json!(["/data/builds/o1"])
+        );
+        let permissions = &settings["permissions"];
+        assert_eq!(permissions["blockReadsOutsideWorkingDirectories"], true);
+        assert_eq!(permissions["blockWritesOutsideWorkingDirectories"], true);
+        assert_eq!(
+            permissions["blockReadsExemptPaths"],
+            serde_json::json!(["/Users/me/.rustup"])
+        );
+        assert_eq!(permissions["disableBypassPermissionsMode"], "disable");
+    }
+
+    #[test]
+    fn a_reader_of_an_order_has_no_writing_tool_and_its_commands_write_in_neither_folder() {
+        let mut launch = launch();
+        launch.order = Some(order(false, false));
+        let args = launch.arguments();
+        assert_eq!(value_of(&args, "permission-mode"), "dontAsk");
+        let allowed = value_of(&args, "allowedTools");
+        assert!(!allowed.contains("Edit("), "{allowed}");
+        let denied: Vec<&str> = value_of(&args, "disallowedTools").split(',').collect();
+        for tool in ["Edit", "Write", "NotebookEdit", "WebFetch"] {
+            assert!(denied.contains(&tool), "{tool} is not denied: {denied:?}");
+        }
+        let settings: serde_json::Value = serde_json::from_str(value_of(&args, "settings")).unwrap();
+        assert_eq!(
+            settings["sandbox"]["filesystem"]["denyWrite"],
+            serde_json::json!(["/data/orders/o1", "/data/builds/o1"])
+        );
+        assert!(settings["sandbox"]["filesystem"].get("allowWrite").is_none());
+    }
+
+    #[test]
+    fn without_the_owners_decision_an_order_asks_instead_of_refusing() {
+        let mut launch = launch();
+        launch.order = Some(order(true, true));
+        assert_eq!(value_of(&launch.arguments(), "permission-mode"), "default");
     }
 
     #[test]

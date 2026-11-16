@@ -80,7 +80,7 @@ pub(super) fn learn_offers(shared: &Shared) -> Result<(), SessionError> {
     Ok(())
 }
 
-fn data(result: Value, what: &str) -> Result<Value, SessionError> {
+pub(super) fn data(result: Value, what: &str) -> Result<Value, SessionError> {
     result
         .get("data")
         .filter(|d| d.get("id").is_some())
@@ -89,7 +89,7 @@ fn data(result: Value, what: &str) -> Result<Value, SessionError> {
 }
 
 /// Every message of the session `id`, oldest first.
-fn messages(shared: &Shared, id: &str) -> Result<Vec<Value>, SessionError> {
+pub(super) fn messages(shared: &Shared, id: &str) -> Result<Vec<Value>, SessionError> {
     let base = format!("/api/session/{}/message", encode(id));
     let mut target = format!("{base}?order=asc&limit={PAGE}");
     let mut all = Vec::new();
@@ -168,7 +168,7 @@ fn header(mapper: &mut Mapper, caps: &crate::Capabilities, id: &str) -> Vec<Upda
 }
 
 /// The permissions and forms of a resumed session that wait for an answer.
-fn waiting_requests(shared: &Arc<Shared>) -> Result<(), SessionError> {
+pub(super) fn waiting_requests(shared: &Arc<Shared>) -> Result<(), SessionError> {
     let target = format!("/api/permission/request?{}", shared.location());
     let permissions = shared.request_now("GET", &target, None)?;
     let forms = shared.request_now("GET", &shared.session_path("/form")?, None)?;

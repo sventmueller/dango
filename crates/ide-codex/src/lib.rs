@@ -26,7 +26,7 @@ pub mod wire;
 mod ws;
 
 pub use capabilities::{Account, Capabilities, Effort, MODES, Mode, Model};
-pub use launch::{ApprovalPolicy, Launch, SandboxMode};
+pub use launch::{ApprovalPolicy, Confinement, Launch, SandboxMode};
 pub use manage::{
     AccountState, ConfigEdit, ConfigWritten, Feedback, FeedbackSent, Login, LoginStarted, McpLogin, McpServer,
     MergeStrategy, Skill, Skills, ThreadPage, ThreadQuery, ThreadSummary,

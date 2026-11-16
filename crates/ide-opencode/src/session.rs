@@ -9,6 +9,7 @@ mod events;
 mod manage;
 mod open;
 mod reply;
+mod resync;
 
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
@@ -52,6 +53,11 @@ pub enum Event {
     Failed(SessionError),
     /// The MCP server of this name changed its state; `Session::mcp_servers` tells the new one.
     McpChanged(String),
+    /// The event stream broke off while the server runs; what happened until it is open again is lost, so the
+    /// thread may lag behind the server until `Session::resync`.
+    StreamGap,
+    /// The event stream is open again after a gap; the events in between stay lost.
+    StreamResumed,
     /// The process ended; its last error output is attached.
     Ended {
         /// The end of what the server wrote to stderr.

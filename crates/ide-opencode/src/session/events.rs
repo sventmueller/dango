@@ -3,7 +3,8 @@
 //! for the user, and changed agents or models are read anew.
 //!
 //! The stream is volatile by the schema's contract: events while it is down are missed. When it breaks while the
-//! server runs, it is opened again a few times before the session gives up.
+//! server runs, the session reports the gap and opens it again a few times before it gives up; `Session::resync`
+//! catches up on what the gap swallowed.
 
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
@@ -58,6 +59,7 @@ fn read(shared: &Arc<Shared>, mut events: Events) {
         if shared.is_ended() || shared.stopping.load(Ordering::SeqCst) {
             return;
         }
+        shared.emit(Event::StreamGap);
         let mut error = SessionError::Closed;
         let reopened = loop {
             if left == 0 {
@@ -74,7 +76,10 @@ fn read(shared: &Arc<Shared>, mut events: Events) {
             }
         };
         match reopened {
-            Some(reopened) => events = reopened,
+            Some(reopened) => {
+                events = reopened;
+                shared.emit(Event::StreamResumed);
+            }
             None => {
                 shared.fail(error);
                 shared.stopping.store(true, Ordering::SeqCst);
