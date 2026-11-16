@@ -33,7 +33,7 @@ impl Acp {
     pub(super) fn new(tab: &AgentTab, name: &str) -> Acp {
         let state = tab.state.borrow();
         Acp {
-            session: state.source().acp().cloned(),
+            session: state.source().acp(),
             caps: state.acp_caps().cloned().unwrap_or_default(),
             thread: state.thread().clone(),
             cwd: tab.cwd.clone(),

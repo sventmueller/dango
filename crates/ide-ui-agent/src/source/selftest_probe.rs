@@ -1,7 +1,7 @@
 //! What the self-test reads from and does with the parts of `source.rs`, kept out of its production code.
 
 use std::rc::Rc;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 #[allow(
     unused_imports,

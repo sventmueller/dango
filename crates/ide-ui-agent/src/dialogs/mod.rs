@@ -340,9 +340,9 @@ pub(crate) fn needs_session(tab: &AgentTab, open: &Open, backend: &dyn backend::
         use crate::source::Source;
         match tab.state.borrow().source() {
             Source::Starting => true,
-            Source::Acp(session) => !session.is_ended(),
             Source::Session(driven) => {
-                driven.codex().is_some_and(|session| !session.is_ended())
+                driven.acp().is_some_and(|session| !session.is_ended())
+                    || driven.codex().is_some_and(|session| !session.is_ended())
                     || driven.opencode().is_some_and(|session| !session.is_ended())
             }
             _ => false,

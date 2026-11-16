@@ -57,7 +57,6 @@ const FILL_PRIORITY: f32 = 255.0;
 
 /// What a session the tab runs itself reported; its own Claude session reports through the app's registry instead.
 pub(crate) enum Incoming {
-    Acp(ide_acp::Event),
     Own(ide_agent::Event),
 }
 

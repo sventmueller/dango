@@ -165,49 +165,23 @@ impl AgentTab {
             return;
         }
         let changes: Vec<Change> = pending.changes.into_iter().collect();
-        let mut problem = None;
-        let mut learned = false;
-        let mut ended = None;
         for event in pending.events {
             match &event {
-                Incoming::Acp(ide_acp::Event::Changed(c)) | Incoming::Own(ide_agent::Event::Changed(c)) => {
+                Incoming::Own(ide_agent::Event::Changed(c)) => {
                     debug_assert!(c.is_empty(), "invalidations are coalesced before scheduling");
                 }
                 Incoming::Own(other) => self.own_event(other),
-                Incoming::Acp(ide_acp::Event::Capabilities) => learned = true,
-                Incoming::Acp(ide_acp::Event::Failed(error)) => problem = self.acp_problem(error),
-                Incoming::Acp(ide_acp::Event::Ended { stderr }) => ended = Some(stderr.clone()),
             }
         }
-        let snapshot = {
-            let mut state = self.state.borrow_mut();
-            if learned {
-                state.learn();
-            }
-            state.source().snapshot()
-        };
-        if learned && self.agent.is_acp() {
-            self.acp_apply_choice();
-            self.send_queued();
-        }
-        if problem.is_some() {
-            self.set_problem(problem);
-        }
+        let snapshot = self.state.borrow().source().snapshot();
         if let Some(snapshot) = snapshot {
             self.absorb(snapshot, &changes);
             super::dialogs::requests_changed(self);
         }
-        if learned {
-            self.refresh();
-            super::dialogs::session_ready(self);
-        }
-        if let Some(stderr) = ended {
-            self.acp_ended(&stderr);
-        }
     }
 
     /// What an ACP session's failure means for the tab; failures of a running session's requests are only logged.
-    fn acp_problem(&self, error: &ide_acp::SessionError) -> Option<Problem> {
+    pub(super) fn acp_problem(&self, error: &ide_acp::SessionError) -> Option<Problem> {
         let ready = self.state.borrow().source().is_live();
         let problem = acp_problem_of(self.agent.name(), ready, error);
         if problem.is_none() {

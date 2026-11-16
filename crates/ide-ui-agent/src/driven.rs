@@ -164,6 +164,11 @@ impl Driven {
         self.with(|driver| driver.opencode().cloned()).flatten()
     }
 
+    /// The ACP session behind the driver, for what only an ACP agent does.
+    pub(crate) fn acp(&self) -> Option<ide_acp::Session> {
+        self.with(|driver| driver.acp().cloned()).flatten()
+    }
+
     /// Hands `message` to the driver's queue, which sends it after the turn that runs and its checkpoint.
     pub(crate) fn send(&self, message: UserMessage) -> Result<(), Explained> {
         let prompt = Prompt {

@@ -18,9 +18,7 @@ pub(super) struct Pending {
 impl Pending {
     pub(crate) fn push(&mut self, event: Incoming) {
         let changes = match event {
-            Incoming::Acp(ide_acp::Event::Changed(changes)) | Incoming::Own(ide_agent::Event::Changed(changes)) => {
-                changes
-            }
+            Incoming::Own(ide_agent::Event::Changed(changes)) => changes,
             other => {
                 self.events.push(other);
                 return;
@@ -51,19 +49,19 @@ mod tests {
     fn streaming_invalidations_stay_bounded_without_losing_control_events() {
         let mut pending = Pending::default();
         for _ in 0..10_000 {
-            pending.push(Incoming::Acp(ide_acp::Event::Changed(vec![Change::Usage])));
+            pending.push(Incoming::Own(ide_agent::Event::Changed(vec![Change::Usage])));
         }
         assert_eq!(pending.changes.len(), 1);
         for n in 0..MAX_CHANGES + 1 {
-            pending.push(Incoming::Acp(ide_acp::Event::Changed(vec![Change::Subagent(
+            pending.push(Incoming::Own(ide_agent::Event::Changed(vec![Change::Subagent(
                 n.to_string(),
             )])));
         }
-        pending.push(Incoming::Acp(ide_acp::Event::Capabilities));
+        pending.push(Incoming::Own(ide_agent::Event::Failed("saving".into())));
         assert_eq!(pending.changes, HashSet::from([Change::Cleared]));
         assert!(matches!(
             pending.events.as_slice(),
-            [Incoming::Acp(ide_acp::Event::Capabilities)]
+            [Incoming::Own(ide_agent::Event::Failed(_))]
         ));
     }
 }

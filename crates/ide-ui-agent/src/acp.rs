@@ -10,8 +10,8 @@ use std::time::Duration;
 use ide_acp::launch::Origin;
 use ide_acp::register::{self, PRESETS};
 use ide_acp::{Effect, Installs, Launch, OptionValue, Plan, Register, Sandbox};
-use ide_process::Supervisor;
-use ide_session::PathKind;
+
+use ide_session::{LaunchError, PathKind};
 use ide_thread::{EntryKind, PermissionOption, RequestState, Thread};
 use objc2::rc::Retained;
 use objc2::sel;
@@ -22,7 +22,7 @@ use super::acp_install::refusal_text;
 use super::acp_words;
 use super::cards::request::{ALLOW_ALWAYS, ALLOW_ONCE};
 use super::source::{Problem, Source};
-use super::tab::{AgentTab, Incoming};
+use super::tab::AgentTab;
 use ide_ui_common::util::{main_soon, ns};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
@@ -287,7 +287,7 @@ impl AgentTab {
                     match (codex, opencode) {
                         (Some(codex), _) => tab.launch_codex(codex, thread, git),
                         (None, Some(opencode)) => tab.launch_opencode(opencode, thread, git),
-                        (None, None) => tab.launch_acp(launch, missing, thread),
+                        (None, None) => tab.launch_acp(launch, missing, thread, git),
                     }
                 }
             });
@@ -309,7 +309,15 @@ impl AgentTab {
         }
     }
 
-    fn launch_acp(&self, launch: Option<Launch>, missing: Option<Availability>, thread: Thread) {
+    /// Starts the agent as `launch` says for `thread` in the app's registry, or shows what it takes when there is no
+    /// launch; the registry takes the checkpoint before each message with `git` (I6).
+    fn launch_acp(
+        &self,
+        launch: Option<Launch>,
+        missing: Option<Availability>,
+        thread: Thread,
+        git: Option<ide_git::Git>,
+    ) {
         let Some(agent) = self.acp_agent() else { return };
         let Some(mut launch) = launch else {
             let problem = match missing {
@@ -320,25 +328,33 @@ impl AgentTab {
             self.start_failed(problem);
             return;
         };
-        {
+        let resume = {
             let state = self.state.borrow();
             if state.sandbox() {
                 launch = launch.sandboxed(&agent.sandbox);
             }
-            launch.resume = thread
+            thread
                 .session()
                 .map(str::to_string)
-                .or_else(|| state.resume().map(|r| r.session.clone()));
-        }
-        let sink = self.sink(Incoming::Acp);
-        match ide_acp::Session::start(Supervisor::global(), launch, thread.clone(), sink) {
-            Ok(session) => {
-                self.state.borrow_mut().started(Source::Acp(session));
-                self.absorb(thread, &[ide_thread::Change::Cleared]);
+                .or_else(|| state.resume().map(|r| r.session.clone()))
+        };
+        let Some(sessions) = self.sessions.clone() else {
+            return self.start_failed(Problem::Start(start_problem(LaunchError::Start(String::new()))));
+        };
+        let (cwd, env) = (launch.cwd.clone(), launch.env.clone());
+        let contract = ide_session::Contract::User(ide_session::UserChoices::default());
+        let mut start = ide_session::Launch::new(ide_session::AgentPath::Acp(Box::new(launch)), cwd, env, contract);
+        start.resume = resume;
+        start.thread = Some(thread);
+        start.git = git;
+        match crate::driven::Driven::start(&sessions, start) {
+            Ok((driven, first)) => {
+                self.state.borrow_mut().started(Source::Session(driven));
+                if let Some(first) = first {
+                    self.absorb(first.thread, &[ide_thread::Change::Cleared]);
+                }
             }
-            Err(error) => {
-                self.start_failed(Problem::Start(ide_core::explain::Explain::explain(&error)));
-            }
+            Err(error) => self.start_failed(Problem::Start(start_problem(error))),
         }
     }
 
@@ -348,8 +364,7 @@ impl AgentTab {
         let source = {
             let mut state = self.state.borrow_mut();
             let path = state.source().tab_session().map(crate::driven::Driven::kind);
-            let agent = matches!(path, Some(PathKind::Codex | PathKind::OpenCode));
-            if !matches!(state.source(), Source::Acp(_)) && !agent {
+            if !matches!(path, Some(PathKind::Acp | PathKind::Codex | PathKind::OpenCode)) {
                 return;
             }
             state.end()
@@ -377,7 +392,8 @@ impl AgentTab {
             }
             Some(terminal) => {
                 let program = match self.state.borrow().source() {
-                    Source::Acp(_) | Source::Idle | Source::Starting => self.launch_program(),
+                    Source::Session(driven) if driven.kind() == PathKind::Acp => self.launch_program(),
+                    Source::Idle | Source::Starting => self.launch_program(),
                     Source::Session(_) | Source::Own(_) | Source::Driven(_) => None,
                 };
                 let Some(program) = program else { return };
@@ -626,6 +642,16 @@ impl AgentTab {
         if let Err(error) = result {
             ide_ui_common::diag::report("answering a permission request", &error);
         }
+    }
+}
+
+/// Why the agent's session did not start, as the ACP session's own error words it.
+fn start_problem(error: LaunchError) -> String {
+    use ide_core::explain::Explain;
+    match error {
+        LaunchError::NotFound(program) => ide_acp::SessionError::NotFound(program).explain(),
+        LaunchError::Start(why) => ide_acp::SessionError::Start(why).explain(),
+        other => other.to_string(),
     }
 }
 
