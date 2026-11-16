@@ -15,6 +15,7 @@ mod launching;
 mod learning;
 mod lifecycle;
 mod manifest;
+pub(crate) mod models;
 mod notices;
 mod own;
 mod power;

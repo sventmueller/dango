@@ -1,5 +1,5 @@
-//! The panel "Leitstand" of one window (E175): the folder's orders grouped by station in an outline, a red dot beside
-//! each that waits, "+ Neuer Auftrag" and the Leitstand tab in its title, an empty state without orders; a double
+//! The panel "Software Factory" of one window (E175): the folder's orders grouped by station in an outline, a red dot
+//! beside each that waits, "+ Neuer Auftrag" and the Leitstand tab in its title, an empty state without orders; a double
 //! click opens an order's tab, the context menu runs the order's commands.
 
 use std::cell::{OnceCell, RefCell};
@@ -14,8 +14,9 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSButton, NSControlTextEditingDelegate, NSMenu, NSMenuDelegate, NSMenuItem, NSOutlineView, NSOutlineViewDataSource,
-    NSOutlineViewDelegate, NSStackView, NSStackViewGravity, NSTableColumn, NSTextField, NSView,
+    NSColor, NSControlTextEditingDelegate, NSImageView, NSLayoutAttribute, NSMenu, NSMenuDelegate, NSMenuItem,
+    NSOutlineView, NSOutlineViewDataSource, NSOutlineViewDelegate, NSStackView, NSStackViewGravity, NSTableColumn,
+    NSTextAlignment, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::NSObjectProtocol;
 use splat_i18n::t;
@@ -186,8 +187,8 @@ impl FactoryPanel {
         let header = ide_ui_common::panel::header_row(mtm);
         let board = ide_ui_common::panel::header_button(
             mtm,
-            "gauge.with.dots.needle.67percent",
-            t("Leitstand-Tab zeigen"),
+            ide_ui_common::util::FACTORY_SYMBOL,
+            t("Software-Factory-Tab zeigen"),
             Some(me),
             sel!(ideFactoryShowBoard:),
         );
@@ -208,27 +209,10 @@ impl FactoryPanel {
         menu.setDelegate(Some(ProtocolObject::from_ref(self)));
         // SAFETY: The outline keeps the menu; its delegate, the panel, outlives the outline through the registry.
         unsafe { outline.setMenu(Some(&menu)) };
-        let empty = crate::ui::column(mtm, ide_ui_common::style::space::M);
-        let note = NSTextField::wrappingLabelWithString(&ns(&crate::model::words::no_order_yet()), mtm);
-        note.setTextColor(Some(&objc2_app_kit::NSColor::secondaryLabelColor()));
-        note.setContentCompressionResistancePriority_forOrientation(
-            objc2_app_kit::NSLayoutPriorityDefaultLow,
-            objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
-        );
-        // SAFETY: The panel answers the action and lives as long as the button through the state's registry.
-        let start = unsafe {
-            NSButton::buttonWithTitle_target_action(
-                &ns(t("Ersten Auftrag anlegen …")),
-                Some(me),
-                Some(sel!(ideFactoryNewOrder:)),
-                mtm,
-            )
-        };
-        empty.addArrangedSubview(&note);
-        empty.addArrangedSubview(&start);
+        let empty = empty_state(mtm, me);
         let page = ide_ui_common::panel::panel_page(mtm);
-        page.addView_inGravity(&ide_ui_common::panel::padded(mtm, &empty), NSStackViewGravity::Top);
         page.addView_inGravity(&scroll, NSStackViewGravity::Top);
+        page.addView_inGravity(&empty, NSStackViewGravity::Center);
         PanelUi {
             outline,
             empty,
@@ -354,6 +338,39 @@ impl FactoryPanel {
         }
         menu.setAutoenablesItems(false);
     }
+}
+
+/// The factory's symbol, "Noch kein Auftrag", what an order is and a button that starts the first, centred as the
+/// panels show a place without content.
+fn empty_state(mtm: MainThreadMarker, panel: &AnyObject) -> Retained<NSStackView> {
+    let stack = NSStackView::new(mtm);
+    stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
+    stack.setAlignment(NSLayoutAttribute::CenterX);
+    stack.setSpacing(ide_ui_common::style::space::M);
+    let title = t("Noch kein Auftrag");
+    if let Some(image) = ide_ui_common::util::symbol_at(ide_ui_common::util::FACTORY_SYMBOL, title, 28.0) {
+        let view = NSImageView::imageViewWithImage(&image, mtm);
+        view.setContentTintColor(Some(&NSColor::tertiaryLabelColor()));
+        stack.addArrangedSubview(&view);
+    }
+    let heading = ide_ui_common::util::label(mtm, title);
+    heading.setFont(Some(&ide_ui_common::style::bold(ide_ui_common::style::HEADING)));
+    heading.setAlignment(NSTextAlignment::Center);
+    stack.addArrangedSubview(&heading);
+    let explanation = NSTextField::wrappingLabelWithString(&ns(&crate::model::words::order_explained()), mtm);
+    explanation.setTextColor(Some(&NSColor::secondaryLabelColor()));
+    explanation.setAlignment(NSTextAlignment::Center);
+    explanation.setPreferredMaxLayoutWidth(200.0);
+    stack.addArrangedSubview(&explanation);
+    let start = ide_ui_common::util::borderless_button(
+        mtm,
+        t("Ersten Auftrag anlegen …"),
+        Some(panel),
+        sel!(ideFactoryNewOrder:),
+    );
+    start.setContentTintColor(Some(&NSColor::controlAccentColor()));
+    stack.addArrangedSubview(&start);
+    stack
 }
 
 #[cfg(feature = "selftest")]

@@ -265,7 +265,12 @@ pub(crate) fn empty_state(
     stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     stack.setAlignment(NSLayoutAttribute::CenterX);
     stack.setSpacing(ide_ui_common::style::space::M);
-    if let Some(image) = symbol(symbol_name, title) {
+    let image = if ide_ui_common::util::is_own_symbol(symbol_name) {
+        ide_ui_common::util::symbol_at(symbol_name, title, 28.0)
+    } else {
+        symbol(symbol_name, title)
+    };
+    if let Some(image) = image {
         let view = NSImageView::imageViewWithImage(&image, mtm);
         view.setSymbolConfiguration(Some(
             &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(

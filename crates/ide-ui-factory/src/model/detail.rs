@@ -167,7 +167,7 @@ impl Command {
             Command::BackToBuilder => t("Zurück an den Builder …"),
             Command::ChangeCriteria => t("Kriterien ändern …"),
             Command::ByHand => t("Von Hand weiter"),
-            Command::BackToLeitstand => t("Zurück an den Leitstand"),
+            Command::BackToLeitstand => t("Zurück an die Software Factory"),
             Command::Resume => t("Auftrag fortsetzen"),
             Command::Continue => t("Weiter"),
             Command::Abort => t("Auftrag abbrechen …"),

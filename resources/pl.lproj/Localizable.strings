@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Wprowadź kod {} w Codex na telefonie. Jest ważny do {}.";
 "Koppeln fehlgeschlagen" = "Nie udało się sparować";
 "Prüfstation" = "Bramka";
-"Im Leitstand zeigen" = "Pokaż w sterowni";
+"In der Software Factory zeigen" = "Pokaż w Software Factory";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "Przy wysokiej klasie ryzyka najpierw otwórz różnice.";
 "„{}“ zurück an den Builder" = "Odeślij „{}” do wykonawcy";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "Komentarz trafi do wykonawcy z następną turą.";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "Zmień kryteria „{}”";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "Jedno kryterium w wierszu. Zmiana unieważnia dowód i trafia do wykonawcy i recenzenta.";
 "Ändern" = "Zmień";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "Sterownia nie wykonała polecenia";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "Software Factory nie wykonała polecenia";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "Odrzucić fragmenty ({}) i zaakceptować resztę?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "Z pozostałych fragmentów powstanie nowy stan. Bramki i recenzent działają dla niego ponownie, a potem akceptacja kończy się dokładnie dla tego stanu.";
 "Verwerfen und abnehmen" = "Odrzuć i zaakceptuj";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "Zlecenie czeka na twoją odpowiedź lub udzielenie uprawnienia. Pytanie i polecenie znajdziesz w sesji agenta.";
 "Antwort" = "Odpowiedź";
 "Antwort senden" = "Wyślij odpowiedź";
-"Leitstand" = "Sterownia";
-"Leitstand-Einstellungen …" = "Ustawienia sterowni…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Ustawienia Software Factory…";
 "Neuer Auftrag …" = "Nowe zlecenie…";
 "Stationen" = "Stacje";
 "Aufträge" = "Zlecenia";
 "Auftrag öffnen" = "Otwórz zlecenie";
-"Leitstand-Tab zeigen" = "Pokaż kartę sterowni";
+"Software-Factory-Tab zeigen" = "Pokaż kartę Software Factory";
 "Auftrag" = "Zlecenie";
-"Leitstand für {}" = "Sterownia dla {}";
+"Software Factory für {}" = "Software Factory dla {}";
 "Builder" = "Wykonawca";
 "Grenzen und Budget" = "Limity i budżet";
 "Budget je Auftrag ($):" = "Budżet na zlecenie ($):";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "„{}” nie jest kwotą w dolarach.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Nie udało się utworzyć szablonu: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Brak zleceń. Zlecenie to cel ze sprawdzalnymi kryteriami, który {} buduje i sprawdza we własnym worktree.";
+"Noch kein Auftrag" = "Brak zleceń";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Zlecenie to cel ze sprawdzalnymi kryteriami, który {} buduje i sprawdza we własnym worktree.";
 "Ziel" = "Cel";
 "Kriterien" = "Kryteria";
 "Zeitleiste" = "Oś czasu";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "Odeślij do wykonawcy…";
 "Kriterien ändern …" = "Zmień kryteria…";
 "Von Hand weiter" = "Kontynuuj ręcznie";
-"Zurück an den Leitstand" = "Przekaż sterowni";
+"Zurück an die Software Factory" = "Przekaż do Software Factory";
 "Auftrag fortsetzen" = "Wznów zlecenie";
 "Auftrag abbrechen …" = "Przerwij zlecenie…";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "Bez startu powyżej (% okna):";
 "Aufträge gleichzeitig:" = "Zlecenia naraz:";
 "Vorgabe des Agenten" = "Ustawienie domyślne agenta";
+"Vorgabe des Agenten ({})" = "Ustawienie domyślne agenta ({})";
 "{} – kann nicht {} sein" = "{} – nie może pełnić roli {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "Projekt nie ma jeszcze pliku .dango/factory.toml; Zachowaj go utworzy.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git ignoruje .dango/factory.toml, więc zespół nie dostanie tego pliku.";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "Inny producent wymagany";
 "Anderer Hersteller bevorzugt" = "Inny producent preferowany";
 "Rollen" = "Role";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Rankingi są w pliku przepływu pracy; „Inny producent preferowany” obowiązuje dopiero po twoim potwierdzeniu.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Kolejność to ranking: zlecenie bierze pierwszą gotową pozycję. „Inny producent preferowany” obowiązuje dopiero po twoim potwierdzeniu.";
 "Risikoklassen" = "Klasy ryzyka";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "Wzorce ścieżek, jeden w wierszu lub rozdzielone przecinkami. Zmierzona klasa może tylko podnieść oczekiwaną.";
 "Prüfrelevante Dateien" = "Pliki istotne dla recenzji";

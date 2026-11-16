@@ -128,7 +128,7 @@ pub(crate) fn refusals(target: &Target, refused: &[Refusal]) {
 
 fn tell(target: &Target, words: &str) {
     let Some(window) = target.window().window() else { return };
-    Alert::new(window.mtm(), t("Der Leitstand hat den Befehl nicht ausgeführt"))
+    Alert::new(window.mtm(), t("Die Software Factory hat den Befehl nicht ausgeführt"))
         .informative(words)
         .button(t("OK"), Role::Plain)
         .sheet(&window, |_| {});

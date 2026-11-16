@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Ange koden {} i Codex på telefonen. Den gäller till {}.";
 "Koppeln fehlgeschlagen" = "Parkopplingen misslyckades";
 "Prüfstation" = "Grind";
-"Im Leitstand zeigen" = "Visa i Kontrollrum";
+"In der Software Factory zeigen" = "Visa i Software Factory";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "Öppna diffen först vid riskklass hög.";
 "„{}“ zurück an den Builder" = "Skicka tillbaka ”{}” till byggaren";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "Kommentaren går till byggaren med nästa omgång.";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "Ändra kriterierna för ”{}”";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "Ett kriterium per rad. Ändringen gör beviset ogiltigt och går till byggaren och granskaren.";
 "Ändern" = "Ändra";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "Kontrollrummet utförde inte kommandot";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "Software Factory utförde inte kommandot";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "Vill du förkasta {} ändringsblock och acceptera resten?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "De återstående ändringsblocken blir ett nytt tillstånd. Grindarna och granskaren körs igen för det; därefter slutförs acceptansen för exakt det tillståndet.";
 "Verwerfen und abnehmen" = "Förkasta och acceptera";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "Arbetsordern väntar på ditt svar eller din behörighet. Frågan och kommandot finns i agentens session.";
 "Antwort" = "Svar";
 "Antwort senden" = "Skicka svar";
-"Leitstand" = "Kontrollrum";
-"Leitstand-Einstellungen …" = "Inställningar för Kontrollrum…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Inställningar för Software Factory…";
 "Neuer Auftrag …" = "Ny arbetsorder…";
 "Stationen" = "Stationer";
 "Aufträge" = "Arbetsordrar";
 "Auftrag öffnen" = "Öppna arbetsorder";
-"Leitstand-Tab zeigen" = "Visa fliken Kontrollrum";
+"Software-Factory-Tab zeigen" = "Visa fliken Software Factory";
 "Auftrag" = "Arbetsorder";
-"Leitstand für {}" = "Kontrollrum för {}";
+"Software Factory für {}" = "Software Factory för {}";
 "Builder" = "Byggare";
 "Grenzen und Budget" = "Gränser och budget";
 "Budget je Auftrag ($):" = "Budget per arbetsorder ($):";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "”{}” är inte ett belopp i dollar.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Mallen kunde inte skapas: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Ingen arbetsorder än. En arbetsorder är ett mål med testbara kriterier som {} bygger och kontrollerar i ett eget worktree.";
+"Noch kein Auftrag" = "Ingen arbetsorder än";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "En arbetsorder är ett mål med testbara kriterier som {} bygger och kontrollerar i ett eget worktree.";
 "Ziel" = "Mål";
 "Kriterien" = "Kriterier";
 "Zeitleiste" = "Tidslinje";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "Tillbaka till byggaren…";
 "Kriterien ändern …" = "Ändra kriterier…";
 "Von Hand weiter" = "Fortsätt manuellt";
-"Zurück an den Leitstand" = "Tillbaka till Kontrollrum";
+"Zurück an die Software Factory" = "Tillbaka till Software Factory";
 "Auftrag fortsetzen" = "Återuppta arbetsorder";
 "Auftrag abbrechen …" = "Avbryt arbetsorder…";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "Ingen start över (% av fönstret):";
 "Aufträge gleichzeitig:" = "Arbetsordrar samtidigt:";
 "Vorgabe des Agenten" = "Agentens förval";
+"Vorgabe des Agenten ({})" = "Agentens förval ({})";
 "{} – kann nicht {} sein" = "{} – kan inte ha rollen {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "Projektet har ingen .dango/factory.toml än; ”Spara” skapar den.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git ignorerar .dango/factory.toml, så teamet får inte filen.";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "Annan tillverkare krävs";
 "Anderer Hersteller bevorzugt" = "Annan tillverkare föredras";
 "Rollen" = "Roller";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Rangordningarna finns i workflowfilen; ”Annan tillverkare föredras” gäller först när du har bekräftat det.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Ordningen är rangordningen: en arbetsorder tar den första posten som är redo. ”Annan tillverkare föredras” gäller först när du har bekräftat det.";
 "Risikoklassen" = "Riskklasser";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "Sökvägsmönster, ett per rad eller avgränsade med kommatecken. Den uppmätta klassen kan bara höja den förväntade.";
 "Prüfrelevante Dateien" = "Filer som påverkar kontrollerna";

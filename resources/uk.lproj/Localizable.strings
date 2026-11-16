@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Введіть код {} у Codex на телефоні. Він дійсний до {}.";
 "Koppeln fehlgeschlagen" = "Не вдалося створити пару";
 "Prüfstation" = "Шлюз";
-"Im Leitstand zeigen" = "Показати в диспетчерській";
+"In der Software Factory zeigen" = "Показати в Software Factory";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "За високого класу ризику спершу відкрийте відмінності.";
 "„{}“ zurück an den Builder" = "Повернути «{}» виконавцеві";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "Коментар буде передано виконавцеві з наступним ходом.";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "Змінити критерії «{}»";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "Один критерій на рядок. Зміна робить докази недійсними й передається виконавцеві та рецензентові.";
 "Ändern" = "Змінити";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "Диспетчерська не виконала команду";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "Software Factory не виконала команду";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "Відкинути фрагменти ({}) і прийняти решту?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "З решти фрагментів утвориться новий стан. Шлюзи й рецензент перевірять його знову, після чого приймання завершиться саме для цього стану.";
 "Verwerfen und abnehmen" = "Відкинути й прийняти";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "Замовлення чекає на вашу відповідь або дозвіл. Запитання й команда — у сеансі агента.";
 "Antwort" = "Відповідь";
 "Antwort senden" = "Надіслати відповідь";
-"Leitstand" = "Диспетчерська";
-"Leitstand-Einstellungen …" = "Параметри диспетчерської…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Параметри Software Factory…";
 "Neuer Auftrag …" = "Нове замовлення…";
 "Stationen" = "Етапи";
 "Aufträge" = "Замовлення";
 "Auftrag öffnen" = "Відкрити замовлення";
-"Leitstand-Tab zeigen" = "Показати вкладку диспетчерської";
+"Software-Factory-Tab zeigen" = "Показати вкладку Software Factory";
 "Auftrag" = "Замовлення";
-"Leitstand für {}" = "Диспетчерська для {}";
+"Software Factory für {}" = "Software Factory для {}";
 "Builder" = "Виконавець";
 "Grenzen und Budget" = "Ліміти та бюджет";
 "Budget je Auftrag ($):" = "Бюджет на замовлення ($):";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "«{}» — не сума в доларах.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Не вдалося створити шаблон: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Замовлень ще немає. Замовлення — це мета з критеріями, які можна перевірити; {} реалізує й перевіряє її в окремому worktree.";
+"Noch kein Auftrag" = "Замовлень ще немає";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Замовлення — це мета з критеріями, які можна перевірити; {} реалізує й перевіряє її в окремому worktree.";
 "Ziel" = "Мета";
 "Kriterien" = "Критерії";
 "Zeitleiste" = "Хронологія";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "Повернути виконавцеві…";
 "Kriterien ändern …" = "Змінити критерії…";
 "Von Hand weiter" = "Продовжити вручну";
-"Zurück an den Leitstand" = "Повернути в диспетчерську";
+"Zurück an die Software Factory" = "Повернути в Software Factory";
 "Auftrag fortsetzen" = "Відновити замовлення";
 "Auftrag abbrechen …" = "Перервати замовлення…";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "Не запускати понад (% вікна):";
 "Aufträge gleichzeitig:" = "Замовлень одночасно:";
 "Vorgabe des Agenten" = "Типове для агента";
+"Vorgabe des Agenten ({})" = "Типове для агента ({})";
 "{} – kann nicht {} sein" = "{} — не може виконувати роль {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "У проєкті ще немає .dango/factory.toml; «Зберегти» створить цей файл.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git ігнорує .dango/factory.toml, тому команда не отримає цей файл.";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "Обовʼязково інший виробник";
 "Anderer Hersteller bevorzugt" = "Бажано інший виробник";
 "Rollen" = "Ролі";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Списки пріоритетів зберігаються у файлі робочого процесу; «Бажано інший виробник» діє лише після вашого підтвердження.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Порядок задає пріоритет: замовлення бере перший готовий запис. «Бажано інший виробник» діє лише після вашого підтвердження.";
 "Risikoklassen" = "Класи ризику";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "Шаблони шляхів, по одному в рядку або через кому. Виміряний клас може лише підвищити очікуваний.";
 "Prüfrelevante Dateien" = "Файли, важливі для перевірки";

@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "電話のCodexにコード{}を入力してください。有効期限は{}です。";
 "Koppeln fehlgeschlagen" = "ペアリングできませんでした";
 "Prüfstation" = "ゲート";
-"Im Leitstand zeigen" = "管制室に表示";
+"In der Software Factory zeigen" = "Software Factoryに表示";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "リスククラスが“高”の場合は、先に差分を開いてください。";
 "„{}“ zurück an den Builder" = "“{}”をビルダーに差し戻す";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "コメントは次のターンでビルダーに送られます。";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "“{}”の基準を変更";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "1行に1つの基準を入力します。変更するとエビデンスは無効になり、変更内容はビルダーとレビュアーに送られます。";
 "Ändern" = "変更";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "管制室はコマンドを実行しませんでした";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "Software Factoryはコマンドを実行しませんでした";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "{}個のハンクを破棄して、残りを検収しますか?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "残りのハンクから新しい状態が作られます。その状態に対してゲートとレビュアーが再度実行され、その後、まさにその状態について検収が完了します。";
 "Verwerfen und abnehmen" = "破棄して検収";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "作業指示が応答または権限の許可を待っています。質問とコマンドはエージェントのセッションにあります。";
 "Antwort" = "応答";
 "Antwort senden" = "応答を送信";
-"Leitstand" = "管制室";
-"Leitstand-Einstellungen …" = "管制室の設定…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Software Factoryの設定…";
 "Neuer Auftrag …" = "新規作業指示…";
 "Stationen" = "工程";
 "Aufträge" = "作業指示";
 "Auftrag öffnen" = "作業指示を開く";
-"Leitstand-Tab zeigen" = "管制室タブを表示";
+"Software-Factory-Tab zeigen" = "Software Factoryタブを表示";
 "Auftrag" = "作業指示";
-"Leitstand für {}" = "{}の管制室";
+"Software Factory für {}" = "{}のSoftware Factory";
 "Builder" = "ビルダー";
 "Grenzen und Budget" = "上限と予算";
 "Budget je Auftrag ($):" = "作業指示ごとの予算（$）:";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "“{}”はドル金額ではありません。";
 "Die Vorlage ließ sich nicht anlegen: {}" = "テンプレートを作成できませんでした: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "作業指示はまだありません。作業指示とは検証可能な基準を持つ目標で、{}が専用のワークツリーでビルドして検証します。";
+"Noch kein Auftrag" = "作業指示はまだありません";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "作業指示とは検証可能な基準を持つ目標で、{}が専用のワークツリーでビルドして検証します。";
 "Ziel" = "目標";
 "Kriterien" = "基準";
 "Zeitleiste" = "タイムライン";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "ビルダーに差し戻す…";
 "Kriterien ändern …" = "基準を変更…";
 "Von Hand weiter" = "手動で続行";
-"Zurück an den Leitstand" = "管制室に戻す";
+"Zurück an die Software Factory" = "Software Factoryに戻す";
 "Auftrag fortsetzen" = "作業指示を再開";
 "Auftrag abbrechen …" = "作業指示を中止…";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "開始しないしきい値（ウインドウの%）:";
 "Aufträge gleichzeitig:" = "同時に実行する作業指示:";
 "Vorgabe des Agenten" = "エージェントのデフォルト";
+"Vorgabe des Agenten ({})" = "エージェントのデフォルト（{}）";
 "{} – kann nicht {} sein" = "{} – {}を担当できません";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "プロジェクトにはまだ.dango/factory.tomlがありません。“保存”で作成されます。";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Gitが.dango/factory.tomlを無視しているため、このままではチームにファイルが共有されません。";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "別ベンダー必須";
 "Anderer Hersteller bevorzugt" = "別ベンダー優先";
 "Rollen" = "ロール";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "優先順位リストはワークフローファイルにあります。“別ベンダー優先”は確認後にのみ適用されます。";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "並び順が優先順位です。作業指示は準備完了の最初の項目を使用します。“別ベンダー優先”は確認後にのみ適用されます。";
 "Risikoklassen" = "リスククラス";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "パスパターン。1行に1つ、またはカンマで区切って指定します。測定されたクラスは、想定されたクラスを引き上げることしかできません。";
 "Prüfrelevante Dateien" = "レビューに関わるファイル";

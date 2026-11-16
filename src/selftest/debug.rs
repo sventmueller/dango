@@ -159,14 +159,15 @@ fn focus(root: PathBuf) {
     );
 }
 
-/// The panel in the sidebar's layout: Debug, then Containers and the Leitstand, then CI last; the controls as large and as far apart as
-/// the search panel's, the triangle before a section's title, the note flush with the panel's title, and the start
-/// row above the list.
+/// The panel in the sidebar's layout: the Software Factory under the agents, Debug, then Containers, then CI last; the
+/// controls as large and as far apart as the search panel's, the triangle before a section's title, the note flush
+/// with the panel's title, and the start row above the list.
 fn layout(controller: &WindowController) {
     let order = controller.shown_symbols();
     check(
-        "the activity bar lists Debug, then Containers and the Leitstand, then CI last",
-        order.ends_with(&[Panel::Debug, Panel::Containers, Panel::Leitstand, Panel::Ci]),
+        "the activity bar lists the Software Factory under the agents, Debug, then Containers, then CI last",
+        order.windows(2).any(|pair| pair == [Panel::Agents, Panel::Leitstand])
+            && order.ends_with(&[Panel::Debug, Panel::Containers, Panel::Ci]),
         format!("{order:?}"),
     );
     let debug = controller.panel_title_row().map(|(_, row)| row);

@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Introdueix el codi {} a Codex al telèfon. És vàlid fins a les {}.";
 "Koppeln fehlgeschlagen" = "No s’ha pogut vincular";
 "Prüfstation" = "Control";
-"Im Leitstand zeigen" = "Mostra a la Sala de control";
+"In der Software Factory zeigen" = "Mostra a la Software Factory";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "Amb classe de risc alta, obre primer el diff.";
 "„{}“ zurück an den Builder" = "Retorna “{}” al constructor";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "El comentari arriba al constructor amb el torn següent.";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "Canvia els criteris de “{}”";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "Un criteri per línia. El canvi invalida l’evidència i arriba al constructor i al revisor.";
 "Ändern" = "Canvia";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "La Sala de control no ha executat l’ordre";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "La Software Factory no ha executat l’ordre";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "Vols descartar {} fragments i acceptar la resta?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "Els fragments restants formen un estat nou. Els controls i el revisor es tornen a executar per a aquest estat; després, l’acceptació conclou exactament per a aquest estat.";
 "Verwerfen und abnehmen" = "Descarta i accepta";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "L’ordre de treball espera la teva resposta o el teu permís. La pregunta i l’ordre són a la sessió de l’agent.";
 "Antwort" = "Resposta";
 "Antwort senden" = "Envia la resposta";
-"Leitstand" = "Sala de control";
-"Leitstand-Einstellungen …" = "Configuració de la Sala de control…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Configuració de la Software Factory…";
 "Neuer Auftrag …" = "Nova ordre de treball…";
 "Stationen" = "Etapes";
 "Aufträge" = "Ordres de treball";
 "Auftrag öffnen" = "Obre l’ordre de treball";
-"Leitstand-Tab zeigen" = "Mostra la pestanya Sala de control";
+"Software-Factory-Tab zeigen" = "Mostra la pestanya Software Factory";
 "Auftrag" = "Ordre de treball";
-"Leitstand für {}" = "Sala de control de {}";
+"Software Factory für {}" = "Software Factory de {}";
 "Builder" = "Constructor";
 "Grenzen und Budget" = "Límits i pressupost";
 "Budget je Auftrag ($):" = "Pressupost per ordre de treball ($):";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "“{}” no és un import en dòlars.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "No s’ha pogut crear la plantilla: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Encara no hi ha cap ordre de treball. Una ordre de treball és un objectiu amb criteris verificables que {} construeix i comprova en un worktree propi.";
+"Noch kein Auftrag" = "Encara no hi ha cap ordre de treball";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Una ordre de treball és un objectiu amb criteris verificables que {} construeix i comprova en un worktree propi.";
 "Ziel" = "Objectiu";
 "Kriterien" = "Criteris";
 "Zeitleiste" = "Cronologia";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "Retorna al constructor…";
 "Kriterien ändern …" = "Canvia els criteris…";
 "Von Hand weiter" = "Continua a mà";
-"Zurück an den Leitstand" = "Retorna a la Sala de control";
+"Zurück an die Software Factory" = "Retorna a la Software Factory";
 "Auftrag fortsetzen" = "Reprèn l’ordre de treball";
 "Auftrag abbrechen …" = "Interromp l’ordre de treball…";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "Cap inici per sobre de (% de la finestra):";
 "Aufträge gleichzeitig:" = "Ordres de treball alhora:";
 "Vorgabe des Agenten" = "Valor per omissió de l’agent";
+"Vorgabe des Agenten ({})" = "Valor per omissió de l’agent ({})";
 "{} – kann nicht {} sein" = "{} – no pot assumir el rol {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "El projecte encara no té .dango/factory.toml; “Desa” el crea.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git ignora .dango/factory.toml, així que l’equip no rep el fitxer.";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "Fabricant diferent obligatori";
 "Anderer Hersteller bevorzugt" = "Fabricant diferent preferit";
 "Rollen" = "Rols";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Les llistes de prioritat són al fitxer de flux de treball; “Fabricant diferent preferit” només s’aplica quan l’hagis confirmat.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "La posició a la llista marca la prioritat: una ordre de treball pren la primera entrada que estigui a punt. “Fabricant diferent preferit” només s’aplica quan l’hagis confirmat.";
 "Risikoklassen" = "Classes de risc";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "Patrons de rutes, un per línia o separats per comes. La classe mesurada només pot apujar l’esperada.";
 "Prüfrelevante Dateien" = "Fitxers rellevants per a la revisió";

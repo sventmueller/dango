@@ -1,5 +1,5 @@
 //! The Leitstand's menu items (E175, F66; no menu of its own): "Ablage ▸ Neuer Auftrag …" and the submenu "Ablage ▸
-//! Auftrag" with the commands of the order in front, "Leitstand-Einstellungen …" among them, greyed out where they
+//! Auftrag" with the commands of the order in front, "Software-Factory-Einstellungen …" among them, greyed out where they
 //! cannot run (E101). The order in front is the order tab's, else the one selected in the Leitstand tab or the panel.
 
 use std::rc::{Rc, Weak};
@@ -164,9 +164,13 @@ pub(crate) fn items(
     }
     order.extend([
         separator(mtm),
-        entry(t("Leitstand-Tab zeigen"), sel!(ideFactoryMenuBoard:), "order.board"),
         entry(
-            t("Leitstand-Einstellungen …"),
+            t("Software-Factory-Tab zeigen"),
+            sel!(ideFactoryMenuBoard:),
+            "order.board",
+        ),
+        entry(
+            t("Software-Factory-Einstellungen …"),
             sel!(ideFactoryMenuSettings:),
             "order.settings",
         ),

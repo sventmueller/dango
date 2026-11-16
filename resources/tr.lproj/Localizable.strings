@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "{} kodunu telefonunuzdaki Codex’e girin. Kod {} saatine kadar geçerli.";
 "Koppeln fehlgeschlagen" = "Eşleme Başarısız";
 "Prüfstation" = "Geçit";
-"Im Leitstand zeigen" = "Kontrol Odasında Göster";
+"In der Software Factory zeigen" = "Software Factory’de Göster";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "Risk sınıfı yüksekse önce farkı açın.";
 "„{}“ zurück an den Builder" = "Builder’a Geri Gönder: “{}”";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "Yorum, sonraki turla birlikte Builder’a gider.";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "Ölçütleri Değiştir: “{}”";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "Her satıra bir ölçüt. Değişiklik kanıtı geçersiz kılar ve Builder’a ve inceleyiciye gider.";
 "Ändern" = "Değiştir";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "Kontrol Odası Komutu Yürütmedi";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "Software Factory Komutu Yürütmedi";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "{} parça atılsın ve kalanı kabul edilsin mi?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "Kalan parçalardan yeni bir durum oluşur. Geçitler ve inceleyici bu durum için yeniden çalışır; ardından kabul tam olarak bu durum için tamamlanır.";
 "Verwerfen und abnehmen" = "At ve Kabul Et";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "İş emri yanıtınızı veya izninizi bekliyor. Soru ve komut, ajanın oturumunda yer alıyor.";
 "Antwort" = "Yanıt";
 "Antwort senden" = "Yanıtı Gönder";
-"Leitstand" = "Kontrol Odası";
-"Leitstand-Einstellungen …" = "Kontrol Odası Ayarları…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Software Factory Ayarları…";
 "Neuer Auftrag …" = "Yeni İş Emri…";
 "Stationen" = "İstasyonlar";
 "Aufträge" = "İş Emirleri";
 "Auftrag öffnen" = "İş Emrini Aç";
-"Leitstand-Tab zeigen" = "Kontrol Odası Sekmesini Göster";
+"Software-Factory-Tab zeigen" = "Software Factory Sekmesini Göster";
 "Auftrag" = "İş Emri";
-"Leitstand für {}" = "Kontrol Odası: {}";
+"Software Factory für {}" = "Software Factory: {}";
 "Builder" = "Builder";
 "Grenzen und Budget" = "Sınırlar ve Bütçe";
 "Budget je Auftrag ($):" = "İş emri başına bütçe ($):";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "“{}” dolar cinsinden bir tutar değil.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Şablon oluşturulamadı: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Henüz iş emri yok. İş emri, test edilebilir ölçütleri olan ve {}’nun kendi worktree’sinde yapıp denetlediği bir hedeftir.";
+"Noch kein Auftrag" = "Henüz iş emri yok";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "İş emri, test edilebilir ölçütleri olan ve {}’nun kendi worktree’sinde yapıp denetlediği bir hedeftir.";
 "Ziel" = "Hedef";
 "Kriterien" = "Ölçütler";
 "Zeitleiste" = "Zaman Çizelgesi";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "Builder’a Geri Gönder…";
 "Kriterien ändern …" = "Ölçütleri Değiştir…";
 "Von Hand weiter" = "Elle Devam Et";
-"Zurück an den Leitstand" = "Kontrol Odasına Geri Ver";
+"Zurück an die Software Factory" = "Software Factory’ye Geri Ver";
 "Auftrag fortsetzen" = "İş Emrini Sürdür";
 "Auftrag abbrechen …" = "İş Emrini İptal Et…";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "Başlatma üst sınırı (pencere %):";
 "Aufträge gleichzeitig:" = "Aynı anda iş emri:";
 "Vorgabe des Agenten" = "Ajanın saptanmış değeri";
+"Vorgabe des Agenten ({})" = "Ajanın saptanmış değeri ({})";
 "{} – kann nicht {} sein" = "{} – {} rolünü üstlenemez";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "Projede henüz .dango/factory.toml yok; Kaydet onu oluşturur.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git, .dango/factory.toml dosyasını yok sayıyor; bu yüzden ekip dosyayı almaz.";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "Başka üretici zorunlu";
 "Anderer Hersteller bevorzugt" = "Başka üretici tercih edilir";
 "Rollen" = "Roller";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Öncelik sıraları iş akışı dosyasındadır; “Başka üretici tercih edilir” ancak siz onayladıktan sonra geçerli olur.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Sıralama öncelik sırasıdır: iş emri, hazır olan ilk girdiyi alır. “Başka üretici tercih edilir” ancak siz onayladıktan sonra geçerli olur.";
 "Risikoklassen" = "Risk Sınıfları";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "Yol desenleri, her satıra bir tane ya da virgülle ayrılmış. Ölçülen sınıf, beklenen sınıfı yalnızca yükseltebilir.";
 "Prüfrelevante Dateien" = "İnceleme İçin Önemli Dosyalar";

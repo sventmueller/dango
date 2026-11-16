@@ -326,9 +326,17 @@ impl ide_ui_factory::Host for Orders {
         set_defaults(&defaults);
     }
 
+    fn models(&self, agent: &ide_factory::routing::Agent, root: Option<&Path>) -> ide_factory::models::Catalog {
+        crate::leitstand::models::of(agent, root)
+    }
+
     fn project_file(&self, root: &Path) -> ProjectFile {
         let text = std::fs::read_to_string(root.join(WORKFLOW_FILE)).ok();
-        ProjectFile::new(text, false, self.defaults())
+        let catalogs = ide_ui_factory::model::settings::AGENTS
+            .iter()
+            .map(|agent| (agent.clone(), crate::leitstand::models::of(agent, Some(root))))
+            .collect();
+        ProjectFile::new(text, false, self.defaults()).with_catalogs(catalogs)
     }
 
     fn save_project_file(&self, root: &Path, text: &str) -> Result<(), Explained> {

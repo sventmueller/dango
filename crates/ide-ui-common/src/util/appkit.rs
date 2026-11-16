@@ -54,9 +54,25 @@ pub fn set_target(item: &NSMenuItem, target: &AnyObject) {
     unsafe { item.setTarget(Some(target)) };
 }
 
-/// An SF Symbol, described for VoiceOver.
+/// An SF Symbol, or one the app draws itself at the size of the activity bar's, described for VoiceOver.
 pub fn symbol(name: &str, description: &str) -> Option<Retained<NSImage>> {
+    if super::own_symbol::is_own_symbol(name) {
+        return super::own_symbol::own_symbol(name, description, crate::style::symbol::LARGE);
+    }
     NSImage::imageWithSystemSymbolName_accessibilityDescription(&ns(name), Some(&ns(description)))
+}
+
+/// The symbol `name` at `points`, an SF Symbol's in the regular weight, described for VoiceOver.
+pub fn symbol_at(name: &str, description: &str, points: f64) -> Option<Retained<NSImage>> {
+    if super::own_symbol::is_own_symbol(name) {
+        return super::own_symbol::own_symbol(name, description, points);
+    }
+    symbol(name, description)?.imageWithSymbolConfiguration(
+        &NSImageSymbolConfiguration::configurationWithPointSize_weight(
+            points,
+            crate::constant!(objc2_app_kit::NSFontWeightRegular),
+        ),
+    )
 }
 
 /// `image`, a template, drawn in `color` as an image of its own, which follows the appearance where it is drawn.
@@ -138,7 +154,7 @@ pub fn symbol_button(
     target: Option<&AnyObject>,
     action: Sel,
 ) -> Retained<NSButton> {
-    let image = symbol(name, description).unwrap_or_default();
+    let image = symbol_at(name, description, points).unwrap_or_default();
     // SAFETY: A nil target sends the action along the responder chain, where only an object that answers it gets it.
     let button = unsafe { NSButton::buttonWithImage_target_action(&image, None, Some(action), mtm) };
     if let Some(target) = target {

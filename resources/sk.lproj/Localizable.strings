@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Zadajte kód {} v Codexe v telefóne. Platí do {}.";
 "Koppeln fehlgeschlagen" = "Spárovanie zlyhalo";
 "Prüfstation" = "Brána";
-"Im Leitstand zeigen" = "Zobraziť vo velíne";
+"In der Software Factory zeigen" = "Zobraziť v Software Factory";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "Pri vysokej triede rizika najprv otvorte rozdiely.";
 "„{}“ zurück an den Builder" = "Vrátiť „{}“ staviteľovi";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "Komentár pôjde staviteľovi s ďalším kolom.";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "Zmeniť kritériá zákazky „{}“";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "Jedno kritérium na riadok. Zmena zneplatní doklad a pôjde staviteľovi aj recenzentovi.";
 "Ändern" = "Zmeniť";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "Velín príkaz nevykonal";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "Software Factory príkaz nevykonala";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "Zahodiť úseky ({}) a zvyšok prijať?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "Zo zvyšných úsekov vznikne nový stav. Brány a recenzent preň prebehnú znova, potom sa prijatie dokončí presne pre tento stav.";
 "Verwerfen und abnehmen" = "Zahodiť a prijať";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "Zákazka čaká na vašu odpoveď alebo povolenie. Otázku a príkaz nájdete v relácii agenta.";
 "Antwort" = "Odpoveď";
 "Antwort senden" = "Odoslať odpoveď";
-"Leitstand" = "Velín";
-"Leitstand-Einstellungen …" = "Nastavenia velína…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Nastavenia Software Factory…";
 "Neuer Auftrag …" = "Nová zákazka…";
 "Stationen" = "Stanice";
 "Aufträge" = "Zákazky";
 "Auftrag öffnen" = "Otvoriť zákazku";
-"Leitstand-Tab zeigen" = "Zobraziť tab velína";
+"Software-Factory-Tab zeigen" = "Zobraziť tab Software Factory";
 "Auftrag" = "Zákazka";
-"Leitstand für {}" = "Velín pre {}";
+"Software Factory für {}" = "Software Factory pre {}";
 "Builder" = "Staviteľ";
 "Grenzen und Budget" = "Limity a rozpočet";
 "Budget je Auftrag ($):" = "Rozpočet na zákazku ($):";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "„{}“ nie je suma v dolároch.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Šablónu sa nepodarilo vytvoriť: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Zatiaľ žiadna zákazka. Zákazka je cieľ s overiteľnými kritériami, ktorý {} postaví a skontroluje vo vlastnom worktree.";
+"Noch kein Auftrag" = "Zatiaľ žiadna zákazka";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Zákazka je cieľ s overiteľnými kritériami, ktorý {} postaví a skontroluje vo vlastnom worktree.";
 "Ziel" = "Cieľ";
 "Kriterien" = "Kritériá";
 "Zeitleiste" = "Časová os";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "Vrátiť staviteľovi…";
 "Kriterien ändern …" = "Zmeniť kritériá…";
 "Von Hand weiter" = "Pokračovať ručne";
-"Zurück an den Leitstand" = "Vrátiť velínu";
+"Zurück an die Software Factory" = "Vrátiť do Software Factory";
 "Auftrag fortsetzen" = "Pokračovať v zákazke";
 "Auftrag abbrechen …" = "Stornovať zákazku…";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "Nespúšťať nad (% okna):";
 "Aufträge gleichzeitig:" = "Zákazky súčasne:";
 "Vorgabe des Agenten" = "Predvolené nastavenie agenta";
+"Vorgabe des Agenten ({})" = "Predvolené nastavenie agenta ({})";
 "{} – kann nicht {} sein" = "{} – nemôže mať rolu {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "Projekt zatiaľ nemá .dango/factory.toml; Uložiť ho vytvorí.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git ignoruje .dango/factory.toml, takže tím súbor nedostane.";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "Iný výrobca povinný";
 "Anderer Hersteller bevorzugt" = "Iný výrobca uprednostnený";
 "Rollen" = "Roly";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Rebríčky sú v súbore pracovného postupu; „Iný výrobca uprednostnený“ platí až po vašom potvrdení.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Poradie je rebríček: zákazka vezme prvú pripravenú položku. „Iný výrobca uprednostnený“ platí až po vašom potvrdení.";
 "Risikoklassen" = "Triedy rizika";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "Vzory ciest, jeden na riadok alebo oddelené čiarkami. Nameraná trieda môže očakávanú iba zvýšiť.";
 "Prüfrelevante Dateien" = "Súbory dôležité pre kontroly";

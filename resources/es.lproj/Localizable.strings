@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Introduce el código {} en Codex en el teléfono. Es válido hasta las {}.";
 "Koppeln fehlgeschlagen" = "No se ha podido vincular";
 "Prüfstation" = "Control";
-"Im Leitstand zeigen" = "Mostrar en la Sala de control";
+"In der Software Factory zeigen" = "Mostrar en la Software Factory";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "Con clase de riesgo alta, abre primero el diff.";
 "„{}“ zurück an den Builder" = "Devolver «{}» al constructor";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "El comentario llega al constructor con el siguiente turno.";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "Cambiar los criterios de «{}»";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "Un criterio por línea. El cambio invalida la evidencia y llega al constructor y al revisor.";
 "Ändern" = "Cambiar";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "La Sala de control no ha ejecutado el comando";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "La Software Factory no ha ejecutado el comando";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "¿Descartar {} fragmentos y aceptar el resto?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "Los fragmentos restantes forman un nuevo estado. Los controles y el revisor vuelven a ejecutarse para él; después, la aceptación concluye exactamente para ese estado.";
 "Verwerfen und abnehmen" = "Descartar y aceptar";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "La orden de trabajo espera tu respuesta o tu permiso. La pregunta y el comando están en la sesión del agente.";
 "Antwort" = "Respuesta";
 "Antwort senden" = "Enviar respuesta";
-"Leitstand" = "Sala de control";
-"Leitstand-Einstellungen …" = "Ajustes de la Sala de control…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Ajustes de la Software Factory…";
 "Neuer Auftrag …" = "Nueva orden de trabajo…";
 "Stationen" = "Etapas";
 "Aufträge" = "Órdenes de trabajo";
 "Auftrag öffnen" = "Abrir orden de trabajo";
-"Leitstand-Tab zeigen" = "Mostrar pestaña de la Sala de control";
+"Software-Factory-Tab zeigen" = "Mostrar pestaña de la Software Factory";
 "Auftrag" = "Orden de trabajo";
-"Leitstand für {}" = "Sala de control de {}";
+"Software Factory für {}" = "Software Factory de {}";
 "Builder" = "Constructor";
 "Grenzen und Budget" = "Límites y presupuesto";
 "Budget je Auftrag ($):" = "Presupuesto por orden de trabajo ($):";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "«{}» no es un importe en dólares.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "No se ha podido crear la plantilla: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Aún no hay ninguna orden de trabajo. Una orden de trabajo es un objetivo con criterios comprobables que {} construye y comprueba en un worktree propio.";
+"Noch kein Auftrag" = "Aún no hay ninguna orden de trabajo";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Una orden de trabajo es un objetivo con criterios comprobables que {} construye y comprueba en un worktree propio.";
 "Ziel" = "Objetivo";
 "Kriterien" = "Criterios";
 "Zeitleiste" = "Cronología";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "Devolver al constructor…";
 "Kriterien ändern …" = "Cambiar criterios…";
 "Von Hand weiter" = "Continuar a mano";
-"Zurück an den Leitstand" = "Devolver a la Sala de control";
+"Zurück an die Software Factory" = "Devolver a la Software Factory";
 "Auftrag fortsetzen" = "Reanudar orden de trabajo";
 "Auftrag abbrechen …" = "Interrumpir orden de trabajo…";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "Sin inicio por encima de (% de la ventana):";
 "Aufträge gleichzeitig:" = "Órdenes de trabajo a la vez:";
 "Vorgabe des Agenten" = "Valor por omisión del agente";
+"Vorgabe des Agenten ({})" = "Valor por omisión del agente ({})";
 "{} – kann nicht {} sein" = "{} – no puede asumir el rol {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "El proyecto aún no tiene .dango/factory.toml; «Guardar» lo crea.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git ignora .dango/factory.toml, así que el equipo no recibe el archivo.";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "Otro fabricante obligatorio";
 "Anderer Hersteller bevorzugt" = "Otro fabricante preferido";
 "Rollen" = "Roles";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Las listas de prioridad están en el archivo de flujo de trabajo; «Otro fabricante preferido» solo se aplica cuando lo hayas confirmado.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "La posición en la lista marca la prioridad: una orden de trabajo toma la primera entrada que esté lista. «Otro fabricante preferido» solo se aplica cuando lo hayas confirmado.";
 "Risikoklassen" = "Clases de riesgo";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "Patrones de rutas, uno por línea o separados por comas. La clase medida solo puede subir la esperada.";
 "Prüfrelevante Dateien" = "Archivos relevantes para la revisión";

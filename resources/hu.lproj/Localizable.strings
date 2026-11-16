@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Adja meg a(z) {} kódot a telefonon a Codexben. Eddig érvényes: {}.";
 "Koppeln fehlgeschlagen" = "A párosítás sikertelen";
 "Prüfstation" = "Ellenőrzőpont";
-"Im Leitstand zeigen" = "Megjelenítés a vezérlőteremben";
+"In der Software Factory zeigen" = "Megjelenítés a Software Factoryban";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "Magas kockázati osztálynál először nyissa meg a különbségeket.";
 "„{}“ zurück an den Builder" = "„{}” visszaküldése az építőnek";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "A megjegyzés a következő körrel megy az építőnek.";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "„{}” kritériumainak módosítása";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "Soronként egy kritérium. A módosítás érvényteleníti a bizonyítékot, és az építőhöz és az ellenőrhöz kerül.";
 "Ändern" = "Módosítás";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "A vezérlőterem nem hajtotta végre a parancsot";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "A Software Factory nem hajtotta végre a parancsot";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "Elvet {} blokkot, és elfogadja a többit?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "A megmaradt blokkokból új állapot jön létre. Az ellenőrzőpontok és az ellenőr újra lefutnak rá, majd az elfogadás pontosan erre az állapotra zárul le.";
 "Verwerfen und abnehmen" = "Elvetés és elfogadás";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "A munkarendelés az Ön válaszára vagy engedélyére vár. A kérdés és a parancs az ügynök munkamenetében található.";
 "Antwort" = "Válasz";
 "Antwort senden" = "Válasz küldése";
-"Leitstand" = "Vezérlőterem";
-"Leitstand-Einstellungen …" = "Vezérlőterem-beállítások…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Software Factory-beállítások…";
 "Neuer Auftrag …" = "Új munkarendelés…";
 "Stationen" = "Állomások";
 "Aufträge" = "Munkarendelések";
 "Auftrag öffnen" = "Munkarendelés megnyitása";
-"Leitstand-Tab zeigen" = "Vezérlőterem-lap megjelenítése";
+"Software-Factory-Tab zeigen" = "Software Factory-lap megjelenítése";
 "Auftrag" = "Munkarendelés";
-"Leitstand für {}" = "Vezérlőterem: {}";
+"Software Factory für {}" = "Software Factory: {}";
 "Builder" = "Építő";
 "Grenzen und Budget" = "Korlátok és költségkeret";
 "Budget je Auftrag ($):" = "Költségkeret munkarendelésenként ($):";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "„{}” nem dollárösszeg.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "A sablon nem hozható létre: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Még nincs munkarendelés. A munkarendelés ellenőrizhető kritériumokkal megadott cél, amelyet a {} egy saját worktree-ben épít meg és ellenőriz.";
+"Noch kein Auftrag" = "Még nincs munkarendelés";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "A munkarendelés ellenőrizhető kritériumokkal megadott cél, amelyet a {} egy saját worktree-ben épít meg és ellenőriz.";
 "Ziel" = "Cél";
 "Kriterien" = "Kritériumok";
 "Zeitleiste" = "Idővonal";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "Vissza az építőnek…";
 "Kriterien ändern …" = "Kritériumok módosítása…";
 "Von Hand weiter" = "Folytatás kézzel";
-"Zurück an den Leitstand" = "Vissza a vezérlőterembe";
+"Zurück an die Software Factory" = "Vissza a Software Factoryba";
 "Auftrag fortsetzen" = "Munkarendelés folytatása";
 "Auftrag abbrechen …" = "Munkarendelés megszakítása…";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "Nincs indítás e fölött (ablak %):";
 "Aufträge gleichzeitig:" = "Egyszerre futó munkarendelések:";
 "Vorgabe des Agenten" = "Az ügynök alapértelmezése";
+"Vorgabe des Agenten ({})" = "Az ügynök alapértelmezése ({})";
 "{} – kann nicht {} sein" = "{} – nem töltheti be ezt a szerepet: {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "A projektnek még nincs .dango/factory.toml fájlja; a Mentés létrehozza.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "A Git figyelmen kívül hagyja a .dango/factory.toml fájlt, így a csapat nem kapja meg.";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "Más gyártó kötelező";
 "Anderer Hersteller bevorzugt" = "Más gyártó előnyben";
 "Rollen" = "Szerepek";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "A rangsorok a munkafolyamatfájlban vannak; a „Más gyártó előnyben” csak az Ön megerősítése után érvényes.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "A sorrend egyben rangsor: a munkarendelés az első kész bejegyzést veszi. A „Más gyártó előnyben” csak az Ön megerősítése után érvényes.";
 "Risikoklassen" = "Kockázati osztályok";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "Útvonalminták, soronként egy vagy vesszővel elválasztva. A mért osztály csak emelheti a várt osztályt.";
 "Prüfrelevante Dateien" = "Az ellenőrzés szempontjából fontos fájlok";

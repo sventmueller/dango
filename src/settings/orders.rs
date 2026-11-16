@@ -6,18 +6,21 @@
 
 use std::cell::{Cell, OnceCell, RefCell};
 
+use ide_factory::models::Catalog;
+use ide_factory::routing::Agent;
 use ide_factory::station::Role;
+use ide_ui_factory::model::ranks;
 use ide_ui_factory::model::settings::{
-    AGENTS, DefaultsForm, LIMITS, PROVIDERS, agent_name, api_service, entry_words, limit_title, provider_title,
-    read_dollars, reviewer_rules, takes,
+    AGENTS, DefaultsForm, LIMITS, PROVIDERS, agent_name, api_service, limit_title, provider_title, read_dollars,
+    reviewer_rules, takes,
 };
 use ide_ui_factory::model::words;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSButton, NSColor, NSControlStateValueOff, NSControlStateValueOn, NSControlTextEditingDelegate, NSPopUpButton,
-    NSTableColumn, NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTextField, NSView,
+    NSButton, NSColor, NSComboBox, NSControlStateValueOff, NSControlStateValueOn, NSControlTextEditingDelegate,
+    NSPopUpButton, NSTableColumn, NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTextField, NSView,
 };
 use objc2_foundation::NSObjectProtocol;
 use splat_i18n::t;
@@ -33,6 +36,8 @@ const PROVIDER_BUDGET: isize = 200;
 
 pub(crate) struct OrdersIvars {
     form: RefCell<DefaultsForm>,
+    /// What each agent offers for an entry, read again with the defaults.
+    catalogs: RefCell<Vec<(Agent, Catalog)>>,
     /// The role whose ranked list the table shows.
     role: Cell<Role>,
     ui: OnceCell<OrdersUi>,
@@ -42,8 +47,8 @@ struct OrdersUi {
     view: Retained<NSView>,
     role: Retained<NSPopUpButton>,
     table: Retained<NSTableView>,
-    model: Retained<NSTextField>,
-    effort: Retained<NSTextField>,
+    model: Retained<NSComboBox>,
+    effort: Retained<NSComboBox>,
     reviewer: Retained<NSPopUpButton>,
     limits: Vec<Retained<NSTextField>>,
     budgets: [Retained<NSTextField>; 2],
@@ -59,8 +64,8 @@ struct RolesPart {
     views: Vec<Retained<NSView>>,
     role: Retained<NSPopUpButton>,
     table: Retained<NSTableView>,
-    model: Retained<NSTextField>,
-    effort: Retained<NSTextField>,
+    model: Retained<NSComboBox>,
+    effort: Retained<NSComboBox>,
     reviewer: Retained<NSPopUpButton>,
 }
 
@@ -90,7 +95,7 @@ define_class!(
                 let form = self.ivars().form.borrow();
                 let role = self.role();
                 let entry = form.list(role).get(usize::try_from(row).ok()?)?;
-                let cell = form::cell(self.mtm(), &entry_words(entry, role));
+                let cell = form::cell(self.mtm(), &ranks::entry_words(entry, role, &self.catalog(&entry.agent)));
                 if !takes(entry, role) {
                     cell.setAlphaValue(0.5);
                 }
@@ -135,7 +140,7 @@ define_class!(
             guarded((), || {
                 if let Some(index) = self.selected() {
                     let role = self.role();
-                    self.change(|form| form.remove(role, index));
+                    self.change(|form| form.edit_list(role, |list| ranks::remove(list, index)));
                 }
             });
         }
@@ -158,7 +163,7 @@ define_class!(
                 if let Some(index) = self.selected() {
                     let role = self.role();
                     let model = self.ui().model.stringValue().to_string();
-                    self.change(|form| form.set_model(role, index, &model));
+                    self.change(|form| form.edit_list(role, |list| ranks::set_model(list, index, &model)));
                     self.select(index);
                 }
             });
@@ -213,6 +218,7 @@ impl OrdersSettings {
     pub(crate) fn new(mtm: MainThreadMarker) -> Retained<OrdersSettings> {
         let this = Self::alloc(mtm).set_ivars(OrdersIvars {
             form: RefCell::new(DefaultsForm::new(crate::leitstand_ui::defaults())),
+            catalogs: RefCell::new(catalogs()),
             role: Cell::new(Role::Builder),
             ui: OnceCell::new(),
         });
@@ -236,9 +242,21 @@ impl OrdersSettings {
         self.ivars().role.get()
     }
 
+    /// What `agent` offers for an entry.
+    fn catalog(&self, agent: &Agent) -> Catalog {
+        self.ivars()
+            .catalogs
+            .borrow()
+            .iter()
+            .find(|(a, _)| a == agent)
+            .map(|(_, c)| c.clone())
+            .unwrap_or_default()
+    }
+
     /// Reads the stored defaults again, as when the settings window comes to the front.
     pub(crate) fn reload(&self) {
         *self.ivars().form.borrow_mut() = DefaultsForm::new(crate::leitstand_ui::defaults());
+        *self.ivars().catalogs.borrow_mut() = catalogs();
         self.show();
     }
 
@@ -263,8 +281,8 @@ impl OrdersSettings {
         let up = button(mtm, t("Nach oben"), me, sel!(ideOrdersShift:), 0);
         let down = button(mtm, t("Nach unten"), me, sel!(ideOrdersShift:), 1);
         let bar = super::list_bar::bar(mtm, &[&remove], &[&add, &up, &down]);
-        let model = text_field(mtm, me, sel!(ideOrdersModel:), t("Vorgabe des Agenten"));
-        let effort = text_field(mtm, me, sel!(ideOrdersEffort:), t("Vorgabe des Agenten"));
+        let model = combo(mtm, me, sel!(ideOrdersModel:));
+        let effort = combo(mtm, me, sel!(ideOrdersEffort:));
         let reviewer = NSPopUpButton::new(mtm);
         for words in reviewer_rules() {
             reviewer.addItemWithTitle(&ns(words));
@@ -412,10 +430,15 @@ impl OrdersSettings {
         let entry = self
             .selected()
             .and_then(|index| form.list(self.role()).get(index).cloned());
+        let catalog = entry.as_ref().map(|e| self.catalog(&e.agent)).unwrap_or_default();
         let model = entry.as_ref().and_then(|e| e.model.clone());
         let effort = entry.as_ref().and_then(|e| e.effort.clone());
-        ui.model.setStringValue(&ns(&model.unwrap_or_default()));
-        ui.effort.setStringValue(&ns(&effort.unwrap_or_default()));
+        let models: Vec<String> = catalog.models.iter().map(|m| m.value.clone()).collect();
+        let placeholder = ranks::default_words(catalog.default_model.as_deref());
+        ide_ui_factory::fill_choices(&ui.model, &models, &placeholder, model.as_deref());
+        let efforts = catalog.efforts_of(model.as_deref()).to_vec();
+        let placeholder = ranks::default_words(catalog.default_effort.as_deref());
+        ide_ui_factory::fill_choices(&ui.effort, &efforts, &placeholder, effort.as_deref());
         ui.model.setEnabled(entry.is_some());
         ui.effort.setEnabled(entry.is_some());
     }
@@ -493,16 +516,20 @@ fn number_field(mtm: MainThreadMarker, target: &AnyObject, tag: isize) -> Retain
     field
 }
 
-fn text_field(
-    mtm: MainThreadMarker,
-    target: &AnyObject,
-    action: objc2::runtime::Sel,
-    placeholder: &str,
-) -> Retained<NSTextField> {
-    let field = NSTextField::textFieldWithString(&ns(""), mtm);
-    field.setPlaceholderString(Some(&ns(placeholder)));
-    set_action(&field, target, action);
-    field
+/// What every agent of the ranked lists offers, from its CLI's files.
+fn catalogs() -> Vec<(Agent, Catalog)> {
+    AGENTS
+        .iter()
+        .map(|agent| (agent.clone(), crate::leitstand::models::of(agent, None)))
+        .collect()
+}
+
+/// A field that offers the models or efforts and takes a typed one.
+fn combo(mtm: MainThreadMarker, target: &AnyObject, action: objc2::runtime::Sel) -> Retained<NSComboBox> {
+    let combo = NSComboBox::new(mtm);
+    combo.setCompletes(true);
+    set_action(&combo, target, action);
+    combo
 }
 
 fn checkbox(mtm: MainThreadMarker, target: &AnyObject, title: &str) -> Retained<NSButton> {

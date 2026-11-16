@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Syötä koodi {} puhelimen Codexiin. Se on voimassa klo {} asti.";
 "Koppeln fehlgeschlagen" = "Parin muodostus epäonnistui";
 "Prüfstation" = "Laatuportti";
-"Im Leitstand zeigen" = "Näytä valvomossa";
+"In der Software Factory zeigen" = "Näytä Software Factoryssa";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "Kun riskiluokka on korkea, avaa erot ensin.";
 "„{}“ zurück an den Builder" = "Lähetä ”{}” takaisin rakentajalle";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "Kommentti menee rakentajalle seuraavan vuoron mukana.";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "Muuta työtilauksen ”{}” kriteerejä";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "Yksi kriteeri riviä kohti. Muutos mitätöi todisteen ja menee rakentajalle ja katselmoijalle.";
 "Ändern" = "Muuta";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "Valvomo ei suorittanut komentoa";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "Software Factory ei suorittanut komentoa";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "Hylätäänkö {} lohkoa ja otetaanko loput vastaan?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "Jäljelle jäävistä lohkoista syntyy uusi tila. Laatuportit ja katselmoija ajetaan sille uudelleen, minkä jälkeen vastaanotto päättyy juuri tälle tilalle.";
 "Verwerfen und abnehmen" = "Hylkää ja ota vastaan";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "Työtilaus odottaa vastaustasi tai lupaa. Kysymys ja komento ovat agentin istunnossa.";
 "Antwort" = "Vastaus";
 "Antwort senden" = "Lähetä vastaus";
-"Leitstand" = "Valvomo";
-"Leitstand-Einstellungen …" = "Valvomon asetukset…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Software Factoryn asetukset…";
 "Neuer Auftrag …" = "Uusi työtilaus…";
 "Stationen" = "Vaiheet";
 "Aufträge" = "Työtilaukset";
 "Auftrag öffnen" = "Avaa työtilaus";
-"Leitstand-Tab zeigen" = "Näytä valvomon välilehti";
+"Software-Factory-Tab zeigen" = "Näytä Software Factory -välilehti";
 "Auftrag" = "Työtilaus";
-"Leitstand für {}" = "Valvomo: {}";
+"Software Factory für {}" = "Software Factory: {}";
 "Builder" = "Rakentaja";
 "Grenzen und Budget" = "Rajat ja budjetti";
 "Budget je Auftrag ($):" = "Budjetti työtilausta kohti ($):";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "”{}” ei ole dollarimäärä.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Pohjaa ei voitu luoda: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Ei vielä työtilauksia. Työtilaus on tavoite testattavine kriteereineen, jonka {} rakentaa ja tarkistaa omassa worktreessään.";
+"Noch kein Auftrag" = "Ei vielä työtilauksia";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Työtilaus on tavoite testattavine kriteereineen, jonka {} rakentaa ja tarkistaa omassa worktreessään.";
 "Ziel" = "Tavoite";
 "Kriterien" = "Kriteerit";
 "Zeitleiste" = "Aikajana";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "Takaisin rakentajalle…";
 "Kriterien ändern …" = "Muuta kriteerejä…";
 "Von Hand weiter" = "Jatka käsin";
-"Zurück an den Leitstand" = "Takaisin valvomoon";
+"Zurück an die Software Factory" = "Takaisin Software Factoryyn";
 "Auftrag fortsetzen" = "Jatka työtilausta";
 "Auftrag abbrechen …" = "Keskeytä työtilaus…";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "Ei aloitusta yli (% ikkunasta):";
 "Aufträge gleichzeitig:" = "Työtilauksia kerrallaan:";
 "Vorgabe des Agenten" = "Agentin oletus";
+"Vorgabe des Agenten ({})" = "Agentin oletus ({})";
 "{} – kann nicht {} sein" = "{} – ei voi toimia roolissa {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "Projektissa ei ole vielä tiedostoa .dango/factory.toml; Tallenna luo sen.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git ohittaa tiedoston .dango/factory.toml, joten tiimi ei saa sitä.";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "Toinen valmistaja pakollinen";
 "Anderer Hersteller bevorzugt" = "Toinen valmistaja ensisijainen";
 "Rollen" = "Roolit";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Paremmuusjärjestykset ovat työnkulkutiedostossa; ”Toinen valmistaja ensisijainen” on voimassa vasta vahvistuksesi jälkeen.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Järjestys on paremmuusjärjestys: työtilaus ottaa ensimmäisen valmiina olevan kohteen. ”Toinen valmistaja ensisijainen” on voimassa vasta vahvistuksesi jälkeen.";
 "Risikoklassen" = "Riskiluokat";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "Polkukuviot, yksi riville tai pilkuilla erotettuina. Mitattu luokka voi vain nostaa odotettua luokkaa.";
 "Prüfrelevante Dateien" = "Katselmoinnin kannalta olennaiset tiedostot";

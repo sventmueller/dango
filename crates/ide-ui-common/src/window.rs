@@ -20,7 +20,7 @@ pub enum Panel {
     Debug,
     Tests,
     Containers,
-    /// The Leitstand's orders of the folder (E175).
+    /// The Software Factory's orders of the folder (E175).
     Leitstand,
 }
 
@@ -29,11 +29,11 @@ impl Panel {
         Panel::Files,
         Panel::Search,
         Panel::Agents,
+        Panel::Leitstand,
         Panel::Git,
         Panel::Tests,
         Panel::Debug,
         Panel::Containers,
-        Panel::Leitstand,
         Panel::Ci,
     ];
 
@@ -66,7 +66,7 @@ impl Panel {
             Panel::Debug => t("Debuggen"),
             Panel::Tests => t("Tests"),
             Panel::Containers => t("Container"),
-            Panel::Leitstand => t("Leitstand"),
+            Panel::Leitstand => t("Software Factory"),
         }
     }
 
@@ -95,7 +95,7 @@ impl Panel {
             Panel::Debug => "ladybug",
             Panel::Tests => "checklist",
             Panel::Containers => "shippingbox",
-            Panel::Leitstand => "gauge.with.dots.needle.67percent",
+            Panel::Leitstand => crate::util::FACTORY_SYMBOL,
         }
     }
 }
@@ -116,7 +116,7 @@ pub enum TabKind {
     Preview,
     /// A debug console (E94).
     Console,
-    /// The Leitstand: every work order of the folder (E175).
+    /// The Software Factory: every work order of the folder (E175).
     Leitstand,
     /// One work order with its timeline and evidence (E175).
     Order,
@@ -135,7 +135,7 @@ impl TabKind {
             TabKind::Plan => "list.bullet.clipboard",
             TabKind::Preview => "eye",
             TabKind::Console => "ladybug",
-            TabKind::Leitstand => "gauge.with.dots.needle.67percent",
+            TabKind::Leitstand => crate::util::FACTORY_SYMBOL,
             TabKind::Order => "wrench.and.screwdriver",
         }
     }

@@ -1,5 +1,5 @@
 //! The Leitstand's settings (E183): the user's defaults for all projects in "Einstellungen ▸ Aufträge", and the
-//! project's workflow file in "Leitstand für <Ordner>", each value with where it comes from and a way back to the
+//! project's workflow file in "Software Factory für <Ordner>", each value with where it comes from and a way back to the
 //! default: every role with model and effort, the reviewer rule, limits, budgets per order, day and provider, gates,
 //! copying and setup, risk patterns and the files that count for the review.
 
@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 use ide_core::explain::Explained;
 use ide_factory::budget::{Budget, Budgets};
 use ide_factory::limits::Limit;
+use ide_factory::models::Catalog;
 use ide_factory::routing::{Agent, Capabilities, RankEntry, ReviewerRule};
 use ide_factory::station::Role;
 use ide_factory::workflow::edit::{self, EditError, EditValue};
@@ -15,7 +16,7 @@ use ide_factory::workflow::{UserDefaults, Workflow, WorkflowError, parse};
 use splat_i18n::{t, tf};
 use toml_edit::{DocumentMut, Item};
 
-use super::words;
+use super::{ranks, words};
 
 /// The limits the settings offer, in their order, with their unit: minutes, a count or percent.
 pub const LIMITS: [Limit; 10] = [
@@ -85,19 +86,6 @@ pub fn agent_name(agent: &Agent) -> String {
     }
 }
 
-/// An entry of a ranked list as its row reads: "Codex · gpt-5-codex · high", with why it cannot take the role.
-pub fn entry_words(entry: &RankEntry, role: Role) -> String {
-    let model = entry.model.as_deref().unwrap_or(t("Vorgabe des Agenten"));
-    let mut words = format!("{} · {model}", agent_name(&entry.agent));
-    if let Some(effort) = &entry.effort {
-        words = format!("{words} · {effort}");
-    }
-    if !Capabilities::of(&entry.agent).takes(role) {
-        words = tf("{} – kann nicht {} sein", &[&words, words::role(role)]);
-    }
-    words
-}
-
 /// Whether `entry` can take `role` at all (E173); one that cannot shows greyed out with its reason.
 pub fn takes(entry: &RankEntry, role: Role) -> bool {
     Capabilities::of(&entry.agent).takes(role)
@@ -125,54 +113,27 @@ impl DefaultsForm {
         self.defaults.role(role)
     }
 
-    /// Adds `agent` at the end of `role`'s list, unless it is in it already.
-    pub fn add(&mut self, role: Role, agent: Agent) {
+    /// Changes `role`'s list with `edit`; what `edit` returns.
+    pub fn edit_list<R>(&mut self, role: Role, edit: impl FnOnce(&mut Vec<RankEntry>) -> R) -> R {
         let mut list = self.list(role).to_vec();
-        if !list.iter().any(|e| e.agent == agent) {
-            list.push(RankEntry::new(agent));
-        }
+        let result = edit(&mut list);
         self.defaults.set_role(role, list);
+        result
     }
 
-    /// Removes the entry at `index` of `role`'s list.
-    pub fn remove(&mut self, role: Role, index: usize) {
-        let mut list = self.list(role).to_vec();
-        if index < list.len() {
-            list.remove(index);
-        }
-        self.defaults.set_role(role, list);
+    /// Adds `agent` at the end of `role`'s list, unless it is in it already.
+    pub fn add(&mut self, role: Role, agent: Agent) {
+        self.edit_list(role, |list| ranks::add(list, agent));
     }
 
     /// Moves the entry at `index` of `role`'s list one place up, or down; where it went.
     pub fn shift(&mut self, role: Role, index: usize, up: bool) -> usize {
-        let mut list = self.list(role).to_vec();
-        let to = if up { index.checked_sub(1) } else { Some(index + 1) };
-        let Some(to) = to.filter(|to| *to < list.len() && index < list.len()) else {
-            return index;
-        };
-        list.swap(index, to);
-        self.defaults.set_role(role, list);
-        to
-    }
-
-    /// Sets the model of the entry at `index`; empty for the agent's default.
-    pub fn set_model(&mut self, role: Role, index: usize, model: &str) {
-        let mut list = self.list(role).to_vec();
-        if let Some(entry) = list.get_mut(index) {
-            let model = model.trim();
-            entry.model = (!model.is_empty()).then(|| model.to_string());
-        }
-        self.defaults.set_role(role, list);
+        self.edit_list(role, |list| ranks::shift(list, index, up))
     }
 
     /// Sets the reasoning effort of the entry at `index`; empty for the agent's default.
     pub fn set_effort(&mut self, role: Role, index: usize, effort: &str) {
-        let mut list = self.list(role).to_vec();
-        if let Some(entry) = list.get_mut(index) {
-            let effort = effort.trim();
-            entry.effort = (!effort.is_empty()).then(|| effort.to_string());
-        }
-        self.defaults.set_role(role, list);
+        self.edit_list(role, |list| ranks::set_effort(list, index, effort));
     }
 
     /// Whether a reviewer of the builders' vendor may review when no other is ready (E162).
@@ -310,7 +271,7 @@ impl Origin {
     }
 }
 
-/// A value of the dialog "Leitstand für <Ordner>" that shows where it comes from and goes back to the default (E183).
+/// A value of the dialog "Software Factory für <Ordner>" that shows where it comes from and goes back to the default (E183).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProjectValue {
     /// A role's ranked list.
@@ -429,13 +390,15 @@ pub fn reviewer_rules() -> [&'static str; 2] {
     [t("Anderer Hersteller Pflicht"), t("Anderer Hersteller bevorzugt")]
 }
 
-/// The project's workflow file as the dialog "Leitstand für <Ordner>" edits it (E183).
+/// The project's workflow file as the dialog "Software Factory für <Ordner>" edits it (E183).
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct ProjectFile {
     text: String,
     exists: bool,
     ignored: bool,
     defaults: UserDefaults,
+    /// What each agent offers for an entry, by agent.
+    catalogs: Vec<(Agent, Catalog)>,
 }
 
 impl ProjectFile {
@@ -446,7 +409,24 @@ impl ProjectFile {
             text: text.unwrap_or_default(),
             ignored,
             defaults,
+            catalogs: Vec::new(),
         }
+    }
+
+    /// The file with `catalogs`, what each agent offers for an entry of a role.
+    #[must_use]
+    pub fn with_catalogs(mut self, catalogs: Vec<(Agent, Catalog)>) -> ProjectFile {
+        self.catalogs = catalogs;
+        self
+    }
+
+    /// What `agent` offers for an entry; nothing for an agent the file was not given.
+    pub fn catalog(&self, agent: &Agent) -> Catalog {
+        self.catalogs
+            .iter()
+            .find(|(a, _)| a == agent)
+            .map(|(_, c)| c.clone())
+            .unwrap_or_default()
     }
 
     /// The text as edited.
@@ -670,14 +650,42 @@ impl ProjectFile {
         }
     }
 
-    /// The ranked list of `role` in words and where it comes from.
-    pub fn role(&self, role: Role) -> (Vec<String>, Origin) {
+    /// The ranked list of `role` and where it comes from.
+    pub fn ranks(&self, role: Role) -> (Vec<RankEntry>, Origin) {
         let own = self.read().ok().and_then(|w| w.role(role).map(<[RankEntry]>::to_vec));
-        let (list, origin) = match own {
+        match own {
             Some(list) => (list, Origin::File),
             None => (self.defaults.role(role).to_vec(), Origin::Default),
-        };
-        (list.iter().map(|e| entry_words(e, role)).collect(), origin)
+        }
+    }
+
+    /// The ranked list of `role` in words, each entry with its agent's default model by name, and where it comes
+    /// from.
+    pub fn role(&self, role: Role) -> (Vec<String>, Origin) {
+        let (list, origin) = self.ranks(role);
+        let words = list
+            .iter()
+            .map(|e| ranks::entry_words(e, role, &self.catalog(&e.agent)))
+            .collect();
+        (words, origin)
+    }
+
+    /// Writes `list` as the ranked list of `role`; an empty one takes it out, so the default applies again.
+    pub fn set_ranks(&mut self, role: Role, list: &[RankEntry]) -> Result<(), Explained> {
+        if list.is_empty() {
+            return self.reset(ProjectValue::Role(role));
+        }
+        let tables = list
+            .iter()
+            .map(|entry| {
+                let mut pairs = vec![("agent".to_string(), entry.agent.to_string())];
+                pairs.extend(entry.model.clone().map(|m| ("model".to_string(), m)));
+                pairs.extend(entry.effort.clone().map(|e| ("effort".to_string(), e)));
+                pairs
+            })
+            .collect();
+        let result = edit::set(&self.text, &ProjectValue::Role(role).key(), EditValue::Tables(tables));
+        self.edit(result)
     }
 
     /// The builder's ranked list and where it comes from.
@@ -960,6 +968,23 @@ high = [\"src/pay/**\"]
         let len = form.list(Role::Builder).len();
         form.add(Role::Builder, first);
         assert_eq!(form.list(Role::Builder).len(), len);
+    }
+
+    #[test]
+    fn a_ranked_list_edited_in_the_dialog_goes_into_the_file_and_an_empty_one_leaves_the_default() {
+        let mut file = ProjectFile::new(Some(FILE.into()), false, UserDefaults::default());
+        let (mut list, origin) = file.ranks(Role::Planner);
+        assert_eq!(origin, Origin::Default);
+        ranks::add(&mut list, Agent::Codex);
+        let codex = list.iter().position(|e| e.agent == Agent::Codex).unwrap();
+        ranks::set_model(&mut list, codex, "gpt-a");
+        ranks::set_effort(&mut list, codex, "high");
+        file.set_ranks(Role::Planner, &list).unwrap();
+        assert_eq!(file.ranks(Role::Planner), (list, Origin::File));
+        assert!(file.text().contains("# Payment code."), "{}", file.text());
+        assert!(file.errors().is_empty(), "{:?}", file.errors());
+        file.set_ranks(Role::Planner, &[]).unwrap();
+        assert_eq!(file.origin(ProjectValue::Role(Role::Planner)), Origin::Default);
     }
 
     #[test]

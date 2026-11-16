@@ -31,7 +31,7 @@ use ide_ui_common::util::{activate, label, ns, symbol};
 /// The menu of a worktree row; `ordered` when a work order owns the worktree.
 pub(crate) fn menu(keys: &[RowKey], ordered: bool) -> Vec<(&'static str, Option<Sel>)> {
     match keys {
-        [RowKey::Worktree(_)] if ordered => vec![(t("Im Leitstand zeigen"), Some(sel!(ideGitShowOrder:)))],
+        [RowKey::Worktree(_)] if ordered => vec![(t("In der Software Factory zeigen"), Some(sel!(ideGitShowOrder:)))],
         [RowKey::Worktree(_)] => vec![
             (t("Übernehmen …"), Some(sel!(ideGitTakeOver:))),
             (t("Thread öffnen"), Some(sel!(ideGitOpenThread:))),

@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Nhập mã {} trong Codex trên điện thoại. Mã có hiệu lực đến {}.";
 "Koppeln fehlgeschlagen" = "Không ghép đôi được";
 "Prüfstation" = "Cổng kiểm tra";
-"Im Leitstand zeigen" = "Hiển thị trong Phòng điều khiển";
+"In der Software Factory zeigen" = "Hiển thị trong Software Factory";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "Với mức rủi ro cao, hãy mở khác biệt trước.";
 "„{}“ zurück an den Builder" = "Gửi “{}” lại cho người xây dựng";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "Nhận xét được gửi đến người xây dựng cùng lượt tiếp theo.";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "Thay đổi tiêu chí của “{}”";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "Mỗi dòng một tiêu chí. Thay đổi này làm bằng chứng mất hiệu lực và được gửi đến người xây dựng và người xem xét.";
 "Ändern" = "Thay đổi";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "Phòng điều khiển không thực hiện lệnh";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "Software Factory không thực hiện lệnh";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "Loại bỏ {} khối thay đổi và nghiệm thu phần còn lại?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "Các khối thay đổi còn lại tạo thành một trạng thái mới. Cổng kiểm tra và người xem xét chạy lại cho trạng thái đó, sau đó việc nghiệm thu hoàn tất cho đúng trạng thái này.";
 "Verwerfen und abnehmen" = "Loại bỏ và nghiệm thu";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "Phiếu công việc đang chờ câu trả lời hoặc quyền từ bạn. Câu hỏi và lệnh nằm trong phiên của tác nhân.";
 "Antwort" = "Trả lời";
 "Antwort senden" = "Gửi câu trả lời";
-"Leitstand" = "Phòng điều khiển";
-"Leitstand-Einstellungen …" = "Cài đặt Phòng điều khiển…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Cài đặt Software Factory…";
 "Neuer Auftrag …" = "Phiếu công việc mới…";
 "Stationen" = "Trạm";
 "Aufträge" = "Phiếu công việc";
 "Auftrag öffnen" = "Mở phiếu công việc";
-"Leitstand-Tab zeigen" = "Hiển thị tab Phòng điều khiển";
+"Software-Factory-Tab zeigen" = "Hiển thị tab Software Factory";
 "Auftrag" = "Phiếu công việc";
-"Leitstand für {}" = "Phòng điều khiển cho {}";
+"Software Factory für {}" = "Software Factory cho {}";
 "Builder" = "Người xây dựng";
 "Grenzen und Budget" = "Giới hạn và ngân sách";
 "Budget je Auftrag ($):" = "Ngân sách mỗi phiếu công việc ($):";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "“{}” không phải là số tiền bằng đô la.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Không thể tạo mẫu: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Chưa có phiếu công việc. Phiếu công việc là một mục tiêu với các tiêu chí kiểm tra được, mà {} xây dựng và kiểm tra trong một worktree riêng.";
+"Noch kein Auftrag" = "Chưa có phiếu công việc";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Phiếu công việc là một mục tiêu với các tiêu chí kiểm tra được, mà {} xây dựng và kiểm tra trong một worktree riêng.";
 "Ziel" = "Mục tiêu";
 "Kriterien" = "Tiêu chí";
 "Zeitleiste" = "Dòng thời gian";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "Gửi lại cho người xây dựng…";
 "Kriterien ändern …" = "Thay đổi tiêu chí…";
 "Von Hand weiter" = "Tiếp tục thủ công";
-"Zurück an den Leitstand" = "Trả lại cho Phòng điều khiển";
+"Zurück an die Software Factory" = "Trả lại cho Software Factory";
 "Auftrag fortsetzen" = "Tiếp tục phiếu công việc";
 "Auftrag abbrechen …" = "Hủy bỏ phiếu công việc…";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "Không bắt đầu khi vượt (% cửa sổ hạn mức):";
 "Aufträge gleichzeitig:" = "Số phiếu công việc cùng lúc:";
 "Vorgabe des Agenten" = "Mặc định của tác nhân";
+"Vorgabe des Agenten ({})" = "Mặc định của tác nhân ({})";
 "{} – kann nicht {} sein" = "{} – không thể đảm nhận vai trò {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "Dự án chưa có .dango/factory.toml; Lưu sẽ tạo tệp này.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git bỏ qua .dango/factory.toml, nên nhóm sẽ không nhận được tệp này.";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "Bắt buộc hãng khác";
 "Anderer Hersteller bevorzugt" = "Ưu tiên hãng khác";
 "Rollen" = "Vai trò";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Các bảng xếp hạng nằm trong tệp quy trình; “Ưu tiên hãng khác” chỉ có hiệu lực sau khi bạn xác nhận.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Thứ tự là bảng xếp hạng: phiếu công việc lấy mục đầu tiên đã sẵn sàng. “Ưu tiên hãng khác” chỉ có hiệu lực sau khi bạn xác nhận.";
 "Risikoklassen" = "Mức rủi ro";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "Mẫu đường dẫn, mỗi dòng một mẫu hoặc phân tách bằng dấu phẩy. Mức đo được chỉ có thể nâng mức dự kiến lên.";
 "Prüfrelevante Dateien" = "Tệp quan trọng cho việc xem xét";

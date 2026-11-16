@@ -1,4 +1,4 @@
-//! The `leitstand-gaps` scenario (E183, E178): the dialog "Leitstand für <Ordner>" names the origin of each value, a
+//! The `leitstand-gaps` scenario (E183, E178): the dialog "Software Factory für <Ordner>" names the origin of each value, a
 //! role list and a risk pattern from `.dango/factory.toml`, the rest "Vorgabe"; "Auf Vorgabe zurücksetzen" takes the
 //! risk pattern out, and saving keeps the file's comment and its other values. Then a scripted builder objects to the
 //! criteria in its first turn: the order waits, its tab shows the objection's text with "Weiter" and "Kriterien ändern
@@ -119,7 +119,7 @@ fn row(rows: &[ProjectRowSeen], value: ProjectValue) -> Option<&ProjectRowSeen> 
     rows.iter().find(|row| row.title == title)
 }
 
-/// Opens "Leitstand für <Ordner>" and waits until it shows its rows.
+/// Opens "Software Factory für <Ordner>" and waits until it shows its rows.
 fn dialog(root: PathBuf, controller: &Retained<WindowController>) {
     ide_ui_factory::project_settings(controller.handle(), controller.context().factory_ui());
     let probe = controller.clone();
@@ -129,7 +129,7 @@ fn dialog(root: PathBuf, controller: &Retained<WindowController>) {
         move || ide_ui_factory::selftest::project(probe.handle(), probe.context().factory_ui()).is_some(),
         move |open| {
             if !open {
-                return give_up(SCENARIO, "the dialog Leitstand für <Ordner> opens");
+                return give_up(SCENARIO, "the dialog Software Factory für <Ordner> opens");
             }
             origins(root, &controller);
         },

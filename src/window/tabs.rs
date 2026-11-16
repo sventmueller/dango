@@ -190,7 +190,11 @@ impl Document {
             crate::util::constant!(objc2_app_kit::NSFontWeightRegular),
         )
         .configurationByApplyingConfiguration(&NSImageSymbolConfiguration::configurationWithHierarchicalColor(&color));
-        let image = symbol(name, "")?.imageWithSymbolConfiguration(&configuration)?;
+        let image = if ide_ui_common::util::is_own_symbol(name) {
+            ide_ui_common::util::own_symbol_in(name, "", 11.0, &color)?
+        } else {
+            symbol(name, "")?.imageWithSymbolConfiguration(&configuration)?
+        };
         Some(match four {
             Some(colors) => crate::util::four_colours(&image, &colors),
             None => image,

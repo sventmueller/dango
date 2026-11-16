@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "अपने फ़ोन पर Codex में कोड {} डालें। यह {} तक मान्य है।";
 "Koppeln fehlgeschlagen" = "पेयर नहीं हो सका";
 "Prüfstation" = "गेट";
-"Im Leitstand zeigen" = "कंट्रोल रूम में दिखाएँ";
+"In der Software Factory zeigen" = "Software Factory में दिखाएँ";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "जोखिम श्रेणी उच्च होने पर पहले अंतर खोलें।";
 "„{}“ zurück an den Builder" = "“{}” बिल्डर को वापस भेजें";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "टिप्पणी अगले टर्न के साथ बिल्डर को जाती है।";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "“{}” के मानदंड बदलें";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "हर पंक्ति में एक मानदंड। बदलाव से प्रमाण अमान्य हो जाता है और यह बिल्डर और समीक्षक को भेजा जाता है।";
 "Ändern" = "बदलें";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "कंट्रोल रूम ने कमांड नहीं चलाया";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "Software Factory ने कमांड नहीं चलाया";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "{} हंक त्यागें और बाकी स्वीकार करें?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "बचे हुए हंक से एक नई स्थिति बनती है। गेट और समीक्षक उसके लिए फिर से चलते हैं, फिर स्वीकृति ठीक उसी स्थिति के लिए पूरी होती है।";
 "Verwerfen und abnehmen" = "त्यागें और स्वीकार करें";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "वर्क ऑर्डर आपके जवाब या अनुमति की प्रतीक्षा कर रहा है। सवाल और कमांड एजेंट के सेशन में हैं।";
 "Antwort" = "जवाब";
 "Antwort senden" = "जवाब भेजें";
-"Leitstand" = "कंट्रोल रूम";
-"Leitstand-Einstellungen …" = "कंट्रोल रूम सेटिंग्ज़…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Software Factory सेटिंग्ज़…";
 "Neuer Auftrag …" = "नया वर्क ऑर्डर…";
 "Stationen" = "स्टेशन";
 "Aufträge" = "वर्क ऑर्डर";
 "Auftrag öffnen" = "वर्क ऑर्डर खोलें";
-"Leitstand-Tab zeigen" = "कंट्रोल रूम टैब दिखाएँ";
+"Software-Factory-Tab zeigen" = "Software Factory टैब दिखाएँ";
 "Auftrag" = "वर्क ऑर्डर";
-"Leitstand für {}" = "{} के लिए कंट्रोल रूम";
+"Software Factory für {}" = "{} के लिए Software Factory";
 "Builder" = "बिल्डर";
 "Grenzen und Budget" = "सीमाएँ और बजट";
 "Budget je Auftrag ($):" = "प्रति वर्क ऑर्डर बजट ($) :";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "“{}” डॉलर में राशि नहीं है।";
 "Die Vorlage ließ sich nicht anlegen: {}" = "टेम्पलेट नहीं बनाया जा सका : {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "अभी कोई वर्क ऑर्डर नहीं। वर्क ऑर्डर जाँचे जा सकने वाले मानदंडों वाला एक लक्ष्य है, जिसे {} अपने अलग वर्कट्री में बनाता और जाँचता है।";
+"Noch kein Auftrag" = "अभी कोई वर्क ऑर्डर नहीं";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "वर्क ऑर्डर जाँचे जा सकने वाले मानदंडों वाला एक लक्ष्य है, जिसे {} अपने अलग वर्कट्री में बनाता और जाँचता है।";
 "Ziel" = "लक्ष्य";
 "Kriterien" = "मानदंड";
 "Zeitleiste" = "टाइमलाइन";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "बिल्डर को वापस भेजें…";
 "Kriterien ändern …" = "मानदंड बदलें…";
 "Von Hand weiter" = "हाथ से जारी रखें";
-"Zurück an den Leitstand" = "कंट्रोल रूम को वापस सौंपें";
+"Zurück an die Software Factory" = "Software Factory को वापस सौंपें";
 "Auftrag fortsetzen" = "वर्क ऑर्डर फिर शुरू करें";
 "Auftrag abbrechen …" = "वर्क ऑर्डर निरस्त करें…";
 "{}: {} · {}" = "{} : {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "इससे ऊपर शुरू न करें (कोटा विंडो का %) :";
 "Aufträge gleichzeitig:" = "एक साथ वर्क ऑर्डर :";
 "Vorgabe des Agenten" = "एजेंट का डिफ़ॉल्ट";
+"Vorgabe des Agenten ({})" = "एजेंट का डिफ़ॉल्ट ({})";
 "{} – kann nicht {} sein" = "{} – {} नहीं हो सकता";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "प्रोजेक्ट में अभी .dango/factory.toml नहीं है; सहेजने पर यह बन जाएगी।";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git .dango/factory.toml को अनदेखा करता है, इसलिए टीम को यह फ़ाइल नहीं मिलती।";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "दूसरा वेंडर अनिवार्य";
 "Anderer Hersteller bevorzugt" = "दूसरा वेंडर पसंदीदा";
 "Rollen" = "भूमिकाएँ";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "रैंकिंग सूचियाँ वर्कफ़्लो फ़ाइल में हैं; “दूसरा वेंडर पसंदीदा” आपकी पुष्टि के बाद ही लागू होता है।";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "क्रम ही रैंकिंग है : वर्क ऑर्डर पहली ऐसी एंट्री लेता है जो तैयार हो। “दूसरा वेंडर पसंदीदा” आपकी पुष्टि के बाद ही लागू होता है।";
 "Risikoklassen" = "जोखिम श्रेणियाँ";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "पाथ पैटर्न, हर पंक्ति में एक या कॉमा से अलग। मापी गई श्रेणी अपेक्षित श्रेणी को केवल बढ़ा सकती है।";
 "Prüfrelevante Dateien" = "समीक्षा के लिए अहम फ़ाइलें";

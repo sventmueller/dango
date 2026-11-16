@@ -105,6 +105,9 @@ pub trait Host {
     fn defaults(&self) -> UserDefaults;
     /// Stores `defaults` as the user's defaults and hands them to every factory.
     fn set_defaults(&self, defaults: UserDefaults);
+    /// The models and efforts `agent` offers for a role's entry and the model it takes without one, with the
+    /// project at `root` where its settings count.
+    fn models(&self, agent: &ide_factory::routing::Agent, root: Option<&Path>) -> ide_factory::models::Catalog;
     /// The workflow file of `root` as the project dialog edits it (E183).
     fn project_file(&self, root: &Path) -> ProjectFile;
     /// Writes `text` as the workflow file of `root` and has the factory read its rules again; the words of the

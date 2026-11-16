@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Vnesite kodo {} v Codex v telefonu. Velja do {}.";
 "Koppeln fehlgeschlagen" = "Seznanjanje ni uspelo";
 "Prüfstation" = "Kontrola";
-"Im Leitstand zeigen" = "Prikaži v nadzorni sobi";
+"In der Software Factory zeigen" = "Prikaži v Software Factory";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "Pri visokem razredu tveganja najprej odprite razlike.";
 "„{}“ zurück an den Builder" = "Vrni »{}« graditelju";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "Komentar gre graditelju z naslednjim krogom.";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "Spremeni merila za »{}«";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "Eno merilo na vrstico. Sprememba razveljavi dokazilo in gre graditelju in pregledovalcu.";
 "Ändern" = "Spremeni";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "Nadzorna soba ukaza ni izvedla";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "Software Factory ukaza ni izvedla";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "Želite zavreči odseke ({}) in sprejeti preostale?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "Iz preostalih odsekov nastane novo stanje. Kontrole in pregledovalec se zanj izvedejo znova, nato se sprejem zaključi za natanko to stanje.";
 "Verwerfen und abnehmen" = "Zavrzi in sprejmi";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "Delovni nalog čaka na vaš odgovor ali dovoljenje. Vprašanje in ukaz sta v seji agenta.";
 "Antwort" = "Odgovor";
 "Antwort senden" = "Pošlji odgovor";
-"Leitstand" = "Nadzorna soba";
-"Leitstand-Einstellungen …" = "Nastavitve nadzorne sobe …";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Nastavitve Software Factory …";
 "Neuer Auftrag …" = "Nov delovni nalog …";
 "Stationen" = "Postaje";
 "Aufträge" = "Delovni nalogi";
 "Auftrag öffnen" = "Odpri delovni nalog";
-"Leitstand-Tab zeigen" = "Prikaži zavihek nadzorne sobe";
+"Software-Factory-Tab zeigen" = "Prikaži zavihek Software Factory";
 "Auftrag" = "Delovni nalog";
-"Leitstand für {}" = "Nadzorna soba za {}";
+"Software Factory für {}" = "Software Factory za {}";
 "Builder" = "Graditelj";
 "Grenzen und Budget" = "Omejitve in proračun";
 "Budget je Auftrag ($):" = "Proračun na delovni nalog ($):";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "»{}« ni znesek v dolarjih.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Predloge ni bilo mogoče ustvariti: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Še ni delovnega naloga. Delovni nalog je cilj s preverljivimi merili, ki ga {} zgradi in preveri v lastnem worktreeju.";
+"Noch kein Auftrag" = "Še ni delovnega naloga";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Delovni nalog je cilj s preverljivimi merili, ki ga {} zgradi in preveri v lastnem worktreeju.";
 "Ziel" = "Cilj";
 "Kriterien" = "Merila";
 "Zeitleiste" = "Časovnica";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "Vrni graditelju …";
 "Kriterien ändern …" = "Spremeni merila …";
 "Von Hand weiter" = "Nadaljuj ročno";
-"Zurück an den Leitstand" = "Vrni nadzorni sobi";
+"Zurück an die Software Factory" = "Vrni v Software Factory";
 "Auftrag fortsetzen" = "Nadaljuj delovni nalog";
 "Auftrag abbrechen …" = "Prekini delovni nalog …";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "Brez zagona nad (% okna):";
 "Aufträge gleichzeitig:" = "Delovni nalogi hkrati:";
 "Vorgabe des Agenten" = "Privzeto za agenta";
+"Vorgabe des Agenten ({})" = "Privzeto za agenta ({})";
 "{} – kann nicht {} sein" = "{} – ne more imeti vloge {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "Projekt še nima datoteke .dango/factory.toml; »Shrani« jo ustvari.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git prezre .dango/factory.toml, zato ekipa datoteke ne dobi.";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "Drug proizvajalec obvezen";
 "Anderer Hersteller bevorzugt" = "Drug proizvajalec zaželen";
 "Rollen" = "Vloge";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Razvrstitve so v datoteki poteka dela; »Drug proizvajalec zaželen« velja šele, ko ga potrdite.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Vrstni red je razvrstitev: delovni nalog vzame prvi vnos, ki je pripravljen. »Drug proizvajalec zaželen« velja šele, ko ga potrdite.";
 "Risikoklassen" = "Razredi tveganja";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "Vzorci poti, en na vrstico ali ločeni z vejicami. Izmerjeni razred lahko pričakovanega samo zviša.";
 "Prüfrelevante Dateien" = "Datoteke, pomembne za preverjanje";

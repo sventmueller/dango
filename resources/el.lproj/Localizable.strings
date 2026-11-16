@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Εισαγάγετε τον κωδικό {} στο Codex στο τηλέφωνό σας. Ισχύει έως τις {}.";
 "Koppeln fehlgeschlagen" = "Η σύζευξη απέτυχε";
 "Prüfstation" = "Πύλη ελέγχου";
-"Im Leitstand zeigen" = "Εμφάνιση στο Κέντρο ελέγχου";
+"In der Software Factory zeigen" = "Εμφάνιση στο Software Factory";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "Σε υψηλή κατηγορία κινδύνου, ανοίξτε πρώτα τις διαφορές.";
 "„{}“ zurück an den Builder" = "Επιστροφή του «{}» στον υλοποιητή";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "Το σχόλιο πηγαίνει στον υλοποιητή με τον επόμενο γύρο.";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "Αλλαγή κριτηρίων του «{}»";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "Ένα κριτήριο ανά γραμμή. Η αλλαγή ακυρώνει την τεκμηρίωση και πηγαίνει στον υλοποιητή και στον αξιολογητή.";
 "Ändern" = "Αλλαγή";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "Το Κέντρο ελέγχου δεν εκτέλεσε την εντολή";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "Το Software Factory δεν εκτέλεσε την εντολή";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "Απόρριψη τμημάτων ({}) και αποδοχή των υπολοίπων;";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "Από τα υπόλοιπα τμήματα προκύπτει νέα κατάσταση. Οι πύλες ελέγχου και ο αξιολογητής εκτελούνται ξανά για αυτήν και μετά η αποδοχή ολοκληρώνεται ακριβώς για αυτήν την κατάσταση.";
 "Verwerfen und abnehmen" = "Απόρριψη και αποδοχή";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "Το δελτίο εργασίας περιμένει την απάντηση ή την άδειά σας. Η ερώτηση και η εντολή βρίσκονται στη συνεδρία του πράκτορα.";
 "Antwort" = "Απάντηση";
 "Antwort senden" = "Αποστολή απάντησης";
-"Leitstand" = "Κέντρο ελέγχου";
-"Leitstand-Einstellungen …" = "Ρυθμίσεις Κέντρου ελέγχου…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Ρυθμίσεις Software Factory…";
 "Neuer Auftrag …" = "Νέο δελτίο εργασίας…";
 "Stationen" = "Σταθμοί";
 "Aufträge" = "Δελτία εργασίας";
 "Auftrag öffnen" = "Άνοιγμα δελτίου εργασίας";
-"Leitstand-Tab zeigen" = "Εμφάνιση καρτέλας Κέντρου ελέγχου";
+"Software-Factory-Tab zeigen" = "Εμφάνιση καρτέλας Software Factory";
 "Auftrag" = "Δελτίο εργασίας";
-"Leitstand für {}" = "Κέντρο ελέγχου για {}";
+"Software Factory für {}" = "Software Factory για {}";
 "Builder" = "Υλοποιητής";
 "Grenzen und Budget" = "Όρια και προϋπολογισμός";
 "Budget je Auftrag ($):" = "Προϋπολογισμός ανά δελτίο εργασίας ($):";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "Το «{}» δεν είναι ποσό σε δολάρια.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Δεν ήταν δυνατή η δημιουργία του προτύπου: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Δεν υπάρχει ακόμα δελτίο εργασίας. Ένα δελτίο εργασίας είναι ένας στόχος με ελέγξιμα κριτήρια, τον οποίο το {} υλοποιεί και ελέγχει σε δικό του worktree.";
+"Noch kein Auftrag" = "Δεν υπάρχει ακόμα δελτίο εργασίας";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Ένα δελτίο εργασίας είναι ένας στόχος με ελέγξιμα κριτήρια, τον οποίο το {} υλοποιεί και ελέγχει σε δικό του worktree.";
 "Ziel" = "Στόχος";
 "Kriterien" = "Κριτήρια";
 "Zeitleiste" = "Χρονολόγιο";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "Επιστροφή στον υλοποιητή…";
 "Kriterien ändern …" = "Αλλαγή κριτηρίων…";
 "Von Hand weiter" = "Χειροκίνητη συνέχεια";
-"Zurück an den Leitstand" = "Επιστροφή στο Κέντρο ελέγχου";
+"Zurück an die Software Factory" = "Επιστροφή στο Software Factory";
 "Auftrag fortsetzen" = "Συνέχιση δελτίου εργασίας";
 "Auftrag abbrechen …" = "Διακοπή δελτίου εργασίας…";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "Καμία έναρξη πάνω από (% παραθύρου):";
 "Aufträge gleichzeitig:" = "Ταυτόχρονα δελτία εργασίας:";
 "Vorgabe des Agenten" = "Προεπιλογή του πράκτορα";
+"Vorgabe des Agenten ({})" = "Προεπιλογή του πράκτορα ({})";
 "{} – kann nicht {} sein" = "{} – δεν μπορεί να έχει τον ρόλο {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "Το έργο δεν έχει ακόμα .dango/factory.toml· η «Αποθήκευση» το δημιουργεί.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Το Git αγνοεί το .dango/factory.toml, οπότε η ομάδα δεν λαμβάνει το αρχείο.";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "Άλλος κατασκευαστής υποχρεωτικά";
 "Anderer Hersteller bevorzugt" = "Άλλος κατασκευαστής κατά προτίμηση";
 "Rollen" = "Ρόλοι";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Οι κατατάξεις βρίσκονται στο αρχείο workflow· το «Άλλος κατασκευαστής κατά προτίμηση» ισχύει μόνο αφού το επιβεβαιώσετε.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Η σειρά είναι η κατάταξη: ένα δελτίο εργασίας παίρνει την πρώτη καταχώριση που είναι έτοιμη. Το «Άλλος κατασκευαστής κατά προτίμηση» ισχύει μόνο αφού το επιβεβαιώσετε.";
 "Risikoklassen" = "Κατηγορίες κινδύνου";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "Μοτίβα διαδρομών, ένα ανά γραμμή ή χωρισμένα με κόμματα. Η μετρημένη κατηγορία μπορεί μόνο να αυξήσει την αναμενόμενη.";
 "Prüfrelevante Dateien" = "Αρχεία σημαντικά για την αξιολόγηση";

@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "在手機上的 Codex 中輸入代碼 {}。有效期限至 {}。";
 "Koppeln fehlgeschlagen" = "配對失敗";
 "Prüfstation" = "關卡";
-"Im Leitstand zeigen" = "在控制室中顯示";
+"In der Software Factory zeigen" = "在 Software Factory 中顯示";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "風險等級為高時，請先打開差異。";
 "„{}“ zurück an den Builder" = "將「{}」退回給建構者";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "註解會在下一輪隨之傳給建構者。";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "更改「{}」的標準";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "每行一條標準。更改會使證據失效，並傳給建構者和審查者。";
 "Ändern" = "更改";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "控制室未執行該指令";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "Software Factory 未執行該指令";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "要捨棄 {} 個變更區塊並驗收其餘部分嗎？";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "其餘變更區塊會形成新的狀態。關卡和審查者會針對它重新執行，之後驗收將針對這個狀態完成。";
 "Verwerfen und abnehmen" = "捨棄並驗收";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "工單正在等待你的回答或權限許可。問題和指令位於代理程式的工作階段中。";
 "Antwort" = "回覆";
 "Antwort senden" = "傳送回覆";
-"Leitstand" = "控制室";
-"Leitstand-Einstellungen …" = "控制室設定⋯";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Software Factory 設定⋯";
 "Neuer Auftrag …" = "新增工單⋯";
 "Stationen" = "階段";
 "Aufträge" = "工單";
 "Auftrag öffnen" = "打開工單";
-"Leitstand-Tab zeigen" = "顯示控制室標籤頁";
+"Software-Factory-Tab zeigen" = "顯示 Software Factory 標籤頁";
 "Auftrag" = "工單";
-"Leitstand für {}" = "{} 的控制室";
+"Software Factory für {}" = "{} 的 Software Factory";
 "Builder" = "建構者";
 "Grenzen und Budget" = "限制和預算";
 "Budget je Auftrag ($):" = "每個工單的預算（$）：";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "「{}」不是美元金額。";
 "Die Vorlage ließ sich nicht anlegen: {}" = "無法建立範本：{}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "尚無工單。工單是附有可檢驗標準的目標，由 {} 在獨立的工作樹中建構並檢查。";
+"Noch kein Auftrag" = "尚無工單";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "工單是附有可檢驗標準的目標，由 {} 在獨立的工作樹中建構並檢查。";
 "Ziel" = "目標";
 "Kriterien" = "標準";
 "Zeitleiste" = "時間軸";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "退回給建構者⋯";
 "Kriterien ändern …" = "更改標準⋯";
 "Von Hand weiter" = "手動繼續";
-"Zurück an den Leitstand" = "交還給控制室";
+"Zurück an die Software Factory" = "交還給 Software Factory";
 "Auftrag fortsetzen" = "恢復工單";
 "Auftrag abbrechen …" = "取消工單⋯";
 "{}: {} · {}" = "{}：{} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "超過此值不啟動（用量時段 %）：";
 "Aufträge gleichzeitig:" = "同時執行的工單：";
 "Vorgabe des Agenten" = "代理程式的預設值";
+"Vorgabe des Agenten ({})" = "代理程式的預設值（{}）";
 "{} – kann nicht {} sein" = "{} – 無法擔任角色 {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "此專案尚無 .dango/factory.toml；儲存時會建立它。";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git 忽略了 .dango/factory.toml，因此團隊不會收到此檔案。";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "必須是其他廠商";
 "Anderer Hersteller bevorzugt" = "優先其他廠商";
 "Rollen" = "角色";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "優先順序清單位於工作流程檔案中；「優先其他廠商」需經你確認後才會生效。";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "順序即優先順序：工單會選用第一個就緒的項目。「優先其他廠商」需經你確認後才會生效。";
 "Risikoklassen" = "風險等級";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "路徑模式，每行一個或以逗號分隔。測得的等級只能提高預期的等級。";
 "Prüfrelevante Dateien" = "對審查重要的檔案";

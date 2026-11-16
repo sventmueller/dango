@@ -43,7 +43,7 @@ pub fn order(window: Window, state: &Rc<State>, order: &ide_factory::OrderId) ->
         .map(|order_tab| order_tab.seen())
 }
 
-/// The dialog "Leitstand für <Ordner>" open on `window`.
+/// The dialog "Software Factory für <Ordner>" open on `window`.
 fn project_sheet(window: Window, state: &Rc<State>) -> Option<objc2::rc::Retained<crate::project::ProjectSheet>> {
     state
         .projects
@@ -52,7 +52,7 @@ fn project_sheet(window: Window, state: &Rc<State>) -> Option<objc2::rc::Retaine
         .find(|sheet| sheet.window() == window && sheet.open_now())
 }
 
-/// What each row of the dialog "Leitstand für <Ordner>" on `window` shows, while it is open.
+/// What each row of the dialog "Software Factory für <Ordner>" on `window` shows, while it is open.
 pub fn project(window: Window, state: &Rc<State>) -> Option<Vec<ProjectRowSeen>> {
     project_sheet(window, state).map(|sheet| sheet.seen())
 }
@@ -78,7 +78,7 @@ pub struct OrderSeen {
     pub buttons: Vec<(String, bool)>,
 }
 
-/// What a row of the dialog "Leitstand für <Ordner>" shows, as the self-test reads it.
+/// What a row of the dialog "Software Factory für <Ordner>" shows, as the self-test reads it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProjectRowSeen {
     /// The row's title, such as "Prüfer:".

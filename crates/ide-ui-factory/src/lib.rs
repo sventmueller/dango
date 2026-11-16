@@ -1,7 +1,7 @@
-//! The Leitstand's views (phase 13, E175, E183, E185): the panel "Leitstand" beside the activity bar with the folder's
-//! orders by station, the Leitstand tab with fleet line, station strip and sortable table, the tab of each order with
-//! timeline, request cards, evidence and its buttons G1 and G2, the sheet "Neuer Auftrag", the dialog "Leitstand für
-//! <Ordner>" and the items of "Ablage ▸ Auftrag". What they show is decided in [`model`] without AppKit (E98) from
+//! The Leitstand's views (phase 13, E175, E183, E185): the panel "Software Factory" beside the activity bar with the
+//! folder's orders by station, the Leitstand tab with fleet line, station strip and sortable table, the tab of each order
+//! with timeline, request cards, evidence and its buttons G1 and G2, the sheet "Neuer Auftrag", the dialog "Software
+//! Factory für <Ordner>" and the items of "Ablage ▸ Auftrag". What they show is decided in [`model`] without AppKit (E98) from
 //! `ide_factory`'s models; the orchestrator itself is the app's, which the crate reaches through its [`Host`] and
 //! windows through `ide_ui_common::window` (E99). The app hands the crate its [`State`] where it attaches a panel or
 //! builds the menus, and calls [`changed`] whenever a folder's factory took a step.
@@ -40,6 +40,7 @@ use objc2::rc::Retained;
 use objc2_app_kit::NSMenuItem;
 
 pub use host::{FolderNotices, Host, Notification, SpecAction, State, install};
+pub use project::roles::fill as fill_choices;
 
 /// The Leitstand tab as the layout keeps it (E64, F76).
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -134,7 +135,7 @@ pub fn new_order_from_issue(window: Window, state: &Rc<State>, prefill: model::s
     true
 }
 
-/// Shows "Leitstand für <Ordner>" on `window`.
+/// Shows "Software Factory für <Ordner>" on `window`.
 pub fn project_settings(window: Window, state: &Rc<State>) {
     if let Some(panel) = state.panels.of(window) {
         project::show(&panel.target());

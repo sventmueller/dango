@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "在手机上的 Codex 中输入代码 {}。有效期至 {}。";
 "Koppeln fehlgeschlagen" = "配对失败";
 "Prüfstation" = "门禁";
-"Im Leitstand zeigen" = "在控制室中显示";
+"In der Software Factory zeigen" = "在 Software Factory 中显示";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "风险等级为高时，请先打开差异。";
 "„{}“ zurück an den Builder" = "将“{}”退回给构建者";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "评论会在下一轮随之发送给构建者。";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "更改“{}”的标准";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "每行一条标准。更改会使证据失效，并发送给构建者和审查者。";
 "Ändern" = "更改";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "控制室未执行该命令";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "Software Factory 未执行该命令";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "要放弃 {} 个变更块并验收其余部分吗？";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "其余变更块会形成一个新状态。门禁和审查者会针对它重新运行，之后验收将针对这一状态完成。";
 "Verwerfen und abnehmen" = "放弃并验收";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "工单正在等待你的回答或权限许可。问题和命令位于智能体的会话中。";
 "Antwort" = "回复";
 "Antwort senden" = "发送回复";
-"Leitstand" = "控制室";
-"Leitstand-Einstellungen …" = "控制室设置…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Software Factory 设置…";
 "Neuer Auftrag …" = "新建工单…";
 "Stationen" = "阶段";
 "Aufträge" = "工单";
 "Auftrag öffnen" = "打开工单";
-"Leitstand-Tab zeigen" = "显示控制室标签页";
+"Software-Factory-Tab zeigen" = "显示 Software Factory 标签页";
 "Auftrag" = "工单";
-"Leitstand für {}" = "{} 的控制室";
+"Software Factory für {}" = "{} 的 Software Factory";
 "Builder" = "构建者";
 "Grenzen und Budget" = "限制和预算";
 "Budget je Auftrag ($):" = "每个工单的预算（$）：";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "“{}”不是美元金额。";
 "Die Vorlage ließ sich nicht anlegen: {}" = "无法创建模板：{}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "还没有工单。工单是一个带有可检验标准的目标，由 {} 在独立的工作树中构建并检查。";
+"Noch kein Auftrag" = "还没有工单";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "工单是一个带有可检验标准的目标，由 {} 在独立的工作树中构建并检查。";
 "Ziel" = "目标";
 "Kriterien" = "标准";
 "Zeitleiste" = "时间线";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "退回给构建者…";
 "Kriterien ändern …" = "更改标准…";
 "Von Hand weiter" = "手动继续";
-"Zurück an den Leitstand" = "交还给控制室";
+"Zurück an die Software Factory" = "交还给 Software Factory";
 "Auftrag fortsetzen" = "恢复工单";
 "Auftrag abbrechen …" = "取消工单…";
 "{}: {} · {}" = "{}：{} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "超过此值不启动（用量窗口 %）：";
 "Aufträge gleichzeitig:" = "同时运行的工单：";
 "Vorgabe des Agenten" = "智能体的默认值";
+"Vorgabe des Agenten ({})" = "智能体的默认值（{}）";
 "{} – kann nicht {} sein" = "{} – 不能担任角色 {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "此项目还没有 .dango/factory.toml；保存时会创建它。";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git 忽略了 .dango/factory.toml，因此团队不会收到此文件。";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "必须是其他厂商";
 "Anderer Hersteller bevorzugt" = "优先其他厂商";
 "Rollen" = "角色";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "优先级列表位于工作流文件中；“优先其他厂商”需经你确认后才生效。";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "顺序即优先级：工单会选用第一个就绪的条目。“优先其他厂商”需经你确认后才生效。";
 "Risikoklassen" = "风险等级";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "路径模式，每行一个或以逗号分隔。测得的等级只能提高预期的等级。";
 "Prüfrelevante Dateien" = "对审查重要的文件";

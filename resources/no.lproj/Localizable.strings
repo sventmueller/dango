@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Skriv inn koden {} i Codex på telefonen. Den gjelder til {}.";
 "Koppeln fehlgeschlagen" = "Paring mislyktes";
 "Prüfstation" = "Kontrollpunkt";
-"Im Leitstand zeigen" = "Vis i kontrollrommet";
+"In der Software Factory zeigen" = "Vis i Software Factory";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "Ved risikoklasse høy: Åpne diffen først.";
 "„{}“ zurück an den Builder" = "Send «{}» tilbake til byggeren";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "Kommentaren går til byggeren med neste runde.";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "Endre kriteriene for «{}»";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "Ett kriterium per linje. Endringen gjør beviset ugyldig og går til byggeren og kontrolløren.";
 "Ändern" = "Endre";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "Kontrollrommet utførte ikke kommandoen";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "Software Factory utførte ikke kommandoen";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "Vil du forkaste {} blokker og akseptere resten?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "De gjenværende blokkene blir en ny tilstand. Kontrollpunktene og kontrolløren kjører på nytt for den, og deretter fullføres aksepten for nøyaktig denne tilstanden.";
 "Verwerfen und abnehmen" = "Forkast og aksepter";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "Arbeidsordren venter på svaret ditt eller en tillatelse. Spørsmålet og kommandoen står i agentens økt.";
 "Antwort" = "Svar";
 "Antwort senden" = "Send svar";
-"Leitstand" = "Kontrollrom";
-"Leitstand-Einstellungen …" = "Innstillinger for kontrollrom…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Innstillinger for Software Factory…";
 "Neuer Auftrag …" = "Ny arbeidsordre…";
 "Stationen" = "Stasjoner";
 "Aufträge" = "Arbeidsordrer";
 "Auftrag öffnen" = "Åpne arbeidsordre";
-"Leitstand-Tab zeigen" = "Vis kontrollromfanen";
+"Software-Factory-Tab zeigen" = "Vis Software Factory-fanen";
 "Auftrag" = "Arbeidsordre";
-"Leitstand für {}" = "Kontrollrom for {}";
+"Software Factory für {}" = "Software Factory for {}";
 "Builder" = "Bygger";
 "Grenzen und Budget" = "Grenser og budsjett";
 "Budget je Auftrag ($):" = "Budsjett per arbeidsordre ($):";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "«{}» er ikke et beløp i dollar.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Kunne ikke opprette malen: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Ingen arbeidsordre ennå. En arbeidsordre er et mål med testbare kriterier som {} bygger og kontrollerer i en egen worktree.";
+"Noch kein Auftrag" = "Ingen arbeidsordre ennå";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "En arbeidsordre er et mål med testbare kriterier som {} bygger og kontrollerer i en egen worktree.";
 "Ziel" = "Mål";
 "Kriterien" = "Kriterier";
 "Zeitleiste" = "Tidslinje";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "Tilbake til byggeren…";
 "Kriterien ändern …" = "Endre kriterier…";
 "Von Hand weiter" = "Fortsett manuelt";
-"Zurück an den Leitstand" = "Tilbake til kontrollrommet";
+"Zurück an die Software Factory" = "Tilbake til Software Factory";
 "Auftrag fortsetzen" = "Gjenoppta arbeidsordre";
 "Auftrag abbrechen …" = "Avbryt arbeidsordre…";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "Ingen start over (% av vinduet):";
 "Aufträge gleichzeitig:" = "Arbeidsordrer samtidig:";
 "Vorgabe des Agenten" = "Agentens standard";
+"Vorgabe des Agenten ({})" = "Agentens standard ({})";
 "{} – kann nicht {} sein" = "{} – kan ikke ha rollen {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "Prosjektet har ingen .dango/factory.toml ennå; Lagre oppretter den.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git ignorerer .dango/factory.toml, så teamet får ikke filen.";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "Annen produsent påkrevd";
 "Anderer Hersteller bevorzugt" = "Annen produsent foretrukket";
 "Rollen" = "Roller";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Rangeringene står i arbeidsflytfilen; «Annen produsent foretrukket» gjelder først når du har bekreftet det.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Rekkefølgen er rangeringen: En arbeidsordre tar den første oppføringen som er klar. «Annen produsent foretrukket» gjelder først når du har bekreftet det.";
 "Risikoklassen" = "Risikoklasser";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "Stimønstre, ett per linje eller skilt med komma. Den målte klassen kan bare heve den forventede.";
 "Prüfrelevante Dateien" = "Filer som teller for gjennomgangen";

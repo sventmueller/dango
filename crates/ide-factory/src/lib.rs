@@ -17,6 +17,7 @@
 //!   when its gate passes.
 //! - [`limits`] holds E168's limits and the stall rule, [`budget`] the budgets in three units and the daily account
 //!   the app keeps across projects, [`quota`] the quotas per account, service and window (C65).
+//! - [`models`] names the models and efforts an entry can take, from what the CLIs keep on the Mac.
 //! - [`routing`] picks the entry of a role's ranked list (E162, E170) with vendors by model (E171) and what each path
 //!   may do in orders ([`routing::Capabilities`], E173).
 //! - [`workflow`] reads and edits `.dango/factory.toml` (E161) and merges it with the user's defaults
@@ -67,6 +68,7 @@ pub mod learning;
 pub mod limits;
 pub mod log;
 pub mod metrics;
+pub mod models;
 pub mod options;
 pub mod order;
 pub mod panel;

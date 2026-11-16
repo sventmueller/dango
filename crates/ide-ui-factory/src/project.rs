@@ -1,10 +1,10 @@
-//! The dialog "Leitstand für <Ordner>" (E183), a sheet on the window: what the project sets in `.dango/factory.toml`
+//! The dialog "Software Factory für <Ordner>" (E183), a sheet on the window: what the project sets in `.dango/factory.toml`
 //! beside the user's defaults, every value with its origin and "Auf Vorgabe zurücksetzen", which takes the key out of
-//! the file with its comments and the rest kept; the role lists read only, the reviewer rule, limits, budgets, copying
-//! and setup, risk patterns and the files that count for the review editable; the gate commands and the prompt
-//! templates to open in the editor, and the file's errors in the user's words (E141, E190).
+//! the file with its comments and the rest kept; the roles' ranked lists with model and effort, the reviewer rule,
+//! limits, budgets, copying and setup, risk patterns and the files that count for the review editable; the gate
+//! commands and the prompt templates to open in the editor, and the file's errors in the user's words (E141, E190).
 
-use std::cell::{OnceCell, RefCell};
+use std::cell::{OnceCell, Ref, RefCell};
 
 use ide_core::explain::Explained;
 use ide_factory::event::PromptKind;
@@ -51,6 +51,7 @@ pub(crate) struct ProjectIvars {
 
 struct ProjectUi {
     panel: Retained<NSWindow>,
+    roles: Retained<roles::RolesEditor>,
     problems: Retained<NSTextField>,
     rows: Vec<ValueRow>,
     template: Retained<NSPopUpButton>,
@@ -120,7 +121,7 @@ define_class!(
     }
 );
 
-/// Shows "Leitstand für <Ordner>" on `target`'s window.
+/// Shows "Software Factory für <Ordner>" on `target`'s window.
 pub(crate) fn show(target: &Target) {
     let window = target.window();
     let Some(parent) = window.window() else { return };
@@ -162,7 +163,7 @@ impl ProjectSheet {
             bottom: space::GROUP,
             right: space::GROUP,
         });
-        column.addArrangedSubview(&ui::heading(mtm, &tf("Leitstand für {}", &[&folder])));
+        column.addArrangedSubview(&ui::heading(mtm, &tf("Software Factory für {}", &[&folder])));
         for note in self.ivars().file.borrow().notes() {
             column.addArrangedSubview(&ui::note(mtm, note, WIDTH));
         }
@@ -170,7 +171,8 @@ impl ProjectSheet {
         problems.setTextColor(Some(&NSColor::systemRedColor()));
         column.addArrangedSubview(&problems);
         let mut rows = Vec::new();
-        for (heading, note, values) in sections() {
+        let roles = roles::RolesEditor::new(mtm, self);
+        for (index, (heading, note, values)) in sections().into_iter().enumerate() {
             column.addArrangedSubview(&ui::heading(mtm, heading));
             if let Some(note) = note {
                 column.addArrangedSubview(&ui::note(mtm, note, WIDTH));
@@ -180,12 +182,16 @@ impl ProjectSheet {
             grid.setColumnSpacing(space::M);
             rows.extend(values.into_iter().map(|value| self.value_row(mtm, &grid, value)));
             column.addArrangedSubview(&grid);
+            if index == 0 {
+                column.addArrangedSubview(&roles.view());
+            }
         }
         let template = self.files_part(mtm, &column);
         let panel = panel(mtm, &folder);
         panel.setContentView(Some(&ui::scrolling(mtm, &column)));
         ProjectUi {
             panel,
+            roles,
             problems,
             rows,
             template,
@@ -327,9 +333,26 @@ impl ProjectSheet {
         ui.problems.setHidden(errors.is_empty());
     }
 
+    /// The workflow file as edited.
+    pub(crate) fn file(&self) -> Ref<'_, ProjectFile> {
+        self.ivars().file.borrow()
+    }
+
+    /// Writes `list` as `role`'s ranked list into the file as edited, and shows it in the rows.
+    pub(crate) fn set_ranks(&self, role: Role, list: &[ide_factory::routing::RankEntry]) {
+        let result = self.ivars().file.borrow_mut().set_ranks(role, list);
+        self.show_values();
+        if let Err(error) = result {
+            self.problem(&error.0);
+        }
+    }
+
     fn reset(&self, value: ProjectValue) {
         let result = self.ivars().file.borrow_mut().reset(value);
         self.show_values();
+        if let Some(roles) = self.ivars().ui.get().map(|ui| &ui.roles) {
+            roles.reload();
+        }
         if let Err(error) = result {
             self.problem(&error.0);
         }
@@ -427,7 +450,7 @@ fn sections() -> Vec<(&'static str, Option<&'static str>, Vec<ProjectValue>)> {
         (
             t("Rollen"),
             Some(t(
-                "Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung.",
+                "Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung.",
             )),
             roles,
         ),
@@ -470,9 +493,10 @@ fn panel(mtm: MainThreadMarker, folder: &str) -> Retained<NSWindow> {
     };
     // SAFETY: Switching it off keeps AppKit from releasing the window behind Rust's back.
     unsafe { panel.setReleasedWhenClosed(false) };
-    panel.setTitle(&ns(&tf("Leitstand für {}", &[folder])));
+    panel.setTitle(&ns(&tf("Software Factory für {}", &[folder])));
     panel
 }
 
+pub(crate) mod roles;
 #[cfg(feature = "selftest")]
 mod selftest_probe;

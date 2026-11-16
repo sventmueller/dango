@@ -275,10 +275,15 @@ beschrieben, gilt so, wie es hier steht:
     mit Gründen. Ein Einwand lässt den Auftrag mit seinem Text warten: „Kriterien ändern …“ fragt den Builder neu,
     „Weiter“ überstimmt, „Auftrag abbrechen …“ beendet. Eine Antwort ohne eine der Zeilen gilt als bestätigt und wird
     als „fehlend“ protokolliert.
-  - **Herkunft je Einstellung (E183):** Der Dialog „Leitstand für <Ordner>“ zeigt für jeden Wert „Vorgabe“ oder
-    „factory.toml“ mit „Zurücksetzen“. Risikomuster und prüfrelevante Dateien sind dort bearbeitbar, die Ranglisten
-    stehen weiter nur in der Datei. Der Tab „Aufträge“ deckt alle vier Rollen mit Modell und Denktiefe, die
-    Prüfer-Regel und API-Budgets je Tag für Claude, Codex und den eigenen Agenten ab.
+  - **Herkunft je Einstellung (E183):** Der Dialog „Software Factory für <Ordner>“ zeigt für jeden Wert „Vorgabe“ oder
+    „factory.toml“ mit „Zurücksetzen“. Risikomuster, prüfrelevante Dateien und die Ranglisten aller vier Rollen mit
+    Modell und Denktiefe sind dort bearbeitbar; eine geänderte Rangliste schreibt die ganze Liste der Rolle in die
+    Datei. Der Tab „Aufträge“ deckt alle vier Rollen mit Modell und Denktiefe, die Prüfer-Regel und API-Budgets je
+    Tag für Claude, Codex und den eigenen Agenten ab.
+  - **Modellwahl:** Modell und Denktiefe sind Auswahllisten, in die sich auch ein eigener Name tippen lässt. Claude
+    bietet die Aliasse opus, sonnet und haiku, Codex die Modelle seines `models_cache.json` mit ihren Denktiefen.
+    Ohne Eintrag nennt die Liste das Modell, das die CLI dann nimmt: bei Claude `ANTHROPIC_MODEL`, sonst `model` aus
+    den Einstellungen des Projekts oder des Nutzers, bei Codex `model` aus seiner `config.toml`.
   - **Issue-Änderungen (E176):** Ein geändertes Issue zeigt im Auftrag-Tab „Issue geändert“ mit Zeilen-Diff; erst
     „Änderung übernehmen“ ändert Ziel und Vorschläge aus der Aufgabenliste, eigene Kriterien bleiben. Gelesen wird beim
     5-Minuten-Abruf (nur Ordner mit bestätigtem Eingang) und beim Öffnen des Auftrag-Tabs.

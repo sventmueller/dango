@@ -11,7 +11,8 @@ changes the table first.
 - **Symbols and names:** `⌘ ⌥ ⇧ ⌃ ↩ ⎋`, key names such as Esc, and file names, commands and flags stay as they are.
   Product and service names are never translated: Claude, Codex, Gemini, Antigravity, Anthropic, OpenAI, OpenRouter,
   Ollama, LM Studio, GitHub Copilot (Copilot), Lowspeak, Git, GitHub, GitLab, ACP, MCP, CI, OAuth, PATH, JSON,
-  Finder, macOS, Mac, claude.ai, Remote Control (Anthropic's feature of that name).
+  Finder, macOS, Mac, claude.ai, Remote Control (Anthropic's feature of that name), Software Factory (the app's
+  feature of that name).
 - **The app's name** never appears in a translation; where a key names the app, it has a `{}` for it.
 - **macOS first:** menu items, buttons and system words that macOS has (the Standard terms below) take the wording
   of macOS in that language, letter for letter, including how it writes the ellipsis of an item that opens a
@@ -185,9 +186,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | | |
 | Container | Containers | the panel that shows a Docker context's Compose projects, containers, images and volumes, eighth in the sidebar (⌘8), and its menu (E136) |
 | Docker-Kontext | Docker context | the Docker engine a window's Containers panel talks to, as `docker context` names it; chosen per window |
-| **Leitstand (phase 13)** | | |
-| Leitstand | Control Room | the ninth panel (⌘9) and the tab with every work order of a folder, and the factory behind them (E175) |
-| Auftrag (Leitstand) | work order | a goal with testable criteria that the factory plans, builds and checks in a worktree of its own; distinct from Auftrag, what a subagent was asked to do |
+| **Software Factory (phase 13)** | | |
+| Software Factory | Software Factory | the panel under the agents (⌘9) and the tab with every work order of a folder, and the factory behind them (E175); a name, never translated |
+| Auftrag (Software Factory) | work order | a goal with testable criteria that the factory plans, builds and checks in a worktree of its own; distinct from Auftrag, what a subagent was asked to do |
 | Nachweis | evidence | what proves a work order's state: gates, the reviewer's findings, cost and provenance, its deviations first (E163) |
 | Abweichung | deviation | something the evidence names before everything else, such as secrets not checked |
 | Abnahme, abnehmen | acceptance, accept | G2: the user accepts the evidence, whole or hunk by hunk (C55); also the station of that name |
@@ -211,7 +212,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Workflow-Datei | workflow file | `.dango/factory.toml`, the project's rules for its work orders, shared with the team |
 | Stand | state | the commit of a work order that gates, reviewer and acceptance refer to |
 | Erstdurchlaufquote, Erstdurchlauf, Quote | first-pass rate, first pass, rate | the share of work orders whose first review round passed, by role, agent, model and risk class; work orders with interventions or a change of agent do not count; routing uses it to break a tie (E180) |
-| Kennzahlen | figures | the table of the Leitstand tab with first-pass rate, review rounds, cost and runtime, and the median wait for the user (E180) |
+| Kennzahlen | figures | the table of the Software Factory tab with first-pass rate, review rounds, cost and runtime, and the median wait for the user (E180) |
 | Regelvorschlag | rule proposal | a work order in which a scout proposes a change to AGENTS.md or CLAUDE.md from recurring findings, waiting for approval and acceptance like any other |
 | wiederkehrender Auftrag | recurring work order | a work order the workflow file creates by itself at an interval, only while the app runs |
 | Abstand (wiederkehrender Auftrag) | interval | how often a recurring work order comes: täglich, wöchentlich, alle {} Tage |
@@ -220,7 +221,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Einwand | objection | the builder's answer in its first turn that the criteria do not hold; the work order waits until the user changes them, continues or aborts (E178) |
 | Rangliste | ranked list | a role's ordered entries of agent, model and effort; a work order takes the first one that is ready (E183) |
 | Prüfer-Regel | reviewer rule | whether the reviewer must (Pflicht) or should (bevorzugt) be of another vendor than the builders (E183) |
-| Vorgabe, auf Vorgabe zurücksetzen | default, reset to default | a value from the user's settings, as against one the workflow file sets; the dialog of a folder's Leitstand names it as the value's origin (E183) |
+| Vorgabe, auf Vorgabe zurücksetzen | default, reset to default | a value from the user's settings, as against one the workflow file sets; the dialog of a folder's Software Factory names it as the value's origin (E183) |
 | Mitkopieren / Einrichtung | copy along / setup | the files copied into a work order's worktree, and the command that prepares the worktree (E188) |
 | Prüfrelevante Dateien | files that matter for the review | path patterns of tests and configuration whose changes raise the measured risk class to high (E183) |
 | Issue | issue | an issue on GitHub or GitLab, which a work order can come from (E176) |
@@ -406,9 +407,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | الحاويات |
 | Docker-Kontext | سياق Docker |
-| **Leitstand (phase 13)** | |
-| Leitstand | غرفة التحكم |
-| Auftrag (Leitstand) | أمر عمل، أوامر العمل |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | أمر عمل، أوامر العمل |
 | Nachweis | الإثبات |
 | Abweichung | انحراف، الانحرافات |
 | Abnahme, abnehmen | القبول، قبول |
@@ -620,9 +621,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Contenidors |
 | Docker-Kontext | context de Docker |
-| **Leitstand (phase 13)** | |
-| Leitstand | Sala de control |
-| Auftrag (Leitstand) | ordre de treball |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | ordre de treball |
 | Nachweis | evidència |
 | Abweichung | desviació |
 | Abnahme, abnehmen | acceptació, acceptar (“Accepta”) |
@@ -834,9 +835,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Kontejnery |
 | Docker-Kontext | kontext Dockeru |
-| **Leitstand (phase 13)** | |
-| Leitstand | velín |
-| Auftrag (Leitstand) | zakázka |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | zakázka |
 | Nachweis | doklad |
 | Abweichung | odchylka |
 | Abnahme, abnehmen | přijetí, přijmout |
@@ -1045,9 +1046,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containere |
 | Docker-Kontext | Docker-kontekst |
-| **Leitstand (phase 13)** | |
-| Leitstand | Kontrolrum (Kontrolrummet) |
-| Auftrag (Leitstand) | arbejdsordre, arbejdsordrer |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | arbejdsordre, arbejdsordrer |
 | Nachweis | dokumentation |
 | Abweichung | afvigelse, afvigelser |
 | Abnahme, abnehmen | accept, acceptere (button: Accepter) |
@@ -1259,9 +1260,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container |
 | Docker-Kontext | Docker context |
-| **Leitstand (phase 13)** | |
-| Leitstand | Κέντρο ελέγχου |
-| Auftrag (Leitstand) | δελτίο εργασίας |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | δελτίο εργασίας |
 | Nachweis | τεκμηρίωση |
 | Abweichung | απόκλιση |
 | Abnahme, abnehmen | αποδοχή, αποδέχομαι |
@@ -1473,9 +1474,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Contenedores |
 | Docker-Kontext | contexto de Docker |
-| **Leitstand (phase 13)** | |
-| Leitstand | Sala de control |
-| Auftrag (Leitstand) | orden de trabajo |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | orden de trabajo |
 | Nachweis | evidencia |
 | Abweichung | desviación |
 | Abnahme, abnehmen | aceptación, aceptar |
@@ -1689,9 +1690,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Kontit |
 | Docker-Kontext | Docker-konteksti |
-| **Leitstand (phase 13)** | |
-| Leitstand | valvomo |
-| Auftrag (Leitstand) | työtilaus |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | työtilaus |
 | Nachweis | todiste |
 | Abweichung | poikkeama |
 | Abnahme, abnehmen | vastaanotto, ottaa vastaan (button: Ota vastaan) |
@@ -1901,9 +1902,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Conteneurs |
 | Docker-Kontext | contexte Docker |
-| **Leitstand (phase 13)** | |
-| Leitstand | Salle de contrôle |
-| Auftrag (Leitstand) | ordre de travail |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | ordre de travail |
 | Nachweis | preuves |
 | Abweichung | écart |
 | Abnahme, abnehmen | acceptation, accepter |
@@ -2117,9 +2118,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containers |
 | Docker-Kontext | הקשר Docker |
-| **Leitstand (phase 13)** | |
-| Leitstand | חדר הבקרה |
-| Auftrag (Leitstand) | הזמנת עבודה, הזמנות עבודה |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | הזמנת עבודה, הזמנות עבודה |
 | Nachweis | הוכחה |
 | Abweichung | חריגה |
 | Abnahme, abnehmen | קבלה, קבלה |
@@ -2329,9 +2330,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | कंटेनर |
 | Docker-Kontext | Docker कॉन्टेक्स्ट |
-| **Leitstand (phase 13)** | |
-| Leitstand | कंट्रोल रूम |
-| Auftrag (Leitstand) | वर्क ऑर्डर |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | वर्क ऑर्डर |
 | Nachweis | प्रमाण |
 | Abweichung | विचलन |
 | Abnahme, abnehmen | स्वीकृति, स्वीकार करें |
@@ -2542,9 +2543,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Kontejneri |
 | Docker-Kontext | Docker kontekst |
-| **Leitstand (phase 13)** | |
-| Leitstand | kontrolna soba |
-| Auftrag (Leitstand) | radni nalog |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | radni nalog |
 | Nachweis | dokazi |
 | Abweichung | odstupanje |
 | Abnahme, abnehmen | prihvaćanje, prihvatiti |
@@ -2757,9 +2758,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Konténerek |
 | Docker-Kontext | Docker-kontextus |
-| **Leitstand (phase 13)** | |
-| Leitstand | vezérlőterem |
-| Auftrag (Leitstand) | munkarendelés |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | munkarendelés |
 | Nachweis | bizonyíték |
 | Abweichung | eltérés |
 | Abnahme, abnehmen | elfogadás, elfogad |
@@ -2970,9 +2971,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container |
 | Docker-Kontext | konteks Docker |
-| **Leitstand (phase 13)** | |
-| Leitstand | Ruang Kendali |
-| Auftrag (Leitstand) | order kerja |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | order kerja |
 | Nachweis | bukti |
 | Abweichung | penyimpangan |
 | Abnahme, abnehmen | penerimaan, terima |
@@ -3183,9 +3184,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container |
 | Docker-Kontext | contesto Docker |
-| **Leitstand (phase 13)** | |
-| Leitstand | Sala di controllo |
-| Auftrag (Leitstand) | ordine di lavoro, ordini di lavoro |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | ordine di lavoro, ordini di lavoro |
 | Nachweis | evidenza |
 | Abweichung | deviazione |
 | Abnahme, abnehmen | accettazione, accettare |
@@ -3397,9 +3398,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | コンテナ |
 | Docker-Kontext | Dockerコンテキスト |
-| **Leitstand (phase 13)** | |
-| Leitstand | 管制室 |
-| Auftrag (Leitstand) | 作業指示 |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | 作業指示 |
 | Nachweis | エビデンス |
 | Abweichung | 逸脱 |
 | Abnahme, abnehmen | 検収, 検収する |
@@ -3610,9 +3611,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | 컨테이너 |
 | Docker-Kontext | Docker 컨텍스트 |
-| **Leitstand (phase 13)** | |
-| Leitstand | 관제실 |
-| Auftrag (Leitstand) | 작업 주문 |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | 작업 주문 |
 | Nachweis | 증빙 |
 | Abweichung | 특이 사항 |
 | Abnahme, abnehmen | 검수, 검수 완료 |
@@ -3822,9 +3823,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container |
 | Docker-Kontext | konteks Docker |
-| **Leitstand (phase 13)** | |
-| Leitstand | Bilik Kawalan |
-| Auftrag (Leitstand) | pesanan kerja |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | pesanan kerja |
 | Nachweis | bukti |
 | Abweichung | sisihan |
 | Abnahme, abnehmen | penerimaan, terima |
@@ -4035,9 +4036,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containers |
 | Docker-Kontext | Docker-context |
-| **Leitstand (phase 13)** | |
-| Leitstand | Controlekamer |
-| Auftrag (Leitstand) | werkorder, werkorders |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | werkorder, werkorders |
 | Nachweis | bewijs |
 | Abweichung | afwijking, afwijkingen |
 | Abnahme, abnehmen | acceptatie, accepteren (button: Accepteer) |
@@ -4248,9 +4249,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containere |
 | Docker-Kontext | Docker-kontekst |
-| **Leitstand (phase 13)** | |
-| Leitstand | kontrollrom |
-| Auftrag (Leitstand) | arbeidsordre |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | arbeidsordre |
 | Nachweis | bevis |
 | Abweichung | avvik |
 | Abnahme, abnehmen | aksept, akseptere |
@@ -4461,9 +4462,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Kontenery |
 | Docker-Kontext | kontekst Dockera |
-| **Leitstand (phase 13)** | |
-| Leitstand | sterownia |
-| Auftrag (Leitstand) | zlecenie |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | zlecenie |
 | Nachweis | dowód |
 | Abweichung | odstępstwo |
 | Abnahme, abnehmen | akceptacja, zaakceptować (button: Akceptuj) |
@@ -4675,9 +4676,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Contêineres |
 | Docker-Kontext | contexto do Docker |
-| **Leitstand (phase 13)** | |
-| Leitstand | Sala de Controle |
-| Auftrag (Leitstand) | ordem de serviço, ordens de serviço |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | ordem de serviço, ordens de serviço |
 | Nachweis | evidência |
 | Abweichung | desvio |
 | Abnahme, abnehmen | aceitação, aceitar |
@@ -4890,9 +4891,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Contentores |
 | Docker-Kontext | contexto do Docker |
-| **Leitstand (phase 13)** | |
-| Leitstand | Sala de controlo |
-| Auftrag (Leitstand) | ordem de trabalho, ordens de trabalho |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | ordem de trabalho, ordens de trabalho |
 | Nachweis | evidência |
 | Abweichung | desvio |
 | Abnahme, abnehmen | aceitação, aceitar |
@@ -5105,9 +5106,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containere |
 | Docker-Kontext | context Docker |
-| **Leitstand (phase 13)** | |
-| Leitstand | Camera de control |
-| Auftrag (Leitstand) | ordin de lucru |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | ordin de lucru |
 | Nachweis | dovadă |
 | Abweichung | abatere |
 | Abnahme, abnehmen | acceptare, acceptați |
@@ -5319,9 +5320,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Контейнеры |
 | Docker-Kontext | контекст Docker |
-| **Leitstand (phase 13)** | |
-| Leitstand | диспетчерская |
-| Auftrag (Leitstand) | заказ |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | заказ |
 | Nachweis | доказательства |
 | Abweichung | отклонение |
 | Abnahme, abnehmen | приемка, принять |
@@ -5534,9 +5535,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Kontajnery |
 | Docker-Kontext | kontext Dockera |
-| **Leitstand (phase 13)** | |
-| Leitstand | velín |
-| Auftrag (Leitstand) | zákazka |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | zákazka |
 | Nachweis | doklad |
 | Abweichung | odchýlka |
 | Abnahme, abnehmen | prijatie, prijať |
@@ -5750,9 +5751,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Vsebniki |
 | Docker-Kontext | kontekst Docker |
-| **Leitstand (phase 13)** | |
-| Leitstand | Nadzorna soba |
-| Auftrag (Leitstand) | delovni nalog |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | delovni nalog |
 | Nachweis | dokazilo |
 | Abweichung | odstopanje |
 | Abnahme, abnehmen | sprejem, sprejeti |
@@ -5963,9 +5964,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containrar |
 | Docker-Kontext | Docker-kontext |
-| **Leitstand (phase 13)** | |
-| Leitstand | Kontrollrum (Kontrollrummet) |
-| Auftrag (Leitstand) | arbetsorder, arbetsordrar |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | arbetsorder, arbetsordrar |
 | Nachweis | bevis |
 | Abweichung | avvikelse, avvikelser |
 | Abnahme, abnehmen | acceptans, acceptera |
@@ -6178,9 +6179,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | คอนเทนเนอร์ |
 | Docker-Kontext | บริบท Docker |
-| **Leitstand (phase 13)** | |
-| Leitstand | ศูนย์ควบคุม |
-| Auftrag (Leitstand) | ใบสั่งงาน |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | ใบสั่งงาน |
 | Nachweis | หลักฐาน |
 | Abweichung | ข้อเบี่ยงเบน |
 | Abnahme, abnehmen | การตรวจรับ, ตรวจรับ |
@@ -6394,9 +6395,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container’lar |
 | Docker-Kontext | Docker bağlamı |
-| **Leitstand (phase 13)** | |
-| Leitstand | Kontrol Odası |
-| Auftrag (Leitstand) | iş emri, iş emirleri |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | iş emri, iş emirleri |
 | Nachweis | kanıt |
 | Abweichung | sapma |
 | Abnahme, abnehmen | kabul, kabul et |
@@ -6607,9 +6608,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Контейнери |
 | Docker-Kontext | контекст Docker |
-| **Leitstand (phase 13)** | |
-| Leitstand | диспетчерська |
-| Auftrag (Leitstand) | замовлення |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | замовлення |
 | Nachweis | докази |
 | Abweichung | відхилення |
 | Abnahme, abnehmen | приймання, прийняти |
@@ -6821,9 +6822,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container |
 | Docker-Kontext | ngữ cảnh Docker |
-| **Leitstand (phase 13)** | |
-| Leitstand | Phòng điều khiển |
-| Auftrag (Leitstand) | phiếu công việc |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | phiếu công việc |
 | Nachweis | bằng chứng |
 | Abweichung | sai lệch |
 | Abnahme, abnehmen | nghiệm thu, nghiệm thu |
@@ -7033,9 +7034,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | 容器 |
 | Docker-Kontext | Docker 上下文 |
-| **Leitstand (phase 13)** | |
-| Leitstand | 控制室 |
-| Auftrag (Leitstand) | 工单 |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | 工单 |
 | Nachweis | 证据 |
 | Abweichung | 偏差 |
 | Abnahme, abnehmen | 验收, 验收 |
@@ -7247,9 +7248,9 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | 容器 |
 | Docker-Kontext | Docker 上下文 |
-| **Leitstand (phase 13)** | |
-| Leitstand | 控制室 |
-| Auftrag (Leitstand) | 工單 |
+| **Software Factory (phase 13)** | |
+| Software Factory | Software Factory |
+| Auftrag (Software Factory) | 工單 |
 | Nachweis | 證據 |
 | Abweichung | 偏差 |
 | Abnahme, abnehmen | 驗收, 驗收 |

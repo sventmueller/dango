@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Inserisci il codice {} in Codex sul telefono. È valido fino alle {}.";
 "Koppeln fehlgeschlagen" = "Abbinamento non riuscito";
 "Prüfstation" = "Gate";
-"Im Leitstand zeigen" = "Mostra nella Sala di controllo";
+"In der Software Factory zeigen" = "Mostra nella Software Factory";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "Con classe di rischio alta, apri prima il diff.";
 "„{}“ zurück an den Builder" = "Restituisci “{}” al builder";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "Il commento va al builder con il prossimo turno.";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "Modifica i criteri di “{}”";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "Un criterio per riga. La modifica invalida l’evidenza e va al builder e al revisore.";
 "Ändern" = "Modifica";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "La Sala di controllo non ha eseguito il comando";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "La Software Factory non ha eseguito il comando";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "Scartare {} blocchi e accettare il resto?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "I blocchi rimanenti diventano un nuovo stato. Gate e revisore vengono rieseguiti su di esso; poi l’accettazione si conclude esattamente per quello stato.";
 "Verwerfen und abnehmen" = "Scarta e accetta";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "L’ordine di lavoro attende la tua risposta o il tuo permesso. La domanda e il comando si trovano nella sessione dell’agente.";
 "Antwort" = "Risposta";
 "Antwort senden" = "Invia risposta";
-"Leitstand" = "Sala di controllo";
-"Leitstand-Einstellungen …" = "Impostazioni Sala di controllo…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Impostazioni Software Factory…";
 "Neuer Auftrag …" = "Nuovo ordine di lavoro…";
 "Stationen" = "Stazioni";
 "Aufträge" = "Ordini di lavoro";
 "Auftrag öffnen" = "Apri ordine di lavoro";
-"Leitstand-Tab zeigen" = "Mostra pannello Sala di controllo";
+"Software-Factory-Tab zeigen" = "Mostra pannello Software Factory";
 "Auftrag" = "Ordine di lavoro";
-"Leitstand für {}" = "Sala di controllo per {}";
+"Software Factory für {}" = "Software Factory per {}";
 "Builder" = "Builder";
 "Grenzen und Budget" = "Limiti e budget";
 "Budget je Auftrag ($):" = "Budget per ordine di lavoro ($):";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "“{}” non è un importo in dollari.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Impossibile creare il modello: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Ancora nessun ordine di lavoro. Un ordine di lavoro è un obiettivo con criteri verificabili che {} costruisce e verifica in un proprio worktree.";
+"Noch kein Auftrag" = "Ancora nessun ordine di lavoro";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Un ordine di lavoro è un obiettivo con criteri verificabili che {} costruisce e verifica in un proprio worktree.";
 "Ziel" = "Obiettivo";
 "Kriterien" = "Criteri";
 "Zeitleiste" = "Linea temporale";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "Restituisci al builder…";
 "Kriterien ändern …" = "Modifica criteri…";
 "Von Hand weiter" = "Continua a mano";
-"Zurück an den Leitstand" = "Restituisci alla Sala di controllo";
+"Zurück an die Software Factory" = "Restituisci alla Software Factory";
 "Auftrag fortsetzen" = "Riattiva ordine di lavoro";
 "Auftrag abbrechen …" = "Annulla ordine di lavoro…";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "Nessun avvio oltre (% della finestra):";
 "Aufträge gleichzeitig:" = "Ordini di lavoro contemporanei:";
 "Vorgabe des Agenten" = "Predefinito dell’agente";
+"Vorgabe des Agenten ({})" = "Predefinito dell’agente ({})";
 "{} – kann nicht {} sein" = "{} – non può avere il ruolo {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "Il progetto non ha ancora .dango/factory.toml; Salva lo crea.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git ignora .dango/factory.toml, quindi il team non riceve il file.";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "Altro produttore obbligatorio";
 "Anderer Hersteller bevorzugt" = "Altro produttore preferito";
 "Rollen" = "Ruoli";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Le liste di priorità sono nel file del workflow; “Altro produttore preferito” vale solo dopo la tua conferma.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "La posizione nell’elenco è la priorità: un ordine di lavoro usa la prima voce pronta. “Altro produttore preferito” vale solo dopo la tua conferma.";
 "Risikoklassen" = "Classi di rischio";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "Pattern di percorso, uno per riga o separati da virgole. La classe misurata può solo alzare quella prevista.";
 "Prüfrelevante Dateien" = "File rilevanti per la revisione";

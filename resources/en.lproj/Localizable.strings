@@ -1978,7 +1978,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Enter the code {} in Codex on your phone. It is valid until {}.";
 "Koppeln fehlgeschlagen" = "Pairing Failed";
 "Prüfstation" = "Gate";
-"Im Leitstand zeigen" = "Show in Control Room";
+"In der Software Factory zeigen" = "Show in Software Factory";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "At risk class high, open the diff first.";
 "„{}“ zurück an den Builder" = "Send “{}” Back to the Builder";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "The comment goes to the builder with the next turn.";
@@ -1986,7 +1986,7 @@
 "Kriterien von „{}“ ändern" = "Change the Criteria of “{}”";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "One criterion per line. The change invalidates the evidence and goes to the builder and the reviewer.";
 "Ändern" = "Change";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "The Control Room Did Not Carry Out the Command";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "The Software Factory Did Not Carry Out the Command";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "Discard {} hunks and accept the rest?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "The remaining hunks become a new state. Gates and the reviewer run again for it; acceptance then completes for exactly that state.";
 "Verwerfen und abnehmen" = "Discard and Accept";
@@ -2001,15 +2001,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "The work order waits for your answer or permission. The question and the command are in the agent’s session.";
 "Antwort" = "Answer";
 "Antwort senden" = "Send Answer";
-"Leitstand" = "Control Room";
-"Leitstand-Einstellungen …" = "Control Room Settings…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Software Factory Settings…";
 "Neuer Auftrag …" = "New Work Order…";
 "Stationen" = "Stations";
 "Aufträge" = "Work Orders";
 "Auftrag öffnen" = "Open Work Order";
-"Leitstand-Tab zeigen" = "Show Control Room Tab";
+"Software-Factory-Tab zeigen" = "Show Software Factory Tab";
 "Auftrag" = "Work Order";
-"Leitstand für {}" = "Control Room for {}";
+"Software Factory für {}" = "Software Factory for {}";
 "Builder" = "Builder";
 "Grenzen und Budget" = "Limits and Budget";
 "Budget je Auftrag ($):" = "Budget per work order ($):";
@@ -2026,6 +2026,8 @@
 "„{}“ ist kein Betrag in Dollar." = "“{}” is not an amount in dollars.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "The template could not be created: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "No work order yet. A work order is a goal with testable criteria that {} builds and checks in a worktree of its own.";
+"Noch kein Auftrag" = "No Work Order Yet";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "A work order is a goal with testable criteria that {} builds and checks in a worktree of its own.";
 "Ziel" = "Goal";
 "Kriterien" = "Criteria";
 "Zeitleiste" = "Timeline";
@@ -2079,7 +2081,7 @@
 "Zurück an den Builder …" = "Back to the Builder…";
 "Kriterien ändern …" = "Change Criteria…";
 "Von Hand weiter" = "Continue by Hand";
-"Zurück an den Leitstand" = "Back to the Control Room";
+"Zurück an die Software Factory" = "Back to the Software Factory";
 "Auftrag fortsetzen" = "Resume Work Order";
 "Auftrag abbrechen …" = "Abort Work Order…";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2230,6 +2232,7 @@
 "Kein Start über (% Fenster):" = "No start above (% of window):";
 "Aufträge gleichzeitig:" = "Work orders at once:";
 "Vorgabe des Agenten" = "Agent’s default";
+"Vorgabe des Agenten ({})" = "Agent’s default ({})";
 "{} – kann nicht {} sein" = "{} – cannot be {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "The project has no .dango/factory.toml yet; Save creates it.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git ignores .dango/factory.toml, so the team does not get the file.";
@@ -2350,7 +2353,7 @@
 "Anderer Hersteller Pflicht" = "Other vendor required";
 "Anderer Hersteller bevorzugt" = "Other vendor preferred";
 "Rollen" = "Roles";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "The ranked lists are in the workflow file; “Other vendor preferred” applies only once you confirm it.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "The order is the ranking: a work order takes the first entry that is ready. “Other vendor preferred” applies only once you confirm it.";
 "Risikoklassen" = "Risk Classes";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "Path patterns, one per line or separated by commas. The measured class can only raise the expected one.";
 "Prüfrelevante Dateien" = "Files That Matter for the Review";

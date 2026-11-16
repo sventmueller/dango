@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Saisissez le code {} dans Codex sur votre téléphone. Il est valable jusqu’à {}.";
 "Koppeln fehlgeschlagen" = "Échec du jumelage";
 "Prüfstation" = "Contrôle";
-"Im Leitstand zeigen" = "Afficher dans la Salle de contrôle";
+"In der Software Factory zeigen" = "Afficher dans la Software Factory";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "Avec une classe de risque élevée, ouvrez d’abord le diff.";
 "„{}“ zurück an den Builder" = "Renvoyer « {} » au builder";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "Le commentaire est transmis au builder avec le prochain tour.";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "Modifier les critères de « {} »";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "Un critère par ligne. La modification invalide les preuves et est transmise au builder et au relecteur.";
 "Ändern" = "Modifier";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "La Salle de contrôle n’a pas exécuté la commande";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "La Software Factory n’a pas exécuté la commande";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "Abandonner {} blocs et accepter le reste ?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "Les blocs restants forment un nouvel état. Les contrôles et le relecteur s’exécutent à nouveau pour cet état, puis l’acceptation se conclut pour exactement cet état.";
 "Verwerfen und abnehmen" = "Abandonner et accepter";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "L’ordre de travail attend votre réponse ou votre autorisation. La question et la commande figurent dans la session de l’agent.";
 "Antwort" = "Réponse";
 "Antwort senden" = "Envoyer la réponse";
-"Leitstand" = "Salle de contrôle";
-"Leitstand-Einstellungen …" = "Réglages de la Salle de contrôle…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Réglages de la Software Factory…";
 "Neuer Auftrag …" = "Nouvel ordre de travail…";
 "Stationen" = "Étapes";
 "Aufträge" = "Ordres de travail";
 "Auftrag öffnen" = "Ouvrir l’ordre de travail";
-"Leitstand-Tab zeigen" = "Afficher l’onglet Salle de contrôle";
+"Software-Factory-Tab zeigen" = "Afficher l’onglet Software Factory";
 "Auftrag" = "Ordre de travail";
-"Leitstand für {}" = "Salle de contrôle de {}";
+"Software Factory für {}" = "Software Factory de {}";
 "Builder" = "Builder";
 "Grenzen und Budget" = "Limites et budget";
 "Budget je Auftrag ($):" = "Budget par ordre de travail ($) :";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "« {} » n’est pas un montant en dollars.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Impossible de créer le gabarit : {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Aucun ordre de travail pour l’instant. Un ordre de travail est un objectif assorti de critères vérifiables, que {} construit et vérifie dans un worktree qui lui est propre.";
+"Noch kein Auftrag" = "Aucun ordre de travail pour l’instant";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Un ordre de travail est un objectif assorti de critères vérifiables, que {} construit et vérifie dans un worktree qui lui est propre.";
 "Ziel" = "Objectif";
 "Kriterien" = "Critères";
 "Zeitleiste" = "Chronologie";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "Renvoyer au builder…";
 "Kriterien ändern …" = "Modifier les critères…";
 "Von Hand weiter" = "Continuer à la main";
-"Zurück an den Leitstand" = "Rendre à la Salle de contrôle";
+"Zurück an die Software Factory" = "Rendre à la Software Factory";
 "Auftrag fortsetzen" = "Reprendre l’ordre de travail";
 "Auftrag abbrechen …" = "Interrompre l’ordre de travail…";
 "{}: {} · {}" = "{} : {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "Aucun démarrage au-delà de (% de la fenêtre) :";
 "Aufträge gleichzeitig:" = "Ordres de travail simultanés :";
 "Vorgabe des Agenten" = "Valeur par défaut de l’agent";
+"Vorgabe des Agenten ({})" = "Valeur par défaut de l’agent ({})";
 "{} – kann nicht {} sein" = "{} – ne peut pas avoir le rôle {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "Le projet n’a pas encore de .dango/factory.toml ; « Enregistrer » le crée.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git ignore .dango/factory.toml ; l’équipe ne reçoit donc pas le fichier.";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "Autre fabricant obligatoire";
 "Anderer Hersteller bevorzugt" = "Autre fabricant préféré";
 "Rollen" = "Rôles";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "Les listes de priorité se trouvent dans le fichier de workflow ; « Autre fabricant préféré » ne s’applique qu’après votre confirmation.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "La position dans la liste fixe la priorité : un ordre de travail prend la première entrée prête. « Autre fabricant préféré » ne s’applique qu’après votre confirmation.";
 "Risikoklassen" = "Classes de risque";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "Motifs de chemin, un par ligne ou séparés par des virgules. La classe mesurée ne peut que relever la classe attendue.";
 "Prüfrelevante Dateien" = "Fichiers importants pour la relecture";

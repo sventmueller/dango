@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "أدخل الرمز {} في Codex على هاتفك. يظل صالحًا حتى {}.";
 "Koppeln fehlgeschlagen" = "فشل الإقران";
 "Prüfstation" = "بوابة";
-"Im Leitstand zeigen" = "إظهار في غرفة التحكم";
+"In der Software Factory zeigen" = "إظهار في Software Factory";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "عند فئة المخاطر العالية، افتح الفروقات أولًا.";
 "„{}“ zurück an den Builder" = "إعادة “{}” إلى المنفّذ";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "يصل التعليق إلى المنفّذ مع الدور التالي.";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "تغيير معايير “{}”";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "معيار واحد في كل سطر. يُبطل التغيير الإثبات ويُرسَل إلى المنفّذ والمراجِع.";
 "Ändern" = "تغيير";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "لم تنفّذ غرفة التحكم الأمر";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "لم تنفّذ Software Factory الأمر";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "هل تريد تجاهل {} من المقاطع وقبول الباقي؟";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "تنشأ من المقاطع المتبقية حالة جديدة. تعمل البوابات والمراجِع عليها مجددًا، ثم يكتمل القبول لهذه الحالة بالتحديد.";
 "Verwerfen und abnehmen" = "تجاهل وقبول";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "ينتظر أمر العمل ردك أو إذنك. السؤال والأمر موجودان في جلسة الوكيل.";
 "Antwort" = "رد";
 "Antwort senden" = "إرسال الرد";
-"Leitstand" = "غرفة التحكم";
-"Leitstand-Einstellungen …" = "إعدادات غرفة التحكم…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "إعدادات Software Factory…";
 "Neuer Auftrag …" = "أمر عمل جديد…";
 "Stationen" = "المحطات";
 "Aufträge" = "أوامر العمل";
 "Auftrag öffnen" = "فتح أمر العمل";
-"Leitstand-Tab zeigen" = "إظهار علامة تبويب غرفة التحكم";
+"Software-Factory-Tab zeigen" = "إظهار علامة تبويب Software Factory";
 "Auftrag" = "أمر العمل";
-"Leitstand für {}" = "غرفة التحكم: {}";
+"Software Factory für {}" = "Software Factory: {}";
 "Builder" = "المنفّذ";
 "Grenzen und Budget" = "الحدود والميزانية";
 "Budget je Auftrag ($):" = "الميزانية لكل أمر عمل ($):";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "ليس “{}” مبلغًا بالدولار.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "تعذّر إنشاء القالب: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "لا يوجد أمر عمل بعد. أمر العمل هدف بمعايير قابلة للاختبار، يبنيه {} ويفحصه في Worktree خاص به.";
+"Noch kein Auftrag" = "لا يوجد أمر عمل بعد";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "أمر العمل هدف بمعايير قابلة للاختبار، يبنيه {} ويفحصه في Worktree خاص به.";
 "Ziel" = "الهدف";
 "Kriterien" = "المعايير";
 "Zeitleiste" = "المخطط الزمني";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "إعادة إلى المنفّذ…";
 "Kriterien ändern …" = "تغيير المعايير…";
 "Von Hand weiter" = "متابعة يدويًا";
-"Zurück an den Leitstand" = "إعادة إلى غرفة التحكم";
+"Zurück an die Software Factory" = "إعادة إلى Software Factory";
 "Auftrag fortsetzen" = "استئناف أمر العمل";
 "Auftrag abbrechen …" = "إلغاء أمر العمل…";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "عدم البدء فوق (% من النافذة):";
 "Aufträge gleichzeitig:" = "أوامر العمل في الوقت نفسه:";
 "Vorgabe des Agenten" = "افتراضي الوكيل";
+"Vorgabe des Agenten ({})" = "افتراضي الوكيل ({})";
 "{} – kann nicht {} sein" = "‏{} – لا يمكنه أداء دور {}";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "لا يوجد في المشروع ‎.dango/factory.toml بعد؛ يُنشئه “حفظ”.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "يتجاهل Git الملف ‎.dango/factory.toml، لذا لا يحصل الفريق عليه.";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "مورّد آخر إلزامي";
 "Anderer Hersteller bevorzugt" = "مورّد آخر مفضَّل";
 "Rollen" = "الأدوار";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "قوائم الأولوية موجودة في ملف سير العمل؛ ولا يسري “مورّد آخر مفضَّل” إلا بعد تأكيدك.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "الترتيب هو الأولوية: يأخذ أمر العمل أول إدخال جاهز. لا يسري “مورّد آخر مفضَّل” إلا بعد تأكيدك.";
 "Risikoklassen" = "فئات المخاطر";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "أنماط المسارات، نمط في كل سطر أو مفصولة بفواصل. لا يمكن للفئة المقيسة إلا أن ترفع الفئة المتوقعة.";
 "Prüfrelevante Dateien" = "الملفات المهمة للمراجعة";

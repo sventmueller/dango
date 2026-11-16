@@ -387,6 +387,14 @@ pub fn no_order_yet() -> String {
     )
 }
 
+/// What a work order is, under "Noch kein Auftrag" in the panel.
+pub fn order_explained() -> String {
+    tf(
+        "Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft.",
+        &[ide_product::NAME],
+    )
+}
+
 /// What a loosening the workflow file asks for allows, for the user to confirm on this Mac (E190).
 pub fn loosening(loosening: &Loosening) -> String {
     match loosening {

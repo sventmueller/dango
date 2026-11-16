@@ -1933,7 +1933,7 @@
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Voer de code {} in Codex op je telefoon in. Hij is geldig tot {}.";
 "Koppeln fehlgeschlagen" = "Koppelen mislukt";
 "Prüfstation" = "Gate";
-"Im Leitstand zeigen" = "Toon in Controlekamer";
+"In der Software Factory zeigen" = "Toon in Software Factory";
 "Bei hoher Risikoklasse zuerst den Diff öffnen." = "Open bij risicoklasse hoog eerst de diff.";
 "„{}“ zurück an den Builder" = "Stuur '{}' terug naar de builder";
 "Der Kommentar geht mit dem nächsten Zug an den Builder." = "De opmerking gaat met de volgende beurt naar de builder.";
@@ -1941,7 +1941,7 @@
 "Kriterien von „{}“ ändern" = "Wijzig criteria van '{}'";
 "Ein Kriterium je Zeile. Die Änderung macht den Nachweis ungültig und geht an Builder und Prüfer." = "Eén criterium per regel. De wijziging maakt het bewijs ongeldig en gaat naar de builder en de reviewer.";
 "Ändern" = "Wijzig";
-"Der Leitstand hat den Befehl nicht ausgeführt" = "De Controlekamer heeft het commando niet uitgevoerd";
+"Die Software Factory hat den Befehl nicht ausgeführt" = "De Software Factory heeft het commando niet uitgevoerd";
 "{} Abschnitte verwerfen und den Rest abnehmen?" = "{} hunks weggooien en de rest accepteren?";
 "Aus den übrigen Abschnitten entsteht ein neuer Stand. Gates und Prüfer laufen für ihn erneut, danach schließt die Abnahme für genau diesen Stand ab." = "De overige hunks vormen een nieuwe toestand. Gates en de reviewer lopen er opnieuw voor; daarna wordt de acceptatie voor precies die toestand afgerond.";
 "Verwerfen und abnehmen" = "Gooi weg en accepteer";
@@ -1956,15 +1956,15 @@
 "Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "De werkorder wacht op je antwoord of toestemming. De vraag en het commando staan in de sessie van de agent.";
 "Antwort" = "Antwoord";
 "Antwort senden" = "Stuur antwoord";
-"Leitstand" = "Controlekamer";
-"Leitstand-Einstellungen …" = "Instellingen Controlekamer…";
+"Software Factory" = "Software Factory";
+"Software-Factory-Einstellungen …" = "Instellingen Software Factory…";
 "Neuer Auftrag …" = "Nieuwe werkorder…";
 "Stationen" = "Stations";
 "Aufträge" = "Werkorders";
 "Auftrag öffnen" = "Open werkorder";
-"Leitstand-Tab zeigen" = "Toon tabblad Controlekamer";
+"Software-Factory-Tab zeigen" = "Toon tabblad Software Factory";
 "Auftrag" = "Werkorder";
-"Leitstand für {}" = "Controlekamer voor {}";
+"Software Factory für {}" = "Software Factory voor {}";
 "Builder" = "Builder";
 "Grenzen und Budget" = "Limieten en budget";
 "Budget je Auftrag ($):" = "Budget per werkorder ($):";
@@ -1981,6 +1981,8 @@
 "„{}“ ist kein Betrag in Dollar." = "'{}' is geen bedrag in dollars.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Het sjabloon kon niet worden aangemaakt: {}";
 "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Nog geen werkorder. Een werkorder is een doel met toetsbare criteria dat {} in een eigen worktree bouwt en controleert.";
+"Noch kein Auftrag" = "Nog geen werkorder";
+"Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Een werkorder is een doel met toetsbare criteria dat {} in een eigen worktree bouwt en controleert.";
 "Ziel" = "Doel";
 "Kriterien" = "Criteria";
 "Zeitleiste" = "Tijdlijn";
@@ -2034,7 +2036,7 @@
 "Zurück an den Builder …" = "Terug naar de builder…";
 "Kriterien ändern …" = "Wijzig criteria…";
 "Von Hand weiter" = "Ga handmatig verder";
-"Zurück an den Leitstand" = "Terug naar de Controlekamer";
+"Zurück an die Software Factory" = "Terug naar de Software Factory";
 "Auftrag fortsetzen" = "Hervat werkorder";
 "Auftrag abbrechen …" = "Breek werkorder af…";
 "{}: {} · {}" = "{}: {} · {}";
@@ -2185,6 +2187,7 @@
 "Kein Start über (% Fenster):" = "Geen start boven (% van venster):";
 "Aufträge gleichzeitig:" = "Werkorders tegelijk:";
 "Vorgabe des Agenten" = "Standaard van de agent";
+"Vorgabe des Agenten ({})" = "Standaard van de agent ({})";
 "{} – kann nicht {} sein" = "{} – kan de rol {} niet vervullen";
 "Das Projekt hat noch keine .dango/factory.toml; Sichern legt sie an." = "Het project heeft nog geen .dango/factory.toml; 'Bewaar' maakt het aan.";
 "Git ignoriert .dango/factory.toml; das Team bekommt die Datei so nicht." = "Git negeert .dango/factory.toml, dus het team krijgt het bestand niet.";
@@ -2313,7 +2316,7 @@
 "Anderer Hersteller Pflicht" = "Andere leverancier verplicht";
 "Anderer Hersteller bevorzugt" = "Andere leverancier bij voorkeur";
 "Rollen" = "Rollen";
-"Die Ranglisten stehen in der Workflow-Datei; „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "De ranglijsten staan in het workflowbestand; 'Andere leverancier bij voorkeur' geldt pas nadat je het hebt bevestigd.";
+"Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist. „Anderer Hersteller bevorzugt“ gilt erst nach deiner Bestätigung." = "De volgorde is de ranglijst: een werkorder neemt het eerste item dat gereed is. 'Andere leverancier bij voorkeur' geldt pas nadat je het hebt bevestigd.";
 "Risikoklassen" = "Risicoklassen";
 "Pfadmuster, eins je Zeile oder durch Kommas getrennt. Die gemessene Klasse kann die erwartete nur anheben." = "Padpatronen, één per regel of gescheiden door komma's. De gemeten klasse kan de verwachte alleen verhogen.";
 "Prüfrelevante Dateien" = "Bestanden die tellen voor de review";

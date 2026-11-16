@@ -1,7 +1,7 @@
 //! The Leitstand tab (E175; the Kanban board struck, F66): the fleet line with the figures of E180 folded under it, the
 //! station strip whose buttons filter the table, and the sortable table of every order, which shows first what has
 //! waited longest for the user. A double
-//! click or Return opens an order's tab; the gear opens "Leitstand für <Ordner>".
+//! click or Return opens an order's tab; the gear opens "Software Factory für <Ordner>".
 
 use std::cell::{Cell, OnceCell, RefCell};
 
@@ -138,7 +138,7 @@ pub(crate) fn show(target: &Target) -> bool {
     let Some(id) = window.add_tab(
         TabKind::Leitstand,
         Some(TAB_KEY.to_string()),
-        t("Leitstand"),
+        t("Software Factory"),
         Retained::into_super(tab.clone()),
     ) else {
         return false;
@@ -168,16 +168,16 @@ impl BoardTab {
     fn build(&self, mtm: MainThreadMarker) -> BoardUi {
         let me: &AnyObject = self.as_ref();
         let head = ui::row(mtm, space::M);
-        head.addArrangedSubview(&ui::title(mtm, t("Leitstand")));
+        head.addArrangedSubview(&ui::title(mtm, t("Software Factory")));
         let gear = ide_ui_common::util::symbol_button(
             mtm,
             "gearshape",
-            t("Leitstand-Einstellungen …"),
+            t("Software-Factory-Einstellungen …"),
             ide_ui_common::style::symbol::MEDIUM,
             Some(me),
             sel!(ideFactoryProjectSettings:),
         );
-        ide_ui_common::util::set_label(&gear, Some(t("Leitstand-Einstellungen …")));
+        ide_ui_common::util::set_label(&gear, Some(t("Software-Factory-Einstellungen …")));
         head.addArrangedSubview(&gear);
         let notices = ui::column(mtm, space::XS);
         let fleet = ui::column(mtm, space::XXS);
