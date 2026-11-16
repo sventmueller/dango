@@ -113,11 +113,6 @@ define_class!(
             });
         }
 
-        #[unsafe(method(ideFactoryNewOrder:))]
-        fn new_order_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::sheet::show(&self.ivars().target));
-        }
-
         #[unsafe(method(ideFactoryProjectSettings:))]
         fn settings_action(&self, _sender: Option<&AnyObject>) {
             guarded((), || crate::project::show(&self.ivars().target));
@@ -175,9 +170,7 @@ impl BoardTab {
             sel!(ideFactoryProjectSettings:),
         );
         ide_ui_common::util::set_label(&gear, Some(t("Leitstand-Einstellungen …")));
-        let add = ui::button(mtm, t("Neuer Auftrag …"), me, sel!(ideFactoryNewOrder:), 0);
         head.addArrangedSubview(&gear);
-        head.addArrangedSubview(&add);
         let notices = ui::column(mtm, space::XS);
         let fleet = ui::column(mtm, space::XXS);
         let strip = ui::row(mtm, space::XS);

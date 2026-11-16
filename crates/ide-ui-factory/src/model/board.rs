@@ -304,22 +304,20 @@ impl FleetWords {
                 )
             })
             .collect();
-        let budget = fleet
-            .day_budget()
-            .dollars()
-            .map_or_else(|| t("ohne Grenze").to_string(), words::dollars);
         let wait = fleet
             .median_wait_ms()
             .map_or_else(|| t("keine").to_string(), words::duration);
-        let day = tf(
-            "Heute: {} von {} · {} erledigt · Wartezeit im Median: {}",
-            &[
-                &words::spend(fleet.day_spent()),
-                &budget,
-                &fleet.done_today().to_string(),
-                &wait,
-            ],
-        );
+        let (spent, done) = (words::spend(fleet.day_spent()), fleet.done_today().to_string());
+        let day = match fleet.day_budget().dollars() {
+            Some(budget) => tf(
+                "Heute: {} von {} · {} erledigt · Wartezeit im Median: {}",
+                &[&spent, &words::dollars(budget), &done, &wait],
+            ),
+            None => tf(
+                "Heute: {} verbraucht, ohne Tagesgrenze · {} erledigt · Wartezeit im Median: {}",
+                &[&spent, &done, &wait],
+            ),
+        };
         let disk = tf("Worktrees: {}", &[&words::bytes(fleet.worktree_bytes())]);
         FleetWords {
             orders,

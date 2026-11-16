@@ -2062,7 +2062,7 @@
 "{} laufen · {} warten · {} gescheitert · höchstens {} gleichzeitig" = "{} running · {} waiting · {} failed · at most {} at once";
 "{} %" = "{} %";
 "{} ({}), {}: {}, gesehen vor {}" = "{} ({}), {}: {}, seen {} ago";
-"ohne Grenze" = "no limit";
+"Heute: {} verbraucht, ohne Tagesgrenze · {} erledigt · Wartezeit im Median: {}" = "Today: {} spent, no daily limit · {} done · median wait: {}";
 "Heute: {} von {} · {} erledigt · Wartezeit im Median: {}" = "Today: {} of {} · {} done · median wait: {}";
 "Worktrees: {}" = "Worktrees: {}";
 "Freigeben" = "Approve";
@@ -2267,6 +2267,7 @@
 "Schließen, während Aufträge laufen?" = "Close While Work Orders Are Running?";
 "Ohne Fenster des Ordners pausieren seine Aufträge, bis er wieder offen ist." = "Without a window of the folder, its work orders pause until it is open again.";
 "Bestätigen" = "Confirm";
+"Ersten Auftrag anlegen …" = "Create the First Work Order…";
 "Workflow-Datei: {}" = "Workflow file: {}";
 "Das Protokoll des Auftrags {} ist ab Zeile {} unlesbar." = "The log of work order {} cannot be read from line {} on.";
 "Das Protokoll des Auftrags {} ließ sich nicht lesen." = "The log of work order {} could not be read.";

@@ -223,7 +223,7 @@ impl FactoryPanel {
         // SAFETY: The panel answers the action and lives as long as the button through the state's registry.
         let start = unsafe {
             NSButton::buttonWithTitle_target_action(
-                &ns(t("Neuer Auftrag …")),
+                &ns(t("Ersten Auftrag anlegen …")),
                 Some(me),
                 Some(sel!(ideFactoryNewOrder:)),
                 mtm,
