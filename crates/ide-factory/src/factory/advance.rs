@@ -375,6 +375,7 @@ impl Factory {
             | Phase::Merging { op }
             | Phase::TakingOver { op }
             | Phase::Cleaning { op }
+            | Phase::Publishing { op }
             | Phase::Verifying { op } => match open(&op) {
                 Some(action) => {
                     let target = action.target(&op);
@@ -408,7 +409,8 @@ impl Factory {
             | Phase::Gate { .. }
             | Phase::ReviewInput
             | Phase::Manifest
-            | Phase::Comparing => {
+            | Phase::Comparing
+            | Phase::PublishScan => {
                 self.set_phase(cx, id, Phase::Idle);
                 self.advance(cx, id);
             }

@@ -1,5 +1,5 @@
-//! The body of an order's tab: goal and criteria, the timeline, the evidence package with its deviations first (R70),
-//! and the sections of the diff with a checkbox each for G2 (C55). Logs and the diff's places stay left to right (E3).
+//! The body of an order's tab: how far its merge request got (E177), goal and criteria, the timeline, the evidence
+//! package with its deviations first (R70), and the sections of the diff with a checkbox each for G2 (C55). Logs and the diff's places stay left to right (E3).
 
 use std::collections::BTreeSet;
 
@@ -36,6 +36,10 @@ pub(crate) fn fill(tab: &OrderTab, body: &NSStackView, detail: &Detail, rejected
     }
     if let Some(change) = detail.issue_change() {
         issue_change(tab, body, detail, change);
+    }
+    if !detail.publication().is_empty() {
+        section(mtm, body, t("Merge Request"));
+        lines(mtm, body, detail.publication(), false);
     }
     section(mtm, body, t("Ziel"));
     body.addArrangedSubview(&ui::text(mtm, detail.goal(), WIDTH));

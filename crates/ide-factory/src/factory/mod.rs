@@ -4,6 +4,7 @@
 mod advance;
 mod commands;
 mod issue;
+mod publish;
 mod restore;
 mod review;
 mod session;
@@ -565,14 +566,19 @@ impl Factory {
     }
 
     /// The step's log could not be written: none of its effects ran, so the order pauses and its open operations
-    /// count as not begun (E167).
+    /// count as not begun (E167). A done order only stops publishing, until the user's next click.
     fn log_failed(&mut self, cx: &mut Cx, id: &OrderId) {
         let Some(order) = self.orders.get_mut(id) else { return };
         order.drop_turn();
+        let finished = order.finished();
         let ops: Vec<_> = order.open_ops().iter().map(|(op, a)| (op.clone(), a.clone())).collect();
         for (op, action) in ops {
             self.emit(cx, id, Event::Dropped { op });
             self.set_phase(cx, id, takeover::redo_phase(&action));
+        }
+        if finished {
+            self.set_phase(cx, id, Phase::Idle);
+            return;
         }
         self.pause(cx, id, PauseReason::LogUnwritable);
     }

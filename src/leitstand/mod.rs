@@ -18,6 +18,7 @@ mod manifest;
 mod notices;
 mod own;
 mod power;
+mod publish;
 mod rules;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
@@ -87,6 +88,8 @@ enum Delivery {
     Space(PathBuf, u64),
     /// The hunks of an order's diff since its base (C55).
     Sections(PathBuf, OrderId, Vec<ide_ui_factory::model::detail::Section>),
+    /// Whether the folder can publish to its service (E177).
+    Forge(PathBuf, ide_ui_factory::model::detail::ForgeAccess),
     /// Time passed.
     Tick,
     /// The user's defaults changed.
@@ -118,6 +121,8 @@ struct Folder {
     sections: BTreeMap<OrderId, Vec<ide_ui_factory::model::detail::Section>>,
     /// What the Leitstand learns from the folder's orders (B47).
     learned: learning::Learned,
+    /// What the app last found of the folder's service for publishing (E177).
+    forge: publish::Forge,
 }
 
 /// Every folder's factory, the sessions of their orders, and what holds across folders.
@@ -219,6 +224,7 @@ impl Leitstand {
                 }
                 self.changed(&root);
             }
+            Delivery::Forge(root, access) => self.forge_read(&root, access),
             Delivery::Logged { root, effects, failed } => {
                 self.writing.set(self.writing.get().saturating_sub(1));
                 self.run_effects(cx, &root, effects, &failed);

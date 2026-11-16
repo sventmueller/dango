@@ -85,6 +85,11 @@ pub(crate) fn run(target: &Target, detail: &Detail, command: Command, rejected: 
                 host().open_merge_request(target.window().id(), target.root(), branch);
             }
         }
+        Command::ShowChange => {
+            if let Some(url) = detail.change_url() {
+                host().open_change(target.window().id(), url);
+            }
+        }
         Command::BackToBuilder => ask_text(
             target,
             &tf("„{}“ zurück an den Builder", &[detail.title()]),

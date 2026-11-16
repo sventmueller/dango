@@ -70,6 +70,11 @@ pub(crate) fn problem(error: &Error) -> String {
     match error {
         Error::Unauthorized { host } => tf("{} nimmt den Token nicht an.", &[host]),
         Error::Forbidden { message } => tf("Der Token darf das nicht: {}", &[message]),
+        Error::MissingScope { host, scope } if scope.is_empty() => tf(
+            "Dem Token von {} fehlen Schreibrechte: bei GitHub für Pull Requests und Issues, bei GitLab der Bereich „api“.",
+            &[host],
+        ),
+        Error::MissingScope { host, scope } => tf("Dem Token von {} fehlt das Recht „{}“.", &[host, scope]),
         Error::NotFound { .. } => t("Das Repository gibt es dort nicht, oder der Token sieht es nicht.").into(),
         Error::RateLimited { until: Some(until) } => tf(
             "Zu viele Anfragen; der Dienst nimmt in {} wieder welche an.",

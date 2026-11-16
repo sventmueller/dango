@@ -99,12 +99,19 @@ pub enum Command {
     Approve,
     /// G2, with the sections the user rejected.
     Accept,
+    /// G2 that keeps the branch and then publishes it as a merge request (E177).
+    AcceptAsChange,
     /// G2 without the take-over: the order's branch stays, its worktree goes (E177 without O2).
     KeepBranch,
     /// Shows the diff, which G2 at class high needs first (R70).
     OpenDiff,
     /// Opens the session of the current role to read.
     OpenSession,
+    /// Pushes the kept branch, opens a merge request and comments the order's issue, or goes on where that stopped
+    /// (E177).
+    Publish,
+    /// Opens the merge request publishing opened or found, in the browser tab (E77).
+    ShowChange,
     /// Opens the forge's page for a new merge request of the branch the order's work is on, in the browser tab (E77,
     /// E177 without O2).
     MergeRequest,
@@ -126,12 +133,15 @@ pub enum Command {
 
 impl Command {
     /// Every command, in the order the tab and the menus list them.
-    pub const ALL: [Command; 13] = [
+    pub const ALL: [Command; 16] = [
         Command::Approve,
         Command::Accept,
+        Command::AcceptAsChange,
         Command::KeepBranch,
         Command::OpenDiff,
         Command::OpenSession,
+        Command::Publish,
+        Command::ShowChange,
         Command::MergeRequest,
         Command::BackToBuilder,
         Command::ChangeCriteria,
@@ -147,7 +157,10 @@ impl Command {
         match self {
             Command::Approve => t("Freigeben"),
             Command::Accept => t("Abnehmen"),
+            Command::AcceptAsChange => t("Abnehmen und Merge Request"),
             Command::KeepBranch => t("Abnehmen und Branch behalten"),
+            Command::Publish => t("Als Merge Request"),
+            Command::ShowChange => t("Merge Request öffnen"),
             Command::MergeRequest => t("Merge Request anlegen"),
             Command::OpenDiff => t("Diff öffnen"),
             Command::OpenSession => t("Sitzung öffnen"),
@@ -180,6 +193,38 @@ pub enum AcceptBlock {
     NoValidEvidence,
     /// The diff was not opened yet.
     OpenDiffFirst,
+}
+
+/// Whether the folder can publish to GitHub or GitLab, as the app last found it (E177).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum ForgeAccess {
+    /// Not looked at yet.
+    #[default]
+    Unknown,
+    /// No remote on a service the app knows.
+    NoRemote,
+    /// The service is known, but no token for its host.
+    NoToken {
+        /// The host.
+        host: String,
+    },
+    /// A remote on a known service with a token for its host.
+    Ready,
+}
+
+impl ForgeAccess {
+    /// Why publishing cannot start; `None` when it can.
+    pub fn reason(&self) -> Option<String> {
+        match self {
+            ForgeAccess::Ready => None,
+            ForgeAccess::Unknown => Some(t("Das Remote des Ordners wird noch geprüft …").into()),
+            ForgeAccess::NoRemote => Some(t("Der Ordner hat kein Remote bei GitHub oder GitLab.").into()),
+            ForgeAccess::NoToken { host } => Some(tf(
+                "Für {} ist kein Token da. Im CI-Panel anmelden; GitLab braucht den Bereich „api“.",
+                &[host],
+            )),
+        }
+    }
 }
 
 /// An order as its tab shows it.
@@ -216,6 +261,15 @@ pub struct Detail {
     issue_change: Option<Vec<String>>,
     /// Whether the issue's change can be taken over now.
     issue_takeable: bool,
+    /// What goes to GitHub or GitLab when the user publishes (E177).
+    outgoing: ide_factory::publish::Outgoing,
+    /// How far publishing got, a line each.
+    publication: Vec<String>,
+    /// The merge request publishing opened or found.
+    change_url: Option<String>,
+    /// The commands of publishing that fit where the order stands, whether the folder can publish or not.
+    publish_fits: Vec<Command>,
+    forge: ForgeAccess,
 }
 
 /// [`Command`] as a set's key.
@@ -296,7 +350,44 @@ impl Detail {
             },
             issue_change: issue_change(order),
             issue_takeable: order.issue_update().is_some() && !order.finished() && order.station() != Station::TakeOver,
+            outgoing: super::change::outgoing(order),
+            publication: super::change::lines(order),
+            change_url: order
+                .publication()
+                .and_then(|p| p.change())
+                .map(|c| c.url().to_string()),
+            publish_fits: publish_fits(order, accept_block),
+            forge: ForgeAccess::Unknown,
         }
+    }
+
+    /// The model with what the app found of the folder's service: publishing is offered only with a remote there and
+    /// a token for its host (E177).
+    pub fn with_forge(mut self, forge: ForgeAccess) -> Detail {
+        for command in &self.publish_fits {
+            if forge == ForgeAccess::Ready {
+                self.enabled.insert(command.tag());
+            } else {
+                self.enabled.remove(&command.tag());
+            }
+        }
+        self.forge = forge;
+        self
+    }
+
+    /// Why "Als Merge Request" cannot start although the order would let it.
+    pub fn publish_block(&self) -> Option<String> {
+        self.publish_fits.first().and_then(|_| self.forge.reason())
+    }
+
+    /// How far publishing got, a line each; empty before the user asked.
+    pub fn publication(&self) -> &[String] {
+        &self.publication
+    }
+
+    /// The page of the merge request publishing opened or found.
+    pub fn change_url(&self) -> Option<&str> {
+        self.change_url.as_deref()
     }
 
     /// The builder's objection to the criteria, while the order waits on it (E178).
@@ -456,6 +547,16 @@ impl Detail {
                 order: id,
                 fingerprint: self.fingerprint.clone()?,
             }),
+            Command::AcceptAsChange => Some(InputKind::Publish {
+                order: id,
+                fingerprint: Some(self.fingerprint.clone()?),
+                texts: self.outgoing.clone(),
+            }),
+            Command::Publish => Some(InputKind::Publish {
+                order: id,
+                fingerprint: None,
+                texts: self.outgoing.clone(),
+            }),
             Command::ByHand => Some(InputKind::ByHand(id)),
             Command::BackToLeitstand => Some(InputKind::BackToLeitstand(id)),
             Command::Resume => Some(InputKind::Resume(Some(id))),
@@ -463,6 +564,7 @@ impl Detail {
             Command::Accept
             | Command::OpenDiff
             | Command::OpenSession
+            | Command::ShowChange
             | Command::MergeRequest
             | Command::BackToBuilder
             | Command::ChangeCriteria
@@ -511,6 +613,10 @@ fn commands(order: &Order) -> (BTreeSet<CommandKey>, Option<AcceptBlock>) {
             waiting(&|r| *r == WaitReason::Acceptance) && accept_block.is_none(),
         ),
         (Command::MergeRequest, merge_branch(order).is_some()),
+        (
+            Command::ShowChange,
+            order.publication().is_some_and(|p| p.change().is_some()),
+        ),
         (Command::OpenDiff, order.head().is_some()),
         (Command::OpenSession, order.current().is_some()),
         (
@@ -537,6 +643,22 @@ fn commands(order: &Order) -> (BTreeSet<CommandKey>, Option<AcceptBlock>) {
         .map(|(command, _)| command.tag())
         .collect();
     (enabled, accept_block)
+}
+
+/// The commands of publishing that fit `order` as the factory takes them: G2 with publishing while G2 can be given,
+/// publishing a done order whose branch was kept until everything is out, or again after it stopped (E177).
+fn publish_fits(order: &Order, accept_block: Option<AcceptBlock>) -> Vec<Command> {
+    let acceptable = *order.condition() == Condition::Waiting(WaitReason::Acceptance)
+        && accept_block.is_none()
+        && order.evidence().is_some_and(|e| e.invalid().is_none());
+    [
+        (Command::AcceptAsChange, acceptable),
+        (Command::Publish, order.can_publish()),
+    ]
+    .into_iter()
+    .filter(|(_, fits)| *fits)
+    .map(|(command, _)| command)
+    .collect()
 }
 
 /// The branch a merge request of the done `order` brings in: the kept branch, or the base it was taken over into.

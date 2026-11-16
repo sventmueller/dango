@@ -22,11 +22,12 @@ mod work;
 
 use std::path::Path;
 
-pub(crate) use load::client;
+pub(crate) use load::{access, client, remote_client};
 pub(crate) use log_tab::LogTabs;
 pub(crate) use login::CI_OAUTH_CLIENTS;
 pub(crate) use ops::open_url;
 pub(crate) use panel::CiPanels;
+pub(crate) use text::problem;
 pub(crate) use work::run as on_lane;
 pub(crate) use work::{CI_HOSTS, use_secrets};
 

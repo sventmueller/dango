@@ -168,16 +168,17 @@ impl OrderTab {
         let mut buttons = Vec::new();
         for command in Command::ALL {
             let button = ui::button(mtm, command.title(), me, sel!(ideFactoryOrderCommand:), command.tag());
-            if command == Command::MergeRequest {
-                button.setToolTip(Some(&ns(t(
-                    "Öffnet die Seite für einen neuen Merge Request im Browser-Tab. Den Branch vorher selbst pushen; die App schreibt nichts zu GitHub oder GitLab.",
-                ))));
+            if let Some(tip) = tooltip(command) {
+                button.setToolTip(Some(&ns(tip)));
             }
             let into = match command {
                 Command::Approve
                 | Command::Accept
+                | Command::AcceptAsChange
                 | Command::OpenDiff
                 | Command::OpenSession
+                | Command::Publish
+                | Command::ShowChange
                 | Command::MergeRequest
                 | Command::Continue
                 | Command::Resume => &primary,
@@ -299,15 +300,20 @@ impl OrderTab {
             let enabled = Command::of_tag(button.tag()).is_some_and(|c| detail.can(c));
             button.setEnabled(enabled);
         }
-        let note = match detail.accept_block() {
+        let accept = match detail.accept_block() {
             Some(AcceptBlock::OpenDiffFirst) => Some(t(
                 "Bei hoher Risikoklasse geht „Abnehmen“ erst, wenn der Diff geöffnet wurde.",
             )),
             Some(AcceptBlock::NoValidEvidence) => Some(t("Abnehmen geht erst mit einem gültigen Nachweis.")),
             None => None,
         };
-        ui.accept_note.setStringValue(&ns(note.unwrap_or("")));
-        ui.accept_note.setHidden(note.is_none());
+        let notes: Vec<String> = accept
+            .map(str::to_string)
+            .into_iter()
+            .chain(detail.publish_block())
+            .collect();
+        ui.accept_note.setStringValue(&ns(&notes.join("\n")));
+        ui.accept_note.setHidden(notes.is_empty());
         ui.request.setHidden(detail.request().is_none());
         self.show_spec(Some(detail));
         crate::order_view::fill(self, &ui.body, detail, &self.ivars().rejected.borrow());
@@ -425,6 +431,19 @@ impl OrderTab {
         } else {
             NSControlStateValueOn
         }
+    }
+}
+
+/// What a command's button says on hover where its title cannot say what leaves the Mac.
+fn tooltip(command: Command) -> Option<&'static str> {
+    match command {
+        Command::MergeRequest => Some(t(
+            "Öffnet die Seite für einen neuen Merge Request im Browser-Tab. Den Branch vorher selbst pushen; die App schreibt nichts zu GitHub oder GitLab.",
+        )),
+        Command::AcceptAsChange | Command::Publish => Some(t(
+            "Pusht den Branch mit deinen Zugangsdaten, legt einen Merge Request mit einer Zusammenfassung des Nachweises an und kommentiert das Issue des Auftrags. Vorher prüft gitleaks alles, was hinausgeht.",
+        )),
+        _ => None,
     }
 }
 

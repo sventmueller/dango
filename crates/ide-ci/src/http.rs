@@ -181,6 +181,14 @@ pub(crate) fn checked(response: Response, host: &str, what: &str) -> Result<Resp
             .map(|seconds| now() + seconds);
         return Err(Error::RateLimited { until: reset.or(after) });
     }
+    if status == 403
+        && let Some(scope) = missing_scope(&response)
+    {
+        return Err(Error::MissingScope {
+            host: host.to_string(),
+            scope,
+        });
+    }
     let message = message(&response);
     Err(match status {
         401 => Error::Unauthorized { host: host.to_string() },
@@ -188,6 +196,22 @@ pub(crate) fn checked(response: Response, host: &str, what: &str) -> Result<Resp
         404 => Error::NotFound { what: what.to_string() },
         _ => Error::Http { status, message },
     })
+}
+
+/// What a refusal names as missing from the token: GitHub's `x-accepted-github-permissions` for fine-grained tokens,
+/// GitLab's `insufficient_scope` with its `scope`, and nothing named for GitHub's "Resource not accessible by …",
+/// which classic tokens and apps get.
+fn missing_scope(response: &Response) -> Option<String> {
+    if let Some(wanted) = response.header("x-accepted-github-permissions") {
+        return Some(wanted.trim().to_string());
+    }
+    let body: serde_json::Value = serde_json::from_slice(&response.body).ok()?;
+    if body.get("error").and_then(serde_json::Value::as_str) == Some("insufficient_scope") {
+        let scope = body.get("scope").and_then(serde_json::Value::as_str).unwrap_or("api");
+        return Some(scope.to_string());
+    }
+    let message = body.get("message").and_then(serde_json::Value::as_str)?;
+    message.starts_with("Resource not accessible by").then(String::new)
 }
 
 /// The `message` both services put in their error bodies, else the start of the body.
@@ -281,6 +305,47 @@ mod tests {
             ),
             Err(Error::Forbidden {
                 message: "Resource not accessible".into()
+            })
+        );
+        assert_eq!(
+            checked(
+                response(
+                    403,
+                    &[],
+                    r#"{"error":"insufficient_scope","error_description":"higher privileges","scope":"api"}"#
+                ),
+                "gitlab.com",
+                "x"
+            ),
+            Err(Error::MissingScope {
+                host: "gitlab.com".into(),
+                scope: "api".into()
+            })
+        );
+        assert_eq!(
+            checked(
+                response(403, &[("x-accepted-github-permissions", "pull_requests=write")], "{}"),
+                "github.com",
+                "x"
+            ),
+            Err(Error::MissingScope {
+                host: "github.com".into(),
+                scope: "pull_requests=write".into()
+            })
+        );
+        assert_eq!(
+            checked(
+                response(
+                    403,
+                    &[],
+                    r#"{"message":"Resource not accessible by personal access token"}"#
+                ),
+                "github.com",
+                "x"
+            ),
+            Err(Error::MissingScope {
+                host: "github.com".into(),
+                scope: String::new()
             })
         );
         assert!(matches!(

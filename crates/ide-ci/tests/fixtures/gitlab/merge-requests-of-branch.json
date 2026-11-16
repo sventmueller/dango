@@ -1,0 +1,12 @@
+[
+  {
+    "id": 9102,
+    "iid": 15,
+    "title": "Add the export job",
+    "description": "Summary\n\n<!-- dango-order: o-2 -->",
+    "author": { "username": "lab-selftest" },
+    "web_url": "https://gitlab.example.com/gitlab/group/app/-/merge_requests/15",
+    "updated_at": "2026-11-16T10:00:00.000Z",
+    "source_branch": "order/o-2"
+  }
+]

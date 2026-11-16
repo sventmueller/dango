@@ -202,6 +202,7 @@ impl Leitstand {
                 agents: BTreeMap::new(),
                 sections: BTreeMap::new(),
                 learned: super::learning::Learned::new(schedule),
+                forge: super::publish::Forge::default(),
             },
         );
         self.after(cx, &root, restored.step);

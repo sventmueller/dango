@@ -314,6 +314,58 @@ pub enum Effect {
         /// Keep the branch, as after a take-over by hand.
         keep_branch: bool,
     },
+    /// Scan the text that is to go to GitHub or GitLab with the order's frozen gitleaks configuration (E177, I4).
+    /// Answered by [`crate::InputKind::Scanned`].
+    ScanOutgoing {
+        /// The order.
+        order: OrderId,
+        /// Everything that goes out, marker included.
+        text: String,
+    },
+    /// Push `commit` as `branch` to the folder's service with the user's own git, credentials and hooks, from the
+    /// main repository (E177, E186). Answered by [`crate::InputKind::Done`].
+    Push {
+        /// The order.
+        order: OrderId,
+        /// The operation.
+        op: OperationId,
+        /// The branch on the service.
+        branch: String,
+        /// The commit G2 accepted.
+        commit: String,
+    },
+    /// Open a merge request of `branch` into `base`, unless the service has one of the branch with the marker in
+    /// its text already. Answered by [`crate::InputKind::Done`].
+    OpenChange {
+        /// The order.
+        order: OrderId,
+        /// The operation.
+        op: OperationId,
+        /// The order's branch.
+        branch: String,
+        /// The branch it goes into.
+        base: String,
+        /// The title.
+        title: String,
+        /// The Markdown body, marker included.
+        body: String,
+        /// The marker to look for.
+        marker: String,
+    },
+    /// Comment on the issue, unless it has a comment with the marker already. Answered by
+    /// [`crate::InputKind::Done`].
+    CommentIssue {
+        /// The order.
+        order: OrderId,
+        /// The operation.
+        op: OperationId,
+        /// The issue's number.
+        issue: u64,
+        /// The comment, marker included.
+        body: String,
+        /// The marker to look for.
+        marker: String,
+    },
     /// After a restart: check whether an operation's target state holds (E167). Answered by
     /// [`crate::InputKind::Verified`].
     Verify {
@@ -388,6 +440,10 @@ impl Effect {
             | Effect::TakeOver { order, .. }
             | Effect::RemoveCheckpoints { order, .. }
             | Effect::RemoveWorktree { order, .. }
+            | Effect::ScanOutgoing { order, .. }
+            | Effect::Push { order, .. }
+            | Effect::OpenChange { order, .. }
+            | Effect::CommentIssue { order, .. }
             | Effect::Verify { order, .. }
             | Effect::WriteSpec { order, .. }
             | Effect::Notify { order, .. } => Some(order),

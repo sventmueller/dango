@@ -28,6 +28,11 @@ impl Factory {
                 rejected,
             } => self.accept(cx, &order, fingerprint, rejected),
             InputKind::KeepBranch { order, fingerprint } => self.keep_branch(cx, &order, fingerprint),
+            InputKind::Publish {
+                order,
+                fingerprint,
+                texts,
+            } => self.publish(cx, &order, fingerprint, texts),
             InputKind::BackToBuilder(id, text) => self.back_to_builder(cx, &id, text),
             InputKind::ChangeCriteria(id, text) => self.change_criteria(cx, &id, &text),
             InputKind::ChangeOption(id, change) => self.change_option(cx, &id, change),
@@ -186,7 +191,7 @@ impl Factory {
     }
 
     /// Whether G2 may be given now for the evidence of `fingerprint`; refuses it if not.
-    fn acceptable(&self, cx: &mut Cx, id: &OrderId, fingerprint: &str) -> bool {
+    pub(super) fn acceptable(&self, cx: &mut Cx, id: &OrderId, fingerprint: &str) -> bool {
         if !self.fitting(cx, id, |o| *o.condition() == Condition::Waiting(WaitReason::Acceptance)) {
             return false;
         }

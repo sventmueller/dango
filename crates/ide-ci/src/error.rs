@@ -18,6 +18,13 @@ pub enum Error {
         /// What the service said.
         message: String,
     },
+    /// The token lacks a scope or permission the call needs, such as GitLab's `api` for writing (E77, E177).
+    MissingScope {
+        /// The host whose token it is.
+        host: String,
+        /// What the service named as needed, such as `api` or `pull_requests=write`; empty when it named nothing.
+        scope: String,
+    },
     /// No such repository, run or job; GitHub also says so for private repositories without a token.
     NotFound {
         /// What was asked for.
@@ -46,6 +53,10 @@ impl fmt::Display for Error {
         match self {
             Error::Unauthorized { host } => write!(f, "{host} wants a valid token"),
             Error::Forbidden { message } => write!(f, "not allowed: {message}"),
+            Error::MissingScope { host, scope } if scope.is_empty() => {
+                write!(f, "the token for {host} lacks write rights")
+            }
+            Error::MissingScope { host, scope } => write!(f, "the token for {host} lacks the scope {scope}"),
             Error::NotFound { what } => write!(f, "not found: {what}"),
             Error::RateLimited { until: Some(until) } => write!(f, "rate limited until {until}"),
             Error::RateLimited { until: None } => write!(f, "rate limited"),
@@ -76,6 +87,20 @@ mod tests {
                     message: "read-only".into(),
                 },
                 "not allowed: read-only",
+            ),
+            (
+                Error::MissingScope {
+                    host: "gitlab.com".into(),
+                    scope: "api".into(),
+                },
+                "the token for gitlab.com lacks the scope api",
+            ),
+            (
+                Error::MissingScope {
+                    host: "github.com".into(),
+                    scope: String::new(),
+                },
+                "the token for github.com lacks write rights",
             ),
             (Error::NotFound { what: "run 7".into() }, "not found: run 7"),
             (

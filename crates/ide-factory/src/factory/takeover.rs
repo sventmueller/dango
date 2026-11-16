@@ -144,6 +144,7 @@ impl Factory {
                 notice: Notice::Done,
             });
             self.wake_queue(cx);
+            self.publish_when_done(cx, id);
         }
     }
 
@@ -202,6 +203,10 @@ impl Factory {
                 result: result.clone(),
             },
         );
+        if action.publishes() {
+            self.published_step(cx, id, &action, result);
+            return;
+        }
         if let OpResult::Failed { detail } = &result {
             let effect = action_name(&action).to_string();
             let detail = detail.clone();
@@ -373,6 +378,10 @@ impl Factory {
         let Some(action) = order.open_ops().get(&op).cloned() else {
             return;
         };
+        if action.publishes() {
+            self.publish_verified(cx, id, op, reached);
+            return;
+        }
         let running = *order.condition() == Condition::Running || *order.condition() == Condition::Aborted;
         match reached {
             Some(result) if running => self.done(cx, id, op, result),
@@ -415,5 +424,8 @@ fn action_name(action: &Action) -> &'static str {
         Action::TakeOver { .. } => "take over",
         Action::RemoveCheckpoints { .. } => "remove checkpoints",
         Action::RemoveWorktree { .. } => "remove worktree",
+        Action::Push { .. } => "push",
+        Action::OpenChange { .. } => "merge request",
+        Action::CommentIssue { .. } => "comment",
     }
 }

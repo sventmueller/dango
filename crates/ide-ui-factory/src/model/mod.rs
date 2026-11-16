@@ -2,6 +2,7 @@
 //! words of the user's language, and what each view lets the user do.
 
 pub mod board;
+pub mod change;
 pub mod detail;
 pub mod list;
 pub mod metrics;

@@ -22,6 +22,9 @@
 //!   gate commands only with the confirmations the app stores (E190).
 //! - [`intake`] takes orders from issues (E176): the frozen origin, the task list as suggested criteria, and which
 //!   issues automatic intake takes; such orders always wait for G1, and their text goes into prompts as foreign text.
+//! - [`publish`] brings an accepted order to GitHub or GitLab on the user's click only ([`InputKind::Publish`], E177):
+//!   the outgoing text scanned for secrets first, then push, merge request and the issue's comment as operations a
+//!   restart verifies by the branch's head and the order's marker on the service.
 //! - [`contract`] reads the builder's confirmation of or objection to the criteria in its first turn (E178).
 //! - [`relevance`] classifies a diff's paths (E172), [`gates`] judges the review row (E163), [`verdict`] reads the
 //!   reviewer's structured answer (E179), [`evidence`] binds the evidence to its fingerprint with the deviations
@@ -66,6 +69,7 @@ pub mod options;
 pub mod order;
 pub mod panel;
 pub mod prompt;
+pub mod publish;
 pub mod quota;
 pub mod relevance;
 pub mod routing;

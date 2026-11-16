@@ -14,6 +14,9 @@
 //!   requests and issues ([`Item`]), one issue or the open issues of a label with text and labels ([`Issue`]), with
 //!   paging, rate limits and typed [`Error`]s; [`log`] makes logs readable and
 //!   cuts out the failure for an agent. [`manual_workflows`] finds the GitHub workflows a checkout may start by hand.
+//! - On the user's click only (E177), [`Client`] also opens a merge request (pull request) from a branch, comments on an
+//!   issue, finds either again by a marker in its text, and reads where a branch points on the service; a token
+//!   without the rights for it fails with [`Error::MissingScope`].
 //!
 //! Every call blocks until the network answers and so belongs on a worker thread. Calls go through a [`Transport`]:
 //! [`Network`] in the app, [`Recorded`] answers in tests, which never touch the network or the keychain. The project's
@@ -32,6 +35,7 @@ pub mod log;
 mod model;
 pub mod oauth;
 pub mod panel;
+mod write;
 
 pub use auth::{
     Auth, Commands, Credential, Keychain, Memory, Printed, SaveError, SecretError, SecretStore, Source, Supervised,

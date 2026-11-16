@@ -409,6 +409,11 @@ pub(super) fn verify(
             (left == 0).then_some(OpResult::Removed)
         }
         TargetState::WorktreeGone { path } => (!Path::new(path).exists()).then_some(OpResult::Removed),
+        TargetState::RemoteBranchAt { .. } | TargetState::ChangeFor { .. } | TargetState::IssueComment { .. } => {
+            return Err(ide_git::Error::Unexpected {
+                what: "the service, not the repository, tells whether a step of publishing happened".into(),
+            });
+        }
     })
 }
 

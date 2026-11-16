@@ -114,10 +114,16 @@ pub(crate) fn load(root: &Path, known: Option<(String, Source, String)>, tab: Ta
 /// The client of `root`'s remote with the token of its host, as the panel finds them, for work beside the panel such
 /// as the Leitstand's intake from issues (E176); blocks on the network.
 pub(crate) fn client(root: &Path) -> Result<Client, Error> {
+    remote_client(root).map(|(_, client)| client)
+}
+
+/// The name of `root`'s remote the panel reads, with the client of its service and the token of its host, for
+/// publishing an order there (E177); blocks on the network.
+pub(crate) fn remote_client(root: &Path) -> Result<(String, Client), Error> {
     let (repo, _) = head(root).map_err(|_| Error::NotFound {
         what: "a git repository with a commit".into(),
     })?;
-    let url = remote_url(&repo).ok_or_else(|| Error::NotFound { what: "remote".into() })?;
+    let (name, url) = remote(&repo).ok_or_else(|| Error::NotFound { what: "remote".into() })?;
     let candidates = ide_ci::candidates(&url, &work::host_rules());
     let first = candidates.first().ok_or_else(|| Error::NotFound {
         what: "CI service".into(),
@@ -125,7 +131,30 @@ pub(crate) fn client(root: &Path) -> Result<Client, Error> {
     let auth = work::auth().ok_or_else(|| Error::Network("no login shell environment".into()))?;
     let token = auth.fresh(first, &*work::network()).map(|c| c.token);
     let forge = ide_ci::locate(&candidates, token.as_deref(), work::network())?;
-    Ok(Client::new(forge, token, work::network()))
+    Ok((name, Client::new(forge, token, work::network())))
+}
+
+/// Whether `root` has a remote on a service the app knows and a token for its host, without asking the service;
+/// blocks on `gh` or `glab` (E177).
+pub(crate) fn access(root: &Path) -> ide_ui_factory::model::detail::ForgeAccess {
+    use ide_ui_factory::model::detail::ForgeAccess;
+    let Ok((repo, _)) = head(root) else {
+        return ForgeAccess::NoRemote;
+    };
+    let Some((_, url)) = remote(&repo) else {
+        return ForgeAccess::NoRemote;
+    };
+    let candidates = ide_ci::candidates(&url, &work::host_rules());
+    let Some(first) = candidates.first() else {
+        return ForgeAccess::NoRemote;
+    };
+    let token = work::auth().and_then(|auth| auth.fresh(first, &*work::network()));
+    match token {
+        Some(_) => ForgeAccess::Ready,
+        None => ForgeAccess::NoToken {
+            host: first.host.clone(),
+        },
+    }
 }
 
 /// The runs of a commit on the forge that answered.
@@ -162,6 +191,11 @@ fn with_jobs(client: &Client, run: Run, read: bool) -> RunRow {
 
 /// The URL of the remote the current branch tracks, else `origin`'s, else the first one's.
 fn remote_url(repo: &ide_git::Repository) -> Option<String> {
+    remote(repo).map(|(_, url)| url)
+}
+
+/// The name and fetch URL of the remote the current branch tracks, else `origin`'s, else the first one's.
+fn remote(repo: &ide_git::Repository) -> Option<(String, String)> {
     let remotes = repo.remotes().ok()?;
     let tracked = repo
         .status(StatusOptions {
@@ -175,5 +209,5 @@ fn remote_url(repo: &ide_git::Repository) -> Option<String> {
         .and_then(|name| remotes.iter().find(|r| r.name == name))
         .or_else(|| remotes.iter().find(|r| r.name == "origin"))
         .or_else(|| remotes.first())?;
-    remote.fetch_url.clone()
+    Some((remote.name.clone(), remote.fetch_url.clone()?))
 }

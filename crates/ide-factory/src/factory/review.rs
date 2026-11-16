@@ -178,7 +178,8 @@ impl Factory {
         self.emit(cx, id, Event::Gate { record });
     }
 
-    /// A secrets scan's result: before the commit after a turn, or as a step of the review.
+    /// A secrets scan's result: before the commit after a turn, as a step of the review, or of the text that goes to
+    /// GitHub or GitLab.
     pub(super) fn scanned(&mut self, cx: &mut Cx, id: &OrderId, scan: SecretScan) {
         let Some(order) = self.orders.get(id) else { return };
         match order.phase() {
@@ -212,6 +213,7 @@ impl Factory {
                     None => self.review_next(cx, id),
                 }
             }
+            Phase::PublishScan => self.publish_scanned(cx, id, scan),
             _ => {}
         }
     }

@@ -143,9 +143,40 @@ pub enum Action {
         /// The branch, which is deleted once taken over or aborted.
         branch: String,
     },
+    /// Push the order's accepted commit as its branch to the service, with the user's credentials (E177).
+    Push {
+        /// The branch on the service.
+        branch: String,
+        /// The commit G2 accepted.
+        commit: String,
+    },
+    /// Open a merge request of the branch into its base, or take the one there is (E177).
+    OpenChange {
+        /// The order's branch.
+        branch: String,
+        /// The branch it goes into.
+        base: String,
+        /// The marker in its text ([`crate::publish::marker`]).
+        marker: String,
+    },
+    /// Comment on the issue the order came from (E177).
+    CommentIssue {
+        /// The issue's number.
+        issue: u64,
+        /// The marker in the comment.
+        marker: String,
+    },
 }
 
 impl Action {
+    /// Whether it writes to GitHub or GitLab, after G2 on the user's click (E177).
+    pub fn publishes(&self) -> bool {
+        matches!(
+            self,
+            Action::Push { .. } | Action::OpenChange { .. } | Action::CommentIssue { .. }
+        )
+    }
+
     /// The state a restart checks before it repeats the action, so nothing happens twice (E167).
     pub fn target(&self, op: &OperationId) -> TargetState {
         match self {
@@ -167,6 +198,18 @@ impl Action {
                 threads: threads.clone(),
             },
             Action::RemoveWorktree { path, .. } => TargetState::WorktreeGone { path: path.clone() },
+            Action::Push { branch, commit } => TargetState::RemoteBranchAt {
+                branch: branch.clone(),
+                commit: commit.clone(),
+            },
+            Action::OpenChange { branch, marker, .. } => TargetState::ChangeFor {
+                branch: branch.clone(),
+                marker: marker.clone(),
+            },
+            Action::CommentIssue { issue, marker } => TargetState::IssueComment {
+                issue: *issue,
+                marker: marker.clone(),
+            },
         }
     }
 
@@ -177,7 +220,11 @@ impl Action {
             Action::Commit { parent, .. } => PreState::Head(parent.clone()),
             Action::MergeTarget { head, .. } => PreState::Head(head.clone()),
             Action::TakeOver { expected, .. } => PreState::Head(expected.clone()),
-            Action::RemoveCheckpoints { .. } | Action::RemoveWorktree { .. } => PreState::Nothing,
+            Action::Push { commit, .. } => PreState::Commit(commit.clone()),
+            Action::RemoveCheckpoints { .. }
+            | Action::RemoveWorktree { .. }
+            | Action::OpenChange { .. }
+            | Action::CommentIssue { .. } => PreState::Nothing,
         }
     }
 }
@@ -229,6 +276,37 @@ pub enum TargetState {
         /// The path.
         path: String,
     },
+    /// The service has the branch at this commit.
+    RemoteBranchAt {
+        /// The branch.
+        branch: String,
+        /// The commit.
+        commit: String,
+    },
+    /// The service has a merge request of the branch, in any state, with the marker in its text.
+    ChangeFor {
+        /// The branch.
+        branch: String,
+        /// The marker.
+        marker: String,
+    },
+    /// The issue has a comment with the marker.
+    IssueComment {
+        /// The issue's number.
+        issue: u64,
+        /// The marker.
+        marker: String,
+    },
+}
+
+impl TargetState {
+    /// Whether only GitHub or GitLab can tell, not the local repository.
+    pub fn on_service(&self) -> bool {
+        matches!(
+            self,
+            TargetState::RemoteBranchAt { .. } | TargetState::ChangeFor { .. } | TargetState::IssueComment { .. }
+        )
+    }
 }
 
 /// What an action achieved, as the app reports it.
@@ -285,6 +363,18 @@ pub enum OpResult {
     TargetMoved,
     /// Removed.
     Removed,
+    /// The branch is on the service at the accepted commit.
+    Pushed,
+    /// The merge request was opened, or found.
+    ChangeOpened {
+        /// It.
+        change: crate::publish::ChangeRef,
+    },
+    /// The issue has the comment, made now or found.
+    Commented {
+        /// The comment's page.
+        url: String,
+    },
     /// It failed, with the app's words.
     Failed {
         /// What went wrong.
@@ -523,6 +613,16 @@ pub enum Event {
     AcceptanceKept,
     /// The user keeps the order's branch instead of taking it over (E177).
     BranchKept,
+    /// The user asked for the order to go to GitHub or GitLab with these texts, or to try again (E177).
+    PublishRequested {
+        /// The texts, without the marker.
+        texts: crate::publish::Outgoing,
+    },
+    /// Publishing stopped; nothing more goes out until the user tries again (E177).
+    PublishFailed {
+        /// Why.
+        failure: crate::publish::PublishFailure,
+    },
     /// The user took the station over by hand (E184).
     ByHand,
     /// The user handed the station back to the Leitstand (E184).
@@ -670,6 +770,13 @@ pub enum Phase {
     },
     /// A restart checks whether an operation happened.
     Verifying {
+        /// The operation.
+        op: OperationId,
+    },
+    /// The secrets scan of the text that goes to GitHub or GitLab (E177, F75).
+    PublishScan,
+    /// A step of publishing: push, merge request or comment (E177).
+    Publishing {
         /// The operation.
         op: OperationId,
     },

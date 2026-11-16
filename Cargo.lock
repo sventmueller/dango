@@ -1673,6 +1673,7 @@ name = "ide-factory"
 version = "0.0.0"
 dependencies = [
  "globset",
+ "ide-product",
  "ide-thread",
  "proptest",
  "serde",

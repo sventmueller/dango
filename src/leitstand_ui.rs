@@ -81,6 +81,15 @@ fn command(kind: InputKind) -> Option<Command> {
             rejected,
         },
         InputKind::KeepBranch { order, fingerprint } => Command::KeepBranch { order, fingerprint },
+        InputKind::Publish {
+            order,
+            fingerprint,
+            texts,
+        } => Command::Publish {
+            order,
+            fingerprint,
+            texts,
+        },
         InputKind::BackToBuilder(id, text) => Command::BackToBuilder(id, text),
         InputKind::ChangeCriteria(id, text) => Command::ChangeCriteria(id, text),
         InputKind::ChangeOption(id, change) => Command::ChangeOption(id, change),
@@ -253,6 +262,14 @@ impl ide_ui_factory::Host for Orders {
                 }
             },
         );
+    }
+
+    fn open_change(&self, window: WindowId, url: &str) {
+        self.0.with(|cx| {
+            if let Some(controller) = cx.windows().get(window.get()) {
+                crate::ci_panel::open_url(Some(&*controller), url);
+            }
+        });
     }
 
     fn open_session(&self, window: WindowId, root: &Path, order: &OrderId) {

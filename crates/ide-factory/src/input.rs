@@ -155,6 +155,18 @@ pub enum InputKind {
         /// The fingerprint the user saw.
         fingerprint: String,
     },
+    /// The user's click on "Als Merge Request" (E177): with `fingerprint`, G2 that keeps the branch like
+    /// [`InputKind::KeepBranch`] and publishes once the worktree is gone; without, publishing an order that is done
+    /// with its branch kept, or trying again where it stopped. Pushes the branch, opens a merge request with `texts`,
+    /// and comments the order's issue, after the secrets scan of everything that goes out.
+    Publish {
+        /// The order.
+        order: OrderId,
+        /// The fingerprint the user saw, for G2 in the same click.
+        fingerprint: Option<String>,
+        /// The texts in the user's words.
+        texts: crate::publish::Outgoing,
+    },
     /// Back to the builder with a comment.
     BackToBuilder(OrderId, String),
     /// Change the criteria, one per line (E184).

@@ -61,6 +61,16 @@ impl Order {
             | Event::AcceptanceKept
             | Event::ByHand => self.apply_review(&entry.event),
             Event::BranchKept => self.branch_kept = true,
+            Event::PublishRequested { texts } => {
+                let publication = self.publication.get_or_insert_default();
+                publication.texts = texts.clone();
+                publication.failure = None;
+            }
+            Event::PublishFailed { failure } => {
+                if let Some(publication) = &mut self.publication {
+                    publication.failure = Some(failure.clone());
+                }
+            }
             Event::CriteriaReplied { reply } => {
                 if !matches!(reply, crate::contract::CriteriaReply::Objection(_)) {
                     self.agreed = Some(self.criteria.clone());
@@ -321,6 +331,15 @@ impl Order {
                 _ => {}
             },
             OpResult::TakenOver { .. } => self.taken_over = true,
+            OpResult::Pushed | OpResult::ChangeOpened { .. } | OpResult::Commented { .. } => {
+                let publication = self.publication.get_or_insert_default();
+                match result {
+                    OpResult::Pushed => publication.pushed = true,
+                    OpResult::ChangeOpened { change } => publication.change = Some(change.clone()),
+                    OpResult::Commented { url } => publication.comment = Some(url.clone()),
+                    _ => {}
+                }
+            }
             _ => {}
         }
     }

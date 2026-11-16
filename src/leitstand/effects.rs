@@ -1,5 +1,6 @@
 //! Carrying out what a factory asks for (`ide_factory::Effect`): sessions on the main thread, git on the
-//! Leitstand's own lane, gates and the preparation of worktrees on threads of their own, files on the disk lane. Every
+//! Leitstand's own lane, gates and the preparation of worktrees on threads of their own, files on the disk lane,
+//! publishing to GitHub or GitLab in `publish`. Every
 //! result comes back as an input with the order's id (E143); a result for an order whose folder is gone finds
 //! nothing and is dropped.
 
@@ -17,7 +18,7 @@ use ide_factory::{Effect, InputKind, OperationId, OrderId};
 
 use super::launching::Wanted;
 use super::sessions::Stop;
-use super::{Back, Delivery, GIT, Leitstand, freeze, gates, git, manifest, notices, power, siblings, store};
+use super::{Back, Delivery, GIT, Leitstand, freeze, gates, git, manifest, notices, power, publish, siblings, store};
 use crate::context::AppContext;
 
 /// How long a job waits for the login shell's environment, read once at launch.
@@ -62,6 +63,9 @@ fn done_failed(order: OrderId, op: OperationId, error: &impl ide_core::explain::
 
 impl Leitstand {
     pub(super) fn effect(&self, cx: &Rc<AppContext>, root: &Path, effect: Effect) {
+        if publish::handles(&effect) {
+            return self.publish_effect(root, effect);
+        }
         match effect {
             Effect::StartSession {
                 order,
@@ -146,7 +150,7 @@ impl Leitstand {
     }
 
     /// Runs `job` with the folder's repository on the Leitstand's git lane and hands what it gives to the factory.
-    fn on_git(
+    pub(super) fn on_git(
         &self,
         root: &Path,
         job: impl FnOnce(ide_git::Result<git::Repos>, &[(String, String)]) -> Option<InputKind> + Send + 'static,

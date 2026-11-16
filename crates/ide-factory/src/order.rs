@@ -186,6 +186,7 @@ pub struct Order {
     g1_skipped: bool,
     agreed: Option<Vec<Criterion>>,
     issue_update: Option<String>,
+    publication: Option<crate::publish::Publication>,
     seq: u64,
 }
 
@@ -271,6 +272,7 @@ impl Order {
             g1_skipped: false,
             agreed: None,
             issue_update: None,
+            publication: None,
             seq: 1,
         })
     }
@@ -712,6 +714,34 @@ impl Order {
     /// Whether the user kept the order's branch instead of taking it over (E177).
     pub fn branch_kept(&self) -> bool {
         self.branch_kept
+    }
+
+    /// Where its way to GitHub or GitLab stands, once the user asked for it (E177).
+    pub fn publication(&self) -> Option<&crate::publish::Publication> {
+        self.publication.as_ref()
+    }
+
+    /// Whether a step of publishing runs now: the scan of the outgoing text, or an operation.
+    pub fn publishing(&self) -> bool {
+        matches!(self.phase, Phase::PublishScan | Phase::Publishing { .. })
+    }
+
+    /// Whether the user may publish it now (E177): done with its branch kept, nothing of it on its way, and not
+    /// everything out yet.
+    pub fn can_publish(&self) -> bool {
+        self.station == Station::Done
+            && self.condition != Condition::Aborted
+            && self.branch_kept
+            && !self.publishing()
+            && self.ops.is_empty()
+            && !self.published()
+    }
+
+    /// Whether everything went out: the merge request is there, and the issue's comment if the order came from one.
+    pub fn published(&self) -> bool {
+        self.publication
+            .as_ref()
+            .is_some_and(|p| p.change.is_some() && (self.options.issue.is_none() || p.comment.is_some()))
     }
 
     /// Whether its checkpoints are removed.

@@ -82,10 +82,14 @@ impl Factory {
         }
     }
 
-    /// Pauses what ran, verifies open operations, and resumes by itself only where the user's setting says so.
+    /// Pauses what ran, verifies open operations, and resumes by itself only where the user's setting says so; a scan
+    /// of outgoing text that never answered is forgotten, so the user can publish again (E177).
     fn reconcile(&mut self, cx: &mut Cx) {
         let ids: Vec<OrderId> = self.orders.keys().cloned().collect();
         for id in &ids {
+            if self.orders.get(id).is_some_and(|o| *o.phase() == Phase::PublishScan) {
+                self.set_phase(cx, id, Phase::Idle);
+            }
             let Some(order) = self.orders.get(id) else { continue };
             if order.finished() && order.open_ops().is_empty() && order.worktree().is_none() {
                 continue;

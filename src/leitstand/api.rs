@@ -48,6 +48,12 @@ pub(crate) enum Command {
         order: OrderId,
         fingerprint: String,
     },
+    /// Push the kept branch, open a merge request and comment the issue, with G2 when `fingerprint` is given (E177).
+    Publish {
+        order: OrderId,
+        fingerprint: Option<String>,
+        texts: ide_factory::publish::Outgoing,
+    },
     BackToBuilder(OrderId, String),
     /// New criteria, one per line (E184).
     ChangeCriteria(OrderId, String),
@@ -190,6 +196,15 @@ impl Leitstand {
                 rejected,
             },
             Command::KeepBranch { order, fingerprint } => InputKind::KeepBranch { order, fingerprint },
+            Command::Publish {
+                order,
+                fingerprint,
+                texts,
+            } => InputKind::Publish {
+                order,
+                fingerprint,
+                texts,
+            },
             Command::BackToBuilder(order, text) => InputKind::BackToBuilder(order, text),
             Command::ChangeCriteria(order, text) => InputKind::ChangeCriteria(order, text),
             Command::ChangeOption(order, change) => InputKind::ChangeOption(order, change),
@@ -367,12 +382,14 @@ impl Leitstand {
         if sections.is_none() {
             self.read_sections(root, order);
         }
+        let forge = self.forge_access(root);
         let now = self.clock.now().wall;
         let folders = self.folders.borrow();
         let factory = &folders.get(root)?.factory;
         let o = factory.order(order)?;
         let held = ide_factory::panel::Hold::of(factory, o);
-        Some(ide_ui_factory::model::detail::Detail::new(o, now, sections.unwrap_or_default()).with_hold(held.as_ref()))
+        let detail = ide_ui_factory::model::detail::Detail::new(o, now, sections.unwrap_or_default());
+        Some(detail.with_hold(held.as_ref()).with_forge(forge))
     }
 
     /// Reads the hunks of the order's diff since its base on the git lane, named `path#index` as G2 rejects them.
