@@ -64,7 +64,7 @@ to it, so it is on or off for every Codex session of the Mac, unlike Claude's, w
 
 | Item | Codex |
 |---|---|
-| Shared server | `codex app-server proxy` connects stdio to the daemon's socket (`Launch::shared`); the framing stays the same, `-c` overrides do not reach the daemon |
+| Shared server | `codex app-server proxy` hands stdio through to the daemon's socket byte for byte (`Launch::shared`). The socket speaks WebSocket (`ws.rs`): the client sends the upgrade, waits for `101`, as the daemon never answers a connection whose frames came earlier, then sends each message as a masked text frame and answers pings; `-c` overrides do not reach the daemon |
 | When | the daemon's saved choice `remoteControlEnabled` in `$CODEX_HOME/app-server-daemon/settings.json` is on (`ide_codex::remote::wanted`); `codex app-server daemon start` makes sure it runs, and if it does not start, the tab keeps a server of its own |
 | On | the phone in the tab's head runs `codex remote-control start --json`, which starts the daemon, turns Remote Control on and saves that; a tab with a server of its own then moves to the daemon once the agent is done, resuming its thread there |
 | State | `remoteControl/status/changed`, sent after `initialize` and on each change: `disabled`, `connecting`, `connected` with the `serverName` the phone shows, `errored` |
@@ -72,7 +72,7 @@ to it, so it is on or off for every Codex session of the Mac, unlike Claude's, w
 | Off | `remoteControl/disable`, saved for the daemon's next start; of the experimental API, which `initialize` asks for only on the shared server |
 | Other clients | every connection hears the threads other clients start after it connected (`thread/started` with `parentThreadId`); the session leaves the requests and turns of a thread that is neither its own nor descends from it to that client, unanswered |
 | Process | the daemon is no child of the supervisor. Started by Dango it inherits the login shell's environment (E10, E23); one the Codex app or a terminal started keeps its own, which the commands Codex runs then get (R46) |
-| Self-test | the stand-in answers `app-server proxy` as the shared server and `remote-control start`, `remote-control pair` and `app-server daemon start` as the CLI, with the saved choice in its `CODEX_HOME` |
+| Self-test | the stand-in answers `app-server proxy` as the shared server over WebSocket, in split frames with a ping, refusing frames that come before its answer to the upgrade, and `remote-control start`, `remote-control pair` and `app-server daemon start` as the CLI, with the saved choice in its `CODEX_HOME` |
 
 ## Schemas
 

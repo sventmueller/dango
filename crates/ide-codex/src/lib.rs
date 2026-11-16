@@ -23,6 +23,7 @@ pub mod session;
 pub mod test_server;
 pub mod version;
 pub mod wire;
+mod ws;
 
 pub use capabilities::{Account, Capabilities, Effort, MODES, Mode, Model};
 pub use launch::{ApprovalPolicy, Launch, SandboxMode};

@@ -238,7 +238,8 @@ struct Shared {
     supervisor: Supervisor,
     process: ProcessId,
     launch: Launch,
-    writer: Mutex<Option<Sender<String>>>,
+    /// What goes to the server's input, already framed.
+    writer: Mutex<Option<Sender<Vec<u8>>>>,
     state: Mutex<State>,
     pending: Mutex<HashMap<i64, Pending>>,
     sink: Sink,
@@ -288,9 +289,21 @@ impl Shared {
     }
 
     fn write(&self, message: &Message) -> Result<(), SessionError> {
+        let text = message.encode();
+        let framed = if self.launch.shared {
+            crate::ws::frame(crate::ws::TEXT, text.as_bytes(), true)
+        } else {
+            let mut line = text.into_bytes();
+            line.push(b'\n');
+            line
+        };
+        self.send_bytes(framed)
+    }
+
+    fn send_bytes(&self, bytes: Vec<u8>) -> Result<(), SessionError> {
         let writer = self.writer.lock().unwrap_or_else(|e| e.into_inner());
         let writer = writer.as_ref().ok_or(SessionError::Closed)?;
-        writer.send(message.encode()).map_err(|_| SessionError::Closed)
+        writer.send(bytes).map_err(|_| SessionError::Closed)
     }
 
     fn notify(&self, method: &str, params: Value) -> Result<(), SessionError> {
@@ -333,8 +346,14 @@ impl Shared {
         self.write(&Message::Response { id, result })
     }
 
-    fn read(self: Arc<Self>, stdout: ChildStdout) {
+    /// Reads the server's output until it ends; `upgraded` hears when the shared server accepted the WebSocket.
+    fn read(self: Arc<Self>, stdout: ChildStdout, upgraded: Sender<()>) {
         let mut reader = BufReader::new(stdout);
+        if self.launch.shared {
+            self.read_websocket(&mut reader, &upgraded);
+            self.finish();
+            return;
+        }
         let mut line = String::new();
         loop {
             line.clear();
@@ -348,6 +367,28 @@ impl Shared {
             }
         }
         self.finish();
+    }
+
+    /// Reads the shared server's WebSocket: its answer to the upgrade, then one message per text frame, answering
+    /// its pings.
+    fn read_websocket(self: &Arc<Self>, reader: &mut BufReader<ChildStdout>, upgraded: &Sender<()>) {
+        if let Err(error) = crate::ws::read_upgrade(reader) {
+            if !self.stopping.load(Ordering::SeqCst) {
+                self.fail(SessionError::Start(error.to_string()));
+            }
+            return;
+        }
+        let _ = upgraded.send(());
+        let mut pong = |opcode: u8, payload: Vec<u8>| {
+            if opcode == crate::ws::PING {
+                drop(self.send_bytes(crate::ws::frame(crate::ws::PONG, &payload, true)));
+            }
+        };
+        while let Ok(Some(text)) = crate::ws::read_message(reader, crate::ws::Peer::Server, &mut pong) {
+            if let Some(message) = Message::parse(&text) {
+                self.dispatch(message);
+            }
+        }
     }
 
     fn dispatch(self: &Arc<Self>, message: Message) {
@@ -552,12 +593,19 @@ impl Shared {
     }
 }
 
-fn write_lines(mut stdin: ChildStdin, rx: &Receiver<String>) {
-    while let Ok(line) = rx.recv() {
-        let written = stdin
-            .write_all(line.as_bytes())
-            .and_then(|()| stdin.write_all(b"\n"))
+/// Writes what `rx` queues to the server's input. For the shared server the WebSocket upgrade goes first and the rest
+/// waits until `upgrade` says the server accepted it: the server never answers a connection whose frames came early.
+fn write_lines(mut stdin: ChildStdin, rx: &Receiver<Vec<u8>>, upgrade: Option<Receiver<()>>) {
+    if let Some(upgraded) = upgrade {
+        let asked = stdin
+            .write_all(&crate::ws::upgrade_request())
             .and_then(|()| stdin.flush());
+        if asked.is_err() || upgraded.recv().is_err() {
+            return;
+        }
+    }
+    while let Ok(bytes) = rx.recv() {
+        let written = stdin.write_all(&bytes).and_then(|()| stdin.flush());
         if written.is_err() {
             break;
         }
@@ -605,6 +653,8 @@ impl Session {
         };
         let origin = u64::try_from(now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos()).unwrap_or_default();
         let (tx, rx) = channel();
+        let (upgraded, upgrade) = channel();
+        let upgrade = launch.shared.then_some(upgrade);
         let stderr_tail = Arc::new(Mutex::new(Tail::new(STDERR_LIMIT)));
         let shared = Arc::new(Shared {
             supervisor: supervisor.clone(),
@@ -641,12 +691,12 @@ impl Session {
         });
         let started = std::thread::Builder::new()
             .name("codex-writer".into())
-            .spawn(move || write_lines(stdin, &rx))
+            .spawn(move || write_lines(stdin, &rx, upgrade))
             .and_then(|_| {
                 let reader = shared.clone();
                 std::thread::Builder::new()
                     .name("codex-reader".into())
-                    .spawn(move || reader.read(stdout))
+                    .spawn(move || reader.read(stdout, upgraded))
             })
             .and_then(|_| {
                 let opener = shared.clone();

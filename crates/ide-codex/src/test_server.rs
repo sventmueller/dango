@@ -14,7 +14,7 @@
 //! start` answer as the CLI does; Remote Control's saved choice lives in `CODEX_HOME` as the daemon keeps it.
 
 use std::collections::VecDeque;
-use std::io::{BufRead, Write};
+use std::io::{BufRead, Read, Write};
 
 use serde_json::{Value, json};
 
@@ -82,7 +82,21 @@ fn thread(turns: Value, name: Option<&str>) -> Value {
 
 impl<W: Write> Server<W> {
     fn send(&mut self, message: &Value) {
-        let _ = writeln!(self.out, "{message}");
+        if self.shared {
+            // Each message in two frames, as a WebSocket may split one.
+            let text = message.to_string();
+            let half = text.len() / 2;
+            let mut first = crate::ws::frame(crate::ws::TEXT, &text.as_bytes()[..half], false);
+            first[0] &= 0x7F;
+            let _ = self.out.write_all(&first);
+            let _ = self.out.write_all(&crate::ws::frame(
+                crate::ws::CONTINUATION,
+                &text.as_bytes()[half..],
+                false,
+            ));
+        } else {
+            let _ = writeln!(self.out, "{message}");
+        }
         let _ = self.out.flush();
     }
 
@@ -188,6 +202,57 @@ impl<W: Write> Server<W> {
             "threadId": PHONE_THREAD, "turnId": "turn-phone", "itemId": "c9", "command": "rm -rf build",
             "cwd": "/work", "startedAtMs": 1000}}),
         );
+    }
+
+    /// Serves the shared server's WebSocket: the upgrade, a ping whose pong the log notes as `{"pong": …}`, then one
+    /// message per text frame, which a client must mask.
+    fn websocket(&mut self, input: impl Read + Send + 'static, log: Option<&std::path::Path>) {
+        let mut input = std::io::BufReader::new(Chunks::of(input));
+        if crate::ws::read_request(&mut input).is_err() {
+            eprintln!("protocol: no WebSocket upgrade");
+            return;
+        }
+        // The real server never answers a connection whose frames came before its answer to the upgrade.
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        if !input.buffer().is_empty() || input.get_mut().arrived() {
+            eprintln!("protocol: frames came before the upgrade was answered");
+            return;
+        }
+        let _ = self.out.write_all(crate::ws::upgrade_answer());
+        let _ = self
+            .out
+            .write_all(&crate::ws::frame(crate::ws::PING, b"stand-in", false));
+        let _ = self.out.flush();
+        let note = |line: &str| {
+            if let Some(path) = log
+                && let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(path)
+            {
+                let _ = writeln!(file, "{line}");
+            }
+        };
+        loop {
+            let mut pong = |opcode: u8, payload: Vec<u8>| {
+                if opcode == crate::ws::PONG {
+                    note(&json!({"pong": String::from_utf8_lossy(&payload)}).to_string());
+                }
+            };
+            let message = crate::ws::read_message(&mut input, crate::ws::Peer::Client, &mut pong);
+            let text = match message {
+                Ok(Some(text)) => text,
+                Ok(None) => return,
+                Err(error) => {
+                    eprintln!("protocol: {error}");
+                    return;
+                }
+            };
+            note(&text);
+            if let Ok(message) = serde_json::from_str::<Value>(&text) {
+                self.handle(&message);
+            }
+            if self.exit {
+                return;
+            }
+        }
     }
 
     /// Where Remote Control stands, as the server says it.
@@ -556,6 +621,54 @@ fn failing() -> VecDeque<Step> {
     .into()
 }
 
+/// The bytes of an input as a thread of its own reads them, so the server can see whether any came early.
+struct Chunks {
+    rx: std::sync::mpsc::Receiver<Vec<u8>>,
+    rest: VecDeque<u8>,
+}
+
+impl Chunks {
+    fn of(mut input: impl Read + Send + 'static) -> Chunks {
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let mut buf = [0u8; 8192];
+            while let Ok(n @ 1..) = input.read(&mut buf) {
+                if tx.send(buf[..n].to_vec()).is_err() {
+                    break;
+                }
+            }
+        });
+        Chunks {
+            rx,
+            rest: VecDeque::new(),
+        }
+    }
+
+    /// Whether bytes came that nobody read yet.
+    fn arrived(&mut self) -> bool {
+        while let Ok(chunk) = self.rx.try_recv() {
+            self.rest.extend(chunk);
+        }
+        !self.rest.is_empty()
+    }
+}
+
+impl Read for Chunks {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if self.rest.is_empty() {
+            match self.rx.recv() {
+                Ok(chunk) => self.rest.extend(chunk),
+                Err(_) => return Ok(0),
+            }
+        }
+        let n = buf.len().min(self.rest.len());
+        for (slot, byte) in buf.iter_mut().zip(self.rest.drain(..n)) {
+            *slot = byte;
+        }
+        Ok(n)
+    }
+}
+
 /// The file of the daemon's saved choices under `home`.
 fn settings(home: &std::path::Path) -> std::path::PathBuf {
     home.join("app-server-daemon/settings.json")
@@ -609,15 +722,12 @@ pub fn main(args: &[String]) -> i32 {
         ["app-server", "daemon", "start", ..] => println!("{}", json!({"status": "alreadyRunning"})),
         _ => {
             let log = std::env::var_os("CODEX_TEST_LOG").map(std::path::PathBuf::from);
-            let shared = words.contains(&"proxy");
-            serve(
-                std::io::stdin().lock(),
-                std::io::stdout().lock(),
-                &scenario,
-                log,
-                shared,
-                home,
-            );
+            if words.contains(&"proxy") {
+                let mut server = Server::new(std::io::stdout().lock(), &scenario, true, home);
+                server.websocket(std::io::stdin(), log.as_deref());
+            } else {
+                run(std::io::stdin().lock(), std::io::stdout().lock(), &scenario, log);
+            }
         }
     }
     0
@@ -625,32 +735,7 @@ pub fn main(args: &[String]) -> i32 {
 
 /// Plays `scenario` against the client on `input` and `output` until the input ends or a turn asks it to exit.
 pub fn run(input: impl BufRead, output: impl Write, scenario: &str, log: Option<std::path::PathBuf>) {
-    serve(input, output, scenario, log, false, None);
-}
-
-fn serve(
-    input: impl BufRead,
-    output: impl Write,
-    scenario: &str,
-    log: Option<std::path::PathBuf>,
-    shared: bool,
-    home: Option<std::path::PathBuf>,
-) {
-    let mut server = Server {
-        out: output,
-        scenario: scenario.to_string(),
-        initialized: false,
-        failing: false,
-        ready: false,
-        turns: 0,
-        turn: None,
-        steps: VecDeque::new(),
-        waiting: None,
-        exit: false,
-        shared,
-        experimental: false,
-        home,
-    };
+    let mut server = Server::new(output, scenario, false, None);
     for line in input.lines().map_while(Result::ok) {
         if let Some(path) = &log
             && let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(path)
@@ -662,6 +747,27 @@ fn serve(
         }
         if server.exit {
             return;
+        }
+    }
+}
+
+impl<W: Write> Server<W> {
+    /// A server that writes to `output`; the shared one when `shared`, with Remote Control's choice under `home`.
+    fn new(output: W, scenario: &str, shared: bool, home: Option<std::path::PathBuf>) -> Server<W> {
+        Server {
+            out: output,
+            scenario: scenario.to_string(),
+            initialized: false,
+            failing: false,
+            ready: false,
+            turns: 0,
+            turn: None,
+            steps: VecDeque::new(),
+            waiting: None,
+            exit: false,
+            shared,
+            experimental: false,
+            home,
         }
     }
 }

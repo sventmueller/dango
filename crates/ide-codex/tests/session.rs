@@ -584,7 +584,14 @@ fn a_shared_session_shows_remote_control_leaves_other_threads_alone_and_turns_it
     let env = launch.env.clone();
     let run = start(launch, log);
     wait("an open thread", || run.session.is_ready());
-    assert_eq!(run.sent()[0]["params"]["capabilities"]["experimentalApi"], true);
+    assert_eq!(
+        run.last("initialize")["params"]["capabilities"]["experimentalApi"],
+        true
+    );
+    assert!(
+        run.sent().iter().any(|m| m["pong"] == "stand-in"),
+        "the shared server's WebSocket ping is answered"
+    );
     wait("Remote Control", || {
         run.session.remote_control() == RemoteControl::Connected(SERVER_NAME.into())
     });
