@@ -37,7 +37,7 @@ fn from_issue(app: &mut App) -> OrderId {
         "https://github.com/acme/widget/issues/3",
         3,
         Some("octo"),
-        "It crashes.",
+        "It crashes.\n\n- [ ] an empty file opens\n",
     );
     let id = app.order_with("o1", |o| *o = issue_order(origin, "Crash on an empty file"));
     app.settle();
