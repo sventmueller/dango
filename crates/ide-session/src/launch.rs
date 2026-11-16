@@ -11,6 +11,12 @@ pub enum AgentPath {
     Claude {
         /// The `claude` executable.
         program: PathBuf,
+        /// Whether the session connects to Remote Control as it starts; `None` follows the user's Claude settings.
+        /// An order's session never connects.
+        remote_control: Option<bool>,
+        /// Where the session `Launch::resume` names branches off: it continues as a new session that ends just
+        /// before a prompt, guarded so that the CLI refuses rather than drops more than that prompt's turn (I6).
+        rewind: Option<ide_thread::Rewind>,
     },
     /// Codex over a server of its own (`ide-codex`); never the shared one of Remote Control (E193).
     Codex {
@@ -33,6 +39,10 @@ pub enum AgentPath {
     /// A session that plays a script, for the self-test and the tests (F61).
     #[cfg(any(test, feature = "selftest"))]
     Scripted(crate::script::Script),
+    /// A recording of Claude Code played into its thread by the caller, with no process behind it, for the
+    /// self-test's AI tabs; it takes no prompts.
+    #[cfg(any(test, feature = "selftest"))]
+    Replay(Box<ide_claude::replay::Replay>),
 }
 
 /// Which path a session takes, without what it needs to start.
@@ -50,9 +60,20 @@ pub enum PathKind {
     Own,
     /// A scripted session.
     Scripted,
+    /// A played recording of Claude Code.
+    Replay,
 }
 
 impl AgentPath {
+    /// Claude Code's `program`, as the user's Claude settings set Remote Control, with no rewind.
+    pub fn claude(program: impl Into<PathBuf>) -> AgentPath {
+        AgentPath::Claude {
+            program: program.into(),
+            remote_control: None,
+            rewind: None,
+        }
+    }
+
     /// Which path it is.
     pub fn kind(&self) -> PathKind {
         match self {
@@ -63,6 +84,8 @@ impl AgentPath {
             AgentPath::Own(_) => PathKind::Own,
             #[cfg(any(test, feature = "selftest"))]
             AgentPath::Scripted(_) => PathKind::Scripted,
+            #[cfg(any(test, feature = "selftest"))]
+            AgentPath::Replay(_) => PathKind::Replay,
         }
     }
 }

@@ -103,7 +103,7 @@ impl Driver {
     }
 
     /// The request `request`, as it waits now.
-    fn pending(&self, request: &str) -> Option<EntryKind> {
+    pub(super) fn pending(&self, request: &str) -> Option<EntryKind> {
         let thread = self.backend.snapshot();
         thread
             .pending_requests()

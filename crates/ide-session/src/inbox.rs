@@ -91,7 +91,20 @@ pub(crate) enum Inbound {
         /// Why.
         message: String,
     },
-    /// Anything the driver does not act on, such as a Remote Control state; it only wakes the driver.
+    /// The end of `turn` is recorded in its checkpoint.
+    Finished {
+        /// The turn.
+        turn: TurnId,
+        /// The commit of the checkpoint taken before the turn.
+        started: ide_git::CommitId,
+        /// The checkpoint with the end recorded.
+        finished: ide_git::Checkpoint,
+    },
+    /// Claude Code reported a failure, typed; `Failed` with its words came just before.
+    ClaudeFailed(ide_claude::SessionError),
+    /// Claude's Remote Control connection changed.
+    RemoteControl,
+    /// Anything the driver does not act on, such as Codex's Remote Control state; it only wakes the driver.
     Other,
 }
 
@@ -150,9 +163,12 @@ impl Inbox {
         move |event| match event {
             ide_claude::Event::Changed(changes) => inbox.changed(changes),
             ide_claude::Event::Capabilities => inbox.push(Inbound::Capabilities),
-            ide_claude::Event::Failed(error) => inbox.push(Inbound::Failed(error.explain())),
+            ide_claude::Event::Failed(error) => {
+                inbox.push(Inbound::Failed(error.explain()));
+                inbox.push(Inbound::ClaudeFailed(error));
+            }
             ide_claude::Event::Ended { stderr } => inbox.push(Inbound::Ended { stderr }),
-            ide_claude::Event::RemoteControl => inbox.push(Inbound::Other),
+            ide_claude::Event::RemoteControl => inbox.push(Inbound::RemoteControl),
         }
     }
 

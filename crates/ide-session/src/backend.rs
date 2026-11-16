@@ -40,6 +40,8 @@ pub(crate) enum Backend {
     Own(ide_agent::Session),
     #[cfg(any(test, feature = "selftest"))]
     Script(crate::script::Session),
+    #[cfg(any(test, feature = "selftest"))]
+    Replay(std::cell::RefCell<ide_claude::replay::Replay>),
 }
 
 /// The option of `request` that allows it once, or that refuses it.
@@ -50,6 +52,15 @@ fn option(request: &PermissionRequest, allow: bool) -> Option<usize> {
         PermissionOption::Deny
     };
     request.options.iter().position(|o| *o == wanted)
+}
+
+/// `reply` in Claude's terms.
+fn plan_answer(reply: PlanReply) -> ide_claude::PlanAnswer {
+    match reply {
+        PlanReply::Approve => ide_claude::PlanAnswer::Approve,
+        PlanReply::Revise(feedback) => ide_claude::PlanAnswer::Revise(feedback),
+        PlanReply::Reject => ide_claude::PlanAnswer::Reject,
+    }
 }
 
 fn unsupported(what: &str) -> String {
@@ -66,6 +77,8 @@ impl Backend {
             Backend::Own(s) => s.snapshot(),
             #[cfg(any(test, feature = "selftest"))]
             Backend::Script(s) => s.snapshot(),
+            #[cfg(any(test, feature = "selftest"))]
+            Backend::Replay(r) => r.borrow().thread().clone(),
         }
     }
 
@@ -79,6 +92,8 @@ impl Backend {
             Backend::Own(_) => true,
             #[cfg(any(test, feature = "selftest"))]
             Backend::Script(s) => !s.is_ended(),
+            #[cfg(any(test, feature = "selftest"))]
+            Backend::Replay(_) => false,
         }
     }
 
@@ -92,6 +107,8 @@ impl Backend {
             Backend::Own(_) => false,
             #[cfg(any(test, feature = "selftest"))]
             Backend::Script(s) => s.is_ended(),
+            #[cfg(any(test, feature = "selftest"))]
+            Backend::Replay(_) => false,
         }
     }
 
@@ -105,27 +122,31 @@ impl Backend {
         matches!(self, Backend::Codex(_))
     }
 
-    pub(crate) fn send(&self, message: UserMessage, schema: Option<Value>) -> Result<(), SendFailure> {
+    /// Sends `message`; the agent's id for it, where the path gives one (Claude's, which rewinding names).
+    pub(crate) fn send(&self, message: UserMessage, schema: Option<Value>) -> Result<Option<String>, SendFailure> {
         let codex = |e: ide_codex::SessionError| match e {
             ide_codex::SessionError::Busy => SendFailure::Busy,
             other => SendFailure::Failed(other.to_string()),
         };
+        let none = |()| None;
         match (self, schema) {
-            (Backend::Codex(s), Some(schema)) => s.send_with_schema(message, schema).map_err(codex),
+            (Backend::Codex(s), Some(schema)) => s.send_with_schema(message, schema).map(none).map_err(codex),
             (_, Some(_)) => Err(SendFailure::Failed(unsupported("schema for its answer"))),
-            (Backend::Claude(s), None) => s.send(message).map(drop).map_err(|e| SendFailure::Failed(e.explain())),
-            (Backend::Codex(s), None) => s.send(message).map_err(codex),
-            (Backend::OpenCode(s), None) => s.send(message).map_err(|e| match e {
+            (Backend::Claude(s), None) => s.send(message).map(Some).map_err(|e| SendFailure::Failed(e.explain())),
+            (Backend::Codex(s), None) => s.send(message).map(none).map_err(codex),
+            (Backend::OpenCode(s), None) => s.send(message).map(none).map_err(|e| match e {
                 ide_opencode::SessionError::Busy => SendFailure::Busy,
                 other => SendFailure::Failed(other.to_string()),
             }),
-            (Backend::Acp(s), None) => s.send(message).map_err(|e| SendFailure::Failed(e.explain())),
-            (Backend::Own(s), None) => s.send(message).map_err(|e| match e {
+            (Backend::Acp(s), None) => s.send(message).map(none).map_err(|e| SendFailure::Failed(e.explain())),
+            (Backend::Own(s), None) => s.send(message).map(none).map_err(|e| match e {
                 ide_agent::SessionError::Busy => SendFailure::Busy,
                 other => SendFailure::Failed(other.explain()),
             }),
             #[cfg(any(test, feature = "selftest"))]
-            (Backend::Script(s), None) => s.send(message).map_err(SendFailure::Failed),
+            (Backend::Script(s), None) => s.send(message).map(none).map_err(SendFailure::Failed),
+            #[cfg(any(test, feature = "selftest"))]
+            (Backend::Replay(_), None) => Err(SendFailure::Failed(unsupported("prompts"))),
         }
     }
 
@@ -139,6 +160,8 @@ impl Backend {
             Backend::Own(s) => s.cancel(),
             #[cfg(any(test, feature = "selftest"))]
             Backend::Script(s) => s.cancel(),
+            #[cfg(any(test, feature = "selftest"))]
+            Backend::Replay(_) => {}
         }
     }
 
@@ -152,6 +175,16 @@ impl Backend {
             Backend::Own(s) => s.stop(),
             #[cfg(any(test, feature = "selftest"))]
             Backend::Script(s) => s.stop(),
+            #[cfg(any(test, feature = "selftest"))]
+            Backend::Replay(_) => {}
+        }
+    }
+
+    /// The Claude session, for what only Claude Code offers; `None` on the other paths.
+    pub(crate) fn claude(&self) -> Option<&ide_claude::Session> {
+        match self {
+            Backend::Claude(s) => Some(s),
+            _ => None,
         }
     }
 
@@ -232,6 +265,8 @@ impl Backend {
             }
             #[cfg(any(test, feature = "selftest"))]
             Backend::Script(s) => s.answer(id, allow, reason),
+            #[cfg(any(test, feature = "selftest"))]
+            Backend::Replay(_) => Err(unsupported("answers")),
         }
     }
 
@@ -251,6 +286,8 @@ impl Backend {
             Backend::OpenCode(s) => s.answer_questions(request, answers).map_err(|e| e.to_string()),
             #[cfg(any(test, feature = "selftest"))]
             Backend::Script(s) => s.answer_questions(request, answers),
+            #[cfg(any(test, feature = "selftest"))]
+            Backend::Replay(_) => Err(unsupported("answers")),
             Backend::Acp(_) | Backend::Own(_) => Err(unsupported("answers to questions")),
         }
     }
@@ -258,14 +295,7 @@ impl Backend {
     /// Answers the plan `request`.
     pub(crate) fn plan(&self, request: &str, reply: PlanReply) -> Result<(), String> {
         match self {
-            Backend::Claude(s) => {
-                let answer = match reply {
-                    PlanReply::Approve => ide_claude::PlanAnswer::Approve,
-                    PlanReply::Revise(feedback) => ide_claude::PlanAnswer::Revise(feedback),
-                    PlanReply::Reject => ide_claude::PlanAnswer::Reject,
-                };
-                s.answer_plan(request, answer).map_err(|e| e.explain())
-            }
+            Backend::Claude(s) => s.answer_plan(request, plan_answer(reply)).map_err(|e| e.explain()),
             #[cfg(any(test, feature = "selftest"))]
             Backend::Script(s) => s.answer_plan(request, reply),
             _ => Err(unsupported("plans")),
@@ -282,5 +312,56 @@ impl Backend {
             }
             _ => false,
         }
+    }
+
+    /// Answers `request` as the user does in an AI tab: with the input they edited and the suggested rules to keep,
+    /// which only Claude takes; the other paths take an answer without them.
+    pub(crate) fn permission_as(
+        &self,
+        request: &PermissionRequest,
+        answer: ide_claude::PermissionAnswer,
+    ) -> Result<(), String> {
+        if let Backend::Claude(s) = self {
+            return s.answer(&request.request_id, answer).map_err(|e| e.explain());
+        }
+        match answer {
+            ide_claude::PermissionAnswer::Allow { updated_input, always }
+                if updated_input.is_none() && always.is_empty() =>
+            {
+                self.permission(request, true, None)
+            }
+            ide_claude::PermissionAnswer::Allow { .. } => Err(unsupported("edited input or rule to keep")),
+            ide_claude::PermissionAnswer::Deny { message, .. } => self.permission(request, false, Some(&message)),
+        }
+    }
+
+    /// Whether a recording plays instead of an agent.
+    pub(crate) fn is_replay(&self) -> bool {
+        #[cfg(any(test, feature = "selftest"))]
+        {
+            matches!(self, Backend::Replay(_))
+        }
+        #[cfg(not(any(test, feature = "selftest")))]
+        {
+            false
+        }
+    }
+}
+
+#[cfg(any(test, feature = "selftest"))]
+impl Backend {
+    /// Plays recorded `lines` into a recording's thread; what changed, `None` on the other paths.
+    pub(crate) fn feed(&self, lines: &str) -> Option<Vec<ide_thread::Change>> {
+        match self {
+            Backend::Replay(replay) => Some(replay.borrow_mut().feed_all(lines)),
+            _ => None,
+        }
+    }
+
+    /// Answers the plan `request` of a recording with the frame a session would send; what changed, `None` on the
+    /// other paths.
+    pub(crate) fn replay_plan(&self, request: &str, reply: PlanReply) -> Option<Vec<ide_thread::Change>> {
+        let Backend::Replay(replay) = self else { return None };
+        Some(replay.borrow_mut().answer_plan(request, &plan_answer(reply)))
     }
 }

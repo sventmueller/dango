@@ -62,10 +62,13 @@ impl Checkpointer {
         let reporting = inbox.clone();
         let spawned = std::thread::Builder::new()
             .name("session-checkpoint".into())
-            .spawn(move || {
-                if let Err(message) = this.with(|c, _| c.finish(&checkpoint)) {
-                    inbox.push(Inbound::FinishFailed { turn, message });
-                }
+            .spawn(move || match this.with(|c, _| c.finish(&checkpoint)) {
+                Ok(finished) => inbox.push(Inbound::Finished {
+                    turn,
+                    started: checkpoint.commit.clone(),
+                    finished,
+                }),
+                Err(message) => inbox.push(Inbound::FinishFailed { turn, message }),
             });
         if let Err(error) = spawned {
             reporting.push(Inbound::FinishFailed {

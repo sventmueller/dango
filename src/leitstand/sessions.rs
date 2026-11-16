@@ -205,7 +205,7 @@ impl Leitstand {
             readiness,
         };
         let path = match ready.program {
-            Program::Claude(program) => AgentPath::Claude { program },
+            Program::Claude(program) => AgentPath::claude(program),
             Program::Codex(program) => AgentPath::Codex { program, version: None },
             Program::Own(config) => AgentPath::Own(config),
             #[cfg(feature = "selftest")]

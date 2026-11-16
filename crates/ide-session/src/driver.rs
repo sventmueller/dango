@@ -3,6 +3,7 @@
 //! prompts that wait, takes the checkpoint before each one, answers requests by its rule, ends every turn with a
 //! typed result and fans everything out to its subscribers.
 
+mod claude;
 mod requests;
 
 use std::collections::{HashSet, VecDeque};
@@ -56,6 +57,8 @@ pub enum SendError {
     Ended,
     /// The path takes no schema for an answer.
     NoSchema(PathKind),
+    /// The path refused the message, in its own words.
+    Refused(String),
 }
 
 impl std::fmt::Display for SendError {
@@ -63,6 +66,7 @@ impl std::fmt::Display for SendError {
         match self {
             SendError::Ended => f.write_str("the session has ended"),
             SendError::NoSchema(path) => write!(f, "{path:?} takes no schema for its answer"),
+            SendError::Refused(why) => f.write_str(why),
         }
     }
 }
@@ -287,9 +291,14 @@ impl Driver {
     }
 
     /// Stops the turn that runs; background work goes on (E23). A prompt still waiting for its checkpoint does not
-    /// go out.
+    /// go out. For the user, it also stops a turn the agent began by itself, as an AI tab does.
     pub fn stop_turn(&mut self) {
-        let Some(open) = self.open.as_mut() else { return };
+        let Some(open) = self.open.as_mut() else {
+            if matches!(self.contract, Contract::User(_)) {
+                self.backend.cancel();
+            }
+            return;
+        };
         match open.phase {
             Phase::Checkpointing(_) | Phase::Retrying(_) => {
                 let mut signals = Vec::new();
@@ -442,6 +451,17 @@ impl Driver {
             }
             Inbound::Checkpointed { turn, result } => self.checkpointed(turn, result, signals),
             Inbound::FinishFailed { turn, message } => signals.push(Signal::CheckpointFailed { turn, message }),
+            Inbound::Finished {
+                turn,
+                started,
+                finished,
+            } => signals.push(Signal::CheckpointFinished {
+                turn,
+                started,
+                finished,
+            }),
+            Inbound::ClaudeFailed(error) => signals.push(Signal::ClaudeFailed(error)),
+            Inbound::RemoteControl => signals.push(Signal::RemoteControl),
             Inbound::Other => {}
         }
     }
@@ -518,7 +538,10 @@ impl Driver {
         };
         match self.checkpointer.clone() {
             Some(checkpointer) => {
-                let label = first_line(&prompt.message.text, 80);
+                let label = match self.contract {
+                    Contract::User(_) => claude::label(&prompt.message.text),
+                    Contract::Order(_) => first_line(&prompt.message.text, 80),
+                };
                 let buffers = std::mem::take(&mut prompt.buffers);
                 checkpointer.create(turn, label, buffers, self.inbox.clone());
                 self.open = Some(Open::new(turn, Phase::Checkpointing(prompt)));
@@ -563,20 +586,30 @@ impl Driver {
         let working = self.backend.busy() || self.backend.snapshot().status() != Status::Idle;
         let Some(open) = self.open.as_mut() else { return };
         open.checkpoint = checkpoint;
-        if let Err(SendFailure::Busy) = sent {
-            open.phase = Phase::Retrying(prompt);
-            self.inbox.poke();
-            return;
-        }
+        let sent = match sent {
+            Err(SendFailure::Busy) => {
+                open.phase = Phase::Retrying(prompt);
+                self.inbox.poke();
+                return;
+            }
+            Ok(id) => Ok(id),
+            Err(SendFailure::Failed(message)) => Err(message),
+        };
         open.phase = Phase::Running;
         open.since = since;
         open.running_seen = working;
         if !std::mem::replace(&mut open.announced, true) {
             signals.push(Signal::TurnStarted(open.turn));
         }
-        if let Err(SendFailure::Failed(message)) = sent {
+        signals.push(Signal::Delivered {
+            turn: open.turn,
+            sent: sent.clone(),
+            checkpoint: open.checkpoint.clone(),
+        });
+        if let Err(message) = sent {
             self.end_turn(Outcome::Failed(message), signals);
         }
+
     }
 
     /// Sends a prompt again that the session was not ready to take.

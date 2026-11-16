@@ -50,7 +50,11 @@ pub(crate) fn start(launch: Launch, supervisor: &Supervisor, inbox: &Arc<Inbox>)
         contract,
     };
     match path {
-        AgentPath::Claude { program } => claude(program, common, supervisor, inbox),
+        AgentPath::Claude {
+            program,
+            remote_control,
+            rewind,
+        } => claude(program, (remote_control, rewind), common, supervisor, inbox),
         AgentPath::Codex { program, version } => codex(program, version, common, supervisor, inbox),
         AgentPath::OpenCode { program, version } => opencode(program, version, common, supervisor, inbox),
         AgentPath::Acp(launch) => acp(*launch, common, supervisor, inbox),
@@ -62,6 +66,8 @@ pub(crate) fn start(launch: Launch, supervisor: &Supervisor, inbox: &Arc<Inbox>)
             common.thread,
             inbox.script(),
         ))),
+        #[cfg(any(test, feature = "selftest"))]
+        AgentPath::Replay(replay) => Ok(Backend::Replay(std::cell::RefCell::new(*replay))),
     }
 }
 
@@ -87,6 +93,8 @@ fn agent_id(path: &AgentPath) -> String {
         AgentPath::Own(_) => ide_agent::session::AGENT_ID.into(),
         #[cfg(any(test, feature = "selftest"))]
         AgentPath::Scripted(_) => "script".into(),
+        #[cfg(any(test, feature = "selftest"))]
+        AgentPath::Replay(_) => ide_claude::AGENT.into(),
     }
 }
 
@@ -108,6 +116,7 @@ pub(crate) fn claude_order(launch: &mut ide_claude::Launch, order: &Order) {
 
 fn claude(
     program: std::path::PathBuf,
+    (remote_control, rewind): (Option<bool>, Option<ide_thread::Rewind>),
     common: Common,
     supervisor: &Supervisor,
     inbox: &Arc<Inbox>,
@@ -117,6 +126,10 @@ fn claude(
     launch.effort = common.effort;
     launch.resume = common.resume;
     launch.session_id = common.session_id;
+    launch.remote_control = remote_control;
+    if let (Some(rewind), Some(session)) = (rewind, launch.resume.clone()) {
+        launch.rewind(&session, &rewind);
+    }
     match &common.contract {
         Contract::User(choices) => {
             launch.permission_mode = Some(choices.mode.clone().unwrap_or_else(|| "default".into()));

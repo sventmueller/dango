@@ -247,7 +247,7 @@ fn opencode_acp_and_paths_without_an_allow_list_take_no_order_and_start_nothing(
         })
     ));
     let elsewhere = order(&scratch.join("other"), None);
-    let claude = AgentPath::Claude { program: missing };
+    let claude = AgentPath::claude(missing);
     assert!(matches!(
         refused(&mut registry, claude, elsewhere),
         Some(LaunchError::Folder { .. })
@@ -280,7 +280,7 @@ fn claude(dir: &Path, frames: &[String], after: &[String], exit: bool) -> (Agent
     std::fs::write(&script, body).unwrap();
     std::fs::set_permissions(&script, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
     let env = vec![("PATH".to_string(), "/usr/bin:/bin".to_string())];
-    (AgentPath::Claude { program: script }, env)
+    (AgentPath::claude(script), env)
 }
 
 /// The frames the CLI printed in the recording `name` of `ide-claude`, before any line containing `until`.

@@ -49,6 +49,16 @@ pub enum Signal {
     Resynced,
     /// Reconciling after a gap failed: no prompt goes out, and an order pauses (C62).
     NeedsPause(String),
+    /// A prompt that waited went out, after its checkpoint, or the path refused it.
+    Delivered {
+        /// The turn it began.
+        turn: TurnId,
+        /// The agent's id of the message where the path gives one, which rewinding names; or the path's words
+        /// when it refused the prompt.
+        sent: Result<Option<String>, String>,
+        /// The checkpoint taken before it.
+        checkpoint: Option<ide_git::Checkpoint>,
+    },
     /// The checkpoint before a turn's prompt, or its end, could not be recorded.
     CheckpointFailed {
         /// The turn.
@@ -56,8 +66,21 @@ pub enum Signal {
         /// Why.
         message: String,
     },
+    /// The end of a turn is recorded in the checkpoint taken before it.
+    CheckpointFinished {
+        /// The turn.
+        turn: TurnId,
+        /// The commit of the checkpoint before the turn.
+        started: ide_git::CommitId,
+        /// The checkpoint with the end recorded, which restoring takes.
+        finished: ide_git::Checkpoint,
+    },
     /// The path reports a failure, such as a missing sign-in, in its own words.
     Failed(String),
+    /// Claude Code's failure behind the `Failed` just before, typed, such as a refused rewind.
+    ClaudeFailed(ide_claude::SessionError),
+    /// Claude's Remote Control connection changed; `Driver::claude` reads it.
+    RemoteControl,
     /// The agent's process ended.
     Ended {
         /// The end of its error output.
