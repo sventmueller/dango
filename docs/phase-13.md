@@ -1014,6 +1014,25 @@ Die Zählung setzt die aus phase-12 (A5–A13) fort. A16 ist mit B49 entfallen.
   - Zu prüfen vor der Entscheidung über O1, je Hersteller mit Datum und Quelle: Anthropic, OpenAI, Google und die
     Anbieter hinter OpenCode.
   - Fällt ein Abo-Weg weg, bleibt er im Routing nur mit API-Schlüssel.
+  - **Geprüft am 2026-11-16:**
+    - **Anthropic:** Die Consumer Terms (gültig ab 2025-10-08, §3 Nr. 7) verbieten Zugriff „through automated or
+      non-human means … bot, script“ ohne API-Schlüssel oder ausdrückliche Erlaubnis.
+      - Die Seite „Legal and compliance“ von Claude Code verbietet Dritten, Abo-Anmeldungen anzubieten, zu
+        vermitteln oder Zugangsdaten zu speichern. Ausgenommen ist ausdrücklich ein Nutzer, der sich im
+        unveränderten Claude-Code-Programm mit seinem eigenen Abo anmeldet; das ist Dangos Weg (E21).
+      - Dieselbe Seite nimmt für die Grenzen der Pläne „ordinary, individual usage“ an. Die Authentifizierungs-Doku
+        empfiehlt `claude setup-token` ausdrücklich für Skripte und unbeaufsichtigte Läufe.
+      - Ergebnis: vertretbar, solange Dango Zugangsdaten nie berührt und wenige Aufträge parallel laufen. Eindeutig
+        abgesichert sind unbeaufsichtigte Läufe nur mit API-Schlüssel.
+      - Die angekündigte Trennung von Agent-SDK- und `claude -p`-Nutzung vom Abo (2026-06-15) ist laut
+        Sekundärquellen ausgesetzt (R1).
+    - **OpenAI:** Die Codex-Doku empfiehlt API-Schlüssel für Automatisierung; ein Verbot unbeaufsichtigter Läufe mit
+      ChatGPT-Anmeldung fand sich dort nicht. Die Terms of Use ließen sich nicht abrufen (403); das bleibt offen.
+    - **Google:** Antigravity hat in Aufträgen keine Rolle (E173). Google-Modelle laufen nur über den eigenen Agenten
+      mit API-Schlüssel und damit unter den API-Bedingungen.
+    - **Anbieter hinter OpenCode:** OpenCode hat in Aufträgen keine Rolle (E173).
+  - **Folge für O1:** Der Modus „Auftrag“ ist für Claude mit eigenem Abo vertretbar, mit API-Schlüssel eindeutig. Für
+    Codex mit ChatGPT-Anmeldung fehlt der Wortlaut der Terms of Use.
 - **A18** Eine Aktivität über `NSProcessInfo` mit `NSActivityUserInitiated` hält den Mac im Leerlauf wach und schaltet
   App Nap ab, nicht aber bei geschlossenem Deckel ohne externen Bildschirm. Zu prüfen in B38.
 - **A19** Jeder Weg lässt sich zu einer Antwort nach einem festen JSON-Schema bringen, oder wenigstens zu einem
