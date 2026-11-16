@@ -255,20 +255,20 @@ fn paid_groups_run_only_when_named_or_asked_for_and_the_run_says_so() {
     assert_eq!(
         selected(&["--paid"]),
         [
-            "lsp", "git", "ci", "dap", "claude", "paste", "acp", "predict", "copilot"
+            "lsp", "git", "ci", "dap", "claude", "paste", "acp", "predict", "copilot", "factory"
         ]
     );
     assert_eq!(selected(&["--only", "acp"]), ["acp"]);
     assert_eq!(
         selected(&["--only", "lsp", "--paid"]),
-        ["lsp", "claude", "paste", "acp", "copilot"]
+        ["lsp", "claude", "paste", "acp", "copilot", "factory"]
     );
     let notice = |args: &[&str]| Options::parse(&strings(args)).unwrap().paid_notice();
     assert_eq!(
         notice(&[]).as_deref(),
         Some(
-            "not run, as they use the owner's paid accounts: claude, paste, acp, copilot; name them in --only or add \
-             --paid"
+            "not run, as they use the owner's paid accounts: claude, paste, acp, copilot, factory; name them in \
+             --only or add --paid"
         )
     );
     assert_eq!(
@@ -362,7 +362,7 @@ fn steps_of(probe: &dyn Probe, group: &str) -> Vec<Step> {
 #[test]
 fn the_groups_that_start_coding_agents_say_they_use_paid_accounts() {
     let paid: Vec<&str> = GROUPS.iter().filter(|g| g.paid).map(|g| g.name).collect();
-    assert_eq!(paid, ["claude", "paste", "acp", "copilot"]);
+    assert_eq!(paid, ["claude", "paste", "acp", "copilot", "factory"]);
     let group = GROUPS.iter().find(|g| g.name == "acp").unwrap();
     assert!(heading(group).contains("uses the owner's paid accounts"));
     let fake = complete();

@@ -69,6 +69,14 @@ pub(crate) const GROUPS: &[Group] = &[
         uses: "the Copilot account: two completions of a tiny made-up file",
         steps: copilot,
     },
+    Group {
+        name: "factory",
+        title: "real orders with claude and codex under their bounds",
+        paid: true,
+        uses: "the Claude and OpenAI accounts: three short turns each, with haiku and gpt-6-luna unless \
+               IDE_LIVE_ORDERS_CLAUDE_MODEL or IDE_LIVE_ORDERS_CODEX_MODEL names another model",
+        steps: factory,
+    },
 ];
 
 const NPM: &str = "registry.npmjs.org";
@@ -439,4 +447,31 @@ fn copilot(_: &Context) -> Vec<Step> {
             "copilot_proposes_a_completion_for_the_signed_in_user",
         ),
     )]
+}
+
+/// The live orders of B43: each CLI as builder and reviewer, with the bounds' negative cases; the per-case tables land
+/// in `target/integration/factory`.
+fn factory(_: &Context) -> Vec<Step> {
+    let evidence = crate::target_dir().join("integration/factory");
+    let live = |name| Action::Test {
+        package: "ide-session",
+        file: "live_orders",
+        name,
+        env: vec![
+            ("IDE_LIVE_ORDERS".into(), "1".into()),
+            ("IDE_LIVE_ORDERS_EVIDENCE".into(), evidence.display().to_string()),
+        ],
+    };
+    vec![
+        step(
+            "claude as builder and reviewer of an order",
+            vec![Need::Program("claude"), CLAUDE],
+            live("claude_keeps_to_an_orders_bounds"),
+        ),
+        step(
+            "codex as builder and reviewer of an order",
+            vec![Need::Program("codex"), OPENAI],
+            live("codex_keeps_to_an_orders_bounds"),
+        ),
+    ]
 }
