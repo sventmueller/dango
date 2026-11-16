@@ -57,6 +57,7 @@ impl Harness {
             key: SessionKey("k-1".into()),
             role: ide_factory::Role::Builder,
             agent: Agent::Claude,
+            index: None,
             subscriber,
             prompts: BTreeMap::new(),
             requests: BTreeMap::new(),
@@ -219,4 +220,22 @@ fn a_launch_error_is_a_readiness_routing_records() {
     assert_eq!(window_seconds("five_hour"), 5 * 60 * 60);
     assert_eq!(window_seconds("seven_day_opus"), 7 * 24 * 60 * 60);
     assert_eq!(service(&Agent::Claude, true), "claude-subscription");
+}
+
+#[test]
+fn a_session_launches_only_while_its_order_waits_for_exactly_it_and_the_app_does_not_quit() {
+    use ide_factory::Role::{Builder, Reviewer};
+    let starting = Phase::Starting {
+        role: Builder,
+        index: 1,
+    };
+    assert!(still_wanted(Some(&starting), Builder, 1, false));
+    assert!(!still_wanted(Some(&starting), Builder, 1, true), "quitting");
+    assert!(!still_wanted(Some(&starting), Builder, 0, false), "another entry");
+    assert!(!still_wanted(Some(&starting), Reviewer, 1, false), "another role");
+    let aborted = Phase::Cleaning {
+        op: ide_factory::OperationId("op-2".into()),
+    };
+    assert!(!still_wanted(Some(&aborted), Builder, 1, false), "the order moved on");
+    assert!(!still_wanted(None, Builder, 1, false), "the order is gone");
 }

@@ -88,9 +88,57 @@ impl super::Leitstand {
         Ok(())
     }
 
-    /// Whether a factory asked for the wake lock, and whether the app holds the activity that keeps the Mac awake.
-    pub(crate) fn wake_lock(&self) -> (bool, bool) {
-        let held = self.shared.borrow().power.holds();
-        (self.probe.wake_asked.get(), held)
+    /// What the self-test sees of the wake lock (E169, R12).
+    pub(crate) fn wake_lock(&self) -> WakeLock {
+        let shared = self.shared.borrow();
+        WakeLock {
+            asked: self.probe.wake_asked.get(),
+            requested: shared.power.requested(),
+            activity: shared.power.holds(),
+        }
     }
+
+    /// Tells every folder that the Mac goes to sleep or woke up, as the workspace's notifications do (E168).
+    pub(crate) fn simulate_sleep(&self, cx: &std::rc::Rc<crate::context::AppContext>, asleep: bool) {
+        self.sleep(cx, asleep);
+    }
+
+    /// The wall clock when this run of the app started.
+    pub(crate) fn started_at(&self) -> u64 {
+        self.clock.run()
+    }
+
+    /// The ids of the orders of `root`'s factory.
+    pub(crate) fn order_ids(&self, root: &std::path::Path) -> Vec<ide_factory::OrderId> {
+        self.folders
+            .borrow()
+            .get(root)
+            .map(|f| f.factory.orders().map(|o| o.id().clone()).collect())
+            .unwrap_or_default()
+    }
+
+    /// The entries of the log of `order` of `root` as they are on disk now.
+    pub(crate) fn order_log(
+        &self,
+        root: &std::path::Path,
+        order: &ide_factory::OrderId,
+    ) -> Vec<ide_factory::log::LogEntry> {
+        let project = super::store::project(&super::store::base(), root);
+        std::fs::read_to_string(super::store::log_file(&project, order))
+            .unwrap_or_default()
+            .lines()
+            .filter_map(|line| serde_json::from_str(line).ok())
+            .collect()
+    }
+}
+
+/// What the self-test sees of the wake lock.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct WakeLock {
+    /// A factory asked to hold it since the self-test started.
+    pub(crate) asked: bool,
+    /// A factory holds it now.
+    pub(crate) requested: bool,
+    /// The activity that keeps the Mac awake is held, which a self-test never does.
+    pub(crate) activity: bool,
 }

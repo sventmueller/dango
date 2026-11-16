@@ -115,18 +115,19 @@ impl Leitstand {
         let root = root.to_path_buf();
         let defaults = defaults();
         let back = self.back();
-        let queued = ide_core::lane::DISK.try_run(move || {
-            let login = crate::environment::wait(std::time::Duration::from_secs(15)).unwrap_or_default();
-            let path = login
-                .iter()
-                .find(|(name, _)| name == "PATH")
-                .map(|(_, value)| value.as_str());
-            let rules = load(&root, &defaults, &confirmed, path);
-            back.deliver(Delivery::Input(root, Box::new(InputKind::Rules(Box::new(rules)))));
+        super::with_environment(move |login| {
+            let queued = ide_core::lane::DISK.try_run(move || {
+                let path = login
+                    .iter()
+                    .find(|(name, _)| name == "PATH")
+                    .map(|(_, value)| value.as_str());
+                let rules = load(&root, &defaults, &confirmed, path);
+                back.deliver(Delivery::Input(root, Box::new(InputKind::Rules(Box::new(rules)))));
+            });
+            if queued.is_err() {
+                ide_core::diag::report("reading a workflow file", "the disk lane took no more work");
+            }
         });
-        if queued.is_err() {
-            ide_core::diag::report("reading a workflow file", "the disk lane took no more work");
-        }
     }
 
     pub(super) fn reload_all_rules(&self) {

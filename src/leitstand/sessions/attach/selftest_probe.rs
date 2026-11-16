@@ -40,6 +40,7 @@ impl Leitstand {
             title: title.to_string(),
             key: SessionKey(format!("selftest-{id}")),
             role: ide_factory::Role::Builder,
+            index: None,
             agent: Agent::Claude,
             subscriber,
             prompts: BTreeMap::new(),

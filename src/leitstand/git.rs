@@ -441,21 +441,54 @@ pub(super) fn same_diff(repo: &Repository, old: (&str, &str), new: (&str, &str))
     Ok(repo.full_diff(old.0, old.1)? == repo.full_diff(new.0, new.1)?)
 }
 
-/// Reverses the hunks the user rejected at G2 in the worktree (C55): each names a file and the hunk's place in the
-/// diff of the order since `base`, as `path#index`.
+/// The name of `hunk` of the file `path` for partial acceptance (C55): the file and a hash of the hunk's place and
+/// lines, so a name never fits another change.
+pub(super) fn hunk_id(path: &str, hunk: &ide_git::Hunk) -> ide_factory::HunkId {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    let place = [hunk.old_start, hunk.old_count, hunk.new_start, hunk.new_count];
+    hasher.update(format!("{place:?}"));
+    for line in &hunk.lines {
+        hasher.update(match line.kind {
+            ide_git::LineKind::Context => b" ",
+            ide_git::LineKind::Added => b"+",
+            ide_git::LineKind::Removed => b"-",
+        });
+        hasher.update(&line.content);
+        hasher.update(if line.missing_newline { b"\\" } else { b"\n" });
+    }
+    let hash: String = hasher.finalize()[..16].iter().map(|b| format!("{b:02x}")).collect();
+    ide_factory::HunkId(format!("{path}#{hash}"))
+}
+
+/// Reverses the hunks the user rejected at G2 in the worktree (C55), each named by [`hunk_id`] in the diff of the
+/// order since `base`. When one of them is no longer in that diff, nothing is reversed, since the user chose from
+/// another diff.
 pub(super) fn reject_hunks(copy: &Repository, base: &str, hunks: &[ide_factory::HunkId]) -> ide_git::Result<()> {
-    let mut by_path: std::collections::BTreeMap<String, Vec<usize>> = std::collections::BTreeMap::new();
-    for hunk in hunks {
-        if let Some((path, index)) = hunk.0.rsplit_once('#')
-            && let Ok(index) = index.parse::<usize>()
-        {
-            by_path.entry(path.to_string()).or_default().push(index);
+    let diffs = copy.diff_since(base, &[] as &[PathBuf])?;
+    let mut chosen: Vec<(&ide_git::FileDiff, Vec<usize>)> = Vec::new();
+    let mut missing: Vec<&str> = Vec::new();
+    for wanted in hunks {
+        let found = diffs.iter().find_map(|diff| {
+            let path = diff.path().to_string_lossy();
+            let index = diff.hunks.iter().position(|hunk| hunk_id(&path, hunk) == *wanted)?;
+            Some((diff, index))
+        });
+        match found {
+            Some((diff, index)) => match chosen.iter_mut().find(|(d, _)| std::ptr::eq(*d, diff)) {
+                Some((_, indices)) => indices.push(index),
+                None => chosen.push((diff, vec![index])),
+            },
+            None => missing.push(&wanted.0),
         }
     }
-    for (path, indices) in by_path {
-        for diff in copy.diff_since(base, &[PathBuf::from(&path)])? {
-            copy.discard_hunks(&diff, &indices)?;
-        }
+    if !missing.is_empty() {
+        return Err(ide_git::Error::PatchDoesNotApply {
+            output: format!("not in the order's diff any more: {}", missing.join(", ")),
+        });
+    }
+    for (diff, indices) in chosen {
+        copy.discard_hunks(diff, &indices)?;
     }
     Ok(())
 }
