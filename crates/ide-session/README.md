@@ -19,7 +19,7 @@ flowchart TB
     rule -->|"left to the user: Signal::Waiting"| feeds
     driver -->|"gap in the stream: resync, or NeedsPause"| session
     driver -->|"signals and coalesced changes"| feeds["one feed per subscriber"]
-    feeds -->|"Driver::take: Batch, a redraw after a backlog"| views["views: Leitstand, order tab, orchestrator"]
+    feeds -->|"Driver::take: Batch, a redraw after a backlog"| views["views: AI tabs, Leitstand, orchestrator"]
     driver -->|"Signal::TurnEnded: succeeded, failed, cancelled, connection lost"| views
 ```
 

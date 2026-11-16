@@ -328,23 +328,22 @@ impl AgentTab {
             self.start_failed(problem);
             return;
         };
-        let resume = {
+        {
             let state = self.state.borrow();
             if state.sandbox() {
                 launch = launch.sandboxed(&agent.sandbox);
             }
-            thread
+            launch.resume = thread
                 .session()
                 .map(str::to_string)
-                .or_else(|| state.resume().map(|r| r.session.clone()))
-        };
+                .or_else(|| state.resume().map(|r| r.session.clone()));
+        }
         let Some(sessions) = self.sessions.clone() else {
             return self.start_failed(Problem::Start(start_problem(LaunchError::Start(String::new()))));
         };
         let (cwd, env) = (launch.cwd.clone(), launch.env.clone());
         let contract = ide_session::Contract::User(ide_session::UserChoices::default());
         let mut start = ide_session::Launch::new(ide_session::AgentPath::Acp(Box::new(launch)), cwd, env, contract);
-        start.resume = resume;
         start.thread = Some(thread);
         start.git = git;
         match crate::driven::Driven::start(&sessions, start) {
