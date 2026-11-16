@@ -1,0 +1,23 @@
+[package]
+name = "ide-session"
+version = "0.0.0"
+description = "One driver over every agent session, with or without a tab: start, send, answer requests by a rule, checkpoint before each prompt, fan events out to any number of views, and a typed end of each turn"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+selftest = []
+
+[dependencies]
+ide-acp = { workspace = true }
+ide-agent = { workspace = true }
+ide-claude = { workspace = true }
+ide-codex = { workspace = true }
+ide-git = { workspace = true }
+ide-opencode = { workspace = true }
+ide-process = { workspace = true }
+ide-thread = { workspace = true }

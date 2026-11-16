@@ -18,6 +18,8 @@ ide-opencode = { path = "crates/ide-opencode" }
 ide-core = { path = "crates/ide-core" }
 ide-dap = { path = "crates/ide-dap" }
 ide-document = { path = "crates/ide-document" }
+ide-factory = { path = "crates/ide-factory" }
+ide-session = { path = "crates/ide-session" }
 ide-git = { path = "crates/ide-git" }
 ide-lsp = { path = "crates/ide-lsp" }
 ide-docker = { path = "crates/ide-docker" }
