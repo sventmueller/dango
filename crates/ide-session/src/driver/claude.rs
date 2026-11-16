@@ -109,7 +109,9 @@ impl Driver {
     /// Plays recorded `lines` into the recording the session plays and hands what changed to the subscribers at
     /// once, without a hop to the main thread; what changed, nothing on the other paths.
     pub fn feed(&mut self, lines: &str) -> Vec<ide_thread::Change> {
-        let changes = self.backend.feed(lines).unwrap_or_default();
+        let Some(changes) = self.backend.feed(lines) else {
+            return Vec::new();
+        };
         self.publish_now(&changes);
         changes
     }
@@ -117,7 +119,9 @@ impl Driver {
     /// Answers the plan `request` of a played recording with the frame a session would send, handed to the
     /// subscribers at once; what changed, nothing on the other paths.
     pub fn replay_plan(&mut self, request: &str, reply: crate::PlanReply) -> Vec<ide_thread::Change> {
-        let changes = self.backend.replay_plan(request, reply).unwrap_or_default();
+        let Some(changes) = self.backend.replay_plan(request, reply) else {
+            return Vec::new();
+        };
         self.publish_now(&changes);
         changes
     }

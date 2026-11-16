@@ -48,6 +48,6 @@ ide-core = { workspace = true, features = ["testing"] }
 
 [features]
 # What the self-test reads of a tab and the panel and does with them, and the recordings and stubs it plays.
-selftest = ["ide-acp/testing", "ide-agent/testing"]
+selftest = ["ide-acp/testing", "ide-agent/testing", "ide-session/selftest"]
 # Dictation into the composer (E13).
 dictation = ["dep:ide-ui-dictation", "ide-ui-dictation/engine"]

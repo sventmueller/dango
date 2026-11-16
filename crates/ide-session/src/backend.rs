@@ -41,7 +41,7 @@ pub(crate) enum Backend {
     #[cfg(any(test, feature = "selftest"))]
     Script(crate::script::Session),
     #[cfg(any(test, feature = "selftest"))]
-    Replay(std::cell::RefCell<ide_claude::replay::Replay>),
+    Replay(Box<std::cell::RefCell<ide_claude::replay::Replay>>),
 }
 
 /// The option of `request` that allows it once, or that refuses it.

@@ -74,6 +74,10 @@ impl AgentTab {
         if self.is_driven() {
             return self.deliver(message, None);
         }
+        let claude = self.state.borrow().source().claude().cloned();
+        if let Some(driven) = claude {
+            return self.hand_over(&driven, message);
+        }
         self.state.borrow_mut().begin_send();
         self.refresh_composer();
         let key = self.key;
@@ -99,14 +103,44 @@ impl AgentTab {
         self.state.borrow_mut().delivering(&message);
         let text = message.text.clone();
         let sent = self.state.borrow().source().send(message);
+        self.delivered(&text, sent.map(|uuid| uuid.or(own_id)), checkpoint);
+    }
+
+    /// Hands `message` to the tab's Claude session in the registry, which takes the checkpoint before it and tells
+    /// with `Signal::Delivered` that it went out.
+    fn hand_over(&self, driven: &crate::driven::Driven, message: UserMessage) {
+        self.state.borrow_mut().begin_send();
+        self.refresh_composer();
+        let prompt = ide_session::Prompt {
+            message: message.clone(),
+            buffers: crate::host::host().unsaved_buffers(&self.cwd),
+            ..ide_session::Prompt::default()
+        };
+        match driven.prompt(prompt) {
+            Ok(turn) => self.state.borrow_mut().handed_over(turn, message),
+            Err(error) => {
+                self.state.borrow_mut().delivering(&message);
+                self.delivered(&message.text, Err(error), None);
+            }
+        }
+    }
+
+    /// Takes in that a message of `text` went out with `checkpoint` taken before it and the id `sent` gives, or
+    /// did not.
+    pub(super) fn delivered(
+        &self,
+        text: &str,
+        sent: Result<Option<String>, ide_core::explain::Explained>,
+        checkpoint: Option<ide_git::Checkpoint>,
+    ) {
         match sent {
-            Ok(uuid) => {
-                self.state.borrow_mut().sent(uuid.or(own_id), checkpoint);
+            Ok(id) => {
+                self.state.borrow_mut().sent(id, checkpoint);
             }
             Err(error) => {
                 ide_ui_common::diag::report("sending to the agent", &error);
                 if self.composer.text().is_empty() {
-                    self.composer.set_text(&text);
+                    self.composer.set_text(text);
                 }
             }
         }

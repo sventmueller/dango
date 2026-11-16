@@ -100,6 +100,8 @@ struct Turn {
     sent_at: Option<Instant>,
     /// The checkpoint of the turn that runs.
     checkpoint: Option<Checkpoint>,
+    /// The message the registry's driver holds until its checkpoint is taken and it goes out, with its turn.
+    handed: Option<(ide_session::TurnId, UserMessage)>,
 }
 
 /// The rewind the session started with, until the agent accepted it.
@@ -155,6 +157,7 @@ impl State {
                 sending: false,
                 sent_at: None,
                 checkpoint: None,
+                handed: None,
             },
             offered: Offered::default(),
             rewind: Rewind::default(),
@@ -329,8 +332,13 @@ impl State {
         self.problem = Some(problem);
     }
 
-    /// Takes the session off the tab, for the caller to end it.
+    /// Takes the session off the tab, for the caller to end it; a message its driver still held before its checkpoint
+    /// goes back to the head of the queue, for the next session.
     pub(crate) fn end(&mut self) -> Source {
+        if let Some((_, message)) = self.turn.handed.take() {
+            self.turn.sending = false;
+            self.queue.insert(0, message);
+        }
         std::mem::replace(&mut self.run.source, Source::Idle)
     }
 
@@ -442,6 +450,22 @@ impl State {
     /// Notes that a checkpoint is being taken before a prompt goes out.
     pub(crate) fn begin_send(&mut self) {
         self.turn.sending = true;
+    }
+
+    /// Notes that the registry's driver took `message`, which begins `turn` once its checkpoint is taken.
+    pub(crate) fn handed_over(&mut self, turn: ide_session::TurnId, message: UserMessage) {
+        self.turn.handed = Some((turn, message));
+    }
+
+    /// The message that began `turn` and went out now, which the driver took from the tab.
+    pub(crate) fn take_handed(&mut self, turn: ide_session::TurnId) -> Option<UserMessage> {
+        match self.turn.handed.take() {
+            Some((handed, message)) if handed == turn => Some(message),
+            other => {
+                self.turn.handed = other;
+                None
+            }
+        }
     }
 
     /// Notes that `message` goes out now that its checkpoint is taken.

@@ -78,9 +78,10 @@ pub fn notifications_posted() -> usize {
 /// Opens an AI tab in `cwd` titled `title` that plays recordings instead of running `claude`, for the self-test.
 pub fn open_replay_in(controller: &(impl AsWindow + ?Sized), cwd: std::path::PathBuf, title: &str) -> Rc<AgentTab> {
     let controller = &controller.as_window();
-    let tab = AgentTab::open_replay_in(controller, cwd);
+    let state = crate::host::state();
+    let tab = AgentTab::open_replay_in(controller, &state, cwd);
     tab.set_custom_title(title);
-    with_tabs(|tabs| tabs.borrow_mut().push(tab.clone()));
+    state.agent_tabs.tabs.borrow_mut().push(tab.clone());
     changed(controller);
     tab
 }
@@ -88,8 +89,9 @@ pub fn open_replay_in(controller: &(impl AsWindow + ?Sized), cwd: std::path::Pat
 /// Opens an AI tab that plays recordings instead of running `claude`, for the self-test.
 pub fn open_replay(controller: &(impl AsWindow + ?Sized)) -> Option<Rc<AgentTab>> {
     let controller = &controller.as_window();
-    let tab = AgentTab::open_replay(controller)?;
-    with_tabs(|tabs| tabs.borrow_mut().push(tab.clone()));
+    let state = crate::host::state();
+    let tab = AgentTab::open_replay(controller, &state)?;
+    state.agent_tabs.tabs.borrow_mut().push(tab.clone());
     changed(controller);
     Some(tab)
 }

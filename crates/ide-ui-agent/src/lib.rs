@@ -120,11 +120,6 @@ impl AgentKey {
     }
 }
 
-/// The key of an AI tab that opens now, which no tab had before.
-pub(crate) fn next_key() -> AgentKey {
-    AgentKey(crate::host::state().agent_tabs.keys.next())
-}
-
 /// The state of the AI tabs, what they show, and the Agents panels.
 #[derive(Default)]
 pub struct State {
@@ -138,6 +133,22 @@ pub struct State {
     usage: usage::Usage,
     #[cfg(feature = "selftest")]
     rewind_alerts: rewind_actions::RewindAlerts,
+    /// The app's session registry, where Claude tabs run their sessions (B37b).
+    sessions: RefCell<Option<Rc<dyn Sessions>>>,
+}
+
+impl State {
+    /// Makes `sessions` the registry the AI tabs opened from now on start their Claude sessions in; once, as the app
+    /// starts.
+    pub fn install_sessions(&self, sessions: Rc<dyn Sessions>) {
+        *self.sessions.borrow_mut() = Some(sessions);
+    }
+
+    /// The key of an AI tab that opens now, which no tab had before, and the app's session registry it starts its
+    /// own Claude session in.
+    pub(crate) fn admit(&self) -> (AgentKey, Option<Rc<dyn Sessions>>) {
+        (AgentKey(self.agent_tabs.keys.next()), self.sessions.borrow().clone())
+    }
 }
 
 fn with_tabs<R>(f: impl FnOnce(&RefCell<Vec<Rc<AgentTab>>>) -> R) -> R {
@@ -159,13 +170,14 @@ pub fn open_agent(controller: &(impl AsWindow + ?Sized), agent: Agent, resume: O
         open.select();
         return Some(open);
     }
-    let tab = AgentTab::open(controller, agent, resume)?;
-    started(controller, &tab);
+    let state = crate::host::state();
+    let tab = AgentTab::open(controller, &state, agent, resume)?;
+    started(controller, &state, &tab);
     Some(tab)
 }
 
-fn started(controller: &Window, tab: &Rc<AgentTab>) {
-    with_tabs(|tabs| tabs.borrow_mut().push(tab.clone()));
+fn started(controller: &Window, state: &State, tab: &Rc<AgentTab>) {
+    state.agent_tabs.tabs.borrow_mut().push(tab.clone());
     tab.start();
     changed(controller);
 }
@@ -176,9 +188,10 @@ pub fn open_own(
     choice: Option<crate::own_agent::ModelChoice>,
 ) -> Option<Rc<AgentTab>> {
     let controller = &controller.as_window();
-    let tab = AgentTab::open(controller, Agent::Own, None)?;
+    let state = crate::host::state();
+    let tab = AgentTab::open(controller, &state, Agent::Own, None)?;
     tab.state.borrow_mut().pick_own(choice);
-    started(controller, &tab);
+    started(controller, &state, &tab);
     Some(tab)
 }
 
@@ -191,13 +204,12 @@ pub fn open_agent_in(
     title: Option<&str>,
 ) -> Option<Rc<AgentTab>> {
     let controller = &controller.as_window();
-    let tab = AgentTab::open_in(controller, agent, cwd, None)?;
+    let state = crate::host::state();
+    let tab = AgentTab::open_in(controller, &state, agent, cwd, None)?;
     if let Some(title) = title {
         tab.set_custom_title(title);
     }
-    with_tabs(|tabs| tabs.borrow_mut().push(tab.clone()));
-    tab.start();
-    changed(controller);
+    started(controller, &state, &tab);
     Some(tab)
 }
 

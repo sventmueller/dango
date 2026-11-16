@@ -38,25 +38,30 @@ pub struct Inspection {
 }
 
 impl AgentTab {
-    /// A tab that plays recordings, with no process behind it.
-    pub(crate) fn open_replay(controller: &Window) -> Option<Rc<AgentTab>> {
+    /// A tab that plays recordings, with no process behind it; `state` holds the AI tabs.
+    pub(crate) fn open_replay(controller: &Window, state: &crate::State) -> Option<Rc<AgentTab>> {
         let cwd = controller.project_root().or_else(|| controller.project())?;
-        Some(AgentTab::open_replay_in(controller, cwd))
+        Some(AgentTab::open_replay_in(controller, state, cwd))
     }
 
-    /// A tab that plays recordings in `cwd`, for the self-test.
-    pub(crate) fn open_replay_in(controller: &Window, cwd: PathBuf) -> Rc<AgentTab> {
-        let thread_id = ThreadId::new();
-        let thread = Thread::new(thread_id.clone(), ide_claude::AGENT, &cwd);
-        let source = source::replay(thread.clone());
+    /// A tab that plays recordings in `cwd`, for the self-test, in the app's session registry.
+    pub(crate) fn open_replay_in(controller: &Window, state: &crate::State, cwd: PathBuf) -> Rc<AgentTab> {
+        let thread = Thread::new(ThreadId::new(), ide_claude::AGENT, &cwd);
         let tab = AgentTab::shared(AgentTab::build(
             controller,
+            state,
             Agent::Claude,
             cwd,
-            thread_id,
-            thread,
-            source,
+            thread.clone(),
+            source::Source::Idle,
         ));
+        if let Some(source) = tab
+            .sessions
+            .as_ref()
+            .and_then(|sessions| source::replay(sessions, thread))
+        {
+            tab.state.borrow_mut().started(source);
+        }
         tab.add_to_window(controller);
         tab
     }
@@ -346,7 +351,7 @@ impl AgentTab {
     pub fn launch_with(&self, program: Option<PathBuf>) {
         let env = ide_ui_common::window::environment(std::time::Duration::ZERO);
         let thread = self.snapshot();
-        self.launch(program, env, thread);
+        self.launch(program, env, thread, None);
     }
 
     /// The ids of the entries of the main timeline that `matches` picks, oldest first.

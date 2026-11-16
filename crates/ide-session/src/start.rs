@@ -67,7 +67,7 @@ pub(crate) fn start(launch: Launch, supervisor: &Supervisor, inbox: &Arc<Inbox>)
             inbox.script(),
         ))),
         #[cfg(any(test, feature = "selftest"))]
-        AgentPath::Replay(replay) => Ok(Backend::Replay(std::cell::RefCell::new(*replay))),
+        AgentPath::Replay(replay) => Ok(Backend::Replay(Box::new(std::cell::RefCell::new(*replay)))),
     }
 }
 

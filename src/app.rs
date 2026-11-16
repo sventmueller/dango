@@ -196,6 +196,7 @@ impl AppDelegate {
     pub(crate) fn new(mtm: MainThreadMarker) -> Retained<Self> {
         let context = Rc::new(AppContext::default());
         context.leitstand().bind(&context, mtm);
+        context.agent().install_sessions(context.leitstand().tab_sessions());
         crate::leitstand_ui::Orders::install(context.leitstand().back());
         let views = context.factory_ui().clone();
         context

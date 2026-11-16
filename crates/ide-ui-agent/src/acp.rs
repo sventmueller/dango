@@ -361,9 +361,7 @@ impl AgentTab {
             Some(terminal) => {
                 let program = match self.state.borrow().source() {
                     Source::Acp(_) | Source::Idle | Source::Starting => self.launch_program(),
-                    #[cfg(feature = "selftest")]
-                    Source::Replay(_) => None,
-                    Source::Live(_) | Source::Own(_) | Source::Codex(_) | Source::OpenCode(_) | Source::Driven(_) => {
+                    Source::Claude(_) | Source::Own(_) | Source::Codex(_) | Source::OpenCode(_) | Source::Driven(_) => {
                         None
                     }
                 };

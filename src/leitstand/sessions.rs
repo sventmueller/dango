@@ -151,9 +151,9 @@ impl Sessions {
         registry.working().iter().filter_map(|id| self.links.get(id)).collect()
     }
 
-    /// Whether a session of an order works in `folder` or below it.
+    /// Whether a session of an order works in `folder` or below it; the AI tabs answer for their own sessions.
     pub(super) fn works_in(&self, folder: &Path) -> bool {
-        self.registry.as_ref().is_some_and(|r| !r.working_in(folder).is_empty())
+        (self.registry.as_ref()).is_some_and(|r| r.working_in(folder).iter().any(|id| self.links.contains_key(id)))
     }
 
     /// The session of `key` with its driver, to stop its turn from the activity view.
@@ -162,10 +162,13 @@ impl Sessions {
         self.registry.as_mut()?.get_mut(id)
     }
 
-    /// Every session's process ends, as the app quits.
+    /// Every order's session ends, as the app quits; the AI tabs end their own sessions as they close.
     pub(super) fn stop_all(&mut self) {
-        if let Some(registry) = self.registry.as_mut() {
-            registry.stop_all();
+        let Some(registry) = self.registry.as_mut() else { return };
+        for id in self.links.keys() {
+            if let Some(driver) = registry.get_mut(*id) {
+                driver.stop();
+            }
         }
     }
 }

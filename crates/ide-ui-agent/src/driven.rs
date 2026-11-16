@@ -1,19 +1,26 @@
-//! A session of the app's registry (E165) that an AI tab follows and writes into without having started it, such as
-//! a work order's (docs/phase-13.md, B37b, E184). The tab subscribes to the session's feed, whose first batch is the
-//! snapshot, hands the user's messages to the driver's queue and answers requests through the driver; the runtime
-//! hears of each such step and logs it. Closing the tab ends its feed, never the session.
+//! A session of the app's registry (E165) that an AI tab follows: one it did not start, such as a work order's
+//! (docs/phase-13.md, B37b, E184), or its own Claude session, which it starts there. The tab subscribes to the
+//! session's feed, whose first batch is the snapshot, hands the user's messages to the driver and answers requests
+//! through it. On an order's session the runtime hears of each such step and logs it, and closing the tab ends its
+//! feed, never the session; the tab's own session ends with the tab.
 
 use std::rc::Rc;
 
 use ide_core::explain::Explained;
-use ide_session::{AnswerError, Batch, Driver, PlanReply, Prompt, SessionId, SubscriberId};
+use ide_session::{
+    AnswerError, Batch, Driver, Launch, LaunchError, PlanReply, Prompt, SessionId, SubscriberId, TurnId,
+};
 use ide_thread::{Answer, Thread, UserMessage};
 
-/// The app's session registry as an attached AI tab reaches it, by the session's id; the other calls tell the runtime
-/// what the user did in the session, which it records for the order (E184).
+/// The app's session registry as an AI tab reaches it, by the session's id; the calls after `end` tell the runtime
+/// what the user did in an order's session, which it records for the order (E184).
 pub trait Sessions {
     /// Runs `f` with the driver of `session`; false, without running it, once the registry let the session go.
     fn with_driver(&self, session: SessionId, f: &mut dyn FnMut(&mut Driver)) -> bool;
+    /// Starts the session `launch` describes for the user, whose requests all go to the user.
+    fn start(&self, launch: Launch) -> Result<SessionId, LaunchError>;
+    /// Ends the user's session `session` and lets it go; an order's session is left to its order.
+    fn end(&self, session: SessionId);
     /// The user wrote a message into `session`, which the driver queued: an intervention.
     fn intervened(&self, session: SessionId);
     /// The user switched the model of `session` to `model`; no change of agent (E170).
@@ -42,23 +49,40 @@ pub(crate) struct Driven {
     subscriber: SubscriberId,
     badge: String,
     sessions: Rc<dyn Sessions>,
+    /// Whether the tab started the session for the user, so it ends with the tab and nobody logs what happens in it.
+    own: bool,
 }
 
 impl Driven {
     /// Subscribes to the session `attach` names; `None` when it is gone or has ended.
     pub(crate) fn subscribe(attach: &Attach) -> Option<Driven> {
-        let mut subscriber = None;
-        attach.sessions.with_driver(attach.session, &mut |driver| {
-            if !driver.is_ended() {
-                subscriber = Some(driver.subscribe());
-            }
-        });
+        let subscriber = subscribe(attach.sessions.as_ref(), attach.session)?;
         Some(Driven {
             session: attach.session,
-            subscriber: subscriber?,
+            subscriber,
             badge: attach.badge.clone(),
             sessions: attach.sessions.clone(),
+            own: false,
         })
+    }
+
+    /// Starts the tab's own session `launch` describes in `sessions` and subscribes to it; with the first batch, the
+    /// snapshot.
+    pub(crate) fn start(sessions: &Rc<dyn Sessions>, launch: Launch) -> Result<(Driven, Option<Batch>), LaunchError> {
+        let session = sessions.start(launch)?;
+        let Some(subscriber) = subscribe(sessions.as_ref(), session) else {
+            sessions.end(session);
+            return Err(LaunchError::Start(String::new()));
+        };
+        let driven = Driven {
+            session,
+            subscriber,
+            badge: String::new(),
+            sessions: sessions.clone(),
+            own: true,
+        };
+        let first = driven.take();
+        Ok((driven, first))
     }
 
     /// What `f` gives of the session's driver, while the registry holds it.
@@ -93,14 +117,32 @@ impl Driven {
         self.with(|driver| driver.thread().clone())
     }
 
-    /// Whether the session takes prompts.
+    /// Whether the session takes prompts: an order's until it ended, the tab's own while its agent runs.
     pub(crate) fn is_live(&self) -> bool {
-        self.with(|driver| !driver.is_ended()).unwrap_or(false)
+        let own = self.own;
+        self.with(|driver| {
+            if own {
+                driver.takes_prompts()
+            } else {
+                !driver.is_ended()
+            }
+        })
+        .unwrap_or(false)
+    }
+
+    /// Whether a recording plays instead of an agent.
+    pub(crate) fn is_replay(&self) -> bool {
+        self.with(|driver| driver.is_replay()).unwrap_or(false)
     }
 
     /// What Claude Code offers in the session, such as its models.
     pub(crate) fn capabilities(&self) -> Option<ide_claude::Capabilities> {
         self.with(|driver| driver.claude_capabilities()).flatten()
+    }
+
+    /// The Claude session behind the driver, for what only Claude Code does.
+    pub(crate) fn claude(&self) -> Option<ide_claude::Session> {
+        self.with(|driver| driver.claude().cloned()).flatten()
     }
 
     /// Hands `message` to the driver's queue, which sends it after the turn that runs and its checkpoint.
@@ -109,11 +151,28 @@ impl Driven {
             message,
             ..Prompt::default()
         };
+        self.prompt(prompt).map(|_| ())
+    }
+
+    /// Hands `prompt` to the driver, which sends it once no turn runs, after a checkpoint with its buffers; the turn
+    /// it begins.
+    pub(crate) fn prompt(&self, prompt: Prompt) -> Result<TurnId, Explained> {
         match self.with(|driver| driver.send(prompt)) {
-            Some(Ok(_)) => {
-                self.sessions.intervened(self.session);
-                Ok(())
+            Some(Ok(turn)) => {
+                if !self.own {
+                    self.sessions.intervened(self.session);
+                }
+                Ok(turn)
             }
+            Some(Err(error)) => Err(Explained(error.to_string())),
+            None => Err(gone()),
+        }
+    }
+
+    /// Hands `message` to the turn that runs, at once; the agent's id of it.
+    pub(crate) fn steer(&self, message: UserMessage) -> Result<Option<String>, Explained> {
+        match self.with(|driver| driver.steer(message)) {
+            Some(Ok(id)) => Ok(id),
             Some(Err(error)) => Err(Explained(error.to_string())),
             None => Err(gone()),
         }
@@ -129,18 +188,30 @@ impl Driven {
         self.with(|driver| driver.stop_task(task));
     }
 
-    /// Switches the session's model, which the runtime records as a model switch (E184).
+    /// Switches the session's model, which the runtime records as a model switch on an order's session (E184).
     pub(crate) fn set_model(&self, model: &str) {
         match self.with(|driver| driver.set_model(model)) {
-            Some(Ok(())) => self.sessions.model_switched(self.session, model),
-            Some(Err(why)) => ide_ui_common::diag::report("switching the model of an order's session", why),
-            None => {}
+            Some(Ok(())) if !self.own => self.sessions.model_switched(self.session, model),
+            Some(Err(why)) if !self.own => {
+                ide_ui_common::diag::report("switching the model of an order's session", why)
+            }
+            _ => {}
         }
     }
 
     /// Allows the permission request `request` once or refuses it, telling the agent `reason`.
     pub(crate) fn answer_permission(&self, request: &str, allow: bool, reason: Option<&str>) -> Result<(), Explained> {
         let answered = self.with(|driver| driver.answer_permission(request, allow, reason));
+        self.after_answer(request, answered)
+    }
+
+    /// Answers the permission request `request` with the input the user edited and the rules to keep.
+    pub(crate) fn answer_permission_as(
+        &self,
+        request: &str,
+        answer: ide_claude::PermissionAnswer,
+    ) -> Result<(), Explained> {
+        let answered = self.with(|driver| driver.answer_permission_as(request, answer));
         self.after_answer(request, answered)
     }
 
@@ -159,7 +230,9 @@ impl Driven {
     fn after_answer(&self, request: &str, answered: Option<Result<(), AnswerError>>) -> Result<(), Explained> {
         match answered {
             Some(Ok(())) => {
-                self.sessions.answered(self.session, request);
+                if !self.own {
+                    self.sessions.answered(self.session, request);
+                }
                 Ok(())
             }
             Some(Err(error)) => Err(Explained(error.to_string())),
@@ -167,10 +240,52 @@ impl Driven {
         }
     }
 
-    /// Ends the tab's feed; the session runs on.
+    /// Leaves the session: the tab's own ends, an order's runs on without the tab's feed.
     pub(crate) fn leave(&self) {
-        self.with(|driver| driver.unsubscribe(self.subscriber));
+        if self.own {
+            self.sessions.end(self.session);
+        } else {
+            self.with(|driver| driver.unsubscribe(self.subscriber));
+        }
     }
+}
+
+#[cfg(feature = "selftest")]
+impl Driven {
+    /// Plays recorded `lines` into the recording the session plays; what they changed, with the thread then, which
+    /// the tab takes in itself, so its feed is emptied.
+    pub(crate) fn feed(&self, lines: &str) -> (Vec<ide_thread::Change>, Option<Thread>) {
+        self.with(|driver| {
+            if !driver.is_replay() {
+                return (Vec::new(), Some(driver.thread().clone()));
+            }
+            let changes = driver.feed(lines);
+            let thread = driver.take(self.subscriber).map(|batch| batch.thread);
+            (changes, thread)
+        })
+        .unwrap_or_default()
+    }
+
+    /// Answers the plan `request` of the recording the session plays; what changed, which the tab takes in itself.
+    pub(crate) fn replay_plan(&self, request: &str, reply: PlanReply) -> Vec<ide_thread::Change> {
+        self.with(|driver| {
+            let changes = driver.replay_plan(request, reply);
+            driver.take(self.subscriber);
+            changes
+        })
+        .unwrap_or_default()
+    }
+}
+
+/// A new subscriber to `session`, unless it is gone or has ended.
+fn subscribe(sessions: &dyn Sessions, session: SessionId) -> Option<SubscriberId> {
+    let mut subscriber = None;
+    sessions.with_driver(session, &mut |driver| {
+        if !driver.is_ended() {
+            subscriber = Some(driver.subscribe());
+        }
+    });
+    subscriber
 }
 
 fn gone() -> Explained {

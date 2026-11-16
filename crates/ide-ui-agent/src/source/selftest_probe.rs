@@ -1,18 +1,33 @@
 //! What the self-test reads from and does with the parts of `source.rs`, kept out of its production code.
 
+use std::rc::Rc;
+use std::time::SystemTime;
+
 #[allow(
     unused_imports,
     reason = "the parts moved here use only some of their module's names"
 )]
 use super::*;
+use crate::driven::{Driven, Sessions};
 
-/// A replay into an empty thread, as the self-test plays it.
-pub(crate) fn replay(thread: Thread) -> Source {
-    Source::Replay(Box::new(Replay::new(
-        thread,
-        SystemTime::now(),
-        Duration::from_millis(40),
-    )))
+/// A replay into `thread` in the registry `sessions`, as the self-test plays it; its first batch is the thread the
+/// tab already shows, so it is not taken in again.
+pub(crate) fn replay(sessions: &Rc<dyn Sessions>, thread: Thread) -> Option<Source> {
+    let cwd = thread.cwd().to_path_buf();
+    let replay = ide_claude::replay::Replay::new(thread, SystemTime::now(), Duration::from_millis(40));
+    let launch = ide_session::Launch::new(
+        ide_session::AgentPath::Replay(Box::new(replay)),
+        cwd,
+        Vec::new(),
+        ide_session::Contract::User(ide_session::UserChoices::default()),
+    );
+    match Driven::start(sessions, launch) {
+        Ok((driven, _first)) => Some(Source::Claude(driven)),
+        Err(error) => {
+            ide_ui_common::diag::report("playing a recording", error);
+            None
+        }
+    }
 }
 
 /// The program the self-test starts as `claude`; process-wide, since the lookup runs on a worker thread.
@@ -24,11 +39,11 @@ pub fn set_test_program(program: PathBuf) {
 }
 
 impl Source {
-    /// Plays recorded lines into the replay; what changed.
-    pub(crate) fn feed(&mut self, lines: &str) -> Vec<ide_thread::Change> {
-        match self {
-            Source::Replay(replay) => replay.feed_all(lines),
-            _ => Vec::new(),
+    /// Plays recorded lines into the replay; what changed, with the thread then.
+    pub(crate) fn feed(&mut self, lines: &str) -> (Vec<ide_thread::Change>, Option<Thread>) {
+        match self.claude() {
+            Some(driven) => driven.feed(lines),
+            None => (Vec::new(), self.snapshot()),
         }
     }
 }

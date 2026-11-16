@@ -609,7 +609,6 @@ impl Driver {
         if let Err(message) = sent {
             self.end_turn(Outcome::Failed(message), signals);
         }
-
     }
 
     /// Sends a prompt again that the session was not ready to take.

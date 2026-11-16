@@ -6,11 +6,11 @@ use std::path::PathBuf;
 use std::sync::atomic::Ordering;
 use std::time::{Duration, SystemTime};
 
-use ide_claude::{Event, Launch, Session, SessionError};
-use ide_process::Supervisor;
+use ide_session::{AgentPath, Contract, Launch, LaunchError, UserChoices};
 use ide_thread::{Change, Status, Thread};
 use splat_i18n::tf;
 
+use super::driven::Driven;
 use super::notify;
 use super::rewind::Fork;
 use super::source::{self, Problem, Source};
@@ -56,6 +56,7 @@ impl AgentTab {
         if let Err(why) = ide_ui_common::util::spawn("claude-start", move || {
             let env = ide_ui_common::window::environment(Duration::from_secs(15));
             let exe = source::find_claude(&env);
+            let git = crate::host::host().git();
             let thread = match transcript {
                 Some(path) if thread.entries(&ide_thread::Lane::Main).is_empty() => {
                     ide_claude::history::rebuild(thread.clone(), &path).unwrap_or(thread)
@@ -64,7 +65,7 @@ impl AgentTab {
             };
             main_soon(move || {
                 if let Some(tab) = super::get(key) {
-                    tab.launch(exe, env, thread);
+                    tab.launch(exe, env, thread, git);
                 }
             });
         }) {
@@ -72,52 +73,82 @@ impl AgentTab {
         }
     }
 
-    pub(super) fn launch(&self, exe: Option<PathBuf>, env: Vec<(String, String)>, thread: Thread) {
+    /// Starts the tab's Claude session in the app's registry, which takes the checkpoint before each message with
+    /// `git` (I6).
+    pub(super) fn launch(
+        &self,
+        exe: Option<PathBuf>,
+        env: Vec<(String, String)>,
+        thread: Thread,
+        git: Option<ide_git::Git>,
+    ) {
         let Some(exe) = exe else {
             self.start_failed(Problem::NotFound);
             return;
         };
-        let mut launch = Launch::new(exe, env, &self.cwd);
-        {
-            let state = self.state.borrow();
-            launch.resume = thread
-                .session()
-                .map(str::to_string)
-                .or_else(|| state.resume().map(|r| r.session.clone()));
-            launch.sandbox = state.sandbox();
-            launch.remote_control = state.remote();
-            let picks = state.picks();
-            launch.permission_mode = Some(picks.mode().to_string());
-            launch.allow_bypass = true;
-            launch.model = picks.model().map(str::to_string);
-            launch.effort = picks.effort().map(str::to_string);
-            launch.file_checkpoints = true;
-            match state.fork() {
-                Some(Fork {
-                    session,
-                    rewind: Some(rewind),
-                    ..
-                }) => launch.rewind(session, rewind),
-                Some(Fork { rewind: None, .. }) => launch.resume = None,
-                None => {}
-            }
-        }
-        let sink = self.sink(Incoming::Claude);
-        let started = Session::start(Supervisor::global(), &launch, thread.clone(), sink);
-        match started {
-            Ok(session) => {
-                self.state.borrow_mut().started(Source::Live(session));
-                self.absorb(thread, &[Change::Cleared]);
+        let Some(sessions) = self.sessions.clone() else {
+            self.start_failed(Problem::Start(String::new()));
+            return;
+        };
+        let launch = self.claude_launch(exe, env, thread, git);
+        match Driven::start(&sessions, launch) {
+            Ok((driven, first)) => {
+                self.state.borrow_mut().started(Source::Claude(driven));
+                if let Some(first) = first {
+                    self.absorb(first.thread, &[Change::Cleared]);
+                }
                 self.send_queued();
             }
             Err(error) => {
                 let problem = match error {
-                    ide_claude::SessionError::NotFound(_) => Problem::NotFound,
+                    LaunchError::NotFound(_) => Problem::NotFound,
+                    LaunchError::Start(why) => Problem::Start(why),
                     other => Problem::Start(other.to_string()),
                 };
                 self.start_failed(problem);
             }
         }
+    }
+
+    /// The launch of the tab's Claude session with `exe` in `env` on `thread`, as the user's picks, the sandbox
+    /// switch, Remote Control and a rewind set it.
+    fn claude_launch(
+        &self,
+        exe: PathBuf,
+        env: Vec<(String, String)>,
+        thread: Thread,
+        git: Option<ide_git::Git>,
+    ) -> Launch {
+        let state = self.state.borrow();
+        let picks = state.picks();
+        let (resume, rewind) = match state.fork() {
+            Some(Fork {
+                session,
+                rewind: Some(rewind),
+                ..
+            }) => (Some(session.clone()), Some(rewind.clone())),
+            Some(Fork { rewind: None, .. }) => (None, None),
+            None => (
+                (thread.session().map(str::to_string)).or_else(|| state.resume().map(|r| r.session.clone())),
+                None,
+            ),
+        };
+        let path = AgentPath::Claude {
+            program: exe,
+            remote_control: state.remote(),
+            rewind,
+        };
+        let contract = Contract::User(UserChoices {
+            mode: Some(picks.mode().to_string()),
+            sandbox: state.sandbox(),
+        });
+        let mut launch = Launch::new(path, &self.cwd, env, contract);
+        launch.model = picks.model().map(str::to_string);
+        launch.effort = picks.effort().map(str::to_string);
+        launch.resume = resume;
+        launch.thread = Some(thread);
+        launch.git = git;
+        launch
     }
 
     /// Takes in what the session reported since the last time.
@@ -132,20 +163,17 @@ impl AgentTab {
         let mut problem = None;
         let mut learned = false;
         let mut remote = false;
-        let mut refused = None;
         let mut ended = None;
         for event in pending.events {
             match &event {
-                Incoming::Claude(Event::Changed(c))
-                | Incoming::Acp(ide_acp::Event::Changed(c))
+                Incoming::Acp(ide_acp::Event::Changed(c))
                 | Incoming::Own(ide_agent::Event::Changed(c))
                 | Incoming::Codex(ide_codex::Event::Changed(c))
                 | Incoming::OpenCode(ide_opencode::Event::Changed(c)) => {
                     debug_assert!(c.is_empty(), "invalidations are coalesced before scheduling");
                 }
                 Incoming::Own(other) => self.own_event(other),
-                Incoming::Claude(Event::Capabilities)
-                | Incoming::Acp(ide_acp::Event::Capabilities)
+                Incoming::Acp(ide_acp::Event::Capabilities)
                 | Incoming::Codex(ide_codex::Event::Capabilities)
                 | Incoming::OpenCode(ide_opencode::Event::Capabilities) => learned = true,
                 Incoming::OpenCode(ide_opencode::Event::Ended { stderr }) => ended = Some(stderr.clone()),
@@ -154,17 +182,9 @@ impl AgentTab {
                 Incoming::Codex(ide_codex::Event::Ended { stderr }) => ended = Some(stderr.clone()),
                 Incoming::Codex(ide_codex::Event::RemoteControl) => remote = true,
                 Incoming::Codex(other) => problem = self.codex_problem(other).or(problem),
-                Incoming::Claude(Event::RemoteControl) => remote = true,
-                Incoming::Claude(Event::Failed(SessionError::RewindRejected(why))) => refused = Some(why.clone()),
-                Incoming::Claude(event @ Event::Failed(_)) => problem = source::problem_of(event),
                 Incoming::Acp(ide_acp::Event::Failed(error)) => problem = self.acp_problem(error),
                 Incoming::Acp(ide_acp::Event::Ended { stderr }) => ended = Some(stderr.clone()),
-                Incoming::Claude(Event::Ended { .. }) => {}
             }
-        }
-        if let Some(why) = refused {
-            self.rewind_refused(&why);
-            return;
         }
         let snapshot = {
             let mut state = self.state.borrow_mut();
@@ -221,7 +241,8 @@ impl AgentTab {
                     crate::host::host().turn_ended(controller.id(), &self.cwd);
                 }
                 let turn = self.state.borrow_mut().turn_ended();
-                if let Some(checkpoint) = turn {
+                let driver_records = self.state.borrow().source().claude().is_some();
+                if let Some(checkpoint) = turn.filter(|_| !driver_records) {
                     let key = self.key;
                     let started = checkpoint.commit.clone();
                     self.store.finish(checkpoint, move |finished| {

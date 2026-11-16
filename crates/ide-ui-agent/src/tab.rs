@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 
-use ide_claude::{Event, Session};
+use ide_claude::Session;
 use ide_thread::{Change, Status, Thread, ThreadId};
 use objc2::rc::{Retained, Weak};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
@@ -55,9 +55,8 @@ pub const INPUT_INSET: f64 = 14.0;
 /// holding priority of the window's content, below the sidebar's, so a wide window neither narrows nor moves it.
 const FILL_PRIORITY: f32 = 255.0;
 
-/// What a session reported, from either kind of connection.
+/// What a session the tab runs itself reported; its own Claude session reports through the app's registry instead.
 pub(crate) enum Incoming {
-    Claude(Event),
     Acp(ide_acp::Event),
     Own(ide_agent::Event),
     Codex(ide_codex::Event),
@@ -168,25 +167,33 @@ pub struct AgentTab {
     pub(super) me: RefCell<std::rc::Weak<AgentTab>>,
     /// What the tab does about Codex's Remote Control that the session cannot say yet (E148).
     pub(super) codex_remote: RefCell<Option<crate::codex::Turning>>,
+    /// The app's session registry, where the tab runs its Claude session (B37b).
+    pub(super) sessions: Option<Rc<dyn crate::Sessions>>,
 }
 
 impl AgentTab {
-    /// A new tab in `controller`'s window running `agent`, not started yet.
-    pub(crate) fn open(controller: &Window, agent: Agent, resume: Option<Resume>) -> Option<Rc<AgentTab>> {
+    /// A new tab in `controller`'s window running `agent`, not started yet; `state` holds the AI tabs.
+    pub(crate) fn open(
+        controller: &Window,
+        state: &crate::State,
+        agent: Agent,
+        resume: Option<Resume>,
+    ) -> Option<Rc<AgentTab>> {
         let cwd = controller.project_root().or_else(|| controller.project())?;
-        AgentTab::open_in(controller, agent, cwd, resume)
+        AgentTab::open_in(controller, state, agent, cwd, resume)
     }
 
     /// A new tab in `controller`'s window running `agent` in `cwd`, such as a thread's worktree, not started yet.
     pub(crate) fn open_in(
         controller: &Window,
+        state: &crate::State,
         agent: Agent,
         cwd: PathBuf,
         resume: Option<Resume>,
     ) -> Option<Rc<AgentTab>> {
         let thread_id = resume.as_ref().and_then(|r| r.thread.clone()).unwrap_or_default();
-        let thread = Thread::new(thread_id.clone(), agent.id(), &cwd);
-        let tab = AgentTab::shared(AgentTab::build(controller, agent, cwd, thread_id, thread, Source::Idle));
+        let thread = Thread::new(thread_id, agent.id(), &cwd);
+        let tab = AgentTab::shared(AgentTab::build(controller, state, agent, cwd, thread, Source::Idle));
         let bookmarked = crate::agent_panel::is_bookmarked(&tab.thread_id);
         tab.state.borrow_mut().opened(resume, bookmarked);
         crate::agent_panel::read_past(&tab.cwd);
@@ -194,17 +201,21 @@ impl AgentTab {
         Some(tab)
     }
 
+    /// A tab in `controller`'s window on `thread` of `agent` in `cwd`, whose session `source` runs; `agents` holds the
+    /// AI tabs and the app's session registry.
     pub(super) fn build(
         controller: &Window,
+        agents: &crate::State,
         agent: Agent,
         cwd: PathBuf,
-        thread_id: ThreadId,
         thread: Thread,
         source: Source,
     ) -> AgentTab {
         let mtm = controller.mtm();
+        let thread_id = thread.id().clone();
         let thread = Rc::new(thread);
-        let key = super::next_key();
+        let (key, sessions) = agents.admit();
+
         let target = AgentTarget::new(mtm, key);
         let this = AgentRoot::alloc(mtm).set_ivars(RootIvars { key });
         // SAFETY: NSView's initializer, called once on the newly allocated object.
@@ -259,6 +270,7 @@ impl AgentTab {
             asides: RefCell::new(Vec::new()),
             me: RefCell::new(std::rc::Weak::new()),
             codex_remote: RefCell::new(None),
+            sessions,
         };
         tab.lay_out();
         tab
@@ -434,14 +446,9 @@ impl AgentTab {
         self.state.borrow().thread().clone()
     }
 
-    /// The running session, if there is one.
+    /// The running Claude session, if there is one.
     pub(crate) fn session(&self) -> Option<Session> {
-        self.state
-            .borrow()
-            .source()
-            .session()
-            .filter(|s| !s.is_ended())
-            .cloned()
+        self.state.borrow().source().session().filter(|s| !s.is_ended())
     }
 
     pub fn status(&self) -> Status {

@@ -331,7 +331,7 @@ impl AgentTab {
             controller.open_file(&path);
             return;
         }
-        let Some(session) = self.state.borrow().source().session().cloned() else {
+        let Some(session) = self.state.borrow().source().session() else {
             return;
         };
         let key = self.key;

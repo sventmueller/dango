@@ -165,7 +165,7 @@ impl AgentTab {
 
     /// Without a checkpoint of the app, as for a resumed session: the CLI's own file history (experimental).
     fn rewind_with_cli(&self, uuid: &str) {
-        let Some(session) = self.state.borrow().source().session().cloned() else {
+        let Some(session) = self.state.borrow().source().session() else {
             return;
         };
         let key = self.key;

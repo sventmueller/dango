@@ -7,7 +7,7 @@ use std::path::Path;
 use std::rc::Rc;
 
 use ide_factory::{InputKind, OrderId, RequestId, SessionEvent};
-use ide_session::{Driver, PathKind, SessionId};
+use ide_session::{Driver, Launch, LaunchError, PathKind, SessionId};
 use ide_ui_common::window::WindowId;
 use splat_i18n::tf;
 
@@ -105,16 +105,40 @@ impl Leitstand {
             session: found.id,
             badge: found.badge,
             title: found.title,
-            sessions: Rc::new(OrderSessions(self.back())),
+            sessions: self.tab_sessions(),
         };
         ide_ui_agent::attach(controller, cx.agent(), attach).is_some()
     }
+
+    /// The registry as the AI tabs reach it: for the sessions of orders and for their own Claude sessions (B37b).
+    pub(crate) fn tab_sessions(&self) -> Rc<dyn ide_ui_agent::Sessions> {
+        Rc::new(TabSessions(self.back()))
+    }
+
+    /// Starts the user's session `launch` describes, which an AI tab runs, in the registry of the orders' sessions;
+    /// no order links it, so the factory never hears of it.
+    fn start_user_session(&self, launch: Launch) -> Result<SessionId, LaunchError> {
+        let rule = ide_session::rule::for_contract(&launch.contract);
+        let mut sessions = self.sessions.borrow_mut();
+        sessions.registry(&self.back()).start(launch, rule)
+    }
+
+    /// Ends the user's session `id` and lets it go; an order's session is left to its order.
+    fn end_user_session(&self, id: SessionId) {
+        let mut sessions = self.sessions.borrow_mut();
+        if sessions.links.contains_key(&id) {
+            return;
+        }
+        if let Some(registry) = sessions.registry.as_mut() {
+            registry.remove(id);
+        }
+    }
 }
 
-/// The registry as the AI tabs on orders' sessions reach it, through the way back to the app context (E143).
-struct OrderSessions(Back);
+/// The registry as the AI tabs reach it, through the way back to the app context (E143).
+struct TabSessions(Back);
 
-impl OrderSessions {
+impl TabSessions {
     /// Hands `event` of `session` to its order's factory on the next turn of the main thread.
     fn later(&self, session: SessionId, event: SessionEvent) {
         let back = self.0.clone();
@@ -124,12 +148,22 @@ impl OrderSessions {
     }
 }
 
-impl ide_ui_agent::Sessions for OrderSessions {
+impl ide_ui_agent::Sessions for TabSessions {
     fn with_driver(&self, session: SessionId, f: &mut dyn FnMut(&mut Driver)) -> bool {
         (self.0)
             .with(|cx| cx.leitstand().with_session(session, |driver| f(driver)))
             .flatten()
             .is_some()
+    }
+
+    fn start(&self, launch: Launch) -> Result<SessionId, LaunchError> {
+        (self.0)
+            .with(|cx| cx.leitstand().start_user_session(launch))
+            .unwrap_or_else(|| Err(LaunchError::Start(String::new())))
+    }
+
+    fn end(&self, session: SessionId) {
+        (self.0).with(|cx| cx.leitstand().end_user_session(session));
     }
 
     fn intervened(&self, session: SessionId) {
