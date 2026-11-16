@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "Προϋπολογισμός σε δολάρια";
 "Spezifikation ohne Freigabe" = "Προδιαγραφή χωρίς έγκριση";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Χωρίς έγκριση μόνο σε χαμηλή κατηγορία κινδύνου και μόνο όταν το επιτρέπει το έργο.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "1 δελτίο εργασίας σε αναμονή";
 "{} Aufträge warten" = "{} δελτία εργασίας σε αναμονή";
 "Station" = "Σταθμός";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "Αρχεία που έμειναν: {}";
 "{} % Fenster" = "{}% του παραθύρου";
 "nichts" = "τίποτα";
-"{} $" = "{} $";
 "Dollar" = "δολάρια";
 "Tokens" = "token";
 "Fensteranteil" = "ποσοστό παραθύρου";
@@ -2348,3 +2346,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Ο φάκελος δεν είναι αξιόπιστος· δεν στάλθηκε τίποτα.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Το βήμα δεν μπόρεσε να εκτελεστεί· δοκιμάστε ξανά.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Το δελτίο εργασίας δεν έχει αποδεκτό commit για να το στείλει το push.";
+"Vorgabe: {}" = "Προεπιλογή: {}";
+"Vorgabe: ohne Grenze" = "Προεπιλογή: χωρίς όριο";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Ένας κενός προϋπολογισμός αφήνει σε ισχύ την προεπιλογή. Ένα έργο μπορεί μόνο να αυστηροποιήσει τα όρια και τους προϋπολογισμούς· έτσι, εδώ ένας προϋπολογισμός είναι χωρίς όριο μόνο όταν ούτε η προεπιλογή ορίζει όριο.";
+"Bestätigen: {}" = "Επιβεβαίωση: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Οι δείκτες βασίζονται σε 1 δελτίο εργασίας· για το ποσοστό επιτυχίας με την πρώτη μετρούν {}, χωρίς παρεμβάσεις και χωρίς αλλαγές πράκτορα.";
+"1 Kommentar ist noch nicht gesendet." = "1 σχόλιο δεν έχει σταλεί ακόμη.";
+"{} Kommentare sind noch nicht gesendet." = "{} σχόλια δεν έχουν σταλεί ακόμη.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Με την έγκριση χάνονται. Το «Αποστολή σχολίων» τα δίνει στον σχεδιαστή, ο οποίος έπειτα αναθεωρεί την προδιαγραφή.";
+"Ohne Kommentare freigeben" = "Έγκριση χωρίς τα σχόλια";
+"{},{} $" = "{},{} $";

@@ -21,6 +21,8 @@ objc2-app-kit.workspace = true
 objc2-foundation.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+libc.workspace = true
+toml_edit = "0.25.19"
 
 [features]
 # What the self-test reads of the panel and the tabs.

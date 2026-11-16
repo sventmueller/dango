@@ -13,6 +13,7 @@ use ide_factory::station::Role;
 use ide_factory::workflow::edit::{self, EditError, EditValue};
 use ide_factory::workflow::{UserDefaults, Workflow, WorkflowError, parse};
 use splat_i18n::{t, tf};
+use toml_edit::{DocumentMut, Item};
 
 use super::words;
 
@@ -497,12 +498,37 @@ impl ProjectFile {
         self.edit(result)
     }
 
+    /// What the file sets at `key`: from the parsed file, or, while the file does not parse, from the raw TOML value
+    /// there, so a single error elsewhere neither hides the value nor lets Save write it away.
+    fn own<T>(
+        &self,
+        key: &[&str],
+        parsed: impl FnOnce(&Workflow) -> Option<T>,
+        raw: impl FnOnce(&Item) -> Option<T>,
+    ) -> Option<T> {
+        match self.read() {
+            Ok(workflow) => parsed(&workflow),
+            Err(_) => self.raw(key).as_ref().and_then(raw),
+        }
+    }
+
+    /// The TOML item at `key`, read without checking the rest of the file.
+    fn raw(&self, key: &[&str]) -> Option<Item> {
+        let doc = self.text.parse::<DocumentMut>().ok()?;
+        let mut item = doc.as_item();
+        for part in key {
+            item = item.as_table_like()?.get(part)?;
+        }
+        Some(item.clone())
+    }
+
     /// The value of `limit` and where it comes from.
     pub fn limit(&self, limit: Limit) -> (u64, Origin) {
-        let own = self
-            .read()
-            .ok()
-            .and_then(|w| w.limits().iter().find(|(l, _)| *l == limit).map(|(_, v)| *v));
+        let own = self.own(
+            &ProjectValue::Limit(limit).key(),
+            |w| w.limits().iter().find(|(l, _)| *l == limit).map(|(_, v)| *v),
+            |item| item.as_integer().and_then(|n| u64::try_from(n).ok()),
+        );
         match own {
             Some(value) => (value, Origin::File),
             None => (self.defaults.limits().get(limit), Origin::Default),
@@ -519,18 +545,24 @@ impl ProjectFile {
     /// The paths or patterns of the list `value` as the file gives them; none by default, where only the built-in
     /// patterns of each test tool apply.
     pub fn list(&self, value: ProjectValue) -> (Vec<String>, Origin) {
-        let Ok(workflow) = self.read() else {
-            return (Vec::new(), self.origin(value));
+        let parsed = |workflow: &Workflow| {
+            let relevance = workflow.relevance();
+            Some(match value {
+                ProjectValue::Copy => workflow.copy().to_vec(),
+                ProjectValue::RiskHigh => relevance.high.clone(),
+                ProjectValue::RiskMedium => relevance.medium.clone(),
+                ProjectValue::Tests => relevance.tests.clone(),
+                ProjectValue::Config => relevance.config.clone(),
+                _ => Vec::new(),
+            })
         };
-        let relevance = workflow.relevance();
-        let list = match value {
-            ProjectValue::Copy => workflow.copy().to_vec(),
-            ProjectValue::RiskHigh => relevance.high.clone(),
-            ProjectValue::RiskMedium => relevance.medium.clone(),
-            ProjectValue::Tests => relevance.tests.clone(),
-            ProjectValue::Config => relevance.config.clone(),
-            _ => Vec::new(),
+        let raw = |item: &Item| {
+            item.as_array()?
+                .iter()
+                .map(|entry| entry.as_str().map(str::to_string))
+                .collect()
         };
+        let list = self.own(&value.key(), parsed, raw).unwrap_or_default();
         (list, self.origin(value))
     }
 
@@ -541,13 +573,23 @@ impl ProjectFile {
 
     /// The setup command (E188).
     pub fn setup(&self) -> (String, Origin) {
-        let setup = self.read().ok().and_then(|w| w.setup().map(str::to_string));
+        let key = ProjectValue::Setup.key();
+        let setup = self.own(
+            &key,
+            |w| w.setup().map(str::to_string),
+            |item| item.as_str().map(str::to_string),
+        );
         (setup.unwrap_or_default(), self.origin(ProjectValue::Setup))
     }
 
     /// The budget of one order in dollars and where it comes from.
     pub fn order_budget(&self) -> (Option<f64>, Origin) {
-        match self.read().ok().and_then(|w| w.budgets().order().dollars()) {
+        let own = self.own(
+            &ProjectValue::OrderBudget.key(),
+            |w| w.budgets().order().dollars(),
+            raw_dollars,
+        );
+        match own {
             Some(dollars) => (Some(dollars), Origin::File),
             None => (self.defaults.budgets().order().dollars(), Origin::Default),
         }
@@ -555,9 +597,76 @@ impl ProjectFile {
 
     /// The budget of one day in dollars and where it comes from.
     pub fn day_budget(&self) -> (Option<f64>, Origin) {
-        match self.read().ok().and_then(|w| w.budgets().day().dollars()) {
+        let own = self.own(
+            &ProjectValue::DayBudget.key(),
+            |w| w.budgets().day().dollars(),
+            raw_dollars,
+        );
+        match own {
             Some(dollars) => (Some(dollars), Origin::File),
             None => (self.defaults.budgets().day().dollars(), Origin::Default),
+        }
+    }
+
+    fn budget(&self, value: ProjectValue) -> (Option<f64>, Origin) {
+        if value == ProjectValue::OrderBudget {
+            self.order_budget()
+        } else {
+            self.day_budget()
+        }
+    }
+
+    /// The text of `value`'s field. A budget the project does not set stays empty, with the default in the
+    /// placeholder, so the field never carries the default into the file.
+    pub fn field_text(&self, value: ProjectValue) -> String {
+        match value {
+            ProjectValue::Role(role) => self.role(role).0.join(", "),
+            ProjectValue::ReviewerRule => reviewer_rules()[usize::from(self.reviewer_preferred().0)].to_string(),
+            ProjectValue::Limit(limit) => self.limit(limit).0.to_string(),
+            ProjectValue::OrderBudget | ProjectValue::DayBudget => match self.budget(value) {
+                (Some(dollars), Origin::File) => dollars.to_string(),
+                _ => String::new(),
+            },
+            ProjectValue::Setup => self.setup().0,
+            list => self.list(list).0.join(", "),
+        }
+    }
+
+    /// The placeholder of `value`'s field: for a budget what applies while the field is empty, else an example.
+    pub fn placeholder(&self, value: ProjectValue) -> Option<String> {
+        let default = match value {
+            ProjectValue::OrderBudget => self.defaults.budgets().order().dollars(),
+            ProjectValue::DayBudget => self.defaults.budgets().day().dollars(),
+            ProjectValue::Copy => return Some(t("Mitkopieren, etwa node_modules, .env.local").into()),
+            ProjectValue::Setup => return Some(t("Einrichtungsbefehl, etwa npm ci").into()),
+            _ => return None,
+        };
+        Some(match default {
+            Some(dollars) => tf("Vorgabe: {}", &[&words::dollars(dollars)]),
+            None => t("Vorgabe: ohne Grenze").into(),
+        })
+    }
+
+    /// Takes `typed` from the field of `value`, which showed `shown`; a field the user left as it was writes nothing.
+    pub fn take(&mut self, value: ProjectValue, shown: &str, typed: &str) -> Result<(), Explained> {
+        if typed == shown {
+            return Ok(());
+        }
+        match value {
+            ProjectValue::Limit(limit) => {
+                let Ok(number) = typed.trim().parse::<u64>() else {
+                    return Err(Explained(tf("„{}“ ist keine ganze Zahl.", &[typed])));
+                };
+                self.set_limit(limit, number)
+            }
+            ProjectValue::OrderBudget | ProjectValue::DayBudget => {
+                let amount =
+                    read_dollars(typed).map_err(|_| Explained(tf("„{}“ ist kein Betrag in Dollar.", &[typed])))?;
+                self.set_dollars(value, amount)
+            }
+            ProjectValue::Setup => self.set_setup(typed),
+            list if list.is_list() => self.set_list(list, typed),
+            _ => Ok(()),
         }
     }
 
@@ -579,7 +688,16 @@ impl ProjectFile {
     /// Whether the rule lets a reviewer of the builders' vendor review when no other is ready, and where it comes
     /// from; "preferred" in the file applies only once the user confirmed it (E190).
     pub fn reviewer_preferred(&self) -> (bool, Origin) {
-        match self.read().ok().and_then(|w| w.reviewer_preferred()) {
+        let own = self.own(
+            &ProjectValue::ReviewerRule.key(),
+            Workflow::reviewer_preferred,
+            |item| match item.as_str()? {
+                "preferred" => Some(true),
+                "required" => Some(false),
+                _ => None,
+            },
+        );
+        match own {
             Some(preferred) => (preferred, Origin::File),
             None => (
                 self.defaults.reviewer_rule() == ReviewerRule::Preferred,
@@ -675,6 +793,14 @@ impl ProjectFile {
     }
 }
 
+/// The dollars of a budget as the raw TOML value gives them.
+#[expect(clippy::cast_precision_loss, reason = "budgets are far below 2^52")]
+fn raw_dollars(item: &Item) -> Option<f64> {
+    item.as_float()
+        .or_else(|| item.as_integer().map(|n| n as f64))
+        .filter(|n| *n >= 0.0)
+}
+
 /// A field that holds no amount of dollars.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NotAnAmount;
@@ -743,6 +869,56 @@ high = [\"src/pay/**\"]
         file.set_list(ProjectValue::RiskHigh, "").unwrap();
         assert_eq!(file.origin(ProjectValue::RiskHigh), Origin::Default);
         assert!(file.errors().is_empty(), "{:?}", file.errors());
+    }
+
+    /// Shows every field of `file`, lets `edit` change what the user types, and takes every field back as Save does.
+    fn save(file: &mut ProjectFile, edit: impl Fn(ProjectValue, &str) -> String) {
+        let shown: Vec<(ProjectValue, String)> = ProjectValue::all()
+            .into_iter()
+            .map(|v| (v, file.field_text(v)))
+            .collect();
+        for (value, text) in shown {
+            file.take(value, &text, &edit(value, &text)).unwrap();
+        }
+    }
+
+    #[test]
+    fn saving_a_file_with_an_error_keeps_the_values_the_user_did_not_touch() {
+        let text = "[limits]\nbogus = 1\nattempts = 2\n\n[risk]\n# Payment code.\nhigh = [\"src/pay/**\"]\n\n[worktree]\nsetup = \"npm ci\"\n";
+        let mut file = ProjectFile::new(Some(text.into()), false, UserDefaults::default());
+        assert!(!file.errors().is_empty(), "the unknown key is an error of the file");
+        assert_eq!(file.field_text(ProjectValue::RiskHigh), "src/pay/**");
+        assert_eq!(file.field_text(ProjectValue::Setup), "npm ci");
+        assert_eq!(file.limit(Limit::Attempts), (2, Origin::File));
+        save(&mut file, |value, text| match value {
+            ProjectValue::Limit(Limit::TurnMinutes) => "30".into(),
+            _ => text.to_string(),
+        });
+        assert!(file.text().contains("high = [\"src/pay/**\"]"), "{}", file.text());
+        assert!(file.text().contains("# Payment code.") && file.text().contains("setup = \"npm ci\""));
+        assert!(file.text().contains("bogus = 1") && file.text().contains("attempts = 2"));
+        assert_eq!(file.limit(Limit::TurnMinutes), (30, Origin::File));
+    }
+
+    #[test]
+    fn an_untouched_budget_writes_nothing_and_an_emptied_one_leaves_the_default() {
+        let mut form = DefaultsForm::default();
+        form.set_budgets(Some(2.345), None);
+        let defaults = form.defaults().clone();
+        let mut file = ProjectFile::new(Some("[budget.day]\ndollars = 7.125\n".into()), false, defaults);
+        assert_eq!(file.field_text(ProjectValue::OrderBudget), "");
+        assert_eq!(file.order_budget(), (Some(2.345), Origin::Default));
+        assert!(file.placeholder(ProjectValue::OrderBudget).is_some());
+        assert_eq!(file.field_text(ProjectValue::DayBudget), "7.125");
+        let before = file.text().to_string();
+        save(&mut file, |_, text| text.to_string());
+        assert_eq!(file.text(), before, "nothing the user left alone is written");
+        save(&mut file, |value, text| match value {
+            ProjectValue::DayBudget => String::new(),
+            _ => text.to_string(),
+        });
+        assert_eq!(file.day_budget(), (None, Origin::Default));
+        assert!(!file.text().contains("dollars"), "{}", file.text());
     }
 
     #[test]

@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "Budsjett i dollar";
 "Spezifikation ohne Freigabe" = "Spesifikasjon uten godkjenning";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Uten godkjenning bare ved risikoklasse lav, og bare hvis prosjektet tillater det.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "1 arbeidsordre venter";
 "{} Aufträge warten" = "{} arbeidsordrer venter";
 "Station" = "Stasjon";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "Etterlatte filer: {}";
 "{} % Fenster" = "{} % av vinduet";
 "nichts" = "ingenting";
-"{} $" = "{} $";
 "Dollar" = "dollar";
 "Tokens" = "tokener";
 "Fensteranteil" = "andel av vinduet";
@@ -2348,3 +2346,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Mappen er ikke klarert; ingenting ble sendt.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Steget kunne ikke kjøres; prøv igjen.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Arbeidsordren har ingen akseptert commit som pushen kan sende.";
+"Vorgabe: {}" = "Standard: {}";
+"Vorgabe: ohne Grenze" = "Standard: ingen grense";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Et tomt budsjett lar standarden gjelde. Et prosjekt kan bare skjerpe grenser og budsjetter, så et budsjett er bare uten grense her når standarden heller ikke setter noen.";
+"Bestätigen: {}" = "Bekreft: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Nøkkeltallene bygger på 1 arbeidsordre; av den teller {} med i førstegangsandelen, uten inngrep og uten agentbytte.";
+"1 Kommentar ist noch nicht gesendet." = "1 kommentar er ikke sendt ennå.";
+"{} Kommentare sind noch nicht gesendet." = "{} kommentarer er ikke sendt ennå.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Godkjenning forkaster dem. «Send kommentarer» gir dem til planleggeren, som deretter reviderer spesifikasjonen.";
+"Ohne Kommentare freigeben" = "Godkjenn uten kommentarer";
+"{},{} $" = "{},{} $";

@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "Budžet u dolarima";
 "Spezifikation ohne Freigabe" = "Specifikacija bez odobrenja";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Bez odobrenja samo kod niskog razreda rizika i samo ako projekt to dopušta.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "1 radni nalog čeka";
 "{} Aufträge warten" = "Radni nalozi na čekanju: {}";
 "Station" = "Faza";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "Zaostale datoteke: {}";
 "{} % Fenster" = "{} % prozora";
 "nichts" = "ništa";
-"{} $" = "{} $";
 "Dollar" = "dolari";
 "Tokens" = "tokeni";
 "Fensteranteil" = "udio prozora";
@@ -2348,3 +2346,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Mapa nije pouzdana; ništa nije poslano.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Korak se nije mogao izvesti; pokušajte ponovno.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Radni nalog nema prihvaćeni commit koji bi push mogao poslati.";
+"Vorgabe: {}" = "Standardno: {}";
+"Vorgabe: ohne Grenze" = "Standardno: bez ograničenja";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Prazan budžet ostavlja na snazi standardnu vrijednost. Projekt može ograničenja i budžete samo pooštriti, pa je budžet ovdje bez ograničenja samo ako ga ne postavlja ni standardna vrijednost.";
+"Bestätigen: {}" = "Potvrdi: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Pokazatelji se temelje na 1 radnom nalogu; od toga se u udio prolaza iz prve ubraja: {}, bez intervencija i bez promjena agenta.";
+"1 Kommentar ist noch nicht gesendet." = "1 komentar još nije poslan.";
+"{} Kommentare sind noch nicht gesendet." = "Neposlanih komentara: {}.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Odobravanjem se gube. “Pošalji komentare” predaje ih planeru, koji zatim dorađuje specifikaciju.";
+"Ohne Kommentare freigeben" = "Odobri bez komentara";
+"{},{} $" = "{},{} $";

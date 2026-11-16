@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "Pressupost en dòlars";
 "Spezifikation ohne Freigabe" = "Especificació sense aprovació";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Sense aprovació només amb classe de risc baixa, i només si el projecte ho permet.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "1 ordre de treball en espera";
 "{} Aufträge warten" = "{} ordres de treball en espera";
 "Station" = "Etapa";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "Fitxers deixats: {}";
 "{} % Fenster" = "{} % de la finestra";
 "nichts" = "res";
-"{} $" = "{} $";
 "Dollar" = "dòlars";
 "Tokens" = "tokens";
 "Fensteranteil" = "part de la finestra";
@@ -2348,3 +2346,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "La carpeta no és de confiança; no s’ha enviat res.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "El pas no s’ha pogut executar; torna‑ho a provar.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "L’ordre de treball no té cap commit acceptat que el push pugui enviar.";
+"Vorgabe: {}" = "Per omissió: {}";
+"Vorgabe: ohne Grenze" = "Per omissió: sense límit";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Un pressupost buit deixa vigent el valor per omissió. Un projecte només pot endurir els límits i els pressupostos; per tant, aquí un pressupost només és sense límit si el valor per omissió tampoc no en fixa cap.";
+"Bestätigen: {}" = "Confirma: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Les mètriques es basen en 1 ordre de treball; per a la taxa de primera passada en compten {}, sense intervencions ni canvis d’agent.";
+"1 Kommentar ist noch nicht gesendet." = "Hi ha 1 comentari que encara no s’ha enviat.";
+"{} Kommentare sind noch nicht gesendet." = "Hi ha {} comentaris que encara no s’han enviat.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "En aprovar es perden. “Envia els comentaris” els fa arribar al planificador, que després revisa l’especificació.";
+"Ohne Kommentare freigeben" = "Aprova sense els comentaris";
+"{},{} $" = "{},{} $";

@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "Budget in dollari";
 "Spezifikation ohne Freigabe" = "Specifica senza approvazione";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Senza approvazione solo con classe di rischio bassa, e solo se il progetto lo consente.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "1 ordine di lavoro in attesa";
 "{} Aufträge warten" = "{} ordini di lavoro in attesa";
 "Station" = "Stazione";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "File lasciati: {}";
 "{} % Fenster" = "{}% della finestra";
 "nichts" = "nulla";
-"{} $" = "{} $";
 "Dollar" = "dollari";
 "Tokens" = "token";
 "Fensteranteil" = "percentuale della finestra";
@@ -2348,3 +2346,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "La cartella non è attendibile; non è stato inviato nulla.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Il passaggio non è potuto partire; riprova.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "L’ordine di lavoro non ha un commit accettato che il push possa inviare.";
+"Vorgabe: {}" = "Predefinito: {}";
+"Vorgabe: ohne Grenze" = "Predefinito: senza limite";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Un budget vuoto lascia in vigore il valore predefinito. Un progetto può solo rendere più restrittivi limiti e budget, quindi qui un budget è senza limite solo se nemmeno il predefinito ne imposta uno.";
+"Bestätigen: {}" = "Conferma: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Le metriche si basano su 1 ordine di lavoro; per il tasso di primo passaggio ne contano {}, esclusi interventi e cambi di agente.";
+"1 Kommentar ist noch nicht gesendet." = "1 commento non è ancora stato inviato.";
+"{} Kommentare sind noch nicht gesendet." = "{} commenti non sono ancora stati inviati.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Approvando vanno persi. “Invia commenti” li passa al pianificatore, che poi rivede la specifica.";
+"Ohne Kommentare freigeben" = "Approva senza commenti";
+"{},{} $" = "{},{} $";

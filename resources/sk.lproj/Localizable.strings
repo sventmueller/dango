@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "Rozpočet v dolároch";
 "Spezifikation ohne Freigabe" = "Špecifikácia bez schválenia";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Bez schválenia len pri nízkej triede rizika a len vtedy, keď to projekt dovoľuje.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "1 zákazka čaká";
 "{} Aufträge warten" = "Čakajúce zákazky: {}";
 "Station" = "Stanica";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "Ponechané súbory: {}";
 "{} % Fenster" = "{} % okna";
 "nichts" = "nič";
-"{} $" = "{} $";
 "Dollar" = "doláre";
 "Tokens" = "tokeny";
 "Fensteranteil" = "podiel okna";
@@ -2348,3 +2346,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Priečinok nie je dôveryhodný; nič sa neodoslalo.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Krok sa nepodarilo spustiť; skúste to znova.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Zákazka nemá prijatý commit, ktorý by mohol push odoslať.";
+"Vorgabe: {}" = "Predvolené: {}";
+"Vorgabe: ohne Grenze" = "Predvolené: bez limitu";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Prázdny rozpočet ponechá v platnosti predvolenú hodnotu. Projekt môže limity a rozpočty len sprísniť, preto je tu rozpočet bez limitu len vtedy, keď ho nestanovuje ani predvolená hodnota.";
+"Bestätigen: {}" = "Potvrdiť: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Metriky vychádzajú z 1 zákazky; z nej sa do podielu úspechu na prvý raz počíta {}, bez zásahov a bez zmien agenta.";
+"1 Kommentar ist noch nicht gesendet." = "1 komentár ešte nebol odoslaný.";
+"{} Kommentare sind noch nicht gesendet." = "Počet neodoslaných komentárov: {}.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Schválením sa stratia. „Odoslať komentáre“ ich odovzdá plánovačovi, ktorý potom špecifikáciu prepracuje.";
+"Ohne Kommentare freigeben" = "Schváliť bez komentárov";
+"{},{} $" = "{},{} $";

@@ -164,6 +164,19 @@ pub(crate) fn now() -> u64 {
         .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
 }
 
+/// The local day of the wall clock `wall`, such as `2026-11-16`, by the rule the app keys the daily account with.
+pub(crate) fn local_day(wall: u64) -> String {
+    let seconds = libc::time_t::try_from(wall / 1000).unwrap_or(0);
+    // SAFETY: An all-zero `tm` is a valid value of the plain C struct, which `localtime_r` overwrites.
+    let mut tm: libc::tm = unsafe { std::mem::zeroed() };
+    // SAFETY: Both pointers are to live locals of the right types for the call, which keeps neither.
+    let filled = unsafe { libc::localtime_r(&raw const seconds, &raw mut tm) };
+    if filled.is_null() {
+        return "1970-01-01".into();
+    }
+    format!("{:04}-{:02}-{:02}", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday)
+}
+
 /// What the self-test reads from a window's Leitstand.
 #[cfg(feature = "selftest")]
 pub mod selftest;

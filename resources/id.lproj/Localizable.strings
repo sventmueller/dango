@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "Anggaran dalam dolar";
 "Spezifikation ohne Freigabe" = "Spesifikasi tanpa persetujuan";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Tanpa persetujuan hanya pada kelas risiko rendah, dan hanya jika proyek mengizinkannya.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "1 order kerja menunggu";
 "{} Aufträge warten" = "{} order kerja menunggu";
 "Station" = "Tahap";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "File yang tertinggal: {}";
 "{} % Fenster" = "{}% jendela";
 "nichts" = "tidak ada";
-"{} $" = "${}";
 "Dollar" = "dolar";
 "Tokens" = "token";
 "Fensteranteil" = "porsi jendela";
@@ -2348,3 +2346,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Folder tidak tepercaya; tidak ada yang dikirim.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Langkah tidak dapat berjalan; coba lagi.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Order kerja tidak memiliki commit yang diterima untuk dikirim oleh push.";
+"Vorgabe: {}" = "Default: {}";
+"Vorgabe: ohne Grenze" = "Default: tanpa batas";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Anggaran yang kosong membiarkan default tetap berlaku. Proyek hanya dapat memperketat batas dan anggaran, jadi anggaran di sini hanya tanpa batas jika default juga tidak menetapkan batas.";
+"Bestätigen: {}" = "Konfirmasi: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Metrik didasarkan pada 1 order kerja; {} di antaranya dihitung untuk tingkat lolos pertama, tanpa intervensi dan tanpa pergantian agen.";
+"1 Kommentar ist noch nicht gesendet." = "1 komentar belum dikirim.";
+"{} Kommentare sind noch nicht gesendet." = "{} komentar belum dikirim.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Menyetujui akan membuangnya. “Kirim Komentar” memberikannya kepada perencana, yang kemudian merevisi spesifikasi.";
+"Ohne Kommentare freigeben" = "Setujui Tanpa Komentar";
+"{},{} $" = "${},{}";

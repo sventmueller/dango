@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "预算（美元）";
 "Spezifikation ohne Freigabe" = "规格无需批准";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "仅当风险等级为低且项目允许时，才可无需批准。";
-"{}, {}, {}, {}" = "{}，{}，{}，{}";
 "1 Auftrag wartet" = "1 个工单正在等待";
 "{} Aufträge warten" = "{} 个工单正在等待";
 "Station" = "阶段";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "遗留的文件：{}";
 "{} % Fenster" = "用量窗口 {}%";
 "nichts" = "无";
-"{} $" = "${}";
 "Dollar" = "美元";
 "Tokens" = "Token";
 "Fensteranteil" = "用量窗口占比";
@@ -2348,3 +2346,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "此文件夹未受信任；未发送任何内容。";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "此步骤无法运行；请重试。";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "工单没有可供推送发送的已验收提交。";
+"Vorgabe: {}" = "默认：{}";
+"Vorgabe: ohne Grenze" = "默认：不限制";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "预算留空则沿用默认值。项目只能收紧限制和预算，因此只有默认值也不设限制时，这里的预算才不受限制。";
+"Bestätigen: {}" = "确认：{}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "指标基于 1 个工单；其中 {} 个计入一次通过率，不含人工干预和更换智能体的工单。";
+"1 Kommentar ist noch nicht gesendet." = "有 1 条评论尚未发送。";
+"{} Kommentare sind noch nicht gesendet." = "有 {} 条评论尚未发送。";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "批准会丢弃这些评论。“发送评论”会把它们交给规划者，由其修改规格。";
+"Ohne Kommentare freigeben" = "不带评论批准";
+"{},{} $" = "${}.{}";

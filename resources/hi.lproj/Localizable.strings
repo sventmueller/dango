@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "डॉलर में बजट";
 "Spezifikation ohne Freigabe" = "बिना मंज़ूरी के स्पेसिफ़िकेशन";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "बिना मंज़ूरी केवल जोखिम श्रेणी निम्न पर, और केवल तब जब प्रोजेक्ट इसकी अनुमति दे।";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "1 वर्क ऑर्डर प्रतीक्षा में";
 "{} Aufträge warten" = "{} वर्क ऑर्डर प्रतीक्षा में";
 "Station" = "स्टेशन";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "छूटी हुई फ़ाइलें : {}";
 "{} % Fenster" = "कोटा विंडो का {}%";
 "nichts" = "कुछ नहीं";
-"{} $" = "${}";
 "Dollar" = "डॉलर";
 "Tokens" = "टोकन";
 "Fensteranteil" = "कोटा विंडो का हिस्सा";
@@ -2348,3 +2346,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "फ़ोल्डर भरोसेमंद नहीं है; कुछ नहीं भेजा गया।";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "यह चरण नहीं चल सका; फिर से कोशिश करें।";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "वर्क ऑर्डर में कोई स्वीकृत कमिट नहीं है जिसे पुश भेज सके।";
+"Vorgabe: {}" = "डिफ़ॉल्ट: {}";
+"Vorgabe: ohne Grenze" = "डिफ़ॉल्ट: कोई सीमा नहीं";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "ख़ाली बजट डिफ़ॉल्ट को लागू रहने देता है। प्रोजेक्ट सीमाएँ और बजट केवल सख़्त कर सकता है, इसलिए यहाँ बजट तभी सीमा-रहित होता है जब डिफ़ॉल्ट भी कोई सीमा तय न करे।";
+"Bestätigen: {}" = "पुष्टि करें: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "मेट्रिक्स 1 वर्क ऑर्डर पर आधारित हैं; इनमें से {} पहली बार में पास दर में गिने जाते हैं, हस्तक्षेप और एजेंट बदलाव वाले ऑर्डर छोड़कर।";
+"1 Kommentar ist noch nicht gesendet." = "1 टिप्पणी अभी भेजी नहीं गई है।";
+"{} Kommentare sind noch nicht gesendet." = "{} टिप्पणियाँ अभी भेजी नहीं गई हैं।";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "मंज़ूर करने पर ये छूट जाएँगी। “टिप्पणियाँ भेजें” इन्हें योजनाकार को देता है, जो फिर स्पेसिफ़िकेशन संशोधित करता है।";
+"Ohne Kommentare freigeben" = "टिप्पणियों के बिना मंज़ूर करें";
+"{},{} $" = "${}.{}";

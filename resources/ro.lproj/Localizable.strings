@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "Buget în dolari";
 "Spezifikation ohne Freigabe" = "Specificație fără aprobare";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Fără aprobare doar la clasa de risc scăzută și doar dacă proiectul permite.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "1 ordin de lucru așteaptă";
 "{} Aufträge warten" = "Ordine de lucru în așteptare: {}";
 "Station" = "Stație";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "Fișiere lăsate în urmă: {}";
 "{} % Fenster" = "{} % din fereastră";
 "nichts" = "nimic";
-"{} $" = "{} $";
 "Dollar" = "dolari";
 "Tokens" = "tokenuri";
 "Fensteranteil" = "proporție din fereastră";
@@ -2348,3 +2346,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Dosarul nu este de încredere; nu s-a trimis nimic.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Pasul nu a putut rula; încercați din nou.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Ordinul de lucru nu are niciun commit acceptat pe care push-ul să-l poată trimite.";
+"Vorgabe: {}" = "Implicit: {}";
+"Vorgabe: ohne Grenze" = "Implicit: fără limită";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Un buget gol lasă în vigoare valoarea implicită. Un proiect poate doar să înăsprească limitele și bugetele, deci aici un buget este fără limită doar dacă nici valoarea implicită nu stabilește una.";
+"Bestätigen: {}" = "Confirmați: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Indicatorii se bazează pe 1 ordin de lucru; contează pentru rata primei treceri: {}, fără intervenții și fără schimbări de agent.";
+"1 Kommentar ist noch nicht gesendet." = "1 comentariu nu a fost trimis încă.";
+"{} Kommentare sind noch nicht gesendet." = "Comentarii netrimise: {}.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Prin aprobare se pierd. „Trimiteți comentariile” le transmite planificatorului, care apoi revizuiește specificația.";
+"Ohne Kommentare freigeben" = "Aprobați fără comentarii";
+"{},{} $" = "{},{} $";

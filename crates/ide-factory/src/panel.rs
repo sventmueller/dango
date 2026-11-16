@@ -354,6 +354,7 @@ pub struct Fleet {
     failed: usize,
     parallel: u32,
     quotas: Vec<QuotaLine>,
+    day: String,
     day_spent: Spend,
     day_budget: crate::budget::Budget,
     done_today: usize,
@@ -397,6 +398,7 @@ impl Fleet {
             failed,
             parallel: factory.parallel_limit(),
             quotas,
+            day: factory.day().day().to_string(),
             day_spent: *factory.day().total(),
             day_budget: factory.rules().budgets().day().clone(),
             done_today,
@@ -428,6 +430,11 @@ impl Fleet {
     /// Use per account and service against its window.
     pub fn quotas(&self) -> &[QuotaLine] {
         &self.quotas
+    }
+
+    /// The local day the daily account counts, such as `2026-11-16`.
+    pub fn day(&self) -> &str {
+        &self.day
     }
 
     /// What the day spent across projects.

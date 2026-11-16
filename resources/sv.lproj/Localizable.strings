@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "Budget i dollar";
 "Spezifikation ohne Freigabe" = "Specifikation utan godkännande";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Utan godkännande bara vid riskklass låg, och bara om projektet tillåter det.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "1 arbetsorder väntar";
 "{} Aufträge warten" = "{} arbetsordrar väntar";
 "Station" = "Station";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "Kvarlämnade filer: {}";
 "{} % Fenster" = "{} % av fönstret";
 "nichts" = "ingenting";
-"{} $" = "{} $";
 "Dollar" = "dollar";
 "Tokens" = "tokens";
 "Fensteranteil" = "fönsterandel";
@@ -2348,3 +2346,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Mappen är inte betrodd; ingenting skickades.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Steget kunde inte köras; försök igen.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Arbetsordern har ingen accepterad commit som pushen kan skicka.";
+"Vorgabe: {}" = "Förval: {}";
+"Vorgabe: ohne Grenze" = "Förval: ingen gräns";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "En tom budget låter förvalet gälla. Ett projekt kan bara skärpa gränser och budgetar, så en budget är här utan gräns bara när förvalet inte heller sätter någon.";
+"Bestätigen: {}" = "Bekräfta: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Nyckeltalen bygger på 1 arbetsorder; av den räknas {} in i förstagångsandelen, utan ingrepp och utan agentbyten.";
+"1 Kommentar ist noch nicht gesendet." = "1 kommentar har inte skickats än.";
+"{} Kommentare sind noch nicht gesendet." = "{} kommentarer har inte skickats än.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Godkännande kastar dem. ”Skicka kommentarer” ger dem till planeraren, som sedan omarbetar specifikationen.";
+"Ohne Kommentare freigeben" = "Godkänn utan kommentarer";
+"{},{} $" = "{},{} $";

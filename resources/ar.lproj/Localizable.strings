@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "الميزانية بالدولار";
 "Spezifikation ohne Freigabe" = "المواصفة بدون اعتماد";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "بدون اعتماد فقط عند فئة المخاطر المنخفضة، وفقط إذا سمح المشروع بذلك.";
-"{}, {}, {}, {}" = "{}، {}، {}، {}";
 "1 Auftrag wartet" = "أمر عمل واحد ينتظر";
 "{} Aufträge warten" = "أوامر عمل تنتظر: {}";
 "Station" = "المحطة";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "ملفات متروكة: {}";
 "{} % Fenster" = "{} % من النافذة";
 "nichts" = "لا شيء";
-"{} $" = "{} $";
 "Dollar" = "دولار";
 "Tokens" = "رموز مميزة";
 "Fensteranteil" = "نسبة النافذة";
@@ -2348,3 +2346,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "المجلد غير موثوق؛ لم يُرسَل شيء.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "تعذّر تشغيل الخطوة؛ حاول مرة أخرى.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "ليس لأمر العمل Commit مقبول يمكن لعملية Push إرساله.";
+"Vorgabe: {}" = "الافتراضي: {}";
+"Vorgabe: ohne Grenze" = "الافتراضي: بلا حد";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "الميزانية الفارغة تُبقي القيمة الافتراضية سارية. لا يمكن للمشروع إلا تشديد الحدود والميزانيات؛ لذا تكون الميزانية هنا بلا حد فقط إذا لم تحدد القيمة الافتراضية حدًا.";
+"Bestätigen: {}" = "تأكيد: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "تستند المؤشرات إلى أمر عمل واحد؛ يُحتسب منه في نسبة النجاح من المرة الأولى: {}، باستثناء التدخلات وتبديلات الوكيل.";
+"1 Kommentar ist noch nicht gesendet." = "لم يُرسَل تعليق واحد بعد.";
+"{} Kommentare sind noch nicht gesendet." = "تعليقات لم تُرسَل بعد (العدد: {}).";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "يؤدي الاعتماد إلى فقدانها. “إرسال التعليقات” يسلّمها إلى المخطِّط، فيراجع المواصفة بعد ذلك.";
+"Ohne Kommentare freigeben" = "اعتماد دون التعليقات";
+"{},{} $" = "{}.{} $";

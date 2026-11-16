@@ -1992,12 +1992,14 @@ dependencies = [
  "ide-factory",
  "ide-product",
  "ide-ui-common",
+ "libc",
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",
  "serde",
  "serde_json",
  "splat-i18n",
+ "toml_edit",
 ]
 
 [[package]]

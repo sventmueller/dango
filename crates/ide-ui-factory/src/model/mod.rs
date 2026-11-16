@@ -10,3 +10,6 @@ pub mod notices;
 pub mod settings;
 pub mod sheet;
 pub mod words;
+
+#[cfg(test)]
+mod testing;

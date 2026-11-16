@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "Бюджет у доларах";
 "Spezifikation ohne Freigabe" = "Специфікація без затвердження";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Без затвердження — лише за низького класу ризику й лише якщо проєкт це дозволяє.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "1 замовлення чекає";
 "{} Aufträge warten" = "Замовлень в очікуванні: {}";
 "Station" = "Етап";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "Залишені файли: {}";
 "{} % Fenster" = "{} % вікна";
 "nichts" = "нічого";
-"{} $" = "{} $";
 "Dollar" = "долари";
 "Tokens" = "токени";
 "Fensteranteil" = "частка вікна";
@@ -2348,3 +2346,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Немає довіри до папки; нічого не надіслано.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Не вдалося виконати крок; спробуйте ще раз.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Замовлення не має прийнятого коміту, який міг би надіслати push.";
+"Vorgabe: {}" = "Типове: {}";
+"Vorgabe: ohne Grenze" = "Типове: без ліміту";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Порожній бюджет залишає чинним типове значення. Проєкт може лише посилювати ліміти й бюджети, тож бюджет тут буває без ліміту, тільки якщо його не задає й типове значення.";
+"Bestätigen: {}" = "Підтвердити: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Показники ґрунтуються на 1 замовленні; з нього в частці успіху з першого разу враховано: {} (без втручань і без зміни агента).";
+"1 Kommentar ist noch nicht gesendet." = "1 коментар ще не надіслано.";
+"{} Kommentare sind noch nicht gesendet." = "Ненадісланих коментарів: {}.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Під час затвердження вони пропадуть. «Надіслати коментарі» передає їх планувальникові, який потім доопрацьовує специфікацію.";
+"Ohne Kommentare freigeben" = "Затвердити без коментарів";
+"{},{} $" = "{},{} $";

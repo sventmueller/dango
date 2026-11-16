@@ -260,7 +260,7 @@ pub fn gate_failure(failure: &GateFailure) -> String {
     }
 }
 
-/// What `spend` used, in the units that counted: "1.20 $ · 34000 Tokens".
+/// What `spend` used, in the units that counted: "1,20 $ · 34000 Tokens".
 pub fn spend(spend: &Spend) -> String {
     let mut parts = Vec::new();
     if spend.dollars() > 0.0 {
@@ -278,9 +278,15 @@ pub fn spend(spend: &Spend) -> String {
     parts.join(" · ")
 }
 
-/// An amount of dollars.
+/// An amount of US dollars to the cent, with the decimal separator and the currency's place of the user's language.
 pub fn dollars(amount: f64) -> String {
-    tf("{} $", &[&format!("{amount:.2}")])
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "a budget or a spending, never negative and far below 2^64 cents"
+    )]
+    let cents = (amount.max(0.0) * 100.0).round() as u64;
+    tf("{},{} $", &[&(cents / 100).to_string(), &format!("{:02}", cents % 100)])
 }
 
 /// A unit of spending.
@@ -490,6 +496,13 @@ fn expected_words(expected: Expected) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn dollars_go_to_the_cent_through_the_language_s_pattern() {
+        assert_eq!(dollars(1.2), tf("{},{} $", &["1", "20"]));
+        assert_eq!(dollars(0.05), tf("{},{} $", &["0", "05"]));
+        assert_eq!(dollars(12.0), tf("{},{} $", &["12", "00"]));
+    }
 
     #[test]
     fn spans_of_time_read_to_the_minute() {

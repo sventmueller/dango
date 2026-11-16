@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "תקציב בדולרים";
 "Spezifikation ohne Freigabe" = "מפרט ללא אישור";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "ללא אישור רק בדרגת סיכון נמוכה, ורק אם הפרויקט מתיר זאת.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "הזמנת עבודה אחת ממתינה";
 "{} Aufträge warten" = "{} הזמנות עבודה ממתינות";
 "Station" = "תחנה";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "קבצים שנותרו: {}";
 "{} % Fenster" = "{}% מהחלון";
 "nichts" = "כלום";
-"{} $" = "{} $";
 "Dollar" = "דולרים";
 "Tokens" = "טוקנים";
 "Fensteranteil" = "חלק מהחלון";
@@ -2348,3 +2346,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "התיקיה אינה מהימנה; שום דבר לא נשלח.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "לא ניתן היה להריץ את השלב; יש לנסות שוב.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "להזמנת העבודה אין Commit שהתקבל שה-Push יוכל לשלוח.";
+"Vorgabe: {}" = "ברירת מחדל: {}";
+"Vorgabe: ohne Grenze" = "ברירת מחדל: ללא מגבלה";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "תקציב ריק משאיר את ברירת המחדל בתוקף. פרויקט יכול רק להחמיר מגבלות ותקציבים, ולכן תקציב כאן הוא ללא מגבלה רק כאשר גם ברירת המחדל אינה קובעת מגבלה.";
+"Bestätigen: {}" = "אישור: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "המדדים מבוססים על הזמנת עבודה אחת; נספרות בשיעור המעבר בסבב הראשון: {}, ללא התערבויות וללא החלפות סוכן.";
+"1 Kommentar ist noch nicht gesendet." = "הערה אחת עדיין לא נשלחה.";
+"{} Kommentare sind noch nicht gesendet." = "{} הערות עדיין לא נשלחו.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "האישור מוותר עליהן. ״שליחת ההערות״ מעבירה אותן למתכנן, שמעדכן אחר כך את המפרט.";
+"Ohne Kommentare freigeben" = "אישור ללא ההערות";
+"{},{} $" = "{}.{} $";
