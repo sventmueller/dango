@@ -417,8 +417,8 @@ pub enum Event {
     TurnStopped {
         /// Its prompt.
         prompt: PromptId,
-        /// Why.
-        why: Overdue,
+        /// Why, when a limit stopped it; `None` when the user or a pause did.
+        why: Option<Overdue>,
     },
     /// Background work still running after the turn was stopped before the gate (E189).
     LeftoversStopped {

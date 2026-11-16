@@ -110,14 +110,13 @@ impl Factory {
         let skips = || routed.skipped.iter().map(|(_, skip)| skip);
         if skips().any(|s| matches!(s, Skip::Quota { .. })) {
             self.pause(cx, id, PauseReason::Quota);
-        } else if routed.skipped.iter().len() > 0 && skips().all(|s| matches!(s, Skip::Budget)) {
-            self.pause(
-                cx,
-                id,
-                PauseReason::Budget {
-                    scope: BudgetScope::Order,
-                },
-            );
+        } else if !routed.skipped.is_empty() && skips().all(|s| matches!(s, Skip::Budget)) {
+            let scope = self
+                .orders
+                .get(id)
+                .and_then(|order| self.budget_reached(order, None))
+                .unwrap_or(BudgetScope::Order);
+            self.pause(cx, id, PauseReason::Budget { scope });
         } else if role == Role::Reviewer && skips().any(|s| matches!(s, Skip::SameVendor)) {
             self.wait(cx, id, WaitReason::NoReviewer);
         } else {
@@ -718,7 +717,7 @@ impl Factory {
                             session,
                         });
                     }
-                    self.emit(cx, &id, Event::TurnStopped { prompt, why });
+                    self.emit(cx, &id, Event::TurnStopped { prompt, why: Some(why) });
                     self.emit(cx, &id, Event::SessionEnded { role });
                     self.failure(cx, &id);
                 }

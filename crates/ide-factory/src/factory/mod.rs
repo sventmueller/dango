@@ -342,14 +342,7 @@ impl Factory {
                 session: slot.session().clone(),
             });
             let prompt = turn.prompt();
-            self.emit(
-                cx,
-                id,
-                Event::TurnStopped {
-                    prompt,
-                    why: crate::limits::Overdue::Turn,
-                },
-            );
+            self.emit(cx, id, Event::TurnStopped { prompt, why: None });
         }
         if matches!(self.orders.get(id).map(Order::phase), Some(Phase::Gate { .. })) {
             cx.effect(Effect::StopGate { order: id.clone() });

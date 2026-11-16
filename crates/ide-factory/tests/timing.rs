@@ -55,7 +55,7 @@ fn stopped(app: &App, id: &ide_factory::OrderId) -> Vec<Overdue> {
         .entries
         .into_iter()
         .filter_map(|e| match e.event {
-            Event::TurnStopped { why, .. } => Some(why),
+            Event::TurnStopped { why, .. } => why,
             _ => None,
         })
         .collect()
