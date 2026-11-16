@@ -1,6 +1,7 @@
 //! An AI tab on a session of the app's registry that it did not start, such as a work order's (B37b, E184): it
 //! shows the session from its feed, wears the order's badge, keeps mode and sandbox as the order set them, and sends
-//! what the user writes into the driver's queue. Closing it leaves the session running.
+//! what the user writes into the driver's queue. Closing it leaves the session running. A Claude tab's own session
+//! in the registry reaches it through the same feed, taken in as its events were when the tab ran it itself.
 
 use std::rc::Rc;
 
@@ -142,6 +143,13 @@ impl AgentTab {
                 Signal::CheckpointFailed { message, .. } => {
                     ide_ui_common::diag::report("checkpoint of a turn", message)
                 }
+                Signal::TurnEnded(end) => self.went_out(end.turn, Err(super::driven::gone()), None),
+                Signal::Ended { .. } => {
+                    let handed = self.state.borrow().handed_turn();
+                    if let Some(turn) = handed {
+                        self.went_out(turn, Err(super::driven::gone()), None);
+                    }
+                }
                 _ => {}
             }
         }
@@ -165,7 +173,8 @@ impl AgentTab {
         }
     }
 
-    /// The message the driver took for `turn` went out with `checkpoint` taken before it, or the agent refused it.
+    /// The message the driver took for `turn` went out with `checkpoint` taken before it, or did not: the agent
+    /// refused it, or the turn or the session ended before it went out. A message that went out before is left alone.
     fn went_out(&self, turn: TurnId, sent: Result<Option<String>, Explained>, checkpoint: Option<ide_git::Checkpoint>) {
         let Some(message) = self.state.borrow_mut().take_handed(turn) else {
             return;

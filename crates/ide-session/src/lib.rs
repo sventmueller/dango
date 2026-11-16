@@ -5,10 +5,11 @@
 //!
 //! # Starting
 //!
-//! A [`Launch`] names the [`AgentPath`] (Claude, Codex, OpenCode, an ACP preset, the own agent, or the scripted
-//! session of the tests), the folder, the environment (the app filters it for an order, E186), model, effort, the
-//! session to resume, git for checkpoints and the [`Contract`]: the user's [`UserChoices`], as the AI tab makes them
-//! today, or an [`Order`] with its [`Role`], worktree, build folder, readable folders and allowed domains.
+//! A [`Launch`] names the [`AgentPath`] (Claude with its Remote Control and a rewind of the session it resumes,
+//! Codex, OpenCode, an ACP preset, the own agent, or, for the tests, the scripted session and a played recording of
+//! Claude), the folder, the environment (the app filters it for an order, E186), model, effort, the session to
+//! resume, git for checkpoints and the [`Contract`]: the user's [`UserChoices`], as the AI tab makes them, or an
+//! [`Order`] with its [`Role`], worktree, build folder, readable folders and allowed domains.
 //! [`Registry::start`] starts it under a [`SessionId`] the app keeps in its context, with a [`RequestRule`];
 //! [`rule::for_contract`] gives the contract's own.
 //!
@@ -33,6 +34,11 @@
 //! background item and [`Driver::set_model`] switches the model where the path can while it runs (E184). Requests go to the rule once: [`Verdict::Allow`],
 //! [`Verdict::Deny`] with a reason the agent reads where the path carries one, or [`Verdict::User`], after which the
 //! user answers through [`Driver::answer_permission`], [`Driver::answer_questions`] and [`Driver::answer_plan`].
+//! The user's session takes more, as the AI tab drives it (B37b): [`Driver::steer`] hands a message to the turn that
+//! runs at once, without a checkpoint (an order's session queues it instead), [`Driver::answer_permission_as`] takes
+//! Claude's answer with an edited input and suggestions to keep as rules, never one for destructive git (E27, E33),
+//! [`Driver::stop_turn`] also stops a turn the agent began by itself, and [`Driver::claude`] reaches what only Claude
+//! Code offers, such as its overlays (E146), Remote Control and its usage.
 //! [`OrderRule`] refuses what reaches beyond an order's bounds (or leaves it to the user without O1), leaves
 //! questions to the user and refuses plans.
 //!
@@ -44,6 +50,12 @@
 //! more than 4096; a new subscriber's first [`Batch`] is the snapshot. `flush` returns the subscribers whose feed
 //! just filled, which [`Driver::take`] empties; [`Driver::unsubscribe`] ends a feed without ending the session.
 //!
+//! [`Signal::Delivered`] says that a prompt went out, with the agent's id of the message, which rewinding names,
+//! and the checkpoint taken before it (labelled as the AI tab labels it for the user's session);
+//! [`Signal::CheckpointFinished`] hands on the checkpoint once the end of its turn is recorded. On the Claude path,
+//! [`Signal::ClaudeFailed`] follows each `Failed` with the typed error, and [`Signal::RemoteControl`] tells that the
+//! Remote Control connection changed.
+//!
 //! Every turn ends with [`Signal::TurnEnded`]: its [`TurnId`], an [`Outcome`] (succeeded, failed with the path's
 //! words, cancelled, connection lost), its checkpoint and how much work still runs (E189). Every path ends a turn in
 //! `Idle`, failed ones too; the outcome comes from the last interruption or error in the turn that no output of the
@@ -54,7 +66,9 @@
 //! when that fails, reports [`Signal::NeedsPause`] and sends nothing until [`Driver::resync`] succeeds (C62).
 //!
 //! The scripted session (feature `selftest`, F61) plays a [`Script`] per prompt, writes files in the folder and
-//! asks for permissions, so self-tests can run an order without an agent's CLI.
+//! asks for permissions, so self-tests can run an order without an agent's CLI. A played recording of Claude
+//! (`AgentPath::Replay`) takes no prompts; `Driver::feed` plays lines into it and hands what changed to the
+//! subscribers at once, and `Driver::replay_plan` answers its plans.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]

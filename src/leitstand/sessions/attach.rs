@@ -1,7 +1,8 @@
 //! The AI tab on an order's session (B37b, E184): the session of the order's current role opens as an AI tab that
 //! follows its feed in the shared registry; what the user does there reaches the order's factory as an intervention,
 //! a model switch or an answer, each on the next turn of the main thread, so no factory step runs inside the tab's
-//! own call. Closing the tab ends its feed, never the session.
+//! own call. Closing the tab ends its feed, never the session. A normal Claude tab starts its own session in the same
+//! registry; no order links it, so the factory never hears of it, and it ends with its tab.
 
 use std::path::Path;
 use std::rc::Rc;

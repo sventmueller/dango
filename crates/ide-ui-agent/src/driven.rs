@@ -288,6 +288,7 @@ fn subscribe(sessions: &dyn Sessions, session: SessionId) -> Option<SubscriberId
     subscriber
 }
 
-fn gone() -> Explained {
+/// Why a call did not reach the session: it has ended.
+pub(crate) fn gone() -> Explained {
     Explained::of(&ide_claude::SessionError::Closed)
 }

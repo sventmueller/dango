@@ -1,8 +1,10 @@
 //! The AI tab: one agent session per tab with its timeline, composer and status, as the official Claude Code
-//! extension shows it, drawn natively. Claude runs through `ide_claude::Session`, other agents over ACP through
-//! `ide_acp::Session`; the self-test feeds recordings through `ide_claude::replay::Replay` instead. [`attach`] opens a
-//! tab on a session of the app's `ide_session::Registry` it did not start, such as a work order's (E184), which the
-//! app feeds with [`session_fed`] after each flush; [`plan::spec_view`] shows a specification without a session (E178).
+//! extension shows it, drawn natively. A Claude tab runs its session in the app's `ide_session::Registry`, which
+//! [`State::install_sessions`] hands over as the app starts (B37b), and the self-test plays recordings there through
+//! `ide_claude::replay::Replay` instead; Codex, OpenCode, the own agent and ACP agents run in sessions of the tab's
+//! own. [`attach`] opens a tab on a session of the registry it did not start, such as a work order's (E184). The app
+//! feeds the tabs on the registry's sessions with [`session_fed`] after each flush; [`plan::spec_view`] shows a
+//! specification without a session (E178).
 
 mod acp;
 mod acp_install;

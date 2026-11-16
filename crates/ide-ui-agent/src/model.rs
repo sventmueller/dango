@@ -457,6 +457,11 @@ impl State {
         self.turn.handed = Some((turn, message));
     }
 
+    /// The turn whose message the registry's driver holds before it goes out.
+    pub(crate) fn handed_turn(&self) -> Option<ide_session::TurnId> {
+        self.turn.handed.as_ref().map(|(turn, _)| *turn)
+    }
+
     /// The message that began `turn` and went out now, which the driver took from the tab.
     pub(crate) fn take_handed(&mut self, turn: ide_session::TurnId) -> Option<UserMessage> {
         match self.turn.handed.take() {

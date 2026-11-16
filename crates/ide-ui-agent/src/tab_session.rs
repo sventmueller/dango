@@ -45,6 +45,10 @@ impl AgentTab {
             self.start_acp(agent, thread);
             return;
         }
+        if self.state.borrow().source().claude().is_some() {
+            let old = self.state.borrow_mut().end();
+            old.end();
+        }
         let transcript = {
             let mut state = self.state.borrow_mut();
             state.start();
