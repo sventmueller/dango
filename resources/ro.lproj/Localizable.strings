@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "Fișierul workflow permite un evaluator de la același producător.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "Fișierul workflow acceptă automat ca ordine de lucru issue-urile cu eticheta „{}” din {}.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "Fișierul workflow activează instrumente pentru rolul {}: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "Selectați un pasaj din specificație și alegeți „Comentați”.";
+"Kommentar zur ganzen Spezifikation" = "Comentariu la întreaga specificație";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "Comentează pasajul selectat sau, dacă nu este selectat nimic, întreaga specificație";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "Comentariile ajung la planificator doar prin „Trimiteți comentariile”, fiecare sub pasajul la care se referă.";
+"Kommentare senden" = "Trimiteți comentariile";
+"Kommentare gesendet" = "Comentarii trimise";
+"Spezifikation zur Freigabe" = "Specificație de aprobat";
+"Freigegeben" = "Aprobată";
+"Auftrag {} · {}" = "Ordinul de lucru {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "Ordinul de lucru stabilește modul și sandboxul";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "Pentru agentul propriu nu este configurat niciun model cu endpoint.";

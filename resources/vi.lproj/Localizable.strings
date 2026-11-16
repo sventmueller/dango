@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "Tệp quy trình cho phép người xem xét cùng hãng.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "Tệp quy trình tự động nhận các issue có nhãn “{}” từ {} làm phiếu công việc.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "Tệp quy trình bật công cụ cho vai trò {}: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "Hãy chọn một đoạn trong đặc tả rồi chọn “Nhận xét”.";
+"Kommentar zur ganzen Spezifikation" = "Nhận xét về toàn bộ đặc tả";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "Nhận xét về đoạn đã chọn, hoặc về toàn bộ đặc tả nếu không chọn gì";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "Nhận xét chỉ được gửi đến người lập kế hoạch khi bạn chọn “Gửi nhận xét”, mỗi nhận xét nằm dưới đoạn mà nó nói đến.";
+"Kommentare senden" = "Gửi nhận xét";
+"Kommentare gesendet" = "Đã gửi nhận xét";
+"Spezifikation zur Freigabe" = "Đặc tả chờ phê duyệt";
+"Freigegeben" = "Đã phê duyệt";
+"Auftrag {} · {}" = "Phiếu công việc {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "Phiếu công việc quyết định chế độ và sandbox";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "Chưa thiết lập mô hình nào có điểm cuối cho tác nhân tích hợp.";

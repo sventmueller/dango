@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "Soubor pracovního postupu povoluje recenzenta od stejného výrobce.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "Soubor pracovního postupu automaticky přijímá jako zakázky issues se štítkem „{}“ z {}.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "Soubor pracovního postupu zapíná pro roli {} nástroje: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "Vyberte místo ve specifikaci a zvolte „Komentovat“.";
+"Kommentar zur ganzen Spezifikation" = "Komentář k celé specifikaci";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "Okomentuje vybrané místo, bez výběru celou specifikaci";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "Komentáře se plánovači odešlou jen tlačítkem „Odeslat komentáře“, každý pod místem, ke kterému patří.";
+"Kommentare senden" = "Odeslat komentáře";
+"Kommentare gesendet" = "Komentáře odeslány";
+"Spezifikation zur Freigabe" = "Specifikace ke schválení";
+"Freigegeben" = "Schváleno";
+"Auftrag {} · {}" = "Zakázka {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "Režim a sandbox určuje zakázka";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "Pro vlastního agenta není nastaven žádný model s koncovým bodem.";

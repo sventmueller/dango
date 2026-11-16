@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "File workflow mengizinkan peninjau dari vendor yang sama.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "File workflow otomatis menerima issue berlabel “{}” dari {} sebagai order kerja.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "File workflow mengaktifkan alat untuk peran {}: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "Pilih bagian dari spesifikasi, lalu pilih “Komentari”.";
+"Kommentar zur ganzen Spezifikation" = "Komentar pada seluruh spesifikasi";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "Mengomentari bagian yang dipilih, atau seluruh spesifikasi jika tidak ada yang dipilih";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "Komentar hanya sampai ke perencana melalui “Kirim Komentar”, masing-masing di bawah bagian yang dimaksud.";
+"Kommentare senden" = "Kirim Komentar";
+"Kommentare gesendet" = "Komentar dikirim";
+"Spezifikation zur Freigabe" = "Spesifikasi Menunggu Persetujuan";
+"Freigegeben" = "Disetujui";
+"Auftrag {} · {}" = "Order Kerja {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "Order kerja menentukan mode dan sandbox";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "Belum ada model dengan endpoint yang disiapkan untuk agen bawaan.";

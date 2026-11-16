@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "ワークフローファイルは、同じベンダーのレビュアーを許可しています。";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "ワークフローファイルは、ラベル“{}”が付いた{}のIssueを自動的に作業指示として受け付けます。";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "ワークフローファイルは、ロール“{}”のツールを有効にします: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "仕様内の箇所を選択して、“コメント”を選択してください。";
+"Kommentar zur ganzen Spezifikation" = "仕様全体へのコメント";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "選択した箇所に、選択がない場合は仕様全体にコメントします";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "コメントは“コメントを送信”でのみプランナーに送られ、それぞれ対象の箇所の下に入ります。";
+"Kommentare senden" = "コメントを送信";
+"Kommentare gesendet" = "コメントを送信しました";
+"Spezifikation zur Freigabe" = "承認待ちの仕様";
+"Freigegeben" = "承認済み";
+"Auftrag {} · {}" = "作業指示{} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "モードとサンドボックスは作業指示で決まります";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "内蔵エージェントにエンドポイント付きのモデルが設定されていません。";

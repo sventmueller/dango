@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "Workflowfilen tillåter en granskare från samma tillverkare.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "Workflowfilen tar automatiskt emot issues med etiketten ”{}” från {} som arbetsordrar.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "Workflowfilen aktiverar verktyg för rollen {}: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "Markera ett ställe i specifikationen och välj ”Kommentera”.";
+"Kommentar zur ganzen Spezifikation" = "Kommentar till hela specifikationen";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "Kommenterar det markerade stället, eller hela specifikationen om inget är markerat";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "Kommentarer når planeraren bara via ”Skicka kommentarer”, var och en under stället den gäller.";
+"Kommentare senden" = "Skicka kommentarer";
+"Kommentare gesendet" = "Kommentarerna skickades";
+"Spezifikation zur Freigabe" = "Specifikation för godkännande";
+"Freigegeben" = "Godkänd";
+"Auftrag {} · {}" = "Arbetsorder {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "Arbetsordern bestämmer läge och sandlåda";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "Ingen modell med slutpunkt har konfigurerats för den egna agenten.";

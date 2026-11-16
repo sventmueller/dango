@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "El fitxer de flux de treball admet un revisor del mateix fabricant.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "El fitxer de flux de treball accepta automàticament com a ordres de treball les issues amb l’etiqueta “{}” de {}.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "El fitxer de flux de treball activa eines per al rol {}: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "Selecciona un passatge de l’especificació i tria “Comenta”.";
+"Kommentar zur ganzen Spezifikation" = "Comentari sobre tota l’especificació";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "Comenta el passatge seleccionat o, si no hi ha cap selecció, tota l’especificació";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "Els comentaris només arriben al planificador amb “Envia els comentaris”, cadascun sota el passatge a què es refereix.";
+"Kommentare senden" = "Envia els comentaris";
+"Kommentare gesendet" = "Comentaris enviats";
+"Spezifikation zur Freigabe" = "Especificació per aprovar";
+"Freigegeben" = "Aprovada";
+"Auftrag {} · {}" = "Ordre de treball {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "L’ordre de treball fixa el mode i el sandbox";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "No hi ha cap model amb punt de connexió configurat per a l’agent propi.";

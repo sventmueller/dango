@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "O arquivo de workflow permite um revisor do mesmo fabricante.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "O arquivo de workflow aceita automaticamente como ordens de serviço as issues com o rótulo “{}” de {}.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "O arquivo de workflow ativa ferramentas para a função {}: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "Selecione um trecho da especificação e escolha “Comentar”.";
+"Kommentar zur ganzen Spezifikation" = "Comentário sobre a especificação inteira";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "Comenta o trecho selecionado ou, sem seleção, a especificação inteira";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "Os comentários só chegam ao planejador com “Enviar Comentários”, cada um abaixo do trecho a que se refere.";
+"Kommentare senden" = "Enviar Comentários";
+"Kommentare gesendet" = "Comentários enviados";
+"Spezifikation zur Freigabe" = "Especificação para Aprovação";
+"Freigegeben" = "Aprovada";
+"Auftrag {} · {}" = "Ordem de Serviço {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "A ordem de serviço define o modo e o sandbox";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "Nenhum modelo com endpoint está configurado para o agente integrado.";

@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "El archivo de flujo de trabajo admite un revisor del mismo fabricante.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "El archivo de flujo de trabajo acepta automáticamente como órdenes de trabajo los issues con la etiqueta «{}» de {}.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "El archivo de flujo de trabajo activa herramientas para el rol {}: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "Selecciona una parte de la especificación y elige «Comentar».";
+"Kommentar zur ganzen Spezifikation" = "Comentario sobre la especificación completa";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "Comenta la parte seleccionada o, si no hay selección, la especificación completa";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "Los comentarios solo llegan al planificador con «Enviar comentarios», cada uno debajo de la parte a la que se refiere.";
+"Kommentare senden" = "Enviar comentarios";
+"Kommentare gesendet" = "Comentarios enviados";
+"Spezifikation zur Freigabe" = "Especificación pendiente de aprobación";
+"Freigegeben" = "Aprobada";
+"Auftrag {} · {}" = "Orden de trabajo {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "La orden de trabajo fija el modo y el sandbox";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "No hay ningún modelo con endpoint configurado para el agente propio.";

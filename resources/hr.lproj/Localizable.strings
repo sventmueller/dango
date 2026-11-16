@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "Datoteka tijeka rada dopušta recenzenta istog proizvođača.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "Datoteka tijeka rada automatski prihvaća issuee s oznakom “{}” s {} kao radne naloge.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "Datoteka tijeka rada uključuje alate za ulogu {}: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "Označite dio specifikacije i odaberite “Komentiraj”.";
+"Kommentar zur ganzen Spezifikation" = "Komentar na cijelu specifikaciju";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "Komentira označeni dio, a bez oznake cijelu specifikaciju";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "Komentari stižu do planera samo putem “Pošalji komentare”, svaki ispod dijela na koji se odnosi.";
+"Kommentare senden" = "Pošalji komentare";
+"Kommentare gesendet" = "Komentari su poslani";
+"Spezifikation zur Freigabe" = "Specifikacija za odobrenje";
+"Freigegeben" = "Odobreno";
+"Auftrag {} · {}" = "Radni nalog {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "Način i sandbox određuje radni nalog";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "Za vlastitog agenta nije podešen nijedan model s krajnjom točkom.";

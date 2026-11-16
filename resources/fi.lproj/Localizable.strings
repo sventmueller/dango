@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "Työnkulkutiedosto sallii saman valmistajan katselmoijan.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "Työnkulkutiedosto ottaa automaattisesti työtilauksiksi issuet, joilla on tunniste ”{}” ja joiden tekijä on {}.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "Työnkulkutiedosto ottaa käyttöön työkaluja roolille {}: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "Merkitse kohta määrittelystä ja valitse ”Kommentoi”.";
+"Kommentar zur ganzen Spezifikation" = "Kommentti koko määrittelystä";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "Kommentoi valittua kohtaa tai koko määrittelyä, jos mitään ei ole valittu";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "Kommentit menevät suunnittelijalle vain valinnalla ”Lähetä kommentit”, kukin sen kohdan alla, jota se koskee.";
+"Kommentare senden" = "Lähetä kommentit";
+"Kommentare gesendet" = "Kommentit lähetetty";
+"Spezifikation zur Freigabe" = "Määrittely hyväksyttäväksi";
+"Freigegeben" = "Hyväksytty";
+"Auftrag {} · {}" = "Työtilaus {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "Työtilaus määrää tilan ja hiekkalaatikon";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "Omalle agentille ei ole määritetty mallia, jolla on päätepiste.";

@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "Файл робочого процесу допускає рецензента того самого виробника.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "Файл робочого процесу автоматично приймає issues з міткою «{}» з {} як замовлення.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "Файл робочого процесу вмикає для ролі {} інструменти: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "Виділіть уривок специфікації й виберіть «Коментувати».";
+"Kommentar zur ganzen Spezifikation" = "Коментар до всієї специфікації";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "Коментує виділений уривок, а якщо нічого не виділено — всю специфікацію";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "Коментарі надходять планувальникові лише через «Надіслати коментарі», кожен під уривком, якого він стосується.";
+"Kommentare senden" = "Надіслати коментарі";
+"Kommentare gesendet" = "Коментарі надіслано";
+"Spezifikation zur Freigabe" = "Специфікація на затвердження";
+"Freigegeben" = "Затверджено";
+"Auftrag {} · {}" = "Замовлення {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "Режим і пісочницю визначає замовлення";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "Для власного агента не налаштовано моделі з кінцевою точкою.";

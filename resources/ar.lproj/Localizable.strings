@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "يسمح ملف سير العمل بمراجِع من المورّد نفسه.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "يقبل ملف سير العمل تلقائيًا Issues ذات التصنيف “{}” من {} كأوامر عمل.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "يُفعّل ملف سير العمل أدوات لدور {}: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "حدد موضعًا في المواصفة واختر “تعليق”.";
+"Kommentar zur ganzen Spezifikation" = "تعليق على المواصفة بأكملها";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "يعلّق على الموضع المحدد، أو على المواصفة بأكملها إذا لم يكن هناك تحديد";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "لا تصل التعليقات إلى المخطِّط إلا عبر “إرسال التعليقات”، وكل تعليق تحت الموضع الذي يقصده.";
+"Kommentare senden" = "إرسال التعليقات";
+"Kommentare gesendet" = "أُرسلت التعليقات";
+"Spezifikation zur Freigabe" = "مواصفة بانتظار الاعتماد";
+"Freigegeben" = "تم الاعتماد";
+"Auftrag {} · {}" = "أمر العمل {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "يحدد أمر العمل الوضع والبيئة المعزولة";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "لم يتم إعداد أي نموذج ذي نقطة نهاية للوكيل المدمج.";

@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "Plik przepływu pracy dopuszcza recenzenta od tego samego producenta.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "Plik przepływu pracy automatycznie przyjmuje jako zamówienia issues z etykietą „{}” z {}.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "Plik przepływu pracy włącza narzędzia dla roli {}: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "Zaznacz fragment specyfikacji i wybierz „Skomentuj”.";
+"Kommentar zur ganzen Spezifikation" = "Komentarz do całej specyfikacji";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "Komentuje zaznaczony fragment, a bez zaznaczenia całą specyfikację";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "Komentarze trafiają do planisty tylko przez „Wyślij komentarze”, każdy pod fragmentem, którego dotyczy.";
+"Kommentare senden" = "Wyślij komentarze";
+"Kommentare gesendet" = "Komentarze wysłane";
+"Spezifikation zur Freigabe" = "Specyfikacja do zatwierdzenia";
+"Freigegeben" = "Zatwierdzono";
+"Auftrag {} · {}" = "Zamówienie {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "Tryb i piaskownicę określa zamówienie";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "Dla wbudowanego agenta nie skonfigurowano modelu z punktem końcowym.";

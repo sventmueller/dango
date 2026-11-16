@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "Fail aliran kerja membenarkan penyemak daripada vendor yang sama.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "Fail aliran kerja menerima issue berlabel “{}” daripada {} sebagai pesanan kerja secara automatik.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "Fail aliran kerja menghidupkan alat untuk peranan {}: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "Pilih bahagian dalam spesifikasi dan pilih “Ulas”.";
+"Kommentar zur ganzen Spezifikation" = "Ulasan tentang keseluruhan spesifikasi";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "Mengulas bahagian yang dipilih, atau keseluruhan spesifikasi jika tiada pilihan";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "Ulasan hanya sampai kepada perancang melalui “Hantar Ulasan”, setiap satu di bawah bahagian yang dimaksudkan.";
+"Kommentare senden" = "Hantar Ulasan";
+"Kommentare gesendet" = "Ulasan dihantar";
+"Spezifikation zur Freigabe" = "Spesifikasi untuk Kelulusan";
+"Freigegeben" = "Diluluskan";
+"Auftrag {} · {}" = "Pesanan Kerja {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "Pesanan kerja menetapkan mod dan sandbox";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "Tiada model dengan endpoint disediakan untuk ejen terbina dalam.";

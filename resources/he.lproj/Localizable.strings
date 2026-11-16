@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "קובץ תהליך העבודה מתיר סוקר מאותו יצרן.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "קובץ תהליך העבודה מקבל אוטומטית Issues עם התווית ״{}״ מ-{} כהזמנות עבודה.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "קובץ תהליך העבודה מפעיל כלים עבור התפקיד {}: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "יש לסמן קטע במפרט ולבחור ״הוספת הערה״.";
+"Kommentar zur ganzen Spezifikation" = "הערה על המפרט כולו";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "הערה על הקטע המסומן, או על המפרט כולו כשלא סומן דבר";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "ההערות מגיעות למתכנן רק דרך ״שליחת ההערות״, כל אחת מתחת לקטע שאליו היא מתייחסת.";
+"Kommentare senden" = "שליחת ההערות";
+"Kommentare gesendet" = "ההערות נשלחו";
+"Spezifikation zur Freigabe" = "מפרט לאישור";
+"Freigegeben" = "אושר";
+"Auftrag {} · {}" = "הזמנת עבודה {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "הזמנת העבודה קובעת את המצב ואת ארגז החול";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "לא הוגדר מודל עם נקודת קצה עבור הסוכן המובנה.";

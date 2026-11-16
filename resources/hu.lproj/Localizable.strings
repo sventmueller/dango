@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "A munkafolyamatfájl megenged egy ugyanattól a gyártótól származó ellenőrt.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "A munkafolyamatfájl automatikusan munkarendelésként fogadja a(z) „{}” címkéjű issue-kat ettől: {}.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "A munkafolyamatfájl eszközöket kapcsol be a(z) {} szerepnek: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "Jelöljön ki egy részt a specifikációban, és válassza a „Megjegyzés” lehetőséget.";
+"Kommentar zur ganzen Spezifikation" = "Megjegyzés a teljes specifikációhoz";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "Megjegyzést fűz a kijelölt részhez, kijelölés nélkül a teljes specifikációhoz";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "A megjegyzések csak a „Megjegyzések küldése” gombbal jutnak el a tervezőhöz, mindegyik az általa jelölt rész alatt.";
+"Kommentare senden" = "Megjegyzések küldése";
+"Kommentare gesendet" = "A megjegyzések elküldve";
+"Spezifikation zur Freigabe" = "Jóváhagyásra váró specifikáció";
+"Freigegeben" = "Jóváhagyva";
+"Auftrag {} · {}" = "{} munkarendelés · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "A módot és a homokozót a munkarendelés határozza meg";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "A beépített ügynökhöz nincs beállítva végponttal rendelkező modell.";

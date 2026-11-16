@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "वर्कफ़्लो फ़ाइल उसी वेंडर के समीक्षक की अनुमति देती है।";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "वर्कफ़्लो फ़ाइल लेबल “{}” वाले Issues को {} से अपने आप वर्क ऑर्डर के रूप में स्वीकार करती है।";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "वर्कफ़्लो फ़ाइल भूमिका {} के लिए टूल चालू करती है : {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "स्पेसिफ़िकेशन में कोई अंश चुनें, फिर “टिप्पणी करें” पर क्लिक करें।";
+"Kommentar zur ganzen Spezifikation" = "पूरे स्पेसिफ़िकेशन पर टिप्पणी";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "चुने गए अंश पर टिप्पणी करता है, कुछ न चुना हो तो पूरे स्पेसिफ़िकेशन पर";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "टिप्पणियाँ योजनाकार तक केवल “टिप्पणियाँ भेजें” से पहुँचती हैं, हर टिप्पणी उसी अंश के नीचे जिससे वह जुड़ी है।";
+"Kommentare senden" = "टिप्पणियाँ भेजें";
+"Kommentare gesendet" = "टिप्पणियाँ भेजी गईं";
+"Spezifikation zur Freigabe" = "मंज़ूरी के लिए स्पेसिफ़िकेशन";
+"Freigegeben" = "मंज़ूर किया गया";
+"Auftrag {} · {}" = "वर्क ऑर्डर {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "मोड और सैंडबॉक्स वर्क ऑर्डर तय करता है";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "बिल्ट-इन एजेंट के लिए एंडपॉइंट वाला कोई मॉडल सेट अप नहीं है।";

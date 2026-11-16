@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "工作流文件允许使用同一厂商的审查者。";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "工作流文件会自动将带有标签“{}”、由 {} 创建的 Issue 接收为工单。";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "工作流文件为角色 {} 启用了工具：{}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "在规格中选择一段文字，然后选取“评论”。";
+"Kommentar zur ganzen Spezifikation" = "针对整个规格的评论";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "评论所选段落；未选择内容时评论整个规格";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "只有通过“发送评论”，评论才会发送给规划者，每条评论都位于它所指的段落下方。";
+"Kommentare senden" = "发送评论";
+"Kommentare gesendet" = "已发送评论";
+"Spezifikation zur Freigabe" = "待批准的规格";
+"Freigegeben" = "已批准";
+"Auftrag {} · {}" = "工单 {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "模式和沙盒由工单决定";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "尚未为内置智能体设置带端点的模型。";

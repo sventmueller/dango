@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "Arbeidsflytfilen tillater en kontrollør fra samme produsent.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "Arbeidsflytfilen tar automatisk imot issues med etiketten «{}» fra {} som arbeidsordrer.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "Arbeidsflytfilen slår på verktøy for rollen {}: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "Marker et sted i spesifikasjonen og velg «Kommenter».";
+"Kommentar zur ganzen Spezifikation" = "Kommentar til hele spesifikasjonen";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "Kommenterer det markerte stedet, eller hele spesifikasjonen når ingenting er markert";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "Kommentarer når planleggeren bare via «Send kommentarer», hver under stedet den gjelder.";
+"Kommentare senden" = "Send kommentarer";
+"Kommentare gesendet" = "Kommentarer sendt";
+"Spezifikation zur Freigabe" = "Spesifikasjon til godkjenning";
+"Freigegeben" = "Godkjent";
+"Auftrag {} · {}" = "Arbeidsordre {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "Arbeidsordren bestemmer modus og sandkasse";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "Ingen modell med endepunkt er satt opp for den innebygde agenten.";

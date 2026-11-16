@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "ไฟล์เวิร์กโฟลว์อนุญาตให้ใช้ผู้ตรวจทานจากผู้ผลิตเดียวกัน";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "ไฟล์เวิร์กโฟลว์รับ Issue ที่มี Label “{}” จาก {} เป็นใบสั่งงานโดยอัตโนมัติ";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "ไฟล์เวิร์กโฟลว์เปิดใช้เครื่องมือสำหรับบทบาท {}: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "เลือกส่วนหนึ่งของข้อกำหนดแล้วเลือก “แสดงความคิดเห็น”";
+"Kommentar zur ganzen Spezifikation" = "ความคิดเห็นเกี่ยวกับทั้งข้อกำหนด";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "แสดงความคิดเห็นในส่วนที่เลือก หรือทั้งข้อกำหนดหากไม่ได้เลือกไว้";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "ความคิดเห็นจะส่งถึงผู้วางแผนผ่าน “ส่งความคิดเห็น” เท่านั้น โดยแต่ละรายการจะอยู่ใต้ส่วนที่กล่าวถึง";
+"Kommentare senden" = "ส่งความคิดเห็น";
+"Kommentare gesendet" = "ส่งความคิดเห็นแล้ว";
+"Spezifikation zur Freigabe" = "ข้อกำหนดที่รออนุมัติ";
+"Freigegeben" = "อนุมัติแล้ว";
+"Auftrag {} · {}" = "ใบสั่งงาน {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "ใบสั่งงานเป็นผู้กำหนดโหมดและแซนด์บ็อกซ์";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "ยังไม่ได้ตั้งค่าโมเดลที่มีเอนด์พอยต์สำหรับเอเจนต์ในตัว";

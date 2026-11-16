@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "Le fichier de workflow autorise un relecteur du même fabricant.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "Le fichier de workflow accepte automatiquement comme ordres de travail les issues portant l’étiquette « {} » de {}.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "Le fichier de workflow active des outils pour le rôle {} : {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "Sélectionnez un passage de la spécification et choisissez « Commenter ».";
+"Kommentar zur ganzen Spezifikation" = "Commentaire sur l’ensemble de la spécification";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "Commente le passage sélectionné, ou l’ensemble de la spécification si rien n’est sélectionné";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "Les commentaires ne sont transmis au planificateur qu’avec « Envoyer les commentaires », chacun sous le passage qu’il concerne.";
+"Kommentare senden" = "Envoyer les commentaires";
+"Kommentare gesendet" = "Commentaires envoyés";
+"Spezifikation zur Freigabe" = "Spécification à approuver";
+"Freigegeben" = "Approuvée";
+"Auftrag {} · {}" = "Ordre de travail {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "L’ordre de travail fixe le mode et la sandbox";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "Aucun modèle avec point de terminaison n’est configuré pour l’agent intégré.";

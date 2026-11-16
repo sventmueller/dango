@@ -2240,3 +2240,14 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "워크플로 파일이 같은 벤더의 검토자를 허용합니다.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "워크플로 파일이 ‘{}’ 레이블이 붙은, {}이(가) 작성한 Issue를 자동으로 작업 주문으로 받습니다.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "워크플로 파일이 역할 {}에 대해 도구를 활성화합니다: {}";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "사양에서 부분을 선택하고 ‘댓글 달기’를 선택하십시오.";
+"Kommentar zur ganzen Spezifikation" = "사양 전체에 대한 댓글";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "선택한 부분에, 선택한 부분이 없으면 사양 전체에 댓글을 답니다";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "댓글은 ‘댓글 보내기’를 통해서만 플래너에 전달되며, 각 댓글은 해당 부분 아래에 놓입니다.";
+"Kommentare senden" = "댓글 보내기";
+"Kommentare gesendet" = "댓글 전송됨";
+"Spezifikation zur Freigabe" = "승인 대기 중인 사양";
+"Freigegeben" = "승인됨";
+"Auftrag {} · {}" = "작업 주문 {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "모드와 샌드박스는 작업 주문이 정합니다";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "내장 에이전트에 엔드포인트가 있는 모델이 설정되지 않았습니다.";
