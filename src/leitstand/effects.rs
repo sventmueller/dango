@@ -405,6 +405,7 @@ impl Leitstand {
                     run_folder,
                     &login,
                     cancel.clone(),
+                    info.frozen.as_deref(),
                 ),
                 Err(error) => git::failed(&error),
             };
@@ -465,6 +466,7 @@ impl Leitstand {
             let copy = main.as_ref().and_then(|main| git::open_in(main, &worktree).ok());
             let job = gates::Job {
                 env: ide_process::order_env::for_orders(&login, &[]),
+                rules: gates::rules(info.frozen.as_deref(), &root),
                 common_dir: copy.as_ref().map(|c| c.common_dir().to_path_buf()),
                 dependencies: siblings::targets(&root),
                 images: images.map(|dir| gates::images_folder(&dir, &ide_core::paths::home())),
@@ -570,6 +572,7 @@ fn prepared(
     run_folder: Option<PathBuf>,
     login: &[(String, String)],
     cancel: Cancel,
+    frozen: Option<&Path>,
 ) -> OpResult {
     let tree = match git::make_worktree(main, root, order, branch, base_branch) {
         Ok(tree) => tree,
@@ -590,6 +593,7 @@ fn prepared(
         let copy = git::open_in(main, &tree.path).ok();
         let job = gates::Job {
             env: ide_process::order_env::for_orders(login, &[]),
+            rules: gates::rules(frozen, root),
             common_dir: copy.as_ref().map(|c| c.common_dir().to_path_buf()),
             dependencies: siblings::targets(root),
             images: None,

@@ -334,6 +334,12 @@ impl Repository {
         Call::new(&self.root, args).envs(&self.pinned())
     }
 
+    /// The git folder below the shared git folder whose `gitdir` record names the linked worktree at `root`, a resolved
+    /// path.
+    pub(crate) fn recorded_git_dir(&self, root: &Path) -> Option<PathBuf> {
+        Anchor::of(&self.root, &self.git_dir, &self.common_dir).git_dir_of_worktree(root)
+    }
+
     /// For an unattended git, `GIT_DIR` and `GIT_WORK_TREE` naming this repository, so no call reads the working tree's
     /// `.git`, which may have changed since the repository was found (E192); nothing for the user's git.
     pub(crate) fn pinned(&self) -> Vec<(OsString, OsString)> {

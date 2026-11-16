@@ -325,3 +325,32 @@ fn an_order_goes_with_its_checkpoints_also_once_its_folder_is_gone() {
         "the branch stays unless asked"
     );
 }
+
+#[test]
+fn an_order_whose_git_file_a_builder_redirected_is_removed_all_the_same() {
+    let (scratch, repository) = repository("order-redirected", &[("a.txt", "a\n")]);
+    let tree = order_tree(&repository, "Redirected", None);
+    let listed = repository
+        .worktrees()
+        .unwrap()
+        .into_iter()
+        .find(|w| w.branch.as_deref() == Some("refs/heads/order/redirected"))
+        .map(|w| w.path)
+        .unwrap();
+    assert_eq!(listed.canonicalize().unwrap(), tree.path.canonicalize().unwrap());
+    let elsewhere = scratch.path("elsewhere");
+    std::fs::create_dir_all(&elsewhere).unwrap();
+    write(&elsewhere, "keep.txt", "not the worktree's\n");
+    write(&tree.path, ".git", &format!("gitdir: {}\n", elsewhere.display()));
+
+    order::remove(&repository, &tree, &[], true).unwrap();
+    assert!(!tree.path.exists());
+    assert!(elsewhere.join("keep.txt").exists(), "only the recorded folder goes");
+    let common = repository.common_dir().join("worktrees");
+    let left: Vec<_> = std::fs::read_dir(&common)
+        .map(|entries| entries.flatten().map(|e| e.file_name()).collect())
+        .unwrap_or_default();
+    assert!(left.is_empty(), "the worktree's record is gone: {left:?}");
+    assert_eq!(repository.resolve("refs/heads/order/redirected").unwrap(), None);
+    assert!(thread_trees::list(repository.root()).is_empty());
+}

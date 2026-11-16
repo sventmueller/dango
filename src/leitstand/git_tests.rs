@@ -224,6 +224,50 @@ fn a_worktree_cut_off_before_its_setup_is_removed_so_it_is_prepared_again() {
 }
 
 #[test]
+fn a_worktree_whose_git_file_was_redirected_is_removed_on_restart_and_on_request() {
+    let (scratch, root, repos) = repository("redirected");
+    let elsewhere = scratch.join("elsewhere");
+    std::fs::create_dir_all(&elsewhere).unwrap();
+    std::fs::write(elsewhere.join("keep.txt"), "not the worktree's\n").unwrap();
+    let redirect = |tree: &ThreadTree| {
+        std::fs::write(tree.path.join(".git"), format!("gitdir: {}\n", elsewhere.display())).unwrap();
+    };
+
+    let order = OrderId("o-5".into());
+    let tree = make_worktree(&repos, &root, &order, "order/o-5", "main").unwrap();
+    redirect(&tree);
+    let action = Action::Commit {
+        branch: "order/o-5".into(),
+        parent: String::new(),
+    };
+    let ready = TargetState::WorktreeReady {
+        branch: "order/o-5".into(),
+    };
+    assert_eq!(verify(&repos, &root, &order, &action, &ready).unwrap(), None);
+    assert!(!tree.path.exists(), "the unprepared worktree is gone");
+    assert_eq!(repos.resolve("refs/heads/order/o-5").unwrap(), None);
+
+    let order = OrderId("o-6".into());
+    let tree = make_worktree(&repos, &root, &order, "order/o-6", "main").unwrap();
+    redirect(&tree);
+    let path = tree.path.to_string_lossy().into_owned();
+    assert_eq!(
+        remove_worktree(&repos, &root, &order, &path, "order/o-6", false),
+        OpResult::Removed
+    );
+    assert!(!tree.path.exists());
+    assert!(elsewhere.join("keep.txt").exists(), "only the recorded folder goes");
+    assert!(
+        repos
+            .worktrees()
+            .unwrap()
+            .iter()
+            .all(|w| w.path.file_name() != tree.path.file_name()),
+        "its record is gone"
+    );
+}
+
+#[test]
 fn reversed_hunks_are_found_and_a_reversal_cut_off_part_way_is_undone() {
     let (_scratch, root, repos) = repository("hunks");
     std::fs::write(root.join("b.txt"), "b\n").unwrap();
