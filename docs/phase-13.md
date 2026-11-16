@@ -220,11 +220,44 @@ beschrieben, gilt so, wie es hier steht:
   - **Bilder der Gates** kommen über die Umgebungsvariable `GATE_IMAGES_DIR`.
   - **Aufbewahrung:** Protokolle, Spezifikation, eingefrorene Konfiguration, Bestätigungen, Tageskonto und Kontingente
     liegen im Datenordner unter `leitstand/`; die Vorgaben des Nutzers in der Einstellung `factoryDefaults` (PerMac).
+- **Stufe 3 (B44b ohne O2, B45b):**
+  - **Eingang aus Issues (E176):** `ide-ci` liest Text und Labels eines Issues, nie Kommentare.
+    - „Als Auftrag übernehmen“ im CI-Panel füllt das Sheet; Aufgabenlisten werden einzeln abwählbare Vorschläge.
+    - G1 ist Pflicht und lässt sich auch im Sheet nicht abwählen; in Stufe 1 wird der Text des Issues die
+      Spezifikation für G1.
+    - Automatisch: alle 5 Minuten, nur mit bestätigter Lockerung (E190), nur erlaubte Autoren; ein Issue ohne Autor
+      wird nicht genommen. Übernommene Issues stehen vor der Übergabe in `intake.json`, damit nach einem Absturz keines
+      doppelt kommt.
+  - **Ohne O2 (E177):** „Abnehmen und Branch behalten“ entfernt den Worktree und behält den Branch; „Merge Request
+    anlegen“ öffnet die Seite der Forge im Browser-Tab. Über die API wird nichts geschrieben.
+  - **Pfadbereiche (E174)** werden beim Beginn des Baus geprüft, nicht beim Eingang, weil der Bereich in Stufe 2 erst
+    nach G1 feststeht. Ein Auftrag, der auf G2 wartet, hält keinen Bereich.
+  - **Parallelität (E168):** Vorgabe 2, ein Ordner in Stufe 1 bleibt bei 1. Wer schon gespeicherte Einstellungen hat,
+    behält 1. Eingereihte Aufträge nennen den Grund und zählen nicht als laufend.
+  - **Merge-Queue:** Rejoint ein Auftrag nach seiner Neuprüfung die Schlange, weckt er deren Kopf; vorher blieben ab drei
+    Aufträgen alle stehen.
+- **Stufe 4 (B47):**
+  - **Kennzahlen (E180):** Die Laufzeit rechnet sie auf einer Lane und zeigt sie eingeklappt unter der Flottenzeile.
+    Aufträge mit Eingriff, Agenten- oder Modellwechsel oder Arbeit von Hand zählen in der Quote nicht.
+  - **Gleichstand (E170):** Ein späterer Eintrag gewinnt nur, wenn er genauso bereit ist und eine echt bessere Quote für
+    die Risikoklasse hat, beide auf mindestens 5 Aufträgen. Der Nachweis nennt die Entscheidung.
+  - **Regelvorschläge:** nach einem gescheiterten, ausgeschöpften oder unklaren Auftrag, ab 5 geprüften Aufträgen und
+    einem Befund, der in mindestens zwei wiederkehrt. Es gibt einen offenen Vorschlag zur Zeit; er ist ein eigener
+    Auftrag, beschränkt auf AGENTS.md/CLAUDE.md, der in jeder Stufe an G1 wartet. Ein Schalter in Einstellungen ▸
+    Aufträge, standardmäßig an.
+  - **Wiederkehrende Aufträge:** `[[recurring]]` in der Workflow-Datei mit `title`, `goal`, `criteria` und `interval`
+    („daily“, „weekly“ oder etwa „14d“). Sie brauchen eine Bestätigung je Projekt wie die anderen Lockerungen (E190),
+    weil eine geteilte Datei sonst Agenten starten und Budget ausgeben könnte. Geprüft wird alle 5 Minuten, solange
+    Dango läuft; nach einer Pause kommt höchstens ein verpasster Termin.
+- **Selbsttests:** `leitstand`, `leitstand-order`, `leitstand-attach`, `leitstand-queue` und `leitstand-metrics` laufen
+  grün, auch mit gesperrtem Bildschirm.
 - **Noch nicht umgesetzt:**
   - der Einwand des Builders gegen die Kriterien (E178);
-  - der Gleichstand im Routing über die Erstdurchlaufquote (Stufe 4, E180; die Kennzahl ist da);
   - die Herkunft je Einstellung (E183);
-  - eine Migration der Workflow-Datei über Version 1 hinaus (der Haken ist da).
+  - eine Migration der Workflow-Datei über Version 1 hinaus (der Haken ist da);
+  - der Umzug normaler AI-Tabs auf den Sitzungstreiber (B37b, die fehlenden Teile stehen oben);
+  - der Eingang aus Issues im Leitstand selbst und das Nachziehen eines Auftrags, wenn sich sein Issue später ändert;
+  - E177 mit Schreibzugriff, solange O2 offen ist.
 
 ## Stufe 1 — Ein Auftrag
 
