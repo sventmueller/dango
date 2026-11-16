@@ -101,6 +101,8 @@ enum Delivery {
     Tick,
     /// The user's defaults changed.
     Settings,
+    /// The login shell's environment is known, or waiting for it gave up.
+    Environment,
     /// The Mac sleeps, or woke up (E168).
     Sleep(bool),
 }
@@ -154,6 +156,8 @@ pub(crate) struct Leitstand {
     intake: RefCell<intake::Intake>,
     /// The number of the last order id given out.
     last_order: Cell<u64>,
+    /// The jobs that wait for the login shell's environment, oldest first.
+    environment: RefCell<Vec<EnvironmentJob>>,
     #[cfg(feature = "selftest")]
     probe: selftest_probe::Probe,
 }
@@ -270,6 +274,7 @@ impl Leitstand {
             }
             Delivery::Tick => self.tick(cx),
             Delivery::Settings => self.reload_all_rules(),
+            Delivery::Environment => self.environment_known(),
             Delivery::Sleep(asleep) => self.sleep(cx, asleep),
         }
     }
@@ -452,17 +457,44 @@ fn runs_while_quitting(effect: &Effect) -> bool {
     )
 }
 
-/// Runs `job` with the login shell's environment once it is known, or with none after waiting for it in vain, without
-/// holding a lane's worker while it waits.
-fn with_environment(job: impl FnOnce(&'static [(String, String)]) + Send + 'static) {
-    if let Some(login) = crate::environment::get() {
-        return job(login);
+/// What waits on the main thread for the login shell's environment, in the order it came.
+type EnvironmentJob = Box<dyn FnOnce(&'static [(String, String)])>;
+
+impl Leitstand {
+    /// Runs `job` on the main thread with the login shell's environment once it is known, or with none after waiting
+    /// for it in vain, after the jobs that wait already; no lane's worker is held while it waits, and the jobs queue
+    /// their lane work in the order they came.
+    fn with_environment(&self, job: impl FnOnce(&'static [(String, String)]) + 'static) {
+        let mut waiting = self.environment.borrow_mut();
+        if waiting.is_empty()
+            && let Some(login) = crate::environment::get()
+        {
+            drop(waiting);
+            return job(login);
+        }
+        waiting.push(Box::new(job));
+        if waiting.len() > 1 {
+            return;
+        }
+        drop(waiting);
+        let back = self.back();
+        let started = crate::util::spawn("order-environment", move || {
+            let _ = crate::environment::wait(effects::ENVIRONMENT_WAIT);
+            back.deliver(Delivery::Environment);
+        });
+        if let Err(why) = started {
+            ide_core::diag::report("waiting for the login environment", why);
+            self.environment_known();
+        }
     }
-    let started = crate::util::spawn("order-environment", move || {
-        job(crate::environment::wait(effects::ENVIRONMENT_WAIT).unwrap_or_default());
-    });
-    if let Err(why) = started {
-        ide_core::diag::report("waiting for the login environment", why);
+
+    /// The login shell's environment is known, or waiting for it gave up: the jobs that waited run, oldest first.
+    fn environment_known(&self) {
+        let login = crate::environment::get().unwrap_or_default();
+        let waiting = std::mem::take(&mut *self.environment.borrow_mut());
+        for job in waiting {
+            job(login);
+        }
     }
 }
 

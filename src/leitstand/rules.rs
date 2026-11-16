@@ -115,7 +115,7 @@ impl Leitstand {
         let root = root.to_path_buf();
         let defaults = defaults();
         let back = self.back();
-        super::with_environment(move |login| {
+        self.with_environment(move |login| {
             let queued = ide_core::lane::DISK.try_run(move || {
                 let path = login
                     .iter()

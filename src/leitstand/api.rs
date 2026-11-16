@@ -258,7 +258,7 @@ impl Leitstand {
         let id = self.order_id(root);
         let (folder, new) = (root.to_path_buf(), id.clone());
         let back = self.back();
-        super::with_environment(move |login| {
+        self.with_environment(move |login| {
             let queued = GIT.try_run(move || {
                 // Without a repository the order still comes in, and its worktree fails in words the user reads.
                 let main = git::open(&folder, login).ok();
@@ -435,7 +435,7 @@ impl Leitstand {
         }
         let (folder, id) = (root.to_path_buf(), order.clone());
         let back = self.back();
-        super::with_environment(move |login| {
+        self.with_environment(move |login| {
             let queued = GIT.try_run(move || {
                 let sections = worktree
                     .and_then(|tree| {

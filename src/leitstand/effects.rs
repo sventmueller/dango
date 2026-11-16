@@ -149,7 +149,8 @@ impl Leitstand {
         Some(store::run_folder(&folder.project, order, folder.work.runs))
     }
 
-    /// Runs `job` with the folder's repository on the Leitstand's git lane and hands what it gives to the factory.
+    /// Runs `job` with the folder's repository on the Leitstand's git lane, once the login shell's environment is
+    /// known, and hands what it gives to the factory.
     pub(super) fn on_git(
         &self,
         root: &Path,
@@ -157,16 +158,17 @@ impl Leitstand {
     ) {
         let root = root.to_path_buf();
         let back = self.back();
-        let queued = GIT.try_run(move || {
-            let login = login();
-            let main = git::open(&root, &login);
-            if let Some(input) = job(main, &login) {
-                back.deliver(Delivery::Input(root, Box::new(input)));
+        self.with_environment(move |login| {
+            let queued = GIT.try_run(move || {
+                let main = git::open(&root, login);
+                if let Some(input) = job(main, login) {
+                    back.deliver(Delivery::Input(root, Box::new(input)));
+                }
+            });
+            if queued.is_err() {
+                ide_core::diag::report("an order's git", "the lane took no more work");
             }
         });
-        if queued.is_err() {
-            ide_core::diag::report("an order's git", "the lane took no more work");
-        }
     }
 
     /// Effects on the repository and the worktree.

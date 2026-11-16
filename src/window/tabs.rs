@@ -546,6 +546,7 @@ impl TabWindow {
         let status = documents.iter().find_map(|doc| doc.status.borrow().clone());
         if let Some(color) = &status {
             self.status.setContentTintColor(Some(color));
+            objc2_app_kit::NSAccessibility::setAccessibilityLabel(&*self.status, Some(&ns(status_words(color))));
         }
         let current = tab.accessoryView(self.window.mtm());
         if status.is_some() && current.is_none() {
@@ -683,8 +684,17 @@ fn status_dot(mtm: MainThreadMarker) -> Retained<NSImageView> {
         7.0,
         crate::util::constant!(objc2_app_kit::NSFontWeightRegular),
     )));
-    crate::util::hide_from_voiceover(&status);
     status
+}
+
+/// What a tab's dot of `color` means, for VoiceOver: red waits for the user, as an agent's question or an order does;
+/// any other colour works.
+pub(super) fn status_words(color: &NSColor) -> &'static str {
+    if *color == *NSColor::systemRedColor() {
+        t("Wartet auf dich")
+    } else {
+        t("Arbeitet")
+    }
 }
 
 /// The view at or under `view` to give the keyboard focus: a text view if there is one, as an editor or a composer

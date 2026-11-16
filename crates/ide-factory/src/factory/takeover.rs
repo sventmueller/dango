@@ -376,7 +376,11 @@ impl Factory {
             return;
         }
         let running = *order.condition() == Condition::Running || *order.condition() == Condition::Aborted;
+        let awaited = phase_op(order.phase()) == Some(&op)
+            || matches!((order.phase(), &action), (Phase::Rejecting, Action::RejectHunks { .. }));
         match reached {
+            // An operation the order moved on from, such as a preparation stopped by an abort, only closes.
+            None if !awaited => self.emit(cx, id, Event::Dropped { op }),
             Some(result) if running => self.done(cx, id, op, result),
             // Left open, so resuming verifies it again and goes on to commit the reversal.
             Some(_) if matches!(action, Action::RejectHunks { .. }) => {}
