@@ -207,10 +207,18 @@ beschrieben, gilt so, wie es hier steht:
     `git reset -q --hard` rutscht durch; Codex kann solche Befehle nie an den Nutzer geben.
   - **Pfad-Abhängigkeiten (E188):** Neben dem Worktree entsteht für jedes `../name` ein Symlink auf den Ordner neben
     dem Repository. Eine Abhängigkeit zwei Ebenen höher wird übersprungen, weil sie im gemeinsamen Worktree-Ordner läge.
-  - **AI-Tab (B37b):** Nur die Sitzung eines Auftrags läuft im Tab über den Treiber (`Source::Driven`, Claude und
-    Skript-Sitzung). Normale Tabs bleiben auf dem bisherigen Weg; ihr Umzug braucht im Treiber noch Remote Control,
-    Zurückspulen, eigene Fehlerarten, bearbeitete Eingaben und „Immer erlauben“ bei Freigaben, Checkpoints je
-    Nachricht, Nachrichten in den laufenden Zug und Mitschnitte.
+  - **AI-Tab (B37b):** Claude-Tabs und die Mitschnitte der Selbsttests laufen über das gemeinsame Register
+    (`Source::Claude`); die Sitzung eines Auftrags hängt der Tab als `Source::Driven` an. Codex, OpenCode, ACP und der
+    eigene Agent bleiben auf ihrem bisherigen Weg (A14 für Claude bestätigt).
+    - Der Treiber kann dafür jetzt Remote Control und Zurückspulen beim Start, Claudes eigene Fehlerarten und Remote
+      Control im Feed, Freigaben mit bearbeiteter Eingabe und gespeicherter Regel (E27/E33 weiter ohne „Immer“ bei
+      zerstörerischem Git), einen Checkpoint je Nachricht und Nachrichten in den laufenden Zug für den Nutzer, und
+      Mitschnitte als eigene Art. Was nur Claude kann (Overlays nach E146, Nutzung, Zurückspulen von Code), geht über
+      `Driver::claude()`.
+    - Je Flush wird der Thread etwa zweimal statt einmal kopiert; der Zustand „Sicherungspunkt wird angelegt …“ endet
+      bis zu 30 ms später; eine mitten im Zug gestoppte Sitzung schließt ihren offenen Checkpoint jetzt ab.
+    - `agent-background` scheitert mit gesperrtem Bildschirm vor und nach dem Umzug gleich (Mitscrollen); mit
+      entsperrtem Bildschirm noch zu prüfen.
     - Der Tab eines Auftrags trägt das Schild „Auftrag … · Rolle“. Modus, Sandbox und Denktiefe sind gesperrt;
       Nachrichten gehen in die Warteschlange des Treibers und stehen als Eingriff im Protokoll; Schließen beendet nur
       das Abonnement.
@@ -255,7 +263,7 @@ beschrieben, gilt so, wie es hier steht:
   - der Einwand des Builders gegen die Kriterien (E178);
   - die Herkunft je Einstellung (E183);
   - eine Migration der Workflow-Datei über Version 1 hinaus (der Haken ist da);
-  - der Umzug normaler AI-Tabs auf den Sitzungstreiber (B37b, die fehlenden Teile stehen oben);
+  - der Umzug der AI-Tabs von Codex, OpenCode, ACP und dem eigenen Agenten auf den Sitzungstreiber (B37b);
   - der Eingang aus Issues im Leitstand selbst und das Nachziehen eines Auftrags, wenn sich sein Issue später ändert;
   - E177 mit Schreibzugriff, solange O2 offen ist.
 
