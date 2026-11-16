@@ -41,6 +41,7 @@ impl Factory {
         }
         if self.queued_behind(order) {
             self.set_phase(cx, id, Phase::Queue);
+            self.wake_head(cx, id);
             return;
         }
         let head = order.head().map_or_else(String::new, |(c, _)| c.to_string());
@@ -143,6 +144,33 @@ impl Factory {
                 notice: Notice::Done,
             });
             self.wake_queue(cx);
+        }
+    }
+
+    /// Lets the head of the queue `id` joined go on if it waits: an order that re-enters the take-over after its
+    /// re-check queues behind orders that were queued behind it before, and nothing else would wake them.
+    fn wake_head(&mut self, cx: &mut Cx, id: &OrderId) {
+        let Some(branch) = self.orders.get(id).map(|o| o.base().branch.clone()) else {
+            return;
+        };
+        let head = self
+            .orders
+            .values()
+            .filter(|o| {
+                o.station() == Station::TakeOver
+                    && !o.finished()
+                    && !o.branch_kept()
+                    && o.base().branch == branch
+                    && *o.condition() == Condition::Running
+            })
+            .find(|o| !self.queued_behind(o))
+            .map(|o| o.id().clone());
+        if let Some(head) = head
+            && head != *id
+            && self.orders.get(&head).is_some_and(|o| *o.phase() == Phase::Queue)
+        {
+            self.set_phase(cx, &head, Phase::Idle);
+            self.advance(cx, &head);
         }
     }
 

@@ -139,6 +139,42 @@ fn take_overs_into_one_branch_queue_and_the_next_merges_what_the_first_took_over
     );
 }
 
+#[test]
+fn three_take_overs_queued_behind_a_fourth_all_come_through() {
+    let mut app = app();
+    let orders = [
+        scoped(&mut app, "o1", &["src/**"], "src/lib.rs"),
+        scoped(&mut app, "o2", &["docs/**"], "docs/guide.md"),
+        scoped(&mut app, "o3", &["tests/**"], "tests/a.rs"),
+        scoped(&mut app, "o4", &["bin/**"], "bin/b.rs"),
+    ];
+    for _ in 0..4 {
+        app.settle();
+        let waiting: Vec<&OrderId> = orders.iter().filter(|o| app.station(o) == Station::Spec).collect();
+        approve(&mut app, &waiting);
+    }
+    app.settle();
+    assert!(orders.iter().all(|o| app.station(o) == Station::Acceptance));
+    app.hold.insert("take_over");
+    for order in &orders {
+        app.send(InputKind::DiffOpened(order.clone()));
+        app.accept(order);
+    }
+    app.settle();
+    app.hold.clear();
+    app.settle();
+    for order in &orders {
+        assert_eq!(
+            app.station(order),
+            Station::Done,
+            "{order:?}: {:?} {:?} refusals {:?}",
+            app.get(order).phase(),
+            app.get(order).condition(),
+            app.refusals
+        );
+    }
+}
+
 fn issue() -> NewOrder {
     let origin = IssueOrigin::freeze(
         "https://github.com/acme/widget/issues/3",
