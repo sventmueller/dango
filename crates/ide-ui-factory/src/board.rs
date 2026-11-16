@@ -16,7 +16,7 @@ use objc2_app_kit::{
     NSStackView, NSTableColumn, NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTextField, NSView,
 };
 use objc2_foundation::{NSArray, NSObjectProtocol, NSSortDescriptor};
-use splat_i18n::t;
+use splat_i18n::{t, tf};
 
 use crate::actions::Target;
 use crate::host::host;
@@ -36,6 +36,7 @@ pub(crate) struct BoardIvars {
 }
 
 struct BoardUi {
+    notices: Retained<NSStackView>,
     fleet: Retained<NSStackView>,
     strip: Retained<NSStackView>,
     table: Retained<OrderTable>,
@@ -99,6 +100,15 @@ define_class!(
                 let row = if table.clickedRow() >= 0 { table.clickedRow() } else { table.selectedRow() };
                 if let Some(id) = self.order_at(row) {
                     crate::order::open(&self.ivars().target, &id);
+                }
+            });
+        }
+
+        #[unsafe(method(ideFactoryConfirm:))]
+        fn confirm_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || {
+                if let Some(button) = sender.and_then(|s| s.downcast_ref::<objc2_app_kit::NSButton>()) {
+                    self.confirm(button.tag());
                 }
             });
         }
@@ -168,6 +178,7 @@ impl BoardTab {
         let add = ui::button(mtm, t("Neuer Auftrag …"), me, sel!(ideFactoryNewOrder:), 0);
         head.addArrangedSubview(&gear);
         head.addArrangedSubview(&add);
+        let notices = ui::column(mtm, space::XS);
         let fleet = ui::column(mtm, space::XXS);
         let strip = ui::row(mtm, space::XS);
         strip.setAccessibilityLabel(Some(&ns(t("Stationen"))));
@@ -211,7 +222,7 @@ impl BoardTab {
             bottom: space::GROUP,
             right: space::GROUP,
         });
-        for view in [&*head as &NSView, &fleet, &strip, &empty, &scroll] {
+        for view in [&*head as &NSView, &notices, &fleet, &strip, &empty, &scroll] {
             column.addArrangedSubview(view);
         }
         scroll
@@ -223,6 +234,7 @@ impl BoardTab {
         ide_ui_common::util::auto_layout(&[&column]);
         ide_ui_common::util::pin_edges(&column, self);
         BoardUi {
+            notices,
             fleet,
             strip,
             table,
@@ -265,7 +277,43 @@ impl BoardTab {
         {
             ui.fleet.addArrangedSubview(&ui::note(mtm, line, 640.0));
         }
+        self.show_notices();
         self.show();
+    }
+
+    /// Errors of the workflow file, unreadable logs and loosenings that wait for confirmation, above the fleet.
+    fn show_notices(&self) {
+        let mtm = self.mtm();
+        let me: &AnyObject = self.as_ref();
+        let ui = self.ui();
+        ui::clear(&ui.notices);
+        let notices = host().notices(self.root());
+        for error in &notices.errors {
+            let line = tf("Workflow-Datei: {}", &[&crate::model::words::workflow_error(error)]);
+            ui.notices.addArrangedSubview(&ui::note(mtm, &line, 640.0));
+        }
+        for problem in &notices.problems {
+            let line = crate::model::words::restore_problem(problem);
+            ui.notices.addArrangedSubview(&ui::note(mtm, &line, 640.0));
+        }
+        for (index, loosening) in notices.loosenings.iter().enumerate() {
+            let row = ui::row(mtm, space::M);
+            row.addArrangedSubview(&ui::note(mtm, &crate::model::words::loosening(loosening), 520.0));
+            let tag = isize::try_from(index).unwrap_or(0);
+            row.addArrangedSubview(&ui::button(mtm, t("Bestätigen"), me, sel!(ideFactoryConfirm:), tag));
+            ui.notices.addArrangedSubview(&row);
+        }
+        ui.notices
+            .setHidden(notices.errors.is_empty() && notices.problems.is_empty() && notices.loosenings.is_empty());
+    }
+
+    /// Confirms the loosening at `index` of the folder's notices.
+    fn confirm(&self, index: isize) {
+        let notices = host().notices(self.root());
+        if let Some(loosening) = usize::try_from(index).ok().and_then(|i| notices.loosenings.get(i)) {
+            host().confirm_loosening(self.root(), loosening);
+            self.reload();
+        }
     }
 
     /// Shows the strip and the table as the model has them now.

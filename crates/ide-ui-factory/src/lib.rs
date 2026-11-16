@@ -38,7 +38,7 @@ use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::NSMenuItem;
 
-pub use host::{Host, Notification, State, install};
+pub use host::{FolderNotices, Host, Notification, State, install};
 
 /// The Leitstand tab as the layout keeps it (E64, F76).
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

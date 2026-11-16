@@ -9,8 +9,9 @@ use std::sync::OnceLock;
 use ide_core::explain::Explained;
 use ide_factory::options::NewOrder;
 use ide_factory::panel::{Board, Fleet, Panel};
-use ide_factory::workflow::UserDefaults;
-use ide_factory::{InputKind, OrderId, Refusal};
+use ide_factory::workflow::rules::Loosening;
+use ide_factory::workflow::{UserDefaults, WorkflowError};
+use ide_factory::{InputKind, OrderId, Refusal, RequestId, RestoreProblem};
 use ide_ui_common::registry::Registry;
 use ide_ui_common::window::WindowId;
 use objc2::rc::{Retained, Weak};
@@ -79,6 +80,25 @@ pub trait Host {
     /// Writes `text` as the workflow file of `root` and has the factory read its rules again; the words of the
     /// failure.
     fn save_project_file(&self, root: &Path, text: &str) -> Result<(), Explained>;
+    /// Allows or refuses the permission request `request` of the order's session that waits for the user, since
+    /// without O1 requests beyond an order's bounds reach the user (C72); what the factory refused.
+    fn decide(&self, root: &Path, order: &OrderId, request: &RequestId, allow: bool) -> Vec<Refusal>;
+    /// What the user should know about the folder beyond its orders: errors of the workflow file, loosenings that
+    /// wait for confirmation (E190) and logs that could not be read at the start (E167).
+    fn notices(&self, root: &Path) -> FolderNotices;
+    /// Confirms `loosening` for `root` on this Mac (E190).
+    fn confirm_loosening(&self, root: &Path, loosening: &Loosening);
+}
+
+/// What the Leitstand tab shows above the fleet line.
+#[derive(Debug, Clone, Default)]
+pub struct FolderNotices {
+    /// What is wrong with the workflow file; while it has errors, no new station starts.
+    pub errors: Vec<WorkflowError>,
+    /// The loosenings the workflow file asks for that this Mac has not confirmed.
+    pub loosenings: Vec<Loosening>,
+    /// Logs that could not be read in full at the start.
+    pub problems: Vec<RestoreProblem>,
 }
 
 static HOST: OnceLock<&'static (dyn Host + Sync)> = OnceLock::new();

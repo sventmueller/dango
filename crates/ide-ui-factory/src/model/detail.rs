@@ -472,6 +472,7 @@ fn passes(reason: &WaitReason) -> bool {
             | WaitReason::LateSpecApproval
             | WaitReason::RefsChanged { .. }
             | WaitReason::Unclear
+            | WaitReason::GateCommandsChanged
             | WaitReason::ReviewRoundsSpent
             | WaitReason::CancelledTurn
             | WaitReason::NoAgent

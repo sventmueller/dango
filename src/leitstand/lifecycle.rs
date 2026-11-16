@@ -3,6 +3,7 @@
 //! the order logs of earlier runs; it stays when the folder's last window closes, and its orders pause then; quitting
 //! pauses every running order with "app ended" before the supervisor ends their processes.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::mpsc;
@@ -187,6 +188,8 @@ impl Leitstand {
                 problems: restored.problems,
                 work: super::effects::Work::default(),
                 worktree_bytes: 0,
+                agents: BTreeMap::new(),
+                sections: BTreeMap::new(),
             },
         );
         self.after(cx, &root, restored.step);

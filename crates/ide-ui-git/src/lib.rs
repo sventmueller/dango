@@ -54,6 +54,24 @@ pub fn attach(controller: &(impl AsWindow + ?Sized)) {
     panel::GitPanel::attach(controller);
 }
 
+/// Opens the row of the worktree at `tree` in the window's Git panel, so its changed files and their diffs are at
+/// hand, as the Leitstand's "Diff zeigen" asks (E175).
+pub fn reveal_tree(state: &State, controller: &(impl AsWindow + ?Sized), tree: &Path) {
+    let controller = &controller.as_window();
+    let Some(panel) = state.panels.of(*controller) else {
+        return;
+    };
+    let item = panel.item_for(&model::RowKey::Worktree(tree.to_path_buf()));
+    // SAFETY: The item is one the data source hands to this view, kept alive by the panel.
+    let row = unsafe {
+        panel.ui().outline.expandItem(Some(&item));
+        panel.ui().outline.rowForItem(Some(&item))
+    };
+    if row >= 0 {
+        panel.ui().outline.scrollRowToVisible(row);
+    }
+}
+
 /// Something changed below `root` on disk, in the working tree or in `.git`.
 pub fn changed(root: &Path) {
     for panel in panel::for_root(root) {

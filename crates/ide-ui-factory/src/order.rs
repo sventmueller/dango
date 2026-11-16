@@ -85,6 +85,16 @@ define_class!(
             guarded((), || self.answer());
         }
 
+        #[unsafe(method(ideFactoryAllow:))]
+        fn allow_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.decide(true));
+        }
+
+        #[unsafe(method(ideFactoryRefuse:))]
+        fn refuse_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.decide(false));
+        }
+
         #[unsafe(method(ideFactorySection:))]
         fn section_action(&self, sender: Option<&AnyObject>) {
             guarded((), || {
@@ -303,6 +313,17 @@ impl OrderTab {
         );
     }
 
+    fn decide(&self, allow: bool) {
+        let Some(detail) = self.detail() else { return };
+        let Some(request) = detail.request().cloned() else {
+            return;
+        };
+        let target = &self.ivars().target;
+        let refused = crate::host::host().decide(target.root(), detail.id(), &request, allow);
+        target.refresh();
+        crate::actions::refusals(target, &refused);
+    }
+
     fn section_switched(&self, button: &NSButton) {
         let Some(detail) = self.detail() else { return };
         let Some(section) = usize::try_from(button.tag())
@@ -341,7 +362,7 @@ fn request_card(mtm: MainThreadMarker, me: &AnyObject) -> (Retained<NSBox>, Reta
     let column = ui::column(mtm, space::S);
     column.addArrangedSubview(&ui::note(
         mtm,
-        t("Der Auftrag wartet auf deine Antwort. Die Frage steht in der Sitzung des Agenten."),
+        t("Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten."),
         WIDTH,
     ));
     let answer = crate::actions::line_field(mtm, "", t("Antwort"));
@@ -362,6 +383,10 @@ fn request_card(mtm: MainThreadMarker, me: &AnyObject) -> (Retained<NSBox>, Reta
     line.addArrangedSubview(&send);
     line.addArrangedSubview(&open);
     column.addArrangedSubview(&line);
+    let permission = ui::row(mtm, space::M);
+    permission.addArrangedSubview(&ui::button(mtm, t("Erlauben"), me, sel!(ideFactoryAllow:), 0));
+    permission.addArrangedSubview(&ui::button(mtm, t("Ablehnen"), me, sel!(ideFactoryRefuse:), 0));
+    column.addArrangedSubview(&permission);
     card.setContentView(Some(&column));
     card.setHidden(true);
     (card, answer)

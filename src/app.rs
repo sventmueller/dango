@@ -196,6 +196,11 @@ impl AppDelegate {
     pub(crate) fn new(mtm: MainThreadMarker) -> Retained<Self> {
         let context = Rc::new(AppContext::default());
         context.leitstand().bind(&context, mtm);
+        crate::leitstand_ui::Orders::install(context.leitstand().back());
+        let views = context.factory_ui().clone();
+        context
+            .leitstand()
+            .listen(move |root| ide_ui_factory::changed(&views, root));
         ide_ui_agent::own_agent::use_secrets(context.secrets().store());
         crate::ci_panel::use_secrets(context.secrets().store());
         let this = Self::alloc(mtm).set_ivars(context);

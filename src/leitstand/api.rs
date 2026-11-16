@@ -1,12 +1,11 @@
 //! What the Leitstand's views (B42) and the rest of the app use: the models of `ide_factory::panel` for a folder, the
 //! user's commands, and a notice after every change. Everything runs on the main thread; a view reads the models
-//! anew when its listener hears of its folder, or compares `revision` when it redraws on its own.
+//! anew when its listener hears of its folder.
 //!
 //! ```text
-//! let id = cx.leitstand().listen(move |root| view.refresh(root));
+//! cx.leitstand().listen(move |root| view.refresh(root));
 //! let panel = cx.leitstand().panel(&root);
 //! cx.leitstand().command(&cx, &root, Command::Approve(order));
-//! cx.leitstand().unlisten(id);
 //! ```
 
 use std::path::{Path, PathBuf};
@@ -27,7 +26,6 @@ use crate::context::AppContext;
 pub(crate) struct ListenerId(u64);
 
 /// What the user can tell the Leitstand.
-#[allow(dead_code, reason = "the Leitstand views of B42 send them")]
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Command {
     /// A new order from the sheet (E185); it starts at the working copy's branch and HEAD.
@@ -74,24 +72,13 @@ pub(crate) enum Command {
     ConfirmLoosening(Loosening),
 }
 
-#[allow(dead_code, reason = "the Leitstand views of B42 call these")]
 impl Leitstand {
-    /// Calls `listener` with a folder's root after each change of its orders, until `unlisten`.
+    /// Calls `listener` with a folder's root after each change of its orders, as long as the app runs.
     pub(crate) fn listen(&self, listener: impl Fn(&Path) + 'static) -> ListenerId {
         let mut listeners = self.listeners.borrow_mut();
         let id = ListenerId(listeners.last().map_or(1, |(id, _)| id.0 + 1));
         listeners.push((id, Rc::new(listener)));
         id
-    }
-
-    /// Stops calling the listener `id`.
-    pub(crate) fn unlisten(&self, id: ListenerId) {
-        self.listeners.borrow_mut().retain(|(own, _)| *own != id);
-    }
-
-    /// How often the orders of `root` changed so far; 0 while it has no factory.
-    pub(crate) fn revision(&self, root: &Path) -> u64 {
-        self.folders.borrow().get(root).map_or(0, |f| f.revision)
     }
 
     /// Whether `root` has a factory: it is trusted and a window showed it.
@@ -168,11 +155,6 @@ impl Leitstand {
             .get(root)
             .map(|f| f.problems.clone())
             .unwrap_or_default()
-    }
-
-    /// Whether the Mac is kept awake for running orders (E169).
-    pub(crate) fn holds_wake_lock(&self) -> bool {
-        super::power::held(self)
     }
 
     /// Carries out the user's `command` for the orders of `root`; a refused one shows in `refusals`. A new order's id,
@@ -340,11 +322,6 @@ impl Leitstand {
         }
     }
 
-    /// The roots whose factory runs, for a view that lists folders.
-    pub(crate) fn folders(&self) -> Vec<PathBuf> {
-        self.roots()
-    }
-
     /// Tells the activity views of the windows of `root` that its sessions changed.
     pub(super) fn refresh_activity(&self, cx: &Rc<AppContext>, root: &Path) {
         for window in cx.windows().all() {
@@ -353,4 +330,83 @@ impl Leitstand {
             }
         }
     }
+
+    /// The folder of the worktree of `order`, while it has one.
+    pub(crate) fn worktree(&self, root: &Path, order: &OrderId) -> Option<PathBuf> {
+        git::tree_of(root, order).map(|tree| tree.path)
+    }
+
+    /// What the sheet "Neuer Auftrag" of `root` checks against (E185): the stage, the folder's rules and what the app
+    /// last found of each path. Whether the working copy has uncommitted changes is read when the order comes in.
+    pub(crate) fn sheet(&self, root: &Path) -> ide_ui_factory::model::sheet::SheetContext {
+        let folders = self.folders.borrow();
+        let (rules, agents) = folders
+            .get(root)
+            .map_or_else(Default::default, |f| (f.factory.rules().clone(), f.agents.clone()));
+        ide_ui_factory::model::sheet::SheetContext::new(super::rules::STAGE, rules, false, agents)
+    }
+
+    /// The order tab of `order` (E175), with the hunks of its diff once the git lane has read them.
+    pub(crate) fn detail(&self, root: &Path, order: &OrderId) -> Option<ide_ui_factory::model::detail::Detail> {
+        let sections = self
+            .folders
+            .borrow()
+            .get(root)
+            .and_then(|f| f.sections.get(order).cloned());
+        if sections.is_none() {
+            self.read_sections(root, order);
+        }
+        let now = self.clock.now().wall;
+        self.with_order(root, order, |o| {
+            ide_ui_factory::model::detail::Detail::new(o, now, sections.unwrap_or_default())
+        })
+    }
+
+    /// Reads the hunks of the order's diff since its base on the git lane, named `path#index` as G2 rejects them.
+    fn read_sections(&self, root: &Path, order: &OrderId) {
+        let Some(base) = self.with_order(root, order, |o| o.base().commit.clone()) else {
+            return;
+        };
+        let (folder, id) = (root.to_path_buf(), order.clone());
+        let back = self.back();
+        let queued = GIT.try_run(move || {
+            let login = crate::environment::wait(std::time::Duration::from_secs(15)).unwrap_or_default();
+            let sections = git::tree_of(&folder, &id)
+                .and_then(|tree| {
+                    let repos = git::open(&folder, login).ok()?;
+                    git::open_in(&repos, &tree.path).ok()
+                })
+                .and_then(|copy| copy.diff_since(&base, &[] as &[PathBuf]).ok())
+                .map(|diffs| sections_of(&diffs))
+                .unwrap_or_default();
+            back.deliver(Delivery::Sections(folder, id, sections));
+        });
+        if queued.is_err() {
+            ide_core::diag::report("reading an order's diff", "the lane took no more work");
+        }
+    }
+}
+
+/// The hunks of `diffs` as the order tab lists them for partial acceptance (C55).
+fn sections_of(diffs: &[ide_git::FileDiff]) -> Vec<ide_ui_factory::model::detail::Section> {
+    let mut sections = Vec::new();
+    for diff in diffs {
+        let Some(path) = diff.new_path.as_ref().or(diff.old_path.as_ref()) else {
+            continue;
+        };
+        let file = path.to_string_lossy();
+        for (index, hunk) in diff.hunks.iter().enumerate() {
+            let header = format!(
+                "@@ -{},{} +{},{} @@ {}",
+                hunk.old_start, hunk.old_count, hunk.new_start, hunk.new_count, hunk.section
+            );
+            let id = HunkId(format!("{file}#{index}"));
+            sections.push(ide_ui_factory::model::detail::Section::new(
+                id,
+                &file,
+                header.trim_end(),
+            ));
+        }
+    }
+    sections
 }

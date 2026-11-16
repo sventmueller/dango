@@ -6,7 +6,6 @@
 use std::cell::{OnceCell, RefCell};
 
 use ide_factory::station::Role;
-use ide_ui_factory::Host;
 use ide_ui_factory::model::settings::{
     AGENTS, DefaultsForm, LIMITS, agent_name, entry_words, limit_title, read_dollars, takes,
 };
@@ -21,7 +20,6 @@ use objc2_foundation::NSObjectProtocol;
 use splat_i18n::t;
 
 use super::form::{self, Row};
-use crate::host::AppHost;
 use crate::util::{guarded, ns, set_action};
 
 /// The tag of the order budget's field; the day's is one more.
@@ -154,7 +152,7 @@ define_class!(
 impl OrdersSettings {
     pub(crate) fn new(mtm: MainThreadMarker) -> Retained<OrdersSettings> {
         let this = Self::alloc(mtm).set_ivars(OrdersIvars {
-            form: RefCell::new(DefaultsForm::new(AppHost.defaults())),
+            form: RefCell::new(DefaultsForm::new(crate::leitstand_ui::defaults())),
             ui: OnceCell::new(),
         });
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
@@ -175,7 +173,7 @@ impl OrdersSettings {
 
     /// Reads the stored defaults again, as when the settings window comes to the front.
     pub(crate) fn reload(&self) {
-        *self.ivars().form.borrow_mut() = DefaultsForm::new(AppHost.defaults());
+        *self.ivars().form.borrow_mut() = DefaultsForm::new(crate::leitstand_ui::defaults());
         self.show();
     }
 
@@ -302,7 +300,7 @@ impl OrdersSettings {
     /// Changes the form with `edit`, stores the defaults and shows them.
     fn change(&self, edit: impl FnOnce(&mut DefaultsForm)) {
         edit(&mut self.ivars().form.borrow_mut());
-        AppHost.set_defaults(self.ivars().form.borrow().defaults().clone());
+        crate::leitstand_ui::set_defaults(self.ivars().form.borrow().defaults());
         let selected = self.selected();
         self.show();
         if let Some(index) = selected {

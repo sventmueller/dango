@@ -92,7 +92,7 @@ pub(super) fn defaults() -> UserDefaults {
 
 impl Leitstand {
     /// Reads the rules of `root` again and hands them to its factory when they differ from what it holds.
-    pub(super) fn reload_rules(&self, root: &Path) {
+    pub(crate) fn reload_rules(&self, root: &Path) {
         let Some(confirmed) = self.folders.borrow().get(root).map(|f| f.confirmations.clone()) else {
             return;
         };

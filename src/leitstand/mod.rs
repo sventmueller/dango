@@ -36,7 +36,6 @@ use ide_factory::{Effect, Factory, Input, InputKind, OrderId, Refusal, RestorePr
 use objc2::MainThreadMarker;
 
 use crate::context::AppContext;
-#[allow(unused_imports, reason = "the Leitstand views of B42 use them")]
 pub(crate) use api::{Command, ListenerId};
 
 /// The user's defaults for orders in every project (E183), kept on this Mac (E113).
@@ -75,6 +74,8 @@ enum Delivery {
     Refs(PathBuf, OrderId, ide_git::RefSnapshot),
     /// The space the order worktrees of `root` take (R68).
     Space(PathBuf, u64),
+    /// The hunks of an order's diff since its base (C55).
+    Sections(PathBuf, OrderId, Vec<ide_ui_factory::model::detail::Section>),
     /// Time passed.
     Tick,
     /// The user's defaults changed.
@@ -100,6 +101,10 @@ struct Folder {
     problems: Vec<RestoreProblem>,
     work: effects::Work,
     worktree_bytes: u64,
+    /// What the app last found of each path, for the sheet "Neuer Auftrag" (E58, E185).
+    agents: BTreeMap<ide_factory::routing::Agent, ide_factory::routing::AgentStatus>,
+    /// The hunks of each order's diff since its base, read on the git lane for partial acceptance (C55).
+    sections: BTreeMap<OrderId, Vec<ide_ui_factory::model::detail::Section>>,
 }
 
 /// Every folder's factory, the sessions of their orders, and what holds across folders.
@@ -147,6 +152,14 @@ impl Back {
         }
     }
 
+    /// Runs `f` with the app context, on the main thread and while the app runs; the Leitstand's views reach the
+    /// runtime this way without looking the context up (E143).
+    pub(crate) fn with<R>(&self, f: impl FnOnce(&Rc<AppContext>) -> R) -> Option<R> {
+        let mtm = MainThreadMarker::new()?;
+        let cx = self.0.get(mtm).upgrade()?;
+        Some(f(&cx))
+    }
+
     /// Tells the Leitstand that the user's settings `names` were written, from any thread.
     pub(crate) fn settings_changed(&self, names: &[String]) {
         if names.iter().any(|name| name == DEFAULTS.declared().name) {
@@ -175,8 +188,20 @@ impl Leitstand {
         match delivery {
             Delivery::Input(root, kind) => match *kind {
                 InputKind::Rules(rules) if !self.rules_differ(&root, &rules) => {}
+                InputKind::Agents(agents) => {
+                    if let Some(folder) = self.folders.borrow_mut().get_mut(&root) {
+                        folder.agents.clone_from(&agents);
+                    }
+                    self.input(cx, &root, InputKind::Agents(agents));
+                }
                 kind => self.input(cx, &root, kind),
             },
+            Delivery::Sections(root, order, sections) => {
+                if let Some(folder) = self.folders.borrow_mut().get_mut(&root) {
+                    folder.sections.insert(order, sections);
+                }
+                self.changed(&root);
+            }
             Delivery::Logged { root, effects, failed } => {
                 self.writing.set(self.writing.get().saturating_sub(1));
                 self.run_effects(cx, &root, effects, &failed);

@@ -1990,7 +1990,7 @@
 "Bei hoher Risikoklasse geht „Abnehmen“ erst, wenn der Diff geöffnet wurde." = "At risk class high, “Accept” works only once the diff has been opened.";
 "Abnehmen geht erst mit einem gültigen Nachweis." = "Accepting needs valid evidence.";
 "Anfrage des Agenten" = "Agent’s Request";
-"Der Auftrag wartet auf deine Antwort. Die Frage steht in der Sitzung des Agenten." = "The work order waits for your answer. The question is in the agent’s session.";
+"Der Auftrag wartet auf deine Antwort oder Freigabe. Frage und Befehl stehen in der Sitzung des Agenten." = "The work order waits for your answer or permission. The question and the command are in the agent’s session.";
 "Antwort" = "Answer";
 "Antwort senden" = "Send Answer";
 "Leitstand" = "Control Room";
@@ -2266,3 +2266,13 @@
 "Prüfstation {} von „{}“" = "Gate {} of “{}”";
 "Schließen, während Aufträge laufen?" = "Close While Work Orders Are Running?";
 "Ohne Fenster des Ordners pausieren seine Aufträge, bis er wieder offen ist." = "Without a window of the folder, its work orders pause until it is open again.";
+"Bestätigen" = "Confirm";
+"Workflow-Datei: {}" = "Workflow file: {}";
+"Das Protokoll des Auftrags {} ist ab Zeile {} unlesbar." = "The log of work order {} cannot be read from line {} on.";
+"Das Protokoll des Auftrags {} ließ sich nicht lesen." = "The log of work order {} could not be read.";
+"Die letzte Zeile im Protokoll des Auftrags {} war abgeschnitten und fehlt." = "The last line of the log of work order {} was cut off and is missing.";
+"Die Workflow-Datei kopiert Dateien mit Zugangsdaten in die Worktrees: {}" = "The workflow file copies files with credentials into the worktrees: {}";
+"Die Workflow-Datei lässt Aufträge niedriger Risikoklasse ohne Freigabe der Spezifikation laufen." = "The workflow file lets work orders of low risk class run without approval of the specification.";
+"Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "The workflow file allows a reviewer from the same vendor.";
+"Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "The workflow file takes issues labelled “{}” by {} as work orders automatically.";
+"Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "The workflow file turns on tools for the role {}: {}";

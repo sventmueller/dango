@@ -6,8 +6,9 @@ use ide_factory::evidence::{Deviation, Invalidation};
 use ide_factory::gates::{GateFailure, GateStep};
 use ide_factory::options::{ChangeRefusal, OptionProblem, SheetNote};
 use ide_factory::station::{Condition, FailReason, PauseReason, RiskClass, Role, Station, TakeOverBlocker, WaitReason};
+use ide_factory::workflow::rules::Loosening;
 use ide_factory::workflow::{Expected, WorkflowError, WorkflowErrorKind};
-use ide_factory::{Refusal, Refused};
+use ide_factory::{Refusal, Refused, RestoreProblem};
 use splat_i18n::{t, tf};
 
 /// The name of `station`.
@@ -339,6 +340,49 @@ pub fn note(note: &SheetNote) -> &'static str {
             t("Die Arbeitskopie hat uncommittete Änderungen; der Auftrag beginnt ohne sie bei HEAD.")
         }
         SheetNote::WithoutVendorChange => t("Ohne Herstellerwechsel: Der Prüfer stammt vom Hersteller eines Builders."),
+    }
+}
+
+/// What a loosening the workflow file asks for allows, for the user to confirm on this Mac (E190).
+pub fn loosening(loosening: &Loosening) -> String {
+    match loosening {
+        Loosening::SkipSpecApproval => {
+            t("Die Workflow-Datei lässt Aufträge niedriger Risikoklasse ohne Freigabe der Spezifikation laufen.").into()
+        }
+        Loosening::IssueIntake { intake } => tf(
+            "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an.",
+            &[&intake.label, &intake.authors.join(", ")],
+        ),
+        Loosening::ReviewerPreferred => t("Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu.").into(),
+        Loosening::CopyCredentials { paths } => tf(
+            "Die Workflow-Datei kopiert Dateien mit Zugangsdaten in die Worktrees: {}",
+            &[&paths.join(", ")],
+        ),
+        Loosening::Tools { role, tools } => tf(
+            "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}",
+            &[self::role(*role), &tools.join(", ")],
+        ),
+    }
+}
+
+/// What went wrong reading an order's log at the start (E167).
+pub fn restore_problem(problem: &RestoreProblem) -> String {
+    let order = problem
+        .order
+        .as_ref()
+        .map_or_else(|| t("unbekannt").to_string(), |o| o.0.clone());
+    if problem.unreadable {
+        tf("Das Protokoll des Auftrags {} ließ sich nicht lesen.", &[&order])
+    } else if let Some(line) = problem.stopped_at {
+        tf(
+            "Das Protokoll des Auftrags {} ist ab Zeile {} unlesbar.",
+            &[&order, &line.to_string()],
+        )
+    } else {
+        tf(
+            "Die letzte Zeile im Protokoll des Auftrags {} war abgeschnitten und fehlt.",
+            &[&order],
+        )
     }
 }
 

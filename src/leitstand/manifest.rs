@@ -16,7 +16,12 @@ pub(super) fn hash(path: &Path) -> String {
 }
 
 fn feed(base: &Path, relative: &Path, hasher: &mut Sha256) {
-    let path = base.join(relative);
+    // Joining an empty path adds a trailing slash, which a file's path does not survive.
+    let path = if relative.as_os_str().is_empty() {
+        base.to_path_buf()
+    } else {
+        base.join(relative)
+    };
     let Ok(meta) = std::fs::symlink_metadata(&path) else {
         hasher.update(b"missing");
         return;

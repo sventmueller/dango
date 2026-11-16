@@ -75,11 +75,6 @@ pub(super) fn hold(leitstand: &Leitstand, root: &Path, hold: bool, running: usiz
     power.activity = Some(activity);
 }
 
-/// Whether the wake lock is held, for the self-test and the views.
-pub(super) fn held(leitstand: &Leitstand) -> bool {
-    !leitstand.shared.borrow().power.holders.is_empty()
-}
-
 /// Watches the workspace for the Mac's sleep and wake, once.
 pub(super) fn watch_sleep(leitstand: &Leitstand) {
     let mut shared = leitstand.shared.borrow_mut();
