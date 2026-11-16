@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::budget::{Budget, Spend};
+use crate::budget::{Budget, Spend, UsageReport};
 use crate::criteria::Criterion;
 use crate::evidence::{Deviation, Evidence, GateRecord, Invalidation};
 use crate::ids::{HunkId, OperationId, PromptId, RequestId, SessionKey};
@@ -122,6 +122,13 @@ pub enum Action {
         /// The target branch.
         target: String,
     },
+    /// Reverse the hunks the user rejected at G2 in the worktree, which is clean at `head` before (C55).
+    RejectHunks {
+        /// The branch's head the worktree is at.
+        head: String,
+        /// The hunks.
+        hunks: Vec<HunkId>,
+    },
     /// Take the order's branch over into the target branch (E164).
     TakeOver {
         /// The target branch.
@@ -180,7 +187,11 @@ impl Action {
     /// The state a restart checks before it repeats the action, so nothing happens twice (E167).
     pub fn target(&self, op: &OperationId) -> TargetState {
         match self {
-            Action::PrepareWorktree { branch, .. } => TargetState::WorktreeOn { branch: branch.clone() },
+            Action::PrepareWorktree { branch, .. } => TargetState::WorktreeReady { branch: branch.clone() },
+            Action::RejectHunks { head, hunks } => TargetState::HunksReversed {
+                head: head.clone(),
+                hunks: hunks.clone(),
+            },
             Action::Commit { branch, parent } => TargetState::CommitWithTrailer {
                 branch: branch.clone(),
                 parent: parent.clone(),
@@ -218,7 +229,7 @@ impl Action {
         match self {
             Action::PrepareWorktree { base, .. } => PreState::Commit(base.clone()),
             Action::Commit { parent, .. } => PreState::Head(parent.clone()),
-            Action::MergeTarget { head, .. } => PreState::Head(head.clone()),
+            Action::MergeTarget { head, .. } | Action::RejectHunks { head, .. } => PreState::Head(head.clone()),
             Action::TakeOver { expected, .. } => PreState::Head(expected.clone()),
             Action::Push { commit, .. } => PreState::Commit(commit.clone()),
             Action::RemoveCheckpoints { .. }
@@ -245,10 +256,19 @@ pub enum PreState {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "target")]
 pub enum TargetState {
-    /// A worktree is checked out on this branch.
-    WorktreeOn {
+    /// A worktree is checked out on this branch and its preparation finished: files copied, setup command run (E188,
+    /// C69). The app marks a worktree once it is prepared; one without the mark is removed, so it is prepared again.
+    #[serde(alias = "worktree_on")]
+    WorktreeReady {
         /// The branch.
         branch: String,
+    },
+    /// The order's worktree is at `head` with the hunks reversed, not yet committed (C55).
+    HunksReversed {
+        /// The head.
+        head: String,
+        /// The hunks.
+        hunks: Vec<HunkId>,
     },
     /// The branch has a commit on `parent` whose trailer names the operation.
     CommitWithTrailer {
@@ -333,6 +353,8 @@ pub enum OpResult {
     },
     /// There was nothing to commit.
     NothingToCommit,
+    /// The rejected hunks are reversed in the worktree.
+    Reversed,
     /// The target was merged in, or there was nothing to merge.
     Merged {
         /// The order's head after.
@@ -451,7 +473,7 @@ pub enum Event {
         /// What it achieved.
         result: OpResult,
     },
-    /// A side effect did not happen: its log entry failed, or a restart found its target state missing.
+    /// A side effect did not happen: a restart found its target state missing.
     Dropped {
         /// Its operation id.
         op: OperationId,
@@ -482,6 +504,9 @@ pub enum Event {
         /// The entry routing's tie-break passed over for this one (E170).
         #[serde(default, skip_serializing_if = "Option::is_none")]
         tie_break: Option<TieBreak>,
+        /// It goes on with the role's earlier thread, whose usage reports count from that thread's start.
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        resumed: bool,
     },
     /// A session could not start; routing passes to the next entry (E170).
     SessionFailed {
@@ -544,6 +569,10 @@ pub enum Event {
         spend: Spend,
         /// The path had no reliable figure.
         unmetered: bool,
+        /// The session's report the spending was counted up to, against which the next report of the role's thread
+        /// counts, also after a restart.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        total: Option<UsageReport>,
     },
     /// The diff was classified (E172).
     Classified {
@@ -780,4 +809,21 @@ pub enum Phase {
         /// The operation.
         op: OperationId,
     },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_worktree_check_logged_under_its_old_name_still_reads() {
+        let old = r#"{"target":"worktree_on","branch":"order/o1"}"#;
+        let read: TargetState = serde_json::from_str(old).unwrap();
+        assert_eq!(
+            read,
+            TargetState::WorktreeReady {
+                branch: "order/o1".into()
+            }
+        );
+    }
 }

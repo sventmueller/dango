@@ -310,8 +310,10 @@ impl Factory {
     /// (E163).
     pub(super) fn after_turn(&mut self, cx: &mut Cx, id: &OrderId) {
         self.set_phase(cx, id, Phase::TurnScan);
+        let run_id = self.start_run(id);
         cx.effect(Effect::ScanSecrets {
             order: id.clone(),
+            run_id,
             range: ScanRange::Pending,
         });
     }
@@ -404,9 +406,13 @@ impl Factory {
                 self.set_phase(cx, id, Phase::Idle);
                 self.advance(cx, id);
             }
+            Phase::Gate { .. } => {
+                cx.effect(Effect::StopGate { order: id.clone() });
+                self.set_phase(cx, id, Phase::Idle);
+                self.advance(cx, id);
+            }
             Phase::Diffing
             | Phase::Scanning
-            | Phase::Gate { .. }
             | Phase::ReviewInput
             | Phase::Manifest
             | Phase::Comparing
@@ -414,7 +420,31 @@ impl Factory {
                 self.set_phase(cx, id, Phase::Idle);
                 self.advance(cx, id);
             }
-            Phase::Rejecting => {
+            Phase::Rejecting => self.redo_rejecting(cx, id),
+        }
+    }
+
+    /// Verifies a reversal of rejected hunks that began, since reversing them again would reverse others; reverses
+    /// them when none began.
+    fn redo_rejecting(&mut self, cx: &mut Cx, id: &OrderId) {
+        let Some(order) = self.orders.get(id) else { return };
+        let begun = order
+            .open_ops()
+            .iter()
+            .find(|(_, action)| matches!(action, Action::RejectHunks { .. }))
+            .map(|(op, action)| (op.clone(), action.clone()));
+        match begun {
+            Some((op, action)) => {
+                let target = action.target(&op);
+                self.set_phase(cx, id, Phase::Verifying { op: op.clone() });
+                cx.effect(Effect::Verify {
+                    order: id.clone(),
+                    op,
+                    action,
+                    target,
+                });
+            }
+            None => {
                 self.set_phase(cx, id, Phase::Idle);
                 self.reject_hunks(cx, id);
             }

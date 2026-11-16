@@ -3,13 +3,13 @@
 
 mod support;
 
-use ide_factory::budget::Budget;
+use ide_factory::budget::{Budget, Unit, UsageReport};
 use ide_factory::effect::Effect;
 use ide_factory::event::{Event, OpResult, Phase, TurnOutcome};
 use ide_factory::gates::{CommandOutcome, TestCount};
 use ide_factory::input::{RefChange, RequestKind};
 use ide_factory::log::read;
-use ide_factory::options::{OptionChange, RiskChoice};
+use ide_factory::options::{ChangeRefusal, OptionChange, RiskChoice};
 use ide_factory::relevance::{Change, ChangeKind};
 use ide_factory::{
     Condition, FailReason, InputKind, PauseReason, Refused, RequestId, RiskClass, SessionEvent, Stage, Station,
@@ -591,11 +591,76 @@ fn options_lock_when_their_station_begins_and_a_budget_never_drops_below_the_spe
         app.refusals.last().map(|r| &r.why),
         Some(Refused::Option { .. })
     ));
+    let session = app.turn_session(&id);
+    let report = UsageReport {
+        dollars: Some(3.0),
+        tokens: None,
+        tokens_reliable: true,
+    };
+    app.send(InputKind::Session(id.clone(), session, SessionEvent::Usage { report }));
+    app.send(InputKind::ChangeOption(
+        id.clone(),
+        OptionChange::Budget(Some(Budget::new(Some(2.0), None, None))),
+    ));
+    assert_eq!(
+        app.refusals.last().map(|r| &r.why),
+        Some(&Refused::Option {
+            refusal: ChangeRefusal::BelowSpent { unit: Unit::Dollars }
+        })
+    );
+    assert_eq!(app.get(&id).options().budget, None, "the refused budget is not taken");
     app.send(InputKind::ChangeOption(
         id.clone(),
         OptionChange::Budget(Some(Budget::new(Some(5.0), None, None))),
     ));
     assert_eq!(app.get(&id).options().budget, Some(Budget::new(Some(5.0), None, None)));
+}
+
+#[test]
+fn a_gate_result_from_before_a_pause_is_not_taken_for_the_run_that_replaced_it() {
+    let mut app = app();
+    app.hold.insert("run_gate");
+    let id = app.order("o1");
+    app.settle();
+    let Some(Effect::RunGate { run_id: old, index, .. }) = app.take("run_gate") else {
+        panic!("the gate runs")
+    };
+    app.send(InputKind::Quit);
+    app.send(InputKind::Resume(Some(id.clone())));
+    assert_eq!(
+        app.asked("stop_gate"),
+        1,
+        "the gate still running from before is stopped"
+    );
+    let Some(Effect::RunGate { run_id: new, .. }) = app.take("run_gate") else {
+        panic!("the gate runs again")
+    };
+    assert_ne!(old, new);
+    app.send(InputKind::GateDone {
+        order: id.clone(),
+        run_id: old,
+        index,
+        outcome: CommandOutcome {
+            exit: Some(2),
+            ..CommandOutcome::default()
+        },
+    });
+    assert_eq!(
+        *app.get(&id).phase(),
+        Phase::Gate { index },
+        "the old run's result is not taken"
+    );
+    app.send(InputKind::GateDone {
+        order: id.clone(),
+        run_id: new,
+        index,
+        outcome: support::passing_gate(),
+    });
+    app.hold.clear();
+    app.settle();
+    assert_eq!(app.station(&id), Station::Acceptance);
+    assert_eq!(app.get(&id).review_rounds(), 0);
+    assert!(app.get(&id).findings().is_none());
 }
 
 #[test]

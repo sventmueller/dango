@@ -132,6 +132,7 @@ fn seeded(id: &str, model: &str, index: usize, rework: bool, at: u64) -> (OrderI
             quota_unknown: false,
             same_vendor: false,
             tie_break: None,
+            resumed: false,
         },
         Event::SessionEnded { role: Role::Builder },
         Event::Entered {
@@ -166,6 +167,7 @@ fn seeded(id: &str, model: &str, index: usize, rework: bool, at: u64) -> (OrderI
                 event,
             }
             .line()
+            .unwrap_or_default()
         })
         .collect();
     (order, text)

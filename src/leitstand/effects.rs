@@ -14,7 +14,7 @@ use ide_factory::budget::Spend;
 use ide_factory::effect::{SandboxRun, ScanRange};
 use ide_factory::event::OpResult;
 use ide_factory::evidence::{Manifest, ManifestEntry};
-use ide_factory::{Effect, InputKind, OperationId, OrderId};
+use ide_factory::{Effect, InputKind, OperationId, OrderId, RunId};
 
 use super::launching::Wanted;
 use super::sessions::Stop;
@@ -111,7 +111,7 @@ impl Leitstand {
                 notices::post(&order, &title, notice);
             }
             Effect::WakeLock { hold, running } => power::hold(self, root, hold, running),
-            Effect::AddToDay { service, spend } => self.add_to_day(cx, service.as_deref(), &spend),
+            Effect::AddToDay { service, spend, .. } => self.add_to_day(cx, service.as_deref(), &spend),
             Effect::Confirm { hash } => self.confirm(root, hash),
             Effect::StopGate { order } => {
                 if let Some(folder) = self.folders.borrow().get(root)
@@ -184,11 +184,12 @@ impl Leitstand {
             Effect::FreezeConfig { order, paths } => self.freeze(root, order, paths),
             Effect::RunGate {
                 order,
+                run_id,
                 index,
                 name,
                 run,
                 images,
-            } => self.run_gate(root, order, index, &name, run, images),
+            } => self.run_gate(root, order, run_id, index, &name, run, images),
             Effect::SnapshotRefs { order } => {
                 let (folder, back) = (root.to_path_buf(), self.back());
                 self.on_git(root, move |main, _| {
@@ -219,7 +220,7 @@ impl Leitstand {
         let branch = info.as_ref().map(|i| i.branch.clone()).unwrap_or_default();
         let folder = root.to_path_buf();
         match effect {
-            Effect::ScanSecrets { order, range } => self.on_git(root, move |main, _| {
+            Effect::ScanSecrets { order, run_id, range } => self.on_git(root, move |main, _| {
                 let since = match &range {
                     ScanRange::Pending => "HEAD".to_string(),
                     ScanRange::Diff { base, .. } => base.clone(),
@@ -227,6 +228,7 @@ impl Leitstand {
                 let scan = main.and_then(|main| git::scan(&main, &worktree, &since, &freeze::frozen_rules(&frozen)));
                 Some(InputKind::Scanned(
                     order,
+                    run_id,
                     scan.unwrap_or(ide_factory::gates::SecretScan::NotInstalled),
                 ))
             }),
@@ -242,11 +244,16 @@ impl Leitstand {
                 };
                 Some(InputKind::Done { order, op, result })
             }),
-            Effect::DiffNames { order, base, head } => self.on_git(root, move |main, _| {
+            Effect::DiffNames {
+                order,
+                run_id,
+                base,
+                head,
+            } => self.on_git(root, move |main, _| {
                 let changes = main
                     .and_then(|main| git::diff_names(&main, &base, &head))
                     .unwrap_or_default();
-                Some(InputKind::Diff(order, changes))
+                Some(InputKind::Diff(order, run_id, changes))
             }),
             Effect::CollectReviewInput { order, base, head } => self.on_git(root, move |main, _| {
                 let input = main
@@ -255,16 +262,17 @@ impl Leitstand {
                 let (diff, commits) = input.unwrap_or_default();
                 Some(InputKind::ReviewInput { order, diff, commits })
             }),
-            Effect::RejectHunks { order, hunks } => {
+            Effect::RejectHunks { order, op, hunks } => {
                 let base = self.base_of(root, &order);
                 self.on_git(root, move |main, _| {
                     let rejected = main
                         .and_then(|main| git::open_in(&main, &worktree))
                         .and_then(|copy| git::reject_hunks(&copy, &base, &hunks));
-                    Some(InputKind::Rejected(
-                        order,
-                        rejected.map_err(|error| ide_core::explain::Explain::explain(&error)),
-                    ))
+                    let result = match rejected {
+                        Ok(()) => OpResult::Reversed,
+                        Err(error) => git::failed(&error),
+                    };
+                    Some(InputKind::Done { order, op, result })
                 });
             }
             other => self.merge_effect(&folder, other),
@@ -294,13 +302,14 @@ impl Leitstand {
             }),
             Effect::CompareDiffs {
                 order,
+                run_id,
                 old_base,
                 old_head,
                 new_base,
                 new_head,
             } => self.on_git(root, move |main, _| {
                 let same = main.and_then(|main| git::same_diff(&main, (&old_base, &old_head), (&new_base, &new_head)));
-                Some(InputKind::Compared(order, same.unwrap_or(false)))
+                Some(InputKind::Compared(order, run_id, same.unwrap_or(false)))
             }),
             Effect::TakeOver { order, op, head, .. } => self.on_git(root, move |main, _| {
                 let result = match (main, git::tree_of(&folder, &order)) {
@@ -422,7 +431,17 @@ impl Leitstand {
     }
 
     /// Runs a gate command in the worktree under the gate sandbox (E187), stoppable through `StopGate`.
-    fn run_gate(&self, root: &Path, order: OrderId, index: usize, name: &str, run: SandboxRun, images: Option<String>) {
+    #[expect(clippy::too_many_arguments, reason = "the fields of the effect, one by one")]
+    fn run_gate(
+        &self,
+        root: &Path,
+        order: OrderId,
+        run_id: RunId,
+        index: usize,
+        name: &str,
+        run: SandboxRun,
+        images: Option<String>,
+    ) {
         let Some(info) = self.info(root, &order) else { return };
         let Some(folder) = self.next_run(root, &order) else {
             return;
@@ -453,7 +472,12 @@ impl Leitstand {
             let outcome = gates::run(&job, copy.as_ref());
             back.deliver(Delivery::Input(
                 root,
-                Box::new(InputKind::GateDone { order, index, outcome }),
+                Box::new(InputKind::GateDone {
+                    order,
+                    run_id,
+                    index,
+                    outcome,
+                }),
             ));
         });
         if let Err(why) = started {
@@ -559,10 +583,14 @@ fn prepared(
         .flatten()
         .map(|head| head.tree)
         .unwrap_or_default();
-    OpResult::Prepared {
+    let prepared = OpResult::Prepared {
         path: tree.path.to_string_lossy().into_owned(),
         tree: base_tree,
         setup,
         copied: Manifest::new(copied).entries().to_vec(),
+    };
+    match git::mark_prepared(main, &tree.path, &prepared) {
+        Ok(()) => prepared,
+        Err(error) => git::failed(&error),
     }
 }

@@ -56,14 +56,15 @@ impl Factory {
             InputKind::Done { order, op, result } => self.done(cx, &order, op, result),
             InputKind::Verified { order, op, reached } => self.verified(cx, &order, op, reached),
             InputKind::Frozen(id, result) => self.frozen(cx, &id, result),
-            InputKind::Scanned(id, scan) => self.scanned(cx, &id, scan),
+            InputKind::Scanned(id, _, scan) => self.scanned(cx, &id, scan),
             InputKind::Refs(id, changes) => self.refs(cx, &id, changes),
-            InputKind::Diff(id, changes) => self.diffed(cx, &id, changes),
-            InputKind::GateDone { order, index, outcome } => self.gate_done(cx, &order, index, outcome),
+            InputKind::Diff(id, _, changes) => self.diffed(cx, &id, changes),
+            InputKind::GateDone {
+                order, index, outcome, ..
+            } => self.gate_done(cx, &order, index, outcome),
             InputKind::ReviewInput { order, diff, commits } => self.review_input(cx, &order, diff, commits),
             InputKind::Manifest(id, manifest) => self.manifest(cx, &id, manifest),
-            InputKind::Rejected(id, result) => self.rejected(cx, &id, result),
-            InputKind::Compared(id, identical) => self.compared(cx, &id, identical),
+            InputKind::Compared(id, _, identical) => self.compared(cx, &id, identical),
             InputKind::Rules(_)
             | InputKind::Agents(_)
             | InputKind::Quota(_)

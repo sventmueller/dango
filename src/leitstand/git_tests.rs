@@ -97,12 +97,13 @@ fn an_order_commits_without_hooks_and_a_restart_finds_its_commit_and_worktree() 
         verify(&repos, &root, &order, &action, &action.target(&other)).unwrap(),
         None
     );
-    let on = TargetState::WorktreeOn {
+    mark_prepared(&repos, &tree.path, &prepared()).unwrap();
+    let ready = TargetState::WorktreeReady {
         branch: "order/o-1".into(),
     };
     assert!(matches!(
-        verify(&repos, &root, &order, &action, &on).unwrap(),
-        Some(OpResult::Prepared { .. })
+        verify(&repos, &root, &order, &action, &ready).unwrap(),
+        Some(OpResult::Prepared { setup: Some(_), .. })
     ));
     let names = diff_names(&repos, &parent, &made).unwrap();
     assert_eq!(names.iter().map(|c| c.path.as_str()).collect::<Vec<_>>(), ["b.txt"]);
@@ -118,6 +119,87 @@ fn an_order_commits_without_hooks_and_a_restart_finds_its_commit_and_worktree() 
         Some(OpResult::Removed)
     );
     assert_eq!(repos.resolve("refs/heads/order/o-1").unwrap(), None);
+}
+
+/// What a finished preparation reports, with a setup command that ran.
+fn prepared() -> OpResult {
+    OpResult::Prepared {
+        path: String::new(),
+        tree: String::new(),
+        setup: Some(ide_factory::gates::CommandOutcome {
+            exit: Some(0),
+            ..ide_factory::gates::CommandOutcome::default()
+        }),
+        copied: Vec::new(),
+    }
+}
+
+#[test]
+fn a_worktree_cut_off_before_its_setup_is_removed_so_it_is_prepared_again() {
+    let (_scratch, root, repos) = repository("unprepared");
+    let order = OrderId("o-3".into());
+    let tree = make_worktree(&repos, &root, &order, "order/o-3", "main").unwrap();
+    let action = Action::Commit {
+        branch: "order/o-3".into(),
+        parent: String::new(),
+    };
+    let ready = TargetState::WorktreeReady {
+        branch: "order/o-3".into(),
+    };
+    assert_eq!(verify(&repos, &root, &order, &action, &ready).unwrap(), None);
+    assert!(!tree.path.exists(), "the worktree without its setup is gone");
+    assert_eq!(repos.resolve("refs/heads/order/o-3").unwrap(), None);
+    let again = make_worktree(&repos, &root, &order, "order/o-3", "main").unwrap();
+    mark_prepared(&repos, &again.path, &prepared()).unwrap();
+    assert!(matches!(
+        verify(&repos, &root, &order, &action, &ready).unwrap(),
+        Some(OpResult::Prepared { setup: Some(_), .. })
+    ));
+}
+
+#[test]
+fn reversed_hunks_are_found_and_a_reversal_cut_off_part_way_is_undone() {
+    let (_scratch, root, repos) = repository("hunks");
+    std::fs::write(root.join("b.txt"), "b\n").unwrap();
+    raw(&root, &["add", "."]);
+    raw(&root, &["commit", "--quiet", "-m", "second"]);
+    let base = repos.head().unwrap().unwrap().to_string();
+    let order = OrderId("o-4".into());
+    let tree = make_worktree(&repos, &root, &order, "order/o-4", "main").unwrap();
+    std::fs::write(tree.path.join("a.txt"), "a\nfrom the builder\n").unwrap();
+    std::fs::write(tree.path.join("b.txt"), "b\nfrom the builder\n").unwrap();
+    let copy = open_in(&repos, &tree.path).unwrap();
+    let parent = copy.head().unwrap().unwrap().to_string();
+    let op = OperationId("op-4".into());
+    let OpResult::Committed { commit: head, .. } = commit(&copy, "order/o-4", &op, "Turn 1", &parent) else {
+        panic!("a commit");
+    };
+    let hunks = vec![
+        ide_factory::HunkId("a.txt#0".into()),
+        ide_factory::HunkId("b.txt#0".into()),
+    ];
+    let action = Action::RejectHunks {
+        head: head.clone(),
+        hunks: hunks.clone(),
+    };
+    let target = action.target(&op);
+    assert_eq!(verify(&repos, &root, &order, &action, &target).unwrap(), None);
+    std::fs::write(tree.path.join("a.txt"), "a\n").unwrap();
+    assert_eq!(
+        verify(&repos, &root, &order, &action, &target).unwrap(),
+        None,
+        "half a reversal is not the reversal"
+    );
+    assert_eq!(
+        std::fs::read_to_string(tree.path.join("a.txt")).unwrap(),
+        "a\nfrom the builder\n",
+        "and is undone"
+    );
+    reject_hunks(&copy, &base, &hunks).unwrap();
+    assert_eq!(
+        verify(&repos, &root, &order, &action, &target).unwrap(),
+        Some(OpResult::Reversed)
+    );
 }
 
 #[test]

@@ -5,32 +5,14 @@
 mod support;
 
 use ide_factory::event::{Event, OpResult, Phase};
-use ide_factory::log::read;
+use ide_factory::log::{read, repair};
 use ide_factory::{Condition, Factory, InputKind, PauseReason, Stage, Stamp, Station};
 use proptest::prelude::*;
 use proptest::test_runner::{Config, RngSeed};
 use support::{App, WORKFLOW, rules};
 
 fn restart(app: &App) -> App {
-    restart_with(app, rules(WORKFLOW))
-}
-
-fn restart_with(app: &App, rules: ide_factory::workflow::rules::Rules) -> App {
-    let logs: Vec<String> = app.logs.values().cloned().collect();
-    let restored = Factory::restore(Stage::One, rules, &logs, Stamp::new(5, app.wall + 1000));
-    assert!(restored.problems.is_empty(), "{:?}", restored.problems);
-    let mut next = App::with(restored.factory);
-    next.wall = app.wall + 2000;
-    next.logs = app.logs.clone();
-    for entry in &restored.step.log {
-        next.logs
-            .entry(entry.order.clone())
-            .or_default()
-            .push_str(&entry.line());
-    }
-    next.effects.extend(restored.step.effects.iter().cloned());
-    next.pending.extend(restored.step.effects);
-    next
+    app.restart_with(rules(WORKFLOW))
 }
 
 #[test]
@@ -75,7 +57,7 @@ fn orders_resume_by_themselves_only_when_the_setting_says_so() {
     app.settle();
     let mut defaults = ide_factory::workflow::UserDefaults::default();
     defaults.set_resume_after_restart(true);
-    let mut next = restart_with(&app, support::rules_with(&defaults, WORKFLOW));
+    let mut next = app.restart_with(support::rules_with(&defaults, WORKFLOW));
     assert_eq!(next.condition(&id), Condition::Running);
     next.settle();
     assert_eq!(next.station(&id), Station::Acceptance);
@@ -124,16 +106,50 @@ fn a_commit_that_did_not_happen_is_scanned_and_made_again() {
 
 #[test]
 fn a_failed_log_write_starts_no_side_effect_and_pauses() {
-    let (mut app, id) = committing();
-    app.take("commit").unwrap();
-    app.send(InputKind::LogFailed(id.clone()));
+    let mut app = App::new(Stage::One, rules(WORKFLOW));
+    app.hold.insert("scan_secrets");
+    let id = app.order("o1");
+    app.settle();
+    assert_eq!(*app.get(&id).phase(), Phase::TurnScan);
+    let scan = app.take("scan_secrets").unwrap();
+    let reply = app.reply(&scan).unwrap();
+    app.unwritable.insert(id.clone());
+    app.send(reply);
+    assert_eq!(
+        app.asked("commit"),
+        0,
+        "the commit whose beginning is not logged is not made"
+    );
     assert_eq!(app.condition(&id), Condition::Paused(PauseReason::LogUnwritable));
     assert_eq!(app.get(&id).open_operations(), 0);
+    assert_eq!(*app.get(&id).phase(), Phase::TurnScan);
+    app.unwritable.clear();
     app.hold.clear();
     app.send(InputKind::Resume(Some(id.clone())));
     app.settle();
-    assert_eq!(app.asked("commit"), 2, "the commit is asked for again");
+    assert_eq!(app.asked("commit"), 1, "the commit is made once");
     assert_eq!(app.station(&id), Station::Acceptance);
+    app.assert_replays();
+}
+
+#[test]
+fn a_log_with_a_gap_restores_up_to_the_gap() {
+    let text = full_log();
+    let lines: Vec<&str> = text.lines().collect();
+    let gap: String = lines
+        .iter()
+        .enumerate()
+        .filter(|(n, _)| *n != 10)
+        .map(|(_, line)| format!("{line}\n"))
+        .collect();
+    let before: String = lines[..10].iter().map(|line| format!("{line}\n")).collect();
+    let at = Stamp::new(1, 1);
+    let restored = Factory::restore(Stage::One, rules(WORKFLOW), &[gap], at);
+    let oracle = Factory::restore(Stage::One, rules(WORKFLOW), &[before], at);
+    let id = ide_factory::OrderId("o1".into());
+    assert_eq!(restored.problems.len(), 1);
+    assert_eq!(restored.problems[0].stopped_at, Some(11));
+    assert_eq!(restored.factory.order(&id), oracle.factory.order(&id));
 }
 
 #[test]
@@ -153,6 +169,55 @@ fn a_take_over_interrupted_before_its_end_was_logged_is_checked() {
     next.settle();
     assert_eq!(next.station(&id), Station::Done);
     assert_eq!(next.asked("take_over"), 0);
+}
+
+/// An app whose order's reversal of a rejected hunk is begun but not answered.
+fn rejecting() -> (App, ide_factory::OrderId) {
+    let mut app = App::new(Stage::One, rules(WORKFLOW));
+    let id = app.order("o1");
+    app.settle();
+    app.hold.insert("reject_hunks");
+    let fingerprint = app.fingerprint(&id);
+    app.send(InputKind::Accept {
+        order: id.clone(),
+        fingerprint,
+        rejected: vec![ide_factory::HunkId("src/lib.rs#2".into())],
+    });
+    app.settle();
+    assert_eq!(*app.get(&id).phase(), Phase::Rejecting);
+    assert_eq!(app.get(&id).open_operations(), 1);
+    (app, id)
+}
+
+#[test]
+fn hunks_reversed_before_their_end_was_logged_are_not_reversed_again() {
+    let (app, id) = rejecting();
+    let mut next = restart(&app);
+    assert_eq!(next.asked("verify"), 1);
+    next.verified.push_back(Some(OpResult::Reversed));
+    next.verified.push_back(Some(OpResult::Reversed));
+    next.settle();
+    assert_eq!(next.get(&id).open_operations(), 1, "a paused order commits nothing yet");
+    next.send(InputKind::Resume(Some(id.clone())));
+    next.settle();
+    assert_eq!(next.asked("reject_hunks"), 0);
+    assert_eq!(next.asked("commit"), 1, "the reversal is committed");
+    assert_eq!(next.station(&id), Station::Done);
+    next.assert_replays();
+}
+
+#[test]
+fn hunks_not_reversed_before_a_crash_are_reversed_once() {
+    let (app, id) = rejecting();
+    let mut next = restart(&app);
+    next.verified.push_back(None);
+    next.settle();
+    assert_eq!(*next.get(&id).phase(), Phase::Rejecting);
+    next.send(InputKind::Resume(Some(id.clone())));
+    next.settle();
+    assert_eq!(next.asked("reject_hunks"), 1);
+    assert_eq!(next.station(&id), Station::Done);
+    next.assert_replays();
 }
 
 /// The log of one order taken through every station.
@@ -204,5 +269,10 @@ proptest! {
             prop_assert!(*order.condition() != Condition::Running || order.station() == Station::Done);
             prop_assert!(order.turn().is_none());
         }
+        let kept = repair(prefix).map_or_else(|| prefix.to_string(), |r| r.kept);
+        prop_assert!(kept.is_empty() || kept.ends_with('\n'), "an append after it starts a line of its own");
+        let repaired = Factory::restore(Stage::One, rules(WORKFLOW), &[kept], at);
+        prop_assert_eq!(repaired.factory.order(&id), oracle.factory.order(&id));
+        prop_assert!(repaired.problems.iter().all(|p| !p.cut && p.stopped_at.is_none()));
     }
 }

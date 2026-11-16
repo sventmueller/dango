@@ -51,8 +51,11 @@ pub(super) fn local_day(wall: u64) -> (String, u64) {
         return ("1970-01-01".into(), 0);
     }
     let day = format!("{:04}-{:02}-{:02}", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
-    let into_day = i64::from(tm.tm_hour) * 3600 + i64::from(tm.tm_min) * 60 + i64::from(tm.tm_sec);
-    let start = (i64::try_from(wall / 1000).unwrap_or(0) - into_day).max(0);
+    (tm.tm_hour, tm.tm_min, tm.tm_sec) = (0, 0, 0);
+    // Midnight's offset from UTC differs from now's on a day the clocks change; mktime looks it up.
+    tm.tm_isdst = -1;
+    // SAFETY: `tm` is a live, filled local that `mktime` reads and normalises in place, keeping no pointer.
+    let start = unsafe { libc::mktime(&raw mut tm) };
     (day, u64::try_from(start).unwrap_or(0) * 1000)
 }
 
@@ -68,5 +71,16 @@ mod tests {
         let (day, start) = local_day(a.wall);
         assert_eq!(day.len(), 10);
         assert!(start <= a.wall && a.wall - start < 25 * 60 * 60 * 1000);
+    }
+
+    #[test]
+    fn every_day_of_a_year_starts_at_its_own_midnight_also_where_the_clocks_change() {
+        const DAY: u64 = 24 * 60 * 60 * 1000;
+        let evening_of_new_year = 1_735_765_200_000;
+        for n in 0..365 {
+            let (day, start) = local_day(evening_of_new_year + n * DAY);
+            assert_eq!(local_day(start).0, day, "{day} begins at {start}");
+            assert_ne!(local_day(start - 1000).0, day, "{day} begins no later than {start}");
+        }
     }
 }

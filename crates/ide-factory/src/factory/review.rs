@@ -53,8 +53,10 @@ impl Factory {
             .is_some_and(|(h, _)| *h == head);
         if !diffed {
             self.set_phase(cx, id, Phase::Diffing);
+            let run_id = self.start_run(id);
             cx.effect(Effect::DiffNames {
                 order: id.clone(),
+                run_id,
                 base,
                 head,
             });
@@ -67,8 +69,10 @@ impl Factory {
             Some(GateStep::PathScope) => self.path_scope(cx, id),
             Some(GateStep::Secrets) => {
                 self.set_phase(cx, id, Phase::Scanning);
+                let run_id = self.start_run(id);
                 cx.effect(Effect::ScanSecrets {
                     order: id.clone(),
+                    run_id,
                     range: ScanRange::Diff { base, head },
                 });
             }
@@ -226,21 +230,24 @@ impl Factory {
             .rules
             .images()
             .map(|dir| format!("{dir}/{id}/{}", order.updated().wall));
-        let effect = Effect::RunGate {
-            order: id.clone(),
-            index,
-            name: gate.name.clone(),
-            run: SandboxRun {
-                command: gate.run.clone(),
-                env: self.rules.gate_env().clone(),
-                network: self.rules.network().to_vec(),
-                sockets: self.rules.sockets().to_vec(),
-                deadline_ms: self.rules.limits().gate_ms(),
-                output_limit: self.rules.limits().gate_output_bytes(),
-            },
-            images,
+        let name = gate.name.clone();
+        let run = SandboxRun {
+            command: gate.run.clone(),
+            env: self.rules.gate_env().clone(),
+            network: self.rules.network().to_vec(),
+            sockets: self.rules.sockets().to_vec(),
+            deadline_ms: self.rules.limits().gate_ms(),
+            output_limit: self.rules.limits().gate_output_bytes(),
         };
         self.set_phase(cx, id, Phase::Gate { index });
+        let effect = Effect::RunGate {
+            order: id.clone(),
+            run_id: self.start_run(id),
+            index,
+            name,
+            run,
+            images,
+        };
         let scratch = self.scratch(id);
         scratch.gate_started = Some(cx.now.mono);
         scratch.gate_stopping = false;

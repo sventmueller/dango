@@ -46,8 +46,10 @@ impl Factory {
             return;
         };
         self.set_phase(cx, id, Phase::PublishScan);
+        let run_id = self.start_run(id);
         cx.effect(Effect::ScanOutgoing {
             order: id.clone(),
+            run_id,
             text,
         });
     }

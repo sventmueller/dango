@@ -10,7 +10,7 @@ mod review;
 mod session;
 mod takeover;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -20,9 +20,9 @@ use crate::budget::DailyAccount;
 use crate::effect::{Effect, Notice};
 use crate::event::{Event, Phase};
 use crate::evidence::Manifest;
-use crate::ids::{OrderId, SessionKey};
+use crate::ids::{OrderId, RunId};
 use crate::input::{Input, InputKind};
-use crate::log::LogEntry;
+use crate::log::{LogEntry, LogFailure};
 use crate::metrics::Metrics;
 use crate::options::{ChangeRefusal, SheetCheck};
 use crate::order::Order;
@@ -98,8 +98,10 @@ struct Scratch {
     before_merge: Option<(String, String)>,
     /// The choice routing made for the session being started.
     choice: Option<(Choice, bool)>,
-    /// The last usage report per session, for the difference to the next.
-    usage: BTreeMap<SessionKey, crate::budget::UsageReport>,
+    /// The session being started goes on with the role's earlier thread.
+    resuming: bool,
+    /// The run whose result the order waits for; results of other runs are stale.
+    run: Option<RunId>,
     /// The station began and nothing of it has run yet.
     fresh: bool,
     /// The next prompt hands the station over from another entry (E170).
@@ -110,6 +112,14 @@ struct Scratch {
     gate_started: Option<Millis>,
     /// A stop of the running gate was asked for.
     gate_stopping: bool,
+}
+
+/// An order and what the factory remembers about it, as they were before a step.
+#[derive(Debug, Clone)]
+struct Kept {
+    seq: u64,
+    order: Order,
+    scratch: Scratch,
 }
 
 /// All orders of one project folder.
@@ -124,6 +134,10 @@ pub struct Factory {
     metrics: Metrics,
     orders: BTreeMap<OrderId, Order>,
     scratch: BTreeMap<OrderId, Scratch>,
+    /// Each order as it was before each step whose entries are not known to be on disk yet, by the first entry's
+    /// place, to go back to when they cannot be written (E167).
+    unlogged: BTreeMap<OrderId, Vec<Kept>>,
+    runs: u64,
     asleep: Option<Millis>,
     woke: Option<Millis>,
     battery: bool,
@@ -136,9 +150,19 @@ pub struct Factory {
 pub(crate) struct Cx {
     now: Stamp,
     step: Step,
+    /// The orders kept as they were before this step.
+    kept: BTreeSet<OrderId>,
 }
 
 impl Cx {
+    fn new(now: Stamp) -> Cx {
+        Cx {
+            now,
+            step: Step::default(),
+            kept: BTreeSet::new(),
+        }
+    }
+
     fn effect(&mut self, effect: Effect) {
         self.step.effects.push(effect);
     }
@@ -164,6 +188,8 @@ impl Factory {
             metrics: Metrics::default(),
             orders: BTreeMap::new(),
             scratch: BTreeMap::new(),
+            unlogged: BTreeMap::new(),
+            runs: 0,
             asleep: None,
             woke: None,
             battery: false,
@@ -231,10 +257,7 @@ impl Factory {
     /// Handles one input.
     pub fn handle(&mut self, input: Input) -> Step {
         self.now = input.at;
-        let mut cx = Cx {
-            now: input.at,
-            step: Step::default(),
-        };
+        let mut cx = Cx::new(input.at);
         self.dispatch(&mut cx, input.kind);
         self.fill_slots(&mut cx);
         self.update_lock(&mut cx);
@@ -272,7 +295,8 @@ impl Factory {
             InputKind::Windows(open) => self.windows_changed(cx, open),
             InputKind::Quit => self.quit(cx),
             InputKind::Tick => self.tick(cx),
-            InputKind::LogFailed(id) => self.log_failed(cx, &id),
+            InputKind::LogFailed(failure) => self.log_failed(failure),
+            other if self.stale(&other) => {}
             other => self.command_or_result(cx, other),
         }
     }
@@ -283,10 +307,45 @@ impl Factory {
 
     /// Records `event` for order `id` and applies it.
     fn emit(&mut self, cx: &mut Cx, id: &OrderId, event: Event) {
-        if let Some(order) = self.orders.get_mut(id) {
-            let entry = order.record(cx.now, event);
-            cx.step.log.push(entry);
+        let Some(order) = self.orders.get_mut(id) else { return };
+        if cx.kept.insert(id.clone()) {
+            let kept = Kept {
+                seq: order.seq(),
+                order: order.clone(),
+                scratch: self.scratch.get(id).cloned().unwrap_or_default(),
+            };
+            self.unlogged.entry(id.clone()).or_default().push(kept);
         }
+        let entry = order.record(cx.now, event);
+        cx.step.log.push(entry);
+    }
+
+    /// The app wrote the log of order `id` up to the entry before `next` (E167).
+    pub fn logged(&mut self, id: &OrderId, next: u64) {
+        if let Some(kept) = self.unlogged.get_mut(id) {
+            kept.retain(|k| k.seq >= next);
+            if kept.is_empty() {
+                self.unlogged.remove(id);
+            }
+        }
+    }
+
+    /// A new run for order `id`, whose result is the only one the order takes from now on.
+    fn start_run(&mut self, id: &OrderId) -> RunId {
+        self.runs += 1;
+        let run = RunId(self.runs);
+        self.scratch(id).run = Some(run);
+        run
+    }
+
+    /// Whether `kind` is the result of a run the order no longer waits for.
+    fn stale(&self, kind: &InputKind) -> bool {
+        let (id, run) = match kind {
+            InputKind::Scanned(id, run, _) | InputKind::Diff(id, run, _) | InputKind::Compared(id, run, _) => (id, run),
+            InputKind::GateDone { order, run_id, .. } => (order, run_id),
+            _ => return false,
+        };
+        self.scratch.get(id).and_then(|s| s.run) != Some(*run)
     }
 
     fn set_phase(&mut self, cx: &mut Cx, id: &OrderId, phase: Phase) {
@@ -362,6 +421,7 @@ impl Factory {
         }
         if matches!(self.orders.get(id).map(Order::phase), Some(Phase::Gate { .. })) {
             cx.effect(Effect::StopGate { order: id.clone() });
+            self.scratch(id).run = None;
         }
     }
 
@@ -565,22 +625,24 @@ impl Factory {
             .is_some_and(|woke| now.since(woke) <= self.rules.limits().wake_grace_ms())
     }
 
-    /// The step's log could not be written: none of its effects ran, so the order pauses and its open operations
-    /// count as not begun (E167). A done order only stops publishing, until the user's next click.
-    fn log_failed(&mut self, cx: &mut Cx, id: &OrderId) {
-        let Some(order) = self.orders.get_mut(id) else { return };
-        order.drop_turn();
-        let finished = order.finished();
-        let ops: Vec<_> = order.open_ops().iter().map(|(op, a)| (op.clone(), a.clone())).collect();
-        for (op, action) in ops {
-            self.emit(cx, id, Event::Dropped { op });
-            self.set_phase(cx, id, takeover::redo_phase(&action));
-        }
-        if finished {
-            self.set_phase(cx, id, Phase::Idle);
+    /// Takes the order back to what its log says, since its entries from `failure.seq` on are not on disk and none of
+    /// their effects ran, and pauses it without an entry that could fail again; what earlier steps began goes on
+    /// (E167).
+    fn log_failed(&mut self, failure: LogFailure) {
+        let LogFailure { order: id, seq } = failure;
+        let kept = self.unlogged.remove(&id).unwrap_or_default();
+        if let Some(before) = kept.into_iter().find(|k| k.seq == seq) {
+            self.orders.insert(id.clone(), before.order);
+            self.scratch.insert(id.clone(), before.scratch);
+        } else if seq == 0 {
+            self.orders.remove(&id);
+            self.scratch.remove(&id);
             return;
         }
-        self.pause(cx, id, PauseReason::LogUnwritable);
+        let Some(order) = self.orders.get_mut(&id) else { return };
+        if !order.finished() {
+            order.pause_unlogged(PauseReason::LogUnwritable);
+        }
     }
 
     /// Resumes a paused order where it stopped.
