@@ -57,6 +57,10 @@ impl Factory {
 
     /// The next step of the take-over.
     pub(super) fn take_over_next(&mut self, cx: &mut Cx, id: &OrderId) {
+        if !self.moves(id) {
+            self.set_phase(cx, id, Phase::Idle);
+            return;
+        }
         let Some(order) = self.orders.get(id) else { return };
         if order.taken_over() || order.branch_kept() {
             self.cleanup_next(cx, id, false);
@@ -124,6 +128,10 @@ impl Factory {
     /// Removes checkpoints, then the worktree (C70), and the branch unless `keep_branch` or the user kept it; after a
     /// take-over or with the branch kept the order is done, after an abort it stays aborted.
     pub(super) fn cleanup_next(&mut self, cx: &mut Cx, id: &OrderId, keep_branch: bool) {
+        if !self.moves(id) {
+            self.set_phase(cx, id, Phase::Idle);
+            return;
+        }
         for role in crate::station::Role::ALL {
             self.end_session(cx, id, role);
         }
@@ -261,7 +269,8 @@ impl Factory {
                 moved: true,
                 ..
             } => {
-                let Some((old_base, old_head)) = self.scratch(id).before_merge.take() else {
+                let before = self.scratch(id).before_merge.take().filter(|_| self.moves(id));
+                let Some((old_base, old_head)) = before else {
                     self.emit(
                         cx,
                         id,

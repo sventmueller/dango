@@ -114,6 +114,8 @@ struct Scratch {
     gate_stopping: bool,
     /// The gate command that runs, as it was when it started.
     gate_running: Option<crate::workflow::GateCommand>,
+    /// A result arrived while the order did not run, and its next step waits for it to run again.
+    held: bool,
 }
 
 /// An order and what the factory remembers about it, as they were before a step.
@@ -616,11 +618,23 @@ impl Factory {
             if *order.condition() == Condition::Paused(PauseReason::Sleep) {
                 order.shift(slept);
                 self.run(cx, &id);
-                if self.orders.get(&id).is_some_and(|o| *o.phase() == Phase::Idle) {
-                    self.advance(cx, &id);
+                let held = self.scratch.get(&id).is_some_and(|s| s.held);
+                if held || self.orders.get(&id).is_some_and(|o| *o.phase() == Phase::Idle) {
+                    self.redo(cx, &id);
                 }
             }
         }
+    }
+
+    /// Whether order `id` may start its next piece of work: only while it runs, or while an aborted one is cleaned up.
+    /// A result that arrives otherwise is recorded, and the order holds in a phase from which resuming goes on.
+    fn moves(&mut self, id: &OrderId) -> bool {
+        let moves = self
+            .orders
+            .get(id)
+            .is_some_and(|o| matches!(o.condition(), Condition::Running | Condition::Aborted));
+        self.scratch(id).held = !moves;
+        moves
     }
 
     /// Whether a failure now falls within the grace after waking, so it does not count (E168).

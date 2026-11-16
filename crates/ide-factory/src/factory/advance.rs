@@ -315,6 +315,9 @@ impl Factory {
     /// (E163).
     pub(super) fn after_turn(&mut self, cx: &mut Cx, id: &OrderId) {
         self.set_phase(cx, id, Phase::TurnScan);
+        if !self.moves(id) {
+            return;
+        }
         let run_id = self.start_run(id);
         cx.effect(Effect::ScanSecrets {
             order: id.clone(),
@@ -325,6 +328,10 @@ impl Factory {
 
     /// Commits the worktree's changes, the operation named in the commit's trailer (E163, E192).
     pub(super) fn commit(&mut self, cx: &mut Cx, id: &OrderId, message: String) {
+        if !self.moves(id) {
+            self.set_phase(cx, id, Phase::TurnScan);
+            return;
+        }
         let Some(order) = self.orders.get(id) else { return };
         let parent = order
             .head()
@@ -345,6 +352,10 @@ impl Factory {
 
     /// After the commit: the ref watch for turns of the builder (E173), then on to the review.
     pub(super) fn after_commit(&mut self, cx: &mut Cx, id: &OrderId) {
+        if !self.moves(id) {
+            self.set_phase(cx, id, Phase::Refs);
+            return;
+        }
         let Some(order) = self.orders.get(id) else { return };
         if order.station() == Station::Build {
             self.set_phase(cx, id, Phase::Refs);
