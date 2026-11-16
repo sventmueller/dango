@@ -3,7 +3,7 @@
 //! the order logs of earlier runs; it stays when the folder's last window closes, and its orders pause then; quitting
 //! pauses every running order with "app ended" before the supervisor ends their processes.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::mpsc;
@@ -13,7 +13,7 @@ use ide_factory::budget::DailyAccount;
 use ide_factory::quota::{QuotaBook, QuotaObservation};
 use ide_factory::routing::{Agent, AgentStatus, Readiness};
 use ide_factory::workflow::rules::{Confirmations, Rules};
-use ide_factory::{Factory, InputKind};
+use ide_factory::{Factory, InputKind, OrderId};
 use ide_ui_common::alert::{Alert, Role};
 use objc2::MainThreadMarker;
 use objc2_app_kit::NSAlertSecondButtonReturn;
@@ -86,7 +86,7 @@ impl Leitstand {
         self.input(cx, &root, InputKind::Windows(false));
     }
 
-    /// The names of the orders of `controller`'s folder whose sessions would pause if it lost this window: none when
+    /// The names of the running orders of `controller`'s folder, which would pause if it lost this window: none when
     /// another window shows the folder.
     pub(crate) fn would_pause(&self, cx: &Rc<AppContext>, controller: &WindowController) -> Vec<String> {
         let Some(root) = controller.project_root() else {
@@ -136,11 +136,13 @@ impl Leitstand {
             let logs = store::read_logs(&project);
             let confirmations = store::load_confirmations(&project);
             let schedule = store::load_schedule(&project);
+            let taken = logged_orders(&store::orders(&project));
             back.deliver(Delivery::Loaded {
                 root,
                 logs,
                 confirmations,
                 schedule,
+                taken,
             });
         });
         if queued.is_err() {
@@ -148,15 +150,40 @@ impl Leitstand {
         }
     }
 
-    /// Reads the daily account and the quotas once.
+    /// Reads the daily account and the quotas once, on the disk lane ahead of the first folder's logs.
     fn read_shared(&self) {
-        let mut shared = self.shared.borrow_mut();
-        if std::mem::replace(&mut shared.read, true) {
+        if std::mem::replace(&mut self.shared.borrow_mut().read, true) {
             return;
         }
-        let base = store::base();
-        shared.day = store::load_day(&base);
-        shared.quotas = store::load_quotas(&base);
+        let back = self.back();
+        let queued = ide_core::lane::DISK.try_run(move || {
+            let base = store::base();
+            let shared = (store::load_day(&base), store::load_quotas(&base));
+            back.deliver(Delivery::Shared(Box::new(shared)));
+        });
+        if queued.is_err() {
+            ide_core::diag::report("reading the daily account", "the disk lane took no more work");
+        }
+    }
+
+    /// The daily account and the quotas were read: what was observed since stays, and every folder hears of them.
+    pub(super) fn shared_read(&self, cx: &Rc<AppContext>, (day, mut quotas): (DailyAccount, QuotaBook)) {
+        let (day, observations) = {
+            let mut shared = self.shared.borrow_mut();
+            for observation in shared.quotas.observations() {
+                quotas.observe(observation.clone());
+            }
+            shared.quotas = quotas;
+            if shared.day == DailyAccount::default() {
+                shared.day = day;
+            }
+            let observations: Vec<QuotaObservation> = shared.quotas.observations().cloned().collect();
+            (shared.day.clone(), observations)
+        };
+        self.broadcast(cx, &InputKind::Day(day));
+        for observation in observations {
+            self.broadcast(cx, &InputKind::Quota(observation));
+        }
     }
 
     /// The logs of `root` were read: its factory comes back as they say, running orders paused (E167).
@@ -167,6 +194,7 @@ impl Leitstand {
         logs: &[String],
         confirmations: Confirmations,
         schedule: ide_factory::workflow::recurring::Schedule,
+        taken: BTreeSet<OrderId>,
     ) {
         self.loading.borrow_mut().retain(|r| *r != root);
         if self.folders.borrow().contains_key(&root) || self.shared.borrow().quitting {
@@ -201,6 +229,8 @@ impl Leitstand {
                 worktree_bytes: 0,
                 agents: BTreeMap::new(),
                 sections: BTreeMap::new(),
+                taken,
+                setups: BTreeMap::new(),
                 learned: super::learning::Learned::new(schedule),
                 forge: super::publish::Forge::default(),
             },
@@ -266,8 +296,8 @@ impl Leitstand {
     /// The app quits: every running order pauses with "app ended", which is on its way to disk before the
     /// supervisor ends the processes (E167); then every session stops. What to wait for before the supervisor ends.
     pub(crate) fn quit(&self, cx: &Rc<AppContext>) -> QuitWrite {
-        self.broadcast(cx, &InputKind::Quit);
         self.shared.borrow_mut().quitting = true;
+        self.broadcast(cx, &InputKind::Quit);
         self.sessions.borrow_mut().stop_all();
         let roots = self.roots();
         for root in &roots {
@@ -298,6 +328,20 @@ impl Leitstand {
         }
         self.broadcast(cx, &InputKind::Quota(observation));
     }
+}
+
+/// The orders whose log is in `folder`, readable or not.
+fn logged_orders(folder: &Path) -> BTreeSet<OrderId> {
+    let Ok(entries) = std::fs::read_dir(folder) else {
+        return BTreeSet::new();
+    };
+    entries
+        .flatten()
+        .filter_map(|entry| {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            name.strip_suffix(".jsonl").map(|id| OrderId(id.to_string()))
+        })
+        .collect()
 }
 
 /// Whether another open window than `controller`'s shows `root`.

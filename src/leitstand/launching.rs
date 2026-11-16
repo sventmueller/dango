@@ -34,13 +34,12 @@ struct Found {
 impl Leitstand {
     /// Looks for the session's program and environment off the main thread, then launches it there.
     pub(super) fn start_session(&self, root: &std::path::Path, wanted: Wanted) {
-        let title = self
-            .folders
-            .borrow()
-            .get(root)
-            .and_then(|f| f.factory.order(&wanted.order))
-            .map(|o| o.title().to_string())
-            .unwrap_or_default();
+        let order = self.with_order(root, &wanted.order, |o| {
+            (o.title().to_string(), super::sessions::starting(o.phase(), wanted.role))
+        });
+        let Some((title, Some(index))) = order else {
+            return;
+        };
         #[cfg(feature = "selftest")]
         let script = self.probe.script_for(&title, wanted.role);
         let root = root.to_path_buf();
@@ -62,6 +61,7 @@ impl Leitstand {
                 order: wanted.order,
                 title,
                 role: wanted.role,
+                index,
                 entry: wanted.entry,
                 resume: found.resume,
                 session_id: found.session_id,

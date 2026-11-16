@@ -23,11 +23,12 @@ mod rules;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 mod sessions;
+mod setups;
 mod siblings;
 mod store;
 
 use std::cell::{Cell, OnceCell, RefCell};
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -67,13 +68,16 @@ enum Delivery {
         failed: Vec<OrderId>,
     },
     /// What a folder needs to start: its order logs, confirmations and the dates of its recurring orders, read from
-    /// disk.
+    /// disk, and the order ids its log folder holds.
     Loaded {
         root: PathBuf,
         logs: Vec<String>,
         confirmations: Confirmations,
         schedule: ide_factory::workflow::recurring::Schedule,
+        taken: BTreeSet<OrderId>,
     },
+    /// The daily account and the quotas across projects, read from disk once (E168, C65).
+    Shared(Box<(ide_factory::budget::DailyAccount, ide_factory::quota::QuotaBook)>),
     /// The figures of the order logs of `root`, computed on a lane (E180).
     Metrics(PathBuf, Box<ide_factory::metrics::Metrics>),
     /// Time to look for recurring orders that are due (B47).
@@ -86,8 +90,10 @@ enum Delivery {
     Refs(PathBuf, OrderId, ide_git::RefSnapshot),
     /// The space the order worktrees of `root` take (R68).
     Space(PathBuf, u64),
-    /// The hunks of an order's diff since its base (C55).
-    Sections(PathBuf, OrderId, Vec<ide_ui_factory::model::detail::Section>),
+    /// The hunks of an order's diff since its base (C55), read for the diff the key names.
+    Sections(PathBuf, OrderId, String, Vec<ide_ui_factory::model::detail::Section>),
+    /// The preparation of an order's worktree with operation `op` ended, with what its factory hears of it (E188).
+    SetupEnded(PathBuf, OrderId, ide_factory::OperationId, Box<InputKind>),
     /// Whether the folder can publish to its service (E177).
     Forge(PathBuf, ide_ui_factory::model::detail::ForgeAccess),
     /// Time passed.
@@ -118,7 +124,11 @@ struct Folder {
     /// What the app last found of each path, for the sheet "Neuer Auftrag" (E58, E185).
     agents: BTreeMap<ide_factory::routing::Agent, ide_factory::routing::AgentStatus>,
     /// The hunks of each order's diff since its base, read on the git lane for partial acceptance (C55).
-    sections: BTreeMap<OrderId, Vec<ide_ui_factory::model::detail::Section>>,
+    sections: BTreeMap<OrderId, api::Sections>,
+    /// The order ids the folder's log folder held when its factory started, readable or not.
+    taken: BTreeSet<OrderId>,
+    /// The preparations of worktrees in flight, by order, with their operation and what stops their setup command.
+    setups: BTreeMap<OrderId, (ide_factory::OperationId, ide_core::Cancel)>,
     /// What the Leitstand learns from the folder's orders (B47).
     learned: learning::Learned,
     /// What the app last found of the folder's service for publishing (E177).
@@ -218,12 +228,9 @@ impl Leitstand {
                 }
                 kind => self.input(cx, &root, kind),
             },
-            Delivery::Sections(root, order, sections) => {
-                if let Some(folder) = self.folders.borrow_mut().get_mut(&root) {
-                    folder.sections.insert(order, sections);
-                }
-                self.changed(&root);
-            }
+            Delivery::Sections(root, order, key, sections) => self.sections_read(&root, &order, key, sections),
+            Delivery::SetupEnded(root, order, op, input) => self.setup_ended(cx, &root, &order, &op, *input),
+            Delivery::Shared(shared) => self.shared_read(cx, *shared),
             Delivery::Forge(root, access) => self.forge_read(&root, access),
             Delivery::Logged { root, effects, failed } => {
                 self.writing.set(self.writing.get().saturating_sub(1));
@@ -234,7 +241,8 @@ impl Leitstand {
                 logs,
                 confirmations,
                 schedule,
-            } => self.loaded(cx, root, &logs, confirmations, schedule),
+                taken,
+            } => self.loaded(cx, root, &logs, confirmations, schedule, taken),
             Delivery::Metrics(root, metrics) => self.metrics_arrived(cx, &root, *metrics),
             Delivery::Recurring => self.recurring_due(),
             Delivery::Flush(session) => self.flush(cx, session),
@@ -289,6 +297,8 @@ impl Leitstand {
         };
         let ended = learning::ended(&step.log);
         self.after(cx, root, step);
+        self.stop_setups(root);
+        self.end_unwanted_starts(root);
         self.learn(root, &ended);
         self.changed(root);
         self.keep_ticking();
@@ -327,9 +337,13 @@ impl Leitstand {
         }
     }
 
+    /// Runs a step's effects; once the app quits, only those that stop work or keep the books, and the others stay
+    /// begun in the log for the restart to check (E167).
     fn run_effects(&self, cx: &Rc<AppContext>, root: &Path, effects: Vec<Effect>, failed: &[OrderId]) {
+        let quitting = self.shared.borrow().quitting;
         for effect in effects {
-            if effect.order().is_some_and(|order| failed.contains(order)) {
+            if effect.order().is_some_and(|order| failed.contains(order)) || (quitting && !runs_while_quitting(&effect))
+            {
                 continue;
             }
             self.effect(cx, root, effect);
@@ -400,7 +414,78 @@ impl Leitstand {
     }
 }
 
+/// Whether `effect` still runs once the app quits: it stops work, lets the wake lock go or adds to the daily account,
+/// and starts nothing the supervisor's shutdown would cut short.
+fn runs_while_quitting(effect: &Effect) -> bool {
+    matches!(
+        effect,
+        Effect::StopTurn { .. }
+            | Effect::StopBackground { .. }
+            | Effect::EndSession { .. }
+            | Effect::StopGate { .. }
+            | Effect::AddToDay { .. }
+            | Effect::WakeLock { hold: false, .. }
+    )
+}
+
+/// Runs `job` with the login shell's environment once it is known, or with none after waiting for it in vain, without
+/// holding a lane's worker while it waits.
+fn with_environment(job: impl FnOnce(&'static [(String, String)]) + Send + 'static) {
+    if let Some(login) = crate::environment::get() {
+        return job(login);
+    }
+    let started = crate::util::spawn("order-environment", move || {
+        job(crate::environment::wait(effects::ENVIRONMENT_WAIT).unwrap_or_default());
+    });
+    if let Err(why) = started {
+        ide_core::diag::report("waiting for the login environment", why);
+    }
+}
+
 /// What is shown for an order in lists of what runs: the question before quitting, the activity view.
 fn order_name(title: &str) -> String {
     splat_i18n::tf("Auftrag „{}“", &[title])
+}
+
+#[cfg(test)]
+mod tests {
+    use ide_factory::SessionKey;
+
+    use super::*;
+
+    #[test]
+    fn quitting_runs_only_what_stops_work_or_keeps_the_books() {
+        let order = OrderId("o-1".into());
+        let session = SessionKey("k".into());
+        let stops = [
+            Effect::StopTurn {
+                order: order.clone(),
+                session: session.clone(),
+            },
+            Effect::EndSession {
+                order: order.clone(),
+                session,
+            },
+            Effect::StopGate { order: order.clone() },
+            Effect::WakeLock {
+                hold: false,
+                running: 0,
+            },
+        ];
+        assert!(stops.iter().all(runs_while_quitting));
+        let starts = [
+            Effect::WakeLock { hold: true, running: 1 },
+            Effect::SnapshotRefs { order: order.clone() },
+            Effect::DiffNames {
+                order: order.clone(),
+                base: "a".into(),
+                head: "b".into(),
+            },
+            Effect::WriteSpec {
+                order,
+                markdown: String::new(),
+            },
+        ];
+        assert!(!starts.iter().any(runs_while_quitting));
+    }
 }

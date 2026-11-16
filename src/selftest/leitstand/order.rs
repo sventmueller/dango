@@ -3,10 +3,13 @@
 //! as ready, so the order runs in stage 1: the specification is skipped, the builder writes a file in the order's
 //! worktree, the factory commits it, the path scope, the secrets scan and the gate pass, the reviewer agent is skipped,
 //! and the evidence waits for acceptance; G2 takes it over into the base branch of the working copy and the worktree
-//! goes. Along the way no notification reaches the user and no activity keeps the Mac awake.
+//! goes. The order holds the wake lock while it runs and lets it go while it waits; no notification reaches the user
+//! and no activity keeps the Mac awake.
 
+use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::time::Duration;
 
 use ide_factory::options::NewOrder;
@@ -68,7 +71,7 @@ fn script() -> Script {
 }
 
 /// Makes the folder a repository with everything in its first commit.
-fn commit(root: &Path) -> Result<(), String> {
+pub(super) fn commit(root: &Path) -> Result<(), String> {
     let git = fixture_git()?;
     let repo = git.init(root).map_err(|e| e.to_string())?;
     append(
@@ -152,20 +155,27 @@ fn start(root: PathBuf) {
         return give_up(SCENARIO, "the order comes in");
     };
     let (probe, waited) = ((root.clone(), id.clone()), id.clone());
+    let held = Rc::new(Cell::new(false));
+    let seen_held = Rc::clone(&held);
     wait_within(
         STATIONS,
         move || {
-            crate::context::app()
-                .leitstand()
-                .with_order(&probe.0, &probe.1, |o| {
-                    *o.condition() == Condition::Waiting(WaitReason::Acceptance)
-                })
-                .unwrap_or(false)
+            let cx = crate::context::app();
+            let condition = cx.leitstand().with_order(&probe.0, &probe.1, |o| o.condition().clone());
+            if condition == Some(Condition::Running) && cx.leitstand().wake_lock().requested {
+                seen_held.set(true);
+            }
+            condition == Some(Condition::Waiting(WaitReason::Acceptance))
         },
         move |ready| {
             if !ready {
                 return give_up_saying(SCENARIO, "the order waits for acceptance", state(&root, &waited));
             }
+            check(
+                "the order holds the wake lock while it runs",
+                held.get(),
+                "no look at the running order found it held",
+            );
             at_acceptance(&root, &waited, notices);
         },
     );
@@ -247,11 +257,11 @@ fn quiet(notices: usize) {
         !ide_ui_common::notify::may_post() && posted > notices,
         format!("{} notifications counted", posted - notices),
     );
-    let (asked, held) = crate::context::app().leitstand().wake_lock();
+    let lock = crate::context::app().leitstand().wake_lock();
     check(
-        "no activity keeps the Mac awake during the self-test",
-        !held,
-        format!("the factory asked for the wake lock: {asked}"),
+        "the wake lock is let go while the order waits for acceptance, and no activity kept the Mac awake",
+        lock.asked && !lock.requested && !lock.activity,
+        format!("{lock:?}"),
     );
 }
 
@@ -291,13 +301,22 @@ fn taken_over(root: &Path, id: &OrderId) {
         over && file.as_deref() == Some(CONTENT),
         format!("taken over: {over}, {WRITTEN}: {file:?}"),
     );
+    let on_disk: Vec<PathBuf> = ide_git::thread_trees::list(root)
+        .into_iter()
+        .filter(|tree| tree.order.as_deref() == Some(id.0.as_str()))
+        .map(|tree| tree.path)
+        .collect();
     check(
         "the order's worktree is gone after the take-over",
-        cx.leitstand().worktree(root, id).is_none(),
-        format!("{:?}", cx.leitstand().worktree(root, id)),
+        cx.leitstand().worktree(root, id).is_none() && on_disk.is_empty(),
+        format!("{:?}, on disk {on_disk:?}", cx.leitstand().worktree(root, id)),
     );
-    let (_, held) = cx.leitstand().wake_lock();
-    check("no activity keeps the Mac awake once the order is done", !held, "");
+    let lock = cx.leitstand().wake_lock();
+    check(
+        "the wake lock stays let go once the order is done",
+        !lock.requested && !lock.activity,
+        format!("{lock:?}"),
+    );
     cx.leitstand().use_script(None);
     cx.leitstand().use_agents(None);
     finish(SCENARIO);

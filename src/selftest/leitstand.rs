@@ -7,6 +7,7 @@ pub(super) mod attach;
 pub(super) mod gaps;
 pub(super) mod metrics;
 pub(super) mod order;
+pub(super) mod pause;
 pub(super) mod queue;
 
 use objc2::rc::Retained;

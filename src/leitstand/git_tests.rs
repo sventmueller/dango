@@ -120,6 +120,72 @@ fn an_order_commits_without_hooks_and_a_restart_finds_its_commit_and_worktree() 
     assert_eq!(repos.resolve("refs/heads/order/o-1").unwrap(), None);
 }
 
+/// Thirty numbered lines, with the lines of `changed` given instead.
+fn numbered(changed: &[(usize, &str)]) -> String {
+    (1..=30)
+        .map(|n| {
+            let line = changed
+                .iter()
+                .find(|(at, _)| *at == n)
+                .map_or(n.to_string(), |(_, text)| text.to_string());
+            format!("{line}\n")
+        })
+        .collect()
+}
+
+/// The names of the hunks of the diff since `base`, as the order tab lists them.
+fn hunk_ids(repos: &Repos, base: &str) -> Vec<ide_factory::HunkId> {
+    repos
+        .diff_since(base, &[] as &[PathBuf])
+        .unwrap()
+        .iter()
+        .flat_map(|diff| {
+            let path = diff.path().to_string_lossy().into_owned();
+            diff.hunks
+                .iter()
+                .map(move |hunk| hunk_id(&path, hunk))
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
+#[test]
+fn a_rejected_hunk_is_reversed_only_while_the_diff_still_holds_it() {
+    let (_scratch, root, repos) = repository("hunks");
+    std::fs::write(root.join("lines.txt"), numbered(&[])).unwrap();
+    raw(&root, &["add", "."]);
+    raw(&root, &["commit", "--quiet", "-m", "lines"]);
+    let base = repos.head().unwrap().unwrap().to_string();
+    std::fs::write(root.join("lines.txt"), numbered(&[(2, "two"), (25, "twenty-five")])).unwrap();
+    let shown = hunk_ids(&repos, &base);
+    assert_eq!(shown.len(), 2, "{shown:?}");
+    assert!(shown.iter().all(|id| id.0.starts_with("lines.txt#")), "{shown:?}");
+
+    std::fs::write(root.join("lines.txt"), numbered(&[(2, "TWO"), (25, "twenty-five")])).unwrap();
+    assert_ne!(
+        hunk_ids(&repos, &base)[0],
+        shown[0],
+        "a hunk with other lines has another name"
+    );
+    let refused = reject_hunks(&repos, &base, &[shown[0].clone(), shown[1].clone()]);
+    assert!(
+        matches!(refused, Err(ide_git::Error::PatchDoesNotApply { .. })),
+        "{refused:?}"
+    );
+    assert_eq!(
+        std::fs::read_to_string(root.join("lines.txt")).unwrap(),
+        numbered(&[(2, "TWO"), (25, "twenty-five")]),
+        "a refused rejection reverses nothing, not even the hunk that still fits"
+    );
+
+    reject_hunks(&repos, &base, &[shown[1].clone()]).unwrap();
+    assert_eq!(
+        std::fs::read_to_string(root.join("lines.txt")).unwrap(),
+        numbered(&[(2, "TWO")]),
+        "only the rejected hunk is reversed"
+    );
+}
+
 #[test]
 fn the_ref_watch_tells_what_dango_made_from_what_others_did() {
     let (_scratch, root, repos) = repository("refs");

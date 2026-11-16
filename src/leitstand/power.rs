@@ -55,9 +55,14 @@ fn in_selftest() -> bool {
     std::env::var_os("IDE_SELFTEST").is_some()
 }
 
+#[cfg(feature = "selftest")]
 impl Power {
+    /// Whether a factory holds the wake lock now, which a self-test reads without the activity behind it.
+    pub(super) fn requested(&self) -> bool {
+        !self.holders.is_empty()
+    }
+
     /// Whether the activity that keeps the Mac awake is held.
-    #[cfg(feature = "selftest")]
     pub(super) fn holds(&self) -> bool {
         self.activity.is_some()
     }

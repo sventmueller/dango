@@ -22,7 +22,7 @@ use super::{Back, Delivery, GIT, Leitstand, freeze, gates, git, manifest, notice
 use crate::context::AppContext;
 
 /// How long a job waits for the login shell's environment, read once at launch.
-const ENVIRONMENT_WAIT: Duration = Duration::from_secs(15);
+pub(super) const ENVIRONMENT_WAIT: Duration = Duration::from_secs(15);
 
 /// What runs for a folder's orders besides their factory.
 #[derive(Default)]
@@ -332,6 +332,7 @@ impl Leitstand {
                 measure_space(&back, &folder);
                 Some(InputKind::Done { order, op, result })
             }),
+            Effect::Verify { ref order, ref op, .. } if self.setup_runs(root, order, op) => {}
             Effect::Verify {
                 order,
                 op,
@@ -376,10 +377,12 @@ impl Leitstand {
     ) {
         let Some(info) = self.info(root, &order) else { return };
         let run_folder = self.next_run(root, &order);
-        let cancel = Cancel::new();
-        let root = root.to_path_buf();
+        let cancel = self.setup_started(root, &order, &op);
+        let id = order.clone();
+        let folder = root.to_path_buf();
         let back = self.back();
         let started = crate::util::spawn("order-worktree", move || {
+            let root = folder;
             let login = login();
             let result = match git::open(&root, &login) {
                 Ok(main) => prepared(
@@ -392,14 +395,16 @@ impl Leitstand {
                     setup,
                     run_folder,
                     &login,
-                    cancel,
+                    cancel.clone(),
                 ),
                 Err(error) => git::failed(&error),
             };
             measure_space(&back, &root);
-            back.deliver(Delivery::Input(root, Box::new(InputKind::Done { order, op, result })));
+            let input = super::setups::ended(order.clone(), op.clone(), result, &cancel);
+            back.deliver(Delivery::SetupEnded(root, order, op, Box::new(input)));
         });
         if let Err(why) = started {
+            self.setup_gone(root, &id);
             ide_core::diag::report("preparing an order's worktree", why);
         }
     }

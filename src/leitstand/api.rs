@@ -18,7 +18,7 @@ use ide_factory::workflow::WorkflowError;
 use ide_factory::workflow::rules::Loosening;
 use ide_factory::{HunkId, InputKind, Order, OrderId, Refusal, RequestId, RestoreProblem, SessionEvent};
 
-use super::{Delivery, GIT, Leitstand, git, order_name, store};
+use super::{Delivery, GIT, Leitstand, git, order_name};
 use crate::context::AppContext;
 
 /// A listener's id, to stop listening.
@@ -36,8 +36,8 @@ pub(crate) enum Command {
     CommentSpec(OrderId, String),
     /// The user opened the order's diff (R70).
     DiffOpened(OrderId),
-    /// G2: accept the evidence of `fingerprint`, without the `rejected` hunks (C55), named `path#index` in the diff
-    /// of the order since its base.
+    /// G2: accept the evidence of `fingerprint`, without the `rejected` hunks (C55), named by their file and content
+    /// in the diff of the order since its base.
     Accept {
         order: OrderId,
         fingerprint: String,
@@ -223,22 +223,15 @@ impl Leitstand {
 
     /// A new order's id, unique in the app's data folder and as a branch name.
     fn order_id(&self, root: &Path) -> OrderId {
-        let project = self
-            .folders
-            .borrow()
-            .get(root)
-            .map(|f| f.project.clone())
-            .unwrap_or_default();
         // An order's id reaches its factory only later through the git lane, so ids given out count as taken.
         let mut n = self.clock.now().wall.max(self.last_order.get() + 1);
         loop {
             let id = OrderId(format!("o-{n}"));
-            let taken = store::log_file(&project, &id).exists()
-                || self
-                    .folders
-                    .borrow()
-                    .get(root)
-                    .is_some_and(|f| f.factory.order(&id).is_some());
+            let taken = self
+                .folders
+                .borrow()
+                .get(root)
+                .is_some_and(|f| f.taken.contains(&id) || f.factory.order(&id).is_some());
             if !taken {
                 self.last_order.set(n);
                 return id;
@@ -252,31 +245,32 @@ impl Leitstand {
         let id = self.order_id(root);
         let (folder, new) = (root.to_path_buf(), id.clone());
         let back = self.back();
-        let queued = GIT.try_run(move || {
-            let login = crate::environment::wait(std::time::Duration::from_secs(15)).unwrap_or_default();
-            // Without a repository the order still comes in, and its worktree fails in words the user reads.
-            let main = git::open(&folder, login).ok();
-            let main = main.as_ref();
-            let branch = main.and_then(|m| m.current_branch().ok().flatten()).unwrap_or_default();
-            let commit = (main.and_then(|m| m.head().ok().flatten()))
-                .map(|c| c.to_string())
-                .unwrap_or_default();
-            let options = ide_git::StatusOptions {
-                untracked: ide_git::Untracked::No,
-                ignored: false,
-            };
-            let dirty = main.is_some_and(|m| m.status(options).is_ok_and(|status| !status.entries.is_empty()));
-            let input = InputKind::NewOrder {
-                id: new,
-                order,
-                base: BaseRef { branch, commit },
-                dirty,
-            };
-            back.deliver(Delivery::Input(folder, Box::new(input)));
+        super::with_environment(move |login| {
+            let queued = GIT.try_run(move || {
+                // Without a repository the order still comes in, and its worktree fails in words the user reads.
+                let main = git::open(&folder, login).ok();
+                let main = main.as_ref();
+                let branch = main.and_then(|m| m.current_branch().ok().flatten()).unwrap_or_default();
+                let commit = (main.and_then(|m| m.head().ok().flatten()))
+                    .map(|c| c.to_string())
+                    .unwrap_or_default();
+                let options = ide_git::StatusOptions {
+                    untracked: ide_git::Untracked::No,
+                    ignored: false,
+                };
+                let dirty = main.is_some_and(|m| m.status(options).is_ok_and(|status| !status.entries.is_empty()));
+                let input = InputKind::NewOrder {
+                    id: new,
+                    order,
+                    base: BaseRef { branch, commit },
+                    dirty,
+                };
+                back.deliver(Delivery::Input(folder, Box::new(input)));
+            });
+            if queued.is_err() {
+                ide_core::diag::report("starting an order", "the lane took no more work");
+            }
         });
-        if queued.is_err() {
-            ide_core::diag::report("starting an order", "the lane took no more work");
-        }
         id
     }
 
@@ -299,29 +293,39 @@ impl Leitstand {
         None
     }
 
-    /// The orders of `root` whose sessions work now, by name.
+    /// The orders of `root` that run, by name: a session works for them, or they have work in flight such as a gate,
+    /// a worktree's preparation, a git operation or a retry's wait (E166).
     pub(crate) fn running_in(&self, root: &Path) -> Vec<String> {
-        let sessions = self.sessions.borrow();
-        let mut names: Vec<String> = sessions
+        let mut names: Vec<String> = self
+            .sessions
+            .borrow()
             .working()
             .into_iter()
             .filter(|link| link.root == root)
             .map(|link| order_name(&link.title))
             .collect();
         names.dedup();
+        if let Some(folder) = self.folders.borrow().get(root) {
+            for order in folder.factory.orders().filter(|o| in_flight(o)) {
+                let name = order_name(order.title());
+                if !names.contains(&name) {
+                    names.push(name);
+                }
+            }
+        }
         names
     }
 
-    /// Every order whose session works now, by name, for the question before quitting (E23, C58).
+    /// Every order that runs, by name, for the question before quitting (E23, C58).
     pub(crate) fn running(&self) -> Vec<String> {
-        let mut names: Vec<String> = self
-            .sessions
-            .borrow()
-            .working()
-            .into_iter()
-            .map(|link| order_name(&link.title))
-            .collect();
-        names.dedup();
+        let mut names: Vec<String> = Vec::new();
+        for root in self.roots() {
+            for name in self.running_in(&root) {
+                if !names.contains(&name) {
+                    names.push(name);
+                }
+            }
+        }
         names
     }
 
@@ -357,9 +361,10 @@ impl Leitstand {
         }
     }
 
-    /// The folder of the worktree of `order`, while it has one.
+    /// The folder of the worktree of `order`, while it has one, as its factory knows it.
     pub(crate) fn worktree(&self, root: &Path, order: &OrderId) -> Option<PathBuf> {
-        git::tree_of(root, order).map(|tree| tree.path)
+        self.with_order(root, order, |o| o.worktree().map(PathBuf::from))
+            .flatten()
     }
 
     /// What the sheet "Neuer Auftrag" of `root` checks against (E185): the stage, the folder's rules and what the app
@@ -372,16 +377,24 @@ impl Leitstand {
         ide_ui_factory::model::sheet::SheetContext::new(stage, rules, false, agents)
     }
 
-    /// The order tab of `order` (E175), with the hunks of its diff once the git lane has read them.
+    /// The order tab of `order` (E175), with the hunks of its diff once the git lane has read them for the diff the
+    /// order holds now; hunks read for an earlier diff never show.
     pub(crate) fn detail(&self, root: &Path, order: &OrderId) -> Option<ide_ui_factory::model::detail::Detail> {
-        let sections = self
+        let key = self.with_order(root, order, diff_key)?;
+        let cached = self
             .folders
             .borrow()
             .get(root)
-            .and_then(|f| f.sections.get(order).cloned());
-        if sections.is_none() {
-            self.read_sections(root, order);
-        }
+            .and_then(|f| f.sections.get(order))
+            .filter(|cached| cached.key == key)
+            .map(|cached| cached.read.clone());
+        let sections = match cached {
+            Some(read) => read,
+            None => {
+                self.read_sections(root, order, key);
+                None
+            }
+        };
         let forge = self.forge_access(root);
         let now = self.clock.now().wall;
         let folders = self.folders.borrow();
@@ -392,32 +405,89 @@ impl Leitstand {
         Some(detail.with_hold(held.as_ref()).with_forge(forge))
     }
 
-    /// Reads the hunks of the order's diff since its base on the git lane, named `path#index` as G2 rejects them.
-    fn read_sections(&self, root: &Path, order: &OrderId) {
-        let Some(base) = self.with_order(root, order, |o| o.base().commit.clone()) else {
+    /// Reads the hunks of the order's diff since its base on the git lane, named as G2 rejects them, for the diff
+    /// `key` names.
+    fn read_sections(&self, root: &Path, order: &OrderId, key: String) {
+        let Some((base, worktree)) = self.with_order(root, order, |o| {
+            (o.base().commit.clone(), o.worktree().map(PathBuf::from))
+        }) else {
             return;
         };
+        if let Some(folder) = self.folders.borrow_mut().get_mut(root) {
+            let pending = Sections {
+                key: key.clone(),
+                read: None,
+            };
+            folder.sections.insert(order.clone(), pending);
+        }
         let (folder, id) = (root.to_path_buf(), order.clone());
         let back = self.back();
-        let queued = GIT.try_run(move || {
-            let login = crate::environment::wait(std::time::Duration::from_secs(15)).unwrap_or_default();
-            let sections = git::tree_of(&folder, &id)
-                .and_then(|tree| {
-                    let repos = git::open(&folder, login).ok()?;
-                    git::open_in(&repos, &tree.path).ok()
-                })
-                .and_then(|copy| copy.diff_since(&base, &[] as &[PathBuf]).ok())
-                .map(|diffs| sections_of(&diffs))
-                .unwrap_or_default();
-            back.deliver(Delivery::Sections(folder, id, sections));
+        super::with_environment(move |login| {
+            let queued = GIT.try_run(move || {
+                let sections = worktree
+                    .and_then(|tree| {
+                        let repos = git::open(&folder, login).ok()?;
+                        git::open_in(&repos, &tree).ok()
+                    })
+                    .and_then(|copy| copy.diff_since(&base, &[] as &[PathBuf]).ok())
+                    .map(|diffs| sections_of(&diffs))
+                    .unwrap_or_default();
+                back.deliver(Delivery::Sections(folder, id, key, sections));
+            });
+            if queued.is_err() {
+                ide_core::diag::report("reading an order's diff", "the lane took no more work");
+            }
         });
-        if queued.is_err() {
-            ide_core::diag::report("reading an order's diff", "the lane took no more work");
+    }
+
+    /// The hunks of the order's diff named by `key` were read; they show while the order still holds that diff.
+    pub(super) fn sections_read(
+        &self,
+        root: &Path,
+        order: &OrderId,
+        key: String,
+        sections: Vec<ide_ui_factory::model::detail::Section>,
+    ) {
+        if let Some(folder) = self.folders.borrow_mut().get_mut(root)
+            && folder.sections.get(order).is_some_and(|cached| cached.key == key)
+        {
+            let read = Sections {
+                key,
+                read: Some(sections),
+            };
+            folder.sections.insert(order.clone(), read);
         }
+        self.changed(root);
     }
 }
 
-/// The hunks of `diffs` as the order tab lists them for partial acceptance (C55).
+/// The hunks of an order's diff as last read, or being read, with the diff they belong to.
+pub(super) struct Sections {
+    key: String,
+    read: Option<Vec<ide_ui_factory::model::detail::Section>>,
+}
+
+/// What names the diff of `order` the order tab offers hunks of: the head of its branch, the evidence it holds and
+/// whether its worktree is the same.
+fn diff_key(order: &Order) -> String {
+    format!(
+        "{}|{}|{}",
+        order.head().map_or("", |(commit, _)| commit),
+        order.evidence().map_or("", |evidence| evidence.fingerprint()),
+        order.worktree().unwrap_or_default()
+    )
+}
+
+/// Whether `order` runs and would pause without a window of its folder: past intake, not finished, and not waiting
+/// for a free slot (E166, E168).
+fn in_flight(order: &Order) -> bool {
+    order.station() != ide_factory::Station::Intake
+        && !order.finished()
+        && *order.condition() == ide_factory::Condition::Running
+        && *order.phase() != ide_factory::event::Phase::Slot
+}
+
+/// The hunks of `diffs` as the order tab lists them for partial acceptance (C55), each named by its content.
 fn sections_of(diffs: &[ide_git::FileDiff]) -> Vec<ide_ui_factory::model::detail::Section> {
     let mut sections = Vec::new();
     for diff in diffs {
@@ -425,14 +495,13 @@ fn sections_of(diffs: &[ide_git::FileDiff]) -> Vec<ide_ui_factory::model::detail
             continue;
         };
         let file = path.to_string_lossy();
-        for (index, hunk) in diff.hunks.iter().enumerate() {
+        for hunk in &diff.hunks {
             let header = format!(
                 "@@ -{},{} +{},{} @@ {}",
                 hunk.old_start, hunk.old_count, hunk.new_start, hunk.new_count, hunk.section
             );
-            let id = HunkId(format!("{file}#{index}"));
             sections.push(ide_ui_factory::model::detail::Section::new(
-                id,
+                git::hunk_id(&file, hunk),
                 &file,
                 header.trim_end(),
             ));

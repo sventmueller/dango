@@ -10,7 +10,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use ide_factory::budget::UsageReport;
-use ide_factory::event::TurnOutcome;
+use ide_factory::event::{Phase, TurnOutcome};
 use ide_factory::input::RequestKind;
 use ide_factory::quota::{QuotaKey, QuotaObservation, QuotaStatus};
 use ide_factory::routing::{Agent, RankEntry, Readiness};
@@ -58,6 +58,8 @@ pub(super) struct Ready {
     pub(super) order: OrderId,
     pub(super) title: String,
     pub(super) role: ide_factory::Role,
+    /// The routing entry's place the order's phase named when the session was asked for.
+    pub(super) index: usize,
     pub(super) entry: RankEntry,
     pub(super) resume: Option<String>,
     /// The id a new session takes where the path lets it be chosen, which resumes it later (A15).
@@ -82,6 +84,8 @@ pub(super) struct Link {
     pub(super) title: String,
     pub(super) key: SessionKey,
     pub(super) role: ide_factory::Role,
+    /// The routing entry's place the order waits for this session with; none for a session no factory asked for.
+    index: Option<usize>,
     agent: Agent,
     subscriber: SubscriberId,
     /// The factory's prompt of each turn the driver took.
@@ -184,6 +188,20 @@ fn role_of(role: ide_factory::Role) -> ide_session::Role {
     }
 }
 
+/// The routing entry's place of the session of `role` that `phase` waits to start, if it waits for one.
+pub(super) fn starting(phase: &Phase, role: ide_factory::Role) -> Option<usize> {
+    match phase {
+        Phase::Starting { role: wanted, index } if *wanted == role => Some(*index),
+        _ => None,
+    }
+}
+
+/// Whether a session of `role` from the entry at `index` is still what an order in `phase` waits for, while the app
+/// does not quit; a session nobody waits for would run on in a worktree that may be going.
+pub(super) fn still_wanted(phase: Option<&Phase>, role: ide_factory::Role, index: usize, quitting: bool) -> bool {
+    !quitting && phase.and_then(|phase| starting(phase, role)) == Some(index)
+}
+
 /// Why a session did not start, in the user's words, as routing records it (E170, E141).
 fn readiness_of(error: &LaunchError) -> Readiness {
     match error {
@@ -200,9 +218,24 @@ fn readiness_of(error: &LaunchError) -> Readiness {
 }
 
 impl Leitstand {
-    /// Starts the session `ready` describes in the order's bounds (E173); without O1, what reaches beyond them goes
-    /// to the user rather than being refused (C72).
+    /// Whether the order of `root` still waits for a session of `role` from the entry at `index`.
+    fn waits_for(&self, root: &Path, order: &OrderId, role: ide_factory::Role, index: usize) -> bool {
+        let quitting = self.shared.borrow().quitting;
+        let folders = self.folders.borrow();
+        let phase = folders
+            .get(root)
+            .and_then(|f| f.factory.order(order))
+            .map(|o| o.phase());
+        still_wanted(phase, role, index, quitting)
+    }
+
+    /// Starts the session `ready` describes in the order's bounds (E173), unless the order stopped waiting for it while
+    /// its program was looked for; without O1, what reaches beyond them goes to the user rather than being refused
+    /// (C72).
     pub(super) fn launch(&self, cx: &Rc<AppContext>, ready: Ready) {
+        if !self.waits_for(&ready.root, &ready.order, ready.role, ready.index) {
+            return;
+        }
         let failed = |readiness| InputKind::SessionFailed {
             order: ready.order.clone(),
             role: ready.role,
@@ -258,6 +291,7 @@ impl Leitstand {
                     title: ready.title,
                     key: SessionKey(format!("{}-{id}", self.clock.run())),
                     role: ready.role,
+                    index: Some(ready.index),
                     agent: ready.entry.agent,
                     subscriber,
                     prompts: BTreeMap::new(),
@@ -307,6 +341,10 @@ impl Leitstand {
         if views {
             self.views_fed(cx, id);
         }
+        if self.started_unwanted(id, &mapped) {
+            self.end_unwanted(id);
+            return self.refresh_activity(cx, &root);
+        }
         if mapped.ended {
             let mut sessions = self.sessions.borrow_mut();
             sessions.links.remove(&id);
@@ -321,6 +359,50 @@ impl Leitstand {
             self.input(cx, &root, input);
         }
         self.refresh_activity(cx, &root);
+    }
+
+    /// Whether session `id` reported its start while its order no longer waits for it: the order moved on while the
+    /// session started, such as when the user aborted it, or the app quits.
+    fn started_unwanted(&self, id: SessionId, mapped: &Mapped) -> bool {
+        let started = mapped
+            .inputs
+            .iter()
+            .any(|input| matches!(input, InputKind::SessionStarted { .. }));
+        let link = {
+            let sessions = self.sessions.borrow();
+            sessions
+                .links
+                .get(&id)
+                .and_then(|l| Some((l.root.clone(), l.order.clone(), l.role, l.index?)))
+        };
+        started && link.is_some_and(|(root, order, role, index)| !self.waits_for(&root, &order, role, index))
+    }
+
+    /// Ends the sessions of `root` that are still starting while their orders no longer wait for them, such as after
+    /// an abort, so none runs on in a worktree that goes.
+    pub(super) fn end_unwanted_starts(&self, root: &Path) {
+        let starting: Vec<(SessionId, OrderId, ide_factory::Role, usize)> = self
+            .sessions
+            .borrow()
+            .links
+            .iter()
+            .filter(|(_, link)| link.root == root && !link.started)
+            .filter_map(|(id, link)| Some((*id, link.order.clone(), link.role, link.index?)))
+            .collect();
+        for (id, order, role, index) in starting {
+            if !self.waits_for(root, &order, role, index) {
+                self.end_unwanted(id);
+            }
+        }
+    }
+
+    /// Ends session `id`, which no order waits for, and lets it go; its order never hears of it.
+    fn end_unwanted(&self, id: SessionId) {
+        let mut sessions = self.sessions.borrow_mut();
+        sessions.links.remove(&id);
+        if let Some(registry) = sessions.registry.as_mut() {
+            registry.remove(id);
+        }
     }
 
     /// Sends a prompt; the turn it starts ends with the same prompt id.
