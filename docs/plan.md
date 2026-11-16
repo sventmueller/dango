@@ -319,11 +319,13 @@ VoiceOver-Prüfung der neuen Ansichten.
   Test-Explorer, Stufe 4 B33 Docker-Panel. Zurückgestellt und nicht umzusetzen: B25 Remote-Entwicklung, B31
   Jupyter-Notebooks, B34 Debugger für C# und Java; ihre Ausarbeitung bleibt im Dokument. Von Codex (C19–C45) und
   Fable 5.2 (F1–F39, G5–G38) geprüft, alle Befunde eingearbeitet.
-- **Phase 13 — Leitstand (Software-Factory)** *(Entwurf vom 2026-11-16, nicht freigegeben; Einzelheiten in
-  [phase-13.md](phase-13.md))*: Stufe 1 ein Auftrag von Eingang bis Übernahme (B37 Sitzungen ohne Tab als Sperre,
-  B38 Orchestrator, B39 Workflow-Datei, B41a Prüfstationen und Nachweis, B42 Leitstand, B43 Modus „Auftrag“, B45a
-  Übernahme), Stufe 2 mehrere Hersteller (B40 Rollen und Routing, B41b Prüfer, B46 Planer), Stufe 3 Fließband (B44
-  Eingang und Rückmeldung, B45b Merge-Queue), Stufe 4 Lernen (B47–B49). Offen: O1–O4.
+- **Phase 13 — Leitstand (Software-Factory)** *(freigegeben 2026-11-16, ganze Phase; Einzelheiten in
+  [phase-13.md](phase-13.md))*: Stufe 1 ein Auftrag von Hand bis zur Übernahme (B37a Sitzungstreiber ohne Tab als
+  Sperre, B38 Orchestrator, B39 Workflow-Datei, B41a Prüfstationen und Nachweis, B42 Leitstand, B43 Modus „Auftrag“,
+  B44a Neuer Auftrag, B45a Worktree und Übernahme), Stufe 2 mehrere Hersteller (B37b AI-Tab auf dem Treiber, B40
+  Rollen und Routing, B41b Prüfer, B46 Planer), Stufe 3 Fließband (B44b Issues und Rückmeldung, B45b Merge-Queue),
+  Stufe 4 Lernen (B47). Von Fable 5.2 (F40–F77) und Codex (C46–C72) geprüft, eingearbeitet; Kanban-Board, B48 und
+  B49 gestrichen. Offen: O1 und O2; O4 lokal.
 - **Danach:** Store-Lite (E20), I2.
 
 ## Risiken
@@ -705,3 +707,36 @@ Risiken aus E148:
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des
 Claude-Kontos (keine Live-Läufe echter Agenten-CLIs in Tests), **R12** Selbsttest-Fenster dürfen nie den Fokus nehmen
 (Wächter im Testlauf), **R13** Dango baut gegen den Arbeitsstand von `../splat` und `../lowspeak`.
+
+Phase 13 *(freigegeben 2026-11-16)*: Kurzfassung; die Einzelheiten in [phase-13.md](phase-13.md) sind ebenso
+verbindlich. E181 und E182 sind mit B48 und B49 entfallen. Offen und erst mit der Entscheidung des Owners gültig: O1
+(E173 ohne Rückfragen, mit der Ausnahme von E27/E33 im eigenen Worktree) und O2 (E177). Bis dahin gehen Anfragen
+außerhalb der Grenzen an den Nutzer, und Aufträge enden am lokalen Branch.
+
+- **E160 Crates `ide-factory` und `ide-ui-factory`**; der Orchestrator ist ein Zustandsautomat ohne Async-Laufzeit,
+  ausgeführt über Lanes (E142).
+- **E161 `.dango/factory.toml`** mit eigener Migration; **E190** die Projektdatei verschärft nur, Lockerungen und
+  Gate-Befehle brauchen eine Bestätigung je Mac.
+- **E162 Rollen** Planer, Builder, Prüfer, Späher; Prüfer eines anderen Herstellers; **E170 Routing** nach Bereitschaft,
+  Kontingent, Budget; **E171** Hersteller nach Modell.
+- **E163 Gates vor dem Prüfer-Agenten**, Nachweis an Tree, Regelsatz, Basis und Manifest gebunden; **E187** Gates im
+  `sandbox-exec`-Profil; **E192** Git des Orchestrators ohne Hooks.
+- **E164** G2 immer, G1 außer nach E178/E185; kein automatischer Push.
+- **E165 Sitzungstreiber `ide-session`** mit Verteiler und typisiertem Abschluss; **E189** Zug-Ende, Rückfragen,
+  Prozesse.
+- **E166 Zustandsautomat**, Aufträge gehören dem Ordner; **E167 Ereignisprotokoll** mit Operations-Ids, pausiert nach
+  Beenden und Neustart; **E168 Grenzen** und Budgets in drei Einheiten; **E169 Wachhalten**.
+- **E172 Prüfregeln und Agenten-Konfiguration aus dem Hauptstand**, eingefroren je Auftrag.
+- **E173 Modus „Auftrag“** mit Tabelle je Weg; nur Wege mit Sandbox bauen; OpenCode und Antigravity ohne Rolle;
+  **E186** Umgebung ohne Zugangsdaten; **E191** Werkzeuge je Rolle aus; **E193** Codex nie über den Dienst aus E148.
+- **E174 Pfadbereiche und Merge-Queue**; **E175 Leitstand** (Panel vor CI mit ⌘9, Tab mit Stationsleiste und Tabelle,
+  Auftrag-Tab, Menüs unter Ablage und Darstellung).
+- **E176 Eingang aus Issues** mit Pflicht-G1; **E177 Rückmeldung** an GitHub/GitLab (hängt an O2).
+- **E178 Planer** mit Spezifikation als Datei; **E179 Prüfer** mit strukturiertem Urteil; **E180 Kennzahlen**.
+- **E183 Einstellungen ▸ Aufträge**; **E184 Eingreifen** in Auftrags-Sitzungen; **E185 Sheet „Neuer Auftrag“**;
+  **E188 Worktree vorbereiten**.
+
+Risiken aus Phase 13: **R60** Kosten und Kontingente, **R61** großzügige Prüfer, **R62** unbeaufsichtigte Rechte,
+**R63** Prompt-Injection, **R64** parallele Aufträge, **R65** Protokolle ohne Garantie, **R66** Ruhezustand, **R67**
+Umbau der Sitzungen, **R68** Platte und Last je Worktree, **R69** Agenten ändern ihre Prüfungen, **R70** Abnahme als
+Routine.
