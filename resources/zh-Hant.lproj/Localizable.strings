@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "關卡指令";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "無；{} 會偵測專案的測試工具。";
 "Workflow-Datei im Editor öffnen" = "在編輯器中打開工作流程檔案";
-"Prompt-Vorlage" = "提示詞範本";
 "Prompt-Vorlage:" = "提示詞範本：";
 "Auf Vorgabe zurücksetzen" = "回復為預設";
-"{} auf Vorgabe zurücksetzen" = "將 {} 回復為預設";
 "„{}“ ist keine ganze Zahl." = "「{}」不是整數。";
 "„{}“ ist kein Betrag in Dollar." = "「{}」不是美元金額。";
 "Die Vorlage ließ sich nicht anlegen: {}" = "無法建立範本：{}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "路徑範圍，例如 src/export/**（選填）";
 "Pfadbereich" = "路徑範圍";
 "Vorgabe" = "預設";
+"Ohne Grenze" = "不限制";
+"Vorgabe ({})" = "預設（{}）";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "留空的欄位會使用你的預設值（以灰色顯示）；粗體表示專案自行設定的值。";
 "Budget in Dollar" = "預算（美元）";
 "Spezifikation ohne Freigabe" = "規格無需核准";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "僅在風險等級為低且專案允許時，才可無需核准。";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "此檔案夾未受信任；未傳送任何內容。";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "此步驟無法執行；請再試一次。";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "工單沒有可供推送傳送的已驗收提交。";
-"Vorgabe: {}" = "預設：{}";
-"Vorgabe: ohne Grenze" = "預設：不限制";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "預算留空即沿用預設值。專案只能收緊限制和預算，因此只有預設值也不設限制時，這裡的預算才不受限制。";
 "Bestätigen: {}" = "確認：{}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "指標根據 1 個工單；其中 {} 個計入一次通過率，不含人工介入和更換代理程式的工單。";

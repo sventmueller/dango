@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "Kontrolni ukazi";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "Brez; {} zazna orodje za testiranje projekta.";
 "Workflow-Datei im Editor öffnen" = "Odpri datoteko poteka dela v urejevalniku";
-"Prompt-Vorlage" = "Predloga poziva";
 "Prompt-Vorlage:" = "Predloga poziva:";
 "Auf Vorgabe zurücksetzen" = "Ponastavi na privzeto";
-"{} auf Vorgabe zurücksetzen" = "Ponastavi {} na privzeto";
 "„{}“ ist keine ganze Zahl." = "»{}« ni celo število.";
 "„{}“ ist kein Betrag in Dollar." = "»{}« ni znesek v dolarjih.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Predloge ni bilo mogoče ustvariti: {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "Obseg poti, na primer src/export/** (neobvezno)";
 "Pfadbereich" = "Obseg poti";
 "Vorgabe" = "Privzeto";
+"Ohne Grenze" = "Brez omejitve";
+"Vorgabe ({})" = "Privzeto ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "Prazno polje prevzame vašo privzeto vrednost, prikazano sivo; krepko je tisto, kar nastavi projekt sam.";
 "Budget in Dollar" = "Proračun v dolarjih";
 "Spezifikation ohne Freigabe" = "Specifikacija brez odobritve";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Brez odobritve samo pri nizkem razredu tveganja in samo, če projekt to dovoli.";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Mapi ne zaupate; nič ni bilo poslano.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Koraka ni bilo mogoče izvesti; poskusite znova.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Delovni nalog nima sprejetega commita, ki bi ga push lahko poslal.";
-"Vorgabe: {}" = "Privzeto: {}";
-"Vorgabe: ohne Grenze" = "Privzeto: brez omejitve";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Prazen proračun pusti v veljavi privzeto vrednost. Projekt lahko omejitve in proračune samo zaostri, zato je proračun tu brez omejitve le, če je ne določa niti privzeta vrednost.";
 "Bestätigen: {}" = "Potrdi: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Kazalniki temeljijo na 1 delovnem nalogu; od tega se v delež uspeha v prvem poskusu šteje: {}, brez posegov in brez menjav agenta.";

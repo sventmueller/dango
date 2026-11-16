@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "Comandi di verifica";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "Nessuno; {} rileva lo strumento di test del progetto.";
 "Workflow-Datei im Editor öffnen" = "Apri il file del workflow nell’editor";
-"Prompt-Vorlage" = "Modello di prompt";
 "Prompt-Vorlage:" = "Modello di prompt:";
 "Auf Vorgabe zurücksetzen" = "Ripristina predefinito";
-"{} auf Vorgabe zurücksetzen" = "Ripristina {} al valore predefinito";
 "„{}“ ist keine ganze Zahl." = "“{}” non è un numero intero.";
 "„{}“ ist kein Betrag in Dollar." = "“{}” non è un importo in dollari.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Impossibile creare il modello: {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "Ambito dei percorsi, ad esempio src/export/** (facoltativo)";
 "Pfadbereich" = "Ambito dei percorsi";
 "Vorgabe" = "Predefinito";
+"Ohne Grenze" = "Senza limite";
+"Vorgabe ({})" = "Predefinito ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "Un campo vuoto usa il tuo valore predefinito, mostrato in grigio; in grassetto c’è ciò che imposta il progetto stesso.";
 "Budget in Dollar" = "Budget in dollari";
 "Spezifikation ohne Freigabe" = "Specifica senza approvazione";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Senza approvazione solo con classe di rischio bassa, e solo se il progetto lo consente.";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "La cartella non è attendibile; non è stato inviato nulla.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Il passaggio non è potuto partire; riprova.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "L’ordine di lavoro non ha un commit accettato che il push possa inviare.";
-"Vorgabe: {}" = "Predefinito: {}";
-"Vorgabe: ohne Grenze" = "Predefinito: senza limite";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Un budget vuoto lascia in vigore il valore predefinito. Un progetto può solo rendere più restrittivi limiti e budget, quindi qui un budget è senza limite solo se nemmeno il predefinito ne imposta uno.";
 "Bestätigen: {}" = "Conferma: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Le metriche si basano su 1 ordine di lavoro; per il tasso di primo passaggio ne contano {}, esclusi interventi e cambi di agente.";

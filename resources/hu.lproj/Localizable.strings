@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "Ellenőrző parancsok";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "Nincs; a {} felismeri a projekt tesztelőeszközét.";
 "Workflow-Datei im Editor öffnen" = "Munkafolyamatfájl megnyitása a szerkesztőben";
-"Prompt-Vorlage" = "Promptsablon";
 "Prompt-Vorlage:" = "Promptsablon:";
 "Auf Vorgabe zurücksetzen" = "Visszaállítás alapértelmezettre";
-"{} auf Vorgabe zurücksetzen" = "A(z) {} visszaállítása alapértelmezettre";
 "„{}“ ist keine ganze Zahl." = "„{}” nem egész szám.";
 "„{}“ ist kein Betrag in Dollar." = "„{}” nem dollárösszeg.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "A sablon nem hozható létre: {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "Útvonal-hatókör, például src/export/** (nem kötelező)";
 "Pfadbereich" = "Útvonal-hatókör";
 "Vorgabe" = "Alapértelmezett";
+"Ohne Grenze" = "Korlát nélkül";
+"Vorgabe ({})" = "Alapértelmezett ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "Az üres mező az Ön alapértelmezését veszi át, amely szürkén látszik benne; félkövér az, amit maga a projekt állít be.";
 "Budget in Dollar" = "Költségkeret dollárban";
 "Spezifikation ohne Freigabe" = "Specifikáció jóváhagyás nélkül";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Jóváhagyás nélkül csak alacsony kockázati osztálynál, és csak ha a projekt engedi.";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "A mappa nem megbízható; semmi sem lett elküldve.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "A lépés nem tudott lefutni; próbálja újra.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "A munkarendelésnek nincs elfogadott commitja, amelyet a push elküldhetne.";
-"Vorgabe: {}" = "Alapértelmezett: {}";
-"Vorgabe: ohne Grenze" = "Alapértelmezett: korlát nélkül";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Az üres költségkeret érvényben hagyja az alapértelmezettet. A projekt csak szigoríthatja a korlátokat és a költségkereteket, ezért itt csak akkor korlát nélküli a költségkeret, ha az alapértelmezett sem szab korlátot.";
 "Bestätigen: {}" = "Megerősítés: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "A mutatók 1 munkarendelésen alapulnak; ebből {} számít bele az elsőkörös sikerarányba, beavatkozások és ügynökváltások nélkül.";

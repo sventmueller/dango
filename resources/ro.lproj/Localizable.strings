@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "Comenzi de control";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "Niciuna; {} detectează instrumentul de testare al proiectului.";
 "Workflow-Datei im Editor öffnen" = "Deschideți fișierul workflow în editor";
-"Prompt-Vorlage" = "Șablon de prompt";
 "Prompt-Vorlage:" = "Șablon de prompt:";
 "Auf Vorgabe zurücksetzen" = "Reveniți la valoarea implicită";
-"{} auf Vorgabe zurücksetzen" = "Readuceți {} la valoarea implicită";
 "„{}“ ist keine ganze Zahl." = "„{}” nu este un număr întreg.";
 "„{}“ ist kein Betrag in Dollar." = "„{}” nu este o sumă în dolari.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Șablonul nu a putut fi creat: {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "Domeniu de căi, de exemplu src/export/** (opțional)";
 "Pfadbereich" = "Domeniu de căi";
 "Vorgabe" = "Implicit";
+"Ohne Grenze" = "Fără limită";
+"Vorgabe ({})" = "Implicit ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "Un câmp gol preia valoarea dvs. implicită, afișată cu gri; cu aldin apare ce setează proiectul însuși.";
 "Budget in Dollar" = "Buget în dolari";
 "Spezifikation ohne Freigabe" = "Specificație fără aprobare";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Fără aprobare doar la clasa de risc scăzută și doar dacă proiectul permite.";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Dosarul nu este de încredere; nu s-a trimis nimic.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Pasul nu a putut rula; încercați din nou.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Ordinul de lucru nu are niciun commit acceptat pe care push-ul să-l poată trimite.";
-"Vorgabe: {}" = "Implicit: {}";
-"Vorgabe: ohne Grenze" = "Implicit: fără limită";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Un buget gol lasă în vigoare valoarea implicită. Un proiect poate doar să înăsprească limitele și bugetele, deci aici un buget este fără limită doar dacă nici valoarea implicită nu stabilește una.";
 "Bestätigen: {}" = "Confirmați: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Indicatorii se bazează pe 1 ordin de lucru; contează pentru rata primei treceri: {}, fără intervenții și fără schimbări de agent.";

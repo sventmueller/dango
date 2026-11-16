@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "Kontrolní příkazy";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "Žádné; {} rozpozná testovací nástroj projektu.";
 "Workflow-Datei im Editor öffnen" = "Otevřít soubor pracovního postupu v editoru";
-"Prompt-Vorlage" = "Šablona promptu";
 "Prompt-Vorlage:" = "Šablona promptu:";
 "Auf Vorgabe zurücksetzen" = "Vrátit na výchozí";
-"{} auf Vorgabe zurücksetzen" = "Vrátit {} na výchozí";
 "„{}“ ist keine ganze Zahl." = "„{}“ není celé číslo.";
 "„{}“ ist kein Betrag in Dollar." = "„{}“ není částka v dolarech.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Šablonu se nepodařilo vytvořit: {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "Rozsah cest, např. src/export/** (nepovinné)";
 "Pfadbereich" = "Rozsah cest";
 "Vorgabe" = "Výchozí";
+"Ohne Grenze" = "Bez limitu";
+"Vorgabe ({})" = "Výchozí ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "Prázdné pole přebírá vaše výchozí nastavení, které je v něm šedě; tučně je to, co nastavuje samotný projekt.";
 "Budget in Dollar" = "Rozpočet v dolarech";
 "Spezifikation ohne Freigabe" = "Specifikace bez schválení";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Bez schválení jen při nízké třídě rizika a jen tehdy, když to projekt dovolí.";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Složka není důvěryhodná; nic se neodeslalo.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Krok nemohl proběhnout; zkuste to znovu.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Zakázka nemá žádný přijatý commit, který by push mohl odeslat.";
-"Vorgabe: {}" = "Výchozí: {}";
-"Vorgabe: ohne Grenze" = "Výchozí: bez limitu";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Prázdný rozpočet ponechá platnou výchozí hodnotu. Projekt může limity a rozpočty jen zpřísnit; bez limitu je tu rozpočet proto jen tehdy, když ho nestanoví ani výchozí hodnota.";
 "Bestätigen: {}" = "Potvrdit: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Metriky vycházejí z 1 zakázky; z ní se do podílu úspěchu napoprvé počítá {}, bez zásahů a bez změn agenta.";

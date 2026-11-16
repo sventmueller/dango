@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "คำสั่งด่านตรวจ";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "ไม่มี; {} จะตรวจพบเครื่องมือทดสอบของโปรเจ็กต์เอง";
 "Workflow-Datei im Editor öffnen" = "เปิดไฟล์เวิร์กโฟลว์ในตัวแก้ไข";
-"Prompt-Vorlage" = "เทมเพลตพรอมต์";
 "Prompt-Vorlage:" = "เทมเพลตพรอมต์:";
 "Auf Vorgabe zurücksetzen" = "คืนค่าเป็นค่าเริ่มต้น";
-"{} auf Vorgabe zurücksetzen" = "คืนค่า {} เป็นค่าเริ่มต้น";
 "„{}“ ist keine ganze Zahl." = "“{}” ไม่ใช่จำนวนเต็ม";
 "„{}“ ist kein Betrag in Dollar." = "“{}” ไม่ใช่จำนวนเงินเป็นดอลลาร์";
 "Die Vorlage ließ sich nicht anlegen: {}" = "สร้างเทมเพลตไม่ได้: {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "ขอบเขตพาธ เช่น src/export/** (ไม่บังคับ)";
 "Pfadbereich" = "ขอบเขตพาธ";
 "Vorgabe" = "ค่าเริ่มต้น";
+"Ohne Grenze" = "ไม่มีขีดจำกัด";
+"Vorgabe ({})" = "ค่าเริ่มต้น ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "ช่องที่เว้นว่างจะใช้ค่าเริ่มต้นของคุณซึ่งแสดงเป็นสีเทา ตัวหนาคือค่าที่โปรเจกต์ตั้งเอง";
 "Budget in Dollar" = "งบประมาณเป็นดอลลาร์";
 "Spezifikation ohne Freigabe" = "ข้อกำหนดโดยไม่ต้องอนุมัติ";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "ข้ามการอนุมัติได้เฉพาะระดับความเสี่ยงต่ำ และเฉพาะเมื่อโปรเจ็กต์อนุญาต";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "ไม่ได้เชื่อถือโฟลเดอร์ ไม่ได้ส่งสิ่งใด";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "ไม่สามารถเรียกใช้ขั้นตอนได้ ลองอีกครั้ง";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "ใบสั่งงานไม่มี Commit ที่ตรวจรับแล้วให้ Push ส่ง";
-"Vorgabe: {}" = "ค่าเริ่มต้น: {}";
-"Vorgabe: ohne Grenze" = "ค่าเริ่มต้น: ไม่มีขีดจำกัด";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "งบประมาณที่เว้นว่างจะใช้ค่าเริ่มต้น โปรเจ็กต์ทำได้เพียงเข้มงวดขีดจำกัดและงบประมาณให้มากขึ้น ดังนั้นงบประมาณที่นี่จะไม่มีขีดจำกัดก็ต่อเมื่อค่าเริ่มต้นไม่ได้กำหนดขีดจำกัดไว้เช่นกัน";
 "Bestätigen: {}" = "ยืนยัน: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "ตัวชี้วัดอิงจากใบสั่งงาน 1 รายการ โดย {} รายการนับรวมในอัตราผ่านในรอบแรก ไม่รวมรายการที่มีการแทรกแซงหรือเปลี่ยนเอเจนต์";

@@ -2018,10 +2018,8 @@
 "Prüfbefehle" = "Gate Commands";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "None; {} detects the project’s test tool.";
 "Workflow-Datei im Editor öffnen" = "Open Workflow File in Editor";
-"Prompt-Vorlage" = "Prompt template";
 "Prompt-Vorlage:" = "Prompt template:";
 "Auf Vorgabe zurücksetzen" = "Reset to Default";
-"{} auf Vorgabe zurücksetzen" = "Reset {} to default";
 "„{}“ ist keine ganze Zahl." = "“{}” is not a whole number.";
 "„{}“ ist kein Betrag in Dollar." = "“{}” is not an amount in dollars.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "The template could not be created: {}";
@@ -2053,6 +2051,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "Path scope, such as src/export/** (optional)";
 "Pfadbereich" = "Path scope";
 "Vorgabe" = "Default";
+"Ohne Grenze" = "No limit";
+"Vorgabe ({})" = "Default ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "An empty field takes your default, shown in grey; bold marks what the project sets itself.";
 "Budget in Dollar" = "Budget in dollars";
 "Spezifikation ohne Freigabe" = "Specification without approval";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Without approval only at risk class low, and only where the project allows it.";
@@ -2387,8 +2388,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "The folder is not trusted; nothing was sent.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "The step could not run; try again.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "The work order has no accepted commit for the push to send.";
-"Vorgabe: {}" = "Default: {}";
-"Vorgabe: ohne Grenze" = "Default: no limit";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "An empty budget leaves the default in force. A project can only tighten limits and budgets, so a budget here is without limit only when the default sets none.";
 "Bestätigen: {}" = "Confirm: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "The figures rest on 1 work order; of these, {} count for the first-pass rate, leaving out interventions and changes of agent.";

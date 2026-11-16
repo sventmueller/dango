@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "Kontrollkommandoer";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "Ingen; {} oppdager prosjektets testverktøy.";
 "Workflow-Datei im Editor öffnen" = "Åpne arbeidsflytfilen i editoren";
-"Prompt-Vorlage" = "Promptmal";
 "Prompt-Vorlage:" = "Promptmal:";
 "Auf Vorgabe zurücksetzen" = "Tilbakestill til standard";
-"{} auf Vorgabe zurücksetzen" = "Tilbakestill {} til standard";
 "„{}“ ist keine ganze Zahl." = "«{}» er ikke et heltall.";
 "„{}“ ist kein Betrag in Dollar." = "«{}» er ikke et beløp i dollar.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Kunne ikke opprette malen: {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "Stiområde, for eksempel src/export/** (valgfritt)";
 "Pfadbereich" = "Stiområde";
 "Vorgabe" = "Standard";
+"Ohne Grenze" = "Ingen grense";
+"Vorgabe ({})" = "Standard ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "Et tomt felt bruker standarden din, som vises i grått; uthevet er det prosjektet selv angir.";
 "Budget in Dollar" = "Budsjett i dollar";
 "Spezifikation ohne Freigabe" = "Spesifikasjon uten godkjenning";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Uten godkjenning bare ved risikoklasse lav, og bare hvis prosjektet tillater det.";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Mappen er ikke klarert; ingenting ble sendt.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Steget kunne ikke kjøres; prøv igjen.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Arbeidsordren har ingen akseptert commit som pushen kan sende.";
-"Vorgabe: {}" = "Standard: {}";
-"Vorgabe: ohne Grenze" = "Standard: ingen grense";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Et tomt budsjett lar standarden gjelde. Et prosjekt kan bare skjerpe grenser og budsjetter, så et budsjett er bare uten grense her når standarden heller ikke setter noen.";
 "Bestätigen: {}" = "Bekreft: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Nøkkeltallene bygger på 1 arbeidsordre; av den teller {} med i førstegangsandelen, uten inngrep og uten agentbytte.";

@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "Grindkommandon";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "Inga; {} identifierar projektets testverktyg.";
 "Workflow-Datei im Editor öffnen" = "Öppna workflowfilen i redigeraren";
-"Prompt-Vorlage" = "Promptmall";
 "Prompt-Vorlage:" = "Promptmall:";
 "Auf Vorgabe zurücksetzen" = "Återställ till förval";
-"{} auf Vorgabe zurücksetzen" = "Återställ {} till förval";
 "„{}“ ist keine ganze Zahl." = "”{}” är inte ett heltal.";
 "„{}“ ist kein Betrag in Dollar." = "”{}” är inte ett belopp i dollar.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Mallen kunde inte skapas: {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "Sökvägsomfång, t.ex. src/export/** (valfritt)";
 "Pfadbereich" = "Sökvägsomfång";
 "Vorgabe" = "Förval";
+"Ohne Grenze" = "Ingen gräns";
+"Vorgabe ({})" = "Förval ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "Ett tomt fält använder ditt förval, som visas i grått; fetstil är det som projektet själv anger.";
 "Budget in Dollar" = "Budget i dollar";
 "Spezifikation ohne Freigabe" = "Specifikation utan godkännande";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Utan godkännande bara vid riskklass låg, och bara om projektet tillåter det.";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Mappen är inte betrodd; ingenting skickades.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Steget kunde inte köras; försök igen.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Arbetsordern har ingen accepterad commit som pushen kan skicka.";
-"Vorgabe: {}" = "Förval: {}";
-"Vorgabe: ohne Grenze" = "Förval: ingen gräns";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "En tom budget låter förvalet gälla. Ett projekt kan bara skärpa gränser och budgetar, så en budget är här utan gräns bara när förvalet inte heller sätter någon.";
 "Bestätigen: {}" = "Bekräfta: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Nyckeltalen bygger på 1 arbetsorder; av den räknas {} in i förstagångsandelen, utan ingrepp och utan agentbyten.";

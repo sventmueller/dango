@@ -2,6 +2,7 @@
 
 use super::*;
 
+use crate::model::settings::role_title;
 use crate::selftest::ProjectRowSeen;
 
 impl ProjectSheet {
@@ -15,37 +16,67 @@ impl ProjectSheet {
         self.ui().panel.sheetParent().is_some()
     }
 
-    /// What every row shows.
+    /// What every row shows: the roles as the editor shows each, then the values; a value the project sets has a
+    /// bold title and goes back to the default when its field is emptied.
     pub(crate) fn seen(&self) -> Vec<ProjectRowSeen> {
-        self.ui()
-            .rows
-            .iter()
-            .map(|row| ProjectRowSeen {
+        let file = self.file();
+        let mut seen: Vec<ProjectRowSeen> = Role::ALL
+            .into_iter()
+            .map(|role| {
+                let (words, origin) = file.role(role);
+                ProjectRowSeen {
+                    title: role_title(role).to_string(),
+                    value: words.join(", "),
+                    origin: origin.words().to_string(),
+                    resettable: origin == Origin::File,
+                }
+            })
+            .collect();
+        seen.extend(self.ui().rows.iter().map(|row| {
+            let bold = row.caption.font().is_some_and(|font| {
+                font.fontDescriptor()
+                    .symbolicTraits()
+                    .contains(objc2_app_kit::NSFontDescriptorSymbolicTraits::TraitBold)
+            });
+            let origin = if bold { Origin::File } else { Origin::Default };
+            ProjectRowSeen {
                 title: row.value.title(),
                 value: match &row.control {
-                    Control::Field(field) | Control::Shown(field) => field.stringValue().to_string(),
+                    Control::Field(field) => field.stringValue().to_string(),
                     Control::Choice(choice) => choice
                         .titleOfSelectedItem()
                         .map(|title| title.to_string())
                         .unwrap_or_default(),
                 },
-                origin: row.origin.stringValue().to_string(),
-                resettable: row.reset.isEnabled(),
-            })
-            .collect()
+                origin: origin.words().to_string(),
+                resettable: bold,
+            }
+        }));
+        seen
     }
 
-    /// Presses "Auf Vorgabe zurücksetzen" of `value`'s row; whether it could be pressed.
+    /// Takes `value` back to the default as the user does: empties its field, picks the menu's default, or presses
+    /// the role's "Auf Vorgabe zurücksetzen"; whether the value was set by the project.
     pub(crate) fn press_reset(&self, value: ProjectValue) -> bool {
-        let enabled = self
-            .ui()
-            .rows
-            .iter()
-            .any(|row| row.value == value && row.reset.isEnabled());
-        if enabled {
-            self.reset(value);
+        if let ProjectValue::Role(_) = value {
+            let set = self.file().origin(value) == Origin::File;
+            if set {
+                self.reset(value);
+            }
+            return set;
         }
-        enabled
+        let Some(row) = self.ui().rows.iter().find(|row| row.value == value) else {
+            return false;
+        };
+        if self.file().origin(value) != Origin::File {
+            return false;
+        }
+        match &row.control {
+            Control::Field(field) => field.setStringValue(&ns("")),
+            Control::Choice(choice) => choice.selectItemAtIndex(0),
+        }
+        self.field_done();
+        true
     }
 
     /// Presses "Sichern".

@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "Commandes de contrôle";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "Aucune ; {} détecte l’outil de test du projet.";
 "Workflow-Datei im Editor öffnen" = "Ouvrir le fichier de workflow dans l’éditeur";
-"Prompt-Vorlage" = "Gabarit de prompt";
 "Prompt-Vorlage:" = "Gabarit de prompt :";
 "Auf Vorgabe zurücksetzen" = "Rétablir la valeur par défaut";
-"{} auf Vorgabe zurücksetzen" = "Rétablir la valeur par défaut de {}";
 "„{}“ ist keine ganze Zahl." = "« {} » n’est pas un nombre entier.";
 "„{}“ ist kein Betrag in Dollar." = "« {} » n’est pas un montant en dollars.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Impossible de créer le gabarit : {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "Périmètre des chemins, comme src/export/** (facultatif)";
 "Pfadbereich" = "Périmètre des chemins";
 "Vorgabe" = "Par défaut";
+"Ohne Grenze" = "Sans limite";
+"Vorgabe ({})" = "Par défaut ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "Un champ vide reprend votre valeur par défaut, affichée en gris ; ce que le projet définit lui-même apparaît en gras.";
 "Budget in Dollar" = "Budget en dollars";
 "Spezifikation ohne Freigabe" = "Spécification sans approbation";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Sans approbation uniquement avec une classe de risque faible, et seulement si le projet l’autorise.";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Le dossier n’est pas approuvé ; rien n’a été envoyé.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "L’étape n’a pas pu s’exécuter ; réessayez.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "L’ordre de travail n’a aucun commit accepté que le push pourrait envoyer.";
-"Vorgabe: {}" = "Par défaut : {}";
-"Vorgabe: ohne Grenze" = "Par défaut : sans limite";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Un budget vide laisse s’appliquer la valeur par défaut. Un projet ne peut que durcir les limites et les budgets ; un budget n’est donc sans limite ici que si la valeur par défaut n’en fixe pas non plus.";
 "Bestätigen: {}" = "Confirmer : {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Les indicateurs reposent sur 1 ordre de travail ; nombre compté pour le taux de premier passage : {}, hors interventions et changements d’agent.";

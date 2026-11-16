@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "Ordres de control";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "Cap; {} detecta l’eina de proves del projecte.";
 "Workflow-Datei im Editor öffnen" = "Obre el fitxer de flux de treball a l’editor";
-"Prompt-Vorlage" = "Plantilla de prompt";
 "Prompt-Vorlage:" = "Plantilla de prompt:";
 "Auf Vorgabe zurücksetzen" = "Restableix el valor per omissió";
-"{} auf Vorgabe zurücksetzen" = "Restableix el valor per omissió de {}";
 "„{}“ ist keine ganze Zahl." = "“{}” no és un nombre enter.";
 "„{}“ ist kein Betrag in Dollar." = "“{}” no és un import en dòlars.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "No s’ha pogut crear la plantilla: {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "Àmbit de rutes, com ara src/export/** (opcional)";
 "Pfadbereich" = "Àmbit de rutes";
 "Vorgabe" = "Per omissió";
+"Ohne Grenze" = "Sense límit";
+"Vorgabe ({})" = "Per omissió ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "Un camp buit fa servir el teu valor per omissió, que es mostra en gris; en negreta hi ha el que defineix el mateix projecte.";
 "Budget in Dollar" = "Pressupost en dòlars";
 "Spezifikation ohne Freigabe" = "Especificació sense aprovació";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Sense aprovació només amb classe de risc baixa, i només si el projecte ho permet.";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "La carpeta no és de confiança; no s’ha enviat res.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "El pas no s’ha pogut executar; torna‑ho a provar.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "L’ordre de treball no té cap commit acceptat que el push pugui enviar.";
-"Vorgabe: {}" = "Per omissió: {}";
-"Vorgabe: ohne Grenze" = "Per omissió: sense límit";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Un pressupost buit deixa vigent el valor per omissió. Un projecte només pot endurir els límits i els pressupostos; per tant, aquí un pressupost només és sense límit si el valor per omissió tampoc no en fixa cap.";
 "Bestätigen: {}" = "Confirma: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Les mètriques es basen en 1 ordre de treball; per a la taxa de primera passada en compten {}, sense intervencions ni canvis d’agent.";

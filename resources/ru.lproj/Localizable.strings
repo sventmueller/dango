@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "Проверочные команды";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "Нет; {} определяет средство тестирования проекта.";
 "Workflow-Datei im Editor öffnen" = "Открыть файл рабочего процесса в редакторе";
-"Prompt-Vorlage" = "Шаблон промпта";
 "Prompt-Vorlage:" = "Шаблон промпта:";
 "Auf Vorgabe zurücksetzen" = "Вернуть значение по умолчанию";
-"{} auf Vorgabe zurücksetzen" = "{}: вернуть значение по умолчанию";
 "„{}“ ist keine ganze Zahl." = "«{}» — не целое число.";
 "„{}“ ist kein Betrag in Dollar." = "«{}» — не сумма в долларах.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Не удалось создать шаблон: {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "Область путей, например src/export/** (необязательно)";
 "Pfadbereich" = "Область путей";
 "Vorgabe" = "По умолчанию";
+"Ohne Grenze" = "Без лимита";
+"Vorgabe ({})" = "По умолчанию ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "Пустое поле берет Ваше значение по умолчанию, показанное серым; жирным выделено то, что задает сам проект.";
 "Budget in Dollar" = "Бюджет в долларах";
 "Spezifikation ohne Freigabe" = "Спецификация без утверждения";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Без утверждения — только при низком классе риска и только если проект это разрешает.";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Папка не является доверенной; ничего не отправлено.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Не удалось выполнить шаг; попробуйте еще раз.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "У заказа нет принятого коммита, который мог бы отправить push.";
-"Vorgabe: {}" = "По умолчанию: {}";
-"Vorgabe: ohne Grenze" = "По умолчанию: без лимита";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Пустой бюджет оставляет в силе значение по умолчанию. Проект может только ужесточать лимиты и бюджеты, поэтому бюджет здесь бывает без лимита, только если его не задает и значение по умолчанию.";
 "Bestätigen: {}" = "Подтвердить: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Показатели основаны на 1 заказе; из него в доле успеха с первого раза учтено: {} (без вмешательств и без смены агента).";

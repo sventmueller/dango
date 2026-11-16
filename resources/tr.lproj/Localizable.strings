@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "Geçit Komutları";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "Yok; {} projenin test aracını algılar.";
 "Workflow-Datei im Editor öffnen" = "İş Akışı Dosyasını Düzenleyicide Aç";
-"Prompt-Vorlage" = "İstem şablonu";
 "Prompt-Vorlage:" = "İstem şablonu:";
 "Auf Vorgabe zurücksetzen" = "Saptanmışa Döndür";
-"{} auf Vorgabe zurücksetzen" = "Saptanmışa döndür: {}";
 "„{}“ ist keine ganze Zahl." = "“{}” bir tam sayı değil.";
 "„{}“ ist kein Betrag in Dollar." = "“{}” dolar cinsinden bir tutar değil.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Şablon oluşturulamadı: {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "Yol kapsamı, örneğin src/export/** (isteğe bağlı)";
 "Pfadbereich" = "Yol kapsamı";
 "Vorgabe" = "Saptanmış";
+"Ohne Grenze" = "Sınır yok";
+"Vorgabe ({})" = "Saptanmış ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "Boş bir alan, gri gösterilen saptanmış değerinizi alır; kalın yazılanlar projenin kendisinin ayarladıklarıdır.";
 "Budget in Dollar" = "Dolar cinsinden bütçe";
 "Spezifikation ohne Freigabe" = "Onaysız belirtim";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Onaysız yalnızca düşük risk sınıfında ve yalnızca proje izin veriyorsa.";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Klasöre güvenilmiyor; hiçbir şey gönderilmedi.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Adım çalıştırılamadı; yeniden deneyin.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "İş emrinin push ile gönderilecek kabul edilmiş bir commit’i yok.";
-"Vorgabe: {}" = "Saptanmış: {}";
-"Vorgabe: ohne Grenze" = "Saptanmış: sınır yok";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Boş bir bütçe saptanmış değeri geçerli bırakır. Bir proje sınırları ve bütçeleri yalnızca sıkılaştırabilir; bu yüzden burada bir bütçe ancak saptanmış değer de sınır koymuyorsa sınırsızdır.";
 "Bestätigen: {}" = "Onayla: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Metrikler 1 iş emrine dayanıyor; bunun {} tanesi ilk geçiş oranına sayılıyor, müdahaleler ve ajan değişiklikleri hariç.";

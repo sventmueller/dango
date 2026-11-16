@@ -30,7 +30,6 @@ ide-predict = { path = "crates/ide-predict" }
 ide-process = { path = "crates/ide-process" }
 ide-product = { path = "crates/ide-product" }
 ide-project = { path = "crates/ide-project" }
-ide-rpc = { path = "crates/ide-rpc" }
 ide-secrets = { path = "crates/ide-secrets" }
 ide-terminal = { path = "crates/ide-terminal" }
 ide-thread = { path = "crates/ide-thread" }

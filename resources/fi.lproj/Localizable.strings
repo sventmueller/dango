@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "Tarkistuskomennot";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "Ei mitään; {} tunnistaa projektin testityökalun.";
 "Workflow-Datei im Editor öffnen" = "Avaa työnkulkutiedosto editorissa";
-"Prompt-Vorlage" = "Kehotepohja";
 "Prompt-Vorlage:" = "Kehotepohja:";
 "Auf Vorgabe zurücksetzen" = "Palauta oletus";
-"{} auf Vorgabe zurücksetzen" = "Palauta oletus: {}";
 "„{}“ ist keine ganze Zahl." = "”{}” ei ole kokonaisluku.";
 "„{}“ ist kein Betrag in Dollar." = "”{}” ei ole dollarimäärä.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Pohjaa ei voitu luoda: {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "Polkurajaus, kuten src/export/** (valinnainen)";
 "Pfadbereich" = "Polkurajaus";
 "Vorgabe" = "Oletus";
+"Ohne Grenze" = "Ei rajaa";
+"Vorgabe ({})" = "Oletus ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "Tyhjä kenttä käyttää oletustasi, joka näkyy siinä harmaana; lihavoitu on se, minkä projekti itse asettaa.";
 "Budget in Dollar" = "Budjetti dollareina";
 "Spezifikation ohne Freigabe" = "Määrittely ilman hyväksyntää";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Ilman hyväksyntää vain riskiluokassa matala ja vain, jos projekti sallii sen.";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Kansioon ei luoteta; mitään ei lähetetty.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Askelta ei voitu suorittaa; yritä uudelleen.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Työtilauksella ei ole vastaanotettua committia, jonka push voisi lähettää.";
-"Vorgabe: {}" = "Oletus: {}";
-"Vorgabe: ohne Grenze" = "Oletus: ei rajaa";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Tyhjä budjetti jättää oletuksen voimaan. Projekti voi vain tiukentaa rajoja ja budjetteja, joten budjetti on tässä rajaton vain, jos oletuskaan ei aseta rajaa.";
 "Bestätigen: {}" = "Vahvista: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Tunnusluvut perustuvat 1 työtilaukseen; ensikierroksen läpäisyasteeseen siitä lasketaan {}, ilman väliintuloja ja agentin vaihtoja.";

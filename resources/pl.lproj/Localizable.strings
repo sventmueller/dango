@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "Polecenia kontrolne";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "Brak; {} rozpozna narzędzie testowe projektu.";
 "Workflow-Datei im Editor öffnen" = "Otwórz plik przepływu pracy w edytorze";
-"Prompt-Vorlage" = "Szablon promptu";
 "Prompt-Vorlage:" = "Szablon promptu:";
 "Auf Vorgabe zurücksetzen" = "Przywróć domyślne";
-"{} auf Vorgabe zurücksetzen" = "Przywróć domyślne: {}";
 "„{}“ ist keine ganze Zahl." = "„{}” nie jest liczbą całkowitą.";
 "„{}“ ist kein Betrag in Dollar." = "„{}” nie jest kwotą w dolarach.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Nie udało się utworzyć szablonu: {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "Zakres ścieżek, np. src/export/** (opcjonalnie)";
 "Pfadbereich" = "Zakres ścieżek";
 "Vorgabe" = "Domyślne";
+"Ohne Grenze" = "Brak limitu";
+"Vorgabe ({})" = "Domyślne ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "Puste pole przejmuje twoje ustawienie domyślne, widoczne na szaro; pogrubione jest to, co ustawia sam projekt.";
 "Budget in Dollar" = "Budżet w dolarach";
 "Spezifikation ohne Freigabe" = "Specyfikacja bez zatwierdzenia";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Bez zatwierdzenia tylko przy niskiej klasie ryzyka i tylko wtedy, gdy projekt na to pozwala.";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Folder jest niezaufany; nic nie wysłano.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Nie udało się wykonać kroku; spróbuj ponownie.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Zlecenie nie ma zaakceptowanego commitu, który push mógłby wysłać.";
-"Vorgabe: {}" = "Domyślne: {}";
-"Vorgabe: ohne Grenze" = "Domyślne: brak limitu";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Pusty budżet pozostawia wartość domyślną. Projekt może tylko zaostrzać limity i budżety, więc budżet jest tu bez limitu tylko wtedy, gdy wartość domyślna też go nie ustala.";
 "Bestätigen: {}" = "Potwierdź: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Metryki opierają się na 1 zleceniu; do odsetka pierwszego podejścia liczy się z niego {}, bez interwencji i bez zmian agenta.";

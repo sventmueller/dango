@@ -173,7 +173,7 @@ fn origins(root: PathBuf, controller: &Retained<WindowController>) {
     let after =
         ide_ui_factory::selftest::project(window, state).and_then(|rows| row(&rows, ProjectValue::RiskHigh).cloned());
     check(
-        "\"Auf Vorgabe zurücksetzen\" takes the risk pattern back to the default",
+        "emptying the risk pattern's field takes it back to the default",
         pressed
             && after
                 .as_ref()

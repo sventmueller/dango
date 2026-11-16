@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "Команди перевірки";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "Немає; {} визначає засіб тестування проєкту.";
 "Workflow-Datei im Editor öffnen" = "Відкрити файл робочого процесу в редакторі";
-"Prompt-Vorlage" = "Шаблон промпту";
 "Prompt-Vorlage:" = "Шаблон промпту:";
 "Auf Vorgabe zurücksetzen" = "Повернути типове значення";
-"{} auf Vorgabe zurücksetzen" = "{}: повернути типове значення";
 "„{}“ ist keine ganze Zahl." = "«{}» — не ціле число.";
 "„{}“ ist kein Betrag in Dollar." = "«{}» — не сума в доларах.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Не вдалося створити шаблон: {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "Область шляхів, наприклад src/export/** (необовʼязково)";
 "Pfadbereich" = "Область шляхів";
 "Vorgabe" = "Типове";
+"Ohne Grenze" = "Без ліміту";
+"Vorgabe ({})" = "Типове ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "Порожнє поле бере ваше типове значення, показане сірим; жирним виділено те, що задає сам проєкт.";
 "Budget in Dollar" = "Бюджет у доларах";
 "Spezifikation ohne Freigabe" = "Специфікація без затвердження";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Без затвердження — лише за низького класу ризику й лише якщо проєкт це дозволяє.";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Немає довіри до папки; нічого не надіслано.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Не вдалося виконати крок; спробуйте ще раз.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Замовлення не має прийнятого коміту, який міг би надіслати push.";
-"Vorgabe: {}" = "Типове: {}";
-"Vorgabe: ohne Grenze" = "Типове: без ліміту";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Порожній бюджет залишає чинним типове значення. Проєкт може лише посилювати ліміти й бюджети, тож бюджет тут буває без ліміту, тільки якщо його не задає й типове значення.";
 "Bestätigen: {}" = "Підтвердити: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Показники ґрунтуються на 1 замовленні; з нього в частці успіху з першого разу враховано: {} (без втручань і без зміни агента).";

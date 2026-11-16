@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "Gatecommando's";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "Geen; {} herkent de testtool van het project.";
 "Workflow-Datei im Editor öffnen" = "Open workflowbestand in editor";
-"Prompt-Vorlage" = "Promptsjabloon";
 "Prompt-Vorlage:" = "Promptsjabloon:";
 "Auf Vorgabe zurücksetzen" = "Zet terug naar standaard";
-"{} auf Vorgabe zurücksetzen" = "Zet {} terug naar standaard";
 "„{}“ ist keine ganze Zahl." = "'{}' is geen geheel getal.";
 "„{}“ ist kein Betrag in Dollar." = "'{}' is geen bedrag in dollars.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Het sjabloon kon niet worden aangemaakt: {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "Padbereik, zoals src/export/** (optioneel)";
 "Pfadbereich" = "Padbereik";
 "Vorgabe" = "Standaard";
+"Ohne Grenze" = "Geen limiet";
+"Vorgabe ({})" = "Standaard ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "Een leeg veld neemt je standaard over, die er grijs in staat; vet is wat het project zelf instelt.";
 "Budget in Dollar" = "Budget in dollars";
 "Spezifikation ohne Freigabe" = "Specificatie zonder goedkeuring";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Zonder goedkeuring alleen bij risicoklasse laag, en alleen als het project het toestaat.";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "De map wordt niet vertrouwd; er is niets verstuurd.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "De stap kon niet worden uitgevoerd; probeer het opnieuw.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "De werkorder heeft geen geaccepteerde commit die de push kan versturen.";
-"Vorgabe: {}" = "Standaard: {}";
-"Vorgabe: ohne Grenze" = "Standaard: geen limiet";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Een leeg budget laat de standaard gelden. Een project kan limieten en budgetten alleen aanscherpen, dus een budget is hier alleen zonder limiet als ook de standaard er geen stelt.";
 "Bestätigen: {}" = "Bevestig: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "De kengetallen berusten op 1 werkorder; daarvan tellen er {} mee voor het percentage eerste doorloop, zonder ingrepen en zonder agentwissels.";

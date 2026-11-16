@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "Kontrolné príkazy";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "Žiadne; {} rozpozná testovací nástroj projektu.";
 "Workflow-Datei im Editor öffnen" = "Otvoriť súbor pracovného postupu v editore";
-"Prompt-Vorlage" = "Šablóna promptu";
 "Prompt-Vorlage:" = "Šablóna promptu:";
 "Auf Vorgabe zurücksetzen" = "Vrátiť na predvolené";
-"{} auf Vorgabe zurücksetzen" = "Vrátiť {} na predvolené";
 "„{}“ ist keine ganze Zahl." = "„{}“ nie je celé číslo.";
 "„{}“ ist kein Betrag in Dollar." = "„{}“ nie je suma v dolároch.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Šablónu sa nepodarilo vytvoriť: {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "Rozsah ciest, napríklad src/export/** (nepovinné)";
 "Pfadbereich" = "Rozsah ciest";
 "Vorgabe" = "Predvolené";
+"Ohne Grenze" = "Bez limitu";
+"Vorgabe ({})" = "Predvolené ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "Prázdne pole preberá vaše predvolené nastavenie, zobrazené sivou; tučné je to, čo nastavuje samotný projekt.";
 "Budget in Dollar" = "Rozpočet v dolároch";
 "Spezifikation ohne Freigabe" = "Špecifikácia bez schválenia";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Bez schválenia len pri nízkej triede rizika a len vtedy, keď to projekt dovoľuje.";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Priečinok nie je dôveryhodný; nič sa neodoslalo.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Krok sa nepodarilo spustiť; skúste to znova.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Zákazka nemá prijatý commit, ktorý by mohol push odoslať.";
-"Vorgabe: {}" = "Predvolené: {}";
-"Vorgabe: ohne Grenze" = "Predvolené: bez limitu";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Prázdny rozpočet ponechá v platnosti predvolenú hodnotu. Projekt môže limity a rozpočty len sprísniť, preto je tu rozpočet bez limitu len vtedy, keď ho nestanovuje ani predvolená hodnota.";
 "Bestätigen: {}" = "Potvrdiť: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Metriky vychádzajú z 1 zákazky; z nej sa do podielu úspechu na prvý raz počíta {}, bez zásahov a bez zmien agenta.";

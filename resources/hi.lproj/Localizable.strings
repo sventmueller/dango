@@ -1973,10 +1973,8 @@
 "Prüfbefehle" = "गेट कमांड";
 "Keine; {} erkennt das Testwerkzeug des Projekts." = "कोई नहीं; {} प्रोजेक्ट का टेस्ट टूल ख़ुद पहचान लेता है।";
 "Workflow-Datei im Editor öffnen" = "वर्कफ़्लो फ़ाइल एडिटर में खोलें";
-"Prompt-Vorlage" = "प्रॉम्प्ट टेम्पलेट";
 "Prompt-Vorlage:" = "प्रॉम्प्ट टेम्पलेट :";
 "Auf Vorgabe zurücksetzen" = "डिफ़ॉल्ट पर रीसेट करें";
-"{} auf Vorgabe zurücksetzen" = "{} को डिफ़ॉल्ट पर रीसेट करें";
 "„{}“ ist keine ganze Zahl." = "“{}” पूर्ण संख्या नहीं है।";
 "„{}“ ist kein Betrag in Dollar." = "“{}” डॉलर में राशि नहीं है।";
 "Die Vorlage ließ sich nicht anlegen: {}" = "टेम्पलेट नहीं बनाया जा सका : {}";
@@ -2008,6 +2006,9 @@
 "Pfadbereich, etwa src/export/** (freiwillig)" = "पाथ दायरा, जैसे src/export/** (वैकल्पिक)";
 "Pfadbereich" = "पाथ दायरा";
 "Vorgabe" = "डिफ़ॉल्ट";
+"Ohne Grenze" = "कोई सीमा नहीं";
+"Vorgabe ({})" = "डिफ़ॉल्ट ({})";
+"Ein leeres Feld übernimmt deine Vorgabe, die grau darin steht; fett ist, was das Projekt selbst setzt." = "खाली फ़ील्ड आपका डिफ़ॉल्ट लेता है, जो उसमें धूसर दिखता है; जो प्रोजेक्ट ख़ुद सेट करता है वह बोल्ड में है।";
 "Budget in Dollar" = "डॉलर में बजट";
 "Spezifikation ohne Freigabe" = "बिना मंज़ूरी के स्पेसिफ़िकेशन";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "बिना मंज़ूरी केवल जोखिम श्रेणी निम्न पर, और केवल तब जब प्रोजेक्ट इसकी अनुमति दे।";
@@ -2350,8 +2351,6 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "फ़ोल्डर भरोसेमंद नहीं है; कुछ नहीं भेजा गया।";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "यह चरण नहीं चल सका; फिर से कोशिश करें।";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "वर्क ऑर्डर में कोई स्वीकृत कमिट नहीं है जिसे पुश भेज सके।";
-"Vorgabe: {}" = "डिफ़ॉल्ट: {}";
-"Vorgabe: ohne Grenze" = "डिफ़ॉल्ट: कोई सीमा नहीं";
 "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "ख़ाली बजट डिफ़ॉल्ट को लागू रहने देता है। प्रोजेक्ट सीमाएँ और बजट केवल सख़्त कर सकता है, इसलिए यहाँ बजट तभी सीमा-रहित होता है जब डिफ़ॉल्ट भी कोई सीमा तय न करे।";
 "Bestätigen: {}" = "पुष्टि करें: {}";
 "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "मेट्रिक्स 1 वर्क ऑर्डर पर आधारित हैं; इनमें से {} पहली बार में पास दर में गिने जाते हैं, हस्तक्षेप और एजेंट बदलाव वाले ऑर्डर छोड़कर।";
