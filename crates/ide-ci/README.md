@@ -2,7 +2,8 @@
 
 CI for the app (E12): GitHub Actions and GitLab CI of a repository's remote, on github.com, gitlab.com, GitHub
 Enterprise Server and self-managed GitLab. It works out which service a remote belongs to, finds a token strictly per
-host, and reads, re-runs, starts and cancels runs and jobs, reads their logs and lists open merge requests and issues.
+host, and reads, re-runs, starts and cancels runs and jobs, reads their logs and lists open merge requests and issues,
+and reads an issue's text and labels, never its comments, for the Leitstand's intake (E176).
 Every call blocks until the network answers, so the app runs it on a worker thread, and only for trusted folders
 (E22). The module `panel` is what the CI panel decides without a window (E98): its phase, rows and when it reads
 again.
@@ -18,7 +19,7 @@ flowchart TB
     auth -->|"then: Commands, Supervised"| cli(["gh auth token, glab auth status --show-token"])
     auth -->|"last: the login shell's environment"| env["GH_TOKEN, GITHUB_TOKEN, GITLAB_TOKEN, ..."]
     login -->|"Auth::save_grant"| keychain
-    lane -->|"Client::new(Forge, token, Transport)"| client["Client: runs, jobs, log, rerun, cancel, changes, issues"]
+    lane -->|"Client::new(Forge, token, Transport)"| client["Client: runs, jobs, log, rerun, cancel, changes, issues, issue, labelled_issues"]
     client -->|"github or gitlab requests, paged"| transport{{"Transport"}}
     transport -->|"Network: HTTPS through ide-net"| api(["GitHub or GitLab API"])
     transport -->|"Recorded, in tests"| recordings[("recorded answers")]

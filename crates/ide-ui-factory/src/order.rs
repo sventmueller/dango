@@ -162,11 +162,17 @@ impl OrderTab {
         let mut buttons = Vec::new();
         for command in Command::ALL {
             let button = ui::button(mtm, command.title(), me, sel!(ideFactoryOrderCommand:), command.tag());
+            if command == Command::MergeRequest {
+                button.setToolTip(Some(&ns(t(
+                    "Öffnet die Seite für einen neuen Merge Request im Browser-Tab. Den Branch vorher selbst pushen; die App schreibt nichts zu GitHub oder GitLab.",
+                ))));
+            }
             let into = match command {
                 Command::Approve
                 | Command::Accept
                 | Command::OpenDiff
                 | Command::OpenSession
+                | Command::MergeRequest
                 | Command::Continue
                 | Command::Resume => &primary,
                 _ => &secondary,

@@ -80,6 +80,7 @@ fn command(kind: InputKind) -> Option<Command> {
             fingerprint,
             rejected,
         },
+        InputKind::KeepBranch { order, fingerprint } => Command::KeepBranch { order, fingerprint },
         InputKind::BackToBuilder(id, text) => Command::BackToBuilder(id, text),
         InputKind::ChangeCriteria(id, text) => Command::ChangeCriteria(id, text),
         InputKind::ChangeOption(id, change) => Command::ChangeOption(id, change),
@@ -217,6 +218,32 @@ impl ide_ui_factory::Host for Orders {
                 ide_ui_git::reveal_tree(cx.git(), &*controller, &tree);
             }
         });
+    }
+
+    fn open_merge_request(&self, window: WindowId, root: &Path, branch: &str) {
+        let open = move |cx: &std::rc::Rc<crate::context::AppContext>, client: &ide_ci::Client, branch: &str| {
+            if let Some(controller) = cx.windows().get(window.get()) {
+                crate::ci_panel::open_url(Some(&*controller), &client.new_change_page(branch));
+            }
+        };
+        let found = self.0.with(|cx| {
+            let controller = cx.windows().get(window.get())?;
+            let client = crate::ci_panel::client_of(&controller)?;
+            open(cx, &client, branch);
+            Some(())
+        });
+        if found.flatten().is_some() || !crate::project::is_trusted(root) {
+            return;
+        }
+        let (root, branch, back) = (root.to_path_buf(), branch.to_string(), self.0.clone());
+        crate::ci_panel::on_lane(
+            move || crate::ci_panel::client(&root),
+            move |client| {
+                if let Some(Ok(client)) = client {
+                    back.with(|cx| open(cx, &client, &branch));
+                }
+            },
+        );
     }
 
     fn open_session(&self, window: WindowId, root: &Path, order: &OrderId) {

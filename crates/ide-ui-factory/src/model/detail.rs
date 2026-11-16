@@ -98,10 +98,15 @@ pub enum Command {
     Approve,
     /// G2, with the sections the user rejected.
     Accept,
+    /// G2 without the take-over: the order's branch stays, its worktree goes (E177 without O2).
+    KeepBranch,
     /// Shows the diff, which G2 at class high needs first (R70).
     OpenDiff,
     /// Opens the session of the current role to read.
     OpenSession,
+    /// Opens the forge's page for a new merge request of the branch the order's work is on, in the browser tab (E77,
+    /// E177 without O2).
+    MergeRequest,
     /// Back to the builder with a comment.
     BackToBuilder,
     /// New criteria, one per line (E184).
@@ -120,11 +125,13 @@ pub enum Command {
 
 impl Command {
     /// Every command, in the order the tab and the menus list them.
-    pub const ALL: [Command; 11] = [
+    pub const ALL: [Command; 13] = [
         Command::Approve,
         Command::Accept,
+        Command::KeepBranch,
         Command::OpenDiff,
         Command::OpenSession,
+        Command::MergeRequest,
         Command::BackToBuilder,
         Command::ChangeCriteria,
         Command::ByHand,
@@ -139,6 +146,8 @@ impl Command {
         match self {
             Command::Approve => t("Freigeben"),
             Command::Accept => t("Abnehmen"),
+            Command::KeepBranch => t("Abnehmen und Branch behalten"),
+            Command::MergeRequest => t("Merge Request anlegen"),
             Command::OpenDiff => t("Diff öffnen"),
             Command::OpenSession => t("Sitzung öffnen"),
             Command::BackToBuilder => t("Zurück an den Builder …"),
@@ -198,6 +207,8 @@ pub struct Detail {
     accept_block: Option<AcceptBlock>,
     /// The specification while it waits for G1.
     spec: Option<String>,
+    /// The branch the order's work is on once it is done: the kept branch, or the base it was taken over into.
+    merge_branch: Option<String>,
 }
 
 /// [`Command`] as a set's key.
@@ -271,6 +282,7 @@ impl Detail {
                 .spec()
                 .filter(|_| *order.condition() == Condition::Waiting(WaitReason::SpecApproval))
                 .map(str::to_string),
+            merge_branch: merge_branch(order),
         }
     }
 
@@ -374,6 +386,19 @@ impl Detail {
         self.enabled.contains(&command.tag())
     }
 
+    /// The model with the condition saying why the order, which runs, is held back for now (E174, R68).
+    pub fn with_hold(mut self, held: Option<&ide_factory::panel::Hold>) -> Detail {
+        if held.is_some() {
+            self.condition = words::status(self.station, &Condition::Running, held);
+        }
+        self
+    }
+
+    /// The branch "Merge Request anlegen" opens a merge request for, once the order is done.
+    pub fn merge_branch(&self) -> Option<&str> {
+        self.merge_branch.as_deref()
+    }
+
     /// Why "Abnehmen" waits, while it does.
     pub fn accept_block(&self) -> Option<AcceptBlock> {
         self.accept_block
@@ -398,6 +423,10 @@ impl Detail {
         let id = self.id.clone();
         match command {
             Command::Approve => Some(InputKind::Approve(id)),
+            Command::KeepBranch => Some(InputKind::KeepBranch {
+                order: id,
+                fingerprint: self.fingerprint.clone()?,
+            }),
             Command::ByHand => Some(InputKind::ByHand(id)),
             Command::BackToLeitstand => Some(InputKind::BackToLeitstand(id)),
             Command::Resume => Some(InputKind::Resume(Some(id))),
@@ -405,6 +434,7 @@ impl Detail {
             Command::Accept
             | Command::OpenDiff
             | Command::OpenSession
+            | Command::MergeRequest
             | Command::BackToBuilder
             | Command::ChangeCriteria
             | Command::Abort => None,
@@ -447,6 +477,11 @@ fn commands(order: &Order) -> (BTreeSet<CommandKey>, Option<AcceptBlock>) {
             Command::Accept,
             waiting(&|r| *r == WaitReason::Acceptance) && accept_block.is_none(),
         ),
+        (
+            Command::KeepBranch,
+            waiting(&|r| *r == WaitReason::Acceptance) && accept_block.is_none(),
+        ),
+        (Command::MergeRequest, merge_branch(order).is_some()),
         (Command::OpenDiff, order.head().is_some()),
         (Command::OpenSession, order.current().is_some()),
         (
@@ -473,6 +508,19 @@ fn commands(order: &Order) -> (BTreeSet<CommandKey>, Option<AcceptBlock>) {
         .map(|(command, _)| command.tag())
         .collect();
     (enabled, accept_block)
+}
+
+/// The branch a merge request of the done `order` brings in: the kept branch, or the base it was taken over into.
+fn merge_branch(order: &Order) -> Option<String> {
+    if order.station() != Station::Done {
+        None
+    } else if order.branch_kept() {
+        Some(order.id().branch())
+    } else if order.taken_over() {
+        Some(order.base().branch.clone())
+    } else {
+        None
+    }
 }
 
 /// Whether "Weiter" lets the wait for `reason` pass, as the factory's `Continue` does.

@@ -5,6 +5,7 @@ use ide_factory::budget::{BudgetScope, Spend, Unit};
 use ide_factory::evidence::{Deviation, Invalidation};
 use ide_factory::gates::{GateFailure, GateStep};
 use ide_factory::options::{ChangeRefusal, OptionProblem, SheetNote};
+use ide_factory::panel::Hold;
 use ide_factory::station::{Condition, FailReason, PauseReason, RiskClass, Role, Station, TakeOverBlocker, WaitReason};
 use ide_factory::workflow::rules::Loosening;
 use ide_factory::workflow::{Expected, WorkflowError, WorkflowErrorKind};
@@ -111,6 +112,16 @@ pub fn condition(station: Station, condition: &Condition) -> String {
     match reason {
         Some(reason) => tf("{}: {}", &[tone.word(), &reason]),
         None => tone.word().to_string(),
+    }
+}
+
+/// What a condition says, or why an order that runs is held back for now (E168, E174, R68).
+pub fn status(station: Station, condition: &Condition, held: Option<&Hold>) -> String {
+    match held {
+        Some(Hold::Slot { limit }) => tf("eingereiht: höchstens {} Aufträge gleichzeitig", &[&limit.to_string()]),
+        Some(Hold::Overlap { title }) => tf("eingereiht: Pfadbereich überschneidet sich mit „{}“", &[title]),
+        Some(Hold::Queue { branch }) => tf("eingereiht: Übernahme in {} nach dem Auftrag davor", &[branch]),
+        None => self::condition(station, condition),
     }
 }
 
@@ -329,6 +340,7 @@ pub fn problem(problem: &OptionProblem) -> String {
         OptionProblem::SameVendor => t("Builder und Prüfer stammen vom selben Hersteller.").into(),
         OptionProblem::SkipNeedsLowRisk => t("Ohne Freigabe nur bei Risikoklasse niedrig.").into(),
         OptionProblem::SkipNotAllowed => t("Das Projekt erlaubt keine Spezifikation ohne Freigabe.").into(),
+        OptionProblem::SkipNotForIssues => t("Aufträge aus Issues brauchen immer die Freigabe.").into(),
         OptionProblem::InvalidWorkflow => t("Die Workflow-Datei ist ungültig.").into(),
     }
 }

@@ -155,6 +155,55 @@ pub struct Item {
     pub branch: Option<String>,
 }
 
+/// An issue with its text and labels, for taking it in as a work order (E176). Comments are never read.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Issue {
+    pub(crate) number: u64,
+    pub(crate) title: String,
+    pub(crate) body: String,
+    pub(crate) labels: Vec<String>,
+    pub(crate) author: Option<String>,
+    pub(crate) url: String,
+    pub(crate) created: Option<i64>,
+}
+
+impl Issue {
+    /// The number the project shows, such as 12 in `#12`.
+    pub fn number(&self) -> u64 {
+        self.number
+    }
+
+    /// Its title.
+    pub fn title(&self) -> &str {
+        &self.title
+    }
+
+    /// Its description as written, Markdown; empty when it has none.
+    pub fn body(&self) -> &str {
+        &self.body
+    }
+
+    /// Its labels' names.
+    pub fn labels(&self) -> &[String] {
+        &self.labels
+    }
+
+    /// Who opened it.
+    pub fn author(&self) -> Option<&str> {
+        self.author.as_deref()
+    }
+
+    /// Its page.
+    pub fn url(&self) -> &str {
+        &self.url
+    }
+
+    /// When it was opened, in seconds since 1970.
+    pub fn created(&self) -> Option<i64> {
+        self.created
+    }
+}
+
 /// A GitHub workflow of the checkout that may be started by hand, since it names `workflow_dispatch`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Workflow {

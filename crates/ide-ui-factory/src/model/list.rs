@@ -22,7 +22,7 @@ impl OrderLine {
     fn of(row: &Row) -> OrderLine {
         let tone = Tone::of(row.station(), row.condition());
         let agent = agent(row.agent(), row.model());
-        let condition = words::condition(row.station(), row.condition());
+        let condition = words::status(row.station(), row.condition(), row.held());
         let runtime = words::duration(row.runtime_ms());
         let detail = [agent.as_str(), runtime.as_str()]
             .into_iter()

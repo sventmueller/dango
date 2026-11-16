@@ -392,10 +392,19 @@ impl CiPanel {
                 entries
             }
             Key::Job(run, job) | Key::Step(run, job, _) => self.job_entries(run, job, busy),
-            Key::Item(_) => vec![
-                (t("Im Browser öffnen"), Some(sel!(ideCiOpenWeb:)), true),
-                (t("Link kopieren"), Some(sel!(ideCiCopyLink:)), true),
-            ],
+            Key::Item(_) => {
+                let mut entries = vec![
+                    (t("Im Browser öffnen"), Some(sel!(ideCiOpenWeb:)), true),
+                    (t("Link kopieren"), Some(sel!(ideCiCopyLink:)), true),
+                ];
+                if self.read().tab == Tab::Issues && self.has_leitstand() {
+                    entries.extend([
+                        ("", None, false),
+                        (t("Als Auftrag übernehmen"), Some(sel!(ideCiTakeAsOrder:)), !busy),
+                    ]);
+                }
+                entries
+            }
         }
     }
 

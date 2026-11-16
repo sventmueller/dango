@@ -41,7 +41,7 @@ impl Default for Limits {
             retry_cap_seconds: 5 * 60,
             attempts: 3,
             window_start_percent: 70,
-            parallel_orders: 1,
+            parallel_orders: 2,
         }
     }
 }
@@ -239,7 +239,7 @@ impl Limits {
         f64::from(self.window_start_percent) / 100.0
     }
 
-    /// How many orders run at once.
+    /// How many orders run at once from stage 3 on; a folder in stage 1 runs one ([`crate::Factory::parallel_limit`]).
     pub fn parallel_orders(&self) -> u32 {
         self.parallel_orders
     }
@@ -362,7 +362,7 @@ mod tests {
         let both = user.tighten(&project);
         assert_eq!(both.turn_ms(), 30 * MINUTE);
         assert_eq!(both.attempts(), 3);
-        assert_eq!(both.parallel_orders(), 1);
+        assert_eq!(both.parallel_orders(), 2);
         assert_eq!(user.loosened_by(&project), [Limit::Attempts, Limit::ParallelOrders]);
     }
 

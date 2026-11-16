@@ -60,6 +60,7 @@ impl Order {
             | Event::Accepted { .. }
             | Event::AcceptanceKept
             | Event::ByHand => self.apply_review(&entry.event),
+            Event::BranchKept => self.branch_kept = true,
             Event::SessionStarted { .. }
             | Event::SessionFailed { .. }
             | Event::SessionEnded { .. }

@@ -10,6 +10,7 @@ mod effects;
 mod freeze;
 mod gates;
 mod git;
+mod intake;
 mod launching;
 mod lifecycle;
 mod manifest;
@@ -125,6 +126,9 @@ pub(crate) struct Leitstand {
     writing: Cell<usize>,
     listeners: RefCell<Vec<(ListenerId, Listener)>>,
     back: OnceCell<Back>,
+    intake: RefCell<intake::Intake>,
+    /// The number of the last order id given out.
+    last_order: Cell<u64>,
     #[cfg(feature = "selftest")]
     probe: selftest_probe::Probe,
 }
@@ -177,6 +181,7 @@ impl Leitstand {
         let _ = self
             .back
             .set(Back(Arc::new(MainThreadBound::new(Rc::downgrade(cx), mtm))));
+        self.start_intake();
     }
 
     /// The way back to the main thread for work that starts now.

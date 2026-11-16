@@ -5,10 +5,55 @@ use serde::Serialize;
 
 use crate::Factory;
 use crate::budget::Spend;
+use crate::event::Phase;
 use crate::order::Order;
 use crate::quota::QuotaBook;
 use crate::station::{Condition, Station};
 use crate::time::Stamp;
+
+/// Why an order that runs makes no progress for now, which the views show beside its condition (E168, E174, R68).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case", tag = "hold")]
+pub enum Hold {
+    /// As many orders run as may run at once.
+    Slot {
+        /// How many may.
+        limit: u32,
+    },
+    /// An order whose path scope may touch the same files builds, is reviewed or is taken over (E174).
+    Overlap {
+        /// That order's title.
+        title: String,
+    },
+    /// Another order is taken over into the same branch first (E174).
+    Queue {
+        /// The target branch.
+        branch: String,
+    },
+}
+
+impl Hold {
+    /// Why `order` of `factory` holds, if it runs and does.
+    pub fn of(factory: &Factory, order: &Order) -> Option<Hold> {
+        if *order.condition() != Condition::Running || order.finished() {
+            return None;
+        }
+        match order.phase() {
+            Phase::Queue => Some(Hold::Queue {
+                branch: order.base().branch.clone(),
+            }),
+            Phase::Slot => match factory.overlapping(order) {
+                Some(other) => Some(Hold::Overlap {
+                    title: other.title().to_string(),
+                }),
+                None => Some(Hold::Slot {
+                    limit: factory.parallel_limit(),
+                }),
+            },
+            _ => None,
+        }
+    }
+}
 
 /// One order as a row of the panel or the table.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -23,12 +68,14 @@ pub struct Row {
     round: u32,
     spend: Spend,
     waiting_since: Option<u64>,
+    held: Option<Hold>,
 }
 
 impl Row {
-    fn of(order: &Order, now: Stamp) -> Row {
+    fn of(factory: &Factory, order: &Order, now: Stamp) -> Row {
         let current = order.current();
         Row {
+            held: Hold::of(factory, order),
             id: order.id().clone(),
             title: order.title().to_string(),
             station: order.station(),
@@ -92,6 +139,11 @@ impl Row {
         self.waiting_since
     }
 
+    /// Why it makes no progress although it runs.
+    pub fn held(&self) -> Option<&Hold> {
+        self.held.as_ref()
+    }
+
     /// Whether it waits for the user (red dot, E71).
     pub fn waits(&self) -> bool {
         self.condition.waits()
@@ -112,7 +164,7 @@ impl Panel {
             let mut rows: Vec<Row> = factory
                 .orders()
                 .filter(|o| o.station() == station && !o.finished())
-                .map(|o| Row::of(o, now))
+                .map(|o| Row::of(factory, o, now))
                 .collect();
             rows.sort_by_key(|r| std::cmp::Reverse(r.runtime_ms));
             if !rows.is_empty() {
@@ -172,7 +224,7 @@ impl Board {
     /// The board for `factory`'s orders at `now`, sorted by "waiting since", longest wait first.
     pub fn new(factory: &Factory, now: Stamp) -> Board {
         let mut board = Board {
-            rows: factory.orders().map(|o| Row::of(o, now)).collect(),
+            rows: factory.orders().map(|o| Row::of(factory, o, now)).collect(),
             filter: None,
             sort: Column::WaitingSince,
             ascending: true,
@@ -343,7 +395,7 @@ impl Fleet {
             running,
             waiting,
             failed,
-            parallel: factory.rules().limits().parallel_orders(),
+            parallel: factory.parallel_limit(),
             quotas,
             day_spent: *factory.day().total(),
             day_budget: factory.rules().budgets().day().clone(),

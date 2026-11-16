@@ -38,6 +38,9 @@ pub struct OrderOptions {
     pub casting: std::collections::BTreeMap<Role, RankEntry>,
     /// Skip G1.
     pub skip_spec_approval: bool,
+    /// The issue the order came from (E176).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub issue: Option<crate::intake::IssueOrigin>,
 }
 
 /// Why a station or step was skipped, as the log says it (E185, F54).
@@ -511,6 +514,8 @@ pub enum Event {
     },
     /// G2 stands after the base moved without changing the diff (C56).
     AcceptanceKept,
+    /// The user keeps the order's branch instead of taking it over (E177).
+    BranchKept,
     /// The user took the station over by hand (E184).
     ByHand,
     /// The user handed the station back to the Leitstand (E184).

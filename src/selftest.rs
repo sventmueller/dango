@@ -32,6 +32,7 @@ mod dialog_shapes;
 mod leitstand;
 mod leitstand_attach;
 mod leitstand_order;
+mod leitstand_queue;
 mod markdown;
 mod markdown_commands;
 mod markdown_editor;

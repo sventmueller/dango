@@ -26,6 +26,7 @@ impl Factory {
             other.id() != order.id()
                 && other.station() == Station::TakeOver
                 && !other.finished()
+                && !other.branch_kept()
                 && other.base().branch == order.base().branch
                 && entered(other).is_some_and(|at| (at.wall, at.mono, other.id()) < (mine.wall, mine.mono, order.id()))
         })
@@ -34,7 +35,7 @@ impl Factory {
     /// The next step of the take-over.
     pub(super) fn take_over_next(&mut self, cx: &mut Cx, id: &OrderId) {
         let Some(order) = self.orders.get(id) else { return };
-        if order.taken_over() {
+        if order.taken_over() || order.branch_kept() {
             self.cleanup_next(cx, id, false);
             return;
         }
@@ -95,8 +96,8 @@ impl Factory {
         });
     }
 
-    /// Removes checkpoints, then the worktree (C70); after a take-over the order is done, after an abort it stays
-    /// aborted.
+    /// Removes checkpoints, then the worktree (C70), and the branch unless `keep_branch` or the user kept it; after a
+    /// take-over or with the branch kept the order is done, after an abort it stays aborted.
     pub(super) fn cleanup_next(&mut self, cx: &mut Cx, id: &OrderId, keep_branch: bool) {
         for role in crate::station::Role::ALL {
             self.end_session(cx, id, role);
@@ -117,6 +118,7 @@ impl Factory {
             return;
         }
         if let Some(path) = order.worktree().map(str::to_string) {
+            let keep_branch = keep_branch || order.branch_kept();
             let op = order.next_op();
             let action = Action::RemoveWorktree {
                 path: path.clone(),

@@ -37,46 +37,94 @@ impl Factory {
         }
     }
 
-    /// Whether `order` may leave intake now: a slot is free and, with parallel orders, no running order's scope
-    /// overlaps its own (E168, E174).
-    fn slot_free(&self, order: &Order) -> bool {
-        let limit = usize::try_from(self.rules.limits().parallel_orders()).unwrap_or(usize::MAX);
-        if self.running() >= limit {
-            return false;
-        }
-        if limit <= 1 {
-            return true;
-        }
+    /// Whether `order` may leave intake now: fewer orders run than may run at once (E168, R68).
+    fn slot_free(&self) -> bool {
+        self.running() < usize::try_from(self.parallel_limit()).unwrap_or(usize::MAX)
+    }
+
+    /// The first other order `order` must not build beside: one that builds, is reviewed or is taken over, in any
+    /// condition, and whose path scope may touch the same files (E174). Without a scope an order overlaps every other.
+    /// An order that waits for acceptance holds no scope: its diff is done, and the take-over queue checks again
+    /// against what was taken over before it (B45a).
+    pub fn overlapping(&self, order: &Order) -> Option<&Order> {
         let scope = |o: &Order| (!o.options().scope.is_empty()).then(|| o.options().scope.clone());
         let mine = scope(order);
-        !self.orders.values().any(|other| {
+        self.orders.values().find(|other| {
             other.id() != order.id()
-                && other.station() != Station::Intake
+                && matches!(other.station(), Station::Build | Station::Review | Station::TakeOver)
                 && !other.finished()
                 && scopes_overlap(mine.as_deref(), scope(other).as_deref())
         })
     }
 
-    fn intake(&mut self, cx: &mut Cx, id: &OrderId) {
+    /// Whether `order` may begin to build now: as many orders as may run at once, and none of them in its path scope
+    /// (E168, E174). Orders that build already count; `order` itself does not.
+    fn build_free(&self, order: &Order) -> bool {
+        let limit = usize::try_from(self.parallel_limit()).unwrap_or(usize::MAX);
+        let building = self
+            .orders
+            .values()
+            .filter(|o| {
+                o.id() != order.id()
+                    && o.station() >= Station::Build
+                    && !o.finished()
+                    && *o.condition() == Condition::Running
+            })
+            .count();
+        building < limit && self.overlapping(order).is_none()
+    }
+
+    /// Enters the build, or holds `id` in its slot while it may not build yet (E174).
+    fn enter_build(&mut self, cx: &mut Cx, id: &OrderId) {
         let Some(order) = self.orders.get(id) else { return };
-        if !self.slot_free(order) {
+        if !self.build_free(order) {
             self.set_phase(cx, id, Phase::Slot);
             return;
         }
-        if order.stage() == Stage::One {
+        self.enter(cx, id, Station::Build);
+        self.advance(cx, id);
+    }
+
+    fn intake(&mut self, cx: &mut Cx, id: &OrderId) {
+        let Some(order) = self.orders.get(id) else { return };
+        if !self.slot_free() {
+            self.set_phase(cx, id, Phase::Slot);
+            return;
+        }
+        if let Some(origin) = order.options().issue.clone().filter(|_| order.stage() == Stage::One) {
+            let markdown = crate::intake::spec_of(order.title(), order.goal(), order.criteria(), &origin);
+            self.enter(cx, id, Station::Spec);
             self.emit(
                 cx,
                 id,
-                Event::Skipped {
-                    station: Station::Spec,
-                    why: SkipWhy::UserWroteSpec,
+                Event::Specified {
+                    markdown: markdown.clone(),
+                    risk: None,
                 },
             );
-            self.enter(cx, id, Station::Build);
+            cx.effect(Effect::WriteSpec {
+                order: id.clone(),
+                markdown,
+            });
+            self.advance(cx, id);
+            return;
+        }
+        if order.stage() == Stage::One {
+            if !order.g1_skipped() {
+                self.emit(
+                    cx,
+                    id,
+                    Event::Skipped {
+                        station: Station::Spec,
+                        why: SkipWhy::UserWroteSpec,
+                    },
+                );
+            }
+            self.enter_build(cx, id);
         } else {
             self.enter(cx, id, Station::Spec);
+            self.advance(cx, id);
         }
-        self.advance(cx, id);
     }
 
     /// Whether the worktree and the frozen configuration are there; asks for what is missing.
@@ -149,8 +197,7 @@ impl Factory {
         if order.spec().is_some() && !rework {
             if order.approved() || order.g1_skipped() {
                 self.end_session(cx, id, Role::Planner);
-                self.enter(cx, id, Station::Build);
-                self.advance(cx, id);
+                self.enter_build(cx, id);
             } else {
                 self.wait(cx, id, WaitReason::SpecApproval);
             }
@@ -177,8 +224,9 @@ impl Factory {
             markdown: answer.to_string(),
         });
         let Some(order) = self.orders.get(id) else { return };
-        if order.criteria().is_empty() && !spec.criteria.is_empty() {
-            let criteria = crate::criteria::renumber(&[], spec.criteria);
+        let suggested = order.options().issue.is_some();
+        if (order.criteria().is_empty() || suggested) && !spec.criteria.is_empty() {
+            let criteria = crate::criteria::renumber(order.criteria(), spec.criteria);
             self.emit(cx, id, Event::CriteriaChanged { criteria });
         }
         let Some(order) = self.orders.get(id) else { return };
@@ -188,6 +236,7 @@ impl Factory {
         }
         let Some(order) = self.orders.get(id) else { return };
         let skip = order.options().skip_spec_approval
+            && order.options().issue.is_none()
             && self.rules.skip_spec_approval()
             && order.expected_risk() == RiskClass::Low;
         self.set_phase(cx, id, Phase::Idle);

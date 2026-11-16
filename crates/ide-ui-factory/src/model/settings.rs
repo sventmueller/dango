@@ -16,7 +16,8 @@ use splat_i18n::{t, tf};
 use super::words;
 
 /// The limits the settings offer, in their order, with their unit: minutes, a count or percent.
-pub const LIMITS: [Limit; 9] = [
+pub const LIMITS: [Limit; 10] = [
+    Limit::ParallelOrders,
     Limit::TurnMinutes,
     Limit::TurnsPerStation,
     Limit::StallMinutes,

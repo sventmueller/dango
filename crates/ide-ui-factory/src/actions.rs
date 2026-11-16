@@ -80,6 +80,11 @@ pub(crate) fn run(target: &Target, detail: &Detail, command: Command, rejected: 
             send(target, InputKind::DiffOpened(id));
         }
         Command::OpenSession => host().open_session(target.window().id(), target.root(), &id),
+        Command::MergeRequest => {
+            if let Some(branch) = detail.merge_branch() {
+                host().open_merge_request(target.window().id(), target.root(), branch);
+            }
+        }
         Command::BackToBuilder => ask_text(
             target,
             &tf("„{}“ zurück an den Builder", &[detail.title()]),

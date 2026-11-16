@@ -279,6 +279,20 @@ impl Factory {
         values.insert("title", order.title().to_string());
         values.insert("goal", order.goal().to_string());
         values.insert("criteria", Factory::criteria_text(order.criteria()));
+        if let Some(origin) = &order.options().issue {
+            let source = format!("the text of issue #{}", origin.number);
+            values.insert("goal", untrusted(&source, order.goal()));
+            if kind == PromptKind::Plan && !order.criteria().is_empty() {
+                let suggested = untrusted(
+                    "criteria suggested by the issue",
+                    &Factory::criteria_text(order.criteria()),
+                );
+                values.insert(
+                    "criteria",
+                    format!("Make these suggestions testable criteria:\n\n{suggested}"),
+                );
+            }
+        }
         if let Some(findings) = order.findings() {
             values.insert("findings", findings.to_string());
         }

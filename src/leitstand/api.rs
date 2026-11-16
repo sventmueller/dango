@@ -43,6 +43,11 @@ pub(crate) enum Command {
         fingerprint: String,
         rejected: Vec<HunkId>,
     },
+    /// G2 with the order's branch kept instead of taken over (E177 without O2).
+    KeepBranch {
+        order: OrderId,
+        fingerprint: String,
+    },
     BackToBuilder(OrderId, String),
     /// New criteria, one per line (E184).
     ChangeCriteria(OrderId, String),
@@ -182,6 +187,7 @@ impl Leitstand {
                 fingerprint,
                 rejected,
             },
+            Command::KeepBranch { order, fingerprint } => InputKind::KeepBranch { order, fingerprint },
             Command::BackToBuilder(order, text) => InputKind::BackToBuilder(order, text),
             Command::ChangeCriteria(order, text) => InputKind::ChangeCriteria(order, text),
             Command::ChangeOption(order, change) => InputKind::ChangeOption(order, change),
@@ -205,7 +211,8 @@ impl Leitstand {
             .get(root)
             .map(|f| f.project.clone())
             .unwrap_or_default();
-        let mut n = self.clock.now().wall;
+        // An order's id reaches its factory only later through the git lane, so ids given out count as taken.
+        let mut n = self.clock.now().wall.max(self.last_order.get() + 1);
         loop {
             let id = OrderId(format!("o-{n}"));
             let taken = store::log_file(&project, &id).exists()
@@ -215,6 +222,7 @@ impl Leitstand {
                     .get(root)
                     .is_some_and(|f| f.factory.order(&id).is_some());
             if !taken {
+                self.last_order.set(n);
                 return id;
             }
             n += 1;
@@ -357,9 +365,11 @@ impl Leitstand {
             self.read_sections(root, order);
         }
         let now = self.clock.now().wall;
-        self.with_order(root, order, |o| {
-            ide_ui_factory::model::detail::Detail::new(o, now, sections.unwrap_or_default())
-        })
+        let folders = self.folders.borrow();
+        let factory = &folders.get(root)?.factory;
+        let o = factory.order(order)?;
+        let held = ide_factory::panel::Hold::of(factory, o);
+        Some(ide_ui_factory::model::detail::Detail::new(o, now, sections.unwrap_or_default()).with_hold(held.as_ref()))
     }
 
     /// Reads the hunks of the order's diff since its base on the git lane, named `path#index` as G2 rejects them.

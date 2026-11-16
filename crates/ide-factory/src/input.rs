@@ -147,6 +147,14 @@ pub enum InputKind {
         /// The hunks rejected.
         rejected: Vec<HunkId>,
     },
+    /// G2 without the take-over: accept the evidence with `fingerprint` and keep the order's branch, removing its
+    /// worktree, so the user can bring it in by a merge request of their own while O2 is open (E177).
+    KeepBranch {
+        /// The order.
+        order: OrderId,
+        /// The fingerprint the user saw.
+        fingerprint: String,
+    },
     /// Back to the builder with a comment.
     BackToBuilder(OrderId, String),
     /// Change the criteria, one per line (E184).

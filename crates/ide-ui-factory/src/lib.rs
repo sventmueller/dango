@@ -124,6 +124,15 @@ pub fn new_order(window: Window, state: &Rc<State>) {
     }
 }
 
+/// Shows the sheet "Neuer Auftrag" on `window` filled in from an issue (E176); whether the folder has a Leitstand.
+pub fn new_order_from_issue(window: Window, state: &Rc<State>, prefill: model::sheet::Prefill) -> bool {
+    let Some(panel) = state.panels.of(window) else {
+        return false;
+    };
+    sheet::show_prefilled(&panel.target(), Some(prefill));
+    true
+}
+
 /// Shows "Leitstand für <Ordner>" on `window`.
 pub fn project_settings(window: Window, state: &Rc<State>) {
     if let Some(panel) = state.panels.of(window) {

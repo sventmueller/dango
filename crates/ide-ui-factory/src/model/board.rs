@@ -114,7 +114,7 @@ impl TableRow {
                     "{} – {}",
                     &[
                         words::station(row.station()),
-                        &words::condition(row.station(), row.condition()),
+                        &words::status(row.station(), row.condition(), row.held()),
                     ],
                 ),
                 agent(row.agent(), row.model()),

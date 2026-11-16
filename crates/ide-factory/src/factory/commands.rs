@@ -27,6 +27,7 @@ impl Factory {
                 fingerprint,
                 rejected,
             } => self.accept(cx, &order, fingerprint, rejected),
+            InputKind::KeepBranch { order, fingerprint } => self.keep_branch(cx, &order, fingerprint),
             InputKind::BackToBuilder(id, text) => self.back_to_builder(cx, &id, text),
             InputKind::ChangeCriteria(id, text) => self.change_criteria(cx, &id, &text),
             InputKind::ChangeOption(id, change) => self.change_option(cx, &id, change),
@@ -123,6 +124,7 @@ impl Factory {
                 budget: order.budget,
                 casting: order.casting,
                 skip_spec_approval: order.skip_spec_approval,
+                issue: order.issue,
             },
             base,
             stage: self.stage,
@@ -185,21 +187,29 @@ impl Factory {
         self.advance(cx, id);
     }
 
-    fn accept(&mut self, cx: &mut Cx, id: &OrderId, fingerprint: String, rejected: Vec<HunkId>) {
+    /// Whether G2 may be given now for the evidence of `fingerprint`; refuses it if not.
+    fn acceptable(&self, cx: &mut Cx, id: &OrderId, fingerprint: &str) -> bool {
         if !self.fitting(cx, id, |o| *o.condition() == Condition::Waiting(WaitReason::Acceptance)) {
-            return;
+            return false;
         }
-        let Some(order) = self.orders.get(id) else { return };
+        let Some(order) = self.orders.get(id) else { return false };
         let current = order
             .evidence()
             .filter(|e| e.invalid().is_none())
             .map(|e| e.fingerprint().to_string());
-        if current.as_deref() != Some(fingerprint.as_str()) {
+        if current.as_deref() != Some(fingerprint) {
             cx.refuse(Some(id), Refused::StaleEvidence);
-            return;
+            return false;
         }
         if order.risk() == RiskClass::High && !order.diff_opened() {
             cx.refuse(Some(id), Refused::OpenDiffFirst);
+            return false;
+        }
+        true
+    }
+
+    fn accept(&mut self, cx: &mut Cx, id: &OrderId, fingerprint: String, rejected: Vec<HunkId>) {
+        if !self.acceptable(cx, id, &fingerprint) {
             return;
         }
         let partial = !rejected.is_empty();
@@ -211,6 +221,19 @@ impl Factory {
             self.enter(cx, id, Station::TakeOver);
             self.advance(cx, id);
         }
+    }
+
+    /// G2 with the branch kept: the worktree goes, the branch stays, and the order is done without a take-over.
+    fn keep_branch(&mut self, cx: &mut Cx, id: &OrderId, fingerprint: String) {
+        if !self.acceptable(cx, id, &fingerprint) {
+            return;
+        }
+        let rejected = Vec::new();
+        self.emit(cx, id, Event::Accepted { fingerprint, rejected });
+        self.emit(cx, id, Event::BranchKept);
+        self.run(cx, id);
+        self.enter(cx, id, Station::TakeOver);
+        self.advance(cx, id);
     }
 
     fn back_to_builder(&mut self, cx: &mut Cx, id: &OrderId, text: String) {

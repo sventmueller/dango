@@ -1,5 +1,5 @@
 //! GitHub: Actions' workflow runs, their jobs and steps, job logs, re-running, starting, approving deployments and
-//! cancelling; open pull requests and issues.
+//! cancelling; open pull requests and issues, and issues with their text and labels.
 
 use serde::Deserialize;
 
@@ -7,7 +7,7 @@ use crate::client::{Client, encode};
 use crate::error::Error;
 use crate::error::Result;
 use crate::http;
-use crate::model::{Item, Job, Run, State, Step, seconds};
+use crate::model::{Issue, Item, Job, Run, State, Step, seconds};
 
 #[derive(Deserialize)]
 struct Runs {
@@ -65,6 +65,38 @@ struct RawItem {
 #[derive(Deserialize)]
 struct RawUser {
     login: String,
+}
+
+#[derive(Deserialize)]
+struct RawIssue {
+    number: u64,
+    title: String,
+    body: Option<String>,
+    #[serde(default)]
+    labels: Vec<RawLabel>,
+    user: Option<RawUser>,
+    html_url: String,
+    created_at: Option<String>,
+    pull_request: Option<serde_json::Value>,
+}
+
+#[derive(Deserialize)]
+struct RawLabel {
+    name: String,
+}
+
+impl RawIssue {
+    fn issue(self) -> Issue {
+        Issue {
+            number: self.number,
+            title: self.title,
+            body: self.body.unwrap_or_default(),
+            labels: self.labels.into_iter().map(|l| l.name).collect(),
+            author: self.user.map(|u| u.login),
+            url: self.html_url,
+            created: self.created_at.as_deref().and_then(seconds),
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -254,4 +286,33 @@ fn items(client: &Client, url: &str, what: &str) -> Result<Vec<Item>> {
             branch: i.head.map(|h| h.reference),
         })
         .collect())
+}
+
+/// The issue `number`; a pull request under that number is no issue.
+pub(crate) fn issue(client: &Client, number: u64) -> Result<Issue> {
+    let url = format!("{}/issues/{number}", repo(client));
+    let raw: RawIssue = http::json(&client.get(&url, "issue")?)?;
+    if raw.pull_request.is_some() {
+        return Err(Error::NotFound {
+            what: format!("issue #{number}"),
+        });
+    }
+    Ok(raw.issue())
+}
+
+/// The open issues with `label`, oldest first, pull requests left out.
+pub(crate) fn labelled_issues(client: &Client, label: &str) -> Result<Vec<Issue>> {
+    let url = format!(
+        "{}/issues?state=open&labels={}&sort=created&direction=asc&per_page=50",
+        repo(client),
+        encode(label)
+    );
+    client.pages(&url, "issues", |response| {
+        let raw: Vec<RawIssue> = http::json(response)?;
+        Ok(raw
+            .into_iter()
+            .filter(|i| i.pull_request.is_none())
+            .map(RawIssue::issue)
+            .collect())
+    })
 }

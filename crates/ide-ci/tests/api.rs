@@ -506,3 +506,67 @@ fn gitlab_retries_and_plays_a_job_starts_a_pipeline_and_lists_merge_requests_and
     assert!(client.rerun_all(&run).is_err());
     assert_eq!(posted(&recorded).len(), 3);
 }
+
+#[test]
+fn github_reads_an_issue_with_text_and_labels_and_a_label_s_open_issues_without_pull_requests() {
+    let (client, recorded) = github(
+        Recorded::new()
+            .answer(
+                Method::Get,
+                &format!("{GITHUB}/issues/28"),
+                200,
+                &fixture("github/issue-28.json"),
+                &[],
+            )
+            .answer(
+                Method::Get,
+                &format!("{GITHUB}/issues?state=open&labels=factory%20ready&sort=created&direction=asc&per_page=50"),
+                200,
+                &fixture("github/labelled.json"),
+                &[],
+            ),
+        Some("t"),
+    );
+    let issue = client.issue(28).unwrap();
+    assert_eq!((issue.number(), issue.author()), (28, Some("octo")));
+    assert!(issue.body().contains("- [ ] an empty file opens"));
+    assert_eq!(issue.labels(), ["bug", "factory"]);
+    assert_eq!(issue.created(), ide_ci::seconds("2026-11-07T15:00:00Z"));
+    let labelled = client.labelled_issues("factory ready").unwrap();
+    let seen: Vec<_> = labelled.iter().map(|i| (i.number(), i.body().is_empty())).collect();
+    assert_eq!(
+        seen,
+        [(26, true), (28, false)],
+        "the pull request is left out, a missing body is empty"
+    );
+    assert!(posted(&recorded).is_empty(), "reading issues writes nothing");
+}
+
+#[test]
+fn gitlab_reads_an_issue_with_its_description_and_a_label_s_open_issues() {
+    let (client, recorded) = gitlab(
+        Recorded::new()
+            .answer(
+                Method::Get,
+                &format!("{GITLAB}/issues/7"),
+                200,
+                &fixture("gitlab/issue-7.json"),
+                &[],
+            )
+            .answer(
+                Method::Get,
+                &format!("{GITLAB}/issues?state=opened&labels=factory&order_by=created_at&sort=asc&per_page=50"),
+                200,
+                &format!("[{}]", fixture("gitlab/issue-7.json")),
+                &[],
+            ),
+    );
+    let issue = client.issue(7).unwrap();
+    assert_eq!((issue.number(), issue.author()), (7, Some("ops")));
+    assert!(issue.body().starts_with("The deploy stage waits forever."));
+    assert_eq!(issue.labels(), ["ops", "factory"]);
+    assert_eq!(issue.url(), "https://gitlab.example.com/gitlab/group/app/-/issues/7");
+    let labelled = client.labelled_issues("factory").unwrap();
+    assert_eq!(labelled, [issue]);
+    assert!(posted(&recorded).is_empty(), "reading issues writes nothing");
+}

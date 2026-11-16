@@ -78,6 +78,9 @@ pub trait Host {
     fn send(&self, root: &Path, command: InputKind) -> Vec<Refusal>;
     /// Opens the diff of the order `order` against its base in `window`, in the diff tab of its worktree (C55).
     fn open_diff(&self, window: WindowId, root: &Path, order: &OrderId);
+    /// Opens the forge's page for a new merge request of `branch` in `window`'s browser tab, as the CI panel does
+    /// (E77); nothing is written to GitHub or GitLab while O2 is open (E177).
+    fn open_merge_request(&self, window: WindowId, root: &Path, branch: &str);
     /// Opens the session of `order`'s current role in `window` as an AI tab that writes into it visibly (E184), or,
     /// where the AI tab does not follow the session's path yet, the order's worktree (E175).
     fn open_session(&self, window: WindowId, root: &Path, order: &OrderId);

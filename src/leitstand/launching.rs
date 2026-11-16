@@ -42,7 +42,7 @@ impl Leitstand {
             .map(|o| o.title().to_string())
             .unwrap_or_default();
         #[cfg(feature = "selftest")]
-        let script = self.probe.script();
+        let script = self.probe.script_for(&title, wanted.role);
         let root = root.to_path_buf();
         let back = self.back();
         let started = crate::util::spawn("order-session", move || {

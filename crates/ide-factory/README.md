@@ -7,7 +7,7 @@ and only then carries out the returned effects on its lanes. Every rule is testa
 
 ```mermaid
 flowchart TB
-    user["user: new order, G1, G2, back to builder, criteria, by hand, abort, resume"] -->|"Input"| handle
+    user["user: new order (by hand or from an issue), G1, G2, keep branch, back to builder, criteria, by hand, abort, resume"] -->|"Input"| handle
     session["session driver (ide-session), mapped: turn ended, activity, request, usage, gap"] -->|"Input"| handle
     results["effect results: worktree, commit, diff, gate, scan, refs, merge, take-over, verify"] -->|"Input"| handle
     clock["Tick, Sleep, Wake, Battery, Windows, Quit"] -->|"Input"| handle

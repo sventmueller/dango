@@ -1,9 +1,11 @@
 //! The sheet "Neuer Auftrag" (E185): title, goal and criteria, the options folded away, and what keeps the order from
-//! starting, checked by `ide_factory::options` as the user types.
+//! starting, checked by `ide_factory::options` as the user types. Taken from an issue (E176), it starts with the
+//! issue's title and text and offers the issue's open task list as suggestions, each of which the user can leave out.
 
 use std::collections::BTreeMap;
 
 use ide_factory::budget::Budget;
+use ide_factory::intake::{IssueOrigin, task_list};
 use ide_factory::options::{NewOrder, RiskChoice, SheetCheck, check_new_order};
 use ide_factory::routing::{Agent, AgentStatus};
 use ide_factory::station::{RiskClass, Stage};
@@ -60,6 +62,38 @@ pub fn risk_title(choice: RiskChoice) -> &'static str {
     }
 }
 
+/// What an issue brings into the sheet (E176): its title, its text as the goal, its open task list as suggestions.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Prefill {
+    title: String,
+    origin: IssueOrigin,
+}
+
+impl Prefill {
+    /// The prefill of the issue `title` whose text `origin` froze.
+    pub fn new(title: &str, origin: IssueOrigin) -> Prefill {
+        Prefill {
+            title: title.trim().to_string(),
+            origin,
+        }
+    }
+
+    /// The title.
+    pub fn title(&self) -> &str {
+        &self.title
+    }
+
+    /// The issue's text, which starts as the goal.
+    pub fn goal(&self) -> &str {
+        self.origin.body.trim()
+    }
+
+    /// The issue's number.
+    pub fn number(&self) -> u64 {
+        self.origin.number
+    }
+}
+
 /// What the user typed and chose in the sheet.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct SheetForm {
@@ -71,9 +105,40 @@ pub struct SheetForm {
     budget: String,
     skip: bool,
     options_open: bool,
+    issue: Option<IssueOrigin>,
+    /// The issue's open tasks, each with whether it stays in.
+    suggestions: Vec<(String, bool)>,
 }
 
 impl SheetForm {
+    /// The form an issue fills in: its title and text, and every open task as a suggestion that stays in.
+    pub fn prefilled(prefill: &Prefill) -> SheetForm {
+        SheetForm {
+            title: prefill.title.clone(),
+            goal: prefill.goal().to_string(),
+            suggestions: task_list(&prefill.origin.body).into_iter().map(|s| (s, true)).collect(),
+            issue: Some(prefill.origin.clone()),
+            ..SheetForm::default()
+        }
+    }
+
+    /// The suggestions from the issue, each with whether it stays in.
+    pub fn suggestions(&self) -> &[(String, bool)] {
+        &self.suggestions
+    }
+
+    /// Leaves the suggestion at `index` in or out.
+    pub fn choose_suggestion(&mut self, index: usize, on: bool) {
+        if let Some(entry) = self.suggestions.get_mut(index) {
+            entry.1 = on;
+        }
+    }
+
+    /// The issue's number, for an order from one.
+    pub fn issue(&self) -> Option<u64> {
+        self.issue.as_ref().map(|i| i.number)
+    }
+
     /// Takes the text fields as they read now.
     pub fn set_texts(&mut self, title: &str, goal: &str, criteria: &str) {
         title.clone_into(&mut self.title);
@@ -102,10 +167,16 @@ impl SheetForm {
 
     /// The order the sheet asks for.
     pub fn order(&self) -> NewOrder {
+        let chosen: Vec<String> = self
+            .suggestions
+            .iter()
+            .filter(|(_, on)| *on)
+            .map(|(text, _)| format!("- {text}\n"))
+            .collect();
         NewOrder {
             title: self.title.trim().to_string(),
             goal: self.goal.trim().to_string(),
-            criteria: self.criteria.clone(),
+            criteria: format!("{}{}", chosen.concat(), self.criteria),
             risk: self.risk,
             scope: self
                 .scope
@@ -116,7 +187,8 @@ impl SheetForm {
                 .collect(),
             budget: self.budget_value(),
             casting: BTreeMap::new(),
-            skip_spec_approval: self.skip,
+            skip_spec_approval: self.skip && self.issue.is_none(),
+            issue: self.issue.clone(),
         }
     }
 
@@ -165,6 +237,21 @@ mod tests {
         assert!(!form.can_start(&cx));
         form.set_texts("CSV export", "Export the table.", "- exports CSV");
         assert!(form.can_start(&cx), "{:?}", form.messages(&cx));
+    }
+
+    #[test]
+    fn an_issue_prefills_the_sheet_and_its_suggestions_can_be_left_out() {
+        let origin = IssueOrigin::freeze("https://x/issues/4", 4, Some("octo"), "Text.\n\n- [ ] one\n- [ ] two\n");
+        let mut form = SheetForm::prefilled(&Prefill::new(" Bug ", origin));
+        assert_eq!(form.suggestions().len(), 2);
+        form.choose_suggestion(0, false);
+        form.set_texts("Bug", "Text.", "- mine");
+        form.set_options(0, "", "", true);
+        let order = form.order();
+        assert_eq!(order.criteria, "- two\n- mine");
+        assert!(!order.skip_spec_approval, "an order from an issue never skips G1");
+        assert_eq!(order.issue.map(|i| i.number), Some(4));
+        assert!(form.can_start(&SheetContext::default()));
     }
 
     #[test]

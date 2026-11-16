@@ -111,6 +111,23 @@ pub(crate) fn load(root: &Path, known: Option<(String, Source, String)>, tab: Ta
     }))
 }
 
+/// The client of `root`'s remote with the token of its host, as the panel finds them, for work beside the panel such
+/// as the Leitstand's intake from issues (E176); blocks on the network.
+pub(crate) fn client(root: &Path) -> Result<Client, Error> {
+    let (repo, _) = head(root).map_err(|_| Error::NotFound {
+        what: "a git repository with a commit".into(),
+    })?;
+    let url = remote_url(&repo).ok_or_else(|| Error::NotFound { what: "remote".into() })?;
+    let candidates = ide_ci::candidates(&url, &work::host_rules());
+    let first = candidates.first().ok_or_else(|| Error::NotFound {
+        what: "CI service".into(),
+    })?;
+    let auth = work::auth().ok_or_else(|| Error::Network("no login shell environment".into()))?;
+    let token = auth.fresh(first, &*work::network()).map(|c| c.token);
+    let forge = ide_ci::locate(&candidates, token.as_deref(), work::network())?;
+    Ok(Client::new(forge, token, work::network()))
+}
+
 /// The runs of a commit on the forge that answered.
 struct RunsRead {
     forge: Forge,

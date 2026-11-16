@@ -1,24 +1,34 @@
-//! The self-test's hooks of the Leitstand: the scripted session its orders start instead of an agent's CLI and the
-//! paths it reports as ready instead of looking for them (F61), and what the self-test reads of the wake lock (R12).
+//! The self-test's hooks of the Leitstand: the scripted session its orders start instead of an agent's CLI, one for
+//! every session or one per order title and role, the paths it reports as ready instead of looking for them (F61),
+//! and what the self-test reads of the wake lock (R12).
 
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
 
+use ide_factory::Role;
 use ide_factory::routing::{Agent, AgentStatus};
 
 /// What the self-test set, and what it reads.
 #[derive(Default)]
 pub(crate) struct Probe {
     script: RefCell<Option<ide_session::Script>>,
+    /// Scripts by order title and role; an empty title stands for every order.
+    scripts: RefCell<BTreeMap<(String, Role), ide_session::Script>>,
     agents: RefCell<Option<BTreeMap<Agent, AgentStatus>>>,
     /// Whether a factory asked for the wake lock since the self-test started.
     wake_asked: Cell<bool>,
 }
 
 impl Probe {
-    /// The script every new session of an order plays, while one is set.
-    pub(super) fn script(&self) -> Option<ide_session::Script> {
-        self.script.borrow().clone()
+    /// The script a new session of `role` for the order titled `title` plays, while one is set: its own, else the
+    /// role's for every order, else the one for every session.
+    pub(super) fn script_for(&self, title: &str, role: Role) -> Option<ide_session::Script> {
+        let scripts = self.scripts.borrow();
+        scripts
+            .get(&(title.to_string(), role))
+            .or_else(|| scripts.get(&(String::new(), role)))
+            .cloned()
+            .or_else(|| self.script.borrow().clone())
     }
 
     /// The paths a folder's factory hears of, while the self-test sets them.
@@ -39,6 +49,12 @@ impl super::Leitstand {
     /// Lets every session an order starts from now on play `script`, or start the agent's CLI again with `None`.
     pub(crate) fn use_script(&self, script: Option<ide_session::Script>) {
         *self.probe.script.borrow_mut() = script;
+    }
+
+    /// Lets the sessions of each order title and role play their own script, an empty title standing for every order;
+    /// an empty map lets them play the one of `use_script` again.
+    pub(crate) fn use_scripts(&self, scripts: BTreeMap<(String, Role), ide_session::Script>) {
+        *self.probe.scripts.borrow_mut() = scripts;
     }
 
     /// Lets every folder whose factory starts from now on hear of `agents` as the paths there are, or look for them

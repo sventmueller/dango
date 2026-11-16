@@ -135,6 +135,11 @@ define_class!(
             guarded((), || self.new_item());
         }
 
+        #[unsafe(method(ideCiTakeAsOrder:))]
+        fn take_as_order_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || self.take_as_order(sender));
+        }
+
         #[unsafe(method(ideCiCopyLink:))]
         fn copy_link_action(&self, sender: Option<&AnyObject>) {
             guarded((), || self.copy_link(sender));

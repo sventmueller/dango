@@ -1,11 +1,12 @@
-//! GitLab: pipelines, their jobs, job traces, retrying, playing and cancelling; open merge requests and issues.
+//! GitLab: pipelines, their jobs, job traces, retrying, playing and cancelling; open merge requests and issues, and
+//! issues with their text and labels.
 
 use serde::Deserialize;
 
 use crate::client::{Client, encode};
 use crate::error::Result;
 use crate::http::{self, Response};
-use crate::model::{Item, Job, Run, State, seconds};
+use crate::model::{Issue, Item, Job, Run, State, seconds};
 
 #[derive(Deserialize)]
 struct RawPipeline {
@@ -50,6 +51,32 @@ struct RawItem {
 #[derive(Deserialize)]
 struct RawUser {
     username: String,
+}
+
+#[derive(Deserialize)]
+struct RawIssue {
+    iid: u64,
+    title: String,
+    description: Option<String>,
+    #[serde(default)]
+    labels: Vec<String>,
+    author: Option<RawUser>,
+    web_url: String,
+    created_at: Option<String>,
+}
+
+impl RawIssue {
+    fn issue(self) -> Issue {
+        Issue {
+            number: self.iid,
+            title: self.title,
+            body: self.description.unwrap_or_default(),
+            labels: self.labels,
+            author: self.author.map(|a| a.username),
+            url: self.web_url,
+            created: self.created_at.as_deref().and_then(seconds),
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -177,6 +204,25 @@ fn items(client: &Client, path: &str, what: &str) -> Result<Vec<Item>> {
             branch: i.source_branch,
         })
         .collect())
+}
+
+pub(crate) fn issue(client: &Client, number: u64) -> Result<Issue> {
+    let url = format!("{}/issues/{number}", project_url(client));
+    let raw: RawIssue = http::json(&client.get(&url, "issue")?)?;
+    Ok(raw.issue())
+}
+
+/// The open issues with `label`, oldest first.
+pub(crate) fn labelled_issues(client: &Client, label: &str) -> Result<Vec<Issue>> {
+    let url = format!(
+        "{}/issues?state=opened&labels={}&order_by=created_at&sort=asc&per_page=50",
+        project_url(client),
+        encode(label)
+    );
+    client.pages(&url, "issues", |response| {
+        let raw: Vec<RawIssue> = http::json(response)?;
+        Ok(raw.into_iter().map(RawIssue::issue).collect())
+    })
 }
 
 pub(crate) fn cancel_url(client: &Client, run: &Run) -> String {

@@ -20,6 +20,8 @@
 //! - [`workflow`] reads and edits `.dango/factory.toml` (E161) and merges it with the user's defaults
 //!   ([`workflow::UserDefaults`], E183) into [`workflow::rules::Rules`], which only tighten and apply loosenings and
 //!   gate commands only with the confirmations the app stores (E190).
+//! - [`intake`] takes orders from issues (E176): the frozen origin, the task list as suggested criteria, and which
+//!   issues automatic intake takes; such orders always wait for G1, and their text goes into prompts as foreign text.
 //! - [`relevance`] classifies a diff's paths (E172), [`gates`] judges the review row (E163), [`verdict`] reads the
 //!   reviewer's structured answer (E179), [`evidence`] binds the evidence to its fingerprint with the deviations
 //!   first, [`options`] checks the sheet "Neuer Auftrag" (E185), [`prompt`] renders the templates.
@@ -51,6 +53,7 @@ pub mod gates;
 mod hash;
 pub mod ids;
 pub mod input;
+pub mod intake;
 pub mod limits;
 pub mod log;
 pub mod metrics;

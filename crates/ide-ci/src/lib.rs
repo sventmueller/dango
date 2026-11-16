@@ -11,7 +11,8 @@
 //! - [`panel`] is what the app's CI panel decides without a window (E98): its phase, the rows, and when to read again.
 //! - [`Client`] reads runs of a commit or branch, their jobs, steps and logs, re-runs failed jobs, single jobs or whole
 //!   runs, starts manual jobs (GitHub: approves waiting deployments) and new runs, cancels, and lists open merge
-//!   requests and issues ([`Item`]), with paging, rate limits and typed [`Error`]s; [`log`] makes logs readable and
+//!   requests and issues ([`Item`]), one issue or the open issues of a label with text and labels ([`Issue`]), with
+//!   paging, rate limits and typed [`Error`]s; [`log`] makes logs readable and
 //!   cuts out the failure for an agent. [`manual_workflows`] finds the GitHub workflows a checkout may start by hand.
 //!
 //! Every call blocks until the network answers and so belongs on a worker thread. Calls go through a [`Transport`]:
@@ -40,4 +41,4 @@ pub use client::{Client, locate};
 pub use error::{Error, Result};
 pub use forge::{Forge, HostRule, Kind, RemoteUrl, candidates};
 pub use http::{Method, Network, Recorded, Request, Response, Transport, now};
-pub use model::{Item, Job, Run, Stage, State, Step, Workflow, manual_workflows, seconds, stages};
+pub use model::{Issue, Item, Job, Run, Stage, State, Step, Workflow, manual_workflows, seconds, stages};

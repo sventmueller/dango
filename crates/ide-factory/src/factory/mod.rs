@@ -366,20 +366,33 @@ impl Factory {
         scratch.manifest = None;
     }
 
-    /// Orders that run, for parallelism and the wake lock: past intake, not finished, condition running.
+    /// Orders that run, for parallelism and the wake lock: past intake, not finished, condition running, and not held
+    /// in a slot before the build (E174).
     fn running(&self) -> usize {
         self.orders
             .values()
             .filter(|o| o.station() != Station::Intake && !o.finished() && *o.condition() == Condition::Running)
+            .filter(|o| *o.phase() != Phase::Slot)
             .count()
     }
 
-    /// Lets orders out of intake while slots are free (E168), oldest first.
+    /// How many orders may run at once: the rule set's number, one while the folder runs in stage 1 (E168).
+    pub fn parallel_limit(&self) -> u32 {
+        if self.stage == Stage::One {
+            1
+        } else {
+            self.rules.limits().parallel_orders().max(1)
+        }
+    }
+
+    /// Lets orders out of intake and into the build while slots are free and their path scopes allow (E168, E174),
+    /// oldest first.
     fn fill_slots(&mut self, cx: &mut Cx) {
         let mut waiting: Vec<(Stamp, OrderId)> = self
             .orders
             .values()
-            .filter(|o| o.station() == Station::Intake && *o.condition() == Condition::Running)
+            .filter(|o| o.station() == Station::Intake || *o.phase() == Phase::Slot)
+            .filter(|o| *o.condition() == Condition::Running && !o.finished())
             .map(|o| (o.created(), o.id().clone()))
             .collect();
         waiting.sort_by_key(|(at, id)| (at.wall, at.mono, id.clone()));
@@ -440,7 +453,11 @@ impl Factory {
         let holds = order.evidence().is_some_and(|e| e.invalid().is_none());
         let back = matches!(order.condition(), Condition::Waiting(WaitReason::Acceptance))
             || (order.station() == Station::TakeOver && *order.condition() == Condition::Running);
-        if holds && matches!(order.station(), Station::Acceptance | Station::TakeOver) && !order.taken_over() {
+        if holds
+            && matches!(order.station(), Station::Acceptance | Station::TakeOver)
+            && !order.taken_over()
+            && !order.branch_kept()
+        {
             self.emit(
                 cx,
                 id,

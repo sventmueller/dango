@@ -22,9 +22,12 @@ mod work;
 
 use std::path::Path;
 
+pub(crate) use load::client;
 pub(crate) use log_tab::LogTabs;
 pub(crate) use login::CI_OAUTH_CLIENTS;
+pub(crate) use ops::open_url;
 pub(crate) use panel::CiPanels;
+pub(crate) use work::run as on_lane;
 pub(crate) use work::{CI_HOSTS, use_secrets};
 
 use crate::window::WindowController;
@@ -32,6 +35,11 @@ use crate::window::WindowController;
 /// Puts the CI panel of the window's folder in place.
 pub(crate) fn attach(controller: &WindowController) {
     panel::CiPanel::attach(controller);
+}
+
+/// The client the CI panel of `controller`'s window found for its folder, once it read the service.
+pub(crate) fn client_of(controller: &WindowController) -> Option<ide_ci::Client> {
+    panel::of(controller).and_then(|p| p.read().client.clone())
 }
 
 /// Something changed below `root`; the panel reads again when HEAD moved.

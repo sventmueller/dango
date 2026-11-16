@@ -181,6 +181,7 @@ pub struct Order {
     switched: bool,
     by_hand: bool,
     taken_over: bool,
+    branch_kept: bool,
     checkpoints_removed: bool,
     g1_skipped: bool,
     seq: u64,
@@ -263,6 +264,7 @@ impl Order {
             switched: false,
             by_hand: false,
             taken_over: false,
+            branch_kept: false,
             checkpoints_removed: false,
             g1_skipped: false,
             seq: 1,
@@ -675,6 +677,11 @@ impl Order {
     /// Whether the take-over happened.
     pub fn taken_over(&self) -> bool {
         self.taken_over
+    }
+
+    /// Whether the user kept the order's branch instead of taking it over (E177).
+    pub fn branch_kept(&self) -> bool {
+        self.branch_kept
     }
 
     /// Whether its checkpoints are removed.

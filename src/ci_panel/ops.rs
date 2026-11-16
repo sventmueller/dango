@@ -132,6 +132,45 @@ impl CiPanel {
         }
     }
 
+    /// Whether the window's folder has a Leitstand that takes orders: it is trusted and its factory runs (E22).
+    pub(super) fn has_leitstand(&self) -> bool {
+        self.controller()
+            .is_some_and(|c| c.is_trusted() && c.project_root().is_some_and(|root| c.context().leitstand().has(&root)))
+    }
+
+    /// Reads the issue the action came from with its text and labels, never its comments, and opens the sheet
+    /// "Neuer Auftrag" filled in from it (E176).
+    pub(crate) fn take_as_order(&self, sender: Option<&AnyObject>) {
+        let (Some(item), Some(client)) = (self.item_for_action(sender), self.client()) else {
+            return;
+        };
+        if !self.has_leitstand() {
+            return;
+        }
+        let id = self.id();
+        let queued = work::run(
+            move || client.issue(item.number),
+            move |result| {
+                with_panel(id, |panel| match result {
+                    Some(Ok(issue)) => panel.open_order_sheet(&issue),
+                    Some(Err(error)) => panel.set_problem(Some(text::problem(&error))),
+                    None => {}
+                });
+            },
+        );
+        if !queued {
+            self.set_problem(Some(t("Die CI-Warteschlange ist voll.").to_string()));
+        }
+    }
+
+    fn open_order_sheet(&self, issue: &ide_ci::Issue) {
+        let Some(controller) = self.controller() else { return };
+        let origin =
+            ide_factory::intake::IssueOrigin::freeze(issue.url(), issue.number(), issue.author(), issue.body());
+        let prefill = ide_ui_factory::model::sheet::Prefill::new(issue.title(), origin);
+        ide_ui_factory::new_order_from_issue(controller.handle(), controller.context().factory_ui(), prefill);
+    }
+
     /// Puts the link of the merge request or issue the action came from on the clipboard.
     pub(crate) fn copy_link(&self, sender: Option<&AnyObject>) {
         let Some(item) = self.item_for_action(sender) else {

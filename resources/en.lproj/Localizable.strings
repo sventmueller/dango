@@ -2288,3 +2288,15 @@
 "Die Workflow-Datei lässt einen Prüfer desselben Herstellers zu." = "The workflow file allows a reviewer from the same vendor.";
 "Die Workflow-Datei nimmt Issues mit dem Label „{}“ von {} automatisch als Aufträge an." = "The workflow file takes issues labelled “{}” by {} as work orders automatically.";
 "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}" = "The workflow file turns on tools for the role {}: {}";
+"Als Auftrag übernehmen" = "Take as Work Order";
+"Die CI-Warteschlange ist voll." = "The CI queue is full.";
+"Aufträge aus Issues brauchen immer die Freigabe." = "Work orders from issues always need approval.";
+"eingereiht: höchstens {} Aufträge gleichzeitig" = "queued: at most {} work orders at once";
+"eingereiht: Pfadbereich überschneidet sich mit „{}“" = "queued: path scope overlaps with “{}”";
+"eingereiht: Übernahme in {} nach dem Auftrag davor" = "queued: take-over into {} after the work order ahead";
+"Abnehmen und Branch behalten" = "Accept and Keep Branch";
+"Merge Request anlegen" = "Create Merge Request";
+"Öffnet die Seite für einen neuen Merge Request im Browser-Tab. Den Branch vorher selbst pushen; die App schreibt nichts zu GitHub oder GitLab." = "Opens the page for a new merge request in the browser tab. Push the branch yourself first; the app writes nothing to GitHub or GitLab.";
+"Titel und Ziel stammen aus Issue #{}. Der Text geht als Fremdtext an die Agenten, und die Spezifikation braucht immer die Freigabe." = "Title and goal come from issue #{}. The text goes to the agents marked as untrusted, and the specification always needs approval.";
+"Vorschläge aus dem Issue" = "Suggestions from the Issue";
+"Vorschlag aus dem Issue" = "Suggestion from the issue";

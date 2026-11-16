@@ -18,8 +18,9 @@ use ide_test::Tool;
 use super::{Delivery, Leitstand};
 
 /// The highest stage of phase 13 this build ships; new orders of a folder run in it while ready paths of two vendors
-/// can fill builder and reviewer, else in stage 1 (`ide_factory::routing::stage_for`).
-pub(super) const HIGHEST: Stage = Stage::Two;
+/// can fill builder and reviewer, else in stage 1 (`ide_factory::routing::stage_for`). Only from stage 3 on do orders
+/// run side by side (E168, `ide_factory::Factory::parallel_limit`).
+pub(super) const HIGHEST: Stage = Stage::Three;
 
 /// The stage new orders of `factory` run in, by the paths it knows and its rules' lists for builder and reviewer.
 pub(super) fn stage(factory: &ide_factory::Factory) -> Stage {

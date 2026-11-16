@@ -42,8 +42,11 @@ pub struct NewOrder {
     pub budget: Option<Budget>,
     /// A fixed entry per role instead of its ranked list (from stage 2).
     pub casting: BTreeMap<Role, RankEntry>,
-    /// Skip G1 (only for class low, only where the project allows it).
+    /// Skip G1 (only for class low, only where the project allows it, never for an order from an issue).
     pub skip_spec_approval: bool,
+    /// The issue the order comes from (E176); its text is foreign text.
+    #[serde(default)]
+    pub issue: Option<crate::intake::IssueOrigin>,
 }
 
 /// Why the sheet does not let an order start.
@@ -74,6 +77,8 @@ pub enum OptionProblem {
     SkipNeedsLowRisk,
     /// The project does not allow skipping G1, or the user has not confirmed it (E190).
     SkipNotAllowed,
+    /// An order from an issue always waits for G1 (E176).
+    SkipNotForIssues,
     /// The workflow file is invalid (E190).
     InvalidWorkflow,
 }
@@ -136,6 +141,9 @@ pub fn check_new_order(
         }
         if !rules.skip_spec_approval() {
             problems.push(OptionProblem::SkipNotAllowed);
+        }
+        if order.issue.is_some() {
+            problems.push(OptionProblem::SkipNotForIssues);
         }
     }
     if stage >= Stage::Two {
@@ -363,6 +371,21 @@ mod tests {
         let check = problems(&new, Stage::Two, ReviewerRule::Preferred);
         assert!(check.ok());
         assert_eq!(check.notes, [SheetNote::WithoutVendorChange]);
+    }
+
+    #[test]
+    fn an_order_from_an_issue_never_skips_g1() {
+        let mut new = order();
+        new.risk = RiskChoice::Fixed(RiskClass::Low);
+        new.skip_spec_approval = true;
+        new.issue = Some(crate::intake::IssueOrigin::freeze(
+            "https://x/issues/1",
+            1,
+            Some("a"),
+            "b",
+        ));
+        let check = problems(&new, Stage::Two, ReviewerRule::Required);
+        assert!(check.problems.contains(&OptionProblem::SkipNotForIssues), "{check:?}");
     }
 
     #[test]

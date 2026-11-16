@@ -1,0 +1,30 @@
+[
+  {
+    "number": 26,
+    "title": "Export as CSV",
+    "body": null,
+    "labels": [{ "name": "factory" }],
+    "user": { "login": "cat" },
+    "html_url": "https://github.com/acme/widget/issues/26",
+    "created_at": "2026-11-05T09:00:00Z"
+  },
+  {
+    "number": 27,
+    "title": "Use the factory label on a pull request",
+    "body": "Not an issue.",
+    "labels": [{ "name": "factory" }],
+    "user": { "login": "octo" },
+    "html_url": "https://github.com/acme/widget/pull/27",
+    "created_at": "2026-11-06T09:00:00Z",
+    "pull_request": { "url": "https://api.github.com/repos/acme/widget/pulls/27" }
+  },
+  {
+    "number": 28,
+    "title": "Crash on an empty file",
+    "body": "Opening an empty file crashes the parser.\n\n- [ ] an empty file opens\n",
+    "labels": [{ "name": "bug" }, { "name": "factory" }],
+    "user": { "login": "octo" },
+    "html_url": "https://github.com/acme/widget/issues/28",
+    "created_at": "2026-11-07T15:00:00Z"
+  }
+]

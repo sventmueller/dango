@@ -1,6 +1,7 @@
 //! The sheet "Neuer Auftrag" (E185) on a window: title, goal and criteria, the options folded away below them (risk
 //! class, path scope, budget, specification without approval), what keeps the order from starting checked as the
-//! user types, and the note that the order starts at HEAD without uncommitted changes (F51).
+//! user types, and the note that the order starts at HEAD without uncommitted changes (F51). Taken from an issue
+//! (E176), it says that the text is the issue's and offers the issue's open tasks as suggestions to leave out.
 
 use std::cell::{OnceCell, RefCell};
 
@@ -14,11 +15,11 @@ use objc2_app_kit::{
     NSTextView, NSTextViewDelegate, NSView, NSWindow, NSWindowStyleMask,
 };
 use objc2_foundation::{NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
-use splat_i18n::t;
+use splat_i18n::{t, tf};
 
 use crate::actions::Target;
 use crate::host::host;
-use crate::model::sheet::{RISKS, SheetContext, SheetForm, risk_title};
+use crate::model::sheet::{Prefill, RISKS, SheetContext, SheetForm, risk_title};
 use crate::model::words;
 use crate::ui;
 use ide_ui_common::style::space;
@@ -43,6 +44,7 @@ struct SheetUi {
     scope: Retained<NSTextField>,
     budget: Retained<NSTextField>,
     skip: Retained<NSButton>,
+    suggestions: Vec<Retained<NSButton>>,
     messages: Retained<NSTextField>,
     start: Retained<NSButton>,
 }
@@ -103,6 +105,11 @@ define_class!(
 
 /// Shows the sheet "Neuer Auftrag" on `target`'s window.
 pub(crate) fn show(target: &Target) {
+    show_prefilled(target, None);
+}
+
+/// Shows the sheet on `target`'s window, filled in from an issue when `prefill` says.
+pub(crate) fn show_prefilled(target: &Target, prefill: Option<Prefill>) {
     let window = target.window();
     let Some(parent) = window.window() else { return };
     if parent.attachedSheet().is_some() {
@@ -112,12 +119,16 @@ pub(crate) fn show(target: &Target) {
     let ivars = SheetIvars {
         target: target.clone(),
         cx: host().sheet(target.root()),
-        form: RefCell::new(SheetForm::default()),
+        form: RefCell::new(prefill.as_ref().map(SheetForm::prefilled).unwrap_or_default()),
         ui: OnceCell::new(),
     };
     // SAFETY: NSObject's initializer, called once on the newly allocated object.
     let sheet: Retained<OrderSheet> = unsafe { msg_send![super(OrderSheet::alloc(mtm).set_ivars(ivars)), init] };
     let _ = sheet.ivars().ui.set(sheet.build(mtm));
+    if let Some(prefill) = &prefill {
+        sheet.ui().title.setStringValue(&ns(prefill.title()));
+        sheet.ui().goal.setString(&ns(prefill.goal()));
+    }
     sheet.changed();
     sheet.show_options();
     let kept = sheet.clone();
@@ -146,6 +157,7 @@ impl OrderSheet {
         labelled(mtm, &column, t("Titel"), &title);
         let (goal_box, goal) = self.text_box(mtm, t("Ziel"));
         labelled(mtm, &column, t("Ziel"), &goal_box);
+        let suggestions = self.issue_part(mtm, &column);
         let (criteria_box, criteria) = self.text_box(mtm, t("Kriterien, eines je Zeile"));
         labelled(mtm, &column, t("Kriterien, eines je Zeile"), &criteria_box);
         let disclosure = ui::button(mtm, t("Optionen"), me, sel!(ideFactorySheetOptions:), 0);
@@ -182,7 +194,8 @@ impl OrderSheet {
                 mtm,
             )
         };
-        skip.setEnabled(self.ivars().cx.skip_allowed());
+        let issue = self.ivars().form.borrow().issue().is_some();
+        skip.setEnabled(self.ivars().cx.skip_allowed() && !issue);
         options.addArrangedSubview(&skip);
         if !self.ivars().cx.skip_allowed() {
             options.addArrangedSubview(&ui::note(
@@ -216,9 +229,50 @@ impl OrderSheet {
             scope,
             budget,
             skip,
+            suggestions,
             messages,
             start,
         }
+    }
+
+    /// For an order from an issue: the note that its text is foreign, and a box per open task of the issue, ticked.
+    fn issue_part(&self, mtm: MainThreadMarker, column: &NSStackView) -> Vec<Retained<NSButton>> {
+        let form = self.ivars().form.borrow();
+        let Some(number) = form.issue() else {
+            return Vec::new();
+        };
+        let note = tf(
+            "Titel und Ziel stammen aus Issue #{}. Der Text geht als Fremdtext an die Agenten, und die Spezifikation braucht immer die Freigabe.",
+            &[&number.to_string()],
+        );
+        column.addArrangedSubview(&ui::note(mtm, &note, WIDTH));
+        if form.suggestions().is_empty() {
+            return Vec::new();
+        }
+        let me: &AnyObject = self.as_ref();
+        let caption = ide_ui_common::util::label(mtm, t("Vorschläge aus dem Issue"));
+        column.addArrangedSubview(&caption);
+        column.setCustomSpacing_afterView(space::XS, &caption);
+        let boxes: Vec<Retained<NSButton>> = form
+            .suggestions()
+            .iter()
+            .map(|(text, on)| {
+                // SAFETY: The sheet answers the action and lives as long as its panel.
+                let tick = unsafe {
+                    NSButton::checkboxWithTitle_target_action(
+                        &ns(text),
+                        Some(me),
+                        Some(sel!(ideFactorySheetChanged:)),
+                        mtm,
+                    )
+                };
+                tick.setState(if *on { NSControlStateValueOn } else { 0 });
+                tick.setAccessibilityHelp(Some(&ns(t("Vorschlag aus dem Issue"))));
+                column.addArrangedSubview(&tick);
+                tick
+            })
+            .collect();
+        boxes
     }
 
     fn text_box(&self, mtm: MainThreadMarker, name: &str) -> (Retained<NSScrollView>, Retained<NSTextView>) {
@@ -257,6 +311,9 @@ impl OrderSheet {
             &ui.budget.stringValue().to_string(),
             ui.skip.state() == NSControlStateValueOn,
         );
+        for (index, tick) in ui.suggestions.iter().enumerate() {
+            form.choose_suggestion(index, tick.state() == NSControlStateValueOn);
+        }
         let cx = &self.ivars().cx;
         let lines = form.messages(cx);
         let ok = form.can_start(cx);

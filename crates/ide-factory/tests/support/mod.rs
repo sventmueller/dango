@@ -68,6 +68,8 @@ pub(crate) struct App {
     pub(crate) gates: VecDeque<CommandOutcome>,
     /// The next diffs; `src/lib.rs` modified when empty.
     pub(crate) diffs: VecDeque<Vec<Change>>,
+    /// The diff of an order every time it is read, before `diffs`.
+    pub(crate) order_diffs: BTreeMap<OrderId, Vec<Change>>,
     /// The next merge results; an unmoved target when empty.
     pub(crate) merges: VecDeque<OpResult>,
     /// The next take-over results; done when empty.
@@ -107,6 +109,7 @@ impl App {
             verdicts: VecDeque::new(),
             gates: VecDeque::new(),
             diffs: VecDeque::new(),
+            order_diffs: BTreeMap::new(),
             merges: VecDeque::new(),
             takeovers: VecDeque::new(),
             refs: VecDeque::new(),
@@ -253,8 +256,10 @@ impl App {
             }
             Effect::DiffNames { order, .. } => Some(InputKind::Diff(
                 order.clone(),
-                self.diffs
-                    .pop_front()
+                self.order_diffs
+                    .get(order)
+                    .cloned()
+                    .or_else(|| self.diffs.pop_front())
                     .unwrap_or_else(|| vec![Change::new("src/lib.rs", ChangeKind::Modified)]),
             )),
             Effect::RunGate { order, index, .. } => Some(InputKind::GateDone {

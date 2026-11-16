@@ -1,12 +1,12 @@
 //! One client for both services: runs of a commit or branch, their jobs and logs, re-running, starting and cancelling;
-//! open merge requests and issues.
+//! open merge requests and issues, and one issue or a label's issues with their text.
 
 use std::sync::Arc;
 
 use crate::error::{Error, Result};
 use crate::forge::{Forge, Kind};
 use crate::http::{self, MAX_PAGES, Method, Request, Response, Transport};
-use crate::model::{Item, Job, Run};
+use crate::model::{Issue, Item, Job, Run};
 use crate::{github, gitlab};
 
 /// The API of one repository, with the token of its host if there is one.
@@ -151,6 +151,22 @@ impl Client {
         match self.forge.kind {
             Kind::GitHub => github::issues(self),
             Kind::GitLab => gitlab::issues(self),
+        }
+    }
+
+    /// The issue `number` with its text and labels, open or not; never its comments.
+    pub fn issue(&self, number: u64) -> Result<Issue> {
+        match self.forge.kind {
+            Kind::GitHub => github::issue(self, number),
+            Kind::GitLab => gitlab::issue(self, number),
+        }
+    }
+
+    /// The open issues that carry `label`, oldest first, with their text and labels.
+    pub fn labelled_issues(&self, label: &str) -> Result<Vec<Issue>> {
+        match self.forge.kind {
+            Kind::GitHub => github::labelled_issues(self, label),
+            Kind::GitLab => gitlab::labelled_issues(self, label),
         }
     }
 
