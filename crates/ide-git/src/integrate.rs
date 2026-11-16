@@ -136,6 +136,46 @@ impl Repository {
         Ok(diffs)
     }
 
+    /// The diffs of every file between `revision` and the working tree, untracked ones as new, as a secrets check
+    /// reads them (C52): binary files and those marked `-diff` as text too, without textconv or an external diff, and
+    /// without the attributes of the working tree, the user's attributes file or the system's, so nothing the builder
+    /// writes keeps a line out of the check.
+    pub fn diff_since_as_text(&self, revision: &str) -> Result<Vec<FileDiff>> {
+        let empty = self.empty_tree()?;
+        let as_text = |tail: &[OsString]| {
+            let mut args: Vec<OsString> = vec![
+                format!("--attr-source={empty}").into(),
+                "-c".into(),
+                "core.attributesFile=/dev/null".into(),
+            ];
+            args.extend(diff_args());
+            args.push("--text".into());
+            args.extend_from_slice(tail);
+            self.call(args).env("GIT_ATTR_NOSYSTEM", "1")
+        };
+        let output = self
+            .git()
+            .ok(as_text(&["-M".into(), word(revision)?.into(), "--".into()]))?;
+        let mut diffs = parse(&output.stdout)?;
+        for path in self.untracked(&[])? {
+            let output = self.git().run(as_text(&[
+                "--no-index".into(),
+                "--".into(),
+                "/dev/null".into(),
+                path.clone().into_os_string(),
+            ]))?;
+            if output.code > 1 {
+                return Err(crate::run::failure(&output));
+            }
+            diffs.extend(parse(&output.stdout)?.into_iter().map(|mut diff| {
+                diff.old_path = None;
+                diff.new_path = Some(path.clone());
+                diff
+            }));
+        }
+        Ok(diffs)
+    }
+
     /// The untracked files among `paths`, or all of them when `paths` is empty; ignored ones are left out.
     pub(crate) fn untracked(&self, paths: &[PathBuf]) -> Result<Vec<PathBuf>> {
         let mut args: Vec<OsString> = ["ls-files", "-z", "--others", "--exclude-standard", "--"]

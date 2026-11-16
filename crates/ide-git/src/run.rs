@@ -14,6 +14,7 @@ use ide_process::tool;
 use ide_process::{Ending, Kind, ProcessId, Spawned, Supervisor};
 
 use crate::error::{Error, Result};
+use crate::repo::Anchor;
 use crate::said::Said;
 
 /// How much of standard error is kept.
@@ -86,6 +87,7 @@ pub struct Git {
     inner: Arc<Inner>,
 }
 
+#[derive(Clone)]
 struct Inner {
     program: Option<PathBuf>,
     /// The login shell's PATH, which programs are looked up on.
@@ -96,12 +98,27 @@ struct Inner {
     settings: Vec<&'static str>,
     /// When every call of this git fails with `Error::TimedOut`, whatever its own limit.
     deadline: Option<Instant>,
+    /// The repository an unattended git finds repositories through, never through a worktree's `.git` file.
+    anchor: Option<Anchor>,
 }
 
 /// The settings of git for the orchestrator (E192): no hooks, since a builder could plant them or point
-/// `core.hooksPath` at its worktree; no fsmonitor, which runs a program the repository names; no credential helper.
-/// `/dev/null` is an empty folder nothing can be written into.
-const UNATTENDED: [&str; 3] = ["core.hooksPath=/dev/null", "core.fsmonitor=false", "credential.helper="];
+/// `core.hooksPath` at its worktree; no fsmonitor, which runs a program the repository names; no credential helper;
+/// no remote at all, as the one push runs with the user's git; no signing program; no editor; and no automatic
+/// maintenance, which would leave a detached git behind. `/dev/null` is an empty folder nothing can be written into.
+const UNATTENDED: [&str; 11] = [
+    "core.hooksPath=/dev/null",
+    "core.fsmonitor=false",
+    "credential.helper=",
+    "protocol.allow=never",
+    "commit.gpgSign=false",
+    "tag.gpgSign=false",
+    "log.showSignature=false",
+    "core.editor=true",
+    "sequence.editor=true",
+    "gc.auto=0",
+    "maintenance.auto=false",
+];
 
 impl std::fmt::Debug for Git {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -128,14 +145,19 @@ impl Git {
                 supervisor: supervisor.clone(),
                 settings: Vec::new(),
                 deadline: None,
+                anchor: None,
             }),
         }
     }
 
     /// The same git for the orchestrator of work orders (E192): every command runs without the repository's hooks,
-    /// fsmonitor and credential helpers, with `environment` instead of the login shell's, such as
+    /// fsmonitor, credential helpers, remotes and signing, with `environment` instead of the login shell's, such as
     /// `ide_process::order_env::for_orders` gives, and fails with `Error::TimedOut` once `deadline` passed. The git the
     /// user's own commits go through keeps its hooks.
+    ///
+    /// Each repository it finds runs every command with that repository's git folder and working tree named
+    /// explicitly, so a `.git` file changed afterwards points it nowhere else; [`Git::bound_to`] also keeps the
+    /// finding itself away from a worktree's `.git` file.
     pub fn unattended(&self, environment: Vec<(String, String)>, deadline: Instant) -> Git {
         let path = tool::var(&environment, "PATH").map(str::to_string);
         Git {
@@ -146,8 +168,28 @@ impl Git {
                 supervisor: self.inner.supervisor.clone(),
                 settings: UNATTENDED.to_vec(),
                 deadline: Some(deadline),
+                anchor: self.inner.anchor.clone(),
             }),
         }
+    }
+
+    /// The same git bound to the user's working copy `root` lies in (E192): an unattended git then finds that copy and
+    /// the worktrees of its repository only through the records in its git folder, never through a worktree's `.git`
+    /// file, which a builder or a gate could point at a configuration of its own; other folders are no repository.
+    pub fn bound_to(&self, root: &Path) -> Git {
+        self.anchored(Anchor::at(root))
+    }
+
+    /// The same git finding repositories through `anchor`.
+    pub(crate) fn anchored(&self, anchor: Anchor) -> Git {
+        let mut inner = Inner::clone(&self.inner);
+        inner.anchor = Some(anchor);
+        Git { inner: Arc::new(inner) }
+    }
+
+    /// What this git finds repositories through, from [`Git::bound_to`] or the repository it belongs to.
+    pub(crate) fn anchor(&self) -> Option<&Anchor> {
+        self.inner.anchor.as_ref()
     }
 
     /// Whether this git runs without hooks, from [`Git::unattended`].

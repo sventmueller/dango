@@ -18,6 +18,9 @@ use ide_process::supervisor::Ending;
 /// How many lines of the end of a gate's output the builder and the evidence get.
 const EXCERPT_LINES: usize = 200;
 
+/// What stands in a gate's output for a line with a secret; for the model and the evidence, so not translated.
+const REMOVED: &str = "[secret removed]";
+
 /// The variable that names the folder of a gate's pictures for the evidence (C69).
 pub(super) const IMAGES_VARIABLE: &str = "GATE_IMAGES_DIR";
 
@@ -57,7 +60,9 @@ pub(super) fn run(job: &Job, git: Option<&ide_git::Repository>) -> CommandOutcom
     }
     let mut readable = job.dependencies.clone();
     readable.extend(job.common_dir.iter().cloned());
-    let mut profile = Profile::gate(&writable, &temp, &ide_core::paths::home()).readable(&readable);
+    let mut profile = Profile::gate(&writable, &temp, &ide_core::paths::home())
+        .readable(&readable)
+        .unreadable(&remote_records(job.common_dir.as_deref()));
     if !job.run.network.is_empty() {
         profile = profile.network(Network::On);
     }
@@ -104,7 +109,7 @@ pub(super) fn run(job: &Job, git: Option<&ide_git::Repository>) -> CommandOutcom
         tests: count_tests(&output),
         left_behind: git.map(left_behind).unwrap_or_default(),
         duration_ms: u64::try_from(outcome.took.as_millis()).unwrap_or(u64::MAX),
-        excerpt: excerpt(&output),
+        excerpt: without_secrets(excerpt(&output), &job.env),
         images: job.images.as_deref().map(pictures).unwrap_or_default(),
     }
 }
@@ -122,6 +127,47 @@ fn failed(why: &str) -> CommandOutcome {
 pub(super) fn excerpt(output: &str) -> String {
     let lines: Vec<&str> = output.lines().collect();
     lines[lines.len().saturating_sub(EXCERPT_LINES)..].join("\n")
+}
+
+/// The files of the shared git folder `common_dir` that can hold a remote's address with its token: the
+/// configuration, the record of the last fetch and the reflogs, whose entry for the clone names where it came from.
+fn remote_records(common_dir: Option<&Path>) -> Vec<PathBuf> {
+    common_dir
+        .map(|dir| ["config", "FETCH_HEAD", "logs"].map(|name| dir.join(name)).to_vec())
+        .unwrap_or_default()
+}
+
+/// `text` with every line gitleaks finds a secret on replaced by [`REMOVED`], before it reaches the builder, its
+/// vendor and the evidence (C50); withheld whole when the check fails, as it then cannot tell. The rules are gitleaks'
+/// own or those `GITLEAKS_CONFIG` names, never a configuration in the worktree.
+fn without_secrets(text: String, env: &[(String, String)]) -> String {
+    if text.trim().is_empty() {
+        return text;
+    }
+    let git = ide_git::Git::new(Supervisor::global(), env.to_vec());
+    match git.scan_text_frozen(&text, &ide_git::FrozenRules::default()) {
+        Ok(ide_git::SecretScan::Found(findings)) => removed(&text, &findings),
+        Ok(ide_git::SecretScan::Clean | ide_git::SecretScan::NotInstalled) => text,
+        Err(error) => format!("[output withheld: the secrets check of it failed: {error}]"),
+    }
+}
+
+/// `text` with the lines of `findings`, counted from 1, replaced by [`REMOVED`].
+fn removed(text: &str, findings: &[ide_git::Finding]) -> String {
+    text.lines()
+        .zip(1u32..)
+        .map(|(line, number)| {
+            if findings
+                .iter()
+                .any(|f| (f.line..=f.end_line.max(f.line)).contains(&number))
+            {
+                REMOVED
+            } else {
+                line
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// What `git status` shows in the worktree after a gate, untracked files included and ignored ones not (F53).
@@ -232,6 +278,56 @@ mod tests {
             Some(0),
             "only ignored tests count as none run"
         );
+    }
+
+    fn finding(line: u32, end_line: u32) -> ide_git::Finding {
+        ide_git::Finding {
+            rule: "github-pat".into(),
+            description: String::new(),
+            file: PathBuf::new(),
+            line,
+            end_line,
+            commit: None,
+        }
+    }
+
+    #[test]
+    fn the_lines_of_a_finding_are_removed_and_the_rest_stays() {
+        let text = "compiling\nTOKEN=a\n-----BEGIN KEY\nb\n-----END KEY\ndone";
+        assert_eq!(
+            removed(text, &[finding(2, 2), finding(3, 5)]),
+            "compiling\n[secret removed]\n[secret removed]\n[secret removed]\n[secret removed]\ndone"
+        );
+        assert_eq!(removed(text, &[]), text);
+    }
+
+    #[test]
+    fn a_token_a_gate_printed_does_not_reach_the_builder() {
+        let Some(dir) = ["/opt/homebrew/bin", "/usr/local/bin"]
+            .into_iter()
+            .find(|d| Path::new(d).join("gitleaks").exists())
+        else {
+            eprintln!("gitleaks is not installed here; only the removal of found lines is checked");
+            return;
+        };
+        let env = vec![("PATH".to_string(), format!("{dir}:/usr/bin:/bin"))];
+        let token = ["ghp_", "1234567890abcdefghij", "ABCDEFGHIJ123456"].concat();
+        let output = format!("running 1 test\nleaked = \"{token}\"\ntest result: ok. 1 passed\n");
+        let cleaned = without_secrets(output, &env);
+        assert!(!cleaned.contains(&token), "{cleaned}");
+        assert!(
+            cleaned.contains(REMOVED) && cleaned.contains("test result: ok"),
+            "{cleaned}"
+        );
+    }
+
+    #[test]
+    fn the_shared_git_folders_records_of_remotes_stay_unreadable() {
+        assert_eq!(
+            remote_records(Some(Path::new("/r/.git"))),
+            ["/r/.git/config", "/r/.git/FETCH_HEAD", "/r/.git/logs"].map(PathBuf::from)
+        );
+        assert!(remote_records(None).is_empty());
     }
 
     #[test]

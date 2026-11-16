@@ -1,5 +1,6 @@
 //! The secrets check before a commit or push (I4), with gitleaks when the login shell's PATH has it.
 
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -35,6 +36,8 @@ pub struct Finding {
     pub file: PathBuf,
     /// The line it starts on.
     pub line: u32,
+    /// The line it ends on.
+    pub end_line: u32,
     /// The commit it is in; `None` for staged changes.
     pub commit: Option<CommitId>,
 }
@@ -49,6 +52,8 @@ struct Report {
     file: String,
     #[serde(default)]
     start_line: u32,
+    #[serde(default)]
+    end_line: u32,
     #[serde(default)]
     commit: String,
 }
@@ -80,7 +85,7 @@ impl Repository {
     /// Runs `gitleaks <command>` on the repository, or on `input` for its `stdin` command; `None` when the login
     /// shell's PATH has no gitleaks.
     pub(crate) fn gitleaks(&self, command: &[&str], input: Option<Vec<u8>>) -> Result<Option<Vec<Finding>>> {
-        gitleaks(self.git(), self.root(), command, input)
+        gitleaks(self.git(), self.root(), &self.pinned(), command, input)
     }
 }
 
@@ -132,31 +137,41 @@ impl Git {
             args.push(format!("--config={}", config.display()));
         }
         let args: Vec<&str> = args.iter().map(String::as_str).collect();
-        Ok(match gitleaks(self, &empty.0, &args, Some(text.as_bytes().to_vec()))? {
-            None => SecretScan::NotInstalled,
-            Some(findings) if findings.is_empty() => SecretScan::Clean,
-            Some(findings) => SecretScan::Found(findings),
-        })
+        Ok(
+            match gitleaks(self, &empty.0, &[], &args, Some(text.as_bytes().to_vec()))? {
+                None => SecretScan::NotInstalled,
+                Some(findings) if findings.is_empty() => SecretScan::Clean,
+                Some(findings) => SecretScan::Found(findings),
+            },
+        )
     }
 
     /// Checks `text` as gitleaks reads standard input, run in the folder `dir`, which needs no repository: for text
     /// that is about to leave the Mac outside a commit.
     pub fn scan_text(&self, dir: &Path, text: &str) -> Result<SecretScan> {
-        Ok(match gitleaks(self, dir, &["stdin"], Some(text.as_bytes().to_vec()))? {
-            None => SecretScan::NotInstalled,
-            Some(findings) if findings.is_empty() => SecretScan::Clean,
-            Some(findings) => SecretScan::Found(findings),
-        })
+        Ok(
+            match gitleaks(self, dir, &[], &["stdin"], Some(text.as_bytes().to_vec()))? {
+                None => SecretScan::NotInstalled,
+                Some(findings) if findings.is_empty() => SecretScan::Clean,
+                Some(findings) => SecretScan::Found(findings),
+            },
+        )
     }
 }
 
 /// Runs `gitleaks <command>` in `dir`, or on `input` for its `stdin` command; `None` when the login shell's PATH has no
 /// gitleaks.
-fn gitleaks(git: &Git, dir: &Path, command: &[&str], input: Option<Vec<u8>>) -> Result<Option<Vec<Finding>>> {
+fn gitleaks(
+    git: &Git,
+    dir: &Path,
+    env: &[(OsString, OsString)],
+    command: &[&str],
+    input: Option<Vec<u8>>,
+) -> Result<Option<Vec<Finding>>> {
     let Some(gitleaks) = git.find("gitleaks") else {
         return Ok(None);
     };
-    let mut call = Call::new(dir, command).args([
+    let mut call = Call::new(dir, command).envs(env).args([
         "--no-banner",
         "--no-color",
         "--redact",
@@ -200,6 +215,7 @@ fn parse(report: &[u8]) -> Result<Vec<Finding>> {
             description: r.description,
             file: PathBuf::from(r.file),
             line: r.start_line,
+            end_line: r.end_line.max(r.start_line),
             commit: (!r.commit.is_empty()).then(|| CommitId::from_git(r.commit)),
         })
         .collect())
@@ -221,6 +237,7 @@ mod tests {
                 description: "GitHub token".into(),
                 file: PathBuf::from("s p.env"),
                 line: 2,
+                end_line: 2,
                 commit: None,
             }]
         );

@@ -35,7 +35,9 @@ impl std::ops::Deref for Repos {
 /// The orchestrator's git for the folder at `root`, from the login shell's environment `login`.
 pub(super) fn open(root: &Path, login: &[(String, String)]) -> ide_git::Result<Repos> {
     let env = ide_process::order_env::for_orders(login, &[]);
-    let git = Git::new(Supervisor::global(), login.to_vec()).unattended(env, Instant::now() + DEADLINE);
+    let git = Git::new(Supervisor::global(), login.to_vec())
+        .unattended(env, Instant::now() + DEADLINE)
+        .bound_to(root);
     let main = git.discover(root)?;
     Ok(Repos { git, main })
 }
@@ -170,21 +172,44 @@ pub(super) fn diff_names(repo: &Repository, base: &str, head: &str) -> ide_git::
         .collect())
 }
 
-/// The added lines of the worktree's changes since `since`, as one text for gitleaks, with where each line is.
+/// The added lines of the worktree's changes since `since`, binary files included, as one text for gitleaks, with
+/// where each line is.
 fn added_text(copy: &Repository, since: &str) -> ide_git::Result<(String, Vec<String>)> {
     let mut text = String::new();
     let mut places = Vec::new();
-    for file in copy.diff_since(since, &[] as &[PathBuf])? {
+    for file in copy.diff_since_as_text(since)? {
         let path = file.path().to_string_lossy().into_owned();
         for line in file.hunks.iter().flat_map(|h| &h.lines) {
             if line.kind == ide_git::LineKind::Added {
-                text.push_str(&line.text());
-                text.push('\n');
-                places.push(format!("{path}:{}", line.new_number.unwrap_or_default()));
+                let place = format!("{path}:{}", line.new_number.unwrap_or_default());
+                for scanned in scanned_lines(&line.content) {
+                    text.push_str(&scanned);
+                    text.push('\n');
+                    places.push(place.clone());
+                }
             }
         }
     }
     Ok((text, places))
+}
+
+/// What gitleaks reads of one added line: the line itself, and for one with NUL bytes, as UTF-16 text and binary
+/// files have, also the line without them and each piece between them, so a token in UTF-16 or among binary data is
+/// read whole.
+fn scanned_lines(content: &[u8]) -> Vec<String> {
+    let text = |bytes: &[u8]| String::from_utf8_lossy(bytes).replace(['\r', '\0'], " ");
+    if !content.contains(&0) {
+        return vec![text(content)];
+    }
+    let without: Vec<u8> = content.iter().copied().filter(|&byte| byte != 0).collect();
+    let mut lines = vec![text(&without)];
+    lines.extend(
+        content
+            .split(|&byte| byte == 0)
+            .filter(|piece| !piece.is_empty())
+            .map(text),
+    );
+    lines
 }
 
 /// The secrets scan of the worktree's changes since `since` with the rules frozen from the main checkout (C52).

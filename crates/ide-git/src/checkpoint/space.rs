@@ -16,7 +16,8 @@ use crate::run::{Call, Git, Output};
 pub(super) struct Space {
     pub(super) git: Git,
     pub(super) root: PathBuf,
-    /// `GIT_DIR` and `GIT_WORK_TREE` for a folder's own store; empty for a repository.
+    /// `GIT_DIR` and `GIT_WORK_TREE` for a folder's own store or a repository of the unattended git; empty for the
+    /// user's repository.
     pub(super) env: Vec<(OsString, OsString)>,
     /// The index a snapshot starts from: the user's in a repository, the store's own in a folder.
     pub(super) index: PathBuf,

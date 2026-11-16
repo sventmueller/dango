@@ -235,7 +235,8 @@ impl Leitstand {
             mcp_servers,
         });
         let git = ide_git::Git::new(Supervisor::global(), ready.login.clone())
-            .unattended(ready.env.clone(), Instant::now() + CHECKPOINT_DEADLINE);
+            .unattended(ready.env.clone(), Instant::now() + CHECKPOINT_DEADLINE)
+            .bound_to(&ready.root);
         let mut launch = Launch::new(path, &ready.worktree, ready.env.clone(), contract.clone());
         launch.model.clone_from(&ready.entry.model);
         launch.effort.clone_from(&ready.entry.effort);
