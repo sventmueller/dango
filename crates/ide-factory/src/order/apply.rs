@@ -2,6 +2,7 @@
 //! alike.
 
 use super::{Order, Slot, Turn, Visit};
+use crate::budget::UsageReport;
 use crate::event::{Action, Event, OpResult, PromptKind, TurnOutcome};
 use crate::evidence::{Deviation, Invalidation, Provenance, order_deviations};
 use crate::ids::{OperationId, PromptId, SessionKey};
@@ -112,8 +113,12 @@ impl Order {
                 quota_unknown,
                 same_vendor,
                 tie_break,
+                resumed,
             } => {
                 self.start_session(*role, entry, *index, *vendor, session, resume.clone());
+                if !*resumed {
+                    self.usage.remove(role);
+                }
                 if *quota_unknown {
                     self.deviate(Deviation::QuotaUnknown);
                 }
@@ -154,16 +159,12 @@ impl Order {
                 self.retry_due = Some(at.mono.after(*delay_ms));
             }
             Event::Spent {
-                role, spend, unmetered, ..
-            } => {
-                self.spend.add(spend);
-                self.role_spend.entry(*role).or_default().add(spend);
-                self.costs.entry(self.station).or_default().add(spend);
-                self.metering.unmetered |= *unmetered;
-                if *unmetered {
-                    self.deviate(Deviation::Unmetered);
-                }
-            }
+                role,
+                spend,
+                unmetered,
+                total,
+                ..
+            } => self.spent(*role, spend, *unmetered, total.as_ref()),
             Event::Intervened { .. } => {
                 self.interventions += 1;
                 let count = self.interventions;
@@ -193,6 +194,19 @@ impl Order {
                 }
             }
             _ => {}
+        }
+    }
+
+    fn spent(&mut self, role: Role, spend: &crate::budget::Spend, unmetered: bool, total: Option<&UsageReport>) {
+        if let Some(total) = total {
+            self.usage.insert(role, *total);
+        }
+        self.spend.add(spend);
+        self.role_spend.entry(role).or_default().add(spend);
+        self.costs.entry(self.station).or_default().add(spend);
+        self.metering.unmetered |= unmetered;
+        if unmetered {
+            self.deviate(Deviation::Unmetered);
         }
     }
 

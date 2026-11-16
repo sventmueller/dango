@@ -55,3 +55,9 @@ pub struct RequestId(pub String);
 /// A hunk of the order's diff as the diff view names it, for partial acceptance (C55).
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct HunkId(pub String);
+
+/// One run of a check the factory asked for: a gate command, a secrets scan, a diff or a comparison of diffs. Its
+/// result names it again, so the result of a run the factory gave up, such as one still running from before a pause,
+/// is told apart from the result of the run that replaced it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
+pub struct RunId(pub u64);

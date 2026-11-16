@@ -158,7 +158,7 @@ fn failures_in_the_two_minutes_after_waking_do_not_count() {
     app.send(InputKind::Sleep);
     assert_eq!(app.condition(&id), Condition::Paused(PauseReason::Sleep));
     assert!(!app.factory.holds_wake_lock());
-    app.pass(30 * MINUTE);
+    app.sleep_through(30 * MINUTE);
     app.send(InputKind::Wake);
     assert_eq!(app.condition(&id), Condition::Running);
     tick(&mut app);
@@ -180,6 +180,39 @@ fn failures_in_the_two_minutes_after_waking_do_not_count() {
     ));
     assert_eq!(retries(&app, &id), [(1, false, 10 * SECOND)]);
     assert_eq!(app.get(&id).attempts(), 0);
+}
+
+/// An app whose turn has been silent for four minutes when the Mac sleeps for half an hour, with `asleep` letting
+/// the time pass on the clocks, and wakes.
+fn slept(asleep: impl FnOnce(&mut App)) -> (App, ide_factory::OrderId) {
+    let (mut app, id) = running();
+    app.pass(4 * MINUTE);
+    app.send(InputKind::Sleep);
+    asleep(&mut app);
+    app.send(InputKind::Wake);
+    tick(&mut app);
+    assert!(stopped(&app, &id).is_empty(), "the time asleep does not count");
+    (app, id)
+}
+
+#[test]
+fn the_time_asleep_never_counts_towards_a_turn_whichever_clock_counts_it() {
+    let (mut mac, id) = slept(|app| app.sleep_through(30 * MINUTE));
+    mac.pass(MINUTE + 10);
+    tick(&mut mac);
+    assert_eq!(
+        stopped(&mac, &id),
+        [Overdue::Stalled],
+        "the silence before the sleep still counts"
+    );
+    let (mut running_on, id) = slept(|app| app.pass(30 * MINUTE));
+    running_on.pass(MINUTE + 10);
+    tick(&mut running_on);
+    assert_eq!(
+        stopped(&running_on, &id),
+        [Overdue::Stalled],
+        "the turn's clock moved by exactly the sleep"
+    );
 }
 
 #[test]

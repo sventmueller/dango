@@ -61,11 +61,12 @@ const RULES_EVERY: u64 = 10;
 enum Delivery {
     /// An input for the factory of `root`.
     Input(PathBuf, Box<InputKind>),
-    /// The log entries of a step were written, but not those of `failed`; the step's effects may run now.
+    /// The log entries of a step were appended as `appended` says; the step's effects may run now, except those of
+    /// orders whose entries are not on disk.
     Logged {
         root: PathBuf,
         effects: Vec<Effect>,
-        failed: Vec<OrderId>,
+        appended: store::Appended,
     },
     /// What a folder needs to start: its order logs, confirmations and the dates of its recurring orders, read from
     /// disk, and the order ids its log folder holds.
@@ -232,9 +233,18 @@ impl Leitstand {
             Delivery::SetupEnded(root, order, op, input) => self.setup_ended(cx, &root, &order, &op, *input),
             Delivery::Shared(shared) => self.shared_read(cx, *shared),
             Delivery::Forge(root, access) => self.forge_read(&root, access),
-            Delivery::Logged { root, effects, failed } => {
+            Delivery::Logged {
+                root,
+                effects,
+                appended,
+            } => {
                 self.writing.set(self.writing.get().saturating_sub(1));
-                self.run_effects(cx, &root, effects, &failed);
+                if let Some(folder) = self.folders.borrow_mut().get_mut(&root) {
+                    for (order, next) in &appended.written {
+                        folder.factory.logged(order, *next);
+                    }
+                }
+                self.run_effects(cx, &root, effects, &appended);
             }
             Delivery::Loaded {
                 root,
@@ -312,44 +322,48 @@ impl Leitstand {
             return;
         }
         if log.is_empty() && self.writing.get() == 0 {
-            return self.run_effects(cx, root, effects, &[]);
+            return self.run_effects(cx, root, effects, &store::Appended::default());
         }
         let Some(project) = self.folders.borrow().get(root).map(|f| f.project.clone()) else {
             return;
         };
         let groups = store::group(&project, &log);
-        let orders: Vec<OrderId> = groups.iter().map(|(order, _, _)| order.clone()).collect();
+        let unwritten = store::Appended {
+            failed: groups.iter().map(store::Group::failure).collect(),
+            ..store::Appended::default()
+        };
         let (root_for_job, effects_for_job) = (root.to_path_buf(), effects.clone());
         self.writing.set(self.writing.get() + 1);
         let back = self.back();
         let queued = ide_core::lane::DISK.try_run(move || {
-            let failed = store::append_all(&groups);
+            let appended = store::append_all(&groups);
             back.deliver(Delivery::Logged {
                 root: root_for_job,
                 effects: effects_for_job,
-                failed,
+                appended,
             });
         });
         if queued.is_err() {
             self.writing.set(self.writing.get().saturating_sub(1));
             ide_core::diag::report("writing an order log", "the disk lane took no more work");
-            self.run_effects(cx, root, effects, &orders);
+            self.run_effects(cx, root, effects, &unwritten);
         }
     }
 
     /// Runs a step's effects; once the app quits, only those that stop work or keep the books, and the others stay
     /// begun in the log for the restart to check (E167).
-    fn run_effects(&self, cx: &Rc<AppContext>, root: &Path, effects: Vec<Effect>, failed: &[OrderId]) {
+    fn run_effects(&self, cx: &Rc<AppContext>, root: &Path, effects: Vec<Effect>, appended: &store::Appended) {
         let quitting = self.shared.borrow().quitting;
         for effect in effects {
-            if effect.order().is_some_and(|order| failed.contains(order)) || (quitting && !runs_while_quitting(&effect))
+            if effect.order().is_some_and(|order| appended.holds_back(order))
+                || (quitting && !runs_while_quitting(&effect))
             {
                 continue;
             }
             self.effect(cx, root, effect);
         }
-        for order in failed {
-            self.input(cx, root, InputKind::LogFailed(order.clone()));
+        for failure in &appended.failed {
+            self.input(cx, root, InputKind::LogFailed(failure.clone()));
         }
     }
 
@@ -488,6 +502,7 @@ mod tests {
             Effect::SnapshotRefs { order: order.clone() },
             Effect::DiffNames {
                 order: order.clone(),
+                run_id: ide_factory::RunId(1),
                 base: "a".into(),
                 head: "b".into(),
             },

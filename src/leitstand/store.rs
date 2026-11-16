@@ -4,12 +4,12 @@
 //! folder and never in a repository. Everything here blocks and belongs on the disk lane.
 
 use std::collections::BTreeMap;
-use std::io::{self, Write};
+use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
 use ide_factory::OrderId;
 use ide_factory::budget::DailyAccount;
-use ide_factory::log::LogEntry;
+use ide_factory::log::{LogEntry, LogFailure};
 use ide_factory::quota::QuotaBook;
 use ide_factory::workflow::recurring::Schedule;
 use ide_factory::workflow::rules::Confirmations;
@@ -67,7 +67,8 @@ fn quotas_file(base: &Path) -> PathBuf {
     base.join("quotas.json")
 }
 
-/// The texts of every order log of the project, in the order of their names.
+/// The texts of every order log of the project, in the order of their names, as they were read; each log is put back
+/// in shape first, so the next entry starts a line of its own and is read after a restart (E167).
 pub(super) fn read_logs(project: &Path) -> Vec<String> {
     let Ok(entries) = std::fs::read_dir(orders(project)) else {
         return Vec::new();
@@ -81,7 +82,10 @@ pub(super) fn read_logs(project: &Path) -> Vec<String> {
     files
         .iter()
         .filter_map(|path| match std::fs::read_to_string(path) {
-            Ok(text) => Some(text),
+            Ok(text) => {
+                repair(path, &text);
+                Some(text)
+            }
             Err(error) => {
                 ide_core::diag::report("reading an order log", error);
                 None
@@ -90,42 +94,179 @@ pub(super) fn read_logs(project: &Path) -> Vec<String> {
         .collect()
 }
 
-/// `entries` grouped by their order's log, each group's lines in order.
-pub(super) fn group(project: &Path, entries: &[LogEntry]) -> Vec<(OrderId, PathBuf, String)> {
-    let mut groups: BTreeMap<OrderId, String> = BTreeMap::new();
-    for entry in entries {
-        groups.entry(entry.order.clone()).or_default().push_str(&entry.line());
+/// Cuts a log back to the lines a restart reads, through a file beside it; what no longer counts is kept in a file
+/// of its own for a look by hand.
+fn repair(file: &Path, text: &str) {
+    let Some(repair) = ide_factory::log::repair(text) else {
+        return;
+    };
+    if !repair.dropped.trim().is_empty() {
+        let aside = file.with_extension("dropped");
+        if let Err(error) = std::fs::write(&aside, repair.dropped.as_bytes()) {
+            ide_core::diag::report("keeping the damaged end of an order log", error);
+        }
     }
-    groups
-        .into_iter()
-        .map(|(order, text)| {
-            let file = log_file(project, &order);
-            (order, file, text)
-        })
-        .collect()
+    if let Err(error) = write_atomically(file, repair.kept.as_bytes()) {
+        ide_core::diag::report("repairing an order log", error);
+    }
 }
 
-/// Appends each group to its log, on disk before it returns; the orders whose log could not be written.
-pub(super) fn append_all(groups: &[(OrderId, PathBuf, String)]) -> Vec<OrderId> {
-    groups
-        .iter()
-        .filter_map(|(order, file, text)| match append(file, text) {
-            Ok(()) => None,
+/// One order's entries of a step, for its log.
+pub(super) struct Group {
+    order: OrderId,
+    file: PathBuf,
+    /// The place of the first entry.
+    first: u64,
+    /// The place after the last entry.
+    next: u64,
+    /// The lines; `None` when an entry cannot be written as JSON.
+    text: Option<String>,
+}
+
+impl Group {
+    /// The failure of writing it.
+    pub(super) fn failure(&self) -> LogFailure {
+        LogFailure {
+            order: self.order.clone(),
+            seq: self.first,
+        }
+    }
+}
+
+/// `entries` grouped by their order's log, each group's lines in order.
+pub(super) fn group(project: &Path, entries: &[LogEntry]) -> Vec<Group> {
+    let mut groups: BTreeMap<OrderId, Group> = BTreeMap::new();
+    for entry in entries {
+        let group = groups.entry(entry.order.clone()).or_insert_with(|| Group {
+            order: entry.order.clone(),
+            file: log_file(project, &entry.order),
+            first: entry.seq,
+            next: entry.seq,
+            text: Some(String::new()),
+        });
+        group.next = entry.seq + 1;
+        match (entry.line(), &mut group.text) {
+            (Ok(line), Some(text)) => text.push_str(&line),
+            (Err(error), text) => {
+                ide_core::diag::report("writing an order log entry as JSON", error);
+                *text = None;
+            }
+            (Ok(_), None) => {}
+        }
+    }
+    groups.into_values().collect()
+}
+
+/// What appending a step's groups came to.
+#[derive(Debug, Default, PartialEq)]
+pub(super) struct Appended {
+    /// The orders whose log is on disk up to the entry before this place.
+    pub(super) written: Vec<(OrderId, u64)>,
+    /// The orders whose entries could not be written.
+    pub(super) failed: Vec<LogFailure>,
+    /// The orders whose entries were not written because they do not continue the log: they build on entries that
+    /// failed before, whose order hears of it from that failure.
+    pub(super) refused: Vec<OrderId>,
+}
+
+impl Appended {
+    /// Whether the effects of `order` must not run.
+    pub(super) fn holds_back(&self, order: &OrderId) -> bool {
+        self.failed.iter().any(|f| f.order == *order) || self.refused.contains(order)
+    }
+}
+
+/// Appends each group to its log, on disk before it returns.
+pub(super) fn append_all(groups: &[Group]) -> Appended {
+    let mut out = Appended::default();
+    for group in groups {
+        let Some(text) = &group.text else {
+            out.failed.push(group.failure());
+            continue;
+        };
+        match append(&group.file, group.first, text) {
+            Ok(true) => out.written.push((group.order.clone(), group.next)),
+            Ok(false) => {
+                ide_core::diag::report(
+                    "writing an order log",
+                    format!(
+                        "entries of {} from {} on do not continue its log",
+                        group.order, group.first
+                    ),
+                );
+                out.refused.push(group.order.clone());
+            }
             Err(error) => {
                 ide_core::diag::report("writing an order log", error);
-                Some(order.clone())
+                out.failed.push(group.failure());
             }
-        })
-        .collect()
+        }
+    }
+    out
 }
 
-fn append(file: &Path, text: &str) -> io::Result<()> {
+/// Appends `text`, whose first entry is the `first`th, if the log ends with the entry before it; `false` if it does
+/// not. A failed write is cut off again, so the log keeps ending with a whole line.
+fn append(file: &Path, first: u64, text: &str) -> io::Result<bool> {
     if let Some(folder) = file.parent() {
         std::fs::create_dir_all(folder)?;
     }
-    let mut log = std::fs::OpenOptions::new().create(true).append(true).open(file)?;
-    log.write_all(text.as_bytes())?;
-    log.sync_data()
+    let mut log = std::fs::OpenOptions::new()
+        .create(true)
+        .read(true)
+        .append(true)
+        .open(file)?;
+    let (last, broken) = last_line(&mut log)?;
+    let next = match last {
+        None => 0,
+        Some(line) => match ide_factory::log::read(&line).entries.as_slice() {
+            [entry] => entry.seq + 1,
+            _ => return Ok(false),
+        },
+    };
+    if next != first {
+        return Ok(false);
+    }
+    let length = log.metadata()?.len();
+    let mut bytes = Vec::with_capacity(text.len() + 1);
+    if !broken && length > 0 {
+        bytes.push(b'\n');
+    }
+    bytes.extend_from_slice(text.as_bytes());
+    let written = log.write_all(&bytes).and_then(|()| log.sync_data());
+    if let Err(error) = written {
+        let _ = log.set_len(length).and_then(|()| log.sync_data());
+        return Err(error);
+    }
+    Ok(true)
+}
+
+/// The log's last line that is not empty, and whether the log ends with a line break.
+fn last_line(log: &mut std::fs::File) -> io::Result<(Option<String>, bool)> {
+    const CHUNK: u64 = 4096;
+    let length = log.metadata()?.len();
+    let mut tail: Vec<u8> = Vec::new();
+    let mut start = length;
+    loop {
+        let trimmed = tail.iter().rposition(|b| !b.is_ascii_whitespace());
+        let line_start = trimmed.and_then(|end| tail[..end].iter().rposition(|b| *b == b'\n'));
+        if line_start.is_some() || start == 0 {
+            break;
+        }
+        let from = start.saturating_sub(CHUNK);
+        let mut chunk = vec![0; usize::try_from(start - from).unwrap_or(0)];
+        log.seek(SeekFrom::Start(from))?;
+        log.read_exact(&mut chunk)?;
+        chunk.extend_from_slice(&tail);
+        tail = chunk;
+        start = from;
+    }
+    let broken = tail.last().is_none_or(|b| *b == b'\n');
+    let Some(end) = tail.iter().rposition(|b| !b.is_ascii_whitespace()) else {
+        return Ok((None, broken));
+    };
+    let begin = tail[..end].iter().rposition(|b| *b == b'\n').map_or(0, |at| at + 1);
+    Ok((Some(String::from_utf8_lossy(&tail[begin..=end]).into_owned()), broken))
 }
 
 /// Writes `text` to `file` whole, through a file beside it, so a crash leaves the old or the new one.
@@ -201,7 +342,7 @@ pub(super) fn save_quotas(base: &Path, quotas: &QuotaBook) {
 mod tests {
     use ide_factory::budget::Spend;
     use ide_factory::event::{Event, Phase};
-    use ide_factory::log::{LOG_VERSION, read};
+    use ide_factory::log::{LOG_VERSION, LogFailure, read};
     use ide_factory::{Stamp, workflow::rules::Confirmations};
 
     use super::*;
@@ -222,14 +363,19 @@ mod tests {
         }
     }
 
+    fn line(order: &str, seq: u64) -> String {
+        entry(order, seq).line().unwrap()
+    }
+
     #[test]
     fn each_order_log_gets_its_own_lines_in_order_and_reads_back() {
         let project = temp("logs");
         let entries = [entry("a", 0), entry("b", 0), entry("a", 1)];
         let groups = group(&project, &entries);
         assert_eq!(groups.len(), 2);
-        assert!(append_all(&groups).is_empty());
-        assert!(append_all(&group(&project, &[entry("a", 2)])).is_empty());
+        let appended = append_all(&groups);
+        assert_eq!(appended.written, [(OrderId("a".into()), 2), (OrderId("b".into()), 1)]);
+        assert!(append_all(&group(&project, &[entry("a", 2)])).failed.is_empty());
         let logs = read_logs(&project);
         assert_eq!(logs.len(), 2);
         let a = read(&logs[0]);
@@ -243,8 +389,95 @@ mod tests {
         let project = temp("unwritable");
         std::fs::create_dir_all(&project).unwrap();
         std::fs::write(orders(&project), "a file where the folder should be").unwrap();
-        let failed = append_all(&group(&project, &[entry("a", 0)]));
-        assert_eq!(failed, [OrderId("a".into())]);
+        let appended = append_all(&group(&project, &[entry("a", 0), entry("a", 1)]));
+        let failure = LogFailure {
+            order: OrderId("a".into()),
+            seq: 0,
+        };
+        assert_eq!(appended.failed, [failure]);
+        assert!(appended.holds_back(&OrderId("a".into())));
+        let _ = std::fs::remove_dir_all(&project);
+    }
+
+    #[test]
+    fn entries_that_do_not_continue_the_log_are_not_written() {
+        let project = temp("gap");
+        assert_eq!(append_all(&group(&project, &[entry("a", 0)])).written.len(), 1);
+        let gap = append_all(&group(&project, &[entry("a", 2)]));
+        assert_eq!(gap.refused, [OrderId("a".into())]);
+        assert!(
+            gap.failed.is_empty(),
+            "the failure the gap follows was reported already"
+        );
+        let again = append_all(&group(&project, &[entry("a", 0)]));
+        assert_eq!(again.refused.len(), 1, "an entry is never written twice");
+        assert_eq!(append_all(&group(&project, &[entry("a", 1)])).written.len(), 1);
+        let a = read(&std::fs::read_to_string(log_file(&project, &OrderId("a".into()))).unwrap());
+        assert_eq!(a.entries.iter().map(|e| e.seq).collect::<Vec<_>>(), [0, 1]);
+        let _ = std::fs::remove_dir_all(&project);
+    }
+
+    /// Restores the logs as the app does at its start, appends `seq` to order `a`, and reads its log back.
+    fn restart_and_append(project: &Path, seq: u64) -> ide_factory::log::Read {
+        let logs = read_logs(project);
+        assert_eq!(logs.len(), 1);
+        let appended = append_all(&group(project, &[entry("a", seq)]));
+        assert_eq!(appended.written, [(OrderId("a".into()), seq + 1)]);
+        read(&std::fs::read_to_string(log_file(project, &OrderId("a".into()))).unwrap())
+    }
+
+    #[test]
+    fn a_crash_in_the_middle_of_a_line_is_cut_back_before_the_next_entry() {
+        let project = temp("cut");
+        let file = log_file(&project, &OrderId("a".into()));
+        let whole = format!("{}{}", line("a", 0), line("a", 1));
+        std::fs::create_dir_all(orders(&project)).unwrap();
+        std::fs::write(&file, &whole[..whole.len() - 9]).unwrap();
+        let back = restart_and_append(&project, 1);
+        assert_eq!((back.entries.len(), back.cut, back.stopped_at), (2, false, None));
+        assert!(file.with_extension("dropped").exists(), "the cut line is kept aside");
+        let _ = std::fs::remove_dir_all(&project);
+    }
+
+    #[test]
+    fn a_crash_before_the_line_break_keeps_the_entry_and_the_next_one_starts_a_line() {
+        let project = temp("unbroken");
+        let file = log_file(&project, &OrderId("a".into()));
+        let whole = format!("{}{}", line("a", 0), line("a", 1));
+        std::fs::create_dir_all(orders(&project)).unwrap();
+        std::fs::write(&file, &whole[..whole.len() - 1]).unwrap();
+        let back = restart_and_append(&project, 2);
+        assert_eq!((back.entries.len(), back.cut, back.stopped_at), (3, false, None));
+        std::fs::write(&file, &whole[..whole.len() - 1]).unwrap();
+        let appended = append_all(&group(&project, &[entry("a", 2)]));
+        assert_eq!(appended.written.len(), 1, "also without the repair at the start");
+        let back = read(&std::fs::read_to_string(&file).unwrap());
+        assert_eq!((back.entries.len(), back.stopped_at), (3, None));
+        let _ = std::fs::remove_dir_all(&project);
+    }
+
+    #[test]
+    fn a_damaged_line_is_set_aside_so_later_entries_are_read_again() {
+        let project = temp("damaged");
+        let file = log_file(&project, &OrderId("a".into()));
+        std::fs::create_dir_all(orders(&project)).unwrap();
+        std::fs::write(&file, format!("{}garbage\n{}", line("a", 0), line("a", 1))).unwrap();
+        let back = restart_and_append(&project, 1);
+        assert_eq!((back.entries.len(), back.stopped_at), (2, None));
+        let _ = std::fs::remove_dir_all(&project);
+    }
+
+    #[test]
+    fn a_last_line_longer_than_what_is_read_at_once_is_found() {
+        let project = temp("long");
+        let mut long = entry("a", 1);
+        long.event = Event::Findings {
+            text: "x".repeat(10_000),
+            round: false,
+        };
+        let appended = append_all(&group(&project, &[entry("a", 0), long]));
+        assert_eq!(appended.written, [(OrderId("a".into()), 2)]);
+        assert_eq!(append_all(&group(&project, &[entry("a", 2)])).written.len(), 1);
         let _ = std::fs::remove_dir_all(&project);
     }
 

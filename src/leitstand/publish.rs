@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 use ide_factory::event::{OpResult, TargetState};
 use ide_factory::gates::SecretScan;
 use ide_factory::publish::ChangeRef;
-use ide_factory::{Effect, InputKind, OperationId, OrderId};
+use ide_factory::{Effect, InputKind, OperationId, OrderId, RunId};
 use ide_ui_factory::model::detail::ForgeAccess;
 
 use super::{Delivery, Leitstand, freeze};
@@ -44,7 +44,7 @@ impl Leitstand {
     /// Carries out one of publishing's effects; its result comes back as an input of the order.
     pub(super) fn publish_effect(&self, root: &Path, effect: Effect) {
         match effect {
-            Effect::ScanOutgoing { order, text } => self.scan_outgoing(root, order, text),
+            Effect::ScanOutgoing { order, run_id, text } => self.scan_outgoing(root, order, run_id, text),
             Effect::Push {
                 order,
                 op,
@@ -75,7 +75,7 @@ impl Leitstand {
     }
 
     /// Scans everything that is to go out with the gitleaks rules frozen for the order (C52, F75).
-    fn scan_outgoing(&self, root: &Path, order: OrderId, text: String) {
+    fn scan_outgoing(&self, root: &Path, order: OrderId, run_id: RunId, text: String) {
         let frozen = self
             .with_order(root, &order, |o| o.frozen().map(PathBuf::from))
             .flatten()
@@ -83,7 +83,7 @@ impl Leitstand {
         self.on_git(root, move |main, _| {
             let rules = freeze::frozen_rules(&frozen);
             let scan = main.and_then(|main| main.git.scan_text_frozen(&text, &rules));
-            Some(InputKind::Scanned(order, scanned(scan)))
+            Some(InputKind::Scanned(order, run_id, scanned(scan)))
         });
     }
 

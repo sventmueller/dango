@@ -7,9 +7,11 @@
 //!   session event mapped into [`SessionEvent`], an effect's result, sleep and wake, [`InputKind::Tick`]) with its
 //!   [`Stamp`] (monotonic milliseconds for limits, wall clock for display) and returns a [`Step`]: [`log`] entries
 //!   first, then [`Effect`]s, then refused commands. The app appends `step.log` to each order's JSON-lines file
-//!   before it runs any effect of that order; if the write fails it reports [`InputKind::LogFailed`] and runs none
-//!   (E167). [`Factory::restore`] rebuilds the factory from the log texts after a restart: running orders come back
-//!   paused with "app ended", and operations begun without their end come back as [`Effect::Verify`].
+//!   before it runs any effect of that order, and only where the entries continue the file's last one; once they are
+//!   on disk it tells [`Factory::logged`], and if the write fails it reports [`InputKind::LogFailed`], runs none of
+//!   the order's effects, and the order goes back to what its log says (E167). [`Factory::restore`] rebuilds the
+//!   factory from the log texts after a restart: running orders come back paused with "app ended", and operations
+//!   begun without their end come back as [`Effect::Verify`].
 //! - [`order::Order`] is an order's state, nothing but its [`event::Event`]s applied in turn; its station
 //!   ([`Station`]) and condition ([`Condition`]) follow E166, and only the factory changes them: a station is done
 //!   when its gate passes.
@@ -81,7 +83,7 @@ pub mod workflow;
 
 pub use effect::Effect;
 pub use factory::{Factory, Refusal, Refused, RestoreProblem, Restored, Step};
-pub use ids::{HunkId, OPERATION_TRAILER, OperationId, OrderId, PromptId, RequestId, SessionKey};
+pub use ids::{HunkId, OPERATION_TRAILER, OperationId, OrderId, PromptId, RequestId, RunId, SessionKey};
 pub use input::{Input, InputKind, SessionEvent};
 pub use order::Order;
 pub use station::{Condition, FailReason, PauseReason, RiskClass, Role, Stage, Station, TakeOverBlocker, WaitReason};

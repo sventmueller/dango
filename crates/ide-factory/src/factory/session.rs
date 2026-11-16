@@ -180,6 +180,7 @@ impl Factory {
             checkpoint_thread: id.checkpoint_thread(role),
         };
         let index = choice.index;
+        self.scratch(id).resuming = matches!(&effect, Effect::StartSession { resume: Some(_), .. });
         self.scratch(id).choice = Some((choice, same_vendor));
         self.set_phase(cx, id, Phase::Starting { role, index });
         cx.effect(effect);
@@ -204,6 +205,7 @@ impl Factory {
         if wanted != role || choice.index != index {
             return;
         }
+        let resumed = std::mem::take(&mut self.scratch(id).resuming);
         self.emit(
             cx,
             id,
@@ -217,6 +219,7 @@ impl Factory {
                 quota_unknown: choice.quota == QuotaState::Unknown,
                 same_vendor,
                 tie_break: choice.tie_break,
+                resumed,
             },
         );
         self.set_phase(cx, id, Phase::Idle);
@@ -420,7 +423,7 @@ impl Factory {
                 }
             },
             SessionEvent::Answered { request } => self.answered(cx, id, request),
-            SessionEvent::Usage { report } => self.spent(cx, id, role, key, report),
+            SessionEvent::Usage { report } => self.spent(cx, id, role, report),
             SessionEvent::Gap { reconciled } => {
                 if !reconciled {
                     self.stop_work(cx, id);
@@ -594,7 +597,9 @@ impl Factory {
         self.scratch(id).handoff = true;
     }
 
-    fn spent(&mut self, cx: &mut Cx, id: &OrderId, role: Role, key: &SessionKey, report: UsageReport) {
+    /// Counts what `role`'s thread used since the report its spending was last counted up to, which the log keeps,
+    /// so a resumed thread that reports its whole usage again is not counted twice.
+    fn spent(&mut self, cx: &mut Cx, id: &OrderId, role: Role, report: UsageReport) {
         let Some(order) = self.orders.get(id) else { return };
         let status = order
             .session(role)
@@ -604,7 +609,10 @@ impl Factory {
         let has_quota = status
             .as_ref()
             .is_some_and(|s| s.account.is_some() && s.service.is_some());
-        let previous = self.scratch(id).usage.insert(key.clone(), report);
+        let previous = order
+            .usage_counted(role)
+            .copied()
+            .filter(|before| !counts_anew(before, &report));
         let before = previous.unwrap_or_default();
         let dollars = match (report.dollars, before.dollars) {
             (Some(now), Some(then)) => (now - then).max(0.0),
@@ -622,18 +630,22 @@ impl Factory {
         if spend.is_zero() && !(unmetered && first) {
             return;
         }
-        self.record_spend(cx, id, role, service, spend, unmetered);
+        let counted = Counted {
+            service,
+            spend,
+            unmetered,
+            total: Some(report),
+        };
+        self.record_spend(cx, id, role, counted);
     }
 
-    fn record_spend(
-        &mut self,
-        cx: &mut Cx,
-        id: &OrderId,
-        role: Role,
-        service: Option<String>,
-        spend: Spend,
-        unmetered: bool,
-    ) {
+    fn record_spend(&mut self, cx: &mut Cx, id: &OrderId, role: Role, counted: Counted) {
+        let Counted {
+            service,
+            spend,
+            unmetered,
+            total,
+        } = counted;
         self.emit(
             cx,
             id,
@@ -642,12 +654,14 @@ impl Factory {
                 service: service.clone(),
                 spend,
                 unmetered,
+                total,
             },
         );
         if !spend.is_zero() {
             let day = self.day.day().to_string();
             self.day.add(&day, service.as_deref(), &spend);
             cx.effect(Effect::AddToDay {
+                order: id.clone(),
                 service: service.clone(),
                 spend,
             });
@@ -694,14 +708,13 @@ impl Factory {
             let share = after - before;
             if share > 0.0 {
                 let (id, role) = (id.clone(), *role);
-                self.record_spend(
-                    cx,
-                    &id,
-                    role,
-                    Some(key.service.clone()),
-                    Spend::new(0.0, 0, share),
-                    false,
-                );
+                let counted = Counted {
+                    service: Some(key.service.clone()),
+                    spend: Spend::new(0.0, 0, share),
+                    unmetered: false,
+                    total: None,
+                };
+                self.record_spend(cx, &id, role, counted);
             }
         }
         for (id, role) in users {
@@ -851,6 +864,22 @@ impl Factory {
 /// Whether a turn whose agent reported its end still has work running that its end waits for (E184, E189).
 fn busy(turn: &crate::order::Turn) -> bool {
     turn.watch().subagents() > 0 || turn.watch().background() > 0 || turn.queued() > 0
+}
+
+/// Spending of a role to record: what it cost on which service, and the usage report it was counted up to.
+struct Counted {
+    service: Option<String>,
+    spend: Spend,
+    unmetered: bool,
+    total: Option<UsageReport>,
+}
+
+/// Whether a thread's usage `now` counts from zero again rather than on from `before`: a figure went down, as when
+/// a path reports only what its new process used.
+fn counts_anew(before: &UsageReport, now: &UsageReport) -> bool {
+    let less = |now: Option<f64>, then: Option<f64>| matches!((now, then), (Some(now), Some(then)) if now < then);
+    let fewer = matches!((now.tokens, before.tokens), (Some(now), Some(then)) if now < then);
+    less(now.dollars, before.dollars) || fewer
 }
 
 /// The role whose session works in `order`'s station.

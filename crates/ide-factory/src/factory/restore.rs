@@ -46,11 +46,8 @@ impl Factory {
         let mut problems = Vec::new();
         for (index, text) in logs.iter().enumerate() {
             let read = read(text);
-            let mut entries = read.entries.into_iter();
-            let order = entries
-                .next()
-                .and_then(|first| Order::create(first.order.clone(), first.at, &first.event).map(|o| (o, first)));
-            let id = order.as_ref().map(|(o, _)| o.id().clone());
+            let order = Order::replay(&read.entries);
+            let id = order.as_ref().map(|o| o.id().clone());
             if read.cut || read.stopped_at.is_some() || order.is_none() {
                 problems.push(RestoreProblem {
                     log: index,
@@ -60,19 +57,12 @@ impl Factory {
                     unreadable: order.is_none(),
                 });
             }
-            let Some((mut order, first)) = order else { continue };
-            order.apply(&first);
-            for entry in entries.filter(|e| e.order == first.order) {
-                order.apply(&entry);
-            }
+            let Some(mut order) = order else { continue };
             order.forget_processes();
             factory.scratch.insert(order.id().clone(), Scratch::default());
             factory.orders.insert(order.id().clone(), order);
         }
-        let mut cx = Cx {
-            now,
-            step: Step::default(),
-        };
+        let mut cx = Cx::new(now);
         factory.reconcile(&mut cx);
         factory.update_lock(&mut cx);
         Restored {

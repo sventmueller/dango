@@ -69,11 +69,10 @@ fn done(app: &mut App, effect: &Effect, result: OpResult) {
 }
 
 fn scanned(app: &mut App, id: &OrderId, scan: SecretScan) {
-    assert!(
-        app.take("scan_outgoing").is_some(),
-        "the outgoing text is scanned first"
-    );
-    app.send(InputKind::Scanned(id.clone(), scan));
+    let Some(Effect::ScanOutgoing { run_id, .. }) = app.take("scan_outgoing") else {
+        panic!("the outgoing text is scanned first")
+    };
+    app.send(InputKind::Scanned(id.clone(), run_id, scan));
 }
 
 fn change() -> OpResult {

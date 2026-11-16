@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::budget::Spend;
 use crate::event::{Action, TargetState};
-use crate::ids::{HunkId, OperationId, OrderId, PromptId, RequestId, SessionKey};
+use crate::ids::{HunkId, OperationId, OrderId, PromptId, RequestId, RunId, SessionKey};
 use crate::routing::RankEntry;
 use crate::station::Role;
 use crate::workflow::WorktreeLocation;
@@ -188,6 +188,8 @@ pub enum Effect {
     ScanSecrets {
         /// The order.
         order: OrderId,
+        /// The run, which the result names.
+        run_id: RunId,
         /// What to scan.
         range: ScanRange,
     },
@@ -207,6 +209,8 @@ pub enum Effect {
     DiffNames {
         /// The order.
         order: OrderId,
+        /// The run, which the result names.
+        run_id: RunId,
         /// The base.
         base: String,
         /// The head.
@@ -216,6 +220,8 @@ pub enum Effect {
     RunGate {
         /// The order.
         order: OrderId,
+        /// The run, which the result names.
+        run_id: RunId,
         /// The gate's index.
         index: usize,
         /// Its name.
@@ -247,10 +253,12 @@ pub enum Effect {
         /// The files copied into the worktree.
         copied: Vec<String>,
     },
-    /// Reverse the hunks the user rejected at G2 in the worktree (C55). Answered by [`crate::InputKind::Rejected`].
+    /// Reverse the hunks the user rejected at G2 in the worktree (C55). Answered by [`crate::InputKind::Done`].
     RejectHunks {
         /// The order.
         order: OrderId,
+        /// The operation.
+        op: OperationId,
         /// The hunks.
         hunks: Vec<HunkId>,
     },
@@ -269,6 +277,8 @@ pub enum Effect {
     CompareDiffs {
         /// The order.
         order: OrderId,
+        /// The run, which the result names.
+        run_id: RunId,
         /// The old base.
         old_base: String,
         /// The head before the merge.
@@ -319,6 +329,8 @@ pub enum Effect {
     ScanOutgoing {
         /// The order.
         order: OrderId,
+        /// The run, which the result names.
+        run_id: RunId,
         /// Everything that goes out, marker included.
         text: String,
     },
@@ -399,8 +411,11 @@ pub enum Effect {
         /// How many orders run, for the activity's reason.
         running: usize,
     },
-    /// Add spending to the daily account across projects, which the app keeps (E168).
+    /// Add spending to the daily account across projects, which the app keeps (E168); not when the order's log
+    /// could not be written, since the order counts the spending again with its next usage report.
     AddToDay {
+        /// The order that spent it.
+        order: OrderId,
         /// The billing service.
         service: Option<String>,
         /// What was spent.
@@ -446,8 +461,9 @@ impl Effect {
             | Effect::CommentIssue { order, .. }
             | Effect::Verify { order, .. }
             | Effect::WriteSpec { order, .. }
-            | Effect::Notify { order, .. } => Some(order),
-            Effect::WakeLock { .. } | Effect::AddToDay { .. } | Effect::Confirm { .. } => None,
+            | Effect::Notify { order, .. }
+            | Effect::AddToDay { order, .. } => Some(order),
+            Effect::WakeLock { .. } | Effect::Confirm { .. } => None,
         }
     }
 }

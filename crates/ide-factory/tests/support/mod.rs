@@ -11,6 +11,7 @@ use ide_factory::event::{BaseRef, OpResult, TurnOutcome};
 use ide_factory::evidence::Manifest;
 use ide_factory::gates::{CommandOutcome, SecretScan, TestCount};
 use ide_factory::input::RefChange;
+use ide_factory::log::{LogEntry, LogFailure, read};
 use ide_factory::options::NewOrder;
 use ide_factory::relevance::{Change, ChangeKind};
 use ide_factory::routing::{Agent, AgentStatus};
@@ -84,6 +85,9 @@ pub(crate) struct App {
     pub(crate) identical: bool,
     /// What verifying an operation after a restart finds.
     pub(crate) verified: VecDeque<Option<OpResult>>,
+    /// Orders whose log cannot be written: their entries do not reach the log, their effects do not run, and the
+    /// factory hears of it, as from the app.
+    pub(crate) unwritable: BTreeSet<OrderId>,
     commits: u64,
     sessions: u64,
 }
@@ -117,6 +121,7 @@ impl App {
             usage: None,
             identical: true,
             verified: VecDeque::new(),
+            unwritable: BTreeSet::new(),
             commits: 0,
             sessions: 0,
         };
@@ -138,20 +143,78 @@ impl App {
         self.wall += ms;
     }
 
+    /// Lets `ms` pass while the Mac sleeps: the app's monotonic clock is `Instant`, which on macOS stands still in
+    /// sleep, so only the wall clock moves.
+    pub(crate) fn sleep_through(&mut self, ms: u64) {
+        self.wall += ms;
+    }
+
     /// Hands the factory one input and keeps what it asks for.
     pub(crate) fn send(&mut self, kind: InputKind) -> ide_factory::Step {
         self.pass(1);
         let step = self.factory.handle(Input::new(self.at(), kind));
-        for entry in &step.log {
-            self.logs
-                .entry(entry.order.clone())
-                .or_default()
-                .push_str(&entry.line());
-        }
-        self.effects.extend(step.effects.iter().cloned());
-        self.pending.extend(step.effects.iter().cloned());
+        let failed = self.write(&step.log);
+        let runs = |e: &&Effect| e.order().is_none_or(|order| !failed.iter().any(|f| f.order == *order));
+        self.effects.extend(step.effects.iter().filter(runs).cloned());
+        self.pending.extend(step.effects.iter().filter(runs).cloned());
         self.refusals.extend(step.refusals.iter().cloned());
+        for failure in failed {
+            self.send(InputKind::LogFailed(failure));
+        }
         step
+    }
+
+    /// Appends `entries` to their logs and tells the factory, except for orders whose log cannot be written.
+    pub(crate) fn write(&mut self, entries: &[LogEntry]) -> Vec<LogFailure> {
+        let mut failed: Vec<LogFailure> = Vec::new();
+        for entry in entries {
+            if self.unwritable.contains(&entry.order) {
+                if !failed.iter().any(|f| f.order == entry.order) {
+                    failed.push(LogFailure {
+                        order: entry.order.clone(),
+                        seq: entry.seq,
+                    });
+                }
+                continue;
+            }
+            let line = entry.line().expect("entries serialise");
+            self.logs.entry(entry.order.clone()).or_default().push_str(&line);
+            self.factory.logged(&entry.order, entry.seq + 1);
+        }
+        failed
+    }
+
+    /// The app after a restart with `rules`: the factory restored from the logs, its first step written.
+    pub(crate) fn restart_with(&self, rules: Rules) -> App {
+        let logs: Vec<String> = self.logs.values().cloned().collect();
+        let restored = Factory::restore(Stage::One, rules, &logs, Stamp::new(5, self.wall + 1000));
+        assert!(restored.problems.is_empty(), "{:?}", restored.problems);
+        let mut next = App::with(restored.factory);
+        next.wall = self.wall + 2000;
+        next.logs = self.logs.clone();
+        next.write(&restored.step.log);
+        next.effects.extend(restored.step.effects.iter().cloned());
+        next.pending.extend(restored.step.effects);
+        next
+    }
+
+    /// Order `id` as its log says, the way a restart finds it before it forgets what only running processes knew.
+    pub(crate) fn replayed(&self, id: &OrderId) -> Order {
+        let read = read(self.logs.get(id).map_or("", String::as_str));
+        assert!(!read.cut && read.stopped_at.is_none(), "the log of {id} reads whole");
+        Order::replay(&read.entries).expect("the log begins with the order's creation")
+    }
+
+    /// Asserts that every order is what its log says: the factory's central promise (E167).
+    pub(crate) fn assert_replays(&self) {
+        for order in self.factory.orders() {
+            assert_eq!(
+                comparable(order),
+                comparable(&self.replayed(order.id())),
+                "order {} as it runs and as its log says",
+                order.id()
+            );
+        }
     }
 
     /// Answers pending effects until only held ones are left.
@@ -239,8 +302,9 @@ impl App {
                 order.clone(),
                 self.refs.pop_front().unwrap_or_default(),
             )),
-            Effect::ScanSecrets { order, .. } => Some(InputKind::Scanned(
+            Effect::ScanSecrets { order, run_id, .. } => Some(InputKind::Scanned(
                 order.clone(),
+                *run_id,
                 self.scans.pop_front().unwrap_or(SecretScan::Clean),
             )),
             Effect::Commit { order, op, .. } => {
@@ -254,16 +318,20 @@ impl App {
                     },
                 })
             }
-            Effect::DiffNames { order, .. } => Some(InputKind::Diff(
+            Effect::DiffNames { order, run_id, .. } => Some(InputKind::Diff(
                 order.clone(),
+                *run_id,
                 self.order_diffs
                     .get(order)
                     .cloned()
                     .or_else(|| self.diffs.pop_front())
                     .unwrap_or_else(|| vec![Change::new("src/lib.rs", ChangeKind::Modified)]),
             )),
-            Effect::RunGate { order, index, .. } => Some(InputKind::GateDone {
+            Effect::RunGate {
+                order, run_id, index, ..
+            } => Some(InputKind::GateDone {
                 order: order.clone(),
+                run_id: *run_id,
                 index: *index,
                 outcome: self.gates.pop_front().unwrap_or_else(passing_gate),
             }),
@@ -273,7 +341,11 @@ impl App {
                 commits: "CSV export".into(),
             }),
             Effect::ReadManifest { order, .. } => Some(InputKind::Manifest(order.clone(), Manifest::default())),
-            Effect::RejectHunks { order, .. } => Some(InputKind::Rejected(order.clone(), Ok(()))),
+            Effect::RejectHunks { order, op, .. } => Some(InputKind::Done {
+                order: order.clone(),
+                op: op.clone(),
+                result: OpResult::Reversed,
+            }),
             Effect::MergeTarget { order, op, .. } => {
                 let (head, tree, base) = self.head_of(order);
                 let result = self.merges.pop_front().unwrap_or(OpResult::Merged {
@@ -288,7 +360,9 @@ impl App {
                     result,
                 })
             }
-            Effect::CompareDiffs { order, .. } => Some(InputKind::Compared(order.clone(), self.identical)),
+            Effect::CompareDiffs { order, run_id, .. } => {
+                Some(InputKind::Compared(order.clone(), *run_id, self.identical))
+            }
             Effect::TakeOver { order, op, .. } => Some(InputKind::Done {
                 order: order.clone(),
                 op: op.clone(),
@@ -392,6 +466,17 @@ impl App {
         let role = order.turn().expect("a turn runs").role();
         order.session(role).expect("a session").session().clone()
     }
+}
+
+/// What of `order` its log holds: everything but what only the running session showed of its turn.
+pub(crate) fn comparable(order: &Order) -> serde_json::Value {
+    let mut value = serde_json::to_value(order).expect("orders serialise");
+    if let Some(turn) = value.get_mut("turn").and_then(serde_json::Value::as_object_mut) {
+        for shown in ["watch", "queued", "ended", "answer"] {
+            turn.remove(shown);
+        }
+    }
+    value
 }
 
 /// The serde tag of `effect`, such as `send_prompt`.

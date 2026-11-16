@@ -369,21 +369,8 @@ pub(super) fn verify(
     target: &TargetState,
 ) -> ide_git::Result<Option<OpResult>> {
     Ok(match target {
-        TargetState::WorktreeOn { branch } => {
-            let on = main
-                .worktrees()?
-                .into_iter()
-                .find(|w| w.branch.as_deref().map(short) == Some(short(branch)));
-            match on {
-                Some(worktree) => Some(OpResult::Prepared {
-                    path: worktree.path.to_string_lossy().into_owned(),
-                    tree: tree(main, short(branch))?.unwrap_or_default(),
-                    setup: None,
-                    copied: Vec::new(),
-                }),
-                None => None,
-            }
-        }
+        TargetState::WorktreeReady { branch } => worktree_ready(main, root, order, branch)?,
+        TargetState::HunksReversed { head, hunks } => hunks_reversed(main, root, order, head, hunks)?,
         TargetState::CommitWithTrailer {
             branch,
             parent,
@@ -440,6 +427,86 @@ pub(super) fn verify(
             });
         }
     })
+}
+
+/// Where a prepared worktree keeps its mark: in its administrative folder in the main repository, which goes with the
+/// worktree, so a worktree made again never finds the mark of an earlier one.
+fn prepared_mark(main: &Repos, worktree: &Path) -> ide_git::Result<PathBuf> {
+    Ok(open_in(main, worktree)?.git_dir().join("order-prepared.json"))
+}
+
+/// Marks the worktree at `worktree` as prepared with `prepared`, once its files are copied and its setup ran (E188),
+/// for the check after a restart.
+pub(super) fn mark_prepared(main: &Repos, worktree: &Path, prepared: &OpResult) -> ide_git::Result<()> {
+    let mark = prepared_mark(main, worktree)?;
+    let json = serde_json::to_vec(prepared).map_err(std::io::Error::other)?;
+    std::fs::write(mark, json)?;
+    Ok(())
+}
+
+/// The order's worktree on `branch` as its preparation left it, if it finished; a worktree without the mark was cut
+/// off before its files were copied or its setup ran, and is removed so it is prepared again (C69).
+fn worktree_ready(main: &Repos, root: &Path, order: &OrderId, branch: &str) -> ide_git::Result<Option<OpResult>> {
+    let on = main
+        .worktrees()?
+        .into_iter()
+        .find(|w| w.branch.as_deref().map(short) == Some(short(branch)));
+    let Some(worktree) = on else { return Ok(None) };
+    let marked = std::fs::read(prepared_mark(main, &worktree.path)?)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<OpResult>(&bytes).ok());
+    match marked {
+        Some(OpResult::Prepared { setup, copied, .. }) => Ok(Some(OpResult::Prepared {
+            path: worktree.path.to_string_lossy().into_owned(),
+            tree: tree(main, short(branch))?.unwrap_or_default(),
+            setup,
+            copied,
+        })),
+        _ => {
+            let path = worktree.path.to_string_lossy();
+            if let OpResult::Failed { detail } = remove_worktree(main, root, order, &path, branch, false) {
+                return Err(ide_git::Error::Unexpected { what: detail });
+            }
+            Ok(None)
+        }
+    }
+}
+
+/// Whether the order's worktree at `head` has the rejected hunks reversed in every file they touch; a reversal cut
+/// off part way is undone, since doing it again counts the hunks anew (C55).
+fn hunks_reversed(
+    main: &Repos,
+    root: &Path,
+    order: &OrderId,
+    head: &str,
+    hunks: &[ide_factory::HunkId],
+) -> ide_git::Result<Option<OpResult>> {
+    let Some(tree) = tree_of(root, order).filter(|t| t.path.is_dir()) else {
+        return Ok(None);
+    };
+    let copy = open_in(main, &tree.path)?;
+    if copy.head()?.map(|c| c.to_string()).as_deref() != Some(head) {
+        return Err(ide_git::Error::Unexpected {
+            what: format!("the worktree of {order} is no longer at {head}"),
+        });
+    }
+    let mut paths: Vec<PathBuf> = hunks
+        .iter()
+        .filter_map(|hunk| hunk.0.rsplit_once('#').map(|(path, _)| PathBuf::from(path)))
+        .collect();
+    paths.sort();
+    paths.dedup();
+    let mut changed = 0;
+    for path in &paths {
+        if !copy.diff_since(head, std::slice::from_ref(path))?.is_empty() {
+            changed += 1;
+        }
+    }
+    if changed == paths.len() {
+        return Ok(Some(OpResult::Reversed));
+    }
+    copy.discard(&paths)?;
+    Ok(None)
 }
 
 /// The diff of the order and the messages of its commits since `base`, for the reviewer (E179).

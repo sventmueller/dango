@@ -8,7 +8,7 @@ use serde::Serialize;
 
 mod apply;
 
-use crate::budget::{Metering, Spend};
+use crate::budget::{Metering, Spend, UsageReport};
 use crate::criteria::Criterion;
 use crate::event::{Action, BaseRef, Event, OrderOptions, Phase, PromptKind, TurnOutcome};
 use crate::evidence::{Deviation, Evidence, GateRecord, ManifestEntry, Provenance, StationCost};
@@ -174,6 +174,7 @@ pub struct Order {
     role_spend: BTreeMap<Role, Spend>,
     role_runtime: BTreeMap<Role, u64>,
     metering: Metering,
+    usage: BTreeMap<Role, UsageReport>,
     ops: BTreeMap<OperationId, Action>,
     request: Option<RequestId>,
     waiting_since: Option<Stamp>,
@@ -259,6 +260,7 @@ impl Order {
             role_spend: BTreeMap::new(),
             role_runtime: BTreeMap::new(),
             metering: Metering::default(),
+            usage: BTreeMap::new(),
             ops: BTreeMap::new(),
             request: None,
             waiting_since: None,
@@ -280,6 +282,19 @@ impl Order {
             publication: None,
             seq: 1,
         })
+    }
+
+    /// The order as its log's `entries` say, the way a restart finds it before it forgets what only running processes
+    /// knew; `None` when they do not begin with its creation. Entries of other orders are passed over.
+    pub fn replay<'a>(entries: impl IntoIterator<Item = &'a LogEntry>) -> Option<Order> {
+        let mut entries = entries.into_iter();
+        let first = entries.next()?;
+        let mut order = Order::create(first.order.clone(), first.at, &first.event)?;
+        order.apply(first);
+        for entry in entries.filter(|e| e.order == first.order) {
+            order.apply(entry);
+        }
+        Some(order)
     }
 
     /// The log entry for `event` at `at`, applied to the order.
@@ -339,9 +354,9 @@ impl Order {
         self.retry_due = self.retry_due.map(|due| due.after(ms));
     }
 
-    /// Forgets the running turn, whose prompt was never sent.
-    pub(crate) fn drop_turn(&mut self) {
-        self.turn = None;
+    /// Pauses the order without a log entry, because its log cannot be written; a restart finds it as its log says.
+    pub(crate) fn pause_unlogged(&mut self, reason: crate::station::PauseReason) {
+        self.condition = Condition::Paused(reason);
     }
 
     /// Forgets what only a running process knew: the turn, its timers, and which sessions are alive (E167).
@@ -351,6 +366,11 @@ impl Order {
         for slot in self.sessions.values_mut() {
             slot.alive = false;
         }
+    }
+
+    /// The place of its next log entry.
+    pub(crate) fn seq(&self) -> u64 {
+        self.seq
     }
 
     /// The next prompt id.
@@ -673,6 +693,11 @@ impl Order {
     /// Which units could be counted.
     pub fn metering(&self) -> Metering {
         self.metering
+    }
+
+    /// The last usage report of `role`'s thread that its spending was counted up to.
+    pub fn usage_counted(&self, role: Role) -> Option<&UsageReport> {
+        self.usage.get(&role)
     }
 
     /// The request a session waits on.

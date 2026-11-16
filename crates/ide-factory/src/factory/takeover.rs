@@ -178,7 +178,8 @@ impl Factory {
         let Some(action) = order.open_ops().get(&op).cloned() else {
             return;
         };
-        let awaited = phase_op(order.phase()) == Some(&op);
+        let awaited = phase_op(order.phase()) == Some(&op)
+            || matches!((order.phase(), &action), (Phase::Rejecting, Action::RejectHunks { .. }));
         self.emit(
             cx,
             id,
@@ -218,6 +219,9 @@ impl Factory {
             }
             (Action::Commit { .. }, OpResult::Committed { .. } | OpResult::NothingToCommit) => {
                 self.after_commit(cx, id)
+            }
+            (Action::RejectHunks { .. }, _) => {
+                self.commit(cx, id, "Leave out the hunks rejected at acceptance".into());
             }
             (Action::MergeTarget { .. }, result) => self.merged(cx, id, result),
             (Action::TakeOver { .. }, OpResult::TakenOver { .. }) => self.cleanup_next(cx, id, false),
@@ -270,8 +274,10 @@ impl Factory {
                     return;
                 };
                 self.set_phase(cx, id, Phase::Comparing);
+                let run_id = self.start_run(id);
                 cx.effect(Effect::CompareDiffs {
                     order: id.clone(),
+                    run_id,
                     old_base,
                     old_head,
                     new_base: base,
@@ -320,7 +326,8 @@ impl Factory {
         self.advance(cx, id);
     }
 
-    /// Reverses the hunks the user rejected at G2 (C55).
+    /// Reverses the hunks the user rejected at G2 (C55), as an operation a restart verifies: done twice, it would
+    /// reverse hunks the first run left in place.
     pub(super) fn reject_hunks(&mut self, cx: &mut Cx, id: &OrderId) {
         let Some(order) = self.orders.get(id) else { return };
         let Some(hunks) = self.rejected_hunks(order) else {
@@ -328,9 +335,18 @@ impl Factory {
             self.advance(cx, id);
             return;
         };
-        self.set_phase(cx, id, Phase::Rejecting);
+        let head = order
+            .head()
+            .map_or_else(|| order.base().commit.clone(), |(c, _)| c.to_string());
+        let op = order.next_op();
+        let action = Action::RejectHunks {
+            head,
+            hunks: hunks.clone(),
+        };
+        self.begin(cx, id, action, Phase::Rejecting);
         cx.effect(Effect::RejectHunks {
             order: id.clone(),
+            op,
             hunks,
         });
     }
@@ -338,25 +354,6 @@ impl Factory {
     /// The hunks of the last partial acceptance, from the log.
     fn rejected_hunks(&self, order: &Order) -> Option<Vec<crate::ids::HunkId>> {
         order.rejected().filter(|h| !h.is_empty()).map(<[_]>::to_vec)
-    }
-
-    /// The rejected hunks are reversed: the new state is committed, its evidence is void, and the review runs again
-    /// (C55).
-    pub(super) fn rejected(&mut self, cx: &mut Cx, id: &OrderId, result: Result<(), String>) {
-        if self.orders.get(id).map(Order::phase) != Some(&Phase::Rejecting) {
-            return;
-        }
-        match result {
-            Ok(()) => self.commit(cx, id, "Leave out the hunks rejected at acceptance".into()),
-            Err(detail) => self.fail(
-                cx,
-                id,
-                FailReason::Effect {
-                    effect: "reject hunks".into(),
-                    detail,
-                },
-            ),
-        }
     }
 
     /// After a restart: an operation's target state holds (it happened) or not (it is done again).
@@ -372,6 +369,8 @@ impl Factory {
         let running = *order.condition() == Condition::Running || *order.condition() == Condition::Aborted;
         match reached {
             Some(result) if running => self.done(cx, id, op, result),
+            // Left open, so resuming verifies it again and goes on to commit the reversal.
+            Some(_) if matches!(action, Action::RejectHunks { .. }) => {}
             Some(result) => {
                 self.emit(cx, id, Event::Finished { op, result });
                 let next = if matches!(action, Action::Commit { .. }) {
@@ -416,13 +415,13 @@ fn entered_take_over(order: &Order) -> Option<crate::time::Stamp> {
         .map(|v| v.at)
 }
 
-/// Where an order goes on when `action` did not happen: a commit is preceded by its secrets scan, everything else
-/// follows from the station.
+/// Where an order goes on when `action` did not happen: a commit is preceded by its secrets scan, rejected hunks are
+/// reversed, everything else follows from the station.
 pub(super) fn redo_phase(action: &Action) -> Phase {
-    if matches!(action, Action::Commit { .. }) {
-        Phase::TurnScan
-    } else {
-        Phase::Idle
+    match action {
+        Action::Commit { .. } => Phase::TurnScan,
+        Action::RejectHunks { .. } => Phase::Rejecting,
+        _ => Phase::Idle,
     }
 }
 
@@ -431,6 +430,7 @@ fn action_name(action: &Action) -> &'static str {
     match action {
         Action::PrepareWorktree { .. } => "prepare worktree",
         Action::Commit { .. } => "commit",
+        Action::RejectHunks { .. } => "reject hunks",
         Action::MergeTarget { .. } => "merge target",
         Action::TakeOver { .. } => "take over",
         Action::RemoveCheckpoints { .. } => "remove checkpoints",

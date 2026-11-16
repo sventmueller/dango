@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 use crate::budget::{DailyAccount, UsageReport};
 use crate::event::{BaseRef, OpResult, TurnOutcome};
 use crate::gates::{CommandOutcome, SecretScan};
-use crate::ids::{HunkId, OperationId, OrderId, PromptId, RequestId, SessionKey};
+use crate::ids::{HunkId, OperationId, OrderId, PromptId, RequestId, RunId, SessionKey};
+use crate::log::LogFailure;
 use crate::options::{NewOrder, OptionChange};
 use crate::quota::QuotaObservation;
 use crate::relevance::Change;
@@ -259,16 +260,18 @@ pub enum InputKind {
     },
     /// The agent configuration is frozen at `dir`, or freezing failed.
     Frozen(OrderId, Result<String, String>),
-    /// The secrets scan's result.
-    Scanned(OrderId, SecretScan),
+    /// The result of the secrets scan of a run.
+    Scanned(OrderId, RunId, SecretScan),
     /// The ref watch's changes.
     Refs(OrderId, Vec<RefChange>),
-    /// The diff's paths.
-    Diff(OrderId, Vec<Change>),
+    /// The diff's paths, listed by a run.
+    Diff(OrderId, RunId, Vec<Change>),
     /// A gate command ended.
     GateDone {
         /// The order.
         order: OrderId,
+        /// The run.
+        run_id: RunId,
         /// Its index.
         index: usize,
         /// What it did.
@@ -285,12 +288,10 @@ pub enum InputKind {
     },
     /// The manifest of inputs outside the tree (C69).
     Manifest(OrderId, crate::evidence::Manifest),
-    /// The rejected hunks were reversed, or reversing failed.
-    Rejected(OrderId, Result<(), String>),
-    /// Whether the diff against the new base is byte for byte the old one (C56).
-    Compared(OrderId, bool),
+    /// Whether the diff against the new base is byte for byte the old one (C56), as a run compared them.
+    Compared(OrderId, RunId, bool),
     /// The step's log could not be written for this order, so none of its effects ran (E167).
-    LogFailed(OrderId),
+    LogFailed(LogFailure),
     /// The Mac goes to sleep (E168).
     Sleep,
     /// The Mac woke up.
