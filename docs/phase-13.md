@@ -127,8 +127,10 @@ beschrieben, gilt so, wie es hier steht:
   - Zeilen von Auftrags-Worktrees im Git-Panel bieten auch „Thread öffnen“ nicht an: Es öffnete einen normalen Thread,
     der unprotokolliert im Worktree des Auftrags schreiben könnte.
   - Der Ort der Worktrees ist noch nicht wählbar (E188); sie liegen im Datenordner der App.
-- **Git ohne Hooks (E192):** `core.hooksPath=/dev/null` wie schon bei den Checkpoints, dazu `core.fsmonitor=false` und
-  ein leerer `credential.helper`.
+- **Git ohne Hooks (E192):** `core.hooksPath=/dev/null` wie schon bei den Checkpoints, dazu `core.fsmonitor=false`,
+  ein leerer `credential.helper`, keine Remotes, keine Signaturen, keine Editoren und keine automatische Wartung. Der
+  Orchestrator findet einen Worktree über die Einträge `worktrees/*/gitdir` des gemeinsamen Git-Ordners, nie über die
+  `.git`-Datei im Worktree, und gibt jedem Aufruf `GIT_DIR` und `GIT_WORK_TREE` mit (`Git::bound_to`).
 - **Netz (E173, E187):** `sandbox-exec` filtert nicht nach Domains. Gates und der eigene Agent haben das Netz ganz an oder
   ganz aus; eine Liste von Domains lehnen Codex und der eigene Agent ab. Nur Claude setzt die Liste über seinen
   Netz-Proxy durch. Lokales TCP ist in Gates aus, bis die Workflow-Datei es erlaubt.
@@ -149,8 +151,9 @@ beschrieben, gilt so, wie es hier steht:
   Text ab.
 - **Ausnahme für Git im eigenen Worktree (E173, C47):** noch nicht umgesetzt. Der eigene Agent fragt weiter bei
   zerstörerischem Git, und die Regel des Auftrags lehnt dann ab.
-- **Ende eines Zugs (E189):** Ein Ergebnis, das kommt, während Subagenten oder Nachrichten der Warteschlange noch laufen,
-  wartet auf sie.
+- **Ende eines Zugs (E189):** Ein Ergebnis, das kommt, während Subagenten, Hintergrundarbeit oder Nachrichten der
+  Warteschlange noch laufen, wartet auf sie, höchstens bis zur Grenze des Zugs (60 min); dann werden die Reste
+  gestoppt und protokolliert.
   - Endet der Prozess bei offenem Zug ohne Fehler oder Abbruch im Thread, ist das Ergebnis „Verbindung verloren“.
   - Bei OpenCode entscheiden `time.busy` und `time.idle` der Sitzung, ob der Zug noch läuft (C62).
 - **Checkpoint:** Scheitert er in einem Auftrag, scheitert der Zug, ohne dass der Prompt hinausgeht.
@@ -319,6 +322,71 @@ beschrieben, gilt so, wie es hier steht:
   - der Eingang aus Issues im Leitstand selbst (nur über das CI-Panel);
   - Lese-Wurzeln für Codex (hängt an Codex' Protokoll, A21);
   - ein Selbsttest für das Senden (braucht Stellvertreter für die POST-Aufrufe und ein Remote auf ein lokales Bare-Repo).
+- **Korrekturen nach dem Review vom 2026-11-16:** Was hier steht, gilt vor dem Text weiter unten.
+  - **Gate-Sandbox (E187, C50):**
+    - Schreiben in `<Ordner>/.git` ist für jeden beschreibbaren Ordner gesperrt.
+    - Mach-Dienste nur aus einer Liste im Code (`MACH_SERVICES`; Namensauflösung, Netzkonfiguration und Zertifikate nur
+      bei eingeschaltetem Netz). Apple Events und LaunchServices sind gesperrt, ebenso der Start von `open`,
+      `launchctl`, `osascript`, `security`, `pbcopy`/`pbpaste`, `screencapture`, `automator` und `shortcuts`.
+    - Lesen: verborgen sind `/Users` außer den erlaubten Pfaden, `/Volumes`, der eigene Ordner unter `/var/folders` und
+      Homebrews `etc` (außer Zertifikaten und der Konfiguration von openssl, clang, rustup und git). In den
+      Werkzeugordnern sind die Dateien mit Zugangsdaten gesperrt (cargo `credentials`, maven `settings*.xml`,
+      `gradle.properties`, `.npmrc`, `.netrc`), im gemeinsamen Git-Ordner `config`, `FETCH_HEAD` und `logs`.
+    - Unix-Sockets nur im eigenen temporären Ordner des Gates und aus der Liste der Workflow-Datei.
+    - Die Ausgabe eines Gates läuft durch gitleaks mit den eingefrorenen Regeln des Auftrags, bevor sie an den Builder
+      oder in den Nachweis geht; Funde werden zu `[secret removed]`, scheitert gitleaks, geht keine Ausgabe weiter.
+    - git innerhalb eines Gates scheitert, weil das Home und die Konfiguration des gemeinsamen Git-Ordners verborgen
+      sind.
+  - **Secrets-Prüfung (C52):** Der Diff liest jede Datei als Text, ohne Attribute, Textconv und externe Diffs; Zeilen
+    mit NUL-Bytes werden auch ohne sie geprüft (UTF-16, Binärdateien).
+  - **Ereignisprotokoll (E167):**
+    - Beim Laden wird ein Log repariert: ein abgerissenes Bruchstück oder eine beschädigte Zeile mit allem danach
+      wandert nach `<Auftrag>.dropped`, ein fehlender Zeilenumbruch wird ergänzt.
+    - Angehängt wird nur, was die Nummerierung des Logs fortsetzt; eine Lücke in der Nummerierung beendet das
+      Wiederherstellen wie eine beschädigte Zeile.
+    - Scheitert das Schreiben, kehrt der Auftrag zum Stand vor dem Schritt zurück und pausiert ohne Eintrag; schon
+      laufende Operationen früherer Schritte bleiben offen. `Dropped` heißt nur noch: Zielzustand nach dem Neustart
+      fehlt.
+    - Ergebnisse von Prüfungen (Diff, Scan, Gate, Vergleich, Scan der ausgehenden Texte) tragen eine Lauf-Id;
+      Ergebnisse anderer Läufe zählen nicht. Ein Operationsergebnis wirkt nur, solange die Phase auf genau diese
+      Operation wartet, und kein Ergebnis bringt einen pausierten Auftrag weiter.
+    - Beim Beenden laufen nur noch Effekte, die Arbeit stoppen oder die Bücher führen; die übrigen bleiben als begonnen
+      im Log für den Neustart.
+  - **Worktree (E188, C69):** Nach Kopieren und Einrichtung schreibt die App eine Marke in den Admin-Ordner des
+    Worktrees; ein Worktree ohne Marke gilt beim Neustart als nicht vorbereitet und wird entfernt und neu angelegt.
+    Entfernt wird ein Worktree unabhängig von seiner `.git`-Datei.
+  - **Einrichtungsbefehl (C67, E190):** läuft erst mit bestätigtem Gate-Satz; er stoppt bei Abbruch, Pause (nicht im
+    Ruhezustand), geschlossenem letzten Fenster und Beenden, und beim Fortsetzen wird der Worktree neu vorbereitet.
+    Ebenso bekommen Sitzungen eine Netzfreigabe erst mit bestätigtem Gate-Satz. Der Bilderordner gehört zum
+    bestätigten Gate-Satz; `~/` wird aufgelöst.
+  - **Mitkopieren (C50):** `"."` und das ganze Repository werden abgelehnt; Dateien mit Zugangsdaten in einem
+    genannten Ordner bleiben draußen, außer sie sind einzeln genannt und bestätigt.
+  - **Abnahme (E164, C55):**
+    - Eine teilweise Abnahme gilt nur für den Tree, der nach dem Verwerfen der Abschnitte entstand; jede Rückkehr in den
+      Bau, neue Befunde oder eine andere Invalidierung heben sie auf. Die Übernahme verlangt eine Abnahme, die dem
+      aktuellen Fingerabdruck entspricht.
+    - „Abnehmen und Branch behalten“ und „Abnehmen und Merge Request“ verwerfen abgewählte Abschnitte wie „Abnehmen“.
+    - Abschnitte heißen `Pfad#<Hash aus Lage und Zeilen>`; die Liste wird neu gelesen, wenn sich der Diff ändert, und
+      ein Verwerfen, das nicht mehr passt, verwirft nichts. Das Verwerfen ist eine Operation mit Prüfung beim Neustart.
+  - **Gates bei geänderten Regeln:** Ein Gate gilt als gelaufen nach Name und Befehl, nicht nach Position; der
+    Nachweis bindet nur Ergebnisse, die zu den aktuellen Regeln passen.
+  - **Fenster (E166, E23):** Ein Auftrag, der ohne offenes Fenster entsteht, beginnt pausiert. „Laufende Aufträge“
+    beim Schließen des letzten Fensters, beim Ersetzen des Ordners und beim Beenden sind alle nach dem Eingang, nicht
+    nur arbeitende Sitzungen.
+  - **Merge-Queue (B45b):** Ein Auftrag, der wartet, pausiert oder scheitert, gibt seinen Platz ab und reiht sich beim
+    Weitermachen neu ein; die Queue prüft nach jeder Eingabe, wer gehen darf.
+  - **Grenzen (E168, R11):** Die 20 Züge und die 70-%-Regel gelten je Besuch einer Station. Der Tag des
+    Tageskontos endet um lokale Mitternacht; die Factory beginnt den neuen Tag selbst und setzt Aufträge fort, die
+    für das Budget des Vortags pausierten. Die monotone Uhr steht im Ruhezustand.
+  - **Verbrauch:** `Spent` nennt den Bericht, bis zu dem gezählt wurde, `SessionStarted`, ob der Thread fortgesetzt
+    wurde; ein fortgesetzter Thread zählt nichts doppelt.
+  - **Klassifizierung:** Alle Muster gelten ohne Rücksicht auf Groß- und Kleinschreibung, auch beim Einfrieren der
+    Agenten-Konfiguration.
+  - **Sitzungen (E165):** Die Registry stoppt eine Sitzung, der niemand mehr folgt. Eine Sitzung startet nur, solange
+    ihr Auftrag genau auf sie wartet und die App nicht beendet wird.
+  - **Einstellungen (E183):** Ein leeres Budget im Projekt lässt die Vorgabe gelten; „kein Limit“ gibt es nur, wo die
+    Vorgabe keines setzt. Gespeichert wird nur, was der Nutzer geändert hat, auch wenn die Workflow-Datei Fehler hat.
+  - **G1 (B46):** „Freigeben“ mit nicht gesendeten Kommentaren fragt nach.
 
 ## Stufe 1 — Ein Auftrag
 
@@ -339,8 +407,8 @@ beschrieben, gilt so, wie es hier steht:
     erfolgreich, gescheitert, vom Nutzer abgebrochen, Verbindung verloren. `Idle` allein unterscheidet das nicht.
   - **Lücken im Ereignisstrom** *(C62)*:
     - Reißt der Strom eines Wegs ab, meldet der Treiber die Lücke; der SSE-Strom von OpenCode etwa ist flüchtig.
-    - Vor dem nächsten Schritt gleicht er Nachrichten, offene Anfragen und Verbrauch mit dem Server ab.
-    - Gelingt das nicht, pausiert der Auftrag.
+    - Lücken gibt es nur bei OpenCode, und OpenCode übernimmt keine Aufträge. Eine Nutzersitzung läuft weiter und
+      wird danach abgeglichen; `NeedsPause` meldet nur.
   - **Threading:** Der Treiber lebt auf dem Haupt-Thread wie heute der Tab; die Ereignisse kommen wie heute von den
     Threads der Sitzungen. Den Sprung auf den Haupt-Thread reicht die App als Schnittstelle hinein, die Crate kennt
     kein AppKit (E142).

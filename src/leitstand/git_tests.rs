@@ -135,7 +135,7 @@ fn numbered(changed: &[(usize, &str)]) -> String {
 }
 
 /// The names of the hunks of the diff since `base`, as the order tab lists them.
-fn hunk_ids(repos: &Repos, base: &str) -> Vec<ide_factory::HunkId> {
+fn hunk_ids(repos: &Repository, base: &str) -> Vec<ide_factory::HunkId> {
     repos
         .diff_since(base, &[] as &[PathBuf])
         .unwrap()
@@ -240,10 +240,8 @@ fn reversed_hunks_are_found_and_a_reversal_cut_off_part_way_is_undone() {
     let OpResult::Committed { commit: head, .. } = commit(&copy, "order/o-4", &op, "Turn 1", &parent) else {
         panic!("a commit");
     };
-    let hunks = vec![
-        ide_factory::HunkId("a.txt#0".into()),
-        ide_factory::HunkId("b.txt#0".into()),
-    ];
+    let hunks = hunk_ids(&copy, &base);
+    assert_eq!(hunks.len(), 2, "{hunks:?}");
     let action = Action::RejectHunks {
         head: head.clone(),
         hunks: hunks.clone(),
