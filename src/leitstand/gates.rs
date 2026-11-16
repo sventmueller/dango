@@ -1,6 +1,6 @@
 //! Gate and setup commands of orders (E187, C67, C68, F53): `/bin/sh -c` in the order's worktree under the gate
 //! profile of `sandbox-exec`, through the supervisor as `Kind::Gate`, with E186's environment, the run's own
-//! temporary folder, a deadline and an output limit; what the command printed is cut to its end for the builder and
+//! temporary folder and private git folder (`ide_git::GateGitDir`), a deadline and an output limit; what the command printed is cut to its end for the builder and
 //! the evidence (I8), the tests it ran are counted where its tool's summary can be read, and whatever it left in the
 //! worktree fails it. Everything here blocks.
 
@@ -53,30 +53,14 @@ pub(super) fn run(job: &Job, git: Option<&ide_git::Repository>) -> CommandOutcom
     if let Err(error) = std::fs::create_dir_all(&temp) {
         return failed(&error.to_string());
     }
-    let mut writable = vec![job.worktree.clone()];
-    if let Some(images) = &job.images {
-        if let Err(error) = std::fs::create_dir_all(images) {
-            return failed(&error.to_string());
-        }
-        writable.push(images.clone());
+    if let Some(images) = &job.images
+        && let Err(error) = std::fs::create_dir_all(images)
+    {
+        return failed(&error.to_string());
     }
-    let mut readable = job.dependencies.clone();
-    readable.extend(job.common_dir.iter().cloned());
-    let mut profile = Profile::gate(&writable, &temp, &ide_core::paths::home())
-        .readable(&readable)
-        .unreadable(&remote_records(job.common_dir.as_deref()));
-    if !job.run.network.is_empty() {
-        profile = profile.network(Network::On);
-    }
-    let sockets: Vec<PathBuf> = job.run.sockets.iter().map(PathBuf::from).collect();
-    profile = profile.sockets(&sockets);
-    let mut env = job.env.clone();
-    env.extend(job.run.env.iter().map(|(k, v)| (k.clone(), v.clone())));
-    env.retain(|(name, _)| name != "TMPDIR");
-    env.push(("TMPDIR".into(), temp.to_string_lossy().into_owned()));
-    if let Some(images) = &job.images {
-        env.push((IMAGES_VARIABLE.into(), images.to_string_lossy().into_owned()));
-    }
+    let private = git.and_then(|repo| private_git(repo, &job.folder.join("git")));
+    let profile = profile(job, &temp, private.as_ref());
+    let env = environment(job, &temp, private.as_ref());
     let gate = Gate {
         supervisor: Supervisor::global(),
         env: &env,
@@ -95,6 +79,9 @@ pub(super) fn run(job: &Job, git: Option<&ide_git::Repository>) -> CommandOutcom
         &job.label,
     );
     let _ = std::fs::remove_dir_all(&temp);
+    if let Some(private) = private {
+        let _ = private.remove();
+    }
     let Ok(outcome) = ran else {
         return ran
             .err()
@@ -113,6 +100,51 @@ pub(super) fn run(job: &Job, git: Option<&ide_git::Repository>) -> CommandOutcom
         duration_ms: u64::try_from(outcome.took.as_millis()).unwrap_or(u64::MAX),
         excerpt: without_secrets(excerpt(&output), &job.env, &job.rules),
         images: job.images.as_deref().map(pictures).unwrap_or_default(),
+    }
+}
+
+/// The gate profile for `job` with its temporary folder `temp`: writing in the worktree, the pictures' folder and the
+/// private git folder; reading the path dependencies and the shared git folder except its records of remotes.
+fn profile(job: &Job, temp: &Path, private: Option<&ide_git::GateGitDir>) -> Profile {
+    let mut writable = vec![job.worktree.clone()];
+    writable.extend(job.images.iter().cloned());
+    writable.extend(private.map(|private| private.folder().to_path_buf()));
+    let mut readable = job.dependencies.clone();
+    readable.extend(job.common_dir.iter().cloned());
+    let mut profile = Profile::gate(&writable, temp, &ide_core::paths::home())
+        .readable(&readable)
+        .unreadable(&remote_records(job.common_dir.as_deref()));
+    if !job.run.network.is_empty() {
+        profile = profile.network(Network::On);
+    }
+    let sockets: Vec<PathBuf> = job.run.sockets.iter().map(PathBuf::from).collect();
+    profile.sockets(&sockets)
+}
+
+/// E186's environment with the run's own variables, then the temporary folder `temp`, the pictures' folder and the
+/// variables that point git at the private git folder, which the run's variables cannot replace.
+fn environment(job: &Job, temp: &Path, private: Option<&ide_git::GateGitDir>) -> Vec<(String, String)> {
+    let mut env = job.env.clone();
+    env.extend(job.run.env.iter().map(|(k, v)| (k.clone(), v.clone())));
+    let mut own = vec![("TMPDIR".to_string(), temp.to_string_lossy().into_owned())];
+    if let Some(images) = &job.images {
+        own.push((IMAGES_VARIABLE.into(), images.to_string_lossy().into_owned()));
+    }
+    own.extend(private.map(ide_git::GateGitDir::environment).unwrap_or_default());
+    env.retain(|(name, _)| !own.iter().any(|(set, _)| set == name));
+    env.extend(own);
+    env
+}
+
+/// The private git folder of a run in `folder`; without it git inside the gate fails, as the shared git folder's
+/// configuration is unreadable there.
+fn private_git(repo: &ide_git::Repository, folder: &Path) -> Option<ide_git::GateGitDir> {
+    match ide_git::GateGitDir::build(repo, folder) {
+        Ok(private) => Some(private),
+        Err(error) => {
+            ide_core::diag::report("making a gate's private git folder", error);
+            None
+        }
     }
 }
 

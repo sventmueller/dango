@@ -12,7 +12,8 @@
 //! For the orchestrator of work orders (phase 13) there are also: [`Git::unattended`], git without the repository's
 //! hooks, with a given environment and a deadline (E192); [`Repository::ref_snapshot`] for the ref watch (E173);
 //! [`Git::scan_text_frozen`], the secrets check with rules frozen from the user's working copy (C52);
-//! [`Repository::full_diff`], [`Repository::changes_between`] and [`Repository::branch_head`] to compare and verify.
+//! [`Repository::full_diff`], [`Repository::changes_between`] and [`Repository::branch_head`] to compare and verify;
+//! [`GateGitDir`], the private git folder git inside a gate's sandbox reads instead of the repository's (E187).
 //!
 //! git runs code a repository controls — hooks, `core.fsmonitor`, filters from its configuration — so callers use this
 //! crate only in folders the user trusts (E22). The crate does not check that itself; the project's trust decision
@@ -35,6 +36,7 @@ mod error;
 #[cfg(feature = "fuzzing")]
 #[doc(hidden)]
 pub mod fuzzing;
+mod gate_dir;
 mod history;
 mod hooks;
 mod id;
@@ -65,6 +67,7 @@ pub use commit::CommitOptions;
 pub use destructive::Destructive;
 pub use diff::{Change, DiffSource, FileDiff, Hunk, Line, LineKind};
 pub use error::{Error, Result};
+pub use gate_dir::GateGitDir;
 pub use history::CommitChanges;
 pub use id::CommitId;
 pub use integrate::ChangedFile;

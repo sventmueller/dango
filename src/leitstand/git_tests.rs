@@ -372,3 +372,95 @@ fn a_line_with_nul_bytes_is_also_read_without_them_and_in_its_pieces() {
         ["\u{1}\u{2}token = x", "\u{1}\u{2}", "token = x"].map(String::from)
     );
 }
+
+/// The value after `name=` on its own line of `output`.
+fn printed<'a>(output: &'a str, name: &str) -> Option<&'a str> {
+    output
+        .lines()
+        .find_map(|line| line.strip_prefix(name)?.strip_prefix('='))
+}
+
+#[test]
+fn git_inside_a_gate_reads_a_private_copy_of_the_repository_and_none_of_its_configuration() {
+    let (scratch, root, repos) = repository("gate-git");
+    let order = OrderId("o-10".into());
+    let tree = make_worktree(&repos, &root, &order, "order/o-10", "main").unwrap();
+    std::fs::write(tree.path.join(".gitattributes"), "*.txt filter=leak\n").unwrap();
+    raw(&tree.path, &["add", ".gitattributes"]);
+    raw(&tree.path, &["commit", "--quiet", "-m", "second"]);
+    std::fs::write(tree.path.join("a.txt"), "changed\n").unwrap();
+    let pictures = scratch.join("pictures");
+    let marker = pictures.join("filtered");
+    raw(
+        &root,
+        &["config", "remote.origin.url", "https://token@example.org/shop.git"],
+    );
+    raw(
+        &root,
+        &[
+            "config",
+            "filter.leak.clean",
+            &format!("touch '{}'; cat", marker.display()),
+        ],
+    );
+    std::fs::create_dir_all(&pictures).unwrap();
+    raw(&tree.path, &["diff", "--stat", "HEAD"]);
+    assert!(marker.exists(), "the planted filter runs for the repository's own git");
+    std::fs::remove_file(&marker).unwrap();
+
+    let copy = open_in(&repos, &tree.path).unwrap();
+    let head = copy.head().unwrap().unwrap().to_string();
+    let script = "echo head=$(git rev-parse HEAD); echo status=$(git status --porcelain); \
+                  echo diff=$(git diff --name-only HEAD); echo subject=$(git log -1 --format=%s); \
+                  echo url=$(git config --get remote.origin.url); \
+                  git update-ref refs/heads/x HEAD && echo updated=yes; \
+                  git commit --quiet -am gate && echo committed=yes";
+    let job = crate::leitstand::gates::Job {
+        run: ide_factory::effect::SandboxRun {
+            command: script.into(),
+            env: std::collections::BTreeMap::new(),
+            network: Vec::new(),
+            sockets: Vec::new(),
+            deadline_ms: 60_000,
+            output_limit: 1 << 20,
+        },
+        worktree: tree.path.clone(),
+        folder: scratch.join("run"),
+        images: Some(pictures),
+        common_dir: Some(copy.common_dir().to_path_buf()),
+        dependencies: Vec::new(),
+        env: ide_process::order_env::for_orders(&login(&scratch), &[]),
+        rules: ide_git::FrozenRules::default(),
+        label: "gate".into(),
+        cancel: ide_core::Cancel::new(),
+    };
+    let outcome = crate::leitstand::gates::run(&job, Some(&copy));
+    let output = &outcome.excerpt;
+    assert_eq!(outcome.exit, Some(0), "{output}");
+    assert_eq!(printed(output, "head"), Some(head.as_str()), "{output}");
+    assert_eq!(printed(output, "status"), Some(" M a.txt"), "{output}");
+    assert_eq!(printed(output, "diff"), Some("a.txt"), "{output}");
+    assert_eq!(printed(output, "subject"), Some("second"), "{output}");
+    assert_eq!(printed(output, "url"), Some(""), "{output}");
+    assert_eq!(printed(output, "updated"), Some("yes"), "{output}");
+    assert_eq!(printed(output, "committed"), Some("yes"), "{output}");
+    assert!(
+        !marker.exists(),
+        "the filter of the real configuration never ran: {output}"
+    );
+    assert_eq!(repos.resolve("refs/heads/x").unwrap(), None);
+    assert_eq!(
+        copy.head().unwrap().unwrap().to_string(),
+        head,
+        "the order's branch did not move"
+    );
+    assert!(
+        !scratch.join("run/git").exists(),
+        "the private git folder went with the run"
+    );
+    assert_eq!(
+        outcome.left_behind,
+        ["a.txt"],
+        "the gate's commit stayed in its own git folder"
+    );
+}

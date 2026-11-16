@@ -335,8 +335,19 @@ beschrieben, gilt so, wie es hier steht:
     - Unix-Sockets nur im eigenen temporären Ordner des Gates und aus der Liste der Workflow-Datei.
     - Die Ausgabe eines Gates läuft durch gitleaks mit den eingefrorenen Regeln des Auftrags, bevor sie an den Builder
       oder in den Nachweis geht; Funde werden zu `[secret removed]`, scheitert gitleaks, geht keine Ausgabe weiter.
-    - git innerhalb eines Gates scheitert, weil das Home und die Konfiguration des gemeinsamen Git-Ordners verborgen
-      sind.
+    - git innerhalb eines Gates liest einen eigenen Git-Ordner des Laufs (Entscheidung des Owners 2026-11-16,
+      `ide_git::GateGitDir`): Die App legt ihn vor dem Start im Ordner des Laufs an und löscht ihn danach. Er enthält
+      eine Konfiguration nur mit Repository-Format, `objectformat`, `core.hooksPath=/dev/null`,
+      `core.fsmonitor=false` und den `core`-Regeln für den Vergleich mit dem Arbeitsbaum (`ignorecase`,
+      `precomposeunicode`, `filemode`, `symlinks`, `autocrlf`, `eol`), also ohne Remotes, Zugangsdaten, Includes,
+      Filter, Aliase und Signieren; dazu Kopien von HEAD und Index des Worktrees, von `packed-refs`, `refs/` (auch
+      `refs/ide-checkpoints`), `shallow` und `info/exclude`, keine symbolischen Links. Die Objekte kommen als
+      Alternate aus dem gemeinsamen Git-Ordner, kopiert wird keines. Im Gate zeigen `GIT_DIR` und `GIT_WORK_TREE`
+      darauf, `GIT_CONFIG_NOSYSTEM=1`, `GIT_CONFIG_GLOBAL` auf eine Datei nur mit der Identität `Dango gate
+      <gate@invalid>`, `GIT_TERMINAL_PROMPT=0`; die Variablen der Workflow-Datei ersetzen sie nicht. Was git im Gate
+      schreibt (Index, Commits, Refs), bleibt in der Kopie; das echte Repository und der Auftragsbranch ändern sich
+      nicht. Ein Repository mit Refs in reftable bekommt keine Kopie, dort scheitert git im Gate weiter. Kosten: etwa
+      0,1 ms je loser Ref, `packed-refs` und Index als eine Kopie.
   - **Secrets-Prüfung (C52):** Der Diff liest jede Datei als Text, ohne Attribute, Textconv und externe Diffs; Zeilen
     mit NUL-Bytes werden auch ohne sie geprüft (UTF-16, Binärdateien).
   - **Ereignisprotokoll (E167):**
