@@ -5,8 +5,9 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Sel};
 use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
-    NSAccessibility, NSButton, NSColor, NSImageView, NSLayoutAttribute, NSLineBreakMode, NSScrollView, NSStackView,
-    NSTextField, NSUserInterfaceLayoutDirection, NSUserInterfaceLayoutOrientation, NSView, NSWritingDirection,
+    NSAccessibility, NSBox, NSBoxType, NSButton, NSColor, NSImageView, NSLayoutAttribute,
+    NSLayoutConstraintOrientation, NSLineBreakMode, NSScrollView, NSStackView, NSTextField,
+    NSUserInterfaceLayoutDirection, NSUserInterfaceLayoutOrientation, NSView, NSWritingDirection,
 };
 use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize};
 
@@ -82,6 +83,89 @@ pub(crate) fn scrolling(mtm: MainThreadMarker, content: &NSView) -> Retained<NSS
     scroll
 }
 
+/// `content` in a scroll view that starts at its top, centred and as wide as the scroll view up to `max`; nothing in
+/// it holds the window wider than its narrowest parts.
+pub(crate) fn reading(mtm: MainThreadMarker, content: &NSView, max: f64) -> Retained<NSScrollView> {
+    let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(600.0, 400.0));
+    let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
+    scroll.setHasVerticalScroller(true);
+    scroll.setAutohidesScrollers(true);
+    scroll.setDrawsBackground(false);
+    let page = TopDown::new(mtm);
+    page.addSubview(content);
+    content.setTranslatesAutoresizingMaskIntoConstraints(false);
+    page.setTranslatesAutoresizingMaskIntoConstraints(false);
+    scroll.setDocumentView(Some(&page));
+    let clip = scroll.contentView();
+    let fill = content.widthAnchor().constraintEqualToAnchor(&page.widthAnchor());
+    fill.setPriority(490.0);
+    ide_ui_common::util::activate([
+        content.topAnchor().constraintEqualToAnchor(&page.topAnchor()),
+        content.bottomAnchor().constraintEqualToAnchor(&page.bottomAnchor()),
+        content.centerXAnchor().constraintEqualToAnchor(&page.centerXAnchor()),
+        content
+            .leadingAnchor()
+            .constraintGreaterThanOrEqualToAnchor(&page.leadingAnchor()),
+        content.widthAnchor().constraintLessThanOrEqualToConstant(max),
+        fill,
+        page.topAnchor().constraintEqualToAnchor(&clip.topAnchor()),
+        page.leadingAnchor().constraintEqualToAnchor(&clip.leadingAnchor()),
+        page.widthAnchor().constraintEqualToAnchor(&clip.widthAnchor()),
+    ]);
+    scroll
+}
+
+/// Lets every wrapping label in `view` wrap at the room `width` leaves it, so none holds its container wider.
+pub(crate) fn wrap(view: &NSView, width: f64) {
+    let width = width.max(MIN_WRAP);
+    if let Some(field) = view.downcast_ref::<NSTextField>() {
+        if field.cell().is_some_and(|cell| cell.wraps()) {
+            field.setPreferredMaxLayoutWidth(width);
+            field.setContentCompressionResistancePriority_forOrientation(
+                250.0,
+                NSLayoutConstraintOrientation::Horizontal,
+            );
+        }
+        return;
+    }
+    if let Some(stack) = view.downcast_ref::<NSStackView>() {
+        let insets = stack.edgeInsets();
+        let inner = width - insets.left - insets.right;
+        let views = stack.arrangedSubviews();
+        if stack.orientation() == NSUserInterfaceLayoutOrientation::Horizontal {
+            let fixed: f64 = views
+                .iter()
+                .filter(|v| v.downcast_ref::<NSTextField>().is_none() && v.downcast_ref::<NSStackView>().is_none())
+                .map(|v| v.fittingSize().width)
+                .sum();
+            let gaps = stack.spacing() * f64::from(u32::try_from(views.len().saturating_sub(1)).unwrap_or(0));
+            for child in views.iter() {
+                wrap(&child, inner - fixed - gaps);
+            }
+        } else {
+            for child in views.iter() {
+                wrap(&child, inner);
+            }
+        }
+        return;
+    }
+    if let Some(card) = view.downcast_ref::<NSBox>() {
+        if let Some(content) = card.contentView() {
+            wrap(
+                &content,
+                width - 2.0 * card.contentViewMargins().width - 2.0 * card.borderWidth(),
+            );
+        }
+        return;
+    }
+    for child in view.subviews().iter() {
+        wrap(&child, width);
+    }
+}
+
+/// The narrowest a label wraps at, so a very narrow window still shows a few words a line.
+const MIN_WRAP: f64 = 120.0;
+
 /// A label of `text` that wraps at `width`, which the user can select and copy.
 pub(crate) fn text(mtm: MainThreadMarker, text: &str, width: f64) -> Retained<NSTextField> {
     let field = NSTextField::wrappingLabelWithString(&ns(text), mtm);
@@ -116,6 +200,24 @@ pub(crate) fn heading(mtm: MainThreadMarker, words: &str) -> Retained<NSTextFiel
         objc2_app_kit::NSAccessibilityStaticTextRole
     )));
     field
+}
+
+/// A heading inside a section, smaller and grey beside the section's own.
+pub(crate) fn subheading(mtm: MainThreadMarker, words: &str) -> Retained<NSTextField> {
+    let field = label(mtm, words);
+    field.setFont(Some(&style::medium(style::LABEL)));
+    field.setTextColor(Some(&NSColor::secondaryLabelColor()));
+    field.setAccessibilityRole(Some(ide_ui_common::constant!(
+        objc2_app_kit::NSAccessibilityStaticTextRole
+    )));
+    field
+}
+
+/// A thin line between two sections of a tab.
+pub(crate) fn rule(mtm: MainThreadMarker) -> Retained<NSBox> {
+    let line = NSBox::new(mtm);
+    line.setBoxType(NSBoxType::Separator);
+    line
 }
 
 /// A tab's title.

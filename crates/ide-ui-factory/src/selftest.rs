@@ -74,7 +74,7 @@ pub fn save_project(window: Window, state: &Rc<State>) -> bool {
 pub struct OrderSeen {
     /// The texts of its condition line and its body, in their order.
     pub texts: Vec<String>,
-    /// Every button in it with whether it can be pressed.
+    /// Every button in its body and every command of its pull-down, with whether it can be pressed.
     pub buttons: Vec<(String, bool)>,
 }
 

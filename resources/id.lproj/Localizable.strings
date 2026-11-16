@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Biaya dan Durasi";
 "Herkunft" = "Asal-usul";
 "Abschnitte des Diffs" = "Hunk Diff";
-"Der Diff hat noch keine Abschnitte." = "Diff belum memiliki hunk.";
+"Weitere Befehle" = "Perintah lainnya";
+"Noch offen: {}" = "Masih menunggu: {}";
+"Noch nichts: {}" = "Belum ada: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Hunk yang tidak dicentang dibuang saat penerimaan; sisanya menjadi keadaan baru yang diperiksa ulang oleh gerbang dan peninjau.";
 "Neuer Auftrag" = "Order Kerja Baru";
 "Kriterien, eines je Zeile" = "Kriteria, satu per baris";

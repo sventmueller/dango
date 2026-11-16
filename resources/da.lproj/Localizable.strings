@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Omkostninger og køretid";
 "Herkunft" = "Oprindelse";
 "Abschnitte des Diffs" = "Diffens blokke";
-"Der Diff hat noch keine Abschnitte." = "Diffen har endnu ingen blokke.";
+"Weitere Befehle" = "Flere kommandoer";
+"Noch offen: {}" = "Endnu ikke nået: {}";
+"Noch nichts: {}" = "Intet endnu: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "En fravalgt blok kasseres ved accepten; resten bliver til en ny tilstand, som gates og revieweren kontrollerer igen.";
 "Neuer Auftrag" = "Ny arbejdsordre";
 "Kriterien, eines je Zeile" = "Kriterier, ét pr. linje";

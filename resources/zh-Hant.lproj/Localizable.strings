@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "費用和執行時間";
 "Herkunft" = "來源";
 "Abschnitte des Diffs" = "差異的變更區塊";
-"Der Diff hat noch keine Abschnitte." = "差異中尚無變更區塊。";
+"Weitere Befehle" = "更多指令";
+"Noch offen: {}" = "尚未進行：{}";
+"Noch nichts: {}" = "尚無：{}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "取消勾選的變更區塊會在驗收時被捨棄；其餘部分會形成新的狀態，由關卡和審查者重新檢查。";
 "Neuer Auftrag" = "新增工單";
 "Kriterien, eines je Zeile" = "標準，每行一條";

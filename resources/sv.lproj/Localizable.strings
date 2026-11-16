@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Kostnad och körtid";
 "Herkunft" = "Ursprung";
 "Abschnitte des Diffs" = "Diffens ändringsblock";
-"Der Diff hat noch keine Abschnitte." = "Diffen har inga ändringsblock än.";
+"Weitere Befehle" = "Fler kommandon";
+"Noch offen: {}" = "Återstår: {}";
+"Noch nichts: {}" = "Inget ännu: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Ett avmarkerat ändringsblock förkastas vid acceptansen; resten blir ett nytt tillstånd som grindarna och granskaren kontrollerar igen.";
 "Neuer Auftrag" = "Ny arbetsorder";
 "Kriterien, eines je Zeile" = "Kriterier, ett per rad";

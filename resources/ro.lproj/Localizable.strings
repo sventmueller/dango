@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Cost și durată";
 "Herkunft" = "Proveniență";
 "Abschnitte des Diffs" = "Fragmentele diff-ului";
-"Der Diff hat noch keine Abschnitte." = "Diff-ul nu are încă fragmente.";
+"Weitere Befehle" = "Mai multe comenzi";
+"Noch offen: {}" = "Încă înainte: {}";
+"Noch nichts: {}" = "Încă nimic: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Un fragment debifat este eliminat la acceptare; din rest rezultă o stare nouă, pe care controalele și evaluatorul o verifică din nou.";
 "Neuer Auftrag" = "Ordin de lucru nou";
 "Kriterien, eines je Zeile" = "Criterii, câte unul pe linie";

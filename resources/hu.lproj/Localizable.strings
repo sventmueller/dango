@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Költség és futásidő";
 "Herkunft" = "Eredet";
 "Abschnitte des Diffs" = "A különbségek blokkjai";
-"Der Diff hat noch keine Abschnitte." = "A különbségekben még nincsenek blokkok.";
+"Weitere Befehle" = "További parancsok";
+"Noch offen: {}" = "Még hátravan: {}";
+"Noch nichts: {}" = "Még semmi: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "A kijelölésből kivett blokk az elfogadáskor elvész; a többiből új állapot jön létre, amelyet az ellenőrzőpontok és az ellenőr újra ellenőriznek.";
 "Neuer Auftrag" = "Új munkarendelés";
 "Kriterien, eines je Zeile" = "Kritériumok, soronként egy";

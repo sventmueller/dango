@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Coût et durée d’exécution";
 "Herkunft" = "Provenance";
 "Abschnitte des Diffs" = "Blocs du diff";
-"Der Diff hat noch keine Abschnitte." = "Le diff n’a pas encore de blocs.";
+"Weitere Befehle" = "Autres commandes";
+"Noch offen: {}" = "Encore à venir : {}";
+"Noch nichts: {}" = "Rien pour l’instant : {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Un bloc désélectionné est abandonné lors de l’acceptation ; le reste forme un nouvel état, que les contrôles et le relecteur vérifient à nouveau.";
 "Neuer Auftrag" = "Nouvel ordre de travail";
 "Kriterien, eines je Zeile" = "Critères, un par ligne";

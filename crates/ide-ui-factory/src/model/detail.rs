@@ -524,6 +524,16 @@ impl Detail {
         self.accept_block
     }
 
+    /// The command the tab offers as the next step, if one fits where the order stands.
+    pub fn primary(&self) -> Option<Command> {
+        primary(&|c| self.can(c), self.accept_block)
+    }
+
+    /// The commands the tab shows beside the next step; every command stays in its menu.
+    pub fn companions(&self) -> Vec<Command> {
+        companions(&|c| self.can(c), self.accept_block, self.objection.is_some())
+    }
+
     /// The input of G2 with the sections in `rejected` turned down; `None` without evidence.
     pub fn accept(&self, rejected: &BTreeSet<HunkId>) -> Option<InputKind> {
         Some(InputKind::Accept {
@@ -683,6 +693,42 @@ fn merge_branch(order: &Order) -> Option<String> {
     } else {
         None
     }
+}
+
+/// The next step among the commands `can` lets through: the diff while G2 at class high waits for it (R70), else the
+/// first that moves the order on.
+fn primary(can: &dyn Fn(Command) -> bool, accept_block: Option<AcceptBlock>) -> Option<Command> {
+    if accept_block == Some(AcceptBlock::OpenDiffFirst) && can(Command::OpenDiff) {
+        return Some(Command::OpenDiff);
+    }
+    [
+        Command::Approve,
+        Command::Accept,
+        Command::BackToLeitstand,
+        Command::Resume,
+        Command::Continue,
+        Command::Publish,
+        Command::ShowChange,
+        Command::MergeRequest,
+    ]
+    .into_iter()
+    .find(|c| can(*c))
+}
+
+/// The commands beside the next step: G2 with a merge request, the diff and the session, and "Kriterien ändern …"
+/// while the builder objects to the criteria (E178).
+fn companions(can: &dyn Fn(Command) -> bool, accept_block: Option<AcceptBlock>, objection: bool) -> Vec<Command> {
+    let first = primary(can, accept_block);
+    [
+        (Command::ChangeCriteria, objection),
+        (Command::AcceptAsChange, true),
+        (Command::OpenDiff, true),
+        (Command::OpenSession, true),
+    ]
+    .into_iter()
+    .filter(|(command, fits)| *fits && can(*command) && Some(*command) != first)
+    .map(|(command, _)| command)
+    .collect()
 }
 
 /// Whether "Weiter" lets the wait for `reason` pass, as the factory's `Continue` does.
@@ -864,6 +910,52 @@ mod tests {
             assert_eq!(Command::of_tag(command.tag()), Some(command));
         }
         assert_eq!(Command::of_tag(-1), None);
+    }
+
+    #[test]
+    fn the_next_step_is_the_command_that_moves_the_order_on() {
+        let only = |allowed: &'static [Command]| move |c: Command| allowed.contains(&c);
+        let running = only(&[
+            Command::OpenDiff,
+            Command::OpenSession,
+            Command::ChangeCriteria,
+            Command::Abort,
+        ]);
+        assert_eq!(primary(&running, None), None);
+        assert_eq!(
+            companions(&running, None, false),
+            [Command::OpenDiff, Command::OpenSession]
+        );
+        let acceptance = only(&[
+            Command::Accept,
+            Command::AcceptAsChange,
+            Command::KeepBranch,
+            Command::OpenDiff,
+            Command::Abort,
+        ]);
+        assert_eq!(primary(&acceptance, None), Some(Command::Accept));
+        assert_eq!(
+            companions(&acceptance, None, false),
+            [Command::AcceptAsChange, Command::OpenDiff]
+        );
+        let unread = only(&[Command::OpenDiff, Command::Abort]);
+        assert_eq!(
+            primary(&unread, Some(AcceptBlock::OpenDiffFirst)),
+            Some(Command::OpenDiff)
+        );
+        assert!(companions(&unread, Some(AcceptBlock::OpenDiffFirst), false).is_empty());
+        let objected = only(&[
+            Command::Continue,
+            Command::ChangeCriteria,
+            Command::OpenSession,
+            Command::Abort,
+        ]);
+        assert_eq!(primary(&objected, None), Some(Command::Continue));
+        assert_eq!(
+            companions(&objected, None, true),
+            [Command::ChangeCriteria, Command::OpenSession]
+        );
+        assert_eq!(companions(&objected, None, false), [Command::OpenSession]);
     }
 
     #[test]

@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Kustannukset ja kesto";
 "Herkunft" = "Alkuperä";
 "Abschnitte des Diffs" = "Erojen lohkot";
-"Der Diff hat noch keine Abschnitte." = "Eroissa ei ole vielä lohkoja.";
+"Weitere Befehle" = "Lisää komentoja";
+"Noch offen: {}" = "Vielä edessä: {}";
+"Noch nichts: {}" = "Ei vielä mitään: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Valitsematta jätetty lohko hylätään vastaanotossa; lopuista syntyy uusi tila, jonka laatuportit ja katselmoija tarkistavat uudelleen.";
 "Neuer Auftrag" = "Uusi työtilaus";
 "Kriterien, eines je Zeile" = "Kriteerit, yksi riviä kohti";

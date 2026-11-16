@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "עלות וזמן ריצה";
 "Herkunft" = "מקור";
 "Abschnitte des Diffs" = "קטעי ההבדלים";
-"Der Diff hat noch keine Abschnitte." = "אין עדיין קטעים בהבדלים.";
+"Weitere Befehle" = "פקודות נוספות";
+"Noch offen: {}" = "עוד לפנינו: {}";
+"Noch nichts: {}" = "עדיין אין: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "השינויים בקטע שהסימון שלו בוטל נמחקים בעת הקבלה; מהשאר נוצר מצב חדש שהשערים והסוקר בודקים שוב.";
 "Neuer Auftrag" = "הזמנת עבודה חדשה";
 "Kriterien, eines je Zeile" = "קריטריונים, אחד בכל שורה";

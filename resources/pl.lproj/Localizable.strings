@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Koszt i czas działania";
 "Herkunft" = "Pochodzenie";
 "Abschnitte des Diffs" = "Fragmenty różnic";
-"Der Diff hat noch keine Abschnitte." = "Różnice nie mają jeszcze fragmentów.";
+"Weitere Befehle" = "Więcej poleceń";
+"Noch offen: {}" = "Jeszcze przed nami: {}";
+"Noch nichts: {}" = "Jeszcze nic: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Odznaczony fragment zostanie odrzucony przy akceptacji; z reszty powstanie nowy stan, który bramki i recenzent sprawdzą ponownie.";
 "Neuer Auftrag" = "Nowe zlecenie";
 "Kriterien, eines je Zeile" = "Kryteria, po jednym w wierszu";

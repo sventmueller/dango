@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Стоимость и время выполнения";
 "Herkunft" = "Происхождение";
 "Abschnitte des Diffs" = "Фрагменты различий";
-"Der Diff hat noch keine Abschnitte." = "В различиях пока нет фрагментов.";
+"Weitere Befehle" = "Другие команды";
+"Noch offen: {}" = "Ещё впереди: {}";
+"Noch nichts: {}" = "Пока ничего: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Снятый фрагмент при приемке отбрасывается; из остальных получается новое состояние, которое шлюзы и рецензент проверяют заново.";
 "Neuer Auftrag" = "Новый заказ";
 "Kriterien, eines je Zeile" = "Критерии, по одному на строку";

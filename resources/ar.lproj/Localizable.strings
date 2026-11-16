@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "التكلفة ومدة التشغيل";
 "Herkunft" = "المنشأ";
 "Abschnitte des Diffs" = "مقاطع الفروقات";
-"Der Diff hat noch keine Abschnitte." = "لا تحتوي الفروقات على مقاطع بعد.";
+"Weitere Befehle" = "أوامر إضافية";
+"Noch offen: {}" = "لم يُنجز بعد: {}";
+"Noch nichts: {}" = "لا شيء بعد: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "يُتجاهَل المقطع غير المحدد عند القبول؛ وتنشأ من الباقي حالة جديدة تفحصها البوابات والمراجِع مجددًا.";
 "Neuer Auftrag" = "أمر عمل جديد";
 "Kriterien, eines je Zeile" = "المعايير، معيار في كل سطر";

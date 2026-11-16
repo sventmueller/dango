@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "लागत और रनटाइम";
 "Herkunft" = "उद्गम";
 "Abschnitte des Diffs" = "अंतर के हंक";
-"Der Diff hat noch keine Abschnitte." = "अंतर में अभी कोई हंक नहीं है।";
+"Weitere Befehle" = "और कमांड";
+"Noch offen: {}" = "अभी बाकी: {}";
+"Noch nichts: {}" = "अभी कुछ नहीं: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "अचयनित हंक स्वीकृति पर त्याग दिया जाता है; बाकी से एक नई स्थिति बनती है, जिसे गेट और समीक्षक फिर से जाँचते हैं।";
 "Neuer Auftrag" = "नया वर्क ऑर्डर";
 "Kriterien, eines je Zeile" = "मानदंड, हर पंक्ति में एक";

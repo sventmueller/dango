@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Chi phí và thời gian chạy";
 "Herkunft" = "Nguồn gốc";
 "Abschnitte des Diffs" = "Khối thay đổi của khác biệt";
-"Der Diff hat noch keine Abschnitte." = "Khác biệt chưa có khối thay đổi nào.";
+"Weitere Befehle" = "Lệnh khác";
+"Noch offen: {}" = "Còn phía trước: {}";
+"Noch nichts: {}" = "Chưa có gì: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Khối thay đổi bị bỏ chọn sẽ bị loại bỏ khi nghiệm thu; phần còn lại tạo thành một trạng thái mới để cổng kiểm tra và người xem xét kiểm tra lại.";
 "Neuer Auftrag" = "Phiếu công việc mới";
 "Kriterien, eines je Zeile" = "Tiêu chí, mỗi dòng một tiêu chí";

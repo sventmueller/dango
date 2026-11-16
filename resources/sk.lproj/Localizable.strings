@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Náklady a čas behu";
 "Herkunft" = "Pôvod";
 "Abschnitte des Diffs" = "Úseky rozdielov";
-"Der Diff hat noch keine Abschnitte." = "Rozdiely zatiaľ nemajú žiadne úseky.";
+"Weitere Befehle" = "Ďalšie príkazy";
+"Noch offen: {}" = "Ešte čaká: {}";
+"Noch nichts: {}" = "Zatiaľ nič: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Odznačený úsek sa pri prijatí zahodí; zo zvyšku vznikne nový stav, ktorý brány a recenzent znova skontrolujú.";
 "Neuer Auftrag" = "Nová zákazka";
 "Kriterien, eines je Zeile" = "Kritériá, jedno na riadok";

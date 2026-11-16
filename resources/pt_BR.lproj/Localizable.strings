@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Custo e Duração";
 "Herkunft" = "Procedência";
 "Abschnitte des Diffs" = "Blocos do Diff";
-"Der Diff hat noch keine Abschnitte." = "O diff ainda não tem blocos.";
+"Weitere Befehle" = "Mais comandos";
+"Noch offen: {}" = "Ainda pela frente: {}";
+"Noch nichts: {}" = "Nada ainda: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Um bloco desmarcado é descartado na aceitação; o restante forma um novo estado, que os gates e o revisor verificam de novo.";
 "Neuer Auftrag" = "Nova Ordem de Serviço";
 "Kriterien, eines je Zeile" = "Critérios, um por linha";

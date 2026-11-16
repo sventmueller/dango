@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Stroški in čas izvajanja";
 "Herkunft" = "Izvor";
 "Abschnitte des Diffs" = "Odseki razlik";
-"Der Diff hat noch keine Abschnitte." = "Razlike še nimajo odsekov.";
+"Weitere Befehle" = "Več ukazov";
+"Noch offen: {}" = "Še pred nami: {}";
+"Noch nichts: {}" = "Še nič: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Odsek, ki ni izbran, se ob sprejemu zavrže; iz preostanka nastane novo stanje, ki ga kontrole in pregledovalec znova preverijo.";
 "Neuer Auftrag" = "Nov delovni nalog";
 "Kriterien, eines je Zeile" = "Merila, eno na vrstico";

@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Coste y duración";
 "Herkunft" = "Procedencia";
 "Abschnitte des Diffs" = "Fragmentos del diff";
-"Der Diff hat noch keine Abschnitte." = "El diff aún no tiene fragmentos.";
+"Weitere Befehle" = "Más comandos";
+"Noch offen: {}" = "Aún pendiente: {}";
+"Noch nichts: {}" = "Nada todavía: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Un fragmento desmarcado se descarta en la aceptación; el resto forma un nuevo estado que los controles y el revisor vuelven a comprobar.";
 "Neuer Auftrag" = "Nueva orden de trabajo";
 "Kriterien, eines je Zeile" = "Criterios, uno por línea";

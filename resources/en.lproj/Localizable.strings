@@ -2042,7 +2042,9 @@
 "Kosten und Laufzeit" = "Cost and Runtime";
 "Herkunft" = "Provenance";
 "Abschnitte des Diffs" = "Hunks of the Diff";
-"Der Diff hat noch keine Abschnitte." = "The diff has no hunks yet.";
+"Weitere Befehle" = "More Commands";
+"Noch offen: {}" = "Still ahead: {}";
+"Noch nichts: {}" = "Nothing yet: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "An unchecked hunk is discarded on acceptance; the rest becomes a new state that gates and the reviewer check again.";
 "Neuer Auftrag" = "New Work Order";
 "Kriterien, eines je Zeile" = "Criteria, one per line";

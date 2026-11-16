@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "コストと実行時間";
 "Herkunft" = "来歴";
 "Abschnitte des Diffs" = "差分のハンク";
-"Der Diff hat noch keine Abschnitte." = "差分にはまだハンクがありません。";
+"Weitere Befehle" = "その他のコマンド";
+"Noch offen: {}" = "未到達: {}";
+"Noch nichts: {}" = "まだなし: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "選択を外したハンクは検収時に破棄されます。残りから新しい状態が作られ、ゲートとレビュアーが再度検証します。";
 "Neuer Auftrag" = "新規作業指示";
 "Kriterien, eines je Zeile" = "基準（1行に1つ）";

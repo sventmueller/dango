@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "비용 및 실행 시간";
 "Herkunft" = "출처";
 "Abschnitte des Diffs" = "차이점의 헝크";
-"Der Diff hat noch keine Abschnitte." = "차이점에 아직 헝크가 없습니다.";
+"Weitere Befehle" = "추가 명령";
+"Noch offen: {}" = "남은 단계: {}";
+"Noch nichts: {}" = "아직 없음: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "선택 해제한 헝크는 검수 시 폐기되며, 나머지로 새로운 상태가 만들어져 게이트와 검토자가 다시 검사합니다.";
 "Neuer Auftrag" = "새로운 작업 주문";
 "Kriterien, eines je Zeile" = "기준(한 줄에 하나씩)";

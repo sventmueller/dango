@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Maliyet ve Süre";
 "Herkunft" = "Köken";
 "Abschnitte des Diffs" = "Farkın Parçaları";
-"Der Diff hat noch keine Abschnitte." = "Farkta henüz parça yok.";
+"Weitere Befehle" = "Diğer Komutlar";
+"Noch offen: {}" = "Henüz sırada: {}";
+"Noch nichts: {}" = "Henüz yok: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Seçimi kaldırılan parça kabulde atılır; kalanından, geçitlerin ve inceleyicinin yeniden denetlediği yeni bir durum oluşur.";
 "Neuer Auftrag" = "Yeni İş Emri";
 "Kriterien, eines je Zeile" = "Ölçütler, her satıra bir tane";

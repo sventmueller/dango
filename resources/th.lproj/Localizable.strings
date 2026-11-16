@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "ค่าใช้จ่ายและเวลาทำงาน";
 "Herkunft" = "ที่มา";
 "Abschnitte des Diffs" = "ส่วนที่เปลี่ยนแปลงของความแตกต่าง";
-"Der Diff hat noch keine Abschnitte." = "ความแตกต่างยังไม่มีส่วนที่เปลี่ยนแปลง";
+"Weitere Befehle" = "คำสั่งเพิ่มเติม";
+"Noch offen: {}" = "ยังไม่ถึง: {}";
+"Noch nichts: {}" = "ยังไม่มี: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "ส่วนที่เปลี่ยนแปลงที่ไม่ได้เลือกจะถูกละทิ้งเมื่อตรวจรับ ส่วนที่เหลือจะกลายเป็นสถานะใหม่ที่ด่านตรวจและผู้ตรวจทานจะตรวจอีกครั้ง";
 "Neuer Auftrag" = "ใบสั่งงานใหม่";
 "Kriterien, eines je Zeile" = "เกณฑ์ หนึ่งข้อต่อบรรทัด";
