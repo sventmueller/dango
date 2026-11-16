@@ -179,7 +179,9 @@ pub fn merge_base(copy: &Repository, tree: &ThreadTree) -> crate::Result<BaseMer
 /// Removes the order's worktree with whatever it holds, after the checkpoints of its sessions `threads` (E167, C70),
 /// and, if `delete_branch`, its branch; returns how many checkpoints went. The checkpoints are deleted through the
 /// worktree while it is there and through the user's repository `main` once it is gone, after a crash in between;
-/// both see the same refs. Removing an order that was not taken over needs the user's approval (E27).
+/// both see the same refs. The worktree's folder goes once the shared git folder's records name it, whatever its
+/// `.git` says, so a builder cannot stop the cleanup. Removing an order that was not taken over needs the user's
+/// approval (E27).
 pub fn remove(
     main: &Repository,
     tree: &ThreadTree,
@@ -197,11 +199,7 @@ pub fn remove(
     for thread in threads {
         deleted += checkpoints.delete_thread(thread)?;
     }
-    if copy.is_some() {
-        main.destructive().remove_worktree(&tree.path)?;
-    } else {
-        main.prune_worktrees()?;
-    }
+    main.remove_recorded_worktree(&tree.path)?;
     forget(tree);
     if delete_branch && main.resolve(&format!("refs/heads/{}", tree.branch))?.is_some() {
         main.destructive().delete_branch(&tree.branch)?;

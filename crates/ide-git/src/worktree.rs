@@ -60,6 +60,27 @@ impl Repository {
         self.remove_worktree_with(path, false)
     }
 
+    /// Removes the linked working tree at `path` without git reading its `.git`, which a builder may have pointed
+    /// elsewhere (E192): its folder, once the shared git folder's records name it as a worktree, then those records.
+    /// Working trees whose folders are gone are forgotten either way.
+    pub(crate) fn remove_recorded_worktree(&self, path: &Path) -> Result<()> {
+        let recorded = path
+            .canonicalize()
+            .ok()
+            .filter(|root| root.as_path() != self.root())
+            .and_then(|root| self.recorded_git_dir(&root).map(|admin| (root, admin)));
+        if let Some((root, _)) = &recorded {
+            std::fs::remove_dir_all(root)?;
+        }
+        self.prune_worktrees()?;
+        if let Some((_, admin)) = recorded
+            && admin.exists()
+        {
+            std::fs::remove_dir_all(admin)?;
+        }
+        Ok(())
+    }
+
     /// Forgets working trees whose folders are gone.
     pub fn prune_worktrees(&self) -> Result<()> {
         self.git().ok(self.call(["worktree", "prune"])).map(drop)

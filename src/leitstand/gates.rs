@@ -40,6 +40,8 @@ pub(super) struct Job {
     pub(super) dependencies: Vec<PathBuf>,
     /// E186's environment.
     pub(super) env: Vec<(String, String)>,
+    /// The order's gitleaks rules, frozen from the main checkout (C52), which its output is cleaned with.
+    pub(super) rules: ide_git::FrozenRules,
     /// The activity view's name for it.
     pub(super) label: String,
     pub(super) cancel: Cancel,
@@ -109,7 +111,7 @@ pub(super) fn run(job: &Job, git: Option<&ide_git::Repository>) -> CommandOutcom
         tests: count_tests(&output),
         left_behind: git.map(left_behind).unwrap_or_default(),
         duration_ms: u64::try_from(outcome.took.as_millis()).unwrap_or(u64::MAX),
-        excerpt: without_secrets(excerpt(&output), &job.env),
+        excerpt: without_secrets(excerpt(&output), &job.env, &job.rules),
         images: job.images.as_deref().map(pictures).unwrap_or_default(),
     }
 }
@@ -137,15 +139,21 @@ fn remote_records(common_dir: Option<&Path>) -> Vec<PathBuf> {
         .unwrap_or_default()
 }
 
+/// The gitleaks rules a gate's output is cleaned with: the order's frozen ones in `frozen`, or before the order was
+/// frozen, those of the main checkout at `root`, which the builder cannot reach either.
+pub(super) fn rules(frozen: Option<&Path>, root: &Path) -> ide_git::FrozenRules {
+    super::freeze::frozen_rules(frozen.unwrap_or(root))
+}
+
 /// `text` with every line gitleaks finds a secret on replaced by [`REMOVED`], before it reaches the builder, its
-/// vendor and the evidence (C50); withheld whole when the check fails, as it then cannot tell. The rules are gitleaks'
-/// own or those `GITLEAKS_CONFIG` names, never a configuration in the worktree.
-fn without_secrets(text: String, env: &[(String, String)]) -> String {
+/// vendor and the evidence (C50), with the order's frozen `rules`, never a configuration in the worktree; withheld
+/// whole when the check fails, as it then cannot tell.
+fn without_secrets(text: String, env: &[(String, String)], rules: &ide_git::FrozenRules) -> String {
     if text.trim().is_empty() {
         return text;
     }
     let git = ide_git::Git::new(Supervisor::global(), env.to_vec());
-    match git.scan_text_frozen(&text, &ide_git::FrozenRules::default()) {
+    match git.scan_text_frozen(&text, rules) {
         Ok(ide_git::SecretScan::Found(findings)) => removed(&text, &findings),
         Ok(ide_git::SecretScan::Clean | ide_git::SecretScan::NotInstalled) => text,
         Err(error) => format!("[output withheld: the secrets check of it failed: {error}]"),
@@ -330,12 +338,32 @@ mod tests {
         };
         let env = vec![("PATH".to_string(), format!("{dir}:/usr/bin:/bin"))];
         let token = ["ghp_", "1234567890abcdefghij", "ABCDEFGHIJ123456"].concat();
-        let output = format!("running 1 test\nleaked = \"{token}\"\ntest result: ok. 1 passed\n");
-        let cleaned = without_secrets(output, &env);
-        assert!(!cleaned.contains(&token), "{cleaned}");
+        let own = ["ORDER", "_SECRET_", "424242"].concat();
+        let output = format!("running 1 test\nleaked = \"{token}\"\nalso {own}\ntest result: ok. 1 passed\n");
+        let frozen = ide_core::testing::scratch("gate-frozen-rules");
+        std::fs::write(
+            frozen.join(".gitleaks.toml"),
+            "[extend]\nuseDefault = true\n[[rules]]\nid = \"order-secret\"\nregex = '''ORDER_SECRET_[0-9]{6}'''\n",
+        )
+        .unwrap();
+        let rules = crate::leitstand::freeze::frozen_rules(&frozen);
+        let cleaned = without_secrets(output.clone(), &env, &rules);
+        assert!(!cleaned.contains(&token) && !cleaned.contains(&own), "{cleaned}");
         assert!(
             cleaned.contains(REMOVED) && cleaned.contains("test result: ok"),
             "{cleaned}"
+        );
+        let by_default = without_secrets(output.clone(), &env, &ide_git::FrozenRules::default());
+        assert!(
+            by_default.contains(&own),
+            "the order's own rule comes only from its frozen rules: {by_default}"
+        );
+
+        std::fs::write(frozen.join(".gitleaks.toml"), "[[rules]\nnot toml").unwrap();
+        let withheld = without_secrets(output, &env, &rules);
+        assert!(
+            withheld.starts_with("[output withheld") && !withheld.contains(&token),
+            "{withheld}"
         );
     }
 
