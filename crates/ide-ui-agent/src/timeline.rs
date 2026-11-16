@@ -6,7 +6,7 @@
 //! measure text views before they know their width.
 
 use std::cell::{Cell, RefCell};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::SystemTime;
@@ -147,6 +147,9 @@ pub struct Timeline {
     pub(super) positions: RefCell<HashMap<EntryId, usize>>,
     pending: Cell<bool>,
     pending_follow: Cell<bool>,
+    /// The rows whose cards changed while the timeline was hidden, so showing it builds only those again; `None` once
+    /// a change other than an append means rebuilding every card in view.
+    behind: RefCell<Option<BTreeSet<usize>>>,
     figures: RefCell<HashMap<EntryId, Vec<splat_render::js::Key>>>,
     /// The entries of the rows, in their order.
     list: RefCell<Vec<std::sync::Arc<Entry>>>,
@@ -234,6 +237,7 @@ impl Timeline {
             positions: RefCell::new(positions),
             pending: Cell::new(false),
             pending_follow: Cell::new(false),
+            behind: RefCell::new(Some(BTreeSet::new())),
             figures: RefCell::new(HashMap::new()),
             list: RefCell::new(list),
             heights: RefCell::new(HashMap::new()),
@@ -449,6 +453,12 @@ impl Timeline {
             if !self.pending.replace(true) {
                 self.pending_follow.set(following);
             }
+            let mut behind = self.behind.borrow_mut();
+            if !appended || changes.contains(&Change::Cleared) {
+                *behind = None;
+            } else if let Some(rows) = behind.as_mut() {
+                rows.extend(reload);
+            }
             return;
         }
         if self.pending.get() {
@@ -599,18 +609,41 @@ impl Timeline {
         }
     }
 
-    /// Builds the rows of a timeline that was hidden at the width it has now, and shows the end if it did before.
+    /// Shows what changed while the timeline was hidden: at the same width only the cards that changed or were
+    /// appended, else every row in view built anew at the width it has now; and the end if it showed it before.
     fn catch_up(&self) {
         // A native tab has just adopted its sidebar; hydrate at the final viewport width.
         if let Some(window) = self.scroll.window() {
             window.layoutIfNeeded();
         }
         self.pending.set(false);
+        let behind = self.behind.replace(Some(BTreeSet::new()));
         let width = self.table_width();
+        if let Some(rows) = behind.filter(|_| (width - self.width.get()).abs() < 0.5) {
+            self.catch_up_rows(rows);
+            return;
+        }
         self.fit_column(width);
         self.width.set(width);
         self.corrections.borrow_mut().clear();
         self.table.reloadData();
+        if self.pending_follow.get() {
+            self.scroll_to_end();
+        }
+    }
+
+    /// Tells the table of the rows appended while it was hidden and builds the cards of `changed` again, as a timeline
+    /// in view takes the same changes.
+    fn catch_up_rows(&self, changed: BTreeSet<usize>) {
+        let before = usize::try_from(self.table.numberOfRows()).unwrap_or(0);
+        if self.count() > before {
+            let added =
+                NSIndexSet::indexSetWithIndexesInRange(objc2_foundation::NSRange::new(before, self.count() - before));
+            self.table
+                .insertRowsAtIndexes_withAnimation(&added, objc2_app_kit::NSTableViewAnimationOptions::empty());
+        }
+        self.refresh_rows(changed.into_iter().filter(|row| *row < before));
+        self.correct_now();
         if self.pending_follow.get() {
             self.scroll_to_end();
         }
@@ -820,6 +853,7 @@ impl Timeline {
             if !self.pending.replace(true) {
                 self.pending_follow.set(following);
             }
+            *self.behind.borrow_mut() = None;
             return;
         }
         self.fit_column(width);
