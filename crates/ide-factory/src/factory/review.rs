@@ -280,7 +280,7 @@ impl Factory {
     }
 
     fn reviewer(&mut self, cx: &mut Cx, id: &OrderId) {
-        if self.stage == Stage::One {
+        if self.orders.get(id).is_none_or(|o| o.stage() == Stage::One) {
             self.emit(
                 cx,
                 id,

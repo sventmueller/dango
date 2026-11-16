@@ -2272,6 +2272,7 @@
 "Die Sitzung ist nicht gestartet: {}" = "The session did not start: {}";
 "Dieser Agent kann die Grenzen des Auftrags nicht einhalten." = "This agent cannot keep to the work order’s bounds.";
 "Dieser Agent übernimmt in Aufträgen keine Rolle." = "This agent takes no role in work orders.";
+"Für den eigenen Agenten ist kein Modell mit Endpunkt eingerichtet." = "No model with an endpoint is set up for the own agent.";
 "Einrichtung von „{}“" = "Setup of “{}”";
 "Prüfstation {} von „{}“" = "Gate {} of “{}”";
 "Schließen, während Aufträge laufen?" = "Close While Work Orders Are Running?";

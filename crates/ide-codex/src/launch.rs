@@ -114,6 +114,12 @@ pub struct Confinement {
     pub writes: bool,
     /// Folders writable besides the project folder, such as the build folder.
     pub write_roots: Vec<PathBuf>,
+    /// The project's `AGENTS.md` as frozen from the user's working copy (E172), given as the thread's developer
+    /// instructions; the worktree's own copies are not read.
+    pub instructions: Option<String>,
+    /// Folders marked untrusted for this server, so no `.codex/` configuration or hooks load from them: the worktree,
+    /// and the working copy whose trust a linked worktree would share (C57).
+    pub untrusted: Vec<PathBuf>,
 }
 
 impl Confinement {
@@ -140,7 +146,8 @@ impl Confinement {
         }
     }
 
-    /// The `-c` overrides: the features off, web search off, no MCP server.
+    /// The `-c` overrides: the features off, web search off, no MCP server, no `AGENTS.md` read from the project, and
+    /// the untrusted folders, each a key of an inline table since a dotted `-c` path is split at every dot.
     fn overrides(&self) -> Vec<(String, String)> {
         let mut overrides: Vec<(String, String)> = ORDER_FEATURES_OFF
             .iter()
@@ -148,6 +155,20 @@ impl Confinement {
             .collect();
         overrides.push(("web_search".into(), "\"disabled\"".into()));
         overrides.push(("mcp_servers".into(), "{}".into()));
+        overrides.push(("project_doc_max_bytes".into(), "0".into()));
+        if !self.untrusted.is_empty() {
+            let projects: Vec<String> = self
+                .untrusted
+                .iter()
+                .map(|folder| {
+                    format!(
+                        "{} = {{ trust_level = \"untrusted\" }}",
+                        toml_string(&folder.to_string_lossy())
+                    )
+                })
+                .collect();
+            overrides.push(("projects".into(), format!("{{ {} }}", projects.join(", "))));
+        }
         overrides
     }
 
@@ -272,8 +293,26 @@ impl Launch {
         if let Some(effort) = &self.effort {
             params["config"] = json!({"model_reasoning_effort": effort});
         }
+        if let Some(instructions) = self.confinement.as_ref().and_then(|c| c.instructions.as_ref()) {
+            params["developerInstructions"] = json!(instructions);
+        }
         params
     }
+}
+
+/// `text` as a TOML basic string.
+fn toml_string(text: &str) -> String {
+    let mut out = String::from("\"");
+    for c in text.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            c if c.is_control() => out.push_str(&format!("\\u{:04X}", u32::from(c))),
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
 }
 
 #[cfg(test)]
@@ -317,6 +356,8 @@ mod tests {
         launch.confinement = Some(Confinement {
             writes: true,
             write_roots: vec!["/builds/o1".into()],
+            instructions: None,
+            untrusted: Vec::new(),
         });
         assert!(!launch.joins_shared());
         let args = launch.args();
@@ -350,6 +391,8 @@ mod tests {
         let reader = Confinement {
             writes: false,
             write_roots: vec!["/builds/o1".into()],
+            instructions: None,
+            untrusted: Vec::new(),
         };
         assert_eq!(
             reader.sandbox_policy(),
@@ -357,5 +400,30 @@ mod tests {
         );
         launch.confinement = Some(reader);
         assert_eq!(launch.open_params()["sandbox"], "read-only");
+    }
+
+    #[test]
+    fn an_order_reads_its_frozen_agents_md_and_no_project_configuration() {
+        let mut launch = Launch::new("/bin/codex", Vec::new(), "/data/worktrees/o1");
+        launch.confinement = Some(Confinement {
+            writes: true,
+            write_roots: Vec::new(),
+            instructions: Some("Run make check.".into()),
+            untrusted: vec!["/data/worktrees/o1".into(), "/work/sh\"op.v2".into()],
+        });
+        let args = launch.args();
+        assert!(args.iter().any(|a| a == "project_doc_max_bytes=0"), "{args:?}");
+        let projects = args
+            .iter()
+            .find(|a| a.starts_with("projects="))
+            .expect("the untrusted folders");
+        assert_eq!(
+            projects,
+            r#"projects={ "/data/worktrees/o1" = { trust_level = "untrusted" }, "/work/sh\"op.v2" = { trust_level = "untrusted" } }"#
+        );
+        assert_eq!(launch.open_params()["developerInstructions"], "Run make check.");
+        launch.confinement = None;
+        assert!(launch.open_params().get("developerInstructions").is_none());
+        assert!(!launch.args().iter().any(|a| a.starts_with("project_doc")));
     }
 }

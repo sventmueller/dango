@@ -340,10 +340,10 @@ impl Leitstand {
     /// last found of each path. Whether the working copy has uncommitted changes is read when the order comes in.
     pub(crate) fn sheet(&self, root: &Path) -> ide_ui_factory::model::sheet::SheetContext {
         let folders = self.folders.borrow();
-        let (rules, agents) = folders
-            .get(root)
-            .map_or_else(Default::default, |f| (f.factory.rules().clone(), f.agents.clone()));
-        ide_ui_factory::model::sheet::SheetContext::new(super::rules::STAGE, rules, false, agents)
+        let (stage, rules, agents) = folders.get(root).map_or_else(Default::default, |f| {
+            (f.factory.stage(), f.factory.rules().clone(), f.agents.clone())
+        });
+        ide_ui_factory::model::sheet::SheetContext::new(stage, rules, false, agents)
     }
 
     /// The order tab of `order` (E175), with the hunks of its diff once the git lane has read them.

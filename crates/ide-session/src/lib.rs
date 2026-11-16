@@ -16,9 +16,9 @@
 //!
 //! | Path | Builder | Readers |
 //! |---|---|---|
-//! | Claude | `ide_claude::OrderBounds`: `dontAsk` (or `default` without O1), edits allowed in worktree and build folder, git beyond the worktree denied, sandbox with `failIfUnavailable` and no unsandboxed commands, both read blocks, `network.allowedDomains`, no MCP, no web tools, no bypass | the same without edit rules, the writing tools denied and both folders closed to commands' writes |
-//! | Codex | `ide_codex::Confinement`: a server of its own, `never`, `workspace-write` with the build folder as write root, no network, apps, plugins, web search, MCP and subagents off | `read-only` |
-//! | Own agent | `ide_agent::Policy::order`: sandbox on, nothing asks but destructive git | the "Nur fragen" profile |
+//! | Claude | `ide_claude::OrderBounds`: `dontAsk` (or `default` without O1, where `reset --hard` and `clean` ask), edits allowed in worktree and build folder, git beyond the worktree denied, sandbox with `failIfUnavailable` and no unsandboxed commands, both read blocks, `network.allowedDomains`, no MCP, no web tools, no bypass; only user settings plus the frozen folder's `CLAUDE.md` files and deny and ask rules | the same without edit rules, the writing tools denied and both folders closed to commands' writes |
+//! | Codex | `ide_codex::Confinement`: a server of its own, `never`, `workspace-write` with the build folder as write root, no network, apps, plugins, web search, MCP and subagents off; no project `AGENTS.md` or `.codex/`, the frozen `AGENTS.md` as developer instructions | `read-only` |
+//! | Own agent | `ide_agent::Policy::order`: sandbox on, nothing asks but destructive git, which with O1 runs when it discards only the worktree's own work; rules files from the frozen folder | the "Nur fragen" profile |
 //! | OpenCode, ACP | refused: [`LaunchError::NoRole`] (C48, C72) | refused |
 //!
 //! An allow-list of domains is refused with [`LaunchError::Unsupported`] on Codex and the own agent, which can only

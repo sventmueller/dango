@@ -32,6 +32,9 @@ pub(super) struct Job {
     pub(super) images: Option<PathBuf>,
     /// The repository's shared git folder, which git in a linked worktree reads.
     pub(super) common_dir: Option<PathBuf>,
+    /// The folders of path dependencies beside the repository, which the build reads through the links beside the
+    /// worktree (E188).
+    pub(super) dependencies: Vec<PathBuf>,
     /// E186's environment.
     pub(super) env: Vec<(String, String)>,
     /// The activity view's name for it.
@@ -52,7 +55,9 @@ pub(super) fn run(job: &Job, git: Option<&ide_git::Repository>) -> CommandOutcom
         }
         writable.push(images.clone());
     }
-    let mut profile = Profile::gate(&writable, &temp, &ide_core::paths::home()).readable(job.common_dir.as_slice());
+    let mut readable = job.dependencies.clone();
+    readable.extend(job.common_dir.iter().cloned());
+    let mut profile = Profile::gate(&writable, &temp, &ide_core::paths::home()).readable(&readable);
     if !job.run.network.is_empty() {
         profile = profile.network(Network::On);
     }

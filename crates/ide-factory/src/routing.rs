@@ -8,7 +8,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use crate::quota::{QuotaBook, QuotaState};
-use crate::station::Role;
+use crate::station::{Role, Stage};
 
 /// A path to an agent (Weg), as Dango connects to it.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -277,6 +277,10 @@ pub struct AgentStatus {
     pub service: Option<String>,
     /// What it can do in orders.
     pub capabilities: Capabilities,
+    /// The vendor of the model it runs when an entry names none, where that depends on its settings rather than its
+    /// program, such as the own agent's endpoint and model (E171).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vendor: Option<Vendor>,
 }
 
 impl AgentStatus {
@@ -287,8 +291,45 @@ impl AgentStatus {
             account: None,
             service: None,
             capabilities: Capabilities::of(agent),
+            vendor: None,
         }
     }
+
+    /// The vendor behind `entry` on this path: by its program or model, else the path's own model's.
+    pub fn vendor_of(&self, entry: &RankEntry) -> Vendor {
+        match entry.vendor() {
+            Vendor::Unknown if entry.model.is_none() => self.vendor.unwrap_or(Vendor::Unknown),
+            vendor => vendor,
+        }
+    }
+}
+
+/// The stage orders created now run in, up to `highest`: from stage 2 on only while an entry of `builders` and one of
+/// `reviewers` of another vendor are ready and may take their roles (E162, E170); otherwise stage 1, with the user's
+/// text as the specification and no reviewer agent.
+pub fn stage_for(
+    agents: &BTreeMap<Agent, AgentStatus>,
+    builders: &[RankEntry],
+    reviewers: &[RankEntry],
+    highest: Stage,
+) -> Stage {
+    if highest == Stage::One {
+        return highest;
+    }
+    let ready = |role: Role, list: &[RankEntry]| -> Vec<Vendor> {
+        list.iter()
+            .filter_map(|entry| {
+                let status = agents.get(&entry.agent)?;
+                (status.readiness == Readiness::Ready && status.capabilities.takes(role))
+                    .then(|| status.vendor_of(entry))
+            })
+            .collect()
+    };
+    let reviewing = ready(Role::Reviewer, reviewers);
+    let two = ready(Role::Builder, builders)
+        .into_iter()
+        .any(|builder| reviewing.iter().any(|&reviewer| vendors_differ(builder, reviewer)));
+    if two { highest } else { Stage::One }
 }
 
 /// Whether the reviewer must come from another vendor than every builder (E162, E183).
@@ -433,7 +474,7 @@ fn judge(
             readiness: status.readiness,
         });
     }
-    let vendor = entry.vendor();
+    let vendor = status.vendor_of(entry);
     if other_vendor && !cx.builders.iter().all(|&built| vendors_differ(vendor, built)) {
         return Err(Skip::SameVendor);
     }

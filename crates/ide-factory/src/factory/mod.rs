@@ -168,9 +168,14 @@ impl Factory {
         }
     }
 
-    /// The stage.
+    /// The stage new orders run in; each order keeps the stage it was created in.
     pub fn stage(&self) -> Stage {
         self.stage
+    }
+
+    /// Lets new orders run in `stage`, such as once paths of two vendors are ready ([`crate::routing::stage_for`]).
+    pub fn set_stage(&mut self, stage: Stage) {
+        self.stage = stage;
     }
 
     /// The rule set.

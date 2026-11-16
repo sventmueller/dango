@@ -40,11 +40,15 @@ pub(super) enum Program {
     Claude(PathBuf),
     /// Codex with an app server of its own (E193).
     Codex(PathBuf),
+    /// The own agent with what its thread starts with (E171).
+    Own(Box<ide_agent::Config>),
     /// The scripted session of the self-test (F61).
     #[cfg(feature = "selftest")]
     Script(ide_session::Script),
     /// The path is not there, or the Leitstand does not start it.
     Missing,
+    /// The path is there but cannot start, in the user's words.
+    Unready(String),
 }
 
 /// A session ready to launch on the main thread, after its program and environment were looked for.
@@ -55,7 +59,13 @@ pub(super) struct Ready {
     pub(super) role: ide_factory::Role,
     pub(super) entry: RankEntry,
     pub(super) resume: Option<String>,
+    /// The id a new session takes where the path lets it be chosen, which resumes it later (A15).
+    pub(super) session_id: Option<String>,
     pub(super) worktree: PathBuf,
+    /// The agent configuration frozen for the order (E172).
+    pub(super) frozen: Option<PathBuf>,
+    /// Folders outside the worktree the order's build reads, such as path dependencies beside the repository (E188).
+    pub(super) read_roots: Vec<PathBuf>,
     pub(super) program: Program,
     /// The login shell's environment.
     pub(super) login: Vec<(String, String)>,
@@ -197,18 +207,22 @@ impl Leitstand {
         let path = match ready.program {
             Program::Claude(program) => AgentPath::Claude { program },
             Program::Codex(program) => AgentPath::Codex { program, version: None },
+            Program::Own(config) => AgentPath::Own(config),
             #[cfg(feature = "selftest")]
             Program::Script(script) => AgentPath::Scripted(script),
             Program::Missing => return self.input(cx, &ready.root, failed(Readiness::NotInstalled)),
+            Program::Unready(why) => return self.input(cx, &ready.root, failed(Readiness::StartFailed(why))),
         };
         let contract = Contract::Order(ide_session::Order {
             order: ready.order.0.clone(),
             role: role_of(ready.role),
             worktree: ready.worktree.clone(),
             build_dir: None,
-            read_roots: Vec::new(),
+            read_roots: ready.read_roots.clone(),
             allowed_domains: ready.network.clone(),
             refuse_outside: false,
+            frozen: ready.frozen.clone(),
+            repository: Some(ready.root.clone()),
         });
         let git = ide_git::Git::new(Supervisor::global(), ready.login.clone())
             .unattended(ready.env.clone(), Instant::now() + CHECKPOINT_DEADLINE);
@@ -216,6 +230,7 @@ impl Leitstand {
         launch.model.clone_from(&ready.entry.model);
         launch.effort.clone_from(&ready.entry.effort);
         launch.resume.clone_from(&ready.resume);
+        launch.session_id.clone_from(&ready.session_id);
         launch.git = Some(git);
         let started = {
             let mut sessions = self.sessions.borrow_mut();
@@ -237,7 +252,7 @@ impl Leitstand {
                     prompts: BTreeMap::new(),
                     requests: BTreeMap::new(),
                     started: false,
-                    resume: ready.resume,
+                    resume: ready.resume.or(ready.session_id),
                     activity: None,
                     usage: None,
                     limits: Vec::new(),

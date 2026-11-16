@@ -55,6 +55,8 @@ pub struct Workspace {
     supervisor: Supervisor,
     http: Http,
     diagnostics: Option<Arc<dyn Diagnostics>>,
+    rules_from: Option<PathBuf>,
+    checkpointed: bool,
 }
 
 impl Workspace {
@@ -72,6 +74,8 @@ impl Workspace {
             supervisor,
             http,
             diagnostics: None,
+            rules_from: None,
+            checkpointed: false,
         })
     }
 
@@ -85,6 +89,30 @@ impl Workspace {
     pub fn with_diagnostics(mut self, diagnostics: Arc<dyn Diagnostics>) -> Workspace {
         self.diagnostics = Some(diagnostics);
         self
+    }
+
+    /// The same, with the project's rules files read from `folder` instead of the project, such as a work order's
+    /// configuration frozen from the user's working copy (E172).
+    pub fn rules_from(mut self, folder: &Path) -> Workspace {
+        self.rules_from = Some(folder.to_path_buf());
+        self
+    }
+
+    /// The same, for a project whose state a checkpoint keeps before each turn, as a work order's worktree: git that
+    /// discards only its own work runs without asking (E173, C47).
+    pub fn checkpointed(mut self) -> Workspace {
+        self.checkpointed = true;
+        self
+    }
+
+    /// The folder the project's rules files are read from.
+    pub fn rules_root(&self) -> &Path {
+        self.rules_from.as_deref().unwrap_or(&self.root)
+    }
+
+    /// Whether a checkpoint keeps the project's state before each turn.
+    pub fn is_checkpointed(&self) -> bool {
+        self.checkpointed
     }
 
     /// The project folder.
@@ -231,6 +259,24 @@ mod tests {
         let profile = ws.sandbox_profile();
         assert!(profile.contains(&format!("(subpath \"{}\")", ws.root().display())));
         assert!(profile.contains("(deny network*)"));
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn a_work_order_reads_its_rules_from_the_frozen_copy_and_discards_its_own_work() {
+        let (dir, ws) = workspace("order");
+        std::fs::write(ws.root().join("AGENTS.md"), "Changed by the builder.\n").unwrap();
+        std::fs::write(dir.join("other/AGENTS.md"), "Run make check.\n").unwrap();
+        assert_eq!(ws.rules_root(), ws.root());
+        assert!(!ws.is_checkpointed());
+        let order = ws.clone().rules_from(&dir.join("other")).checkpointed();
+        let rules = crate::prompt::project_rules(order.rules_root());
+        assert_eq!(rules, [("AGENTS.md".to_string(), "Run make check.\n".to_string())]);
+        let call = serde_json::json!({"command": "git reset --hard"});
+        let discard = crate::tools::action("run_command", &call, &order);
+        assert!(matches!(discard, Ok(crate::policy::Action::Discard(_))), "{discard:?}");
+        let asked = crate::tools::action("run_command", &call, &ws);
+        assert!(matches!(asked, Ok(crate::policy::Action::Command(_))), "{asked:?}");
         let _ = std::fs::remove_dir_all(dir);
     }
 }

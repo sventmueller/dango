@@ -215,7 +215,7 @@ impl Session {
 
     fn open(config: Config, stored: Stored, sink: impl Fn(Event) + Send + Sync + 'static) -> Session {
         let thread = Thread::new(config.thread.clone(), AGENT_ID, config.workspace.root());
-        let rules = crate::prompt::project_rules(config.workspace.root());
+        let rules = crate::prompt::project_rules(config.workspace.rules_root());
         let state = State {
             thread,
             conversation: Vec::new(),

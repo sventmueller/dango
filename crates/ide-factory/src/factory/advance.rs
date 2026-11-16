@@ -63,7 +63,7 @@ impl Factory {
             self.set_phase(cx, id, Phase::Slot);
             return;
         }
-        if self.stage == Stage::One {
+        if order.stage() == Stage::One {
             self.emit(
                 cx,
                 id,

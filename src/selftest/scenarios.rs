@@ -182,6 +182,7 @@ pub(crate) const SCENARIOS: &[Scenario] = &[
     plain("containers-panel", containers::run),
     plain("leitstand", leitstand::run),
     plain("leitstand-attach", leitstand_attach::run),
+    limited("leitstand-order", leitstand_order::run, GIT),
     Scenario {
         offline: false,
         ..limited("companions", companions::run, Duration::from_secs(1200))

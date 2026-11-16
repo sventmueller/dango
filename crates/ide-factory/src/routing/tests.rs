@@ -257,3 +257,47 @@ fn a_stale_quota_is_unknown_and_lets_the_station_start() {
     assert_eq!((choice.index, choice.quota), (0, QuotaState::Unknown));
     world.excluded.clear();
 }
+
+#[test]
+fn the_own_agent_without_a_model_counts_as_its_endpoint_vendor() {
+    let mut world = World::new();
+    world.builders = vec![Vendor::Anthropic];
+    let own = RankEntry::new(Agent::Own);
+    let unknown = world.route(Role::Reviewer, std::slice::from_ref(&own));
+    assert_eq!(chosen(&unknown), None, "an unknown vendor is no change of vendor");
+    world.agents.get_mut(&Agent::Own).unwrap().vendor = Some(Vendor::Google);
+    let routed = world.route(Role::Reviewer, std::slice::from_ref(&own));
+    assert_eq!(routed.choice.map(|c| c.vendor), Some(Vendor::Google));
+    let named = RankEntry::new(Agent::Own).model("gpt-5");
+    let routed = world.route(Role::Reviewer, std::slice::from_ref(&named));
+    assert_eq!(
+        routed.choice.map(|c| c.vendor),
+        Some(Vendor::OpenAi),
+        "a model the entry names decides"
+    );
+}
+
+#[test]
+fn stage_two_needs_a_ready_builder_and_a_ready_reviewer_of_another_vendor() {
+    let mut world = World::new();
+    let builders = [RankEntry::new(Agent::Claude), RankEntry::new(Agent::Codex)];
+    let reviewers = [RankEntry::new(Agent::Codex), RankEntry::new(Agent::Claude)];
+    let stage = |world: &World, reviewers: &[RankEntry]| stage_for(&world.agents, &builders, reviewers, Stage::Two);
+    assert_eq!(stage(&world, &reviewers), Stage::Two);
+    assert_eq!(stage_for(&world.agents, &builders, &reviewers, Stage::One), Stage::One);
+    world.agents.get_mut(&Agent::Codex).unwrap().readiness = Readiness::NotInstalled;
+    assert_eq!(stage(&world, &reviewers), Stage::One, "Claude alone");
+    let with_own = [RankEntry::new(Agent::Codex), RankEntry::new(Agent::Own)];
+    assert_eq!(stage(&world, &with_own), Stage::One, "an own agent of unknown vendor");
+    world.agents.get_mut(&Agent::Own).unwrap().vendor = Some(Vendor::Google);
+    assert_eq!(
+        stage(&world, &with_own),
+        Stage::Two,
+        "Claude builds, the own agent on Gemini reviews"
+    );
+    assert_eq!(
+        stage(&world, &reviewers),
+        Stage::One,
+        "a ready own agent the reviewer's list does not name"
+    );
+}

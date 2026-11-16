@@ -28,6 +28,8 @@ fn order(worktree: &Path, build: Option<PathBuf>) -> Order {
         read_roots: Vec::new(),
         allowed_domains: Vec::new(),
         refuse_outside: true,
+        frozen: None,
+        repository: None,
     }
 }
 

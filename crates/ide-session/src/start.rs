@@ -2,6 +2,7 @@
 //! user's choices as the AI tab makes them, or an order's bounds; a path that cannot hold an order's bounds is
 //! refused before anything starts (C48, C59, C72).
 
+use std::path::Path;
 use std::sync::Arc;
 
 use ide_process::Supervisor;
@@ -24,6 +25,7 @@ pub(crate) fn start(launch: Launch, supervisor: &Supervisor, inbox: &Arc<Inbox>)
         model,
         effort,
         resume,
+        session_id,
         thread,
         git: _,
         contract,
@@ -43,6 +45,7 @@ pub(crate) fn start(launch: Launch, supervisor: &Supervisor, inbox: &Arc<Inbox>)
         model,
         effort,
         resume,
+        session_id,
         thread,
         contract,
     };
@@ -69,6 +72,7 @@ struct Common {
     model: Option<String>,
     effort: Option<String>,
     resume: Option<String>,
+    session_id: Option<String>,
     thread: Thread,
     contract: Contract,
 }
@@ -86,7 +90,7 @@ fn agent_id(path: &AgentPath) -> String {
     }
 }
 
-/// The Claude launch of an order (E173): its bounds, and no Remote Control.
+/// The Claude launch of an order (E173): its bounds with its frozen configuration (E172), and no Remote Control.
 pub(crate) fn claude_order(launch: &mut ide_claude::Launch, order: &Order) {
     launch.order = Some(ide_claude::OrderBounds {
         builds: order.role.builds(),
@@ -95,6 +99,8 @@ pub(crate) fn claude_order(launch: &mut ide_claude::Launch, order: &Order) {
         build_dir: order.build_dir.clone(),
         read_roots: order.read_roots.clone(),
         allowed_domains: order.allowed_domains.clone(),
+        frozen: order.frozen.clone(),
+        frozen_settings: order.frozen.as_deref().and_then(frozen_claude_settings),
     });
     launch.allow_bypass = false;
     launch.remote_control = Some(false);
@@ -110,6 +116,7 @@ fn claude(
     launch.model = common.model;
     launch.effort = common.effort;
     launch.resume = common.resume;
+    launch.session_id = common.session_id;
     match &common.contract {
         Contract::User(choices) => {
             launch.permission_mode = Some(choices.mode.clone().unwrap_or_else(|| "default".into()));
@@ -135,10 +142,41 @@ pub(crate) fn codex_order(order: &Order) -> Result<ide_codex::Confinement, Launc
             missing: ALLOW_LIST,
         });
     }
+    let mut untrusted = vec![order.worktree.clone()];
+    untrusted.extend(order.repository.iter().cloned());
     Ok(ide_codex::Confinement {
         writes: order.role.builds(),
         write_roots: order.build_dir.iter().cloned().collect(),
+        instructions: order.frozen.as_deref().and_then(frozen_agents_md),
+        untrusted,
     })
+}
+
+/// The frozen project settings of Claude: `.claude/settings.json` with `.claude/settings.local.json` over it; a file
+/// that does not parse adds nothing.
+pub(crate) fn frozen_claude_settings(frozen: &Path) -> Option<serde_json::Value> {
+    let read = |name: &str| -> Option<serde_json::Value> {
+        serde_json::from_str(&std::fs::read_to_string(frozen.join(".claude").join(name)).ok()?).ok()
+    };
+    let mut rules: [Vec<serde_json::Value>; 2] = [Vec::new(), Vec::new()];
+    let mut found = false;
+    for settings in ["settings.json", "settings.local.json"].into_iter().filter_map(read) {
+        found = true;
+        for (list, key) in rules.iter_mut().zip(["deny", "ask"]) {
+            list.extend(settings["permissions"][key].as_array().cloned().unwrap_or_default());
+        }
+    }
+    let [deny, ask] = rules;
+    found.then(|| serde_json::json!({"permissions": {"deny": deny, "ask": ask}}))
+}
+
+/// The frozen `AGENTS.md` at the project's root, where Codex reads it for a session in the worktree's root; its
+/// `AGENTS.override.md` first, as Codex prefers it.
+pub(crate) fn frozen_agents_md(frozen: &Path) -> Option<String> {
+    ["AGENTS.override.md", "AGENTS.md"]
+        .iter()
+        .filter_map(|name| std::fs::read_to_string(frozen.join(name)).ok())
+        .find(|text| !text.trim().is_empty())
 }
 
 fn codex(
@@ -232,7 +270,14 @@ pub(crate) fn own_order(config: &mut ide_agent::Config, order: &Order) -> Result
     config.policy = ide_agent::Policy::order(order.role.builds());
     let mut allowed = config.workspace.allowed().to_vec();
     allowed.extend(order.build_dir.iter().cloned());
-    config.workspace = config.workspace.clone().allow(&allowed);
+    let mut workspace = config.workspace.clone().allow(&allowed);
+    if let Some(frozen) = &order.frozen {
+        workspace = workspace.rules_from(frozen);
+    }
+    if order.refuse_outside {
+        workspace = workspace.checkpointed();
+    }
+    config.workspace = workspace;
     Ok(())
 }
 
@@ -253,4 +298,76 @@ fn own(mut config: ide_agent::Config, common: Common, inbox: &Arc<Inbox>) -> Res
         ide_agent::Session::start(config, inbox.own())
     };
     Ok(Backend::Own(session))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::launch::Role;
+
+    fn scratch(name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("ide-session-start-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join(".claude")).unwrap();
+        dir
+    }
+
+    fn order(frozen: Option<&Path>) -> Order {
+        Order {
+            order: "o-1".into(),
+            role: Role::Builder,
+            worktree: "/data/worktrees/o-1".into(),
+            build_dir: None,
+            read_roots: Vec::new(),
+            allowed_domains: Vec::new(),
+            refuse_outside: true,
+            frozen: frozen.map(Path::to_path_buf),
+            repository: Some("/work/shop".into()),
+        }
+    }
+
+    #[test]
+    fn claude_takes_the_frozen_folder_with_the_rules_of_its_settings() {
+        let frozen = scratch("claude");
+        std::fs::write(
+            frozen.join(".claude/settings.json"),
+            r#"{"permissions": {"allow": ["Bash"], "deny": ["Read(./.env)"]}, "hooks": {}}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            frozen.join(".claude/settings.local.json"),
+            r#"{"permissions": {"ask": ["Bash(npm publish:*)"]}}"#,
+        )
+        .unwrap();
+        let mut launch = ide_claude::Launch::new("/bin/claude", Vec::new(), "/data/worktrees/o-1");
+        claude_order(&mut launch, &order(Some(&frozen)));
+        let bounds = launch.order.clone().unwrap();
+        assert_eq!(bounds.frozen.as_deref(), Some(frozen.as_path()));
+        assert_eq!(
+            bounds.frozen_settings,
+            Some(serde_json::json!({"permissions": {"deny": ["Read(./.env)"], "ask": ["Bash(npm publish:*)"]}}))
+        );
+        assert!(!bounds.asks, "O1 refuses instead of asking");
+        assert_eq!(frozen_claude_settings(&scratch("empty")), None);
+        let _ = std::fs::remove_dir_all(&frozen);
+    }
+
+    #[test]
+    fn codex_reads_the_frozen_agents_md_and_trusts_neither_the_worktree_nor_the_working_copy() {
+        let frozen = scratch("codex");
+        assert_eq!(codex_order(&order(Some(&frozen))).unwrap().instructions, None);
+        std::fs::write(frozen.join("AGENTS.md"), "Run make check.\n").unwrap();
+        let bounds = codex_order(&order(Some(&frozen))).unwrap();
+        assert_eq!(bounds.instructions.as_deref(), Some("Run make check.\n"));
+        assert_eq!(
+            bounds.untrusted,
+            [
+                std::path::PathBuf::from("/data/worktrees/o-1"),
+                std::path::PathBuf::from("/work/shop")
+            ]
+        );
+        std::fs::write(frozen.join("AGENTS.override.md"), "Override.\n").unwrap();
+        assert_eq!(frozen_agents_md(&frozen).as_deref(), Some("Override.\n"));
+        let _ = std::fs::remove_dir_all(&frozen);
+    }
 }

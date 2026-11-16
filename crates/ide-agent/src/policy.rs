@@ -65,6 +65,9 @@ pub(crate) enum Action {
     },
     /// Runs a command line.
     Command(String),
+    /// Runs a command line whose only destructive git discards the work of a checkpointed workspace, which the
+    /// checkpoint brings back (E173, C47).
+    Discard(String),
     /// Requests a web page.
     Fetch {
         /// The page's host.
@@ -174,6 +177,7 @@ impl Policy {
                 }
             }
             Action::Command(command) => self.command(command),
+            Action::Discard(command) => self.discard(command),
             Action::Fetch { host } => {
                 if self.sandbox {
                     return Verdict::Deny(Refusal::NoNetwork);
@@ -205,6 +209,23 @@ impl Policy {
         if let Some(why) = destructive_git(command) {
             return ask(None, Some(Reason::Destructive(why)), None, true);
         }
+        self.harmless(command)
+    }
+
+    /// A command that discards only the checkpointed workspace's own work: it runs where everything runs on its own,
+    /// as in a work order; elsewhere it asks as any destructive command does.
+    fn discard(&self, command: &str) -> Verdict {
+        if self.profile == Profile::Ask {
+            return Verdict::Deny(Refusal::ReadOnly);
+        }
+        if self.approval == Approval::All {
+            return Verdict::Allow;
+        }
+        self.command(command)
+    }
+
+    /// A command that destroys nothing git cannot bring back.
+    fn harmless(&self, command: &str) -> Verdict {
         if self.approval == Approval::All {
             return Verdict::Allow;
         }
@@ -228,6 +249,44 @@ impl Policy {
             ask(suggested_rule(command), None, None, false)
         }
     }
+}
+
+/// Whether every destructive part of `command` is a `git reset --hard` or `git clean` of the folder it runs in: git
+/// named directly, not through a shell or `eval`, pointed at no other repository or tree, and no part changing the
+/// folder first. False when nothing in it is destructive.
+pub(crate) fn discards_only_own_work(command: &str) -> bool {
+    let parts = segments(command);
+    let moves = parts.iter().any(|part| {
+        words(part)
+            .first()
+            .is_some_and(|w| matches!(w.as_str(), "cd" | "pushd"))
+    });
+    let destructive: Vec<&String> = parts.iter().filter(|part| destructive_git(part).is_some()).collect();
+    !moves
+        && !destructive.is_empty()
+        && destructive.iter().all(|part| {
+            let words = words(part);
+            matches!(destructive_git(part), Some(Destructive::ResetHard | Destructive::Clean))
+                && !words.iter().any(|word| elsewhere(word))
+        })
+}
+
+/// Whether `word` points git at another repository or tree, or hands the command to a shell.
+fn elsewhere(word: &str) -> bool {
+    let name = word.rsplit('/').next().unwrap_or(word);
+    matches!(
+        name,
+        "sh" | "bash" | "zsh" | "dash" | "ksh" | "fish" | "eval" | "env" | "xargs"
+    ) || word == "-C"
+        || [
+            "--git-dir",
+            "--work-tree",
+            "GIT_DIR=",
+            "GIT_WORK_TREE=",
+            "GIT_COMMON_DIR=",
+        ]
+        .iter()
+        .any(|prefix| word.starts_with(prefix))
 }
 
 fn ask(rule: Option<Rule>, reason: Option<Reason>, blocked_path: Option<String>, risky: bool) -> Verdict {
@@ -480,5 +539,52 @@ mod tests {
             }),
             Verdict::Allow
         );
+    }
+
+    #[test]
+    fn only_git_that_discards_the_folders_own_work_counts_as_such() {
+        for command in [
+            "git reset --hard",
+            "git clean -fd",
+            "git reset --hard HEAD~1 && git clean -fdx",
+            "cargo test; git clean -fd",
+        ] {
+            assert!(discards_only_own_work(command), "{command}");
+        }
+        for command in [
+            "git status",
+            "git push -f",
+            "git reset --hard && git push --force",
+            "git stash drop",
+            "git -C ../main reset --hard",
+            "git --git-dir=../main/.git reset --hard",
+            "GIT_DIR=../main/.git git reset --hard",
+            "sh -c 'git reset --hard'",
+            "cd ../main && git reset --hard",
+        ] {
+            assert!(!discards_only_own_work(command), "{command}");
+        }
+    }
+
+    #[test]
+    fn an_orders_builder_discards_its_own_work_without_asking_and_nothing_else_does() {
+        let builder = Policy::order(true);
+        let discard = Action::Discard("git reset --hard".into());
+        assert_eq!(builder.decide(&discard), Verdict::Allow);
+        assert!(matches!(
+            builder.decide(&Action::Command("git reset --hard".into())),
+            Verdict::Ask {
+                reason: Some(Reason::Destructive(_)),
+                ..
+            }
+        ));
+        assert_eq!(Policy::order(false).decide(&discard), Verdict::Deny(Refusal::ReadOnly));
+        assert!(matches!(
+            policy(Approval::Manual, Vec::new()).decide(&discard),
+            Verdict::Ask {
+                reason: Some(Reason::Destructive(_)),
+                ..
+            }
+        ));
     }
 }

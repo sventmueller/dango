@@ -17,8 +17,20 @@ use ide_test::Tool;
 
 use super::{Delivery, Leitstand};
 
-/// The stage of phase 13 this build ships.
-pub(super) const STAGE: Stage = Stage::One;
+/// The highest stage of phase 13 this build ships; new orders of a folder run in it while ready paths of two vendors
+/// can fill builder and reviewer, else in stage 1 (`ide_factory::routing::stage_for`).
+pub(super) const HIGHEST: Stage = Stage::Two;
+
+/// The stage new orders of `factory` run in, by the paths it knows and its rules' lists for builder and reviewer.
+pub(super) fn stage(factory: &ide_factory::Factory) -> Stage {
+    let rules = factory.rules();
+    ide_factory::routing::stage_for(
+        factory.agents(),
+        rules.role(ide_factory::Role::Builder),
+        rules.role(ide_factory::Role::Reviewer),
+        HIGHEST,
+    )
+}
 
 /// The rules of the folder at `root` for `defaults` and `confirmed`, with `path` the login shell's PATH.
 pub(super) fn load(root: &Path, defaults: &UserDefaults, confirmed: &Confirmations, path: Option<&str>) -> Rules {

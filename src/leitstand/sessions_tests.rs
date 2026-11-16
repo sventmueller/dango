@@ -38,6 +38,8 @@ impl Harness {
             read_roots: Vec::new(),
             allowed_domains: Vec::new(),
             refuse_outside: false,
+            frozen: None,
+            repository: None,
         });
         let script = Script {
             turns,
@@ -164,6 +166,20 @@ fn a_session_starts_its_turn_ends_with_its_prompt_and_answer_and_a_question_wait
             )
         })
     });
+}
+
+#[test]
+fn a_session_given_its_id_at_launch_can_be_resumed_from_its_start() {
+    let mut harness = Harness::new(Vec::new());
+    harness.link.resume = Some("7f1c2a7e-0b4d-4c1e-9a55-3f6d2b8e9c10".into());
+    harness.until("the start", |mapped| {
+        mapped.iter().any(|i| matches!(i, InputKind::SessionStarted { .. }))
+    });
+    let resume = harness.mapped.iter().find_map(|i| match i {
+        InputKind::SessionStarted { resume, .. } => resume.clone(),
+        _ => None,
+    });
+    assert_eq!(resume.as_deref(), Some("7f1c2a7e-0b4d-4c1e-9a55-3f6d2b8e9c10"));
 }
 
 #[test]

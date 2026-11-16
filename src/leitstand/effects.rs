@@ -13,11 +13,11 @@ use ide_factory::budget::Spend;
 use ide_factory::effect::{SandboxRun, ScanRange};
 use ide_factory::event::OpResult;
 use ide_factory::evidence::{Manifest, ManifestEntry};
-use ide_factory::routing::{Agent, RankEntry};
-use ide_factory::{Effect, InputKind, OperationId, OrderId, Role};
+use ide_factory::{Effect, InputKind, OperationId, OrderId};
 
-use super::sessions::{Program, Ready, Stop};
-use super::{Back, Delivery, GIT, Leitstand, freeze, gates, git, manifest, notices, power, store};
+use super::launching::Wanted;
+use super::sessions::Stop;
+use super::{Back, Delivery, GIT, Leitstand, freeze, gates, git, manifest, notices, power, siblings, store};
 use crate::context::AppContext;
 
 /// How long a job waits for the login shell's environment, read once at launch.
@@ -45,7 +45,7 @@ struct Info {
 }
 
 /// The login shell's environment, waited for.
-fn login() -> Vec<(String, String)> {
+pub(super) fn login() -> Vec<(String, String)> {
     crate::environment::wait(ENVIRONMENT_WAIT)
         .map(<[_]>::to_vec)
         .unwrap_or_default()
@@ -69,9 +69,21 @@ impl Leitstand {
                 entry,
                 resume,
                 worktree,
+                frozen,
                 network,
                 ..
-            } => self.start_session(root, order, role, entry, resume, PathBuf::from(worktree), network),
+            } => self.start_session(
+                root,
+                Wanted {
+                    order,
+                    role,
+                    entry,
+                    resume,
+                    worktree: PathBuf::from(worktree),
+                    frozen: (!frozen.is_empty()).then(|| PathBuf::from(frozen)),
+                    network,
+                },
+            ),
             Effect::SendPrompt {
                 session,
                 prompt,
@@ -348,53 +360,6 @@ impl Leitstand {
         });
     }
 
-    /// Looks for the session's program and environment off the main thread, then launches it there.
-    #[expect(clippy::too_many_arguments, reason = "the fields of the effect, taken apart once")]
-    fn start_session(
-        &self,
-        root: &Path,
-        order: OrderId,
-        role: Role,
-        entry: RankEntry,
-        resume: Option<String>,
-        worktree: PathBuf,
-        network: Vec<String>,
-    ) {
-        let title = self.info(root, &order).map(|i| i.title).unwrap_or_default();
-        #[cfg(feature = "selftest")]
-        let script = self.probe.script();
-        let root = root.to_path_buf();
-        let back = self.back();
-        let started = crate::util::spawn("order-session", move || {
-            let login = login();
-            let env = ide_process::order_env::for_orders(&login, &[]);
-            let path = ide_process::tool::var(&login, "PATH");
-            let program = match &entry.agent {
-                Agent::Claude => ide_ui_agent::claude_program(&login).map_or(Program::Missing, Program::Claude),
-                Agent::Codex => ide_process::tool::which("codex", path).map_or(Program::Missing, Program::Codex),
-                _ => Program::Missing,
-            };
-            #[cfg(feature = "selftest")]
-            let program = script.map_or(program, Program::Script);
-            back.deliver(Delivery::Launch(Box::new(Ready {
-                root,
-                order,
-                title,
-                role,
-                entry,
-                resume,
-                worktree,
-                program,
-                login,
-                env,
-                network,
-            })));
-        });
-        if let Err(why) = started {
-            ide_core::diag::report("starting an order's session", why);
-        }
-    }
-
     /// Makes the order's worktree, copies the listed files from the working copy and runs the setup command (E188).
     fn prepare(
         &self,
@@ -473,6 +438,7 @@ impl Leitstand {
             let job = gates::Job {
                 env: ide_process::order_env::for_orders(&login, &[]),
                 common_dir: copy.as_ref().map(|c| c.common_dir().to_path_buf()),
+                dependencies: siblings::targets(&root),
                 images: images.map(PathBuf::from),
                 worktree,
                 folder,
@@ -554,6 +520,7 @@ fn prepared(
         Ok(tree) => tree,
         Err(failed) => return *failed,
     };
+    siblings::link(root, &tree.path);
     let mut copied = Vec::new();
     for path in copy {
         let target = tree.path.join(path);
@@ -572,6 +539,7 @@ fn prepared(
         let job = gates::Job {
             env: ide_process::order_env::for_orders(login, &[]),
             common_dir: copy.as_ref().map(|c| c.common_dir().to_path_buf()),
+            dependencies: siblings::targets(root),
             images: None,
             worktree: tree.path.clone(),
             folder: run_folder.unwrap_or_else(|| tree.path.with_extension("setup")),

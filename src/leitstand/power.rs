@@ -55,8 +55,18 @@ fn in_selftest() -> bool {
     std::env::var_os("IDE_SELFTEST").is_some()
 }
 
+impl Power {
+    /// Whether the activity that keeps the Mac awake is held.
+    #[cfg(feature = "selftest")]
+    pub(super) fn holds(&self) -> bool {
+        self.activity.is_some()
+    }
+}
+
 /// Whether the folder's factory at `root` holds the wake lock for `running` orders; the activity follows the sum.
 pub(super) fn hold(leitstand: &Leitstand, root: &Path, hold: bool, running: usize) {
+    #[cfg(feature = "selftest")]
+    leitstand.probe.note_wake(hold);
     let mut shared = leitstand.shared.borrow_mut();
     let power = &mut shared.power;
     if hold {

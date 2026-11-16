@@ -43,6 +43,9 @@ pub struct Launch {
     pub(crate) thinking_display: Option<String>,
     /// The session to resume, by id.
     pub resume: Option<String>,
+    /// The id a new session takes, a UUID, so it can be resumed before its first turn named it; only without
+    /// `resume`.
+    pub session_id: Option<String>,
     /// The message of the resumed session up to which it is resumed, by uuid; only with `resume`.
     pub(crate) resume_at: Option<String>,
     /// The prompt whose turn resuming at `resume_at` drops; the CLI refuses to resume when more would be dropped. Only
@@ -78,6 +81,10 @@ pub struct Launch {
     pub order: Option<OrderBounds>,
 }
 
+/// The variable that makes the CLI load the `CLAUDE.md` files of the folders `--add-dir` names, such as an order's
+/// frozen configuration (E172).
+const ADDED_DIRECTORIES_CLAUDE_MD: &str = "CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD";
+
 /// The variable the CLI reads to know who started it; it is left for the CLI to choose, so the app never passes
 /// itself off as another client such as the VS Code extension.
 const ENTRYPOINT: &str = "CLAUDE_CODE_ENTRYPOINT";
@@ -95,6 +102,7 @@ impl Launch {
             thinking: Thinking::Default,
             thinking_display: Some("summarized".into()),
             resume: None,
+            session_id: None,
             resume_at: None,
             resume_drops_turn: None,
             fork_session: false,
@@ -172,6 +180,11 @@ impl Launch {
                     flag("resume-drops-turn", prompt);
                 }
             }
+        } else if let Some(id) = &self.session_id {
+            flag("session-id", id);
+        }
+        if let Some(order) = &self.order {
+            flag("setting-sources", order.setting_sources());
         }
         self.rules(&mut args);
         if self.allow_bypass && self.order.is_none() {
@@ -221,11 +234,18 @@ impl Launch {
         let mut env: Vec<(String, String)> = self
             .env
             .iter()
-            .filter(|(name, _)| name != ENTRYPOINT && name != "CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING")
+            .filter(|(name, _)| {
+                name != ENTRYPOINT
+                    && name != "CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING"
+                    && name != ADDED_DIRECTORIES_CLAUDE_MD
+            })
             .cloned()
             .collect();
         if self.file_checkpoints {
             env.push(("CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING".into(), "true".into()));
+        }
+        if self.order.as_ref().is_some_and(|order| order.frozen.is_some()) {
+            env.push((ADDED_DIRECTORIES_CLAUDE_MD.into(), "1".into()));
         }
         env
     }
@@ -392,6 +412,8 @@ mod tests {
             build_dir: Some("/data/builds/o1".into()),
             read_roots: vec!["/Users/me/.rustup".into()],
             allowed_domains: vec!["crates.io".into()],
+            frozen: None,
+            frozen_settings: None,
         }
     }
 
@@ -487,7 +509,90 @@ mod tests {
     fn without_the_owners_decision_an_order_asks_instead_of_refusing() {
         let mut launch = launch();
         launch.order = Some(order(true, true));
-        assert_eq!(value_of(&launch.arguments(), "permission-mode"), "default");
+        let args = launch.arguments();
+        assert_eq!(value_of(&args, "permission-mode"), "default");
+        let settings: serde_json::Value = serde_json::from_str(value_of(&args, "settings")).unwrap();
+        assert_eq!(
+            settings["permissions"]["ask"],
+            serde_json::json!(["Bash(git reset --hard:*)", "Bash(git clean:*)"]),
+            "git that discards the worktree's own work goes to the user"
+        );
+        launch.order = Some(order(true, false));
+        let settings: serde_json::Value = serde_json::from_str(value_of(&launch.arguments(), "settings")).unwrap();
+        assert_eq!(
+            settings["permissions"]["ask"],
+            serde_json::json!([]),
+            "with O1 the checkpoint covers it"
+        );
+        let denied = value_of(&launch.arguments(), "disallowedTools").to_string();
+        assert!(
+            denied.contains("Bash(git -C:*)") && !denied.contains("reset"),
+            "{denied}"
+        );
+    }
+
+    #[test]
+    fn an_order_loads_its_frozen_configuration_and_none_of_the_worktree() {
+        let mut launch = launch();
+        let mut bounds = order(true, false);
+        assert_eq!(value_of(&launch_with(&mut launch, &bounds), "setting-sources"), "user");
+        assert!(
+            launch
+                .environment()
+                .iter()
+                .all(|(name, _)| name != ADDED_DIRECTORIES_CLAUDE_MD)
+        );
+        bounds.frozen = Some("/data/frozen/o1".into());
+        bounds.frozen_settings = Some(serde_json::json!({
+            "permissions": {"allow": ["Bash(git push:*)"], "deny": ["Read(./.env)"], "ask": ["Bash(npm publish:*)"]},
+            "hooks": {"PreToolUse": []},
+        }));
+        let args = launch_with(&mut launch, &bounds);
+        assert_eq!(value_of(&args, "setting-sources"), "user");
+        assert!(args.contains(&"--add-dir=/data/frozen/o1".to_string()), "{args:?}");
+        assert!(
+            launch
+                .environment()
+                .contains(&(ADDED_DIRECTORIES_CLAUDE_MD.into(), "1".into()))
+        );
+        let allowed: Vec<&str> = value_of(&args, "allowedTools").split(',').collect();
+        assert!(allowed.contains(&"Read(//data/frozen/o1/**)"), "{allowed:?}");
+        assert!(!allowed.contains(&"Edit(//data/frozen/o1/**)"));
+        let denied: Vec<&str> = value_of(&args, "disallowedTools").split(',').collect();
+        assert!(denied.contains(&"Edit(//data/frozen/o1/**)"), "{denied:?}");
+        let settings: serde_json::Value = serde_json::from_str(value_of(&args, "settings")).unwrap();
+        assert_eq!(
+            settings["sandbox"]["filesystem"]["denyWrite"],
+            serde_json::json!(["/data/frozen/o1"])
+        );
+        assert_eq!(settings["permissions"]["deny"], serde_json::json!(["Read(./.env)"]));
+        assert_eq!(
+            settings["permissions"]["ask"],
+            serde_json::json!(["Bash(npm publish:*)"])
+        );
+        assert!(settings["permissions"].get("allow").is_none() && settings.get("hooks").is_none());
+    }
+
+    fn launch_with(launch: &mut Launch, bounds: &OrderBounds) -> Vec<String> {
+        launch.order = Some(bounds.clone());
+        launch.arguments()
+    }
+
+    #[test]
+    fn a_new_session_takes_the_id_it_is_given_and_a_resumed_one_keeps_its_own() {
+        let mut launch = launch();
+        launch.session_id = Some("7f1c2a7e-0b4d-4c1e-9a55-3f6d2b8e9c10".into());
+        assert_eq!(
+            value_of(&launch.arguments(), "session-id"),
+            "7f1c2a7e-0b4d-4c1e-9a55-3f6d2b8e9c10"
+        );
+        launch.resume = Some("s-1".into());
+        let args = launch.arguments();
+        assert!(!args.iter().any(|a| a.starts_with("--session-id")), "{args:?}");
+        assert!(
+            !args.iter().any(|a| a.starts_with("--setting-sources")),
+            "a thread of the user loads every source"
+        );
     }
 
     #[test]

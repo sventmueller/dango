@@ -23,6 +23,8 @@ fn order(worktree: &std::path::Path) -> Order {
         read_roots: Vec::new(),
         allowed_domains: Vec::new(),
         refuse_outside: true,
+        frozen: None,
+        repository: None,
     }
 }
 

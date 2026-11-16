@@ -23,6 +23,8 @@ impl Leitstand {
             read_roots: Vec::new(),
             allowed_domains: Vec::new(),
             refuse_outside: false,
+            frozen: None,
+            repository: None,
         });
         let launch = Launch::new(AgentPath::Scripted(script), folder, Vec::new(), contract.clone());
         let mut sessions = self.sessions.borrow_mut();

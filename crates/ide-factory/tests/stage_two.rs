@@ -256,3 +256,16 @@ fn interventions_are_deviations_and_the_gate_waits_for_the_queue() {
     let deviations = app.get(&id).evidence().unwrap().deviations().to_vec();
     assert!(deviations.contains(&Deviation::Interventions { count: 1 }));
 }
+
+#[test]
+fn an_order_keeps_the_stage_it_was_created_in() {
+    let mut app = App::new(Stage::One, rules(WORKFLOW));
+    app.hold.insert("prepare_worktree");
+    let first = app.order("o1");
+    app.factory.set_stage(Stage::Two);
+    let second = app.order("o2");
+    assert_eq!(app.get(&first).stage(), Stage::One);
+    assert_eq!(app.get(&second).stage(), Stage::Two);
+    assert!(app.get(&first).g1_skipped(), "stage 1 skips the specification");
+    assert_eq!(app.station(&first), Station::Build);
+}

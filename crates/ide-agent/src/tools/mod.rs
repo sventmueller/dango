@@ -279,7 +279,13 @@ pub(crate) fn action(name: &str, input: &Value, workspace: &Workspace) -> Result
         "read_file" => place("path", false).map(|(path, inside)| Action::Read { path, inside }),
         "grep" | "glob" | "diagnostics" => place("path", true).map(|(path, inside)| Action::Read { path, inside }),
         "edit_file" | "write_file" => place("path", false).map(|(path, inside)| Action::Write { path, inside }),
-        "run_command" => required(input, "command").map(|c| Action::Command(c.to_string())),
+        "run_command" => required(input, "command").map(|c| {
+            if workspace.is_checkpointed() && crate::policy::discards_only_own_work(c) {
+                Action::Discard(c.to_string())
+            } else {
+                Action::Command(c.to_string())
+            }
+        }),
         "web_fetch" => fetch::host(required(input, "url")?).map(|host| Action::Fetch { host }),
         "todo_write" => Ok(Action::Internal),
         other => Err(ToolNote::UnknownTool(other.to_string())),

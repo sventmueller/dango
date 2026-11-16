@@ -114,8 +114,14 @@ pub struct Order {
     /// The domains commands may reach; none means no network.
     pub allowed_domains: Vec<String>,
     /// Whether requests outside the bounds are refused and the agent told why; without the owner's decision O1 they
-    /// go to the user instead (C72).
+    /// go to the user instead (C72). With it, git that discards only the worktree's own work runs without asking,
+    /// since the checkpoint before each turn brings it back (E173, C47).
     pub refuse_outside: bool,
+    /// The agent configuration frozen from the user's working copy (E172): the project settings and instruction files
+    /// the session loads instead of the worktree's.
+    pub frozen: Option<PathBuf>,
+    /// The user's working copy the worktree belongs to, whose trust a path may hand on to the worktree.
+    pub repository: Option<PathBuf>,
 }
 
 impl Order {
@@ -180,6 +186,9 @@ pub struct Launch {
     pub effort: Option<String>,
     /// The agent's id of a session to resume (A15); for the own agent, any value resumes the thread its store keeps.
     pub resume: Option<String>,
+    /// The id a new session takes, where the path lets the caller choose it at the start (Claude: a UUID), so it can
+    /// be resumed before its first turn named it.
+    pub session_id: Option<String>,
     /// The thread to fill, such as one rebuilt from a transcript; a new one when `None`.
     pub thread: Option<Thread>,
     /// git for the checkpoint before each prompt (I6, E34); none are taken without it.
@@ -198,6 +207,7 @@ impl Launch {
             model: None,
             effort: None,
             resume: None,
+            session_id: None,
             thread: None,
             git: None,
             contract,
@@ -268,6 +278,8 @@ mod tests {
             read_roots: Vec::new(),
             allowed_domains: Vec::new(),
             refuse_outside: true,
+            frozen: None,
+            repository: None,
         }
     }
 

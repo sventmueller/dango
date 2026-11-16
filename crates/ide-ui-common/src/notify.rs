@@ -50,6 +50,11 @@ pub fn post(id: &str, title: &str, body: &str) {
     center.addNotificationRequest_withCompletionHandler(&request(id, title, body), None);
 }
 
+/// Whether a notification would reach the user now; never while the self-test runs (R12).
+pub fn may_post() -> bool {
+    allowed()
+}
+
 /// How many notifications were posted, or would have been where posting is not allowed, for the self-test.
 pub fn posted() -> usize {
     NOTIFIED.load(Ordering::Relaxed)

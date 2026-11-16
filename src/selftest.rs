@@ -31,6 +31,7 @@ mod containers;
 mod dialog_shapes;
 mod leitstand;
 mod leitstand_attach;
+mod leitstand_order;
 mod markdown;
 mod markdown_commands;
 mod markdown_editor;

@@ -6,6 +6,11 @@
 //! `blockReadsOutsideWorkingDirectories`, `blockWritesOutsideWorkingDirectories`, `blockReadsExemptPaths` (only
 //! from `--settings`) and `disableBypassPermissionsMode`, and the `sandbox` keys `enabled`, `failIfUnavailable`,
 //! `allowUnsandboxedCommands`, `autoAllowBashIfSandboxed`, `network.allowedDomains` and `filesystem`.
+//!
+//! The project's configuration comes from the order's frozen copy only (E172, C57): `--setting-sources=user` keeps
+//! the worktree's settings, `CLAUDE.md`, `CLAUDE.local.md`, rules, skills and hooks out, and the frozen folder joins
+//! through `--add-dir` with `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD`, which loads its `CLAUDE.md`,
+//! `.claude/CLAUDE.md` and `.claude/rules/` but not its `CLAUDE.local.md`, a file of the excluded source `local`.
 
 use std::path::{Path, PathBuf};
 
@@ -43,6 +48,10 @@ pub const BEYOND_WORKTREE: [&str; 27] = [
     "git --work-tree",
 ];
 
+/// Git commands that discard only the worktree's own work, which the checkpoint before each turn brings back
+/// (E173, C47): allowed with the owner's decision O1, asked otherwise.
+pub const OWN_WORKTREE_DISCARDS: [&str; 2] = ["git reset --hard", "git clean"];
+
 /// Tools that reach the network past the sandbox, which no order session gets (E191).
 const WEB_TOOLS: [&str; 2] = ["WebFetch", "WebSearch"];
 
@@ -66,6 +75,12 @@ pub struct OrderBounds {
     pub read_roots: Vec<PathBuf>,
     /// The domains sandboxed commands may reach; none means no network.
     pub allowed_domains: Vec<String>,
+    /// The agent configuration frozen from the user's working copy (E172): its `CLAUDE.md` files are the only ones
+    /// the session loads, and nothing of the session writes there.
+    pub frozen: Option<PathBuf>,
+    /// The frozen project settings, `.claude/settings.json` with `.claude/settings.local.json` over it, as read from
+    /// `frozen`; only their deny and ask rules carry over, since everything else could loosen the order's bounds.
+    pub frozen_settings: Option<Value>,
 }
 
 /// `path` as the absolute path of a permission rule, which starts with `//`, with everything below it.
@@ -83,9 +98,16 @@ impl OrderBounds {
         if self.asks { "default" } else { "dontAsk" }
     }
 
-    /// The folders the session may use besides its working folder.
+    /// The folders the session may use besides its working folder: the build folder, and the frozen configuration
+    /// for its `CLAUDE.md` files.
     pub(crate) fn extra_dirs(&self) -> Vec<PathBuf> {
-        self.build_dir.iter().cloned().collect()
+        self.build_dir.iter().chain(&self.frozen).cloned().collect()
+    }
+
+    /// The setting sources the CLI loads from files: the user's only, so no settings, `CLAUDE.md`, rules, skills or
+    /// hooks come from the worktree, where the builder writes (E172, C57). The frozen ones come through `--add-dir`.
+    pub(crate) fn setting_sources(&self) -> &'static str {
+        "user"
     }
 
     fn folders(&self) -> impl Iterator<Item = &PathBuf> {
@@ -96,6 +118,7 @@ impl OrderBounds {
     /// too, and shell commands, which all run in the sandbox.
     pub(crate) fn allowed_tools(&self) -> Vec<String> {
         let mut rules: Vec<String> = self.folders().map(|f| format!("Read({})", rule_path(f))).collect();
+        rules.extend(self.frozen.iter().map(|f| format!("Read({})", rule_path(f))));
         if self.builds {
             rules.extend(self.folders().map(|f| format!("Edit({})", rule_path(f))));
         }
@@ -110,7 +133,17 @@ impl OrderBounds {
         if !self.builds {
             rules.extend(WRITING_TOOLS.iter().map(|t| (*t).to_string()));
         }
+        rules.extend(self.frozen.iter().map(|f| format!("Edit({})", rule_path(f))));
         rules
+    }
+
+    /// The rules that ask instead of allowing: without O1, git that discards the worktree's own work goes to the
+    /// user (E173, C47); with it, those commands run, the checkpoint covering them.
+    fn ask_rules(&self) -> Vec<String> {
+        if !self.asks {
+            return Vec::new();
+        }
+        OWN_WORKTREE_DISCARDS.iter().map(|c| format!("Bash({c}:*)")).collect()
     }
 
     /// The settings handed over with `--settings`. Both read blocks are set: the file tools' block names
@@ -118,19 +151,27 @@ impl OrderBounds {
     /// whatever that block leaves open (A21).
     pub(crate) fn settings(&self) -> Value {
         let mut readable: Vec<String> = self.folders().map(|f| shown(f)).collect();
-        readable.extend(self.read_roots.iter().map(|f| shown(f)));
+        readable.extend(self.read_roots.iter().chain(&self.frozen).map(|f| shown(f)));
         let mut filesystem = json!({"denyRead": ["~"], "allowRead": readable});
+        let frozen = self.frozen.iter().map(|f| shown(f));
         if self.builds {
             filesystem["allowWrite"] = json!(self.build_dir.iter().map(|f| shown(f)).collect::<Vec<_>>());
+            if self.frozen.is_some() {
+                filesystem["denyWrite"] = json!(frozen.collect::<Vec<_>>());
+            }
         } else {
-            filesystem["denyWrite"] = json!(self.folders().map(|f| shown(f)).collect::<Vec<_>>());
+            filesystem["denyWrite"] = json!(self.folders().map(|f| shown(f)).chain(frozen).collect::<Vec<_>>());
         }
+        let (deny, mut ask) = carried(self.frozen_settings.as_ref());
+        ask.extend(self.ask_rules());
         json!({
             "permissions": {
                 "blockReadsOutsideWorkingDirectories": true,
                 "blockWritesOutsideWorkingDirectories": true,
                 "blockReadsExemptPaths": self.read_roots.iter().map(|f| shown(f)).collect::<Vec<_>>(),
                 "disableBypassPermissionsMode": "disable",
+                "deny": deny,
+                "ask": ask,
             },
             "sandbox": {
                 "enabled": true,
@@ -142,4 +183,15 @@ impl OrderBounds {
             },
         })
     }
+}
+
+/// The deny and ask rules of the frozen project settings, which only tighten.
+fn carried(settings: Option<&Value>) -> (Vec<String>, Vec<String>) {
+    let rules = |key: &str| -> Vec<String> {
+        settings
+            .and_then(|s| s["permissions"][key].as_array())
+            .map(|list| list.iter().filter_map(|r| r.as_str().map(str::to_string)).collect())
+            .unwrap_or_default()
+    };
+    (rules("deny"), rules("ask"))
 }

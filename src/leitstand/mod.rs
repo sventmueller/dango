@@ -10,14 +10,17 @@ mod effects;
 mod freeze;
 mod gates;
 mod git;
+mod launching;
 mod lifecycle;
 mod manifest;
 mod notices;
+mod own;
 mod power;
 mod rules;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 mod sessions;
+mod siblings;
 mod store;
 
 use std::cell::{Cell, OnceCell, RefCell};
@@ -252,6 +255,8 @@ impl Leitstand {
         let step = {
             let mut folders = self.folders.borrow_mut();
             let Some(folder) = folders.get_mut(root) else { return };
+            let stage = rules::stage(&folder.factory);
+            folder.factory.set_stage(stage);
             let step = folder.factory.handle(Input::new(at, kind));
             folder.revision += 1;
             if !step.refusals.is_empty() {

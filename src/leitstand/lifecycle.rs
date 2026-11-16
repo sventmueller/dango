@@ -163,7 +163,7 @@ impl Leitstand {
         }
         let defaults = rules::defaults();
         let first = Rules::new(&defaults, None, &confirmations);
-        let restored = Factory::restore(rules::STAGE, first, logs, self.clock.now());
+        let restored = Factory::restore(ide_factory::Stage::One, first, logs, self.clock.now());
         for problem in &restored.problems {
             ide_core::diag::report(
                 "restoring an order log",
@@ -216,6 +216,10 @@ impl Leitstand {
     fn read_agents(&self, root: &Path) {
         let root = root.to_path_buf();
         let back = self.back();
+        #[cfg(feature = "selftest")]
+        if let Some(agents) = self.probe.agents() {
+            return back.deliver(Delivery::Input(root, Box::new(InputKind::Agents(agents))));
+        }
         let started = crate::util::spawn("order-agents", move || {
             let login = crate::environment::wait(Duration::from_secs(15)).unwrap_or_default();
             let path = ide_process::tool::var(login, "PATH");
@@ -226,10 +230,9 @@ impl Leitstand {
                 }
                 status
             };
-            let agents = [
+            let mut agents: BTreeMap<Agent, AgentStatus> = [
                 (Agent::Claude, ide_ui_agent::claude_program(login).is_some()),
                 (Agent::Codex, ide_process::tool::which("codex", path).is_some()),
-                (Agent::Own, false),
             ]
             .into_iter()
             .map(|(agent, found)| {
@@ -237,6 +240,7 @@ impl Leitstand {
                 (agent, status)
             })
             .collect();
+            agents.insert(Agent::Own, super::own::status());
             back.deliver(Delivery::Input(root, Box::new(InputKind::Agents(agents))));
         });
         if let Err(why) = started {
