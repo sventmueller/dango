@@ -1,9 +1,7 @@
 //! How an AI tab's session runs: starting it, the events that come from it, and what changes of its status set off.
 
-use ide_core::LockIgnoringPoison;
 use ide_ui_common::window::{Notices, Trust};
 use std::path::PathBuf;
-use std::sync::atomic::Ordering;
 use std::time::{Duration, SystemTime};
 
 use ide_session::{AgentPath, Contract, Launch, LaunchError, UserChoices};
@@ -14,7 +12,7 @@ use super::driven::Driven;
 use super::notify;
 use super::rewind::Fork;
 use super::source::{self, Problem, Source};
-use super::tab::{AgentTab, Incoming};
+use super::tab::AgentTab;
 use crate::AgentKey;
 use ide_ui_common::util::{main_after, main_soon};
 
@@ -154,30 +152,6 @@ impl AgentTab {
         launch.thread = Some(thread);
         launch.git = git;
         launch
-    }
-
-    /// Takes in what the session reported since the last time.
-    pub(super) fn flush(&self) {
-        let inbox = self.inbox.borrow().clone();
-        inbox.scheduled.store(false, Ordering::SeqCst);
-        let pending = std::mem::take(&mut *inbox.events.lock_ignoring_poison());
-        if pending.is_empty() {
-            return;
-        }
-        let changes: Vec<Change> = pending.changes.into_iter().collect();
-        for event in pending.events {
-            match &event {
-                Incoming::Own(ide_agent::Event::Changed(c)) => {
-                    debug_assert!(c.is_empty(), "invalidations are coalesced before scheduling");
-                }
-                Incoming::Own(other) => self.own_event(other),
-            }
-        }
-        let snapshot = self.state.borrow().source().snapshot();
-        if let Some(snapshot) = snapshot {
-            self.absorb(snapshot, &changes);
-            super::dialogs::requests_changed(self);
-        }
     }
 
     /// What an ACP session's failure means for the tab; failures of a running session's requests are only logged.

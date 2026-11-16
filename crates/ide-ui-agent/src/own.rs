@@ -2,8 +2,10 @@
 //! model chosen; the composer's pills for model and effort, for the profile and approval mode (E27) and for the
 //! sandbox (E19); and answering its permission requests.
 
-use ide_agent::{Approval, Choice, Profile, Session};
+use ide_agent::{Approval, Profile, Session};
 use ide_core::explain::Explained;
+use ide_git::Git;
+use ide_session::{AgentPath, Contract, Launch, LaunchError, UserChoices};
 use ide_thread::{Change, EntryKind, PermissionOption, RequestState};
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
@@ -11,13 +13,17 @@ use objc2_app_kit::{NSColor, NSControlStateValueOn, NSMenu};
 use splat_i18n::{t, tf};
 
 use super::cards::request::{ALLOW_ALWAYS, ALLOW_ONCE};
+use super::driven::Driven;
 use super::source::{Problem, Source};
-use super::tab::{AgentTab, Incoming};
+use super::tab::AgentTab;
 use crate::own_agent::{self, ModelChoice};
 use ide_ui_common::util::{item, main_soon, ns, separator};
 
 /// How many models of one endpoint the "+" menu lists.
 const MENU_MODELS: usize = 12;
+
+/// What a session of the own agent starts with: its configuration and the conversation its store kept.
+type Prepared = (ide_agent::Config, Option<ide_agent::store::Stored>);
 
 /// The endpoints the "+" menu offers, each that can be asked with its models as last loaded, else the model it
 /// starts with, and the model ticked as the default for new threads.
@@ -123,30 +129,28 @@ impl AgentTab {
             .or_else(|| picked_model(self.agent.id()));
         let (key, cwd, thread_id) = (self.key, self.cwd.clone(), self.thread_id.clone());
         let sandbox = self.state.borrow().sandbox();
-        let sink = self.sink(Incoming::Own);
         let diagnostics = crate::host::host().agent_diagnostics(&cwd);
         if let Err(why) = ide_ui_common::util::spawn("own-agent-start", move || {
             let store = own_agent::store_path(&thread_id);
-            let stored = store.exists().then(|| ide_agent::store::load(&store).ok()).flatten();
+            let stored = store.exists().then(|| ide_agent::store::load(&store));
             let choice = chosen
                 .or_else(|| {
-                    stored.filter(|s| !s.model.is_empty()).map(|s| ModelChoice {
-                        endpoint: s.endpoint,
-                        model: s.model,
+                    let stored = stored.as_ref()?.as_ref().ok()?;
+                    (!stored.model.is_empty()).then(|| ModelChoice {
+                        endpoint: stored.endpoint.clone(),
+                        model: stored.model.clone(),
                     })
                 })
                 .or_else(own_agent::default_choice);
-            let session = choice.clone().map(|choice| {
+            let prepared = choice.clone().map(|choice| {
                 let config = own_agent::config(thread_id, &cwd, &choice, sandbox, diagnostics)?;
-                if store.exists() {
-                    Session::resume(config, sink).map_err(|e| Explained(own_agent::load_error(&e)))
-                } else {
-                    Ok(Session::start(config, sink))
-                }
+                let stored = stored.transpose().map_err(|e| Explained(own_agent::load_error(&e)))?;
+                Ok((config, stored))
             });
+            let git = crate::host::host().git();
             main_soon(move || {
                 if let Some(tab) = super::get(key) {
-                    tab.launch_own(choice, session);
+                    tab.launch_own(choice, prepared, git);
                 }
             });
         }) {
@@ -154,9 +158,11 @@ impl AgentTab {
         }
     }
 
-    fn launch_own(&self, choice: Option<ModelChoice>, session: Option<Result<Session, Explained>>) {
-        let session = match session {
-            Some(Ok(session)) => session,
+    /// Starts the session `prepared` describes in the app's registry: its configuration, and the conversation its
+    /// store kept, which it continues; the registry takes the checkpoint before each message with `git` (I6).
+    fn launch_own(&self, choice: Option<ModelChoice>, prepared: Option<Result<Prepared, Explained>>, git: Option<Git>) {
+        let (config, stored) = match prepared {
+            Some(Ok(prepared)) => prepared,
             Some(Err(Explained(why))) => {
                 return self.start_failed(Problem::Start(why));
             }
@@ -164,22 +170,34 @@ impl AgentTab {
                 return self.start_failed(Problem::NoModel);
             }
         };
-        apply_choice(&session, &super::choices::of(self.agent.id()));
-        let snapshot = session.snapshot();
+        let Some(sessions) = self.sessions.clone() else {
+            return self.start_failed(Problem::Start(String::new()));
+        };
+        let path = match stored {
+            Some(stored) => AgentPath::OwnStored(Box::new(config), Box::new(stored)),
+            None => AgentPath::Own(Box::new(config)),
+        };
+        let thread = ide_thread::Thread::new(self.thread_id.clone(), self.agent.id(), &self.cwd);
+        let mut launch = Launch::new(path, &self.cwd, Vec::new(), Contract::User(UserChoices::default()));
+        launch.thread = Some(thread);
+        launch.git = git;
+        let (driven, first) = match Driven::start(&sessions, launch) {
+            Ok(started) => started,
+            Err(LaunchError::Start(why)) => return self.start_failed(Problem::Start(why)),
+            Err(other) => return self.start_failed(Problem::Start(other.to_string())),
+        };
+        let session = driven.own_agent();
+        if let Some(session) = &session {
+            apply_choice(session, &super::choices::of(self.agent.id()));
+        }
+        let snapshot = session.map(|s| s.snapshot()).or(first.map(|batch| batch.thread));
         {
             let mut state = self.state.borrow_mut();
             state.pick_own(choice);
-            state.started(Source::Own(session));
+            state.started(Source::Session(driven));
         }
-        self.absorb(snapshot, &[Change::Cleared]);
-    }
-
-    /// The session reported something besides changes to the thread.
-    pub(super) fn own_event(&self, event: &ide_agent::Event) {
-        match event {
-            ide_agent::Event::RuleAdded(rule) => own_agent::add_rule(&self.cwd, rule.clone()),
-            ide_agent::Event::Failed(why) => ide_ui_common::diag::report("the own agent", why),
-            ide_agent::Event::Changed(_) => {}
+        if let Some(snapshot) = snapshot {
+            self.absorb(snapshot, &[Change::Cleared]);
         }
     }
 
@@ -212,7 +230,7 @@ impl AgentTab {
         };
         self.composer.model.setTitle(&ns(&pill));
         self.composer.model.setEnabled(true);
-        let policy = state.source().own().map(Session::policy);
+        let policy = state.source().own_agent().map(|session| session.policy());
         let (profile, approval) = policy
             .as_ref()
             .map_or((Profile::Write, Approval::Manual), |p| (p.profile, p.approval));
@@ -326,7 +344,7 @@ impl AgentTab {
             .is_some_and(|c| c.endpoint == choice.endpoint);
         self.state.borrow_mut().pick_own(Some(choice.clone()));
         super::choices::remember(self.agent.id(), |remembered| remembered.model = Some(picked.clone()));
-        let session = self.state.borrow().source().own().cloned();
+        let session = self.state.borrow().source().own_agent();
         match session {
             Some(session) if same_endpoint => {
                 let listed = own_agent::models(endpoint).into_iter().find(|m| m.id == model);
@@ -345,7 +363,7 @@ impl AgentTab {
         let Some(level) = self.state.borrow().offered().efforts.get(index).cloned() else {
             return;
         };
-        if let Some(session) = self.state.borrow().source().own() {
+        if let Some(session) = self.state.borrow().source().own_agent() {
             session.set_effort(Some(level.as_str()).filter(|l| !l.is_empty()));
         }
         super::choices::remember(self.agent.id(), |choice| {
@@ -368,7 +386,7 @@ impl AgentTab {
     pub(super) fn own_mode_items(&self) -> Retained<NSMenu> {
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
-        let policy = self.state.borrow().source().own().map(Session::policy);
+        let policy = self.state.borrow().source().own_agent().map(|session| session.policy());
         let (profile, approval) = policy.map_or((Profile::Write, Approval::Manual), |p| (p.profile, p.approval));
         let mut modes = Vec::new();
         for (n, (item, title, symbol)) in [
@@ -408,7 +426,7 @@ impl AgentTab {
         let Some(mode) = self.state.borrow().offered().modes.get(index).cloned() else {
             return;
         };
-        if let Some(session) = self.state.borrow().source().own() {
+        if let Some(session) = self.state.borrow().source().own_agent() {
             match mode.as_str() {
                 "ask" => session.set_profile(Profile::Ask),
                 "write" => session.set_profile(Profile::Write),
@@ -427,7 +445,7 @@ impl AgentTab {
     /// The sandbox switch: it takes effect with the next tool call, also in a running turn.
     pub(super) fn own_toggle_sandbox(&self) {
         let on = self.state.borrow_mut().toggle_sandbox();
-        if let Some(session) = self.state.borrow().source().own() {
+        if let Some(session) = self.state.borrow().source().own_agent() {
             session.set_sandbox(on);
         }
         self.refresh_composer();
@@ -447,17 +465,9 @@ impl AgentTab {
             ALLOW_ALWAYS => matches!(option, PermissionOption::AllowAlways { .. }),
             _ => *option == PermissionOption::Deny,
         };
-        let choice = request
-            .options
-            .iter()
-            .position(wanted)
-            .map_or(Choice::Dismiss, Choice::Option);
-        let result = self
-            .state
-            .borrow()
-            .source()
-            .own()
-            .map(|s| s.answer(&request.request_id, choice));
+        let option = request.options.iter().position(wanted);
+        let session = self.state.borrow().source().tab_session().cloned();
+        let result = session.map(|driven| driven.answer_option(&request.request_id, option));
         if let Some(Err(error)) = result {
             ide_ui_common::diag::report("answering a permission request", &error);
         }

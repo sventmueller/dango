@@ -1,6 +1,5 @@
-//! Where a tab's thread comes from: its own session in the app's session registry, on Claude, Codex, OpenCode or
-//! ACP, which a recording played for the self-test can take the place of; the own agent; or a session of the registry
-//! the tab did not start.
+//! Where a tab's thread comes from: its own session in the app's session registry, on any path, which a recording
+//! played for the self-test can take the place of, or a session of the registry the tab did not start.
 
 #[cfg(feature = "selftest")]
 use ide_core::LockIgnoringPoison;
@@ -62,10 +61,8 @@ pub(crate) enum Source {
     /// Looking for `claude` and the login shell's environment.
     Starting,
     /// The tab's own session, which the app's registry runs (B37b): Claude, Codex or OpenCode over their own
-    /// protocols (E147), or an agent over ACP; in the self-test, a played recording.
+    /// protocols (E147), an agent over ACP or the app's own agent; in the self-test, a played recording.
     Session(Driven),
-    /// The app's own agent.
-    Own(ide_agent::Session),
     /// A session of the app's registry the tab did not start, such as a work order's (E184).
     Driven(Driven),
 }
@@ -84,13 +81,9 @@ impl Source {
         }
     }
 
-    /// The thread as it is now, when there is one.
+    /// The thread as of the driver's last flush, when there is one.
     pub(crate) fn snapshot(&self) -> Option<Thread> {
-        match self {
-            Source::Own(session) => Some(session.snapshot()),
-            Source::Session(driven) | Source::Driven(driven) => driven.snapshot(),
-            Source::Idle | Source::Starting => None,
-        }
+        self.tab_session().or_else(|| self.driven()).and_then(Driven::snapshot)
     }
 
     pub(crate) fn capabilities(&self) -> Option<Capabilities> {
@@ -115,18 +108,14 @@ impl Source {
 
     pub(crate) fn is_live(&self) -> bool {
         match self {
-            Source::Own(_) => true,
             Source::Session(driven) | Source::Driven(driven) => driven.is_live(),
             Source::Idle | Source::Starting => false,
         }
     }
 
     /// The own agent's session, when the tab runs one.
-    pub(crate) fn own(&self) -> Option<&ide_agent::Session> {
-        match self {
-            Source::Own(session) => Some(session),
-            _ => None,
-        }
+    pub(crate) fn own_agent(&self) -> Option<ide_agent::Session> {
+        self.tab_session().and_then(Driven::own_agent)
     }
 
     /// The ACP session, when the tab runs one.
@@ -202,7 +191,6 @@ impl Source {
     pub(crate) fn send(&self, message: UserMessage) -> Result<Option<String>, Explained> {
         match self {
             Source::Session(driven) => driven.steer(message),
-            Source::Own(session) => session.send(message).map(|()| None).map_err(|e| Explained::of(&e)),
             Source::Driven(driven) => driven.send(message).map(|()| None),
             _ => Err(Explained::of(&SessionError::Closed)),
         }
@@ -211,9 +199,6 @@ impl Source {
     pub(crate) fn interrupt(&self) {
         if let Some(driven) = self.tab_session().or_else(|| self.driven()) {
             driven.stop_turn();
-        }
-        if let Some(session) = self.own() {
-            session.cancel();
         }
     }
 
@@ -303,9 +288,6 @@ impl Source {
     pub(crate) fn end(&self) {
         if let Some(driven) = self.driven().or_else(|| self.tab_session()) {
             driven.leave();
-        }
-        if let Some(session) = self.own() {
-            session.stop();
         }
     }
 }

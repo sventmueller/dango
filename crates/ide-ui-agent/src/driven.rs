@@ -169,6 +169,11 @@ impl Driven {
         self.with(|driver| driver.acp().cloned()).flatten()
     }
 
+    /// The own agent's session behind the driver, for its profiles and settings.
+    pub(crate) fn own_agent(&self) -> Option<ide_agent::Session> {
+        self.with(|driver| driver.own().cloned()).flatten()
+    }
+
     /// Hands `message` to the driver's queue, which sends it after the turn that runs and its checkpoint.
     pub(crate) fn send(&self, message: UserMessage) -> Result<(), Explained> {
         let prompt = Prompt {

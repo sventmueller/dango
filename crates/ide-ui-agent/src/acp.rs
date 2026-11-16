@@ -394,7 +394,7 @@ impl AgentTab {
                 let program = match self.state.borrow().source() {
                     Source::Session(driven) if driven.kind() == PathKind::Acp => self.launch_program(),
                     Source::Idle | Source::Starting => self.launch_program(),
-                    Source::Session(_) | Source::Own(_) | Source::Driven(_) => None,
+                    Source::Session(_) | Source::Driven(_) => None,
                 };
                 let Some(program) = program else { return };
                 let mut parts: Vec<String> = terminal.env.iter().map(|(k, v)| format!("{k}={v}")).collect();

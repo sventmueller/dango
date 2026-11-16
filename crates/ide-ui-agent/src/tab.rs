@@ -1,12 +1,9 @@
 //! One AI tab: its session, the views showing it, and how session events reach them.
 
-use ide_core::LockIgnoringPoison;
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 
 use ide_claude::Session;
 use ide_thread::{Change, Status, Thread, ThreadId};
@@ -28,7 +25,7 @@ use super::suggest::Suggestions;
 use super::target::AgentTarget;
 use super::timeline::Timeline;
 use super::{overlay, ui};
-use ide_ui_common::util::{activate, auto_layout, guarded, main_after, main_soon};
+use ide_ui_common::util::{activate, auto_layout, guarded, main_soon};
 use ide_ui_common::window::{Notices, TabDecor, TabId, TabKind, Tabs, Window};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
@@ -54,18 +51,6 @@ pub const INPUT_INSET: f64 = 14.0;
 /// How strongly the composer fills the conversation's width up to `INPUT_WIDTH`: above the content's hugging and the
 /// holding priority of the window's content, below the sidebar's, so a wide window neither narrows nor moves it.
 const FILL_PRIORITY: f32 = 255.0;
-
-/// What a session the tab runs itself reported; its own Claude session reports through the app's registry instead.
-pub(crate) enum Incoming {
-    Own(ide_agent::Event),
-}
-
-/// Session events waiting for the main thread.
-#[derive(Default)]
-pub(crate) struct Inbox {
-    pub(super) events: Mutex<super::inbox::Pending>,
-    pub(super) scheduled: AtomicBool,
-}
 
 pub(crate) struct RootIvars {
     key: AgentKey,
@@ -149,7 +134,6 @@ pub struct AgentTab {
     pub(super) queue_view: Retained<NSStackView>,
     pub(super) suggestions: Suggestions,
     pub(super) state: RefCell<State>,
-    pub(super) inbox: RefCell<Arc<Inbox>>,
     pub(super) store: Store,
     pub(super) ticking: std::cell::Cell<bool>,
     /// Where the keyboard focus was before ⌘Esc moved it into the composer.
@@ -164,7 +148,7 @@ pub struct AgentTab {
     pub(super) me: RefCell<std::rc::Weak<AgentTab>>,
     /// What the tab does about Codex's Remote Control that the session cannot say yet (E148).
     pub(super) codex_remote: RefCell<Option<crate::codex::Turning>>,
-    /// The app's session registry, where the tab runs its Claude session (B37b).
+    /// The app's session registry, where the tab runs its session (B37b).
     pub(super) sessions: Option<Rc<dyn crate::Sessions>>,
 }
 
@@ -259,7 +243,6 @@ impl AgentTab {
             suggestions,
             agent,
             state,
-            inbox: RefCell::new(Arc::new(Inbox::default())),
             ticking: std::cell::Cell::new(false),
             previous_focus: RefCell::new(None),
             dialog: RefCell::new(None),
@@ -471,27 +454,6 @@ impl AgentTab {
     pub(crate) fn show_pending(&self) {
         self.timeline.show_pending();
         self.start_ticking();
-    }
-
-    /// Where a new session reports to: a fresh inbox, emptied on the main thread shortly after something arrives.
-    pub(super) fn sink<E: Send + 'static>(&self, wrap: fn(E) -> Incoming) -> impl Fn(E) + Send + Sync + 'static {
-        let inbox = Arc::new(Inbox::default());
-        *self.inbox.borrow_mut() = inbox.clone();
-        let key = self.key;
-        move |event: E| {
-            inbox.events.lock_ignoring_poison().push(wrap(event));
-            if !inbox.scheduled.swap(true, Ordering::SeqCst) {
-                let scheduled = inbox.clone();
-                main_after(Duration::from_millis(30), move || {
-                    if let Some(tab) = super::get(key) {
-                        let current = Arc::ptr_eq(&tab.inbox.borrow(), &scheduled);
-                        if current {
-                            tab.flush();
-                        }
-                    }
-                });
-            }
-        }
     }
 
     /// Shows the thread as `snapshot` has it and reacts to how its status moved.

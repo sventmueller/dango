@@ -27,7 +27,6 @@ mod figures;
 mod format;
 mod header;
 mod host;
-mod inbox;
 mod markdown;
 mod mention;
 mod model;
@@ -135,19 +134,19 @@ pub struct State {
     usage: usage::Usage,
     #[cfg(feature = "selftest")]
     rewind_alerts: rewind_actions::RewindAlerts,
-    /// The app's session registry, where Claude tabs run their sessions (B37b).
+    /// The app's session registry, where the AI tabs run their sessions (B37b).
     sessions: RefCell<Option<Rc<dyn Sessions>>>,
 }
 
 impl State {
-    /// Makes `sessions` the registry the AI tabs opened from now on start their Claude sessions in; once, as the app
+    /// Makes `sessions` the registry the AI tabs opened from now on start their sessions in; once, as the app
     /// starts.
     pub fn install_sessions(&self, sessions: Rc<dyn Sessions>) {
         *self.sessions.borrow_mut() = Some(sessions);
     }
 
     /// The key of an AI tab that opens now, which no tab had before, and the app's session registry it starts its
-    /// own Claude session in.
+    /// own session in.
     pub(crate) fn admit(&self) -> (AgentKey, Option<Rc<dyn Sessions>>) {
         (AgentKey(self.agent_tabs.keys.next()), self.sessions.borrow().clone())
     }

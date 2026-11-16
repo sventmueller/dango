@@ -32,7 +32,7 @@ const APP_LOOKUPS: usize = 404;
 
 /// How many times the UI crates' production code may look their state up through their host's `state()` or call a
 /// function that does, instead of being handed it, a ratchet like `APP_LOOKUPS` (E143).
-const STATE_LOOKUPS: usize = 481;
+const STATE_LOOKUPS: usize = 480;
 
 pub(crate) fn check() -> Result<(), String> {
     let root = root();

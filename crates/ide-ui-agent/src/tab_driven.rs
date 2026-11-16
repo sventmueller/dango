@@ -148,6 +148,8 @@ impl AgentTab {
             Signal::CodexFailed(error) => heard.problem = Some(Problem::Start(crate::codex::explained(&error))),
             Signal::OpenCodeFailed(error) => heard.problem = Some(Problem::Start(crate::opencode::explained(&error))),
             Signal::AcpFailed(error) => heard.problem = self.acp_problem(&error),
+            Signal::Failed(why) if self.agent.is_own() => ide_ui_common::diag::report("the own agent", why),
+            Signal::RuleAdded(rule) => crate::own_agent::add_rule(&self.cwd, rule),
             Signal::Delivered { turn, sent, checkpoint } => self.went_out(turn, sent.map_err(Explained), checkpoint),
             Signal::CheckpointFinished { started, finished, .. } => {
                 self.state.borrow_mut().checkpoint_finished(&started, &finished);
@@ -187,7 +189,8 @@ impl AgentTab {
         }
     }
 
-    /// Takes in what the tab's own session on another path than Claude reported: Codex, OpenCode or ACP.
+    /// Takes in what the tab's own session on another path than Claude reported: Codex, OpenCode, ACP or the own
+    /// agent.
     fn take_other(&self, heard: Heard, thread: ide_thread::Thread, changes: &[Change]) {
         if heard.learned {
             self.state.borrow_mut().learn();
