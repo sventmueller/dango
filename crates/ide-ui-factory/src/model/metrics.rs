@@ -186,11 +186,19 @@ impl MetricsView {
         let wait = metrics
             .median_wait_ms()
             .map_or_else(|| t("keine").to_string(), words::duration);
-        self.lines = vec![
-            tf(
-                "Die Kennzahlen beruhen auf {} Aufträgen; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel.",
-                &[&metrics.orders().to_string(), &metrics.eligible().to_string()],
+        let eligible = metrics.eligible().to_string();
+        let rests = match metrics.orders() {
+            1 => tf(
+                "Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel.",
+                &[&eligible],
             ),
+            orders => tf(
+                "Die Kennzahlen beruhen auf {} Aufträgen; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel.",
+                &[&orders.to_string(), &eligible],
+            ),
+        };
+        self.lines = vec![
+            rests,
             tf("Wartezeit auf dich im Median: {}", &[&wait]),
             tf(
                 "Bei Gleichstand im Routing entscheidet die Quote, sobald beide Einträge auf mindestens {} Aufträgen beruhen.",

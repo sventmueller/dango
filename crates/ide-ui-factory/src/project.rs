@@ -23,7 +23,7 @@ use splat_i18n::{t, tf};
 
 use crate::actions::Target;
 use crate::host::host;
-use crate::model::settings::{LIMITS, Origin, ProjectFile, ProjectValue, read_dollars, reviewer_rules};
+use crate::model::settings::{LIMITS, Origin, ProjectFile, ProjectValue, reviewer_rules};
 use crate::ui;
 use ide_factory::station::Role;
 use ide_ui_common::style::space;
@@ -56,10 +56,11 @@ struct ProjectUi {
     template: Retained<NSPopUpButton>,
 }
 
-/// A value's row: its control, its origin and its reset button.
+/// A value's row: its control, what the control showed of the file, its origin and its reset button.
 struct ValueRow {
     value: ProjectValue,
     control: Control,
+    shown: RefCell<String>,
     origin: Retained<NSTextField>,
     reset: Retained<NSButton>,
 }
@@ -242,7 +243,11 @@ impl ProjectSheet {
         let title = value.title();
         let caption = label(mtm, &title);
         let control = match value {
-            ProjectValue::Role(_) => Control::Shown(ui::text(mtm, "", WIDE)),
+            ProjectValue::Role(_) => {
+                let shown = ui::text(mtm, "", WIDE);
+                ide_ui_common::util::set_title_element(&shown, &caption);
+                Control::Shown(shown)
+            }
             ProjectValue::ReviewerRule => {
                 let choice = NSPopUpButton::new(mtm);
                 for words in reviewer_rules() {
@@ -259,12 +264,6 @@ impl ProjectSheet {
                     80.0
                 };
                 field.widthAnchor().constraintEqualToConstant(width).setActive(true);
-                let example = match value {
-                    ProjectValue::Copy => Some(t("Mitkopieren, etwa node_modules, .env.local")),
-                    ProjectValue::Setup => Some(t("Einrichtungsbefehl, etwa npm ci")),
-                    _ => None,
-                };
-                field.setPlaceholderString(example.map(ns).as_deref());
                 ide_ui_common::util::set_title_element(&field, &caption);
                 Control::Field(field)
             }
@@ -291,6 +290,7 @@ impl ProjectSheet {
         ValueRow {
             value,
             control,
+            shown: RefCell::new(String::new()),
             origin,
             reset,
         }
@@ -305,13 +305,19 @@ impl ProjectSheet {
         let file = self.ivars().file.borrow();
         let ui = self.ui();
         for row in &ui.rows {
-            let words = value_words(&file, row.value);
-            match &row.control {
-                Control::Field(field) | Control::Shown(field) => field.setStringValue(&ns(&words)),
+            let shown = match &row.control {
+                Control::Field(field) | Control::Shown(field) => {
+                    let text = file.field_text(row.value);
+                    field.setStringValue(&ns(&text));
+                    field.setPlaceholderString(file.placeholder(row.value).as_deref().map(ns).as_deref());
+                    text
+                }
                 Control::Choice(choice) => {
                     choice.selectItemAtIndex(isize::from(file.reviewer_preferred().0));
+                    choice.indexOfSelectedItem().to_string()
                 }
-            }
+            };
+            *row.shown.borrow_mut() = shown;
             let origin = file.origin(row.value);
             row.origin.setStringValue(&ns(origin.words()));
             row.reset.setEnabled(origin == Origin::File);
@@ -335,20 +341,20 @@ impl ProjectSheet {
         ui.problems.setHidden(words.is_empty());
     }
 
-    /// Takes what the controls say into the file; the first problem, in the user's words.
+    /// Takes what the user changed in the controls into the file; the first problem, in the user's words.
     fn take_fields(&self) -> Result<(), Explained> {
         let mut file = self.ivars().file.borrow_mut();
         for row in &self.ui().rows {
+            let shown = row.shown.borrow();
             match &row.control {
                 Control::Shown(_) => {}
                 Control::Choice(choice) => {
-                    let preferred = choice.indexOfSelectedItem() == 1;
-                    let (now, origin) = file.reviewer_preferred();
-                    if preferred != now || origin == Origin::File {
-                        file.set_reviewer_preferred(preferred)?;
+                    let index = choice.indexOfSelectedItem();
+                    if index.to_string() != *shown {
+                        file.set_reviewer_preferred(index == 1)?;
                     }
                 }
-                Control::Field(field) => take_field(&mut file, row.value, &field.stringValue().to_string())?,
+                Control::Field(field) => file.take(row.value, &shown, &field.stringValue().to_string())?,
             }
         }
         Ok(())
@@ -425,7 +431,13 @@ fn sections() -> Vec<(&'static str, Option<&'static str>, Vec<ProjectValue>)> {
             )),
             roles,
         ),
-        (t("Grenzen und Budget"), None, limits),
+        (
+            t("Grenzen und Budget"),
+            Some(t(
+                "Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt.",
+            )),
+            limits,
+        ),
         (t("Worktree"), None, vec![ProjectValue::Copy, ProjectValue::Setup]),
         (
             t("Risikoklassen"),
@@ -442,55 +454,6 @@ fn sections() -> Vec<(&'static str, Option<&'static str>, Vec<ProjectValue>)> {
             vec![ProjectValue::Tests, ProjectValue::Config],
         ),
     ]
-}
-
-/// What the row of `value` shows of `file`.
-fn value_words(file: &ProjectFile, value: ProjectValue) -> String {
-    let dollars = |amount: Option<f64>| amount.map(|d| format!("{d:.2}")).unwrap_or_default();
-    match value {
-        ProjectValue::Role(role) => file.role(role).0.join(", "),
-        ProjectValue::ReviewerRule => {
-            let preferred = file.reviewer_preferred().0;
-            reviewer_rules()[usize::from(preferred)].to_string()
-        }
-        ProjectValue::Limit(limit) => file.limit(limit).0.to_string(),
-        ProjectValue::OrderBudget => dollars(file.order_budget().0),
-        ProjectValue::DayBudget => dollars(file.day_budget().0),
-        ProjectValue::Setup => file.setup().0,
-        list => file.list(list).0.join(", "),
-    }
-}
-
-/// Takes what the field of `value` says into `file`; a value that came from the default and did not change stays out
-/// of the file.
-fn take_field(file: &mut ProjectFile, value: ProjectValue, typed: &str) -> Result<(), Explained> {
-    match value {
-        ProjectValue::Limit(limit) => {
-            let Ok(number) = typed.trim().parse::<u64>() else {
-                return Err(Explained(tf("„{}“ ist keine ganze Zahl.", &[typed])));
-            };
-            let (now, origin) = file.limit(limit);
-            if number != now || origin == Origin::File {
-                file.set_limit(limit, number)?;
-            }
-        }
-        ProjectValue::OrderBudget | ProjectValue::DayBudget => {
-            let amount = read_dollars(typed).map_err(|_| Explained(tf("„{}“ ist kein Betrag in Dollar.", &[typed])))?;
-            let order = value == ProjectValue::OrderBudget;
-            let (now, origin) = if order { file.order_budget() } else { file.day_budget() };
-            if amount != now || origin == Origin::File {
-                if order {
-                    file.set_order_budget(amount)?;
-                } else {
-                    file.set_day_budget(amount)?;
-                }
-            }
-        }
-        ProjectValue::Setup => file.set_setup(typed)?,
-        list if list.is_list() => file.set_list(list, typed)?,
-        _ => {}
-    }
-    Ok(())
 }
 
 fn panel(mtm: MainThreadMarker, folder: &str) -> Retained<NSWindow> {

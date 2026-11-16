@@ -21,9 +21,12 @@ use splat_i18n::{t, tf};
 
 use crate::actions::Target;
 use crate::host::host;
-use crate::model::board::{BoardView, COLUMNS, FleetWords, column_of, column_title, key_of};
+use crate::model::board::{
+    BoardView, COLUMNS, FleetWords, column_of, column_title, confirm_label, key_of, loosening_of,
+};
 use crate::table::OrderTable;
 use crate::ui;
+use ide_factory::workflow::rules::Loosening;
 use ide_ui_common::style::space;
 
 /// The key of the Leitstand tab, one per window (E64).
@@ -33,6 +36,8 @@ pub(crate) struct BoardIvars {
     target: Target,
     tab: Cell<Option<TabId>>,
     view: RefCell<BoardView>,
+    /// The hashes of the loosenings shown, by the tags of their buttons.
+    loosenings: RefCell<Vec<String>>,
     ui: OnceCell<BoardUi>,
 }
 
@@ -151,6 +156,7 @@ impl BoardTab {
             target,
             tab: Cell::new(None),
             view: RefCell::new(BoardView::default()),
+            loosenings: RefCell::new(Vec::new()),
             ui: OnceCell::new(),
         };
         // SAFETY: NSView's initializer, called once on the newly allocated object.
@@ -264,7 +270,7 @@ impl BoardTab {
         let now = crate::now();
         let board = host().board(self.root());
         self.ivars().view.borrow_mut().set(board, now);
-        let fleet = FleetWords::new(host().fleet(self.root()).as_ref(), now);
+        let fleet = FleetWords::new(host().fleet(self.root()).as_ref(), now, &crate::local_day(now));
         let mtm = self.mtm();
         let ui = self.ui();
         ui::clear(&ui.fleet);
@@ -299,20 +305,26 @@ impl BoardTab {
             let row = ui::row(mtm, space::M);
             row.addArrangedSubview(&ui::note(mtm, &crate::model::words::loosening(loosening), 520.0));
             let tag = isize::try_from(index).unwrap_or(0);
-            row.addArrangedSubview(&ui::button(mtm, t("Bestätigen"), me, sel!(ideFactoryConfirm:), tag));
+            let confirm = ui::button(mtm, t("Bestätigen"), me, sel!(ideFactoryConfirm:), tag);
+            ide_ui_common::util::set_label(&confirm, Some(&confirm_label(loosening)));
+            row.addArrangedSubview(&confirm);
             ui.notices.addArrangedSubview(&row);
         }
+        *self.ivars().loosenings.borrow_mut() = notices.loosenings.iter().map(Loosening::hash).collect();
         ui.notices
             .setHidden(notices.errors.is_empty() && notices.problems.is_empty() && notices.loosenings.is_empty());
     }
 
-    /// Confirms the loosening at `index` of the folder's notices.
+    /// Confirms the loosening the button at `index` stood beside, if the folder still asks for it.
     fn confirm(&self, index: isize) {
+        let shown = usize::try_from(index)
+            .ok()
+            .and_then(|i| self.ivars().loosenings.borrow().get(i).cloned());
         let notices = host().notices(self.root());
-        if let Some(loosening) = usize::try_from(index).ok().and_then(|i| notices.loosenings.get(i)) {
+        if let Some(loosening) = shown.and_then(|hash| loosening_of(&notices.loosenings, &hash)) {
             host().confirm_loosening(self.root(), loosening);
-            self.reload();
         }
+        self.reload();
     }
 
     /// Shows the strip and the table as the model has them now.
@@ -355,7 +367,7 @@ impl BoardTab {
             String::new()
         }));
         ui.empty.setHidden(!rows.is_empty());
-        let waits = rows.iter().any(|row| row.tone() == crate::model::words::Tone::Waiting);
+        let waits = view.waits();
         drop(view);
         ui.table.reloadData();
         if let Some(id) = selected

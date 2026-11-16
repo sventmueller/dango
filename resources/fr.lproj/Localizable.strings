@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "Budget en dollars";
 "Spezifikation ohne Freigabe" = "Spécification sans approbation";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Sans approbation uniquement avec une classe de risque faible, et seulement si le projet l’autorise.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "1 ordre de travail en attente";
 "{} Aufträge warten" = "{} ordres de travail en attente";
 "Station" = "Étape";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "Fichiers laissés sur place : {}";
 "{} % Fenster" = "{} % de la fenêtre";
 "nichts" = "rien";
-"{} $" = "{} $";
 "Dollar" = "dollars";
 "Tokens" = "jetons";
 "Fensteranteil" = "part de la fenêtre";
@@ -2349,3 +2347,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Le dossier n’est pas approuvé ; rien n’a été envoyé.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "L’étape n’a pas pu s’exécuter ; réessayez.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "L’ordre de travail n’a aucun commit accepté que le push pourrait envoyer.";
+"Vorgabe: {}" = "Par défaut : {}";
+"Vorgabe: ohne Grenze" = "Par défaut : sans limite";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Un budget vide laisse s’appliquer la valeur par défaut. Un projet ne peut que durcir les limites et les budgets ; un budget n’est donc sans limite ici que si la valeur par défaut n’en fixe pas non plus.";
+"Bestätigen: {}" = "Confirmer : {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Les indicateurs reposent sur 1 ordre de travail ; nombre compté pour le taux de premier passage : {}, hors interventions et changements d’agent.";
+"1 Kommentar ist noch nicht gesendet." = "1 commentaire n’a pas encore été envoyé.";
+"{} Kommentare sind noch nicht gesendet." = "{} commentaires n’ont pas encore été envoyés.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "L’approbation les abandonne. « Envoyer les commentaires » les transmet au planificateur, qui révise ensuite la spécification.";
+"Ohne Kommentare freigeben" = "Approuver sans les commentaires";
+"{},{} $" = "{},{} $";

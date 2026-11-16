@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "Budget in dollars";
 "Spezifikation ohne Freigabe" = "Specificatie zonder goedkeuring";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Zonder goedkeuring alleen bij risicoklasse laag, en alleen als het project het toestaat.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "1 werkorder wacht";
 "{} Aufträge warten" = "{} werkorders wachten";
 "Station" = "Station";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "Achtergelaten bestanden: {}";
 "{} % Fenster" = "{}% van venster";
 "nichts" = "niets";
-"{} $" = "$ {}";
 "Dollar" = "dollars";
 "Tokens" = "tokens";
 "Fensteranteil" = "vensteraandeel";
@@ -2349,3 +2347,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "De map wordt niet vertrouwd; er is niets verstuurd.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "De stap kon niet worden uitgevoerd; probeer het opnieuw.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "De werkorder heeft geen geaccepteerde commit die de push kan versturen.";
+"Vorgabe: {}" = "Standaard: {}";
+"Vorgabe: ohne Grenze" = "Standaard: geen limiet";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Een leeg budget laat de standaard gelden. Een project kan limieten en budgetten alleen aanscherpen, dus een budget is hier alleen zonder limiet als ook de standaard er geen stelt.";
+"Bestätigen: {}" = "Bevestig: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "De kengetallen berusten op 1 werkorder; daarvan tellen er {} mee voor het percentage eerste doorloop, zonder ingrepen en zonder agentwissels.";
+"1 Kommentar ist noch nicht gesendet." = "1 opmerking is nog niet verstuurd.";
+"{} Kommentare sind noch nicht gesendet." = "{} opmerkingen zijn nog niet verstuurd.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Goedkeuren laat ze vervallen. 'Verstuur opmerkingen' geeft ze aan de planner, die de specificatie daarna herziet.";
+"Ohne Kommentare freigeben" = "Keur goed zonder opmerkingen";
+"{},{} $" = "$ {},{}";

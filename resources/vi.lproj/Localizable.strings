@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "Ngân sách bằng đô la";
 "Spezifikation ohne Freigabe" = "Đặc tả không cần phê duyệt";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Chỉ được bỏ qua phê duyệt ở mức rủi ro thấp, và chỉ khi dự án cho phép.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "1 phiếu công việc đang chờ";
 "{} Aufträge warten" = "{} phiếu công việc đang chờ";
 "Station" = "Trạm";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "Tệp còn sót lại: {}";
 "{} % Fenster" = "{}% cửa sổ hạn mức";
 "nichts" = "không có gì";
-"{} $" = "{} $";
 "Dollar" = "đô la";
 "Tokens" = "token";
 "Fensteranteil" = "tỷ lệ cửa sổ hạn mức";
@@ -2349,3 +2347,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Thư mục chưa được tin cậy; chưa gửi gì.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Không thể chạy bước này; hãy thử lại.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Phiếu công việc không có commit đã nghiệm thu nào để push gửi đi.";
+"Vorgabe: {}" = "Mặc định: {}";
+"Vorgabe: ohne Grenze" = "Mặc định: không giới hạn";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Ngân sách để trống sẽ giữ giá trị mặc định. Dự án chỉ có thể thắt chặt giới hạn và ngân sách, nên ngân sách ở đây chỉ không giới hạn khi giá trị mặc định cũng không đặt giới hạn.";
+"Bestätigen: {}" = "Xác nhận: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Các chỉ số dựa trên 1 phiếu công việc; {} phiếu trong số đó được tính vào tỷ lệ đạt ngay lần đầu, không gồm các phiếu có can thiệp hoặc đổi tác nhân.";
+"1 Kommentar ist noch nicht gesendet." = "Còn 1 nhận xét chưa gửi.";
+"{} Kommentare sind noch nicht gesendet." = "Còn {} nhận xét chưa gửi.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Phê duyệt sẽ bỏ các nhận xét này. “Gửi nhận xét” chuyển chúng cho người lập kế hoạch, sau đó người này sửa lại đặc tả.";
+"Ohne Kommentare freigeben" = "Phê duyệt không kèm nhận xét";
+"{},{} $" = "{},{} $";

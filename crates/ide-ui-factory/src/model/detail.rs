@@ -86,7 +86,7 @@ impl Stage {
         }
     }
 
-    /// "Bau – erledigt · 12 min · 1.20 $ · claude · opus".
+    /// "Bau – erledigt · 12 min · 1,20 $ · claude · opus".
     pub fn words(&self) -> &str {
         &self.words
     }
@@ -720,19 +720,11 @@ fn issue_change(order: &Order) -> Option<Vec<String>> {
 
 fn timeline(order: &Order, now: u64) -> Vec<Stage> {
     let costs = order.costs();
+    let visits: Vec<Station> = order.visits().iter().map(|v| v.station).collect();
     Station::ALL
         .into_iter()
         .map(|station| {
-            let visited = order.visits().iter().any(|v| v.station == station);
-            let passage = if station == order.station() {
-                Passage::Current
-            } else if station == Station::Spec && order.g1_skipped() {
-                Passage::Skipped
-            } else if visited {
-                Passage::Passed
-            } else {
-                Passage::Ahead
-            };
+            let passage = passage(station, order.station(), &visits, order.g1_skipped());
             let mut parts = vec![words::station(station).to_string()];
             match passage {
                 Passage::Current => parts.push(words::condition(order.station(), order.condition())),
@@ -761,6 +753,27 @@ fn timeline(order: &Order, now: u64) -> Vec<Stage> {
             }
         })
         .collect()
+}
+
+/// Where `station` stands for an order at `current` that entered the stations `visits` in this order: passed only if
+/// the order left it forward and has not gone back before it since, as "Zurück an den Builder" or a partial
+/// acceptance does.
+fn passage(station: Station, current: Station, visits: &[Station], spec_skipped: bool) -> Passage {
+    if station == current {
+        return Passage::Current;
+    }
+    if station == Station::Spec && spec_skipped {
+        return Passage::Skipped;
+    }
+    let Some(last) = visits.iter().rposition(|s| *s == station) else {
+        return Passage::Ahead;
+    };
+    let since = &visits[last + 1..];
+    if !since.is_empty() && since.iter().all(|s| *s > station) {
+        Passage::Passed
+    } else {
+        Passage::Ahead
+    }
 }
 
 fn role_of(station: Station) -> Option<Role> {
@@ -851,5 +864,23 @@ mod tests {
             assert_eq!(Command::of_tag(command.tag()), Some(command));
         }
         assert_eq!(Command::of_tag(-1), None);
+    }
+
+    #[test]
+    fn a_station_the_order_went_back_from_is_not_passed() {
+        use Station::{Acceptance, Build, Intake, Review, Spec, TakeOver};
+        let back = [Intake, Build, Review, Build];
+        assert_eq!(passage(Intake, Build, &back, true), Passage::Passed);
+        assert_eq!(passage(Spec, Build, &back, true), Passage::Skipped);
+        assert_eq!(passage(Build, Build, &back, true), Passage::Current);
+        assert_eq!(passage(Review, Build, &back, true), Passage::Ahead);
+        let partial = [Intake, Spec, Build, Review, Acceptance, Review];
+        assert_eq!(passage(Spec, Review, &partial, false), Passage::Passed);
+        assert_eq!(passage(Build, Review, &partial, false), Passage::Passed);
+        assert_eq!(passage(Review, Review, &partial, false), Passage::Current);
+        assert_eq!(passage(Acceptance, Review, &partial, false), Passage::Ahead);
+        assert_eq!(passage(TakeOver, Review, &partial, false), Passage::Ahead);
+        let again = [Intake, Build, Review, Build, Review, Acceptance];
+        assert_eq!(passage(Review, Acceptance, &again, false), Passage::Passed);
     }
 }

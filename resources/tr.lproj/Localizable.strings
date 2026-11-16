@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "Dolar cinsinden bütçe";
 "Spezifikation ohne Freigabe" = "Onaysız belirtim";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Onaysız yalnızca düşük risk sınıfında ve yalnızca proje izin veriyorsa.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "1 iş emri bekliyor";
 "{} Aufträge warten" = "{} iş emri bekliyor";
 "Station" = "İstasyon";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "Geride kalan dosyalar: {}";
 "{} % Fenster" = "%{} pencere";
 "nichts" = "hiçbir şey";
-"{} $" = "${}";
 "Dollar" = "dolar";
 "Tokens" = "token";
 "Fensteranteil" = "pencere payı";
@@ -2349,3 +2347,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Klasöre güvenilmiyor; hiçbir şey gönderilmedi.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Adım çalıştırılamadı; yeniden deneyin.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "İş emrinin push ile gönderilecek kabul edilmiş bir commit’i yok.";
+"Vorgabe: {}" = "Saptanmış: {}";
+"Vorgabe: ohne Grenze" = "Saptanmış: sınır yok";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Boş bir bütçe saptanmış değeri geçerli bırakır. Bir proje sınırları ve bütçeleri yalnızca sıkılaştırabilir; bu yüzden burada bir bütçe ancak saptanmış değer de sınır koymuyorsa sınırsızdır.";
+"Bestätigen: {}" = "Onayla: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Metrikler 1 iş emrine dayanıyor; bunun {} tanesi ilk geçiş oranına sayılıyor, müdahaleler ve ajan değişiklikleri hariç.";
+"1 Kommentar ist noch nicht gesendet." = "1 yorum henüz gönderilmedi.";
+"{} Kommentare sind noch nicht gesendet." = "{} yorum henüz gönderilmedi.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Onaylamak bunları atar. “Yorumları Gönder” bunları planlayıcıya verir; planlayıcı ardından belirtimi gözden geçirir.";
+"Ohne Kommentare freigeben" = "Yorumlar Olmadan Onayla";
+"{},{} $" = "${},{}";

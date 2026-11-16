@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "予算（ドル）";
 "Spezifikation ohne Freigabe" = "承認なしの仕様";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "承認なしにできるのは、リスククラスが“低”で、かつプロジェクトが許可している場合のみです。";
-"{}, {}, {}, {}" = "{}、{}、{}、{}";
 "1 Auftrag wartet" = "1件の作業指示が待機中";
 "{} Aufträge warten" = "{}件の作業指示が待機中";
 "Station" = "工程";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "残されたファイル: {}";
 "{} % Fenster" = "ウインドウの{}%";
 "nichts" = "なし";
-"{} $" = "${}";
 "Dollar" = "ドル";
 "Tokens" = "トークン";
 "Fensteranteil" = "ウインドウ比率";
@@ -2349,3 +2347,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "フォルダが信頼されていないため、何も送信されませんでした。";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "ステップを実行できませんでした。もう一度お試しください。";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "作業指示には、プッシュで送信できる検収済みのコミットがありません。";
+"Vorgabe: {}" = "デフォルト: {}";
+"Vorgabe: ohne Grenze" = "デフォルト: 上限なし";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "予算を空欄にするとデフォルトが適用されます。プロジェクトは上限と予算を厳しくすることしかできないため、ここで予算を上限なしにできるのはデフォルトにも上限がない場合だけです。";
+"Bestätigen: {}" = "確認: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "指標は1件の作業指示に基づいています。そのうち{}件が初回通過率の対象で、介入やエージェント変更のあったものは除きます。";
+"1 Kommentar ist noch nicht gesendet." = "未送信のコメントが1件あります。";
+"{} Kommentare sind noch nicht gesendet." = "未送信のコメントが{}件あります。";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "承認するとこれらは破棄されます。“コメントを送信”でプランナーに渡すと、プランナーが仕様を修正します。";
+"Ohne Kommentare freigeben" = "コメントなしで承認";
+"{},{} $" = "${}.{}";

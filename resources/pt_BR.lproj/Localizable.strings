@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "Orçamento em dólares";
 "Spezifikation ohne Freigabe" = "Especificação sem aprovação";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Sem aprovação somente com classe de risco baixa e somente se o projeto permitir.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "1 ordem de serviço aguardando";
 "{} Aufträge warten" = "{} ordens de serviço aguardando";
 "Station" = "Estação";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "Arquivos deixados para trás: {}";
 "{} % Fenster" = "{}% da janela";
 "nichts" = "nada";
-"{} $" = "US$ {}";
 "Dollar" = "dólares";
 "Tokens" = "tokens";
 "Fensteranteil" = "parcela da janela";
@@ -2349,3 +2347,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "A pasta não é confiável; nada foi enviado.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Não foi possível executar a etapa; tente novamente.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "A ordem de serviço não tem um commit aceito para o push enviar.";
+"Vorgabe: {}" = "Padrão: {}";
+"Vorgabe: ohne Grenze" = "Padrão: sem limite";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Um orçamento vazio mantém o padrão em vigor. Um projeto só pode tornar limites e orçamentos mais rígidos, então aqui um orçamento só fica sem limite se o padrão também não definir nenhum.";
+"Bestätigen: {}" = "Confirmar: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "As métricas se baseiam em 1 ordem de serviço; entram na taxa de primeira passagem: {}, sem intervenções nem trocas de agente.";
+"1 Kommentar ist noch nicht gesendet." = "1 comentário ainda não foi enviado.";
+"{} Kommentare sind noch nicht gesendet." = "{} comentários ainda não foram enviados.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Ao aprovar, eles se perdem. “Enviar Comentários” os entrega ao planejador, que então revisa a especificação.";
+"Ohne Kommentare freigeben" = "Aprovar sem Comentários";
+"{},{} $" = "US$ {},{}";

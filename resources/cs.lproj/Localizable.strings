@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "Rozpočet v dolarech";
 "Spezifikation ohne Freigabe" = "Specifikace bez schválení";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "Bez schválení jen při nízké třídě rizika a jen tehdy, když to projekt dovolí.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "1 zakázka čeká";
 "{} Aufträge warten" = "Čekající zakázky: {}";
 "Station" = "Stanice";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "Ponechané soubory: {}";
 "{} % Fenster" = "{} % okna";
 "nichts" = "nic";
-"{} $" = "{} $";
 "Dollar" = "dolary";
 "Tokens" = "tokeny";
 "Fensteranteil" = "podíl okna";
@@ -2349,3 +2347,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "Složka není důvěryhodná; nic se neodeslalo.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "Krok nemohl proběhnout; zkuste to znovu.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "Zakázka nemá žádný přijatý commit, který by push mohl odeslat.";
+"Vorgabe: {}" = "Výchozí: {}";
+"Vorgabe: ohne Grenze" = "Výchozí: bez limitu";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "Prázdný rozpočet ponechá platnou výchozí hodnotu. Projekt může limity a rozpočty jen zpřísnit; bez limitu je tu rozpočet proto jen tehdy, když ho nestanoví ani výchozí hodnota.";
+"Bestätigen: {}" = "Potvrdit: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "Metriky vycházejí z 1 zakázky; z ní se do podílu úspěchu napoprvé počítá {}, bez zásahů a bez změn agenta.";
+"1 Kommentar ist noch nicht gesendet." = "1 komentář ještě nebyl odeslán.";
+"{} Kommentare sind noch nicht gesendet." = "Počet neodeslaných komentářů: {}.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "Schválením se ztratí. „Odeslat komentáře“ je předá plánovači, který pak specifikaci přepracuje.";
+"Ohne Kommentare freigeben" = "Schválit bez komentářů";
+"{},{} $" = "{},{} $";

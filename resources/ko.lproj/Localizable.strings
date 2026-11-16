@@ -2009,7 +2009,6 @@
 "Budget in Dollar" = "예산(달러)";
 "Spezifikation ohne Freigabe" = "승인 없이 사양 진행";
 "Ohne Freigabe nur bei Risikoklasse niedrig und nur, wenn das Projekt es erlaubt." = "승인 없이 진행하는 것은 위험 등급이 낮음이고 프로젝트가 허용하는 경우에만 가능합니다.";
-"{}, {}, {}, {}" = "{}, {}, {}, {}";
 "1 Auftrag wartet" = "작업 주문 1개 대기 중";
 "{} Aufträge warten" = "작업 주문 {}개 대기 중";
 "Station" = "단계";
@@ -2131,7 +2130,6 @@
 "Hinterlassene Dateien: {}" = "남겨진 파일: {}";
 "{} % Fenster" = "사용량 구간의 {}%";
 "nichts" = "없음";
-"{} $" = "${}";
 "Dollar" = "달러";
 "Tokens" = "토큰";
 "Fensteranteil" = "사용량 구간 비율";
@@ -2349,3 +2347,13 @@
 "Der Ordner ist nicht vertraut; nichts wurde gesendet." = "폴더를 신뢰하지 않으므로 아무것도 보내지 않았습니다.";
 "Der Schritt konnte nicht laufen; versuch es noch einmal." = "단계를 실행할 수 없습니다. 다시 시도하십시오.";
 "Der Auftrag hat keinen abgenommenen Commit, den der Push senden könnte." = "작업 주문에 푸시로 보낼 검수 완료된 커밋이 없습니다.";
+"Vorgabe: {}" = "기본값: {}";
+"Vorgabe: ohne Grenze" = "기본값: 한도 없음";
+"Ein leeres Budget lässt die Vorgabe gelten. Ein Projekt kann Grenzen und Budgets nur verschärfen; ohne Grenze ist ein Budget hier nur, wenn auch die Vorgabe keine setzt." = "예산을 비워 두면 기본값이 적용됩니다. 프로젝트는 한도와 예산을 더 엄격하게만 설정할 수 있으므로, 기본값에도 한도가 없을 때에만 여기서 예산에 한도가 없습니다.";
+"Bestätigen: {}" = "확인: {}";
+"Die Kennzahlen beruhen auf 1 Auftrag; {} davon zählen für die Erstdurchlaufquote, ohne Eingriffe und ohne Agentenwechsel." = "지표는 작업 주문 1개를 기준으로 합니다. 그중 {}개가 1차 통과율에 포함되며, 개입이나 에이전트 교체가 있었던 작업 주문은 제외됩니다.";
+"1 Kommentar ist noch nicht gesendet." = "보내지 않은 댓글이 1개 있습니다.";
+"{} Kommentare sind noch nicht gesendet." = "보내지 않은 댓글이 {}개 있습니다.";
+"Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet." = "승인하면 이 댓글은 사라집니다. ‘댓글 보내기’를 누르면 플래너에게 전달되고, 플래너가 사양을 수정합니다.";
+"Ohne Kommentare freigeben" = "댓글 없이 승인";
+"{},{} $" = "${}.{}";

@@ -29,10 +29,10 @@ impl OrderLine {
             .filter(|part| !part.is_empty())
             .collect::<Vec<_>>()
             .join(" · ");
-        let spoken = tf(
-            "{}, {}, {}, {}",
-            &[row.title(), words::station(row.station()), &condition, &detail],
-        );
+        let spoken = [words::station(row.station()), condition.as_str(), detail.as_str()]
+            .into_iter()
+            .filter(|part| !part.is_empty())
+            .fold(row.title().to_string(), |spoken, part| tf("{}, {}", &[&spoken, part]));
         OrderLine {
             id: row.id().clone(),
             title: row.title().to_string(),
@@ -202,6 +202,19 @@ mod tests {
             ..List::default()
         };
         assert_eq!(one.symbol_words().as_deref(), Some(t("1 Auftrag wartet")));
+    }
+
+    #[test]
+    fn a_line_without_an_agent_reads_without_an_empty_part() {
+        let factory = super::super::testing::waiting();
+        let list = List::new(&Panel::new(&factory, factory.now()));
+        let line = list.order(&OrderId("o1".into())).expect("the order is listed");
+        assert!(line.spoken().starts_with("CSV export"), "{}", line.spoken());
+        assert!(
+            !line.spoken().ends_with(", ") && !line.spoken().contains(", , "),
+            "{}",
+            line.spoken()
+        );
     }
 
     #[test]

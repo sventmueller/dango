@@ -4463,7 +4463,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Docker-Kontext | kontekst Dockera |
 | **Leitstand (phase 13)** | |
 | Leitstand | sterownia |
-| Auftrag (Leitstand) | zamówienie |
+| Auftrag (Leitstand) | zlecenie |
 | Nachweis | dowód |
 | Abweichung | odstępstwo |
 | Abnahme, abnehmen | akceptacja, zaakceptować (button: Akceptuj) |
@@ -4489,7 +4489,7 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Erstdurchlaufquote, Erstdurchlauf, Quote | odsetek pierwszego podejścia, pierwsze podejście, odsetek |
 | Kennzahlen | metryki |
 | Regelvorschlag | propozycja reguły |
-| wiederkehrender Auftrag | cykliczne zamówienie |
+| wiederkehrender Auftrag | cykliczne zlecenie |
 | Abstand (wiederkehrender Auftrag) | interwał |
 | eingereiht | w kolejce |
 | Rolle | rola |

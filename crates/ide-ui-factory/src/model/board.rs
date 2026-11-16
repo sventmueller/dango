@@ -2,8 +2,10 @@
 //! station that filters the table, and the sortable table whose filter and sort survive each new board.
 
 use ide_factory::OrderId;
+use ide_factory::budget::Spend;
 use ide_factory::panel::{Board, Column, Fleet, Row};
 use ide_factory::station::Station;
+use ide_factory::workflow::rules::Loosening;
 use splat_i18n::{t, tf};
 
 use super::list::agent;
@@ -243,6 +245,17 @@ impl BoardView {
             .unwrap_or_default()
     }
 
+    /// Whether any order of the folder waits for the user, whatever the filter shows: the tab's red dot (E71).
+    pub fn waits(&self) -> bool {
+        self.board.as_ref().is_some_and(|board| {
+            let mut all = board.clone();
+            all.filter(None);
+            all.rows()
+                .iter()
+                .any(|row| Tone::of(row.station(), row.condition()) == Tone::Waiting)
+        })
+    }
+
     /// Whether the folder has no order at all.
     pub fn is_empty(&self) -> bool {
         self.board
@@ -270,8 +283,9 @@ pub struct FleetWords {
 }
 
 impl FleetWords {
-    /// The words of `fleet` at `now` (wall clock); a folder without a factory shows zeros.
-    pub fn new(fleet: Option<&Fleet>, now: u64) -> FleetWords {
+    /// The words of `fleet` at `now` (wall clock) on the local day `today`, such as `2026-11-16`; a folder without a
+    /// factory shows zeros.
+    pub fn new(fleet: Option<&Fleet>, now: u64, today: &str) -> FleetWords {
         let Some(fleet) = fleet else {
             return FleetWords {
                 orders: tf("{} laufen · {} warten · {} gescheitert", &["0", "0", "0"]),
@@ -305,7 +319,13 @@ impl FleetWords {
         let wait = fleet
             .median_wait_ms()
             .map_or_else(|| t("keine").to_string(), words::duration);
-        let (spent, done) = (words::spend(fleet.day_spent()), fleet.done_today().to_string());
+        // The account starts over only when spending comes in, so after midnight it may still hold yesterday's.
+        let spent = if fleet.day() == today {
+            words::spend(fleet.day_spent())
+        } else {
+            words::spend(&Spend::default())
+        };
+        let done = fleet.done_today().to_string();
         let day = match fleet.day_budget().dollars() {
             Some(budget) => tf(
                 "Heute: {} von {} · {} erledigt · Wartezeit im Median: {}",
@@ -346,9 +366,68 @@ impl FleetWords {
     }
 }
 
+/// The loosening among `loosenings` whose hash is `hash`, so a button confirms the loosening it stood beside even
+/// when the list changed since it was shown.
+pub fn loosening_of<'a>(loosenings: &'a [Loosening], hash: &str) -> Option<&'a Loosening> {
+    loosenings.iter().find(|loosening| loosening.hash() == hash)
+}
+
+/// What VoiceOver reads for the button that confirms `loosening`.
+pub fn confirm_label(loosening: &Loosening) -> String {
+    tf("Bestätigen: {}", &[&words::loosening(loosening)])
+}
+
 #[cfg(test)]
 mod tests {
+    use ide_factory::budget::DailyAccount;
+    use ide_factory::quota::QuotaBook;
+    use ide_factory::workflow::rules::Rules;
+    use ide_factory::{Factory, Input, InputKind, Stage, Stamp};
+
+    use super::super::testing::waiting;
     use super::*;
+
+    #[test]
+    fn the_red_dot_stays_while_the_filter_hides_the_order_that_waits() {
+        let factory = waiting();
+        let mut view = BoardView::default();
+        view.set(Some(Board::new(&factory, factory.now())), factory.now().wall);
+        assert!(view.waits(), "the order waits: {:?}", view.rows());
+        view.click(Station::Done);
+        assert!(view.rows().is_empty());
+        assert!(view.waits(), "the filter hides the order, not its wait");
+    }
+
+    #[test]
+    fn yesterdays_spending_does_not_count_for_today() {
+        let mut factory = Factory::new(Stage::One, Rules::default());
+        let mut account = DailyAccount::new("2026-11-15");
+        account.add("2026-11-15", None, &Spend::new(3.5, 0, 0.0));
+        factory.handle(Input::new(Stamp::new(1, 1), InputKind::Day(account)));
+        let fleet = Fleet::new(&factory, &QuotaBook::default(), Stamp::new(2, 2), 0, 0);
+        let yesterday = FleetWords::new(Some(&fleet), 2, "2026-11-15");
+        let today = FleetWords::new(Some(&fleet), 2, "2026-11-16");
+        assert!(yesterday.day().contains(&words::dollars(3.5)), "{}", yesterday.day());
+        assert!(!today.day().contains(&words::dollars(3.5)), "{}", today.day());
+        assert!(
+            today.day().contains(&words::spend(&Spend::default())),
+            "{}",
+            today.day()
+        );
+    }
+
+    #[test]
+    fn a_loosening_is_found_by_its_hash_wherever_it_stands() {
+        let skip = Loosening::SkipSpecApproval;
+        let copy = Loosening::CopyCredentials {
+            paths: vec![".env".into()],
+        };
+        let shown = [skip.clone(), copy.clone()];
+        let now = [copy.clone()];
+        assert_eq!(loosening_of(&now, &shown[1].hash()), Some(&copy));
+        assert_eq!(loosening_of(&now, &shown[0].hash()), None);
+        assert_ne!(confirm_label(&skip), confirm_label(&copy));
+    }
 
     #[test]
     fn an_empty_folder_shows_every_station_with_none() {

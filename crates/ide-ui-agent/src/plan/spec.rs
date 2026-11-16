@@ -11,9 +11,9 @@ use dispatch2::MainThreadBound;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send, sel};
-use objc2_app_kit::{NSButton, NSColor, NSView};
+use objc2_app_kit::{NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSButton, NSColor, NSModalResponse, NSView};
 use objc2_foundation::{NSAttributedString, NSObjectProtocol, NSRange};
-use splat_i18n::t;
+use splat_i18n::{t, tf};
 
 use super::super::cards::request::PLAN_APPROVE;
 use super::super::markdown::{self, Tone};
@@ -22,6 +22,7 @@ use super::super::{style, ui};
 use super::ask::{self, Asking, Popover};
 use super::doc::{Frame, Heading, frame, show_notes};
 use super::{PLAN_IN_DOC, PLAN_REJECT, PLAN_REVISE, PlanNote, entry_tag, feedback, locate, rect_of};
+use ide_ui_common::alert::{Alert, Role};
 use ide_ui_common::util::{guarded, main_soon, ns};
 
 /// What the user does with a specification.
@@ -335,8 +336,49 @@ impl SpecDoc {
         }
     }
 
-    /// Answers as the head's button `what` says: approve, send the comments, or discard.
+    /// Answers as the head's button `what` says: approve, send the comments, or discard; approving with comments not
+    /// sent asks first, as approving would drop them.
     fn answer_with(&self, what: u8) {
+        if self.answered.get() {
+            return;
+        }
+        if what == PLAN_APPROVE && !self.notes.borrow().is_empty() {
+            self.ask_unsent();
+            return;
+        }
+        self.give(what);
+    }
+
+    /// Asks what becomes of the comments not sent yet: send them to the planner, approve without them, or neither.
+    fn ask_unsent(&self) {
+        let message = match self.notes.borrow().len() {
+            1 => t("1 Kommentar ist noch nicht gesendet.").to_string(),
+            n => tf("{} Kommentare sind noch nicht gesendet.", &[&n.to_string()]),
+        };
+        let alert = Alert::new(self.mtm, &message)
+            .warning()
+            .informative(t(
+                "Beim Freigeben gehen sie verloren. „Kommentare senden“ gibt sie dem Planer, der die Spezifikation dann überarbeitet.",
+            ))
+            .button(t("Kommentare senden"), Role::Plain)
+            .button(t("Ohne Kommentare freigeben"), Role::Destructive)
+            .button(t("Abbrechen"), Role::CancelOnEscape);
+        let doc = self.target.ivars().doc.borrow().clone();
+        let then = move |response: NSModalResponse| {
+            let Some(doc) = doc.upgrade() else { return };
+            if response == NSAlertFirstButtonReturn {
+                doc.answer_with(PLAN_REVISE);
+            } else if response == NSAlertSecondButtonReturn {
+                doc.give(PLAN_APPROVE);
+            }
+        };
+        match self.frame.text.window() {
+            Some(window) => alert.sheet(&window, then),
+            None => then(alert.run_modal()),
+        }
+    }
+
+    fn give(&self, what: u8) {
         if self.answered.get() {
             return;
         }
