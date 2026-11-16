@@ -1961,3 +1961,11 @@
 "Änderungen gelten sofort." = "Changes apply at once.";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "This agent cannot continue a session.";
 "Erst wenn der Agent fertig ist." = "Only once the agent is done.";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: continue in Codex on your phone";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "Remote Control takes over the session once the agent is done";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Control is on: this Mac’s Codex sessions also run in Codex on your phone";
+"Codex hat keine Verbindung zu OpenAI" = "Codex has no connection to OpenAI";
+"Handy koppeln …" = "Pair Phone…";
+"Handy koppeln" = "Pair Phone";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Enter the code {} in Codex on your phone. It is valid until {}.";
+"Koppeln fehlgeschlagen" = "Pairing Failed";

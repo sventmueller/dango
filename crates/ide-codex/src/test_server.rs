@@ -7,6 +7,11 @@
 //! A message containing `slow` streams one delta and waits for `turn/interrupt`; `crash` says [`CRASH`] on stderr
 //! and exits mid-turn; `refuse` gets an error answer to `turn/start`; `ask` asks a question; `fail` ends the turn with an error. With `CODEX_TEST_LOG` set, every
 //! line the client sends is appended to that file.
+//!
+//! As `app-server proxy` it plays the shared server (E148): it says where Remote Control stands after `initialize`,
+//! turns it off on `remoteControl/disable`, and before a turn whose message contains `foreign` starts a thread of
+//! another client that asks for a command. `remote-control start`, `remote-control pair` and `app-server daemon
+//! start` answer as the CLI does; Remote Control's saved choice lives in `CODEX_HOME` as the daemon keeps it.
 
 use std::collections::VecDeque;
 use std::io::{BufRead, Write};
@@ -27,6 +32,18 @@ pub const CRASH: &str = "the model crashed";
 
 /// What `--version` prints, unless the scenario is `old`.
 pub const VERSION: &str = "codex-cli 0.167.0";
+
+/// The thread another client of the shared server starts.
+pub const PHONE_THREAD: &str = "thr_phone";
+
+/// The name the shared server reports to the phone.
+pub const SERVER_NAME: &str = "Test Mac";
+
+/// The pairing code `remote-control pair` prints.
+pub const PAIRING_CODE: &str = "TEST-1234";
+
+/// The id of the request another client's thread sends.
+pub const PHONE_ASK: u64 = 950;
 
 /// The request ids of the server's requests.
 const COMMAND_ASK: u64 = 900;
@@ -49,6 +66,12 @@ struct Server<W: Write> {
     steps: VecDeque<Step>,
     waiting: Option<u64>,
     exit: bool,
+    /// Whether it plays the shared server.
+    shared: bool,
+    /// Whether the client asked for the experimental API.
+    experimental: bool,
+    /// Where Remote Control's saved choice lives.
+    home: Option<std::path::PathBuf>,
 }
 
 fn thread(turns: Value, name: Option<&str>) -> Value {
@@ -136,6 +159,9 @@ impl<W: Write> Server<W> {
             self.note("item/agentMessage/delta", json!({"itemId": "m1", "delta": "Working"}));
             return;
         }
+        if self.shared && text.contains("foreign") {
+            self.foreign();
+        }
         self.failing = text.contains("fail");
         self.steps = if text.contains("ask") {
             question()
@@ -145,6 +171,43 @@ impl<W: Write> Server<W> {
             opening()
         };
         self.play();
+    }
+
+    /// Another client of the shared server starts a thread and asks for a command in it.
+    fn foreign(&mut self) {
+        let mut phone = thread(json!([]), None);
+        phone["id"] = json!(PHONE_THREAD);
+        self.note("thread/started", json!({"thread": phone}));
+        self.note(
+            "turn/started",
+            json!({"threadId": PHONE_THREAD, "turn": {"id": "turn-phone", "items": [],
+                                                                             "status": "inProgress"}}),
+        );
+        self.send(
+            &json!({"id": PHONE_ASK, "method": "item/commandExecution/requestApproval", "params": {
+            "threadId": PHONE_THREAD, "turnId": "turn-phone", "itemId": "c9", "command": "rm -rf build",
+            "cwd": "/work", "startedAtMs": 1000}}),
+        );
+    }
+
+    /// Where Remote Control stands, as the server says it.
+    fn remote_status(&self) -> Value {
+        let status = if self.shared && remote_enabled(self.home.as_deref()) {
+            "connected"
+        } else {
+            "disabled"
+        };
+        json!({"status": status, "serverName": SERVER_NAME, "installationId": "inst_test", "environmentId": null})
+    }
+
+    fn disable_remote(&mut self, id: &Value) {
+        if !self.experimental {
+            return self.error(id, -32600, "remoteControl/disable requires experimentalApi capability");
+        }
+        save_remote(self.home.as_deref(), false);
+        let status = self.remote_status();
+        self.reply(id, status.clone());
+        self.send(&json!({"method": "remoteControl/status/changed", "params": status}));
     }
 
     /// Ends the turn once its steps are played and nothing waits for the client.
@@ -265,11 +328,14 @@ impl<W: Write> Server<W> {
                 return self.error(id, -32600, "Already initialized");
             }
             self.initialized = true;
-            return self.reply(
+            self.experimental = params["capabilities"]["experimentalApi"].as_bool() == Some(true);
+            self.reply(
                 id,
                 json!({"userAgent": "dango/0.167.0", "codexHome": "/home/.codex", "platformFamily": "unix",
                        "platformOs": "macos"}),
             );
+            let status = self.remote_status();
+            return self.send(&json!({"method": "remoteControl/status/changed", "params": status}));
         }
         if !self.initialized {
             return self.error(id, -32600, "Not initialized");
@@ -291,6 +357,7 @@ impl<W: Write> Server<W> {
                 self.reply(id, json!({}));
                 self.end_turn("interrupted");
             }
+            "remoteControl/disable" => self.disable_remote(id),
             _ if self.manage(id, method, params) => {}
             _ => self.error(id, -32600, &format!("Invalid request: unknown variant `{method}`")),
         }
@@ -489,8 +556,86 @@ fn failing() -> VecDeque<Step> {
     .into()
 }
 
+/// The file of the daemon's saved choices under `home`.
+fn settings(home: &std::path::Path) -> std::path::PathBuf {
+    home.join("app-server-daemon/settings.json")
+}
+
+fn remote_enabled(home: Option<&std::path::Path>) -> bool {
+    home.and_then(|home| std::fs::read(settings(home)).ok())
+        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+        .and_then(|s| s["remoteControlEnabled"].as_bool())
+        .unwrap_or(false)
+}
+
+fn save_remote(home: Option<&std::path::Path>, enabled: bool) {
+    if let Some(home) = home {
+        let _ = std::fs::create_dir_all(home.join("app-server-daemon"));
+        let _ = std::fs::write(settings(home), json!({"remoteControlEnabled": enabled}).to_string());
+    }
+}
+
+/// Runs as `codex` with the command line `args`, without the program, and the scenario and log of the environment:
+/// `--version`, the CLI's Remote Control commands, or the app-server, a server of its own or the shared one through
+/// `proxy`. The answer is the exit code.
+pub fn main(args: &[String]) -> i32 {
+    let scenario = std::env::var("CODEX_TEST_SCENARIO").unwrap_or_else(|_| "basic".into());
+    let home = std::env::var_os("CODEX_HOME").map(std::path::PathBuf::from);
+    let words: Vec<&str> = args.iter().map(String::as_str).collect();
+    match words.as_slice() {
+        [.., "--version"] => {
+            println!(
+                "{}",
+                if scenario == "old" {
+                    "codex-cli 0.150.0"
+                } else {
+                    VERSION
+                }
+            );
+        }
+        ["remote-control", "start", ..] => {
+            save_remote(home.as_deref(), true);
+            println!(
+                "{}",
+                json!({"mode": "daemon", "status": "connected", "serverName": SERVER_NAME,
+                       "environmentId": "env_test", "timedOut": false})
+            );
+        }
+        ["remote-control", "pair", ..] => println!(
+            "{}",
+            json!({"pairingCode": "pair_test", "manualPairingCode": PAIRING_CODE, "environmentId": "env_test",
+                   "expiresAt": 2_000_000_000})
+        ),
+        ["app-server", "daemon", "start", ..] => println!("{}", json!({"status": "alreadyRunning"})),
+        _ => {
+            let log = std::env::var_os("CODEX_TEST_LOG").map(std::path::PathBuf::from);
+            let shared = words.contains(&"proxy");
+            serve(
+                std::io::stdin().lock(),
+                std::io::stdout().lock(),
+                &scenario,
+                log,
+                shared,
+                home,
+            );
+        }
+    }
+    0
+}
+
 /// Plays `scenario` against the client on `input` and `output` until the input ends or a turn asks it to exit.
 pub fn run(input: impl BufRead, output: impl Write, scenario: &str, log: Option<std::path::PathBuf>) {
+    serve(input, output, scenario, log, false, None);
+}
+
+fn serve(
+    input: impl BufRead,
+    output: impl Write,
+    scenario: &str,
+    log: Option<std::path::PathBuf>,
+    shared: bool,
+    home: Option<std::path::PathBuf>,
+) {
     let mut server = Server {
         out: output,
         scenario: scenario.to_string(),
@@ -502,6 +647,9 @@ pub fn run(input: impl BufRead, output: impl Write, scenario: &str, log: Option<
         steps: VecDeque::new(),
         waiting: None,
         exit: false,
+        shared,
+        experimental: false,
+        home,
     };
     for line in input.lines().map_while(Result::ok) {
         if let Some(path) = &log

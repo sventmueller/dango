@@ -17,6 +17,7 @@ pub mod manage;
 pub mod mapping;
 mod prompt;
 pub mod protocol;
+pub mod remote;
 mod requests;
 pub mod session;
 pub mod test_server;
@@ -30,6 +31,7 @@ pub use manage::{
     MergeStrategy, Skill, Skills, ThreadPage, ThreadQuery, ThreadSummary,
 };
 pub use mapping::Mapper;
+pub use remote::{Pairing, RemoteControl};
 pub use session::{Choice, Event, Reply, Session, SessionError};
 pub use version::{TESTED, Version};
 

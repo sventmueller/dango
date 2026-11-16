@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "Değişiklikler hemen geçerli olur.";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "Bu ajan bir oturumu sürdüremez.";
 "Erst wenn der Agent fertig ist." = "Ancak ajan bitirince.";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: telefonunuzdaki Codex’te devam edin";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "Ajan bitirince Remote Control oturumu devralacak";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Control açık: bu Mac’in Codex oturumları telefonunuzdaki Codex’te de çalışıyor";
+"Codex hat keine Verbindung zu OpenAI" = "Codex’in OpenAI ile bağlantısı yok";
+"Handy koppeln …" = "Telefonu Eşle…";
+"Handy koppeln" = "Telefonu Eşle";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "{} kodunu telefonunuzdaki Codex’e girin. Kod {} saatine kadar geçerli.";
+"Koppeln fehlgeschlagen" = "Eşleme Başarısız";

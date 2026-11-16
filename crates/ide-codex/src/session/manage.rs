@@ -13,6 +13,7 @@ use crate::manage::{
     McpServer, MergeStrategy, Skills, ThreadPage, ThreadQuery, ThreadSummary,
 };
 use crate::protocol::method;
+use crate::remote::RemoteControl;
 
 fn models(result: Value) -> Result<Vec<Model>, SessionError> {
     reply::typed(result.get("data").cloned().unwrap_or(Value::Null))
@@ -20,6 +21,10 @@ fn models(result: Value) -> Result<Vec<Model>, SessionError> {
 
 fn forked(result: Value) -> Result<ThreadSummary, SessionError> {
     reply::typed::<Forked>(result).map(|f| f.thread)
+}
+
+fn remote(result: Value) -> Result<RemoteControl, SessionError> {
+    Ok(RemoteControl::read(&result))
 }
 
 fn limits(result: Value) -> Result<Vec<RateLimit>, SessionError> {
@@ -200,6 +205,23 @@ impl Session {
             params["threadId"] = json!(thread);
         }
         self.shared.call(method::FEEDBACK_UPLOAD, params, None, reply::typed)
+    }
+
+    /// Turns Remote Control off for the shared server, for every client of it, and keeps that choice for its next
+    /// starts; the answer is where it stands then. A server of its own has nothing to turn off.
+    pub fn disable_remote_control(&self) -> Result<Reply<RemoteControl>, SessionError> {
+        if !self.shared.launch.shared {
+            return Err(SessionError::Closed);
+        }
+        let after: After = Box::new(|result, shared| {
+            if let Ok(result) = result {
+                shared.state().remote = RemoteControl::read(result);
+                shared.emit(Event::RemoteControl);
+            }
+        });
+        Ok(self
+            .shared
+            .call(method::REMOTE_CONTROL_DISABLE, json!({}), Some(after), remote))
     }
 
     /// The plugins of the marketplaces the project folder sees, as Codex reports them.

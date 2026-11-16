@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "変更はすぐに反映されます。";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "このエージェントはセッションを続行できません。";
 "Erst wenn der Agent fertig ist." = "エージェントが完了してから行われます。";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control：電話のCodexで続ける";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "エージェントが完了すると、Remote Controlがセッションを引き継ぎます";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Controlはオンです：このMacのCodexセッションは電話のCodexでも実行されています";
+"Codex hat keine Verbindung zu OpenAI" = "CodexはOpenAIに接続されていません";
+"Handy koppeln …" = "電話をペアリング…";
+"Handy koppeln" = "電話をペアリング";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "電話のCodexにコード{}を入力してください。有効期限は{}です。";
+"Koppeln fehlgeschlagen" = "ペアリングできませんでした";

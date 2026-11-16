@@ -1,7 +1,8 @@
 //! The `codex` scenario (E147): the Codex choice starts the app-server of `ide_codex::test_server` (this program,
 //! started with `IDE_CODEX_TEST_SERVER`) instead of the ACP adapter. Its models and modes fill the composer's
 //! menus, a turn asks for a command, which the user allows once, and runs to its end; the overlays Codex offers are
-//! in the `/` menu, and `/status` says the route. No Codex on the Mac ever starts.
+//! in the `/` menu, and `/status` says the route. The phone in the head turns Remote Control on, which moves the
+//! session to the shared server (E148), and its menu turns it off. No Codex on the Mac ever starts.
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -9,7 +10,7 @@ use std::time::Duration;
 use ide_thread::Status;
 
 use super::agent::{controller_of, picture, tab_of};
-use super::agent_actions::titles;
+use super::agent_actions::{index_of, titles};
 use super::{check, finish, give_up, give_up_saying, helpers};
 use ide_ui_agent::{AgentKey, TabMenu};
 
@@ -23,6 +24,11 @@ const SCROLL_SETTLE: Duration = Duration::from_millis(300);
 
 fn log() -> PathBuf {
     ide_core::paths::home().join("codex-test-log")
+}
+
+/// Codex's own folder of the stand-in, where it keeps Remote Control's saved choice as the daemon does.
+fn codex_home() -> PathBuf {
+    ide_core::paths::home().join("codex-home")
 }
 
 fn soon(what: &'static str, ready: impl Fn() -> bool + 'static, then: impl FnOnce() + 'static) {
@@ -41,6 +47,7 @@ pub(crate) fn run() {
     }
     let made = helpers::make_project(PROJECT, &[("README.md", "# Codex\n")]);
     ide_ui_agent::set_test_launch(None);
+    let _ = std::fs::remove_dir_all(codex_home());
     let server = std::env::current_exe().ok().zip(made.ok()).map(|(program, root)| {
         ide_codex::Launch::new(
             program,
@@ -48,6 +55,7 @@ pub(crate) fn run() {
                 ("IDE_CODEX_TEST_SERVER".into(), "1".into()),
                 ("CODEX_TEST_SCENARIO".into(), "basic".into()),
                 ("CODEX_TEST_LOG".into(), log().to_string_lossy().into_owned()),
+                ("CODEX_HOME".into(), codex_home().to_string_lossy().into_owned()),
                 ("PATH".into(), "/usr/bin:/bin".into()),
             ],
             root,
@@ -306,7 +314,65 @@ fn rewind(key: AgentKey) {
                 offered.iter().any(|t| t.contains("Unterhaltung")) && text == "ask me",
                 format!("{offered:?} {text:?}"),
             );
-            finish(NAME);
+            remote(key);
+        },
+    );
+}
+
+/// What the phone in the head says while it is on.
+fn remote_shown_on() -> &'static str {
+    splat_i18n::t("Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy")
+}
+
+/// What the phone in the head says while it is off.
+fn remote_off() -> &'static str {
+    splat_i18n::t("Remote Control: auf dem Handy in Codex weiterarbeiten")
+}
+
+/// The phone in the head turns Remote Control on, which moves the session to Codex's shared server; its menu offers
+/// pairing and turns Remote Control off again, for every Codex session of the Mac.
+fn remote(key: AgentKey) {
+    soon(
+        "the phone shows in the head of the resumed session",
+        move || tab_of(key).is_some_and(|t| t.is_live() && t.inspect().remote.as_deref() == Some(remote_off())),
+        move || remote_on(key),
+    );
+}
+
+/// The phone turns Remote Control on, and its menu turns it off.
+fn remote_on(key: AgentKey) {
+    let Some(tab) = tab_of(key) else {
+        return give_up(NAME, "the AI tab is open");
+    };
+    tab.remote_control(&tab.root());
+    soon(
+        "the session moves to Codex's shared server",
+        move || tab_of(key).is_some_and(|t| t.inspect().remote.as_deref() == Some(remote_shown_on())),
+        move || {
+            let Some(tab) = tab_of(key) else {
+                return give_up(NAME, "the AI tab is open");
+            };
+            let shared = std::fs::read_to_string(log()).is_ok_and(|l| l.contains(r#""experimentalApi":true"#));
+            let menu = tab.menu(TabMenu::Remote);
+            let shown = titles(&menu);
+            if let Some(end) = index_of(&menu, "Remote Control beenden") {
+                menu.performActionForItemAtIndex(end);
+            }
+            soon(
+                "Remote Control turns off",
+                move || {
+                    std::fs::read_to_string(log()).is_ok_and(|l| l.contains("remoteControl/disable"))
+                        && tab_of(key).is_some_and(|t| t.inspect().remote.as_deref() == Some(remote_off()))
+                },
+                move || {
+                    check(
+                        "the phone moves the Codex session to the shared server, and its menu pairs or turns it off",
+                        shared && shown.len() == 3,
+                        format!("{shared} {shown:?}"),
+                    );
+                    finish(NAME);
+                },
+            );
         },
     );
 }

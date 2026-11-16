@@ -1,13 +1,13 @@
 //! Sessions against the stand-in server of this crate: the handshake in order, a whole turn with every kind of
 //! notification, approvals, questions, cancelling, a crash, a failed turn, resuming, signing in, the version gate,
-//! the settings the next turn carries and the management calls.
+//! the settings the next turn carries, the management calls, and the shared server Remote Control reaches.
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use ide_codex::test_server::{COMMAND_OUTPUT, CRASH, THREAD};
-use ide_codex::{Choice, Event, Launch, LoginStarted, Session, SessionError, TESTED};
+use ide_codex::test_server::{COMMAND_OUTPUT, CRASH, PAIRING_CODE, PHONE_ASK, SERVER_NAME, THREAD};
+use ide_codex::{Choice, Event, Launch, LoginStarted, RemoteControl, Session, SessionError, TESTED};
 use ide_process::Supervisor;
 use ide_thread::{
     Answer, Decision, EntryKind, Lane, LimitStatus, Notice, RequestState, Status, Thread, ThreadId, TodoStatus,
@@ -543,4 +543,78 @@ fn a_version_read_before_the_start_is_not_read_again() {
         run.events
             .has(|e| matches!(e, Event::Failed(SessionError::Unsupported { .. })))
     });
+}
+
+/// A launch of the shared server whose Remote Control the user turned on, with Codex's files in the test's folder.
+fn shared(name: &str) -> (Launch, PathBuf) {
+    let (mut launch, log) = launch("basic", name);
+    let home = launch.cwd.join("codex-home");
+    let _ = std::fs::remove_dir_all(&home);
+    launch
+        .env
+        .push(("CODEX_HOME".into(), home.to_string_lossy().into_owned()));
+    (launch, log)
+}
+
+#[test]
+fn remote_control_starts_through_the_cli_and_pairs_a_phone() {
+    let (launch, _) = shared("remote-cli");
+    let supervisor = Supervisor::new();
+    assert!(!ide_codex::remote::wanted(&launch.env));
+    let started = ide_codex::remote::start(&supervisor, &launch.program, &launch.env).unwrap();
+    assert_eq!(started, RemoteControl::Connected(SERVER_NAME.into()));
+    assert!(
+        ide_codex::remote::wanted(&launch.env),
+        "the choice is kept for the daemon's next start"
+    );
+    ide_codex::remote::ensure_daemon(&supervisor, &launch.program, &launch.env).unwrap();
+    let pairing = ide_codex::remote::pair(&supervisor, &launch.program, &launch.env).unwrap();
+    assert_eq!(pairing.code, PAIRING_CODE);
+    let missing = ide_codex::remote::start(&supervisor, &launch.cwd.join("codex"), &launch.env);
+    assert!(matches!(missing, Err(SessionError::NotFound(_))));
+}
+
+#[test]
+fn a_shared_session_shows_remote_control_leaves_other_threads_alone_and_turns_it_off() {
+    let (mut launch, log) = shared("remote-session");
+    let supervisor = Supervisor::new();
+    ide_codex::remote::start(&supervisor, &launch.program, &launch.env).unwrap();
+    launch.shared = true;
+    assert_eq!(launch.args(), ["app-server", "proxy"]);
+    let env = launch.env.clone();
+    let run = start(launch, log);
+    wait("an open thread", || run.session.is_ready());
+    assert_eq!(run.sent()[0]["params"]["capabilities"]["experimentalApi"], true);
+    wait("Remote Control", || {
+        run.session.remote_control() == RemoteControl::Connected(SERVER_NAME.into())
+    });
+    assert!(run.events.has(|e| matches!(e, Event::RemoteControl)));
+    run.session.send(message("foreign: list the files")).unwrap();
+    let command = await_request(&run.session);
+    let asks = kinds(&run.session)
+        .into_iter()
+        .filter(|k| matches!(k, EntryKind::PermissionRequest(_)))
+        .count();
+    assert_eq!(asks, 1, "the phone's request stays out of the thread");
+    run.session.answer(&command, Choice::Option(0)).unwrap();
+    wait("the file change request", || {
+        pending_request(&run.session).is_some_and(|r| r != command)
+    });
+    assert!(
+        run.sent().iter().all(|m| m["id"] != PHONE_ASK),
+        "the phone answers its own request"
+    );
+    let off = run.session.disable_remote_control().unwrap().wait().unwrap();
+    assert_eq!(off, RemoteControl::Off);
+    assert_eq!(run.session.remote_control(), RemoteControl::Off);
+    assert!(!ide_codex::remote::wanted(&env));
+}
+
+#[test]
+fn a_session_of_its_own_has_no_remote_control() {
+    let run = ready("basic", "remote-own");
+    assert_eq!(run.sent()[0]["params"]["capabilities"]["experimentalApi"], false);
+    assert_eq!(run.session.remote_control(), RemoteControl::Off);
+    assert!(run.session.disable_remote_control().is_err());
+    assert!(!run.events.has(|e| matches!(e, Event::RemoteControl)));
 }

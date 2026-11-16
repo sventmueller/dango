@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "Изменения применяются сразу.";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "Этот агент не может продолжить сеанс.";
 "Erst wenn der Agent fertig ist." = "Только когда агент закончит работу.";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: продолжайте в Codex на телефоне";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "Remote Control подхватит сеанс, когда агент закончит работу";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Control включен: сеансы Codex этого Mac работают также в Codex на телефоне";
+"Codex hat keine Verbindung zu OpenAI" = "У Codex нет подключения к OpenAI";
+"Handy koppeln …" = "Создать пару с телефоном…";
+"Handy koppeln" = "Создать пару с телефоном";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Введите код {} в Codex на телефоне. Он действителен до {}.";
+"Koppeln fehlgeschlagen" = "Не удалось создать пару";

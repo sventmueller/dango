@@ -13,8 +13,10 @@ use splat_i18n::{t, tf};
 use crate::source::{Problem, Source};
 use crate::tab::{AgentTab, Incoming};
 
+mod remote;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
+pub(crate) use remote::Turning;
 #[cfg(feature = "selftest")]
 pub use selftest_probe::set_test_codex;
 
@@ -22,24 +24,27 @@ pub use selftest_probe::set_test_codex;
 pub(crate) const PRESET: &str = "codex-acp";
 
 /// How the Codex choice starts in `cwd` with the login shell's `env`: the app-server when an installed Codex speaks
-/// its protocol; none to take the ACP adapter. This runs `codex --version`, so it runs off the main thread.
+/// its protocol, the shared one when Remote Control is on (E148); none to take the ACP adapter. This runs Codex, so
+/// it runs off the main thread.
 pub(crate) fn launch_for(agent: &str, env: &[(String, String)], cwd: &Path) -> Option<ide_codex::Launch> {
     if agent != PRESET {
         return None;
     }
     #[cfg(feature = "selftest")]
-    {
+    let mut launch = {
         let _ = env;
-        selftest_probe::test_launch(cwd)
-    }
+        selftest_probe::test_launch(cwd)?
+    };
     #[cfg(not(feature = "selftest"))]
-    {
+    let mut launch = {
         let program = ide_process::tool::which("codex", ide_process::tool::var(env, "PATH"))?;
         let version = ide_codex::version::probe(Supervisor::global(), &program, env).ok()?;
         let mut launch = ide_codex::Launch::new(program, env.to_vec(), cwd);
         launch.version = Some(version);
-        Some(launch)
-    }
+        launch
+    };
+    remote::share(&mut launch);
+    Some(launch)
 }
 
 /// The file that keeps the Codex threads of each folder as `thread/list` last named them, for the Agents panel.

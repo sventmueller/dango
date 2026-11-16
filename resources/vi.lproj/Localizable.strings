@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "Thay đổi có hiệu lực ngay.";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "Tác nhân này không thể tiếp tục một phiên.";
 "Erst wenn der Agent fertig ist." = "Chỉ khi tác nhân xong.";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: tiếp tục trong Codex trên điện thoại";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "Remote Control sẽ tiếp quản phiên khi tác nhân xong";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Control đang bật: các phiên Codex của máy Mac này cũng chạy trong Codex trên điện thoại";
+"Codex hat keine Verbindung zu OpenAI" = "Codex không có kết nối với OpenAI";
+"Handy koppeln …" = "Ghép đôi điện thoại…";
+"Handy koppeln" = "Ghép đôi điện thoại";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Nhập mã {} trong Codex trên điện thoại. Mã có hiệu lực đến {}.";
+"Koppeln fehlgeschlagen" = "Không ghép đôi được";

@@ -1,7 +1,6 @@
 //! The head of the AI tab: the session's title, then Remote Control, the focus view, the session's subagents and
 //! background processes, bookmark, history and a new session.
 
-use ide_claude::RemoteControl;
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{NSButton, NSClickGestureRecognizer, NSColor, NSStackView, NSTextField};
@@ -40,6 +39,45 @@ fn work_button(mtm: MainThreadMarker, target: &AgentTarget, part: Part) -> Retai
     );
     button.setEnabled(false);
     button
+}
+
+/// What the Remote Control button shows.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Remote {
+    /// The agent offers none.
+    Hidden,
+    /// Off; a click turns it on.
+    Off,
+    /// It connects.
+    Connecting,
+    /// Codex's is on, and the session moves to the shared server once the agent is done (E148).
+    Moving,
+    /// The phone reaches the session.
+    Connected,
+    /// It lost its connection or did not start, for this reason.
+    Failed(String),
+}
+
+impl Remote {
+    /// The button for Claude's `remote`.
+    pub(crate) fn of_claude(remote: &ide_claude::RemoteControl) -> Remote {
+        match remote {
+            ide_claude::RemoteControl::Unavailable => Remote::Hidden,
+            ide_claude::RemoteControl::Off => Remote::Off,
+            ide_claude::RemoteControl::Connecting => Remote::Connecting,
+            ide_claude::RemoteControl::Connected(_) => Remote::Connected,
+            ide_claude::RemoteControl::Failed(why) => Remote::Failed(why.clone()),
+        }
+    }
+}
+
+/// Whose Remote Control the button shows, which says where the session continues.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Reach {
+    /// Claude's, for this session, on the phone and on claude.ai.
+    Claude,
+    /// Codex's, for every Codex session of the Mac, in Codex on the phone (E148).
+    Codex,
 }
 
 /// Puts the title's text on the left edge of the window's tab bar, which AppKit insets 8 points from the content.
@@ -159,30 +197,45 @@ impl Header {
         }
     }
 
-    /// Shows where the session stands with Remote Control; hidden where the CLI does not offer it.
-    pub(crate) fn set_remote(&self, remote: &RemoteControl) {
+    /// Shows where the session stands with `reach`'s Remote Control; hidden where the agent does not offer it.
+    pub(crate) fn set_remote(&self, remote: &Remote, reach: Reach) {
         let interrupted;
         let (name, color, tip) = match remote {
-            RemoteControl::Unavailable => {
+            Remote::Hidden => {
                 self.remote.setHidden(true);
                 return;
             }
-            RemoteControl::Off => (
+            Remote::Off => (
                 "iphone",
                 NSColor::secondaryLabelColor(),
-                t("Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten"),
+                match reach {
+                    Reach::Claude => t("Remote Control: auf dem Handy oder auf claude.ai weiterarbeiten"),
+                    Reach::Codex => t("Remote Control: auf dem Handy in Codex weiterarbeiten"),
+                },
             ),
-            RemoteControl::Connecting => (
+            Remote::Connecting => (
                 "iphone.radiowaves.left.and.right",
                 NSColor::secondaryLabelColor(),
                 t("Remote Control verbindet …"),
             ),
-            RemoteControl::Connected(_) => (
+            Remote::Moving => (
+                "iphone.radiowaves.left.and.right",
+                NSColor::secondaryLabelColor(),
+                t("Remote Control übernimmt die Sitzung, sobald der Agent fertig ist"),
+            ),
+            Remote::Connected => (
                 "iphone.radiowaves.left.and.right",
                 NSColor::controlAccentColor(),
-                t("Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai"),
+                match reach {
+                    Reach::Claude => {
+                        t("Remote Control ist an: diese Sitzung läuft auch auf dem Handy und auf claude.ai")
+                    }
+                    Reach::Codex => {
+                        t("Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy")
+                    }
+                },
             ),
-            RemoteControl::Failed(why) => {
+            Remote::Failed(why) => {
                 interrupted = tf("Remote Control ist unterbrochen: {}", &[why]);
                 ("iphone.slash", NSColor::systemOrangeColor(), interrupted.as_str())
             }

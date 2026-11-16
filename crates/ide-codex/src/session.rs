@@ -27,6 +27,7 @@ use crate::capabilities::Capabilities;
 use crate::launch::{ApprovalPolicy, Launch, SandboxMode};
 use crate::mapping::Mapper;
 use crate::protocol::{method, text};
+use crate::remote::RemoteControl;
 use crate::requests::Offer;
 use crate::version::Version;
 use crate::wire::{Id, Message, RpcError};
@@ -71,6 +72,8 @@ pub enum Event {
         /// Why not.
         error: Option<String>,
     },
+    /// Where the shared server stands with Remote Control changed; read it with `Session::remote_control`.
+    RemoteControl,
     /// The process ended; its last error output is attached.
     Ended {
         /// The end of what the server wrote to stderr.
@@ -205,6 +208,30 @@ struct State {
     starting: bool,
     /// The user stopped a turn that had no id yet.
     interrupt: bool,
+    /// Where the shared server stands with Remote Control, as it last said.
+    remote: RemoteControl,
+    /// The threads whose start the shared server announced, with the thread each descends from.
+    started: HashMap<String, Option<String>>,
+}
+
+impl State {
+    /// Whether `thread` is another client's thread of the shared server, which this session leaves to that client:
+    /// one whose start it heard that is neither its own nor descends from it. Threads it never heard of count as its
+    /// own, as everything of a server of its own does.
+    fn foreign(&self, thread: &str) -> bool {
+        let mut current = thread;
+        for _ in 0..=self.started.len() {
+            if self.thread_id.as_deref() == Some(current) {
+                return false;
+            }
+            match self.started.get(current) {
+                Some(Some(parent)) => current = parent,
+                Some(None) => return self.thread_id.is_some(),
+                None => return false,
+            }
+        }
+        false
+    }
 }
 
 struct Shared {
@@ -376,6 +403,21 @@ impl Shared {
                 }
                 return;
             }
+            "remoteControl/status/changed" => {
+                if self.launch.shared {
+                    self.state().remote = RemoteControl::read(params);
+                    self.emit(Event::RemoteControl);
+                }
+                return;
+            }
+            "thread/started" if self.launch.shared => {
+                let thread = params.get("thread").unwrap_or(&Value::Null);
+                if let Some(id) = text(thread, "id") {
+                    let parent = text(thread, "parentThreadId").map(str::to_string);
+                    self.state().started.insert(id.to_string(), parent);
+                }
+            }
+            _ if self.foreign(params) => return,
             "turn/started" => self.state().starting = false,
             _ => {}
         }
@@ -394,6 +436,10 @@ impl Shared {
     }
 
     fn on_request(self: &Arc<Self>, id: Id, method: &str, params: &Value) {
+        // Another client of the shared server answers its own requests; an answer from here would take its choice.
+        if self.foreign(params) {
+            return;
+        }
         let ask = format!("p{}", self.next_ask.fetch_add(1, Ordering::SeqCst) + 1);
         let taken = self.state().mapper.request(&ask, method, params, now());
         let Some((offer, updates)) = taken else {
@@ -403,6 +449,11 @@ impl Shared {
         };
         self.state().asks.insert(ask, Ask { id, offer });
         self.apply(updates);
+    }
+
+    /// Whether `params` name another client's thread of the shared server.
+    fn foreign(&self, params: &Value) -> bool {
+        self.launch.shared && text(params, "threadId").is_some_and(|thread| self.state().foreign(thread))
     }
 
     /// The server no longer needs the answer to its request `id`, such as when the turn was stopped.
@@ -569,6 +620,8 @@ impl Session {
                 overrides: Overrides::default(),
                 starting: false,
                 interrupt: false,
+                remote: RemoteControl::Off,
+                started: HashMap::new(),
             }),
             pending: Mutex::new(HashMap::new()),
             sink: Box::new(sink),
@@ -626,6 +679,19 @@ impl Session {
     /// Codex's id for the thread, once it opened it; resuming names it.
     pub fn session_id(&self) -> Option<String> {
         self.shared.state().thread_id.clone()
+    }
+
+    /// How the session was started, with the program and environment Codex's other commands take too.
+    pub fn launch(&self) -> &Launch {
+        &self.shared.launch
+    }
+
+    /// Where Remote Control stands for this session: off for a server of its own, the shared server's state else.
+    pub fn remote_control(&self) -> RemoteControl {
+        if !self.shared.launch.shared {
+            return RemoteControl::Off;
+        }
+        self.shared.state().remote.clone()
     }
 
     /// The supervisor's number for the process.

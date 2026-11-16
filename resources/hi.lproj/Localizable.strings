@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "बदलाव तुरंत लागू होते हैं।";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "यह एजेंट किसी सेशन को जारी नहीं रख सकता।";
 "Erst wenn der Agent fertig ist." = "एजेंट का काम पूरा होने के बाद ही।";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: अपने फ़ोन पर Codex में जारी रखें";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "एजेंट का काम पूरा होते ही Remote Control सेशन संभाल लेगा";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Control चालू है: इस Mac के Codex सेशन आपके फ़ोन पर Codex में भी चलते हैं";
+"Codex hat keine Verbindung zu OpenAI" = "Codex का OpenAI से कनेक्शन नहीं है";
+"Handy koppeln …" = "फ़ोन पेयर करें…";
+"Handy koppeln" = "फ़ोन पेयर करें";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "अपने फ़ोन पर Codex में कोड {} डालें। यह {} तक मान्य है।";
+"Koppeln fehlgeschlagen" = "पेयर नहीं हो सका";

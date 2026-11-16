@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "تسري التغييرات فورًا.";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "لا يمكن لهذا الوكيل متابعة جلسة.";
 "Erst wenn der Agent fertig ist." = "فقط بعد انتهاء الوكيل.";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: تابِع في Codex على هاتفك";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "سيتولى Remote Control الجلسة بعد انتهاء الوكيل";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Control قيد التشغيل: تعمل جلسات Codex على جهاز Mac هذا أيضًا في Codex على هاتفك";
+"Codex hat keine Verbindung zu OpenAI" = "لا يوجد اتصال بين Codex وOpenAI";
+"Handy koppeln …" = "إقران الهاتف…";
+"Handy koppeln" = "إقران الهاتف";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "أدخل الرمز {} في Codex على هاتفك. يظل صالحًا حتى {}.";
+"Koppeln fehlgeschlagen" = "فشل الإقران";

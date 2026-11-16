@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "Modificările se aplică imediat.";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "Acest agent nu poate continua o sesiune.";
 "Erst wenn der Agent fertig ist." = "Doar după ce agentul termină.";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: continuați în Codex pe telefon";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "Remote Control va prelua sesiunea după ce agentul termină";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Control este activat: sesiunile Codex ale acestui Mac rulează și în Codex pe telefon";
+"Codex hat keine Verbindung zu OpenAI" = "Codex nu are conexiune la OpenAI";
+"Handy koppeln …" = "Asociați telefonul…";
+"Handy koppeln" = "Asociați telefonul";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Introduceți codul {} în Codex pe telefon. Este valabil până la {}.";
+"Koppeln fehlgeschlagen" = "Asocierea a eșuat";

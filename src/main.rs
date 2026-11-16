@@ -47,14 +47,8 @@ fn main() {
     // The self-test's Codex app-server is this program too, started with this variable (E147).
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_CODEX_TEST_SERVER").is_some() {
-        let scenario = std::env::var("CODEX_TEST_SCENARIO").unwrap_or_else(|_| "basic".into());
-        if std::env::args().any(|a| a == "--version") {
-            println!("{}", ide_codex::test_server::VERSION);
-            return;
-        }
-        let log = std::env::var_os("CODEX_TEST_LOG").map(std::path::PathBuf::from);
-        ide_codex::test_server::run(std::io::stdin().lock(), std::io::stdout().lock(), &scenario, log);
-        return;
+        let args: Vec<String> = std::env::args().skip(1).collect();
+        std::process::exit(ide_codex::test_server::main(&args));
     }
     // The self-test's OpenCode server is this program too, started with this variable (E147).
     #[cfg(feature = "selftest")]

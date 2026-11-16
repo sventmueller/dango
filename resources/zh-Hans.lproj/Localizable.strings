@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "更改会立即生效。";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "此智能体无法继续会话。";
 "Erst wenn der Agent fertig ist." = "需等智能体完成后。";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control：在手机上的 Codex 中继续";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "智能体完成后，Remote Control 将接管此会话";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Control 已打开：此 Mac 的 Codex 会话也在手机上的 Codex 中运行";
+"Codex hat keine Verbindung zu OpenAI" = "Codex 未连接到 OpenAI";
+"Handy koppeln …" = "配对手机…";
+"Handy koppeln" = "配对手机";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "在手机上的 Codex 中输入代码 {}。有效期至 {}。";
+"Koppeln fehlgeschlagen" = "配对失败";

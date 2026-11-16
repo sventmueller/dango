@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "Promjene vrijede odmah.";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "Ovaj agent ne može nastaviti sesiju.";
 "Erst wenn der Agent fertig ist." = "Tek kad agent završi.";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: nastavite u Codexu na telefonu";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "Remote Control preuzet će sesiju čim agent završi";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Control je uključen: Codex sesije ovog Maca rade i u Codexu na telefonu";
+"Codex hat keine Verbindung zu OpenAI" = "Codex nema vezu s OpenAI-jem";
+"Handy koppeln …" = "Upari telefon…";
+"Handy koppeln" = "Upari telefon";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Unesite kod {} u Codex na telefonu. Vrijedi do {}.";
+"Koppeln fehlgeschlagen" = "Uparivanje nije uspjelo";

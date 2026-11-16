@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "การเปลี่ยนแปลงมีผลทันที";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "เอเจนต์นี้ไม่สามารถทำเซสชันต่อได้";
 "Erst wenn der Agent fertig ist." = "เมื่อเอเจนต์เสร็จแล้วเท่านั้น";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: ทำต่อใน Codex บนโทรศัพท์";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "Remote Control จะรับช่วงเซสชันเมื่อเอเจนต์เสร็จแล้ว";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Control เปิดอยู่: เซสชัน Codex ของ Mac เครื่องนี้ทำงานใน Codex บนโทรศัพท์ด้วย";
+"Codex hat keine Verbindung zu OpenAI" = "Codex ไม่ได้เชื่อมต่อกับ OpenAI";
+"Handy koppeln …" = "จับคู่โทรศัพท์…";
+"Handy koppeln" = "จับคู่โทรศัพท์";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "ป้อนรหัส {} ใน Codex บนโทรศัพท์ รหัสนี้ใช้ได้ถึง {}";
+"Koppeln fehlgeschlagen" = "จับคู่ไม่สำเร็จ";

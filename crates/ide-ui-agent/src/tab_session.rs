@@ -149,6 +149,7 @@ impl AgentTab {
                 Incoming::OpenCode(ide_opencode::Event::McpChanged(_)) => {}
                 Incoming::OpenCode(other) => problem = self.opencode_problem(other).or(problem),
                 Incoming::Codex(ide_codex::Event::Ended { stderr }) => ended = Some(stderr.clone()),
+                Incoming::Codex(ide_codex::Event::RemoteControl) => remote = true,
                 Incoming::Codex(other) => problem = self.codex_problem(other).or(problem),
                 Incoming::Claude(Event::RemoteControl) => remote = true,
                 Incoming::Claude(Event::Failed(SessionError::RewindRejected(why))) => refused = Some(why.clone()),
@@ -183,12 +184,16 @@ impl AgentTab {
             self.absorb(snapshot, &changes);
             super::dialogs::requests_changed(self);
         }
+        if remote {
+            self.codex_remote_heard();
+        }
         if learned {
             self.refresh();
             super::dialogs::session_ready(self);
         } else if remote {
             self.refresh_remote();
         }
+        self.codex_move_if_idle();
         if let Some(stderr) = ended {
             self.acp_ended(&stderr);
         }

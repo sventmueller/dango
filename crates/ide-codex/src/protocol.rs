@@ -58,6 +58,8 @@ pub mod method {
     pub const FEEDBACK_UPLOAD: &str = "feedback/upload";
     /// Lists the plugins.
     pub const PLUGIN_LIST: &str = "plugin/list";
+    /// Turns Remote Control off for the shared server and keeps that choice; of the experimental API.
+    pub const REMOTE_CONTROL_DISABLE: &str = "remoteControl/disable";
 
     /// The server asks before it runs a command.
     pub const COMMAND_APPROVAL: &str = "item/commandExecution/requestApproval";

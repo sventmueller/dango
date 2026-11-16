@@ -18,8 +18,8 @@ Dango runs Codex through `codex app-server`, the protocol the Codex SDK builds o
 
 - One JSON-RPC 2.0 message per line on stdio, **without** the `"jsonrpc"` member (`wire.rs`). Not `ide-rpc`, which
   frames with `Content-Length`.
-- `initialize` with `clientInfo` and `capabilities.experimentalApi: false`, then the notification `initialized`.
-  Requests before that are refused by the server.
+- `initialize` with `clientInfo` and `capabilities.experimentalApi: false` (`true` on the shared server, see Remote
+  Control), then the notification `initialized`. Requests before that are refused by the server.
 - Then `account/read`, `thread/start` or `thread/resume` (cwd, model, effort, approval policy, sandbox) and
   `model/list`.
 
@@ -56,6 +56,23 @@ Claude Code uses (`Bash`, `Edit`, `Write`, `WebSearch`), so every agent's cards 
 
 Not offered: `/btw` (a fork's turn would need a second thread on the connection), `/plugins` (`plugin/list` is
 marked as in development), `/permissions` and `/hooks`.
+
+## Remote Control (E148)
+
+The phone reaches only Codex's shared app-server, the daemon `codex app-server daemon` manages. Remote Control belongs
+to it, so it is on or off for every Codex session of the Mac, unlike Claude's, which is one session's.
+
+| Item | Codex |
+|---|---|
+| Shared server | `codex app-server proxy` connects stdio to the daemon's socket (`Launch::shared`); the framing stays the same, `-c` overrides do not reach the daemon |
+| When | the daemon's saved choice `remoteControlEnabled` in `$CODEX_HOME/app-server-daemon/settings.json` is on (`ide_codex::remote::wanted`); `codex app-server daemon start` makes sure it runs, and if it does not start, the tab keeps a server of its own |
+| On | the phone in the tab's head runs `codex remote-control start --json`, which starts the daemon, turns Remote Control on and saves that; a tab with a server of its own then moves to the daemon once the agent is done, resuming its thread there |
+| State | `remoteControl/status/changed`, sent after `initialize` and on each change: `disabled`, `connecting`, `connected` with the `serverName` the phone shows, `errored` |
+| Pairing | `codex remote-control pair --json`: `manualPairingCode` and `expiresAt`, shown in an alert |
+| Off | `remoteControl/disable`, saved for the daemon's next start; of the experimental API, which `initialize` asks for only on the shared server |
+| Other clients | every connection hears the threads other clients start after it connected (`thread/started` with `parentThreadId`); the session leaves the requests and turns of a thread that is neither its own nor descends from it to that client, unanswered |
+| Process | the daemon is no child of the supervisor. Started by Dango it inherits the login shell's environment (E10, E23); one the Codex app or a terminal started keeps its own, which the commands Codex runs then get (R46) |
+| Self-test | the stand-in answers `app-server proxy` as the shared server and `remote-control start`, `remote-control pair` and `app-server daemon start` as the CLI, with the saved choice in its `CODEX_HOME` |
 
 ## Schemas
 

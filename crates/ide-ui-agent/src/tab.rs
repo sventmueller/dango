@@ -166,6 +166,8 @@ pub struct AgentTab {
     pub(super) asides: RefCell<Vec<super::dialogs::model::Aside>>,
     /// The tab itself, for what holds on to it without keeping it open, such as its overlay.
     pub(super) me: RefCell<std::rc::Weak<AgentTab>>,
+    /// What the tab does about Codex's Remote Control that the session cannot say yet (E148).
+    pub(super) codex_remote: RefCell<Option<crate::codex::Turning>>,
 }
 
 impl AgentTab {
@@ -256,6 +258,7 @@ impl AgentTab {
             dialogs_opened: std::cell::Cell::new(0),
             asides: RefCell::new(Vec::new()),
             me: RefCell::new(std::rc::Weak::new()),
+            codex_remote: RefCell::new(None),
         };
         tab.lay_out();
         tab
@@ -606,8 +609,14 @@ impl AgentTab {
     }
 
     pub(super) fn refresh_remote(&self) {
+        if let Some(session) = self.codex_session() {
+            let remote = self.codex_remote_shown(&session);
+            self.header.set_remote(&remote, super::header::Reach::Codex);
+            return;
+        }
         let remote = self.session().map(|s| s.remote_control()).unwrap_or_default();
-        self.header.set_remote(&remote);
+        self.header
+            .set_remote(&super::header::Remote::of_claude(&remote), super::header::Reach::Claude);
     }
 
     pub(super) fn refresh_tab_mark(&self) {

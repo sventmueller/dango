@@ -669,6 +669,13 @@ Code-Review 2026-11-14 *(nichtfunktional, vom Eigentümer beauftragt)*:
   - **Fortsetzen:** Eine fortgesetzte Sitzung behält ihren Weg.
   - **Umsetzung Codex (abweichend vom ersten Entwurf):** kein eigener Agent-Typ, sondern ein zweiter Weg derselben Codex-Auswahl (Preset `codex-acp`): Beim Start prüft der Tab `codex --version` und nimmt bei 0.167 oder neuer den App-Server, sonst `codex-acp`. Modell, Aufwand und Modus erscheinen im Composer wie bei einem ACP-Agenten. Details in [codex.md](codex.md).
   - **Umsetzung OpenCode:** ebenso ein zweiter Weg der OpenCode-Auswahl (Preset `opencode`). 2.2.6 bringt eine neue v2-API unter `/api/…` statt der v1-Routen; `opencode serve --stdio` öffnet trotz des Namens einen HTTP-Server auf 127.0.0.1 mit Einmal-Passwort je Start. Details in [opencode.md](opencode.md).
+- **E148 Remote Control für Codex über den gemeinsamen App-Server** *(Entscheidung des Eigentümers, weicht von E10 und E23 ab)*:
+  - **Was:** Das Handy im Kopf des KI-Tabs gibt es auch für Codex. Das Handy erreicht nur Codex' gemeinsamen App-Server, den Dienst, den `codex app-server daemon` verwaltet. Ist Remote Control an, verbindet sich ein Codex-Tab über `codex app-server proxy` mit diesem Dienst, statt einen eigenen App-Server zu starten.
+  - **Für den ganzen Mac, nicht je Sitzung:** Remote Control gehört bei Codex dem Dienst. Einschalten (`codex remote-control start`) und Beenden (`remoteControl/disable`) gelten für alle Codex-Sitzungen des Macs und bleiben für den nächsten Start gespeichert. Das unterscheidet sich von Claude, wo Remote Control je Sitzung gilt.
+  - **Umzug:** Ein Tab mit eigenem App-Server wechselt nach dem Einschalten auf den Dienst, sobald der Agent fertig ist, und setzt seinen Thread dort fort. Neue Tabs starten gleich dort, solange die gespeicherte Wahl an ist; startet der Dienst nicht, bleibt der eigene App-Server.
+  - **Fremde Threads:** Am Dienst hört jede Verbindung auch die Threads der anderen Clients. Dango zeigt und beantwortet nur den eigenen Thread und dessen Unteragenten.
+  - **Weicht ab von E10 und E23:** Der Dienst ist kein Kindprozess unter Dangos Supervisor. Startet Dango ihn, erbt er die Login-Shell-Umgebung; läuft er schon, weil die Codex-App oder ein Terminal ihn startete, bekommen die Befehle, die Codex ausführt, dessen Umgebung. Unter dem Supervisor laufen der Proxy und die Aufrufe der Codex-CLI.
+  - **Experimentelle API:** Nur die Verbindung zum Dienst meldet sich dafür an, weil Codex das Abschalten nur dort anbietet. Details in [codex.md](codex.md).
 
 Risiken aus Phase 12: **R23** `modalkit` 0.0.x mit einem Betreuer, **R24** Vim-Nutzer messen am Original, **R25**
 iCloud Drive langsam und nicht steuerbar, **R28** Emmet-Server kaum gepflegt, **R29** Testausgaben ohne festen
@@ -684,6 +691,11 @@ Risiken aus E146 und E147:
 - **R42** Geheimnisse in MCP-Definitionen: Tokens nie in Prozessnamen oder Protokollen. Dangos eigene Liste hält sie im Schlüsselbund. `.mcp.json` wird geschrieben wie eingegeben, mit Hinweis.
 - **R43** Daten nach außen: `/bug` und Feedback senden an den Hersteller, nur nach einer Bestätigung, die nennt, was gesendet wird.
 - **R44** Umfang: Codex und OpenCode sind je ein neuer Agentenweg in der Größe von `ide-claude`. Sie kommen nach den Overlays für Claude und ACP, jeweils als eigene Phase.
+
+Risiken aus E148:
+- **R45** Remote Control von Codex ist experimentell: Dienst, Proxy und `remoteControl/*` können sich je Release ändern, und das Koppeln hakt laut offenen Issues bei Codex. Abhilfe: Startet der Dienst nicht, bleibt der eigene App-Server; Fehler zeigt das Handy-Symbol.
+- **R46** Fremde Umgebung: Läuft der Dienst schon, bekommen Codex' Befehle dessen Umgebung statt der Login-Shell (E10, E23).
+- **R47** Tab und Dienst trennen sich: Schließen eines Tabs beendet nur Dangos Verbindung; was der Dienst mit einem laufenden Turn tut, entscheidet Codex.
 
 Neue Risiken: **R9** Last durch parallele Agenten (Zeitmessungen nur über `make perf`), **R11** Nutzungslimit des
 Claude-Kontos (keine Live-Läufe echter Agenten-CLIs in Tests), **R12** Selbsttest-Fenster dürfen nie den Fokus nehmen

@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "Muutokset tulevat voimaan heti.";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "Tämä agentti ei voi jatkaa istuntoa.";
 "Erst wenn der Agent fertig ist." = "Vasta kun agentti on valmis.";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: jatka Codexissa puhelimella";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "Remote Control ottaa istunnon hoitaakseen, kun agentti on valmis";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Control on päällä: tämän Macin Codex-istunnot toimivat myös puhelimen Codexissa";
+"Codex hat keine Verbindung zu OpenAI" = "Codexilla ei ole yhteyttä OpenAI:hin";
+"Handy koppeln …" = "Muodosta pari puhelimeen…";
+"Handy koppeln" = "Muodosta pari puhelimeen";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Syötä koodi {} puhelimen Codexiin. Se on voimassa klo {} asti.";
+"Koppeln fehlgeschlagen" = "Parin muodostus epäonnistui";

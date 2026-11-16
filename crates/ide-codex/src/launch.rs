@@ -113,8 +113,12 @@ pub struct Launch {
     pub resume: Option<String>,
     /// The release `version::probe` already read for this program; the handshake reads it itself when `None`.
     pub version: Option<crate::version::Version>,
-    /// `-c key=value` overrides of `config.toml`, the value in TOML.
+    /// `-c key=value` overrides of `config.toml`, the value in TOML; a server of its own takes them, the shared one
+    /// keeps its own configuration.
     pub config: Vec<(String, String)>,
+    /// Whether the session joins Codex's shared app-server, the daemon Remote Control reaches (E148), through
+    /// `codex app-server proxy` instead of starting a server of its own.
+    pub shared: bool,
 }
 
 impl Launch {
@@ -132,11 +136,16 @@ impl Launch {
             resume: None,
             version: None,
             config: Vec::new(),
+            shared: false,
         }
     }
 
-    /// The arguments: the app-server on stdio, which is its default transport, and the overrides.
+    /// The arguments: the app-server on stdio, which is its default transport, and the overrides; or the proxy that
+    /// connects stdio to the shared server.
     pub fn args(&self) -> Vec<String> {
+        if self.shared {
+            return vec!["app-server".to_string(), "proxy".to_string()];
+        }
         let mut args = vec!["app-server".to_string()];
         for (key, value) in &self.config {
             args.push("-c".into());
@@ -190,6 +199,9 @@ mod tests {
         let mut launch = Launch::new("/bin/codex", vec![("PATH".into(), "/bin".into())], "/work");
         launch.config.push(("model_verbosity".into(), "\"low\"".into()));
         assert_eq!(launch.args(), ["app-server", "-c", "model_verbosity=\"low\""]);
+        launch.shared = true;
+        assert_eq!(launch.args(), ["app-server", "proxy"]);
+        launch.shared = false;
         assert_eq!(launch.open_params(), json!({"cwd": "/work"}));
         launch.model = Some("gpt-5.5".into());
         launch.effort = Some("high".into());

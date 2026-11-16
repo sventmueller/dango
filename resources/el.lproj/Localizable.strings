@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "Οι αλλαγές ισχύουν αμέσως.";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "Αυτός ο πράκτορας δεν μπορεί να συνεχίσει μια συνεδρία.";
 "Erst wenn der Agent fertig ist." = "Μόνο αφού ολοκληρώσει ο πράκτορας.";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: συνεχίστε στο Codex στο τηλέφωνό σας";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "Το Remote Control θα αναλάβει τη συνεδρία μόλις ολοκληρώσει ο πράκτορας";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Το Remote Control είναι ενεργό: οι συνεδρίες Codex αυτού του Mac εκτελούνται και στο Codex στο τηλέφωνό σας";
+"Codex hat keine Verbindung zu OpenAI" = "Το Codex δεν έχει σύνδεση με το OpenAI";
+"Handy koppeln …" = "Σύζευξη τηλεφώνου…";
+"Handy koppeln" = "Σύζευξη τηλεφώνου";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Εισαγάγετε τον κωδικό {} στο Codex στο τηλέφωνό σας. Ισχύει έως τις {}.";
+"Koppeln fehlgeschlagen" = "Η σύζευξη απέτυχε";

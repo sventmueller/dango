@@ -25,12 +25,18 @@ pub(super) fn open(shared: &Arc<Shared>) {
     }
 }
 
-/// The parameters of `initialize`: the client's name, without the experimental API, whose methods and fields this
-/// crate does not use.
+/// The parameters of `initialize` for a server of its own: the client's name, without the experimental API, whose
+/// methods and fields this crate does not use there.
 pub(crate) fn initialize_params() -> Value {
+    initialize_with(false)
+}
+
+/// The parameters of `initialize`, with the experimental API when `experimental`: the shared server's Remote Control
+/// switch is only there.
+fn initialize_with(experimental: bool) -> Value {
     json!({
         "clientInfo": {"name": ide_product::NAME, "title": ide_product::NAME, "version": env!("CARGO_PKG_VERSION")},
-        "capabilities": {"experimentalApi": false}
+        "capabilities": {"experimentalApi": experimental}
     })
 }
 
@@ -42,7 +48,7 @@ fn handshake(shared: &Arc<Shared>) -> Result<(), SessionError> {
     };
     shared.state().caps.version = Some(version);
     let result = shared
-        .call(method::INITIALIZE, initialize_params(), None, reply::raw)
+        .call(method::INITIALIZE, initialize_with(launch.shared), None, reply::raw)
         .wait()?;
     shared.state().caps.learn_initialize(&result);
     shared.emit(Event::Capabilities);

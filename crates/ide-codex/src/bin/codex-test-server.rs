@@ -1,17 +1,8 @@
 //! The stand-in of `ide_codex::test_server` as a `codex` executable: `--version` prints the release, `app-server`
-//! speaks the protocol on stdin and stdout.
+//! speaks the protocol on stdin and stdout, `app-server proxy` as the shared server, and the CLI's Remote Control
+//! commands answer as Codex's do.
 
 fn main() {
-    let scenario = std::env::var("CODEX_TEST_SCENARIO").unwrap_or_else(|_| "basic".into());
-    if std::env::args().any(|a| a == "--version") {
-        let version = if scenario == "old" {
-            "codex-cli 0.150.0"
-        } else {
-            ide_codex::test_server::VERSION
-        };
-        println!("{version}");
-        return;
-    }
-    let log = std::env::var_os("CODEX_TEST_LOG").map(std::path::PathBuf::from);
-    ide_codex::test_server::run(std::io::stdin().lock(), std::io::stdout().lock(), &scenario, log);
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    std::process::exit(ide_codex::test_server::main(&args));
 }

@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "Ändringar gäller direkt.";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "Den här agenten kan inte fortsätta en session.";
 "Erst wenn der Agent fertig ist." = "Först när agenten är klar.";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: fortsätt i Codex på telefonen";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "Remote Control tar över sessionen när agenten är klar";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Control är på: den här Macens Codex-sessioner körs även i Codex på telefonen";
+"Codex hat keine Verbindung zu OpenAI" = "Codex har ingen anslutning till OpenAI";
+"Handy koppeln …" = "Parkoppla telefon…";
+"Handy koppeln" = "Parkoppla telefon";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Ange koden {} i Codex på telefonen. Den gäller till {}.";
+"Koppeln fehlgeschlagen" = "Parkopplingen misslyckades";

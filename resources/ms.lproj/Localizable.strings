@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "Perubahan berkuat kuasa serta-merta.";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "Ejen ini tidak dapat meneruskan sesi.";
 "Erst wenn der Agent fertig ist." = "Hanya selepas ejen selesai.";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: teruskan dalam Codex pada telefon anda";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "Remote Control akan mengambil alih sesi selepas ejen selesai";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Control dihidupkan: sesi Codex Mac ini juga berjalan dalam Codex pada telefon anda";
+"Codex hat keine Verbindung zu OpenAI" = "Codex tiada sambungan ke OpenAI";
+"Handy koppeln …" = "Pasangkan Telefon…";
+"Handy koppeln" = "Pasangkan Telefon";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Masukkan kod {} dalam Codex pada telefon anda. Kod sah sehingga {}.";
+"Koppeln fehlgeschlagen" = "Gagal Memasangkan";

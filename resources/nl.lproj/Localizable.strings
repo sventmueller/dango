@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "Wijzigingen gelden meteen.";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "Deze agent kan geen sessie voortzetten.";
 "Erst wenn der Agent fertig ist." = "Pas als de agent klaar is.";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: ga verder in Codex op je telefoon";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "Remote Control neemt de sessie over zodra de agent klaar is";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Control staat aan: de Codex-sessies van deze Mac draaien ook in Codex op je telefoon";
+"Codex hat keine Verbindung zu OpenAI" = "Codex heeft geen verbinding met OpenAI";
+"Handy koppeln …" = "Koppel telefoon…";
+"Handy koppeln" = "Koppel telefoon";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Voer de code {} in Codex op je telefoon in. Hij is geldig tot {}.";
+"Koppeln fehlgeschlagen" = "Koppelen mislukt";

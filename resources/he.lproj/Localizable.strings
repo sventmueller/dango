@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "השינויים חלים מיד.";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "סוכן זה אינו יכול להמשיך סשן.";
 "Erst wenn der Agent fertig ist." = "רק לאחר שהסוכן יסיים.";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: אפשר להמשיך ב‑Codex בטלפון";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "Remote Control ייקח את הסשן כשהסוכן יסיים";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Control פועל: הסשנים של Codex ב‑Mac הזה רצים גם ב‑Codex בטלפון";
+"Codex hat keine Verbindung zu OpenAI" = "ל‑Codex אין חיבור ל‑OpenAI";
+"Handy koppeln …" = "צימוד טלפון…";
+"Handy koppeln" = "צימוד טלפון";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "יש להזין את הקוד {} ב‑Codex בטלפון. הוא בתוקף עד {}.";
+"Koppeln fehlgeschlagen" = "הצימוד נכשל";

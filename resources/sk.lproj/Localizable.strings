@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "Zmeny platia okamžite.";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "Tento agent nedokáže pokračovať v relácii.";
 "Erst wenn der Agent fertig ist." = "Až keď agent skončí.";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: pokračujte v Codexe v telefóne";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "Remote Control prevezme reláciu, keď agent skončí";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Control je zapnutý: relácie Codexu na tomto Macu bežia aj v Codexe v telefóne";
+"Codex hat keine Verbindung zu OpenAI" = "Codex nemá spojenie s OpenAI";
+"Handy koppeln …" = "Spárovať telefón…";
+"Handy koppeln" = "Spárovať telefón";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Zadajte kód {} v Codexe v telefóne. Platí do {}.";
+"Koppeln fehlgeschlagen" = "Spárovanie zlyhalo";

@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "A módosítások azonnal érvénybe lépnek.";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "Ez az ügynök nem tud munkamenetet folytatni.";
 "Erst wenn der Agent fertig ist." = "Csak ha az ügynök elkészült.";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: folytatás a Codexben a telefonon";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "A Remote Control átveszi a munkamenetet, amint az ügynök elkészült";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "A Remote Control be van kapcsolva: ennek a Macnek a Codex-munkamenetei a telefonon, a Codexben is futnak";
+"Codex hat keine Verbindung zu OpenAI" = "A Codexnek nincs kapcsolata az OpenAI-jal";
+"Handy koppeln …" = "Telefon párosítása…";
+"Handy koppeln" = "Telefon párosítása";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Adja meg a(z) {} kódot a telefonon a Codexben. Eddig érvényes: {}.";
+"Koppeln fehlgeschlagen" = "A párosítás sikertelen";

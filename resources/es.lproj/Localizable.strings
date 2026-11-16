@@ -1924,3 +1924,11 @@
 "Änderungen gelten sofort." = "Los cambios se aplican al instante.";
 "Dieser Agent kann eine Sitzung nicht fortsetzen." = "Este agente no puede continuar una sesión.";
 "Erst wenn der Agent fertig ist." = "Solo cuando el agente termine.";
+"Remote Control: auf dem Handy in Codex weiterarbeiten" = "Remote Control: continúa en Codex en el teléfono";
+"Remote Control übernimmt die Sitzung, sobald der Agent fertig ist" = "Remote Control se hará cargo de la sesión cuando el agente termine";
+"Remote Control ist an: die Codex-Sitzungen dieses Macs laufen auch in Codex auf dem Handy" = "Remote Control está activado: las sesiones de Codex de este Mac también se ejecutan en Codex en el teléfono";
+"Codex hat keine Verbindung zu OpenAI" = "Codex no tiene conexión con OpenAI";
+"Handy koppeln …" = "Vincular teléfono…";
+"Handy koppeln" = "Vincular teléfono";
+"Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Introduce el código {} en Codex en el teléfono. Es válido hasta las {}.";
+"Koppeln fehlgeschlagen" = "No se ha podido vincular";
