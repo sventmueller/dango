@@ -163,6 +163,34 @@ beschrieben, gilt so, wie es hier steht:
 - **Agenten-Konfiguration (E172):** `CLAUDE.md` und `AGENTS.md` zählen in jeder Tiefe, dazu `CLAUDE.local.md`.
   Rust-Tests in Quelldateien zählen nicht als Teständerung, weil sie sich am Pfad nicht erkennen lassen.
 - **Spätes G1:** In Stufe 1 gilt G1 immer als übersprungen; ein Diff, der hoch gemessen wird, wartet vor der Prüfung.
+- **Laufzeit und Oberfläche (B37a, B38, B42, B44a, B45a in der App):** `src/leitstand/` führt je vertrautem Ordner
+  eine Fabrik, schreibt das Protokoll vor jeder Wirkung und führt die Wirkungen auf Lanes aus. `ide-ui-factory` zeigt
+  Panel, Leitstand-Tab, Auftrag-Tab, Sheet, Einstellungen „Aufträge“ und den Dialog „Leitstand für <Ordner>“.
+  `src/leitstand_ui.rs` verbindet beide; Ergebnisse aus Worker-Threads und die Ansichten erreichen den App-Kontext über
+  einen gebundenen `Back`, ohne nachzuschlagen (E143).
+  - **Teilweise Abnahme (C55):** Die Abschnitte wählt der Nutzer mit Häkchen im Auftrag-Tab ab. „Diff zeigen“ öffnet die
+    Zeile des Worktrees im Git-Panel, weil der Diff-Tab keinen Abnahme-Modus hat.
+  - **Die Karte einer Anfrage** zeigt den Text der Frage nicht, weil das Modell ihn nicht trägt; sie bietet Antwort,
+    „Erlauben“, „Ablehnen“ und „Sitzung öffnen“.
+  - **„Weiter“** bestätigt bei geänderten Gate-Befehlen den aktuellen Satz (E190). Fehler der Workflow-Datei,
+    unlesbare Protokolle und offene Lockerungen stehen über der Flottenzeile, Lockerungen mit „Bestätigen“.
+  - **Einstellungen (E183):** Der Tab „Aufträge“ deckt Stufe 1 ab: Rangliste des Builders, Grenzen, Budgets je
+    Auftrag und Tag, Fortsetzen nach dem Neustart, Batterie. Er steht neben „Agenten“; die späteren Tabs rücken um eins.
+  - **Projekt-Dialog:** Gate-Befehle nur lesend mit „Workflow-Datei im Editor öffnen“; Risikomuster und prüfrelevante
+    Dateien noch nicht im Dialog.
+  - **Menüs:** „Ablage ▸ Neuer Auftrag …“, „Ablage ▸ Auftrag“ (mit „Auftrag abbrechen …“ und „Auftrag fortsetzen“,
+    weil „Abbrechen“ und „Fortsetzen“ als Schlüssel schon feste Bedeutungen haben), „Darstellung ▸ Leitstand“.
+  - **Mitteilungen** schickt nur die Laufzeit, aus der Wirkung der Fabrik; die Ansichten schicken keine.
+  - **Ref-Wache:** Als von Dango gemacht gelten bisher nur Checkpoints und die Branches anderer Aufträge. Ein Commit
+    des Nutzers im Git-Panel während eines Zugs lässt den Auftrag warten.
+  - **Testzahlen der Gates** kommen aus den Zusammenfassungen von libtest, nextest, pytest, Jest und Vitest; andere
+    Ausgaben zählen als „unbekannt“.
+  - **Der Worktree** beginnt an der Spitze des Basis-Branches, nicht genau am gemerkten Commit.
+  - **Das Einfrieren der Agenten-Konfiguration** geht höchstens 6 Ebenen tief und überspringt `node_modules`,
+    `target` und Ähnliches; die Sitzungen lesen die eingefrorene Ablage noch nicht (E172, offen).
+  - **Bilder der Gates** kommen über die Umgebungsvariable `GATE_IMAGES_DIR`.
+  - **Aufbewahrung:** Protokolle, Spezifikation, eingefrorene Konfiguration, Bestätigungen, Tageskonto und Kontingente
+    liegen im Datenordner unter `leitstand/`; die Vorgaben des Nutzers in der Einstellung `factoryDefaults` (PerMac).
 - **Noch nicht umgesetzt:**
   - der Einwand des Builders gegen die Kriterien (E178);
   - der Gleichstand im Routing über die Erstdurchlaufquote (Stufe 4, E180; die Kennzahl ist da);
