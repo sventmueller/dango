@@ -254,6 +254,15 @@ impl Site {
         )
     }
 
+    /// The MCP servers the CLI's configuration starts, which the order switches off as the app does.
+    fn mcp_servers(&self, cli: Cli, program: &Path) -> Vec<String> {
+        match cli {
+            Cli::Codex => ide_codex::version::mcp_servers(&Supervisor::new(), program, &self.login)
+                .expect("codex lists its MCP servers"),
+            _ => Vec::new(),
+        }
+    }
+
     fn launch(&self, cli: Cli, program: &Path, model: &str, role: Role) -> Launch {
         let contract = Contract::Order(Order {
             order: format!("live-{}", self.id),
@@ -265,6 +274,7 @@ impl Site {
             refuse_outside: true,
             frozen: None,
             repository: Some(self.main.clone()),
+            mcp_servers: self.mcp_servers(cli, program),
         });
         let mut launch = Launch::new(cli.path(program), &self.worktree, self.env.clone(), contract);
         launch.model = Some(model.to_string());
@@ -754,6 +764,7 @@ fn codex_mcp(program: &Path, site: &Site, home: &Path) -> Row {
         write_roots: Vec::new(),
         instructions: None,
         untrusted: vec![site.worktree.clone(), site.main.clone()],
+        mcp_servers: ide_codex::version::mcp_servers(&Supervisor::new(), program, &site.login).unwrap_or_default(),
     });
     let thread = Thread::new(ThreadId::new(), ide_codex::AGENT, &site.worktree);
     let (tx, rx) = channel();
@@ -773,7 +784,14 @@ fn codex_mcp(program: &Path, site: &Site, home: &Path) -> Row {
                 None => session
                     .mcp_servers()
                     .wait()
-                    .map(|servers| servers.into_iter().map(|s| s.name).collect())
+                    // Codex lists switched-off servers as well; one that runs offers its tools.
+                    .map(|servers| {
+                        servers
+                            .into_iter()
+                            .filter(|s| !s.tools.is_empty())
+                            .map(|s| s.name)
+                            .collect()
+                    })
                     .map_err(|e| e.to_string()),
             };
             session.stop(Duration::from_secs(2));

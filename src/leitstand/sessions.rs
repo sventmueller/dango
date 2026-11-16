@@ -38,8 +38,9 @@ const CHECKPOINT_DEADLINE: Duration = Duration::from_secs(24 * 60 * 60);
 pub(super) enum Program {
     /// Claude Code.
     Claude(PathBuf),
-    /// Codex with an app server of its own (E193).
-    Codex(PathBuf),
+    /// Codex with an app server of its own (E193), and the MCP servers its configuration starts, which the order
+    /// switches off (E191).
+    Codex(PathBuf, Vec<String>),
     /// The own agent with what its thread starts with (E171).
     Own(Box<ide_agent::Config>),
     /// The scripted session of the self-test (F61).
@@ -207,9 +208,13 @@ impl Leitstand {
             role: ready.role,
             readiness,
         };
+        let mut mcp_servers = Vec::new();
         let path = match ready.program {
             Program::Claude(program) => AgentPath::claude(program),
-            Program::Codex(program) => AgentPath::Codex { program, version: None },
+            Program::Codex(program, servers) => {
+                mcp_servers = servers;
+                AgentPath::Codex { program, version: None }
+            }
             Program::Own(config) => AgentPath::Own(config),
             #[cfg(feature = "selftest")]
             Program::Script(script) => AgentPath::Scripted(script),
@@ -223,9 +228,11 @@ impl Leitstand {
             build_dir: None,
             read_roots: ready.read_roots.clone(),
             allowed_domains: ready.network.clone(),
-            refuse_outside: false,
+            // O1 holds for the path whose bounds the paid group `factory` proved: Claude kept every one of them.
+            refuse_outside: matches!(path, AgentPath::Claude { .. }),
             frozen: ready.frozen.clone(),
             repository: Some(ready.root.clone()),
+            mcp_servers,
         });
         let git = ide_git::Git::new(Supervisor::global(), ready.login.clone())
             .unattended(ready.env.clone(), Instant::now() + CHECKPOINT_DEADLINE);

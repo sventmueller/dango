@@ -147,6 +147,8 @@ pub struct Order {
     pub frozen: Option<PathBuf>,
     /// The user's working copy the worktree belongs to, whose trust a path may hand on to the worktree.
     pub repository: Option<PathBuf>,
+    /// The MCP servers the path's own configuration would start, each switched off by name (E191).
+    pub mcp_servers: Vec<String>,
 }
 
 impl Order {
@@ -308,6 +310,7 @@ mod tests {
             refuse_outside: true,
             frozen: None,
             repository: None,
+            mcp_servers: Vec::new(),
         }
     }
 

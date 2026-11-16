@@ -25,6 +25,7 @@ fn order(worktree: &std::path::Path) -> Order {
         refuse_outside: true,
         frozen: None,
         repository: None,
+        mcp_servers: Vec::new(),
     }
 }
 

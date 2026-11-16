@@ -163,6 +163,7 @@ pub(crate) fn codex_order(order: &Order) -> Result<ide_codex::Confinement, Launc
         write_roots: order.build_dir.iter().cloned().collect(),
         instructions: order.frozen.as_deref().and_then(frozen_agents_md),
         untrusted,
+        mcp_servers: order.mcp_servers.clone(),
     })
 }
 
@@ -347,6 +348,7 @@ mod tests {
             refuse_outside: true,
             frozen: frozen.map(Path::to_path_buf),
             repository: Some("/work/shop".into()),
+            mcp_servers: Vec::new(),
         }
     }
 

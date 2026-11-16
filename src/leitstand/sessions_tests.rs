@@ -40,6 +40,7 @@ impl Harness {
             refuse_outside: false,
             frozen: None,
             repository: None,
+            mcp_servers: Vec::new(),
         });
         let script = Script {
             turns,

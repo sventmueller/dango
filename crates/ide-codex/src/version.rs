@@ -70,19 +70,71 @@ pub fn check(found: Option<Version>) -> Result<Version, SessionError> {
 /// Runs `program --version` with the environment `env` through `supervisor` and checks the release it names; this
 /// waits for the process, so it runs off the main thread.
 pub fn probe(supervisor: &Supervisor, program: &Path, env: &[(String, String)]) -> Result<Version, SessionError> {
+    let output = run(supervisor, program, env, &["--version"], "codex --version")?;
+    check(Version::parse(&output))
+}
+
+/// The names of every MCP server Codex's configuration starts, from `codex mcp list --json`, so an order can switch
+/// each off by name (E191); this waits for the process, so it runs off the main thread.
+pub fn mcp_servers(
+    supervisor: &Supervisor,
+    program: &Path,
+    env: &[(String, String)],
+) -> Result<Vec<String>, SessionError> {
+    let output = run(supervisor, program, env, &["mcp", "list", "--json"], "codex mcp list")?;
+    let listed: serde_json::Value =
+        serde_json::from_str(&output).map_err(|e| SessionError::Start(format!("codex mcp list: {e}")))?;
+    let servers = listed
+        .as_array()
+        .ok_or_else(|| SessionError::Start("codex mcp list: no list".into()))?;
+    // Only servers of the configuration file take `enabled = false`; for one a plugin brings, Codex then refuses its
+    // whole configuration ("invalid transport"). Plugins are off in an order anyway.
+    let configured = configured_servers(env);
+    Ok(servers
+        .iter()
+        .filter_map(|server| server["name"].as_str())
+        .filter(|name| configured.iter().any(|c| c == name))
+        .map(str::to_string)
+        .collect())
+}
+
+/// The names of the `[mcp_servers.<name>]` tables of Codex's configuration file under `CODEX_HOME` or `~/.codex`.
+fn configured_servers(env: &[(String, String)]) -> Vec<String> {
+    let var = |name: &str| env.iter().find(|(k, _)| k == name).map(|(_, v)| v.clone());
+    let home = var("CODEX_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| var("HOME").map(|home| Path::new(&home).join(".codex")));
+    let Some(text) = home.and_then(|home| std::fs::read_to_string(home.join("config.toml")).ok()) else {
+        return Vec::new();
+    };
+    text.lines()
+        .filter_map(|line| line.trim().strip_prefix("[mcp_servers.")?.strip_suffix(']'))
+        .filter(|name| !name.contains('.'))
+        .map(|name| name.trim_matches('"').to_string())
+        .collect()
+}
+
+/// The standard output of `program args` with the environment `env`, ended after the probe's time limit.
+fn run(
+    supervisor: &Supervisor,
+    program: &Path,
+    env: &[(String, String)],
+    args: &[&str],
+    label: &str,
+) -> Result<String, SessionError> {
     if !program.is_file() {
         return Err(SessionError::NotFound(program.to_path_buf()));
     }
     let mut command = Command::new(program);
     command
-        .arg("--version")
+        .args(args)
         .env_clear()
         .envs(env.iter().map(|(k, v)| (k, v)))
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
     let spawned = supervisor
-        .spawn(command, Kind::Agent, "codex --version")
+        .spawn(command, Kind::Agent, label)
         .map_err(|e| SessionError::Start(e.to_string()))?;
     let Some(mut stdout) = spawned.stdout else {
         supervisor.stop(spawned.id, Duration::ZERO);
@@ -99,7 +151,7 @@ pub fn probe(supervisor: &Supervisor, program: &Path, env: &[(String, String)]) 
         }
         reader.join().unwrap_or_default()
     });
-    check(Version::parse(&output))
+    Ok(output)
 }
 
 #[cfg(test)]

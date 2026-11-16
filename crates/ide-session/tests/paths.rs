@@ -30,6 +30,7 @@ fn order(worktree: &Path, build: Option<PathBuf>) -> Order {
         refuse_outside: true,
         frozen: None,
         repository: None,
+        mcp_servers: Vec::new(),
     }
 }
 
@@ -162,7 +163,8 @@ fn a_codex_order_runs_on_a_server_of_its_own_with_no_approvals_and_its_rule_refu
         assert_eq!(turn["params"]["approvalPolicy"], "never");
         assert_eq!(
             turn["params"]["sandboxPolicy"],
-            json!({"type": "workspaceWrite", "writableRoots": [build.to_string_lossy()], "networkAccess": false})
+            json!({"type": "workspaceWrite", "writableRoots": [build.to_string_lossy()], "networkAccess": false,
+                   "excludeTmpdirEnvVar": true, "excludeSlashTmp": true})
         );
     }
     assert!(turns[0]["params"].get("outputSchema").is_none());

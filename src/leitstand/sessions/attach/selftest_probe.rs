@@ -25,6 +25,7 @@ impl Leitstand {
             refuse_outside: false,
             frozen: None,
             repository: None,
+            mcp_servers: Vec::new(),
         });
         let launch = Launch::new(AgentPath::Scripted(script), folder, Vec::new(), contract.clone());
         let mut sessions = self.sessions.borrow_mut();

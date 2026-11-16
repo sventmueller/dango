@@ -94,7 +94,12 @@ fn find(login: &[(String, String)], wanted: &Wanted) -> Found {
             session_id: wanted.resume.is_none().then(|| session_id(&wanted.order)),
             ..program(ide_ui_agent::claude_program(login).map(Program::Claude))
         },
-        Agent::Codex => program(ide_process::tool::which("codex", path).map(Program::Codex)),
+        Agent::Codex => program(ide_process::tool::which("codex", path).map(|codex| {
+            match ide_codex::version::mcp_servers(ide_process::Supervisor::global(), &codex, login) {
+                Ok(servers) => Program::Codex(codex, servers),
+                Err(why) => Program::Unready(why.to_string()),
+            }
+        })),
         Agent::Own => match own::start(&wanted.worktree, &wanted.entry, wanted.resume.as_deref()) {
             Ok(start) => Found {
                 program: Program::Own(start.config),

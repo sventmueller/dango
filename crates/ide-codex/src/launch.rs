@@ -120,6 +120,9 @@ pub struct Confinement {
     /// Folders marked untrusted for this server, so no `.codex/` configuration or hooks load from them: the worktree,
     /// and the working copy whose trust a linked worktree would share (C57).
     pub untrusted: Vec<PathBuf>,
+    /// The MCP servers of the user's configuration, each switched off by name: an empty `mcp_servers` table leaves
+    /// them running, since Codex merges overrides into its configuration.
+    pub mcp_servers: Vec<String>,
 }
 
 impl Confinement {
@@ -132,7 +135,13 @@ impl Confinement {
                 .iter()
                 .map(|root| root.to_string_lossy().into_owned())
                 .collect();
-            json!({"type": "workspaceWrite", "writableRoots": roots, "networkAccess": false})
+            json!({
+                "type": "workspaceWrite",
+                "writableRoots": roots,
+                "networkAccess": false,
+                "excludeTmpdirEnvVar": true,
+                "excludeSlashTmp": true
+            })
         } else {
             json!({"type": "readOnly", "networkAccess": false})
         }
@@ -155,6 +164,9 @@ impl Confinement {
             .collect();
         overrides.push(("web_search".into(), "\"disabled\"".into()));
         overrides.push(("mcp_servers".into(), "{}".into()));
+        for name in &self.mcp_servers {
+            overrides.push((format!("mcp_servers.{name}.enabled"), "false".into()));
+        }
         overrides.push(("project_doc_max_bytes".into(), "0".into()));
         if !self.untrusted.is_empty() {
             let projects: Vec<String> = self
@@ -358,6 +370,7 @@ mod tests {
             write_roots: vec!["/builds/o1".into()],
             instructions: None,
             untrusted: Vec::new(),
+            mcp_servers: Vec::new(),
         });
         assert!(!launch.joins_shared());
         let args = launch.args();
@@ -381,7 +394,8 @@ mod tests {
         assert_eq!(
             turn,
             json!({"threadId": "thr_1", "approvalPolicy": "never", "sandboxPolicy": {"type": "workspaceWrite",
-                   "writableRoots": ["/builds/o1"], "networkAccess": false}})
+                   "writableRoots": ["/builds/o1"], "networkAccess": false, "excludeTmpdirEnvVar": true,
+                   "excludeSlashTmp": true}})
         );
     }
 
@@ -393,6 +407,7 @@ mod tests {
             write_roots: vec!["/builds/o1".into()],
             instructions: None,
             untrusted: Vec::new(),
+            mcp_servers: Vec::new(),
         };
         assert_eq!(
             reader.sandbox_policy(),
@@ -410,6 +425,7 @@ mod tests {
             write_roots: Vec::new(),
             instructions: Some("Run make check.".into()),
             untrusted: vec!["/data/worktrees/o1".into(), "/work/sh\"op.v2".into()],
+            mcp_servers: Vec::new(),
         });
         let args = launch.args();
         assert!(args.iter().any(|a| a == "project_doc_max_bytes=0"), "{args:?}");
