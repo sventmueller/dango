@@ -295,7 +295,9 @@ beschrieben, gilt so, wie es hier steht:
     - MCP-Server liefen trotz `mcp_servers={}`: geschlossen, indem jeder Server der Konfigurationsdatei einzeln
       `enabled=false` bekommt. Server aus Plugins sind über die abgeschalteten Plugins aus; für sie lehnt Codex
       `enabled=false` mit „invalid transport“ ab. Lässt sich die Liste nicht lesen, startet Codex nicht.
-    - Lesen im Home-Ordner bleibt offen (A21, keine Lese-Wurzeln im stabilen Protokoll).
+    - Lesen im Home-Ordner bleibt offen (A21, keine Lese-Wurzeln im stabilen Protokoll). Entscheidung des Owners
+      (2026-11-16): Codex bleibt Builder und Prüfer; Daten verlassen den Mac nur über einen Diff, den Secrets-Prüfung
+      und Abnahme sehen. Restrisiko: ein Geheimnis, das gitleaks nicht erkennt.
     - Im zweiten Lauf blockiert: Push, fremde Refs, Netz und MCP. Drei Fälle hat Codex nicht ausgeführt.
     - Codex läuft ohnehin ohne Rückfragen (`ApprovalPolicy::Never`); der Modus „Auftrag“ ist für Codex nicht
       eingeschaltet.
