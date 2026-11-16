@@ -137,14 +137,6 @@ pub(crate) fn explained(error: &ide_opencode::SessionError) -> String {
     }
 }
 
-/// The ACP choice as OpenCode takes it.
-pub(crate) fn choice_of(choice: ide_acp::Choice) -> ide_opencode::Choice {
-    match choice {
-        ide_acp::Choice::Option(index) => ide_opencode::Choice::Option(index),
-        _ => ide_opencode::Choice::Dismiss,
-    }
-}
-
 impl AgentTab {
     /// Starts OpenCode's server with `launch` for `thread`, continuing the thread's OpenCode session where it has one.
     pub(crate) fn launch_opencode(&self, mut launch: ide_opencode::Launch, thread: Thread) {

@@ -58,7 +58,8 @@ pub(crate) fn start(launch: Launch, supervisor: &Supervisor, inbox: &Arc<Inbox>)
         AgentPath::Codex { program, version } => codex(program, version, common, supervisor, inbox),
         AgentPath::OpenCode { program, version } => opencode(program, version, common, supervisor, inbox),
         AgentPath::Acp(launch) => acp(*launch, common, supervisor, inbox),
-        AgentPath::Own(config) => own(*config, common, inbox),
+        AgentPath::Own(config) => own(*config, None, common, inbox),
+        AgentPath::OwnStored(config, stored) => own(*config, Some(*stored), common, inbox),
         #[cfg(any(test, feature = "selftest"))]
         AgentPath::Scripted(script) => Ok(Backend::Script(crate::script::Session::start(
             script,
@@ -90,7 +91,7 @@ fn agent_id(path: &AgentPath) -> String {
         AgentPath::Codex { .. } => ide_codex::AGENT.into(),
         AgentPath::OpenCode { .. } => ide_opencode::AGENT.into(),
         AgentPath::Acp(launch) => launch.agent.clone(),
-        AgentPath::Own(_) => ide_agent::session::AGENT_ID.into(),
+        AgentPath::Own(_) | AgentPath::OwnStored(..) => ide_agent::session::AGENT_ID.into(),
         #[cfg(any(test, feature = "selftest"))]
         AgentPath::Scripted(_) => "script".into(),
         #[cfg(any(test, feature = "selftest"))]
@@ -210,6 +211,7 @@ fn codex(
                 launch.approval = Some(mode.approval);
                 launch.sandbox = Some(mode.sandbox);
             }
+            launch.shared = choices.shared;
         }
         Contract::Order(order) => launch.confinement = Some(codex_order(order)?),
     }
@@ -261,6 +263,7 @@ fn acp(
         .map(Backend::Acp)
         .map_err(|error| match error {
             ide_acp::SessionError::NotFound(program) => LaunchError::NotFound(program),
+            ide_acp::SessionError::Start(why) => LaunchError::Start(why),
             other => LaunchError::Start(other.to_string()),
         })
 }
@@ -294,7 +297,13 @@ pub(crate) fn own_order(config: &mut ide_agent::Config, order: &Order) -> Result
     Ok(())
 }
 
-fn own(mut config: ide_agent::Config, common: Common, inbox: &Arc<Inbox>) -> Result<Backend, LaunchError> {
+/// The own agent's session; with `stored`, the conversation the caller read from its store goes on.
+fn own(
+    mut config: ide_agent::Config,
+    stored: Option<ide_agent::store::Stored>,
+    common: Common,
+    inbox: &Arc<Inbox>,
+) -> Result<Backend, LaunchError> {
     if let Some(order) = common.contract.order() {
         own_order(&mut config, order)?;
     }
@@ -305,10 +314,12 @@ fn own(mut config: ide_agent::Config, common: Common, inbox: &Arc<Inbox>) -> Res
         config.effort = common.effort;
     }
     config.thread = common.thread.id().clone();
-    let session = if common.resume.is_some() {
-        ide_agent::Session::resume(config, inbox.own()).map_err(|e| LaunchError::Start(format!("{e:?}")))?
-    } else {
-        ide_agent::Session::start(config, inbox.own())
+    let session = match stored {
+        Some(stored) => ide_agent::Session::resume_stored(config, stored, inbox.own()),
+        None if common.resume.is_some() => {
+            ide_agent::Session::resume(config, inbox.own()).map_err(|e| LaunchError::Start(format!("{e:?}")))?
+        }
+        None => ide_agent::Session::start(config, inbox.own()),
     };
     Ok(Backend::Own(session))
 }

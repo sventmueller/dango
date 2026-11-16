@@ -6,12 +6,15 @@
 use std::path::Path;
 
 use ide_acp::capabilities::{Category, ConfigOption, Mode, OptionChoice, OptionValue};
+#[cfg(not(feature = "selftest"))]
 use ide_process::Supervisor;
+use ide_session::{AgentPath, Contract, Launch, LaunchError, UserChoices};
 use ide_thread::Thread;
 use splat_i18n::{t, tf};
 
+use crate::driven::Driven;
 use crate::source::{Problem, Source};
-use crate::tab::{AgentTab, Incoming};
+use crate::tab::AgentTab;
 
 mod remote;
 #[cfg(feature = "selftest")]
@@ -209,43 +212,53 @@ pub(crate) fn explained(error: &ide_codex::SessionError) -> String {
     }
 }
 
-/// The ACP choice as Codex takes it.
-pub(crate) fn choice(choice: ide_acp::Choice) -> ide_codex::Choice {
-    match choice {
-        ide_acp::Choice::Option(index) => ide_codex::Choice::Option(index),
-        _ => ide_codex::Choice::Dismiss,
+/// Why the Codex session did not start, as `explained` words Codex's own error.
+fn start_problem(error: LaunchError) -> String {
+    match error {
+        LaunchError::NotFound(program) => explained(&ide_codex::SessionError::NotFound(program)),
+        LaunchError::Start(why) => tf("Codex: {}", &[&why]),
+        other => tf("Codex: {}", &[&other.to_string()]),
     }
 }
 
 impl AgentTab {
-    /// Starts Codex's app-server with `launch` for `thread`, continuing the thread's Codex thread where it has one.
-    pub(crate) fn launch_codex(&self, mut launch: ide_codex::Launch, thread: Thread) {
-        {
+    /// Starts Codex's app-server as `launch` says for `thread` in the app's registry, continuing the thread's Codex
+    /// thread where it has one; the registry takes the checkpoint before each message with `git` (I6).
+    pub(crate) fn launch_codex(&self, launch: ide_codex::Launch, thread: Thread, git: Option<ide_git::Git>) {
+        let resume = {
             let state = self.state.borrow();
-            launch.resume = match state.fork() {
+            match state.fork() {
                 // A rewind continues the thread the agent cut, or one before the first prompt starts anew.
                 Some(fork) => fork.rewind.is_some().then(|| fork.session.clone()),
                 None => thread
                     .session()
                     .map(str::to_string)
                     .or_else(|| state.resume().map(|r| r.session.clone())),
-            };
-        }
-        let sink = self.sink(Incoming::Codex);
-        match ide_codex::Session::start(Supervisor::global(), launch, thread.clone(), sink) {
-            Ok(session) => {
-                self.state.borrow_mut().started(Source::Codex(session));
-                self.absorb(thread, &[ide_thread::Change::Cleared]);
             }
-            Err(error) => self.start_failed(Problem::Start(explained(&error))),
-        }
-    }
-
-    /// What an event of the Codex session that is not a change of the thread means for the tab.
-    pub(crate) fn codex_problem(&self, event: &ide_codex::Event) -> Option<Problem> {
-        match event {
-            ide_codex::Event::Failed(error) => Some(Problem::Start(explained(error))),
-            _ => None,
+        };
+        let Some(sessions) = self.sessions.clone() else {
+            return self.start_failed(Problem::Start(start_problem(LaunchError::Start(String::new()))));
+        };
+        let path = AgentPath::Codex {
+            program: launch.program,
+            version: launch.version,
+        };
+        let contract = Contract::User(UserChoices {
+            shared: launch.shared,
+            ..UserChoices::default()
+        });
+        let mut start = Launch::new(path, launch.cwd, launch.env, contract);
+        start.resume = resume;
+        start.thread = Some(thread);
+        start.git = git;
+        match Driven::start(&sessions, start) {
+            Ok((driven, first)) => {
+                self.state.borrow_mut().started(Source::Session(driven));
+                if let Some(first) = first {
+                    self.absorb(first.thread, &[ide_thread::Change::Cleared]);
+                }
+            }
+            Err(error) => self.start_failed(Problem::Start(start_problem(error))),
         }
     }
 }

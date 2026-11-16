@@ -9,8 +9,9 @@ use std::time::Duration;
 
 use ide_acp::launch::Origin;
 use ide_acp::register::{self, PRESETS};
-use ide_acp::{Choice, Effect, Installs, Launch, OptionValue, Plan, Register, Sandbox};
+use ide_acp::{Effect, Installs, Launch, OptionValue, Plan, Register, Sandbox};
 use ide_process::Supervisor;
+use ide_session::PathKind;
 use ide_thread::{EntryKind, PermissionOption, RequestState, Thread};
 use objc2::rc::Retained;
 use objc2::sel;
@@ -280,10 +281,11 @@ impl AgentTab {
                     launch
                 });
             let missing = (!sdk && launch.is_none()).then(|| availability(&agent, &env, &cwd));
+            let git = crate::host::host().git();
             main_soon(move || {
                 if let Some(tab) = super::get(key) {
                     match (codex, opencode) {
-                        (Some(codex), _) => tab.launch_codex(codex, thread),
+                        (Some(codex), _) => tab.launch_codex(codex, thread, git),
                         (None, Some(opencode)) => tab.launch_opencode(opencode, thread),
                         (None, None) => tab.launch_acp(launch, missing, thread),
                     }
@@ -332,7 +334,8 @@ impl AgentTab {
     pub(super) fn acp_ended(&self, stderr: &str) {
         let source = {
             let mut state = self.state.borrow_mut();
-            if !matches!(state.source(), Source::Acp(_) | Source::Codex(_) | Source::OpenCode(_)) {
+            let path = state.source().tab_session().map(crate::driven::Driven::kind);
+            if !matches!(state.source(), Source::Acp(_) | Source::OpenCode(_)) && path != Some(PathKind::Codex) {
                 return;
             }
             state.end()
@@ -361,9 +364,7 @@ impl AgentTab {
             Some(terminal) => {
                 let program = match self.state.borrow().source() {
                     Source::Acp(_) | Source::Idle | Source::Starting => self.launch_program(),
-                    Source::Claude(_) | Source::Own(_) | Source::Codex(_) | Source::OpenCode(_) | Source::Driven(_) => {
-                        None
-                    }
+                    Source::Session(_) | Source::Own(_) | Source::OpenCode(_) | Source::Driven(_) => None,
                 };
                 let Some(program) = program else { return };
                 let mut parts: Vec<String> = terminal.env.iter().map(|(k, v)| format!("{k}={v}")).collect();
@@ -607,8 +608,7 @@ impl AgentTab {
                 .position(|o| matches!(o, PermissionOption::AllowAlways { .. })),
             _ => request.options.iter().position(|o| *o == PermissionOption::Deny),
         };
-        let choice = index.map_or(Choice::Dismiss, Choice::Option);
-        let result = self.state.borrow().source().answer_acp(&request.request_id, choice);
+        let result = self.state.borrow().source().answer_option(&request.request_id, index);
         if let Err(error) = result {
             ide_ui_common::diag::report("answering a permission request", &error);
         }

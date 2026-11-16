@@ -213,6 +213,12 @@ impl Session {
         Ok(Session::open(config, stored, sink))
     }
 
+    /// The thread `stored` holds, as `store::load` read it from the configuration's store, shown again and
+    /// continued.
+    pub fn resume_stored(config: Config, stored: Stored, sink: impl Fn(Event) + Send + Sync + 'static) -> Session {
+        Session::open(config, stored, sink)
+    }
+
     fn open(config: Config, stored: Stored, sink: impl Fn(Event) + Send + Sync + 'static) -> Session {
         let thread = Thread::new(config.thread.clone(), AGENT_ID, config.workspace.root());
         let rules = crate::prompt::project_rules(config.workspace.rules_root());

@@ -55,9 +55,10 @@ impl Driver {
         self.backend.is_replay()
     }
 
-    /// Whether a view may hand the session messages: it has not ended, and an agent runs it, not a recording.
+    /// Whether a view may hand the session messages: it has not ended, its agent has opened it, and an agent runs it,
+    /// not a recording.
     pub fn takes_prompts(&self) -> bool {
-        !self.is_ended() && !self.backend.is_ended() && !self.backend.is_replay()
+        !self.is_ended() && self.backend.is_ready() && !self.backend.is_ended() && !self.backend.is_replay()
     }
 
     /// Hands `message` to the turn that runs, at once and without a checkpoint, as the user's messages reach a running

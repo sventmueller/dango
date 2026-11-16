@@ -12,7 +12,7 @@ use crate::rule::{RequestKind, Verdict};
 use crate::turn::TurnEnd;
 
 /// A control event of a session, which every subscriber gets in order.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Signal {
     /// The session is open and takes prompts.
     Ready,
@@ -79,8 +79,17 @@ pub enum Signal {
     Failed(String),
     /// Claude Code's failure behind the `Failed` just before, typed, such as a refused rewind.
     ClaudeFailed(ide_claude::SessionError),
-    /// Claude's Remote Control connection changed; `Driver::claude` reads it.
+    /// Remote Control changed: Claude's connection, which `Driver::claude` reads, or where Codex's shared server
+    /// stands with it, which `Driver::codex` reads.
     RemoteControl,
+    /// Codex's failure behind the `Failed` just before, typed, such as a missing sign-in.
+    CodexFailed(ide_codex::SessionError),
+    /// OpenCode's failure behind the `Failed` just before, typed, such as no connected provider.
+    OpenCodeFailed(ide_opencode::SessionError),
+    /// An ACP agent's failure behind the `Failed` just before, typed, such as a sign-in it wants.
+    AcpFailed(ide_acp::SessionError),
+    /// The user stored a rule of the own agent for the project, for the app to keep.
+    RuleAdded(ide_agent::Rule),
     /// The agent's process ended.
     Ended {
         /// The end of its error output.

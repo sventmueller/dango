@@ -20,7 +20,6 @@ impl Pending {
         let changes = match event {
             Incoming::Acp(ide_acp::Event::Changed(changes))
             | Incoming::Own(ide_agent::Event::Changed(changes))
-            | Incoming::Codex(ide_codex::Event::Changed(changes))
             | Incoming::OpenCode(ide_opencode::Event::Changed(changes)) => changes,
             other => {
                 self.events.push(other);

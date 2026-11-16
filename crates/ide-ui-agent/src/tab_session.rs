@@ -45,7 +45,7 @@ impl AgentTab {
             self.start_acp(agent, thread);
             return;
         }
-        if self.state.borrow().source().claude().is_some() {
+        if self.state.borrow().source().tab_session().is_some() {
             let old = self.state.borrow_mut().end();
             old.end();
         }
@@ -97,7 +97,7 @@ impl AgentTab {
         let launch = self.claude_launch(exe, env, thread, git);
         match Driven::start(&sessions, launch) {
             Ok((driven, first)) => {
-                self.state.borrow_mut().started(Source::Claude(driven));
+                self.state.borrow_mut().started(Source::Session(driven));
                 if let Some(first) = first {
                     self.absorb(first.thread, &[Change::Cleared]);
                 }
@@ -145,6 +145,7 @@ impl AgentTab {
         let contract = Contract::User(UserChoices {
             mode: Some(picks.mode().to_string()),
             sandbox: state.sandbox(),
+            shared: false,
         });
         let mut launch = Launch::new(path, &self.cwd, env, contract);
         launch.model = picks.model().map(str::to_string);
@@ -166,26 +167,21 @@ impl AgentTab {
         let changes: Vec<Change> = pending.changes.into_iter().collect();
         let mut problem = None;
         let mut learned = false;
-        let mut remote = false;
         let mut ended = None;
         for event in pending.events {
             match &event {
                 Incoming::Acp(ide_acp::Event::Changed(c))
                 | Incoming::Own(ide_agent::Event::Changed(c))
-                | Incoming::Codex(ide_codex::Event::Changed(c))
                 | Incoming::OpenCode(ide_opencode::Event::Changed(c)) => {
                     debug_assert!(c.is_empty(), "invalidations are coalesced before scheduling");
                 }
                 Incoming::Own(other) => self.own_event(other),
-                Incoming::Acp(ide_acp::Event::Capabilities)
-                | Incoming::Codex(ide_codex::Event::Capabilities)
-                | Incoming::OpenCode(ide_opencode::Event::Capabilities) => learned = true,
+                Incoming::Acp(ide_acp::Event::Capabilities) | Incoming::OpenCode(ide_opencode::Event::Capabilities) => {
+                    learned = true
+                }
                 Incoming::OpenCode(ide_opencode::Event::Ended { stderr }) => ended = Some(stderr.clone()),
                 Incoming::OpenCode(ide_opencode::Event::McpChanged(_)) => {}
                 Incoming::OpenCode(other) => problem = self.opencode_problem(other).or(problem),
-                Incoming::Codex(ide_codex::Event::Ended { stderr }) => ended = Some(stderr.clone()),
-                Incoming::Codex(ide_codex::Event::RemoteControl) => remote = true,
-                Incoming::Codex(other) => problem = self.codex_problem(other).or(problem),
                 Incoming::Acp(ide_acp::Event::Failed(error)) => problem = self.acp_problem(error),
                 Incoming::Acp(ide_acp::Event::Ended { stderr }) => ended = Some(stderr.clone()),
             }
@@ -197,9 +193,6 @@ impl AgentTab {
             }
             state.source().snapshot()
         };
-        if learned && let Some(session) = self.state.borrow().source().codex() {
-            crate::codex::remember_threads(session, &self.cwd);
-        }
         if learned && self.agent.is_acp() {
             self.acp_apply_choice();
             self.send_queued();
@@ -211,16 +204,10 @@ impl AgentTab {
             self.absorb(snapshot, &changes);
             super::dialogs::requests_changed(self);
         }
-        if remote {
-            self.codex_remote_heard();
-        }
         if learned {
             self.refresh();
             super::dialogs::session_ready(self);
-        } else if remote {
-            self.refresh_remote();
         }
-        self.codex_move_if_idle();
         if let Some(stderr) = ended {
             self.acp_ended(&stderr);
         }
@@ -245,7 +232,7 @@ impl AgentTab {
                     crate::host::host().turn_ended(controller.id(), &self.cwd);
                 }
                 let turn = self.state.borrow_mut().turn_ended();
-                let driver_records = self.state.borrow().source().claude().is_some();
+                let driver_records = self.state.borrow().source().tab_session().is_some();
                 if let Some(checkpoint) = turn.filter(|_| !driver_records) {
                     let key = self.key;
                     let started = checkpoint.commit.clone();

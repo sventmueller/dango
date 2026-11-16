@@ -1,5 +1,5 @@
 //! A session of the app's registry (E165) that an AI tab follows: one it did not start, such as a work order's
-//! (docs/phase-13.md, B37b, E184), or its own Claude session, which it starts there. The tab subscribes to the
+//! (docs/phase-13.md, B37b, E184), or its own session on any path, which it starts there. The tab subscribes to the
 //! session's feed, whose first batch is the snapshot, hands the user's messages to the driver and answers requests
 //! through it. On an order's session the runtime hears of each such step and logs it, and closing the tab ends its
 //! feed, never the session; the tab's own session ends with the tab.
@@ -8,7 +8,7 @@ use std::rc::Rc;
 
 use ide_core::explain::Explained;
 use ide_session::{
-    AnswerError, Batch, Driver, Launch, LaunchError, PlanReply, Prompt, SessionId, SubscriberId, TurnId,
+    AnswerError, Batch, Driver, Launch, LaunchError, PathKind, PlanReply, Prompt, SessionId, SubscriberId, TurnId,
 };
 use ide_thread::{Answer, Thread, UserMessage};
 
@@ -51,18 +51,21 @@ pub(crate) struct Driven {
     sessions: Rc<dyn Sessions>,
     /// Whether the tab started the session for the user, so it ends with the tab and nobody logs what happens in it.
     own: bool,
+    /// The path the session takes.
+    kind: PathKind,
 }
 
 impl Driven {
     /// Subscribes to the session `attach` names; `None` when it is gone or has ended.
     pub(crate) fn subscribe(attach: &Attach) -> Option<Driven> {
-        let subscriber = subscribe(attach.sessions.as_ref(), attach.session)?;
+        let (subscriber, kind) = subscribe(attach.sessions.as_ref(), attach.session)?;
         Some(Driven {
             session: attach.session,
             subscriber,
             badge: attach.badge.clone(),
             sessions: attach.sessions.clone(),
             own: false,
+            kind,
         })
     }
 
@@ -70,7 +73,7 @@ impl Driven {
     /// snapshot.
     pub(crate) fn start(sessions: &Rc<dyn Sessions>, launch: Launch) -> Result<(Driven, Option<Batch>), LaunchError> {
         let session = sessions.start(launch)?;
-        let Some(subscriber) = subscribe(sessions.as_ref(), session) else {
+        let Some((subscriber, kind)) = subscribe(sessions.as_ref(), session) else {
             sessions.end(session);
             return Err(LaunchError::Start(String::new()));
         };
@@ -80,6 +83,7 @@ impl Driven {
             badge: String::new(),
             sessions: sessions.clone(),
             own: true,
+            kind,
         };
         let first = driven.take();
         Ok((driven, first))
@@ -105,6 +109,11 @@ impl Driven {
     /// The badge over the conversation.
     pub(crate) fn badge(&self) -> &str {
         &self.badge
+    }
+
+    /// The path the session takes.
+    pub(crate) fn kind(&self) -> PathKind {
+        self.kind
     }
 
     /// What waits in the tab's feed; `None` once the session is gone.
@@ -143,6 +152,11 @@ impl Driven {
     /// The Claude session behind the driver, for what only Claude Code does.
     pub(crate) fn claude(&self) -> Option<ide_claude::Session> {
         self.with(|driver| driver.claude().cloned()).flatten()
+    }
+
+    /// The Codex session behind the driver, for what only Codex does.
+    pub(crate) fn codex(&self) -> Option<ide_codex::Session> {
+        self.with(|driver| driver.codex().cloned()).flatten()
     }
 
     /// Hands `message` to the driver's queue, which sends it after the turn that runs and its checkpoint.
@@ -215,6 +229,12 @@ impl Driven {
         self.after_answer(request, answered)
     }
 
+    /// Answers the permission request `request` with the option at `option` in its list, or dismisses it.
+    pub(crate) fn answer_option(&self, request: &str, option: Option<usize>) -> Result<(), Explained> {
+        let answered = self.with(|driver| driver.answer_option(request, option));
+        self.after_answer(request, answered)
+    }
+
     /// Answers the questions of `request`.
     pub(crate) fn answer_questions(&self, request: &str, answers: Vec<Answer>) -> Result<(), Explained> {
         let answered = self.with(|driver| driver.answer_questions(request, answers));
@@ -277,12 +297,12 @@ impl Driven {
     }
 }
 
-/// A new subscriber to `session`, unless it is gone or has ended.
-fn subscribe(sessions: &dyn Sessions, session: SessionId) -> Option<SubscriberId> {
+/// A new subscriber to `session`, with the path it takes, unless it is gone or has ended.
+fn subscribe(sessions: &dyn Sessions, session: SessionId) -> Option<(SubscriberId, PathKind)> {
     let mut subscriber = None;
     sessions.with_driver(session, &mut |driver| {
         if !driver.is_ended() {
-            subscriber = Some(driver.subscribe());
+            subscriber = Some((driver.subscribe(), driver.kind()));
         }
     });
     subscriber

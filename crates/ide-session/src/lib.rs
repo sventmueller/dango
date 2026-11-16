@@ -38,7 +38,13 @@
 //! runs at once, without a checkpoint (an order's session queues it instead), [`Driver::answer_permission_as`] takes
 //! Claude's answer with an edited input and suggestions to keep as rules, never one for destructive git (E27, E33),
 //! [`Driver::stop_turn`] also stops a turn the agent began by itself, and [`Driver::claude`] reaches what only Claude
-//! Code offers, such as its overlays (E146), Remote Control and its usage.
+//! Code offers, such as its overlays (E146), Remote Control and its usage. [`Driver::codex`], [`Driver::opencode`],
+//! [`Driver::acp`] and [`Driver::own`] do the same for the other paths: overlays, models, modes, management, Codex's
+//! Remote Control and the own agent's profiles; [`Driver::answer_option`] answers with any option a request offers,
+//! such as allowing for the whole session. A user's Codex session joins Codex's shared server when
+//! [`UserChoices::shared`] says so (E148), and the own agent continues a conversation its caller read from the store
+//! ([`AgentPath::OwnStored`]). A gap in OpenCode's stream holds prompts and the end of a turn only for an order; the
+//! user's session goes on and is reconciled once the stream is back.
 //! [`OrderRule`] refuses what reaches beyond an order's bounds (or leaves it to the user without O1), leaves
 //! questions to the user and refuses plans.
 //!
@@ -52,9 +58,10 @@
 //!
 //! [`Signal::Delivered`] says that a prompt went out, with the agent's id of the message, which rewinding names,
 //! and the checkpoint taken before it (labelled as the AI tab labels it for the user's session);
-//! [`Signal::CheckpointFinished`] hands on the checkpoint once the end of its turn is recorded. On the Claude path,
-//! [`Signal::ClaudeFailed`] follows each `Failed` with the typed error, and [`Signal::RemoteControl`] tells that the
-//! Remote Control connection changed.
+//! [`Signal::CheckpointFinished`] hands on the checkpoint once the end of its turn is recorded.
+//! [`Signal::ClaudeFailed`], [`Signal::CodexFailed`], [`Signal::OpenCodeFailed`] and [`Signal::AcpFailed`] follow each
+//! `Failed` of their path with the typed error; [`Signal::RemoteControl`] tells that Remote Control changed, Claude's or Codex's, and
+//! [`Signal::RuleAdded`] hands on a rule the user stored with the own agent.
 //!
 //! Every turn ends with [`Signal::TurnEnded`]: its [`TurnId`], an [`Outcome`] (succeeded, failed with the path's
 //! words, cancelled, connection lost), its checkpoint and how much work still runs (E189). Every path ends a turn in

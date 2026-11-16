@@ -24,6 +24,12 @@ use super::{format, style, ui};
 use crate::work::Part;
 use ide_ui_common::util::{item, main_soon, ns, set_target};
 
+/// Whether `agent` gives prompts no id of its own, as ACP agents and the own agent do, so the app's own id keys the
+/// checkpoint taken before a prompt (I6).
+pub(super) fn app_ids(agent: &Agent) -> bool {
+    agent.is_acp() || agent.is_own()
+}
+
 pub(super) fn pop_up(menu: &NSMenu, view: &NSView) {
     let below = NSPoint::new(0.0, view.frame().size.height + 4.0);
     menu.popUpMenuPositioningItem_atLocation_inView(None, below, Some(view));
@@ -74,8 +80,8 @@ impl AgentTab {
         if self.is_driven() {
             return self.deliver(message, None);
         }
-        let claude = self.state.borrow().source().claude().cloned();
-        if let Some(driven) = claude {
+        let own = self.state.borrow().source().tab_session().cloned();
+        if let Some(driven) = own {
             return self.hand_over(&driven, message);
         }
         self.state.borrow_mut().begin_send();
@@ -94,8 +100,7 @@ impl AgentTab {
     }
 
     pub(super) fn deliver(&self, mut message: UserMessage, checkpoint: Option<ide_git::Checkpoint>) {
-        // ACP and the own agent give prompts no id; the app's own one keys the checkpoint taken before the prompt (I6).
-        let app_ids = self.agent.is_acp() || self.agent.is_own();
+        let app_ids = app_ids(&self.agent);
         if app_ids && message.message_id.is_none() {
             message.message_id = Some(format!("app-{}", ide_thread::ThreadId::new()));
         }
@@ -106,9 +111,12 @@ impl AgentTab {
         self.delivered(&text, sent.map(|uuid| uuid.or(own_id)), checkpoint);
     }
 
-    /// Hands `message` to the tab's Claude session in the registry, which takes the checkpoint before it and tells
+    /// Hands `message` to the tab's own session in the registry, which takes the checkpoint before it and tells
     /// with `Signal::Delivered` that it went out.
-    fn hand_over(&self, driven: &crate::driven::Driven, message: UserMessage) {
+    fn hand_over(&self, driven: &crate::driven::Driven, mut message: UserMessage) {
+        if app_ids(&self.agent) && message.message_id.is_none() {
+            message.message_id = Some(format!("app-{}", ide_thread::ThreadId::new()));
+        }
         self.state.borrow_mut().begin_send();
         self.refresh_composer();
         let prompt = ide_session::Prompt {

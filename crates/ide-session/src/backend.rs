@@ -188,6 +188,38 @@ impl Backend {
         }
     }
 
+    /// The Codex session, for what only Codex offers; `None` on the other paths.
+    pub(crate) fn codex(&self) -> Option<&ide_codex::Session> {
+        match self {
+            Backend::Codex(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    /// The OpenCode session, for what only OpenCode offers; `None` on the other paths.
+    pub(crate) fn opencode(&self) -> Option<&ide_opencode::Session> {
+        match self {
+            Backend::OpenCode(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    /// The ACP session, for what only an ACP agent offers; `None` on the other paths.
+    pub(crate) fn acp(&self) -> Option<&ide_acp::Session> {
+        match self {
+            Backend::Acp(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    /// The own agent's session, for its profiles and settings; `None` on the other paths.
+    pub(crate) fn own(&self) -> Option<&ide_agent::Session> {
+        match self {
+            Backend::Own(s) => Some(s),
+            _ => None,
+        }
+    }
+
     /// What Claude Code offers: its models, commands and account; `None` on the other paths.
     pub(crate) fn claude_capabilities(&self) -> Option<ide_claude::Capabilities> {
         match self {
@@ -267,6 +299,31 @@ impl Backend {
             Backend::Script(s) => s.answer(id, allow, reason),
             #[cfg(any(test, feature = "selftest"))]
             Backend::Replay(_) => Err(unsupported("answers")),
+        }
+    }
+
+    /// Answers `request` with the option at `option` in its list, or dismisses it with none, on the paths whose
+    /// answer is one of the request's options.
+    pub(crate) fn option(&self, request: &PermissionRequest, option: Option<usize>) -> Result<(), String> {
+        let id = request.request_id.as_str();
+        match self {
+            Backend::Codex(s) => {
+                let choice = option.map_or(ide_codex::Choice::Dismiss, ide_codex::Choice::Option);
+                s.answer(id, choice).map_err(|e| e.to_string())
+            }
+            Backend::OpenCode(s) => {
+                let choice = option.map_or(ide_opencode::Choice::Dismiss, ide_opencode::Choice::Option);
+                s.answer(id, choice).map_err(|e| e.to_string())
+            }
+            Backend::Acp(s) => {
+                let choice = option.map_or(ide_acp::Choice::Dismiss, ide_acp::Choice::Option);
+                s.answer(id, choice).map_err(|e| e.explain())
+            }
+            Backend::Own(s) => {
+                let choice = option.map_or(ide_agent::Choice::Dismiss, ide_agent::Choice::Option);
+                s.answer(id, choice).map_err(|e| e.explain())
+            }
+            _ => Err(unsupported("answer by the request's options")),
         }
     }
 

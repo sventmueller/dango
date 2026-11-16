@@ -102,9 +102,17 @@ pub(crate) enum Inbound {
     },
     /// Claude Code reported a failure, typed; `Failed` with its words came just before.
     ClaudeFailed(ide_claude::SessionError),
-    /// Claude's Remote Control connection changed.
+    /// Remote Control changed: Claude's connection, or where Codex's shared server stands with it.
     RemoteControl,
-    /// Anything the driver does not act on, such as Codex's Remote Control state; it only wakes the driver.
+    /// Codex reported a failure, typed; `Failed` with its words came just before.
+    CodexFailed(ide_codex::SessionError),
+    /// OpenCode reported a failure, typed; `Failed` with its words came just before.
+    OpenCodeFailed(ide_opencode::SessionError),
+    /// An ACP agent reported a failure, typed; `Failed` with its words came just before.
+    AcpFailed(ide_acp::SessionError),
+    /// The user stored a rule of the own agent for the project, which the app keeps.
+    RuleAdded(ide_agent::Rule),
+    /// Anything the driver does not act on, such as an MCP server's state; it only wakes the driver.
     Other,
 }
 
@@ -177,8 +185,12 @@ impl Inbox {
         move |event| match event {
             ide_codex::Event::Changed(changes) => inbox.changed(changes),
             ide_codex::Event::Capabilities => inbox.push(Inbound::Capabilities),
-            ide_codex::Event::Failed(error) => inbox.push(Inbound::Failed(error.to_string())),
+            ide_codex::Event::Failed(error) => {
+                inbox.push(Inbound::Failed(error.to_string()));
+                inbox.push(Inbound::CodexFailed(error));
+            }
             ide_codex::Event::Ended { stderr } => inbox.push(Inbound::Ended { stderr }),
+            ide_codex::Event::RemoteControl => inbox.push(Inbound::RemoteControl),
             _ => inbox.push(Inbound::Other),
         }
     }
@@ -188,7 +200,10 @@ impl Inbox {
         move |event| match event {
             ide_opencode::Event::Changed(changes) => inbox.changed(changes),
             ide_opencode::Event::Capabilities => inbox.push(Inbound::Capabilities),
-            ide_opencode::Event::Failed(error) => inbox.push(Inbound::Failed(error.to_string())),
+            ide_opencode::Event::Failed(error) => {
+                inbox.push(Inbound::Failed(error.to_string()));
+                inbox.push(Inbound::OpenCodeFailed(error));
+            }
             ide_opencode::Event::Ended { stderr } => inbox.push(Inbound::Ended { stderr }),
             ide_opencode::Event::StreamGap => inbox.push(Inbound::Gap),
             ide_opencode::Event::StreamResumed => inbox.push(Inbound::Resumed),
@@ -201,7 +216,10 @@ impl Inbox {
         move |event| match event {
             ide_acp::Event::Changed(changes) => inbox.changed(changes),
             ide_acp::Event::Capabilities => inbox.push(Inbound::Capabilities),
-            ide_acp::Event::Failed(error) => inbox.push(Inbound::Failed(error.explain())),
+            ide_acp::Event::Failed(error) => {
+                inbox.push(Inbound::Failed(error.explain()));
+                inbox.push(Inbound::AcpFailed(error));
+            }
             ide_acp::Event::Ended { stderr } => inbox.push(Inbound::Ended { stderr }),
         }
     }
@@ -211,7 +229,7 @@ impl Inbox {
         move |event| match event {
             ide_agent::Event::Changed(changes) => inbox.changed(changes),
             ide_agent::Event::Failed(why) => inbox.push(Inbound::Failed(why)),
-            ide_agent::Event::RuleAdded(_) => inbox.push(Inbound::Other),
+            ide_agent::Event::RuleAdded(rule) => inbox.push(Inbound::RuleAdded(rule)),
         }
     }
 

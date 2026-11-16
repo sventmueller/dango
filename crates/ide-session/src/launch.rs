@@ -36,6 +36,8 @@ pub enum AgentPath {
     Acp(Box<ide_acp::Launch>),
     /// The app's own agent with its endpoint, key, model and workspace (`ide-agent`).
     Own(Box<ide_agent::Config>),
+    /// The own agent continuing the conversation its store kept, which the caller read off the main thread.
+    OwnStored(Box<ide_agent::Config>, Box<ide_agent::store::Stored>),
     /// A session that plays a script, for the self-test and the tests (F61).
     #[cfg(any(test, feature = "selftest"))]
     Scripted(crate::script::Script),
@@ -81,7 +83,7 @@ impl AgentPath {
             AgentPath::Codex { .. } => PathKind::Codex,
             AgentPath::OpenCode { .. } => PathKind::OpenCode,
             AgentPath::Acp(_) => PathKind::Acp,
-            AgentPath::Own(_) => PathKind::Own,
+            AgentPath::Own(_) | AgentPath::OwnStored(..) => PathKind::Own,
             #[cfg(any(test, feature = "selftest"))]
             AgentPath::Scripted(_) => PathKind::Scripted,
             #[cfg(any(test, feature = "selftest"))]
@@ -174,6 +176,9 @@ pub struct UserChoices {
     pub mode: Option<String>,
     /// Whether Claude's shell commands run in its sandbox.
     pub sandbox: bool,
+    /// Whether a Codex session joins Codex's shared server, the one Remote Control reaches (E148), which the caller
+    /// made sure runs; an order's session never does (E193).
+    pub shared: bool,
 }
 
 /// Whom the session works for.

@@ -4,6 +4,7 @@
 //! typed result and fans everything out to its subscribers.
 
 mod claude;
+mod paths;
 mod requests;
 
 use std::collections::{HashSet, VecDeque};
@@ -462,6 +463,10 @@ impl Driver {
             }),
             Inbound::ClaudeFailed(error) => signals.push(Signal::ClaudeFailed(error)),
             Inbound::RemoteControl => signals.push(Signal::RemoteControl),
+            Inbound::CodexFailed(error) => signals.push(Signal::CodexFailed(error)),
+            Inbound::OpenCodeFailed(error) => signals.push(Signal::OpenCodeFailed(error)),
+            Inbound::AcpFailed(error) => signals.push(Signal::AcpFailed(error)),
+            Inbound::RuleAdded(rule) => signals.push(Signal::RuleAdded(rule)),
             Inbound::Other => {}
         }
     }
@@ -498,7 +503,7 @@ impl Driver {
             };
             return self.end_turn(outcome, signals);
         }
-        if self.stream != StreamState::Live {
+        if self.stream != StreamState::Live && self.contract.order().is_some() {
             return;
         }
         let rests = status == Status::Idle && !busy && self.thread.pending_requests().is_empty();
@@ -523,15 +528,23 @@ impl Driver {
         signals.push(Signal::TurnEnded(end));
     }
 
-    /// Starts the next prompt that waits, when nothing keeps it: a turn that runs, a session not ready, a gap.
+    /// Whether a gap in the event stream holds prompts and the end of a turn until the thread is reconciled (C62): an
+    /// order's session does; the user's goes on as the AI tab always ran it, reconciled once the stream is back.
+    fn holds_for_gaps(&self) -> bool {
+        self.contract.order().is_some()
+    }
+
+    /// Starts the next prompt that waits, when nothing keeps it: a turn that runs, a session not ready, an order's gap.
     fn advance(&mut self, signals: &mut Vec<Signal>) {
         if self.open.is_some() || self.queue.is_empty() || !self.is_ready() {
             return;
         }
-        match self.stream {
-            StreamState::Live => {}
-            StreamState::Gap => return self.begin_resync(),
-            StreamState::Resyncing | StreamState::Paused(_) => return,
+        if self.holds_for_gaps() {
+            match self.stream {
+                StreamState::Live => {}
+                StreamState::Gap => return self.begin_resync(),
+                StreamState::Resyncing | StreamState::Paused(_) => return,
+            }
         }
         let Some((turn, mut prompt)) = self.queue.pop_front() else {
             return;

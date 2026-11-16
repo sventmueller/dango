@@ -59,7 +59,6 @@ const FILL_PRIORITY: f32 = 255.0;
 pub(crate) enum Incoming {
     Acp(ide_acp::Event),
     Own(ide_agent::Event),
-    Codex(ide_codex::Event),
     OpenCode(ide_opencode::Event),
 }
 

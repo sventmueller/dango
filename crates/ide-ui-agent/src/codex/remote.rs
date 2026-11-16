@@ -52,7 +52,7 @@ pub(crate) fn share(launch: &mut ide_codex::Launch) {
 impl AgentTab {
     /// The running Codex session over its own protocol, if the tab has one.
     pub(crate) fn codex_session(&self) -> Option<ide_codex::Session> {
-        self.state.borrow().source().codex().filter(|s| !s.is_ended()).cloned()
+        self.state.borrow().source().codex().filter(|s| !s.is_ended())
     }
 
     /// What the head's phone shows for Codex's `session`.

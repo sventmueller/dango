@@ -1,6 +1,6 @@
-//! Where a tab's thread comes from: its own Claude session in the app's session registry, which a recording played
-//! for the self-test can take the place of, an agent over ACP, Codex, OpenCode, the own agent, or a session of the
-//! registry the tab did not start.
+//! Where a tab's thread comes from: its own session in the app's session registry, on Claude or Codex, which a
+//! recording played for the self-test can take the place of; an agent over ACP, OpenCode, the own agent, or a session
+//! of the registry the tab did not start.
 
 #[cfg(feature = "selftest")]
 use ide_core::LockIgnoringPoison;
@@ -11,6 +11,8 @@ use std::time::Duration;
 use ide_claude::{Capabilities, PermissionAnswer, PlanAnswer, Session, SessionError};
 use ide_process::tool;
 use ide_thread::{Answer, Thread, UserMessage};
+
+use crate::driven::Driven;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
@@ -60,30 +62,29 @@ pub(crate) enum Source {
     Idle,
     /// Looking for `claude` and the login shell's environment.
     Starting,
-    /// The tab's own Claude session, which the app's registry runs (B37b); in the self-test, a played recording.
-    Claude(crate::driven::Driven),
+    /// The tab's own session, which the app's registry runs (B37b): Claude, or Codex over its app-server (E147); in
+    /// the self-test, a played recording.
+    Session(Driven),
     /// An agent over ACP.
     Acp(ide_acp::Session),
     /// The app's own agent.
     Own(ide_agent::Session),
-    /// Codex over its app-server (E147).
-    Codex(ide_codex::Session),
     /// OpenCode over its v2 HTTP API (E147).
     OpenCode(ide_opencode::Session),
     /// A session of the app's registry the tab did not start, such as a work order's (E184).
-    Driven(crate::driven::Driven),
+    Driven(Driven),
 }
 
 impl Source {
     /// The Claude session of the tab's own, for what only Claude Code does.
     pub(crate) fn session(&self) -> Option<Session> {
-        self.claude().and_then(crate::driven::Driven::claude)
+        self.tab_session().and_then(Driven::claude)
     }
 
-    /// The tab's own Claude session in the registry, or the recording that plays instead.
-    pub(crate) fn claude(&self) -> Option<&crate::driven::Driven> {
+    /// The tab's own session in the registry, or the recording that plays instead.
+    pub(crate) fn tab_session(&self) -> Option<&Driven> {
         match self {
-            Source::Claude(driven) => Some(driven),
+            Source::Session(driven) => Some(driven),
             _ => None,
         }
     }
@@ -93,22 +94,21 @@ impl Source {
         match self {
             Source::Acp(session) => Some(session.snapshot()),
             Source::Own(session) => Some(session.snapshot()),
-            Source::Codex(session) => Some(session.snapshot()),
             Source::OpenCode(session) => Some(session.snapshot()),
-            Source::Claude(driven) | Source::Driven(driven) => driven.snapshot(),
+            Source::Session(driven) | Source::Driven(driven) => driven.snapshot(),
             Source::Idle | Source::Starting => None,
         }
     }
 
     pub(crate) fn capabilities(&self) -> Option<Capabilities> {
         match self {
-            Source::Claude(driven) | Source::Driven(driven) => driven.capabilities(),
+            Source::Session(driven) | Source::Driven(driven) => driven.capabilities(),
             _ => None,
         }
     }
 
     /// The registry's session the tab follows, when it did not start its own.
-    pub(crate) fn driven(&self) -> Option<&crate::driven::Driven> {
+    pub(crate) fn driven(&self) -> Option<&Driven> {
         match self {
             Source::Driven(driven) => Some(driven),
             _ => None,
@@ -117,16 +117,15 @@ impl Source {
 
     /// Whether a recording plays instead of a process, which a restart must not replace with a real `claude`.
     pub(crate) fn is_replay(&self) -> bool {
-        self.claude().is_some_and(crate::driven::Driven::is_replay)
+        self.tab_session().is_some_and(Driven::is_replay)
     }
 
     pub(crate) fn is_live(&self) -> bool {
         match self {
             Source::Acp(session) => session.is_ready(),
-            Source::Codex(session) => session.is_ready() && !session.is_ended(),
             Source::OpenCode(session) => session.is_ready() && !session.is_ended(),
             Source::Own(_) => true,
-            Source::Claude(driven) | Source::Driven(driven) => driven.is_live(),
+            Source::Session(driven) | Source::Driven(driven) => driven.is_live(),
             Source::Idle | Source::Starting => false,
         }
     }
@@ -166,11 +165,8 @@ impl Source {
     }
 
     /// The Codex session, when the tab runs one over the app-server.
-    pub(crate) fn codex(&self) -> Option<&ide_codex::Session> {
-        match self {
-            Source::Codex(session) => Some(session),
-            _ => None,
-        }
+    pub(crate) fn codex(&self) -> Option<ide_codex::Session> {
+        self.tab_session().and_then(Driven::codex)
     }
 
     pub(crate) fn authenticate(&self, method: &str) -> Result<(), ide_acp::SessionError> {
@@ -208,32 +204,30 @@ impl Source {
             .map_or(Err(ide_acp::SessionError::Closed), |s| s.set_mode(mode))
     }
 
-    pub(crate) fn answer_acp(&self, request: &str, choice: ide_acp::Choice) -> Result<(), ide_acp::SessionError> {
+    /// Answers the permission request `request` with the option at `option` in its list, or dismisses it.
+    pub(crate) fn answer_option(&self, request: &str, option: Option<usize>) -> Result<(), Explained> {
+        if let Some(driven) = self.tab_session() {
+            return driven.answer_option(request, option);
+        }
         if let Some(session) = self.opencode() {
+            let choice = option.map_or(ide_opencode::Choice::Dismiss, ide_opencode::Choice::Option);
             return session
-                .answer(request, crate::opencode::choice_of(choice))
-                .map_err(|e| ide_acp::SessionError::Agent(crate::opencode::explained(&e)));
+                .answer(request, choice)
+                .map_err(|e| Explained(crate::opencode::explained(&e)));
         }
-        if let Some(session) = self.codex() {
-            return session
-                .answer(request, crate::codex::choice(choice))
-                .map_err(|e| ide_acp::SessionError::Agent(crate::codex::explained(&e)));
-        }
+        let choice = option.map_or(ide_acp::Choice::Dismiss, ide_acp::Choice::Option);
         self.acp()
             .map_or(Err(ide_acp::SessionError::Closed), |s| s.answer(request, choice))
+            .map_err(|e| Explained::of(&e))
     }
 
     /// Sends `message` as a prompt, into the turn that runs for the tab's own Claude session; the CLI's id for it,
     /// which an ACP agent does not give.
     pub(crate) fn send(&self, message: UserMessage) -> Result<Option<String>, Explained> {
         match self {
-            Source::Claude(driven) => driven.steer(message),
+            Source::Session(driven) => driven.steer(message),
             Source::Acp(session) => session.send(message).map(|()| None).map_err(|e| Explained::of(&e)),
             Source::Own(session) => session.send(message).map(|()| None).map_err(|e| Explained::of(&e)),
-            Source::Codex(session) => session
-                .send(message)
-                .map(|()| None)
-                .map_err(|e| Explained(crate::codex::explained(&e))),
             Source::OpenCode(session) => session
                 .send(message)
                 .map(|()| None)
@@ -244,7 +238,7 @@ impl Source {
     }
 
     pub(crate) fn interrupt(&self) {
-        if let Some(driven) = self.claude() {
+        if let Some(driven) = self.tab_session().or_else(|| self.driven()) {
             driven.stop_turn();
         }
         if let Some(session) = self.acp() {
@@ -253,14 +247,8 @@ impl Source {
         if let Some(session) = self.own() {
             session.cancel();
         }
-        if let Some(session) = self.codex() {
-            session.cancel();
-        }
         if let Some(session) = self.opencode() {
             session.cancel();
-        }
-        if let Some(driven) = self.driven() {
-            driven.stop_turn();
         }
     }
 
@@ -273,7 +261,7 @@ impl Source {
                 PermissionAnswer::Deny { message, .. } => driven.answer_permission(request, false, Some(message)),
             };
         }
-        match self.claude().filter(|driven| !driven.is_replay()) {
+        match self.tab_session().filter(|driven| !driven.is_replay()) {
             Some(driven) => driven.answer_permission_as(request, answer),
             None => Err(Explained::of(&SessionError::Closed)),
         }
@@ -282,16 +270,6 @@ impl Source {
     /// Answers the questions of request `request`, whichever agent asked them; an MCP server's form of Codex takes
     /// the answers as its fields.
     pub(crate) fn answer_questions(&self, request: &str, answers: Vec<Answer>) -> Result<(), Explained> {
-        if let Some(session) = self.codex() {
-            let form: serde_json::Map<String, serde_json::Value> = answers
-                .iter()
-                .map(|a| (a.question.clone(), serde_json::Value::from(a.answer.clone())))
-                .collect();
-            return session
-                .answer_questions(request, answers)
-                .or_else(|_| session.answer_form(request, serde_json::Value::Object(form)))
-                .map_err(|e| Explained(crate::codex::explained(&e)));
-        }
         if let Some(session) = self.opencode() {
             return session
                 .answer_questions(request, answers)
@@ -299,7 +277,7 @@ impl Source {
         }
         match self
             .driven()
-            .or_else(|| self.claude().filter(|driven| !driven.is_replay()))
+            .or_else(|| self.tab_session().filter(|driven| !driven.is_replay()))
         {
             Some(driven) => driven.answer_questions(request, answers),
             None => Err(Explained::of(&SessionError::Closed)),
@@ -314,17 +292,17 @@ impl Source {
             PlanAnswer::Reject => ide_session::PlanReply::Reject,
         };
         #[cfg(feature = "selftest")]
-        if let Some(driven) = self.claude().filter(|driven| driven.is_replay()) {
+        if let Some(driven) = self.tab_session().filter(|driven| driven.is_replay()) {
             return Ok(driven.replay_plan(request, reply));
         }
-        match self.driven().or_else(|| self.claude()) {
+        match self.driven().or_else(|| self.tab_session()) {
             Some(driven) => driven.answer_plan(request, reply).map(|()| Vec::new()),
             None => Err(Explained::of(&SessionError::Closed)),
         }
     }
 
     pub(crate) fn stop_task(&self, task: &str) {
-        if let Some(driven) = self.driven().or_else(|| self.claude()) {
+        if let Some(driven) = self.driven().or_else(|| self.tab_session()) {
             driven.stop_task(task);
         }
     }
@@ -349,7 +327,7 @@ impl Source {
     }
 
     pub(crate) fn set_model(&self, model: &str) {
-        if let Some(driven) = self.driven().or_else(|| self.claude()) {
+        if let Some(driven) = self.driven().or_else(|| self.tab_session()) {
             driven.set_model(model);
         }
     }
@@ -360,10 +338,10 @@ impl Source {
         }
     }
 
-    /// Ends the process: input closed, then the supervisor's signals; the registry does that for the tab's own Claude
+    /// Ends the process: input closed, then the supervisor's signals; the registry does that for the tab's own
     /// session. A session of the registry the tab did not start runs on; the tab only leaves its feed.
     pub(crate) fn end(&self) {
-        if let Some(driven) = self.driven().or_else(|| self.claude()) {
+        if let Some(driven) = self.driven().or_else(|| self.tab_session()) {
             driven.leave();
         }
         if let Some(session) = self.acp() {
@@ -371,9 +349,6 @@ impl Source {
         }
         if let Some(session) = self.own() {
             session.stop();
-        }
-        if let Some(session) = self.codex() {
-            session.stop(Duration::from_secs(2));
         }
         if let Some(session) = self.opencode() {
             session.stop(Duration::from_secs(2));

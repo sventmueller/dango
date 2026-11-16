@@ -22,7 +22,7 @@ pub(crate) fn replay(sessions: &Rc<dyn Sessions>, thread: Thread) -> Option<Sour
         ide_session::Contract::User(ide_session::UserChoices::default()),
     );
     match Driven::start(sessions, launch) {
-        Ok((driven, _first)) => Some(Source::Claude(driven)),
+        Ok((driven, _first)) => Some(Source::Session(driven)),
         Err(error) => {
             ide_ui_common::diag::report("playing a recording", error);
             None
@@ -41,7 +41,7 @@ pub fn set_test_program(program: PathBuf) {
 impl Source {
     /// Plays recorded lines into the replay; what changed, with the thread then.
     pub(crate) fn feed(&mut self, lines: &str) -> (Vec<ide_thread::Change>, Option<Thread>) {
-        match self.claude() {
+        match self.tab_session() {
             Some(driven) => driven.feed(lines),
             None => (Vec::new(), self.snapshot()),
         }
