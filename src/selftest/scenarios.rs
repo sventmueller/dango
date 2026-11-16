@@ -186,6 +186,8 @@ pub(crate) const SCENARIOS: &[Scenario] = &[
     limited("leitstand-queue", leitstand::queue::run, Duration::from_secs(900)),
     limited("leitstand-metrics", leitstand::metrics::run, GIT),
     limited("leitstand-gaps", leitstand::gaps::run, GIT),
+    limited("leitstand-hunks", leitstand::hunks::run, GIT),
+    limited("leitstand-setup", leitstand::setup::run, GIT),
     Scenario {
         limit: GIT,
         ..launched("leitstand-pause", leitstand::pause::run, Launches::Quit)

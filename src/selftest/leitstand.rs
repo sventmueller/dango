@@ -4,11 +4,14 @@
 //! children are the scenarios that run orders.
 
 pub(super) mod attach;
+mod folder;
 pub(super) mod gaps;
+pub(super) mod hunks;
 pub(super) mod metrics;
 pub(super) mod order;
 pub(super) mod pause;
 pub(super) mod queue;
+pub(super) mod setup;
 
 use objc2::rc::Retained;
 

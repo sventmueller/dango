@@ -304,9 +304,15 @@ impl PaneTab {
         unsafe { self.setAccessibilityValue(Some(&NSNumber::new_bool(selected))) };
     }
 
+    /// The tab's words for VoiceOver: its title, what its dot means while one shows, and whether it is a preview.
     fn describe(&self) {
         let ivars = self.ivars();
-        let title = ivars.title.stringValue().to_string();
+        let mut title = ivars.title.stringValue().to_string();
+        if !ivars.status.isHidden()
+            && let Some(color) = ivars.status.contentTintColor()
+        {
+            title = format!("{title}, {}", crate::window::tabs::status_words(&color));
+        }
         if ivars.preview.get() {
             self.setAccessibilityLabel(Some(&ns(&tf("{}, Vorschau", &[&title]))));
             self.setToolTip(Some(&ns(t(

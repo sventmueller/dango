@@ -569,6 +569,60 @@ fn abort_removes_checkpoints_then_the_worktree() {
 }
 
 #[test]
+fn a_preparation_stopped_by_an_abort_leaves_the_cleanup_where_it_is() {
+    let mut app = app();
+    app.hold.insert("prepare_worktree");
+    let id = app.order("o1");
+    app.settle();
+    let Some(Effect::PrepareWorktree { op, .. }) = app.take("prepare_worktree") else {
+        panic!("the worktree is asked for")
+    };
+    app.hold.insert("remove_checkpoints");
+    app.send(InputKind::Abort(id.clone()));
+    app.settle();
+    let cleaning = app.get(&id).phase().clone();
+    assert!(matches!(cleaning, Phase::Cleaning { .. }), "{cleaning:?}");
+    assert_eq!(app.get(&id).open_operations(), 2);
+    app.send(InputKind::Verified {
+        order: id.clone(),
+        op,
+        reached: None,
+    });
+    assert_eq!(*app.get(&id).phase(), cleaning, "the stopped preparation only closes");
+    assert_eq!(app.get(&id).open_operations(), 1);
+    app.hold.clear();
+    app.settle();
+    assert_eq!(app.condition(&id), Condition::Aborted);
+    assert_eq!(*app.get(&id).phase(), Phase::Idle);
+    app.assert_replays();
+}
+
+#[test]
+fn a_preparation_stopped_by_a_pause_is_made_again_on_resuming() {
+    let mut app = app();
+    app.hold.insert("prepare_worktree");
+    let id = app.order("o1");
+    app.settle();
+    let Some(Effect::PrepareWorktree { op, .. }) = app.take("prepare_worktree") else {
+        panic!("the worktree is asked for")
+    };
+    app.send(InputKind::Windows(false));
+    assert_eq!(app.condition(&id), Condition::Paused(PauseReason::NoWindow));
+    app.send(InputKind::Verified {
+        order: id.clone(),
+        op,
+        reached: None,
+    });
+    assert_eq!(*app.get(&id).phase(), Phase::Idle);
+    assert_eq!(app.asked("prepare_worktree"), 1);
+    app.send(InputKind::Windows(true));
+    assert_eq!(app.asked("prepare_worktree"), 2, "resuming prepares the worktree anew");
+    app.hold.clear();
+    app.settle();
+    assert_eq!(app.station(&id), Station::Acceptance);
+}
+
+#[test]
 fn by_hand_and_back_to_the_leitstand_end_the_station_through_its_gate() {
     let mut app = app();
     let id = app.order("o1");
