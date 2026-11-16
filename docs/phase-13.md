@@ -207,9 +207,17 @@ beschrieben, gilt so, wie es hier steht:
     `git reset -q --hard` rutscht durch; Codex kann solche Befehle nie an den Nutzer geben.
   - **Pfad-Abhängigkeiten (E188):** Neben dem Worktree entsteht für jedes `../name` ein Symlink auf den Ordner neben
     dem Repository. Eine Abhängigkeit zwei Ebenen höher wird übersprungen, weil sie im gemeinsamen Worktree-Ordner läge.
-  - **AI-Tab (B37b):** Claude-Tabs und die Mitschnitte der Selbsttests laufen über das gemeinsame Register
-    (`Source::Claude`); die Sitzung eines Auftrags hängt der Tab als `Source::Driven` an. Codex, OpenCode, ACP und der
-    eigene Agent bleiben auf ihrem bisherigen Weg (A14 für Claude bestätigt).
+  - **AI-Tab (B37b):** Alle AI-Tabs laufen über das gemeinsame Register (`Source::Session`): Claude, Codex, OpenCode,
+    ACP, der eigene Agent und die Mitschnitte der Selbsttests. Die Sitzung eines Auftrags hängt der Tab als
+    `Source::Driven` an (A14 bestätigt).
+    - Was nur ein Weg kann, geht über `Driver::claude/codex/opencode/acp/own`; Freigaben mit jeder angebotenen Option
+      über `Driver::answer_option`.
+    - Codex tritt auf Wunsch dem geteilten Server bei (`UserChoices::shared`, E148, nie für Aufträge).
+    - Der eigene Agent setzt eine außerhalb des Haupt-Threads gelesene Ablage fort (`AgentPath::OwnStored`).
+    - Eine Lücke im OpenCode-Strom hält nur bei Aufträgen Prompts und Zug-Ende an; eine Sitzung des Nutzers liest danach
+      nach.
+    - Stoppen, während der Checkpoint noch angelegt wird, nimmt die Nachricht zurück in die Eingabe; ist ein Agent
+      beschäftigt, versucht der Treiber die Nachricht erneut.
     - Der Treiber kann dafür jetzt Remote Control und Zurückspulen beim Start, Claudes eigene Fehlerarten und Remote
       Control im Feed, Freigaben mit bearbeiteter Eingabe und gespeicherter Regel (E27/E33 weiter ohne „Immer“ bei
       zerstörerischem Git), einen Checkpoint je Nachricht und Nachrichten in den laufenden Zug für den Nutzer, und
@@ -259,13 +267,27 @@ beschrieben, gilt so, wie es hier steht:
     Dango läuft; nach einer Pause kommt höchstens ein verpasster Termin.
 - **Selbsttests:** `leitstand`, `leitstand-order`, `leitstand-attach`, `leitstand-queue` und `leitstand-metrics` laufen
   grün, auch mit gesperrtem Bildschirm.
+- **Lücken geschlossen:**
+  - **Einwand des Builders (E178):** Der erste Prompt verlangt am Ende `CRITERIA CONFIRMED` oder `CRITERIA OBJECTION`
+    mit Gründen. Ein Einwand lässt den Auftrag mit seinem Text warten: „Kriterien ändern …“ fragt den Builder neu,
+    „Weiter“ überstimmt, „Auftrag abbrechen …“ beendet. Eine Antwort ohne eine der Zeilen gilt als bestätigt und wird
+    als „fehlend“ protokolliert.
+  - **Herkunft je Einstellung (E183):** Der Dialog „Leitstand für <Ordner>“ zeigt für jeden Wert „Vorgabe“ oder
+    „factory.toml“ mit „Zurücksetzen“. Risikomuster und prüfrelevante Dateien sind dort bearbeitbar, die Ranglisten
+    stehen weiter nur in der Datei. Der Tab „Aufträge“ deckt alle vier Rollen mit Modell und Denktiefe, die
+    Prüfer-Regel und API-Budgets je Tag für Claude, Codex und den eigenen Agenten ab.
+  - **Issue-Änderungen (E176):** Ein geändertes Issue zeigt im Auftrag-Tab „Issue geändert“ mit Zeilen-Diff; erst
+    „Änderung übernehmen“ ändert Ziel und Vorschläge aus der Aufgabenliste, eigene Kriterien bleiben. Gelesen wird beim
+    5-Minuten-Abruf (nur Ordner mit bestätigtem Eingang) und beim Öffnen des Auftrag-Tabs.
+  - **Migration der Workflow-Datei:** Der Haken ist mit einem künstlichen Schritt getestet; mehr gibt es erst mit einer
+    echten Version 2.
+- **Selbsttests der Agentenwege:** `codex`, `opencode`, `acp`, `acp-actions`, `acp-dialogs`, `own-agent`, `agent`,
+  `agent-actions`, `agent-dialogs`, `agent-perf`, `quit` und `leitstand-gaps` laufen grün.
+- **A17** ist geprüft (siehe Annahmen).
 - **Noch nicht umgesetzt:**
-  - der Einwand des Builders gegen die Kriterien (E178);
-  - die Herkunft je Einstellung (E183);
-  - eine Migration der Workflow-Datei über Version 1 hinaus (der Haken ist da);
-  - der Umzug der AI-Tabs von Codex, OpenCode, ACP und dem eigenen Agenten auf den Sitzungstreiber (B37b);
-  - der Eingang aus Issues im Leitstand selbst und das Nachziehen eines Auftrags, wenn sich sein Issue später ändert;
-  - E177 mit Schreibzugriff, solange O2 offen ist.
+  - der Eingang aus Issues im Leitstand selbst (nur über das CI-Panel);
+  - E177 mit Schreibzugriff (O2 entschieden: auf Knopfdruck; in Arbeit);
+  - der Modus „Auftrag“ ohne Rückfragen (O1 entschieden: nach dem Testlauf der Gruppe `factory`).
 
 ## Stufe 1 — Ein Auftrag
 
