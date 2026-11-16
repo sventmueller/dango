@@ -21,6 +21,7 @@ use crate::evidence::Manifest;
 use crate::ids::{OrderId, SessionKey};
 use crate::input::{Input, InputKind};
 use crate::log::LogEntry;
+use crate::metrics::Metrics;
 use crate::options::{ChangeRefusal, SheetCheck};
 use crate::order::Order;
 use crate::quota::QuotaBook;
@@ -118,6 +119,7 @@ pub struct Factory {
     agents: BTreeMap<Agent, AgentStatus>,
     quotas: QuotaBook,
     day: DailyAccount,
+    metrics: Metrics,
     orders: BTreeMap<OrderId, Order>,
     scratch: BTreeMap<OrderId, Scratch>,
     asleep: Option<Millis>,
@@ -157,6 +159,7 @@ impl Factory {
             agents: BTreeMap::new(),
             quotas: QuotaBook::default(),
             day: DailyAccount::default(),
+            metrics: Metrics::default(),
             orders: BTreeMap::new(),
             scratch: BTreeMap::new(),
             asleep: None,
@@ -208,6 +211,11 @@ impl Factory {
         &self.day
     }
 
+    /// The figures routing's tie-break reads, as the app last handed them in (E180).
+    pub fn metrics(&self) -> &Metrics {
+        &self.metrics
+    }
+
     /// What the app said about each path.
     pub fn agents(&self) -> &BTreeMap<Agent, AgentStatus> {
         &self.agents
@@ -255,6 +263,7 @@ impl Factory {
             }
             InputKind::Quota(observation) => self.quota(cx, observation),
             InputKind::Day(day) => self.day = day,
+            InputKind::Metrics(metrics) => self.metrics = *metrics,
             InputKind::Sleep => self.sleep(cx),
             InputKind::Wake => self.wake(cx),
             InputKind::Battery(on) => self.battery = on,

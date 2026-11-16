@@ -189,6 +189,7 @@ impl SheetForm {
             casting: BTreeMap::new(),
             skip_spec_approval: self.skip && self.issue.is_none(),
             issue: self.issue.clone(),
+            rule_proposal: false,
         }
     }
 

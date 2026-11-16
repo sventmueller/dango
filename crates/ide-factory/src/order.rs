@@ -392,6 +392,20 @@ impl Order {
         self.stage
     }
 
+    /// Whether it is a scout's proposal of a rule change (B47).
+    pub fn rule_proposal(&self) -> bool {
+        self.options.rule_proposal
+    }
+
+    /// The role that writes its specification: the scout for a rule proposal, else the planner.
+    pub fn spec_role(&self) -> Role {
+        if self.options.rule_proposal {
+            Role::Scout
+        } else {
+            Role::Planner
+        }
+    }
+
     /// When it was created.
     pub fn created(&self) -> Stamp {
         self.created
@@ -450,7 +464,7 @@ impl Order {
     /// The session that works now or worked last: of the running turn, else of the station's role.
     pub fn current(&self) -> Option<&Slot> {
         let role = self.turn.as_ref().map(Turn::role).unwrap_or(match self.station {
-            Station::Spec => Role::Planner,
+            Station::Spec => self.spec_role(),
             Station::Review => Role::Reviewer,
             _ => Role::Builder,
         });

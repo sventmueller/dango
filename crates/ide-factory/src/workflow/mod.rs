@@ -6,6 +6,7 @@
 mod defaults;
 pub mod edit;
 mod read;
+pub mod recurring;
 pub mod rules;
 
 use std::collections::BTreeMap;
@@ -101,6 +102,18 @@ pub enum WorkflowErrorKind {
         /// The name.
         name: String,
     },
+    /// A key the table needs is missing or empty.
+    Missing,
+    /// A recurring order's interval is none of `daily`, `weekly` or a number of days such as `14d`.
+    BadInterval {
+        /// What the file says.
+        value: String,
+    },
+    /// Two recurring orders have the same title.
+    DuplicateRecurring {
+        /// The title.
+        title: String,
+    },
 }
 
 /// A gate command and the risk classes it applies to.
@@ -153,6 +166,7 @@ pub struct Workflow {
     limits: Vec<(Limit, u64)>,
     budgets: Budgets,
     relevance: RelevancePatterns,
+    recurring: Vec<recurring::RecurringOrder>,
 }
 
 /// A workflow file read, with the text it migrated to when it was of an older version.
@@ -251,6 +265,11 @@ impl Workflow {
     pub fn relevance(&self) -> &RelevancePatterns {
         &self.relevance
     }
+
+    /// The recurring cleanup orders (B47).
+    pub fn recurring(&self) -> &[recurring::RecurringOrder] {
+        &self.recurring
+    }
 }
 
 /// Reads the workflow file `text`, migrating an older version; every error found is reported.
@@ -330,8 +349,19 @@ fn syntax(text: &str, error: &toml_edit::TomlError) -> WorkflowError {
 }
 
 const TOP: &[&str] = &[
-    "version", "gates", "worktree", "roles", "review", "spec", "intake", "tools", "limits", "budget", "risk",
+    "version",
+    "gates",
+    "worktree",
+    "roles",
+    "review",
+    "spec",
+    "intake",
+    "tools",
+    "limits",
+    "budget",
+    "risk",
     "relevant",
+    "recurring",
 ];
 
 fn read_workflow(r: &mut Reader<'_>, top: &dyn TableLike) -> Workflow {
@@ -379,6 +409,7 @@ fn read_workflow(r: &mut Reader<'_>, top: &dyn TableLike) -> Workflow {
         workflow.budgets = read_budgets(r, budget);
     }
     workflow.relevance = read_relevance(r, top);
+    workflow.recurring = recurring::read(r, top);
     workflow
 }
 

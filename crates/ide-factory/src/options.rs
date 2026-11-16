@@ -47,6 +47,9 @@ pub struct NewOrder {
     /// The issue the order comes from (E176); its text is foreign text.
     #[serde(default)]
     pub issue: Option<crate::intake::IssueOrigin>,
+    /// A scout's proposal of a rule change, whose criteria the scout's specification brings (B47).
+    #[serde(default)]
+    pub rule_proposal: bool,
 }
 
 /// Why the sheet does not let an order start.
@@ -126,7 +129,7 @@ pub fn check_new_order(
     if order.goal.trim().is_empty() {
         problems.push(OptionProblem::MissingGoal);
     }
-    if stage == Stage::One && criteria_from_lines(&order.criteria).is_empty() {
+    if stage == Stage::One && !order.rule_proposal && criteria_from_lines(&order.criteria).is_empty() {
         problems.push(OptionProblem::MissingCriteria);
     }
     if let Err(PatternError { pattern, message }) = PathScope::new(&order.scope) {

@@ -22,6 +22,7 @@ pub struct UserDefaults {
     resume_after_restart: bool,
     awake_on_battery: bool,
     location: WorktreeLocation,
+    rule_proposals: bool,
 }
 
 impl Default for UserDefaults {
@@ -40,6 +41,7 @@ impl Default for UserDefaults {
             resume_after_restart: false,
             awake_on_battery: false,
             location: WorktreeLocation::DataFolder,
+            rule_proposals: true,
         }
     }
 }
@@ -113,5 +115,16 @@ impl UserDefaults {
     /// Sets where worktrees lie.
     pub fn set_location(&mut self, location: WorktreeLocation) {
         self.location = location;
+    }
+
+    /// Whether a scout proposes a change to the agents' instructions after an order ended escalated or failed; on
+    /// by default (B47).
+    pub fn rule_proposals(&self) -> bool {
+        self.rule_proposals
+    }
+
+    /// Sets whether a scout proposes rule changes.
+    pub fn set_rule_proposals(&mut self, on: bool) {
+        self.rule_proposals = on;
     }
 }

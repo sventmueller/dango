@@ -23,6 +23,12 @@ impl BoardTab {
             } else {
                 ui.empty.stringValue().to_string()
             },
+            metrics: ui.metrics.seen(),
         }
+    }
+
+    /// Opens the figures' section under the fleet line, as a click on its disclosure does.
+    pub(crate) fn open_metrics(&self) {
+        self.ui().metrics.open();
     }
 }

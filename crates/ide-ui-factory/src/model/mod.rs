@@ -4,6 +4,7 @@
 pub mod board;
 pub mod detail;
 pub mod list;
+pub mod metrics;
 pub mod notices;
 pub mod settings;
 pub mod sheet;

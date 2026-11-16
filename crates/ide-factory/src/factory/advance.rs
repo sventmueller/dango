@@ -109,7 +109,7 @@ impl Factory {
             self.advance(cx, id);
             return;
         }
-        if order.stage() == Stage::One {
+        if order.stage() == Stage::One && !order.rule_proposal() {
             if !order.g1_skipped() {
                 self.emit(
                     cx,
@@ -193,18 +193,18 @@ impl Factory {
             return;
         }
         let Some(order) = self.orders.get(id) else { return };
-        let rework = order.findings().is_some();
+        let (rework, role) = (order.findings().is_some(), order.spec_role());
         if order.spec().is_some() && !rework {
             if order.approved() || order.g1_skipped() {
-                self.end_session(cx, id, Role::Planner);
+                self.end_session(cx, id, role);
                 self.enter_build(cx, id);
             } else {
                 self.wait(cx, id, WaitReason::SpecApproval);
             }
             return;
         }
-        if let Some(session) = self.ensure_session(cx, id, Role::Planner) {
-            self.prompt(cx, id, Role::Planner, &session, PromptKind::Plan);
+        if let Some(session) = self.ensure_session(cx, id, role) {
+            self.prompt(cx, id, role, &session, PromptKind::Plan);
         }
     }
 
@@ -237,6 +237,7 @@ impl Factory {
         let Some(order) = self.orders.get(id) else { return };
         let skip = order.options().skip_spec_approval
             && order.options().issue.is_none()
+            && !order.rule_proposal()
             && self.rules.skip_spec_approval()
             && order.expected_risk() == RiskClass::Low;
         self.set_phase(cx, id, Phase::Idle);

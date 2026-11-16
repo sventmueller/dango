@@ -38,6 +38,8 @@ pub(super) struct Shared {
     pub(super) quotas: QuotaBook,
     read: bool,
     pub(super) power: power::Power,
+    /// Whether the look for due recurring orders is scheduled (B47).
+    pub(super) recurring: bool,
 }
 
 /// What quitting waits for: the log entries that pause the running orders.
@@ -133,10 +135,12 @@ impl Leitstand {
         let queued = ide_core::lane::DISK.try_run(move || {
             let logs = store::read_logs(&project);
             let confirmations = store::load_confirmations(&project);
+            let schedule = store::load_schedule(&project);
             back.deliver(Delivery::Loaded {
                 root,
                 logs,
                 confirmations,
+                schedule,
             });
         });
         if queued.is_err() {
@@ -156,7 +160,14 @@ impl Leitstand {
     }
 
     /// The logs of `root` were read: its factory comes back as they say, running orders paused (E167).
-    pub(super) fn loaded(&self, cx: &Rc<AppContext>, root: PathBuf, logs: &[String], confirmations: Confirmations) {
+    pub(super) fn loaded(
+        &self,
+        cx: &Rc<AppContext>,
+        root: PathBuf,
+        logs: &[String],
+        confirmations: Confirmations,
+        schedule: ide_factory::workflow::recurring::Schedule,
+    ) {
         self.loading.borrow_mut().retain(|r| *r != root);
         if self.folders.borrow().contains_key(&root) || self.shared.borrow().quitting {
             return;
@@ -190,9 +201,12 @@ impl Leitstand {
                 worktree_bytes: 0,
                 agents: BTreeMap::new(),
                 sections: BTreeMap::new(),
+                learned: super::learning::Learned::new(schedule),
             },
         );
         self.after(cx, &root, restored.step);
+        self.refresh_metrics(&root);
+        self.keep_recurring();
         let (day, quotas) = {
             let shared = self.shared.borrow();
             (

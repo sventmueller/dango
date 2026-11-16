@@ -12,6 +12,7 @@ mod gates;
 mod git;
 mod intake;
 mod launching;
+mod learning;
 mod lifecycle;
 mod manifest;
 mod notices;
@@ -64,12 +65,18 @@ enum Delivery {
         effects: Vec<Effect>,
         failed: Vec<OrderId>,
     },
-    /// What a folder needs to start: its order logs and confirmations, read from disk.
+    /// What a folder needs to start: its order logs, confirmations and the dates of its recurring orders, read from
+    /// disk.
     Loaded {
         root: PathBuf,
         logs: Vec<String>,
         confirmations: Confirmations,
+        schedule: ide_factory::workflow::recurring::Schedule,
     },
+    /// The figures of the order logs of `root`, computed on a lane (E180).
+    Metrics(PathBuf, Box<ide_factory::metrics::Metrics>),
+    /// Time to look for recurring orders that are due (B47).
+    Recurring,
     /// A session's driver has something to take in (E165).
     Flush(ide_session::SessionId),
     /// A session can be launched now that its program was looked for.
@@ -109,6 +116,8 @@ struct Folder {
     agents: BTreeMap<ide_factory::routing::Agent, ide_factory::routing::AgentStatus>,
     /// The hunks of each order's diff since its base, read on the git lane for partial acceptance (C55).
     sections: BTreeMap<OrderId, Vec<ide_ui_factory::model::detail::Section>>,
+    /// What the Leitstand learns from the folder's orders (B47).
+    learned: learning::Learned,
 }
 
 /// Every folder's factory, the sessions of their orders, and what holds across folders.
@@ -218,7 +227,10 @@ impl Leitstand {
                 root,
                 logs,
                 confirmations,
-            } => self.loaded(cx, root, &logs, confirmations),
+                schedule,
+            } => self.loaded(cx, root, &logs, confirmations, schedule),
+            Delivery::Metrics(root, metrics) => self.metrics_arrived(cx, &root, *metrics),
+            Delivery::Recurring => self.recurring_due(),
             Delivery::Flush(session) => self.flush(cx, session),
             Delivery::Launch(ready) => self.launch(cx, *ready),
             Delivery::Refs(root, order, snapshot) => {
@@ -269,7 +281,9 @@ impl Leitstand {
             }
             step
         };
+        let ended = learning::ended(&step.log);
         self.after(cx, root, step);
+        self.learn(root, &ended);
         self.changed(root);
         self.keep_ticking();
     }

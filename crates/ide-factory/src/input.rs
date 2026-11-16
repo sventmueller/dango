@@ -190,6 +190,8 @@ pub enum InputKind {
     Quota(QuotaObservation),
     /// The daily account across projects (E168).
     Day(DailyAccount),
+    /// The figures of the folder's order logs, for routing's tie-break (E170, E180).
+    Metrics(Box<crate::metrics::Metrics>),
     /// An event of an order's session.
     Session(OrderId, SessionKey, SessionEvent),
     /// A session started.

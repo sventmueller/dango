@@ -11,7 +11,7 @@ use crate::ids::{HunkId, OperationId, PromptId, RequestId, SessionKey};
 use crate::limits::Overdue;
 use crate::options::{OptionChange, RiskChoice};
 use crate::relevance::Classification;
-use crate::routing::{Agent, RankEntry, Readiness, Vendor};
+use crate::routing::{Agent, RankEntry, Readiness, TieBreak, Vendor};
 use crate::station::{Condition, RiskClass, Role, Stage, Station, TakeOverBlocker};
 use crate::verdict::Round;
 use crate::workflow::WorktreeLocation;
@@ -41,6 +41,10 @@ pub struct OrderOptions {
     /// The issue the order came from (E176).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub issue: Option<crate::intake::IssueOrigin>,
+    /// A scout's proposal of a rule change (B47): the scout writes the specification, which waits at G1 in every
+    /// stage.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub rule_proposal: bool,
 }
 
 /// Why a station or step was skipped, as the log says it (E185, F54).
@@ -385,6 +389,9 @@ pub enum Event {
         quota_unknown: bool,
         /// The reviewer is of a builder's vendor.
         same_vendor: bool,
+        /// The entry routing's tie-break passed over for this one (E170).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        tie_break: Option<TieBreak>,
     },
     /// A session could not start; routing passes to the next entry (E170).
     SessionFailed {

@@ -26,7 +26,9 @@
 //!   reviewer's structured answer (E179), [`evidence`] binds the evidence to its fingerprint with the deviations
 //!   first, [`options`] checks the sheet "Neuer Auftrag" (E185), [`prompt`] renders the templates.
 //! - [`panel`] is what the panel, the Leitstand tab's station strip and table, and the fleet line show (E175, E98);
-//!   [`metrics`] the figures of E180.
+//!   [`metrics`] the figures of E180, which routing's tie-break reads once the app hands them in
+//!   ([`InputKind::Metrics`]); [`learning`] the recurring findings a scout turns into a rule proposal (B47), and
+//!   [`workflow::recurring`] the cleanup orders the workflow file repeats.
 //!
 //! Errors and reasons are typed values with the data a sentence in the user's language needs (E141); the app words
 //! them.
@@ -54,6 +56,7 @@ mod hash;
 pub mod ids;
 pub mod input;
 pub mod intake;
+pub mod learning;
 pub mod limits;
 pub mod log;
 pub mod metrics;

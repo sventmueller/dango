@@ -1,5 +1,6 @@
-//! The Leitstand tab (E175; the Kanban board struck, F66): the fleet line, the station strip whose buttons filter the
-//! table, and the sortable table of every order, which shows first what has waited longest for the user. A double
+//! The Leitstand tab (E175; the Kanban board struck, F66): the fleet line with the figures of E180 folded under it, the
+//! station strip whose buttons filter the table, and the sortable table of every order, which shows first what has
+//! waited longest for the user. A double
 //! click or Return opens an order's tab; the gear opens "Leitstand für <Ordner>".
 
 use std::cell::{Cell, OnceCell, RefCell};
@@ -38,6 +39,7 @@ pub(crate) struct BoardIvars {
 struct BoardUi {
     notices: Retained<NSStackView>,
     fleet: Retained<NSStackView>,
+    metrics: Retained<crate::metrics::MetricsSection>,
     strip: Retained<NSStackView>,
     table: Retained<OrderTable>,
     empty: Retained<NSTextField>,
@@ -173,6 +175,7 @@ impl BoardTab {
         head.addArrangedSubview(&gear);
         let notices = ui::column(mtm, space::XS);
         let fleet = ui::column(mtm, space::XXS);
+        let metrics = crate::metrics::MetricsSection::new(mtm);
         let strip = ui::row(mtm, space::XS);
         strip.setAccessibilityLabel(Some(&ns(t("Stationen"))));
         let table = OrderTable::new(mtm);
@@ -215,13 +218,14 @@ impl BoardTab {
             bottom: space::GROUP,
             right: space::GROUP,
         });
-        for view in [&*head as &NSView, &notices, &fleet, &strip, &empty, &scroll] {
+        for view in [&*head as &NSView, &notices, &fleet, &metrics, &strip, &empty, &scroll] {
             column.addArrangedSubview(view);
         }
-        scroll
-            .widthAnchor()
-            .constraintEqualToAnchor_constant(&column.widthAnchor(), -2.0 * space::GROUP)
-            .setActive(true);
+        for wide in [&*scroll as &NSView, &metrics] {
+            wide.widthAnchor()
+                .constraintEqualToAnchor_constant(&column.widthAnchor(), -2.0 * space::GROUP)
+                .setActive(true);
+        }
         column.setHuggingPriority_forOrientation(1.0, objc2_app_kit::NSLayoutConstraintOrientation::Vertical);
         self.addSubview(&column);
         ide_ui_common::util::auto_layout(&[&column]);
@@ -229,6 +233,7 @@ impl BoardTab {
         BoardUi {
             notices,
             fleet,
+            metrics,
             strip,
             table,
             empty,
@@ -270,6 +275,7 @@ impl BoardTab {
         {
             ui.fleet.addArrangedSubview(&ui::note(mtm, line, 640.0));
         }
+        ui.metrics.set(host().metrics(self.root()).as_ref());
         self.show_notices();
         self.show();
     }

@@ -1,12 +1,14 @@
 //! Roles and routing (E162, E170, E171): each role has a ranked list of agent, model and effort; the first entry that
-//! may take the role, is ready, has quota and lies within budget gets it. The vendor counts by model, not by program,
-//! and an unknown vendor never counts as a change of vendor.
+//! may take the role, is ready, has quota and lies within budget gets it, unless a later entry that is as ready has the
+//! better first-pass rate (E180). The vendor counts by model, not by program, and an unknown vendor never counts as a
+//! change of vendor.
 
 use std::collections::BTreeMap;
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
+use crate::metrics::Rate;
 use crate::quota::{QuotaBook, QuotaState};
 use crate::station::{Role, Stage};
 
@@ -382,6 +384,22 @@ pub struct Choice {
     pub service: Option<String>,
     /// The account its quota hangs on.
     pub account: Option<String>,
+    /// The entry it won over by its first-pass rate, when the tie-break decided (E170).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tie_break: Option<TieBreak>,
+}
+
+/// An entry that a later one of the list beat by its first-pass rate for the order's risk class (E170, E180).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TieBreak {
+    /// The entry passed over.
+    pub over: RankEntry,
+    /// Its place in the list.
+    pub over_index: usize,
+    /// The first-pass rate of the chosen entry, from 0 to 1.
+    pub rate: f64,
+    /// The first-pass rate of the entry passed over.
+    pub over_rate: f64,
 }
 
 /// What routing decided for a role.
@@ -413,6 +431,8 @@ pub struct RouteContext<'a> {
     pub builders: &'a [Vendor],
     /// The reviewer rule.
     pub rule: ReviewerRule,
+    /// The first-pass rate of an entry in this role for the order's risk class, for the tie-break (E170, E180).
+    pub first_pass: &'a dyn Fn(&RankEntry) -> Option<Rate>,
 }
 
 /// The first entry of `list` for `role` that may take it, is ready, has quota and budget (E170); for the reviewer
@@ -437,7 +457,7 @@ fn pick(role: Role, list: &[RankEntry], cx: &RouteContext<'_>, other_vendor: boo
         match judge(role, index, entry, cx, other_vendor) {
             Ok(choice) => {
                 return Route {
-                    choice: Some(choice),
+                    choice: Some(tie_break(role, list, cx, other_vendor, choice)),
                     skipped,
                     same_vendor: false,
                 };
@@ -450,6 +470,47 @@ fn pick(role: Role, list: &[RankEntry], cx: &RouteContext<'_>, other_vendor: boo
         skipped,
         same_vendor: false,
     }
+}
+
+/// `first`, or a later entry of `list` that is as ready and has the better first-pass rate, when the rates of both
+/// rest on at least [`crate::metrics::MIN_ORDERS`] orders (E170).
+fn tie_break(role: Role, list: &[RankEntry], cx: &RouteContext<'_>, other_vendor: bool, first: Choice) -> Choice {
+    let rated = |entry: &RankEntry| (cx.first_pass)(entry).filter(Rate::sound);
+    let Some(first_rate) = rated(&first.entry) else {
+        return first;
+    };
+    let mut best: Option<(Choice, Rate)> = None;
+    for (index, entry) in list.iter().enumerate().skip(first.index + 1) {
+        let Some(rate) = rated(entry) else { continue };
+        let bar = best.as_ref().map_or(first_rate.rate, |(_, r)| r.rate);
+        if rate.rate <= bar {
+            continue;
+        }
+        let Ok(choice) = judge(role, index, entry, cx, other_vendor) else {
+            continue;
+        };
+        if as_ready(&first, &choice) {
+            best = Some((choice, rate));
+        }
+    }
+    let Some((mut choice, rate)) = best else {
+        return first;
+    };
+    choice.tie_break = Some(TieBreak {
+        over: first.entry,
+        over_index: first.index,
+        rate: rate.rate,
+        over_rate: first_rate.rate,
+    });
+    choice
+}
+
+/// Whether two entries that may both start are equally ready: their quotas are both known or both unknown.
+fn as_ready(a: &Choice, b: &Choice) -> bool {
+    matches!(
+        (a.quota, b.quota),
+        (QuotaState::Unknown, QuotaState::Unknown) | (QuotaState::Known { .. }, QuotaState::Known { .. })
+    )
 }
 
 fn judge(
@@ -495,6 +556,7 @@ fn judge(
         quota,
         service: status.service,
         account: status.account,
+        tie_break: None,
     })
 }
 

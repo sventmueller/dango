@@ -86,6 +86,7 @@ impl Order {
                 resume,
                 quota_unknown,
                 same_vendor,
+                tie_break,
             } => {
                 self.start_session(*role, entry, *index, *vendor, session, resume.clone());
                 if *quota_unknown {
@@ -93,6 +94,15 @@ impl Order {
                 }
                 if *same_vendor {
                     self.deviate(Deviation::SameVendorReview);
+                }
+                if let Some(note) = tie_break {
+                    self.deviate(Deviation::TieBreak {
+                        role: *role,
+                        chosen: entry.clone(),
+                        over: note.over.clone(),
+                        percent: percent(note.rate),
+                        over_percent: percent(note.over_rate),
+                    });
                 }
             }
             Event::SessionFailed { index, .. } => self.excluded.push(*index),
@@ -385,4 +395,16 @@ impl Order {
         self.deviations.push(deviation);
         order_deviations(&mut self.deviations);
     }
+}
+
+/// A share from 0 to 1 in whole percent.
+fn percent(share: f64) -> u32 {
+    let rounded = (share.clamp(0.0, 1.0) * 100.0).round();
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "clamped to 0..=100"
+    )]
+    let percent = rounded as u32;
+    percent
 }

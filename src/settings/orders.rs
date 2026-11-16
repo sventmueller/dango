@@ -38,6 +38,7 @@ struct OrdersUi {
     budgets: [Retained<NSTextField>; 2],
     resume: Retained<NSButton>,
     battery: Retained<NSButton>,
+    proposals: Retained<NSButton>,
     problem: Retained<NSTextField>,
 }
 
@@ -139,10 +140,12 @@ define_class!(
         fn switch(&self, _sender: Option<&AnyObject>) {
             guarded((), || {
                 let ui = self.ui();
-                let (resume, battery) = (ui.resume.state() == NSControlStateValueOn, ui.battery.state() == NSControlStateValueOn);
+                let on = |button: &NSButton| button.state() == NSControlStateValueOn;
+                let (resume, battery, proposals) = (on(&ui.resume), on(&ui.battery), on(&ui.proposals));
                 self.change(|form| {
                     form.set_resume_after_restart(resume);
                     form.set_awake_on_battery(battery);
+                    form.set_rule_proposals(proposals);
                 });
             });
         }
@@ -212,6 +215,11 @@ impl OrdersSettings {
         ];
         let resume = checkbox(mtm, me, t("Pausierte Aufträge nach einem Neustart selbst fortsetzen"));
         let battery = checkbox(mtm, me, t("Auf Batterie für laufende Aufträge wach bleiben"));
+        let proposals = checkbox(
+            mtm,
+            me,
+            t("Nach gescheiterten Aufträgen Regeln für AGENTS.md oder CLAUDE.md vorschlagen"),
+        );
         let problem = form::problem(mtm);
         let content = form::stack(
             mtm,
@@ -237,6 +245,13 @@ impl OrdersSettings {
                 form::heading(mtm, t("Verhalten")),
                 Retained::into_super(Retained::into_super(resume.clone())),
                 Retained::into_super(Retained::into_super(battery.clone())),
+                Retained::into_super(Retained::into_super(proposals.clone())),
+                form::note(
+                    mtm,
+                    t(
+                        "Ein Späher fasst wiederkehrende Befunde zusammen; sein Vorschlag ist ein eigener Auftrag, der auf deine Freigabe und Abnahme wartet.",
+                    ),
+                ),
                 Retained::into_super(Retained::into_super(problem.clone())),
             ],
         );
@@ -248,6 +263,7 @@ impl OrdersSettings {
             budgets,
             resume,
             battery,
+            proposals,
             problem,
         }
     }
@@ -273,6 +289,7 @@ impl OrdersSettings {
         };
         ui.resume.setState(state(form.resume_after_restart()));
         ui.battery.setState(state(form.awake_on_battery()));
+        ui.proposals.setState(state(form.rule_proposals()));
         drop(form);
         self.show_model();
     }

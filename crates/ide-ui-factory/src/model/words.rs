@@ -7,6 +7,7 @@ use ide_factory::gates::{GateFailure, GateStep};
 use ide_factory::options::{ChangeRefusal, OptionProblem, SheetNote};
 use ide_factory::panel::Hold;
 use ide_factory::station::{Condition, FailReason, PauseReason, RiskClass, Role, Station, TakeOverBlocker, WaitReason};
+use ide_factory::workflow::recurring::Interval;
 use ide_factory::workflow::rules::Loosening;
 use ide_factory::workflow::{Expected, WorkflowError, WorkflowErrorKind};
 use ide_factory::{Refusal, Refused, RestoreProblem};
@@ -201,6 +202,22 @@ pub fn deviation(deviation: &Deviation) -> String {
         Deviation::QuotaUnknown => t("Kontingent unbekannt").into(),
         Deviation::CredentialsCopied => t("Dateien mit Zugangsdaten mitkopiert").into(),
         Deviation::BaseUpdated => t("Basis aktualisiert").into(),
+        Deviation::TieBreak {
+            role: r,
+            chosen,
+            over,
+            percent,
+            over_percent,
+        } => tf(
+            "Gleichstand als {} nach Erstdurchlaufquote entschieden: {} ({} %) vor {} ({} %)",
+            &[
+                role(*r),
+                &super::list::agent(Some(&chosen.agent.to_string()), chosen.model.as_deref()),
+                &percent.to_string(),
+                &super::list::agent(Some(&over.agent.to_string()), over.model.as_deref()),
+                &over_percent.to_string(),
+            ],
+        ),
     }
 }
 
@@ -382,6 +399,25 @@ pub fn loosening(loosening: &Loosening) -> String {
             "Die Workflow-Datei schaltet für die Rolle {} Werkzeuge ein: {}",
             &[self::role(*role), &tools.join(", ")],
         ),
+        Loosening::RecurringOrders { orders } => {
+            let list: Vec<String> = orders
+                .iter()
+                .map(|o| tf("„{}“ ({})", &[o.title(), &interval(o.interval())]))
+                .collect();
+            tf(
+                "Die Workflow-Datei legt wiederkehrende Aufträge selbst an: {}",
+                &[&list.join(", ")],
+            )
+        }
+    }
+}
+
+/// How often a recurring order comes: "wöchentlich", "alle 14 Tage".
+pub fn interval(interval: Interval) -> String {
+    match interval {
+        Interval::Daily => t("täglich").into(),
+        Interval::Weekly => t("wöchentlich").into(),
+        Interval::Days(days) => tf("alle {} Tage", &[&days.to_string()]),
     }
 }
 
@@ -422,6 +458,12 @@ pub fn workflow_error(error: &WorkflowError) -> String {
         WorkflowErrorKind::CopyOutsideRepository { path } => tf("„{}“ liegt außerhalb des Repositorys", &[path]),
         WorkflowErrorKind::ImagesInsideRepository { path } => tf("„{}“ liegt im Repository", &[path]),
         WorkflowErrorKind::BadVariableName { name } => tf("„{}“ ist kein gültiger Variablenname", &[name]),
+        WorkflowErrorKind::Missing => t("Fehlt oder ist leer").into(),
+        WorkflowErrorKind::BadInterval { value } => tf(
+            "„{}“ ist kein Abstand; erlaubt sind daily, weekly oder Tage wie 14d",
+            &[value],
+        ),
+        WorkflowErrorKind::DuplicateRecurring { title } => tf("Zwei wiederkehrende Aufträge heißen „{}“", &[title]),
     };
     match (error.key.is_empty(), error.line) {
         (true, None) => what,

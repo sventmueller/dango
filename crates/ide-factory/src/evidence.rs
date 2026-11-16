@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::budget::{Metering, Spend};
 use crate::gates::{CommandOutcome, GateFailure, GateStep, SecretScan};
 use crate::hash::hash_json;
-use crate::routing::{Agent, Vendor};
+use crate::routing::{Agent, RankEntry, Vendor};
 use crate::station::{Role, Station};
 use crate::verdict::Round;
 
@@ -158,6 +158,19 @@ pub enum Deviation {
     CredentialsCopied,
     /// The base moved and the diff against it stayed byte for byte the same, so G2 stands (C56).
     BaseUpdated,
+    /// Routing chose a later entry of the role's list over an equally ready one by its first-pass rate (E170, E180).
+    TieBreak {
+        /// The role.
+        role: Role,
+        /// The entry chosen.
+        chosen: RankEntry,
+        /// The entry passed over.
+        over: RankEntry,
+        /// The chosen entry's first-pass rate in percent.
+        percent: u32,
+        /// The first-pass rate of the entry passed over, in percent.
+        over_percent: u32,
+    },
 }
 
 impl Deviation {
@@ -177,6 +190,7 @@ impl Deviation {
             Deviation::QuotaUnknown => 10,
             Deviation::CredentialsCopied => 11,
             Deviation::BaseUpdated => 12,
+            Deviation::TieBreak { .. } => 13,
         }
     }
 }

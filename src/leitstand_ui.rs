@@ -146,6 +146,10 @@ impl ide_ui_factory::Host for Orders {
         self.0.with(|cx| cx.leitstand().fleet(root)).flatten()
     }
 
+    fn metrics(&self, root: &Path) -> Option<ide_factory::metrics::Metrics> {
+        self.0.with(|cx| cx.leitstand().metrics(root)).flatten()
+    }
+
     fn order(&self, root: &Path, order: &OrderId) -> Option<Detail> {
         self.0.with(|cx| cx.leitstand().detail(root, order)).flatten()
     }

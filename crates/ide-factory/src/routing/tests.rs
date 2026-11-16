@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use super::*;
+use crate::metrics::{MIN_ORDERS, Rate};
 use crate::quota::{QuotaKey, QuotaObservation, QuotaStatus};
 
 #[test]
@@ -50,6 +51,8 @@ struct World {
     excluded: Vec<usize>,
     builders: Vec<Vendor>,
     rule: ReviewerRule,
+    /// First-pass rate and orders per agent.
+    rates: Vec<(Agent, (f64, u32))>,
 }
 
 impl World {
@@ -72,6 +75,7 @@ impl World {
             excluded: Vec::new(),
             builders: Vec::new(),
             rule: ReviewerRule::Required,
+            rates: Vec::new(),
         }
     }
 
@@ -92,6 +96,12 @@ impl World {
 
     fn route(&self, role: Role, list: &[RankEntry]) -> Route {
         let reached = |service: Option<&str>| service.is_some_and(|s| self.reached.contains(&s));
+        let first_pass = |entry: &RankEntry| {
+            self.rates
+                .iter()
+                .find(|(agent, _)| *agent == entry.agent)
+                .map(|&(_, (rate, orders))| Rate { rate, orders })
+        };
         let cx = RouteContext {
             agents: &self.agents,
             quotas: &self.quotas,
@@ -101,6 +111,7 @@ impl World {
             excluded: &self.excluded,
             builders: &self.builders,
             rule: self.rule,
+            first_pass: &first_pass,
         };
         route(role, list, &cx)
     }
@@ -250,6 +261,7 @@ fn a_stale_quota_is_unknown_and_lets_the_station_start() {
             excluded: &[],
             builders: &[],
             rule: ReviewerRule::Required,
+            first_pass: &|_| None,
         };
         route(Role::Builder, &list(), &cx)
     };
@@ -300,4 +312,87 @@ fn stage_two_needs_a_ready_builder_and_a_ready_reviewer_of_another_vendor() {
         Stage::One,
         "a ready own agent the reviewer's list does not name"
     );
+}
+
+#[test]
+fn the_better_first_pass_rate_breaks_a_tie_only_on_enough_orders() {
+    let enough = MIN_ORDERS;
+    type Case = (&'static str, [(f64, u32); 3], Option<usize>, usize);
+    let cases: [Case; 6] = [
+        ("no rates: the first entry", [(0.0, 0); 3], None, 0),
+        (
+            "the second is better on enough orders",
+            [(0.4, enough), (0.9, enough), (0.0, 0)],
+            Some(0),
+            1,
+        ),
+        (
+            "the second rests on too few",
+            [(0.4, enough), (0.9, enough - 1), (0.0, 0)],
+            None,
+            0,
+        ),
+        (
+            "the first rests on too few",
+            [(0.4, enough - 1), (0.9, enough), (0.0, 0)],
+            None,
+            0,
+        ),
+        (
+            "an equal rate keeps the rank",
+            [(0.8, enough), (0.8, enough), (0.0, 0)],
+            None,
+            0,
+        ),
+        (
+            "the best of three wins",
+            [(0.4, enough), (0.6, enough), (0.9, enough)],
+            Some(0),
+            2,
+        ),
+    ];
+    for (name, rates, over, index) in cases {
+        let mut world = World::new();
+        world.rates = [Agent::Claude, Agent::Codex, Agent::Own]
+            .into_iter()
+            .zip(rates)
+            .filter(|(_, (_, orders))| *orders > 0)
+            .collect();
+        let choice = world.route(Role::Builder, &list()).choice.expect("an entry");
+        assert_eq!(choice.index, index, "{name}");
+        assert_eq!(choice.tie_break.as_ref().map(|t| t.over_index), over, "{name}");
+    }
+}
+
+#[test]
+fn the_tie_break_note_names_both_rates_and_the_entry_passed_over() {
+    let mut world = World::new();
+    world.rates = vec![
+        (Agent::Claude, (0.5, MIN_ORDERS)),
+        (Agent::Codex, (0.75, MIN_ORDERS + 3)),
+    ];
+    let choice = world.route(Role::Builder, &list()).choice.expect("an entry");
+    let note = choice.tie_break.expect("the tie-break decided");
+    assert_eq!(note.over, list()[0]);
+    assert_eq!((note.rate, note.over_rate), (0.75, 0.5));
+}
+
+#[test]
+fn an_entry_that_is_not_as_ready_does_not_win_the_tie_break() {
+    let mut world = World::new();
+    world.rates = vec![(Agent::Claude, (0.2, MIN_ORDERS)), (Agent::Codex, (1.0, MIN_ORDERS))];
+    world.quota("chatgpt-subscription", 0.2);
+    let route = world.route(Role::Builder, &list());
+    assert_eq!(
+        chosen(&route),
+        Some(0),
+        "a known quota against an unknown one is no tie"
+    );
+    world.quota("claude-subscription", 0.5);
+    let route = world.route(Role::Builder, &list());
+    assert_eq!(chosen(&route), Some(1), "both known: the rate decides");
+    world.quota("chatgpt-subscription", 0.9);
+    let route = world.route(Role::Builder, &list());
+    assert_eq!(chosen(&route), Some(0), "an entry over the start limit takes no part");
+    assert!(route.choice.is_some_and(|c| c.tie_break.is_none()));
 }

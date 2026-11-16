@@ -64,6 +64,8 @@ pub trait Host {
     fn board(&self, root: &Path) -> Option<Board>;
     /// The fleet line above the table; `None` while the folder has no factory yet.
     fn fleet(&self, root: &Path) -> Option<Fleet>;
+    /// The figures of the folder's order logs (E180), as the app last computed them; `None` before the first time.
+    fn metrics(&self, root: &Path) -> Option<ide_factory::metrics::Metrics>;
     /// The order `order` of `root` as its tab shows it, built with [`Detail::new`] from the factory's order and the
     /// sections of its diff; `None` for an order the folder does not know.
     fn order(&self, root: &Path, order: &OrderId) -> Option<Detail>;

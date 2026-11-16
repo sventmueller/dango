@@ -71,6 +71,23 @@ impl super::Leitstand {
             .is_some_and(|f| f.factory.rules().has_gates())
     }
 
+    /// Writes `logs`, each an order's id and its log's lines, where the factory of `root` reads them when it starts.
+    pub(crate) fn seed_logs(
+        &self,
+        root: &std::path::Path,
+        logs: &[(ide_factory::OrderId, String)],
+    ) -> std::io::Result<()> {
+        let project = super::store::project(&super::store::base(), root);
+        for (order, text) in logs {
+            let file = super::store::log_file(&project, order);
+            if let Some(folder) = file.parent() {
+                std::fs::create_dir_all(folder)?;
+            }
+            std::fs::write(file, text)?;
+        }
+        Ok(())
+    }
+
     /// Whether a factory asked for the wake lock, and whether the app holds the activity that keeps the Mac awake.
     pub(crate) fn wake_lock(&self) -> (bool, bool) {
         let held = self.shared.borrow().power.holds();

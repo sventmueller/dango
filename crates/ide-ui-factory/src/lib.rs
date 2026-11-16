@@ -19,6 +19,7 @@ mod actions;
 mod board;
 mod commands;
 mod host;
+mod metrics;
 pub mod model;
 mod order;
 mod order_view;

@@ -230,7 +230,7 @@ impl Leitstand {
     }
 
     /// Reads the working copy's branch, HEAD and whether it has uncommitted changes, then hands the new order over.
-    fn new_order(&self, root: &Path, order: NewOrder) -> OrderId {
+    pub(super) fn new_order(&self, root: &Path, order: NewOrder) -> OrderId {
         let id = self.order_id(root);
         let (folder, new) = (root.to_path_buf(), id.clone());
         let back = self.back();

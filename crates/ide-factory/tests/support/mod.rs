@@ -321,7 +321,7 @@ impl App {
             .into_iter()
             .find(|r| order.session(*r).is_some_and(|s| s.session() == session))?;
         match role {
-            ide_factory::Role::Planner => Some(SPEC.to_string()),
+            ide_factory::Role::Planner | ide_factory::Role::Scout => Some(SPEC.to_string()),
             ide_factory::Role::Reviewer => Some(self.verdicts.pop_front().unwrap_or_else(|| passing_verdict(order))),
             _ => None,
         }

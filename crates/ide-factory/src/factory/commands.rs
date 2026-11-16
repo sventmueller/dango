@@ -61,6 +61,7 @@ impl Factory {
             | InputKind::Agents(_)
             | InputKind::Quota(_)
             | InputKind::Day(_)
+            | InputKind::Metrics(_)
             | InputKind::Sleep
             | InputKind::Wake
             | InputKind::Battery(_)
@@ -123,8 +124,9 @@ impl Factory {
                 scope: order.scope,
                 budget: order.budget,
                 casting: order.casting,
-                skip_spec_approval: order.skip_spec_approval,
+                skip_spec_approval: order.skip_spec_approval && !order.rule_proposal,
                 issue: order.issue,
+                rule_proposal: order.rule_proposal,
             },
             base,
             stage: self.stage,
@@ -175,14 +177,8 @@ impl Factory {
         }) {
             return;
         }
-        self.emit(
-            cx,
-            id,
-            Event::Commented {
-                role: Role::Planner,
-                text,
-            },
-        );
+        let role = self.orders.get(id).map_or(Role::Planner, Order::spec_role);
+        self.emit(cx, id, Event::Commented { role, text });
         self.run(cx, id);
         self.advance(cx, id);
     }

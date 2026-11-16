@@ -18,13 +18,21 @@ use crate::station::{Condition, FailReason, PauseReason, Role, Station, WaitReas
 use crate::verdict::VERDICT_SCHEMA;
 
 impl Factory {
-    /// The ranked list of `role` for `order`: its fixed entry, else the rule set's list.
+    /// The ranked list of `role` for `order`: its fixed entry, else the rule set's list. The scout's list goes on with
+    /// the reviewer's entries, so a scout of the reviewer's vendor reads when no cheap or local one is ready (B47).
     fn role_list(&self, order: &Order, role: Role) -> Vec<RankEntry> {
-        order
-            .options()
-            .casting
-            .get(&role)
-            .map_or_else(|| self.rules.role(role).to_vec(), |entry| vec![entry.clone()])
+        if let Some(entry) = order.options().casting.get(&role) {
+            return vec![entry.clone()];
+        }
+        let mut list = self.rules.role(role).to_vec();
+        if role == Role::Scout {
+            for entry in self.rules.role(Role::Reviewer) {
+                if !list.contains(entry) {
+                    list.push(entry.clone());
+                }
+            }
+        }
+        list
     }
 
     /// The first budget scope reached for `order`, counting the billing service `service`.
@@ -57,6 +65,8 @@ impl Factory {
             1.0
         };
         let reached = |service: Option<&str>| self.budget_reached(order, service).is_some();
+        let risk = order.risk();
+        let first_pass = |entry: &RankEntry| self.metrics.rate(role, &entry.agent, entry.model.as_deref(), risk);
         let cx = RouteContext {
             agents: &self.agents,
             quotas: &self.quotas,
@@ -66,13 +76,14 @@ impl Factory {
             excluded,
             builders: order.builders(),
             rule: self.rules.reviewer_rule(),
+            first_pass: &first_pass,
         };
         route(role, list, &cx)
     }
 
     /// Whether routing would find an entry for the role of `order`'s station now, without recording anything.
     pub(super) fn can_route(&self, order: &Order) -> bool {
-        let role = station_role(order.station());
+        let role = station_role(order);
         let list = self.role_list(order, role);
         self.route_for(order, role, &list, order.excluded()).choice.is_some()
     }
@@ -200,6 +211,7 @@ impl Factory {
                 resume,
                 quota_unknown: choice.quota == QuotaState::Unknown,
                 same_vendor,
+                tie_break: choice.tie_break,
             },
         );
         self.set_phase(cx, id, Phase::Idle);
@@ -496,13 +508,12 @@ impl Factory {
                     self.emit(cx, id, Event::LeftoversStopped { background });
                 }
                 match role {
-                    Role::Planner => match answer {
+                    Role::Planner | Role::Scout => match answer {
                         Some(answer) if !answer.trim().is_empty() => self.specified(cx, id, &answer),
                         _ => self.failure(cx, id),
                     },
                     Role::Builder => self.after_turn(cx, id),
                     Role::Reviewer => self.reviewed(cx, id, answer.as_deref().unwrap_or_default()),
-                    Role::Scout => self.set_phase(cx, id, Phase::Idle),
                 }
             }
             TurnOutcome::Failed(_) | TurnOutcome::ConnectionLost => {
@@ -525,7 +536,7 @@ impl Factory {
         let failed = order.attempts() + u32::from(counted);
         let limits = self.rules.limits();
         if failed >= limits.attempts() {
-            let role = station_role(order.station());
+            let role = station_role(order);
             self.end_session(cx, id, role);
             self.fail(cx, id, FailReason::AttemptsSpent);
             return;
@@ -660,7 +671,7 @@ impl Factory {
                 let matches = slot.alive()
                     && status.account.as_deref() == Some(key.account.as_str())
                     && status.service.as_deref() == Some(key.service.as_str());
-                matches.then(|| (o.id().clone(), station_role(o.station())))
+                matches.then(|| (o.id().clone(), station_role(o)))
             })
             .collect();
         let spent = self.quotas.state(&key.account, &key.service, self.now.wall).spent();
@@ -757,10 +768,10 @@ impl Factory {
     }
 }
 
-/// The role whose session works in `station`.
-pub(super) fn station_role(station: Station) -> Role {
-    match station {
-        Station::Spec => Role::Planner,
+/// The role whose session works in `order`'s station.
+pub(super) fn station_role(order: &Order) -> Role {
+    match order.station() {
+        Station::Spec => order.spec_role(),
         Station::Review => Role::Reviewer,
         _ => Role::Builder,
     }

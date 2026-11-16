@@ -6,6 +6,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
+use super::recurring::RecurringOrder;
 use super::{GateCommand, IssueIntake, UserDefaults, Workflow, WorkflowError, WorktreeLocation};
 use crate::budget::Budgets;
 use crate::hash::hash_json;
@@ -38,6 +39,11 @@ pub enum Loosening {
         role: Role,
         /// The tools.
         tools: Vec<String>,
+    },
+    /// Orders the workflow file creates by itself at intervals (B47), which start agents without the user.
+    RecurringOrders {
+        /// The orders.
+        orders: Vec<RecurringOrder>,
     },
 }
 
@@ -135,6 +141,10 @@ pub struct Rules {
     resume_after_restart: bool,
     awake_on_battery: bool,
     #[serde(skip)]
+    recurring: Vec<RecurringOrder>,
+    #[serde(skip)]
+    rule_proposals: bool,
+    #[serde(skip)]
     pending: Vec<Loosening>,
     #[serde(skip)]
     errors: Vec<WorkflowError>,
@@ -203,6 +213,14 @@ impl Rules {
             .filter(|p| credentials_ok || !credentials.contains(p))
             .cloned()
             .collect();
+        let recurring = if !file.recurring().is_empty()
+            && allow(Loosening::RecurringOrders {
+                orders: file.recurring().to_vec(),
+            }) {
+            file.recurring().to_vec()
+        } else {
+            Vec::new()
+        };
         let roles = Role::ALL
             .into_iter()
             .map(|role| {
@@ -230,6 +248,8 @@ impl Rules {
             templates: BTreeMap::new(),
             resume_after_restart: defaults.resume_after_restart(),
             awake_on_battery: defaults.awake_on_battery(),
+            recurring,
+            rule_proposals: defaults.rule_proposals(),
             pending,
             errors: Vec::new(),
             gate_hash: String::new(),
@@ -417,5 +437,15 @@ impl Rules {
     /// Whether running orders keep the Mac awake on battery.
     pub fn awake_on_battery(&self) -> bool {
         self.awake_on_battery
+    }
+
+    /// The recurring cleanup orders, once the user confirmed them (B47, E190).
+    pub fn recurring(&self) -> &[RecurringOrder] {
+        &self.recurring
+    }
+
+    /// Whether a scout proposes rule changes after an order ended escalated or failed (B47).
+    pub fn rule_proposals(&self) -> bool {
+        self.rule_proposals
     }
 }

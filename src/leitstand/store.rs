@@ -1,5 +1,6 @@
 //! What the Leitstand keeps on this Mac (E167, E168, E190): each order's log as JSON lines and its specification, the
-//! confirmations of each project, and across projects the daily account and the quota book, all in the app's data
+//! confirmations and the dates of the recurring orders of each project (B47), and across projects the daily account
+//! and the quota book, all in the app's data
 //! folder and never in a repository. Everything here blocks and belongs on the disk lane.
 
 use std::collections::BTreeMap;
@@ -10,6 +11,7 @@ use ide_factory::OrderId;
 use ide_factory::budget::DailyAccount;
 use ide_factory::log::LogEntry;
 use ide_factory::quota::QuotaBook;
+use ide_factory::workflow::recurring::Schedule;
 use ide_factory::workflow::rules::Confirmations;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -51,6 +53,10 @@ pub(super) fn run_folder(project: &Path, order: &OrderId, run: u64) -> PathBuf {
 
 fn confirmations_file(project: &Path) -> PathBuf {
     project.join("confirmations.json")
+}
+
+fn schedule_file(project: &Path) -> PathBuf {
+    project.join("recurring.json")
 }
 
 fn day_file(base: &Path) -> PathBuf {
@@ -159,6 +165,16 @@ pub(super) fn load_confirmations(project: &Path) -> Confirmations {
 /// Keeps the confirmations of the project.
 pub(super) fn save_confirmations(project: &Path, confirmations: &Confirmations) {
     save(&confirmations_file(project), confirmations);
+}
+
+/// When each recurring order of the project last came (B47).
+pub(super) fn load_schedule(project: &Path) -> Schedule {
+    load(&schedule_file(project))
+}
+
+/// Keeps when each recurring order of the project last came.
+pub(super) fn save_schedule(project: &Path, schedule: &Schedule) {
+    save(&schedule_file(project), schedule);
 }
 
 /// The daily account across projects (E168).

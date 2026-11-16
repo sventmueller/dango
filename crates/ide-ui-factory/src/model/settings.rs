@@ -197,6 +197,16 @@ impl DefaultsForm {
     pub fn set_awake_on_battery(&mut self, on: bool) {
         self.defaults.set_awake_on_battery(on);
     }
+
+    /// Whether a scout proposes rule changes after an order ended escalated or failed (B47).
+    pub fn rule_proposals(&self) -> bool {
+        self.defaults.rule_proposals()
+    }
+
+    /// Sets whether a scout proposes rule changes.
+    pub fn set_rule_proposals(&mut self, on: bool) {
+        self.defaults.set_rule_proposals(on);
+    }
 }
 
 /// `budgets` with only its services' budgets, so tightening with it keeps them and changes nothing else.
