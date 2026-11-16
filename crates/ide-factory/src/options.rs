@@ -167,7 +167,10 @@ fn check_casting(
             .get(&role)
             .map_or_else(|| rules.role(role).to_vec(), |entry| vec![entry.clone()])
     };
-    let refused = check.problems.iter().any(|p| matches!(p, OptionProblem::CannotTakeRole { .. }));
+    let refused = check
+        .problems
+        .iter()
+        .any(|p| matches!(p, OptionProblem::CannotTakeRole { .. }));
     if refused || (!order.casting.contains_key(&Role::Builder) && !order.casting.contains_key(&Role::Reviewer)) {
         return;
     }

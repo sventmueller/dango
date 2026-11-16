@@ -319,7 +319,10 @@ mod tests {
             profile.contains("(deny network* (remote unix-socket) (local unix-socket))"),
             "{profile}"
         );
-        assert!(profile.contains("(path-literal \"/private/var/run/x.sock\")"), "{profile}");
+        assert!(
+            profile.contains("(path-literal \"/private/var/run/x.sock\")"),
+            "{profile}"
+        );
         assert!(profile.contains("(path-regex #\"^/w/\")"), "{profile}");
         assert!(!profile.contains("(deny network*)\n"), "{profile}");
     }
