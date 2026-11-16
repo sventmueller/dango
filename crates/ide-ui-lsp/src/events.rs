@@ -5,6 +5,7 @@
     reason = "the parts moved here use only some of their parent's names"
 )]
 use super::*;
+use ide_lsp::Event;
 
 pub(super) fn event_arrived(folder: &Path, id: u64, event: Event) {
     let Some(slot) = slot(folder, id) else { return };

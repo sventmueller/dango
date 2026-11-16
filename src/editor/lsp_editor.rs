@@ -13,8 +13,9 @@ use objc2_app_kit::{NSStackView, NSTextStorage, NSTextView};
 
 use super::EditorTextView;
 use super::insets::{self, Inset, Layer, Place};
+use ide_lsp::lsp_types::FormattingOptions;
 use ide_ui_lsp::ViewState;
-use ide_ui_lsp::editor::{Editor, Hint};
+use ide_ui_lsp::editor::{Debugger, Editor, Hint};
 
 /// `view` as a language server's editor that it holds on to.
 pub(crate) fn lsp_editor(view: Retained<EditorTextView>) -> Box<dyn Editor> {
@@ -109,7 +110,7 @@ impl Editor for EditorTextView {
         super::path_changed(self);
     }
 
-    fn formatting_options(&self) -> (u32, bool) {
+    fn formatting_options(&self) -> FormattingOptions {
         super::formatting_options(self)
     }
 
@@ -137,11 +138,17 @@ impl Editor for EditorTextView {
         insets::clear(self, Layer::Inlay);
     }
 
-    fn debugger_paused(&self) -> bool {
+    fn debugger(&self) -> &dyn Debugger {
+        self
+    }
+}
+
+impl Debugger for EditorTextView {
+    fn is_paused(&self) -> bool {
         crate::debug::paused_in(self)
     }
 
-    fn debugger_hover(&self, index: usize) -> bool {
+    fn hover(&self, index: usize) -> bool {
         crate::debug::hover(self, index)
     }
 }
@@ -239,7 +246,7 @@ impl Editor for Held {
         Editor::path_changed(&*self.0);
     }
 
-    fn formatting_options(&self) -> (u32, bool) {
+    fn formatting_options(&self) -> FormattingOptions {
         Editor::formatting_options(&*self.0)
     }
 
@@ -259,11 +266,7 @@ impl Editor for Held {
         Editor::clear_inlay_hints(&*self.0);
     }
 
-    fn debugger_paused(&self) -> bool {
-        Editor::debugger_paused(&*self.0)
-    }
-
-    fn debugger_hover(&self, index: usize) -> bool {
-        Editor::debugger_hover(&*self.0, index)
+    fn debugger(&self) -> &dyn Debugger {
+        Editor::debugger(&*self.0)
     }
 }

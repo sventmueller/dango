@@ -92,7 +92,7 @@ pub fn mouse_moved(view: &dyn Editor, event: &NSEvent) {
     if leave {
         dismiss(view);
     }
-    if server_of(view).is_some() || view.debugger_paused() {
+    if server_of(view).is_some() || view.debugger().is_paused() {
         view.later(sel!(ideHoverRest), REST);
     }
 }
@@ -107,7 +107,7 @@ pub fn hover_rest(view: &dyn Editor) {
         return;
     }
     if let Some(index) = character_at(view, point)
-        && !view.debugger_hover(index)
+        && !view.debugger().hover(index)
     {
         ask(view, index);
     }

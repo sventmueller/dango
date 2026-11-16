@@ -179,30 +179,10 @@ pub(crate) fn unsaved_buffers(root: &Path) -> Vec<(PathBuf, String)> {
 pub(crate) fn settings_changed(names: &[String]) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let cx = crate::context::AppContext::get(mtm);
-    for name in names {
-        match name.as_str() {
-            "minimap" => cx.editor().minimap.forget(),
-            "stickyScrollLines" => cx.editor().sticky.forget(),
-            "diagnosticsAtLineEnd" => cx.editor().line_diagnostics.forget(),
-            "showWhitespace" => whitespace::forget(),
-            "blameAtLineEnd" => blame::forget(),
-            "vimMode" => {
-                cx.editor().vim.forget();
-                for view in open_editors() {
-                    vim::attach(&view);
-                }
-            }
-            _ => {}
-        }
-    }
-    for view in open_editors() {
-        if let Some(map) = view.ivars().around.minimap.borrow().as_ref().and_then(Weak::load) {
-            map.fit();
-        }
-        sticky::refresh(&view);
-        line_diagnostics::refresh(&view);
-    }
+    settings_change::apply(&cx, names);
 }
+
+mod settings_change;
 
 /// Puts the unsaved texts a restored checkpoint held into their editors, opening in `controller` the files not open,
 /// each as one undoable step that leaves the editor unsaved.
@@ -254,8 +234,13 @@ impl ide_ui_dictation::DictationField for EditorField {
 }
 
 /// The tab size and whether `view` indents with spaces, for a language server's formatting.
-pub(crate) fn formatting_options(view: &EditorTextView) -> (u32, bool) {
-    indent::formatting(view)
+pub(crate) fn formatting_options(view: &EditorTextView) -> ide_lsp::lsp_types::FormattingOptions {
+    let (tab_size, insert_spaces) = indent::formatting(view);
+    ide_lsp::lsp_types::FormattingOptions {
+        tab_size,
+        insert_spaces,
+        ..Default::default()
+    }
 }
 
 /// The editor in tab `id` of `controller` is about to close.

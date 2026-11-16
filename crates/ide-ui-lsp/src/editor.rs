@@ -7,6 +7,7 @@ use std::ops::{Deref, Range};
 use std::path::PathBuf;
 
 use ide_document::{Change, Document};
+use ide_lsp::lsp_types::FormattingOptions;
 use objc2::rc::Retained;
 use objc2::runtime::Sel;
 use objc2_app_kit::{NSStackView, NSTextStorage, NSTextView};
@@ -51,7 +52,7 @@ pub trait Editor: Deref<Target = NSTextView> {
     /// The document's file moved; tab, title and colours follow.
     fn path_changed(&self);
     /// The indentation a formatter should keep: its width and whether it uses spaces.
-    fn formatting_options(&self) -> (u32, bool);
+    fn formatting_options(&self) -> FormattingOptions;
     /// Lays the overlay of fold placeholders and further carets out again.
     fn follow_overlay(&self);
     /// Adds the editor's own items, such as its indentation, to the status bar `stack`.
@@ -60,10 +61,16 @@ pub trait Editor: Deref<Target = NSTextView> {
     fn set_inlay_hints(&self, hints: Vec<Hint>, kept: Option<Range<usize>>);
     /// Takes the inlay hints out.
     fn clear_inlay_hints(&self);
-    /// Whether a debugger stopped in the program of the editor's file, which then shows values on hover.
-    fn debugger_paused(&self) -> bool;
-    /// Shows the debugger's value of the expression at the UTF-16 offset `index`; whether it did.
-    fn debugger_hover(&self, index: usize) -> bool;
+    /// The debugger's hover integration, independent of language server state.
+    fn debugger(&self) -> &dyn Debugger;
+}
+
+/// Debugger values shown on hover, even when no language server serves the document.
+pub trait Debugger {
+    /// Whether execution stopped in this editor's file.
+    fn is_paused(&self) -> bool;
+    /// Shows the value at UTF-16 offset `index`; whether a value was shown.
+    fn hover(&self, index: usize) -> bool;
 }
 
 /// The marker of the main thread, on which every editor lives.

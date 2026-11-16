@@ -374,6 +374,18 @@ mod tests {
     }
 
     #[test]
+    fn a_panicking_builder_skips_only_its_frame_and_the_writer_continues() {
+        let mut bytes = Vec::new();
+        let broken = Out::Built(Box::new(|| panic!("builder failed")));
+        assert!(write_out(&mut bytes, broken, "test").unwrap());
+        assert!(bytes.is_empty());
+        let frame = framing::frame(b"next");
+        assert!(write_out(&mut bytes, Out::Frame(frame.clone()), "test").unwrap());
+        assert_eq!(bytes, frame);
+        assert!(!write_out(&mut bytes, Out::EndOfInput, "test").unwrap());
+    }
+
+    #[test]
     fn answers_reach_their_calls_in_any_order_and_a_panicking_receiver_costs_one_frame() {
         let (transport, mut peer, _) = connect();
         let (tx, rx) = channel();

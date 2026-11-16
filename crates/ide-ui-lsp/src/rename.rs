@@ -132,12 +132,7 @@ pub fn rename_to(view: &dyn Editor, index: usize, name: &str) {
 }
 
 fn options(view: &dyn Editor) -> FormattingOptions {
-    let (tab_size, insert_spaces) = view.formatting_options();
-    FormattingOptions {
-        tab_size,
-        insert_spaces,
-        ..FormattingOptions::default()
-    }
+    view.formatting_options()
 }
 
 /// What runs after formatting, such as saving.

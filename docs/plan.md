@@ -319,6 +319,11 @@ VoiceOver-Prüfung der neuen Ansichten.
   Test-Explorer, Stufe 4 B33 Docker-Panel. Zurückgestellt und nicht umzusetzen: B25 Remote-Entwicklung, B31
   Jupyter-Notebooks, B34 Debugger für C# und Java; ihre Ausarbeitung bleibt im Dokument. Von Codex (C19–C45) und
   Fable 5.2 (F1–F39, G5–G38) geprüft, alle Befunde eingearbeitet.
+- **Phase 13 — Leitstand (Software-Factory)** *(Entwurf vom 2026-11-16, nicht freigegeben; Einzelheiten in
+  [phase-13.md](phase-13.md))*: Stufe 1 ein Auftrag von Eingang bis Übernahme (B37 Sitzungen ohne Tab als Sperre,
+  B38 Orchestrator, B39 Workflow-Datei, B41a Prüfstationen und Nachweis, B42 Leitstand, B43 Modus „Auftrag“, B45a
+  Übernahme), Stufe 2 mehrere Hersteller (B40 Rollen und Routing, B41b Prüfer, B46 Planer), Stufe 3 Fließband (B44
+  Eingang und Rückmeldung, B45b Merge-Queue), Stufe 4 Lernen (B47–B49). Offen: O1–O4.
 - **Danach:** Store-Lite (E20), I2.
 
 ## Risiken
