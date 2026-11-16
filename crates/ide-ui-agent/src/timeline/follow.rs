@@ -9,7 +9,7 @@ use block2::RcBlock;
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::sel;
-use objc2_app_kit::{NSScrollView, NSScrollerStyle, NSWorkspace};
+use objc2_app_kit::{NSScrollView, NSScrollerStyle, NSWindowOcclusionState, NSWorkspace};
 use objc2_foundation::{NSNotification, NSNotificationCenter, NSObjectProtocol, NSPoint, NSRunLoop};
 use objc2_quartz_core::CADisplayLink;
 
@@ -161,7 +161,10 @@ impl Timeline {
         if !self.follow.on() || self.count() == 0 {
             return;
         }
-        if !self.is_visible() || NSWorkspace::sharedWorkspace().accessibilityDisplayShouldReduceMotion() {
+        if !self.is_visible()
+            || !self.on_display()
+            || NSWorkspace::sharedWorkspace().accessibilityDisplayShouldReduceMotion()
+        {
             return self.scroll_to_end();
         }
         self.table.tile();
@@ -208,6 +211,14 @@ impl Timeline {
         if next >= end {
             self.stop_glide();
         }
+    }
+
+    /// Whether some part of the window shows on screen; the display link does not fire while none does, as on a
+    /// locked screen, and a glide would stop short of the end.
+    fn on_display(&self) -> bool {
+        self.scroll
+            .window()
+            .is_some_and(|window| window.occlusionState().contains(NSWindowOcclusionState::Visible))
     }
 
     fn stop_glide(&self) {
