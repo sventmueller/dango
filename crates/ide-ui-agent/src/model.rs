@@ -313,23 +313,29 @@ impl State {
         &self.run.source
     }
 
-    /// Notes that the session is being started.
-    pub(crate) fn start(&mut self) {
+    /// Notes that the session is being started; the session the tab ran until now, as `end` takes it off.
+    #[must_use = "the registry runs the session the tab ran until now until the caller ends it"]
+    pub(crate) fn start(&mut self) -> Source {
+        let before = self.end();
         self.run.source = Source::Starting;
         self.problem = None;
         self.picks.applied = false;
+        before
     }
 
-    /// Notes that `source` runs the session now.
-    pub(crate) fn started(&mut self, source: Source) {
-        self.run.source = source;
+    /// Notes that `source` runs the session now; the one it replaces, which a start that overtook this one began.
+    #[must_use = "the registry runs the replaced session until the caller ends it"]
+    pub(crate) fn started(&mut self, source: Source) -> Source {
         self.problem = None;
+        std::mem::replace(&mut self.run.source, source)
     }
 
-    /// Notes that the session did not start, for `problem`.
-    pub(crate) fn failed(&mut self, problem: Problem) {
-        self.run.source = Source::Idle;
+    /// Notes that the session did not start, for `problem`; the one it replaces, which a start that overtook this
+    /// one began.
+    #[must_use = "the registry runs the replaced session until the caller ends it"]
+    pub(crate) fn failed(&mut self, problem: Problem) -> Source {
         self.problem = Some(problem);
+        std::mem::replace(&mut self.run.source, Source::Idle)
     }
 
     /// Takes the session off the tab, for the caller to end it; a message its driver still held before its checkpoint
@@ -712,6 +718,67 @@ mod tests {
             text: text.to_string(),
             ..UserMessage::default()
         }
+    }
+
+    /// The app's registry as the tabs reach it.
+    struct Registered(std::cell::RefCell<ide_session::Registry>);
+
+    impl crate::driven::Sessions for Registered {
+        fn with_driver(&self, session: ide_session::SessionId, f: &mut dyn FnMut(&mut ide_session::Driver)) -> bool {
+            self.0.borrow_mut().get_mut(session).map(f).is_some()
+        }
+
+        fn start(&self, launch: ide_session::Launch) -> Result<ide_session::SessionId, ide_session::LaunchError> {
+            let rule = ide_session::rule::for_contract(&launch.contract);
+            self.0.borrow_mut().start(launch, rule)
+        }
+
+        fn end(&self, session: ide_session::SessionId) {
+            self.0.borrow_mut().remove(session);
+        }
+
+        fn intervened(&self, _: ide_session::SessionId) {}
+
+        fn model_switched(&self, _: ide_session::SessionId, _: &str) {}
+
+        fn answered(&self, _: ide_session::SessionId, _: &str) {}
+    }
+
+    /// A session of the tab's own in `sessions`; the scripted one stands in for every path.
+    fn own_session(sessions: &Rc<dyn crate::driven::Sessions>) -> Source {
+        let launch = ide_session::Launch::new(
+            ide_session::AgentPath::Scripted(ide_session::Script::new(Vec::new())),
+            std::env::temp_dir(),
+            Vec::new(),
+            ide_session::Contract::User(ide_session::UserChoices::default()),
+        );
+        let (driven, _) = crate::driven::Driven::start(sessions, launch).unwrap();
+        Source::Session(driven)
+    }
+
+    #[test]
+    fn starting_again_ends_the_session_the_tab_ran_and_one_a_concurrent_start_left() {
+        let wake: Arc<dyn ide_session::Wake> = Arc::new(|_: ide_session::SessionId| {});
+        let registry = ide_session::Registry::new(ide_process::Supervisor::new(), wake);
+        let registered = Rc::new(Registered(std::cell::RefCell::new(registry)));
+        let sessions: Rc<dyn crate::driven::Sessions> = registered.clone();
+        let running = || registered.0.borrow().len();
+        let mut state = state();
+        state.started(own_session(&sessions)).end();
+        assert_eq!(running(), 1);
+        state.set_problem(Some(Problem::Start("codex asks for a sign-in".into())));
+        let before = state.start();
+        assert!(
+            before.tab_session().is_some(),
+            "a retry takes the failed session off the tab"
+        );
+        before.end();
+        assert_eq!(running(), 0);
+        state.started(own_session(&sessions)).end();
+        state.started(own_session(&sessions)).end();
+        assert_eq!(running(), 1, "of two starts at once, one session runs");
+        state.failed(Problem::NotFound).end();
+        assert_eq!(running(), 0);
     }
 
     #[test]

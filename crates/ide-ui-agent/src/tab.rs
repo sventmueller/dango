@@ -536,7 +536,8 @@ impl AgentTab {
 
     /// Shows that the session did not start, for `problem`.
     pub(super) fn start_failed(&self, problem: Problem) {
-        self.state.borrow_mut().failed(problem);
+        let replaced = self.state.borrow_mut().failed(problem);
+        replaced.end();
         self.refresh();
     }
 

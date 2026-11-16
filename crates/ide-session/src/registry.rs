@@ -45,7 +45,8 @@ impl Registry {
         }
     }
 
-    /// Starts the session `launch` describes, answering its requests by `rule`.
+    /// Starts the session `launch` describes, answering its requests by `rule`. Its owners, the order's runtime or
+    /// the AI tab, subscribe to it before the main thread turns; it lives while one of them follows it.
     pub fn start(&mut self, launch: Launch, rule: Box<dyn RequestRule>) -> Result<SessionId, LaunchError> {
         self.next += 1;
         let id = SessionId(self.next);
@@ -54,9 +55,17 @@ impl Registry {
         Ok(id)
     }
 
-    /// Takes in what `session` reported, on the main thread; the subscribers to tell that a batch waits.
+    /// Takes in what `session` reported, on the main thread; the subscribers to tell that a batch waits. A session
+    /// nobody follows any more is stopped and let go.
     pub fn flush(&mut self, session: SessionId) -> Vec<SubscriberId> {
-        self.drivers.get_mut(&session).map(Driver::flush).unwrap_or_default()
+        let Some(driver) = self.drivers.get_mut(&session) else {
+            return Vec::new();
+        };
+        let woken = driver.flush();
+        if driver.subscribers() == 0 {
+            self.remove(session);
+        }
+        woken
     }
 
     /// The driver of `session`.

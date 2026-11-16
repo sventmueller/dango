@@ -348,7 +348,7 @@ impl AgentTab {
         start.git = git;
         match crate::driven::Driven::start(&sessions, start) {
             Ok((driven, first)) => {
-                self.state.borrow_mut().started(Source::Session(driven));
+                self.run_session(driven);
                 if let Some(first) = first {
                     self.absorb(first.thread, &[ide_thread::Change::Cleared]);
                 }

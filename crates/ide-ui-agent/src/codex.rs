@@ -13,7 +13,7 @@ use ide_thread::Thread;
 use splat_i18n::{t, tf};
 
 use crate::driven::Driven;
-use crate::source::{Problem, Source};
+use crate::source::Problem;
 use crate::tab::AgentTab;
 
 mod remote;
@@ -243,7 +243,7 @@ impl AgentTab {
         start.git = git;
         match Driven::start(&sessions, start) {
             Ok((driven, first)) => {
-                self.state.borrow_mut().started(Source::Session(driven));
+                self.run_session(driven);
                 if let Some(first) = first {
                     self.absorb(first.thread, &[ide_thread::Change::Cleared]);
                 }

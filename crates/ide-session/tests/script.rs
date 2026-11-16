@@ -1,5 +1,6 @@
 //! The driver over the scripted session (F61): an order's turn in its worktree with a checkpoint and the order's
-//! rule, every kind of turn end, background work, and the fan-out to a slow subscriber at a high event rate (C71).
+//! rule, every kind of turn end, background work, the fan-out to a slow subscriber at a high event rate (C71),
+//! steering, stopping before a prompt went out, and the end of a session nobody follows.
 
 mod support;
 
@@ -7,12 +8,12 @@ use std::time::Duration;
 
 use ide_session::rule::{NO_PLANS, OUTSIDE_ORDER};
 use ide_session::{
-    AgentPath, Contract, End, Launch, Order, Outcome, Prompt, RequestKind, Role, Script, ScriptTurn, SendError,
-    SessionId, Signal, Step, UserChoices, Verdict,
+    AgentPath, Contract, End, Launch, Order, Outcome, Prompt, Registry, RequestKind, Role, Script, ScriptTurn,
+    SendError, SessionId, Signal, Step, UserChoices, UserRule, Verdict,
 };
-use ide_thread::{Answer, Decision, EntryKind, Lane, RequestState};
+use ide_thread::{Answer, Decision, EntryKind, Lane, Notice, RequestState, Status, UserMessage};
 use serde_json::json;
-use support::{Harness, failed_with, folder, waiting};
+use support::{Harness, failed_with, folder, git_env, waiting};
 
 fn order(worktree: &std::path::Path) -> Order {
     Order {
@@ -29,13 +30,13 @@ fn order(worktree: &std::path::Path) -> Order {
     }
 }
 
-fn git_env(home: &std::path::Path) -> Vec<(String, String)> {
-    vec![
-        ("PATH".into(), "/usr/bin:/bin:/usr/sbin:/sbin".into()),
-        ("HOME".into(), home.to_string_lossy().into_owned()),
-        ("GIT_CONFIG_GLOBAL".into(), "/dev/null".into()),
-        ("GIT_CONFIG_NOSYSTEM".into(), "1".into()),
-    ]
+/// git for the checkpoints of a repository it makes in `worktree`, with a home folder of its own in `scratch`.
+fn repository(scratch: &std::path::Path, worktree: &std::path::Path) -> ide_git::Git {
+    std::fs::create_dir_all(worktree).unwrap();
+    std::fs::create_dir_all(scratch.join("home")).unwrap();
+    let git = ide_git::Git::new(&ide_process::Supervisor::new(), git_env(&scratch.join("home")));
+    git.init(worktree).unwrap();
+    git
 }
 
 fn scripted(harness: &mut Harness, folder: &std::path::Path, turns: Vec<ScriptTurn>, contract: Contract) -> SessionId {
@@ -56,10 +57,7 @@ fn user() -> Contract {
 fn an_order_runs_in_its_worktree_after_a_checkpoint_and_its_rule_answers_what_lies_outside() {
     let scratch = folder("order");
     let worktree = scratch.join("wt");
-    std::fs::create_dir_all(&worktree).unwrap();
-    std::fs::create_dir_all(scratch.join("home")).unwrap();
-    let git = ide_git::Git::new(&ide_process::Supervisor::new(), git_env(&scratch.join("home")));
-    git.init(&worktree).unwrap();
+    let git = repository(&scratch, &worktree);
     let turn = ScriptTurn::new(
         vec![
             Step::Say("Reading.".into()),
@@ -346,4 +344,126 @@ fn a_view_that_joins_mid_run_writes_into_the_queue_stops_one_task_and_leaves_wit
     assert!(driver.unsubscribe(tab));
     assert_eq!(driver.subscribers(), 1);
     assert!(!driver.is_ended(), "the session runs on without the view");
+}
+
+fn message(text: &str) -> UserMessage {
+    UserMessage {
+        text: text.into(),
+        ..UserMessage::default()
+    }
+}
+
+fn says(registry: &Registry, session: SessionId, text: &str) -> bool {
+    let thread = registry.get(session).unwrap().thread();
+    (thread.entries(&Lane::Main).iter()).any(|e| matches!(&e.kind, EntryKind::AgentMessage(m) if m.markdown == text))
+}
+
+#[test]
+fn steering_reaches_the_user_s_agent_at_once_and_waits_for_the_turn_in_an_order() {
+    let scratch = folder("steer");
+    let mut harness = Harness::new();
+    let answer = ScriptTurn::new(vec![Step::Say("Steered.".into())], End::Succeed);
+    let users = scripted(&mut harness, &scratch, vec![answer], user());
+    let watcher = harness.follow(users);
+    harness.until(watcher, "the open session", |s| s.contains(&Signal::Ready));
+    let driver = harness.registry.get_mut(users).unwrap();
+    assert_eq!(driver.steer(message("Look at the tests")), Ok(None));
+    assert_eq!(driver.queued(), 0, "it went to the agent, not into the queue");
+    harness.until_state("the steered answer", |r| says(r, users, "Steered."));
+    assert!(
+        !(harness.signals(watcher).iter()).any(|s| matches!(s, Signal::TurnStarted(_))),
+        "no turn of the driver"
+    );
+
+    let worktree = scratch.join("wt");
+    std::fs::create_dir_all(&worktree).unwrap();
+    let hanging = ScriptTurn::new(Vec::new(), End::Hang);
+    let orders = scripted(
+        &mut harness,
+        &worktree,
+        vec![hanging],
+        Contract::Order(order(&worktree)),
+    );
+    let runtime = harness.follow(orders);
+    let first = harness
+        .registry
+        .get_mut(orders)
+        .unwrap()
+        .send(Prompt::new("Build it"))
+        .unwrap();
+    harness.until(runtime, "the hanging turn", |s| s.contains(&Signal::TurnStarted(first)));
+    let driver = harness.registry.get_mut(orders).unwrap();
+    assert_eq!(driver.steer(message("And the docs")), Ok(None));
+    assert_eq!(driver.queued(), 1, "an order's session holds it for the turn's end");
+    driver.stop_turn();
+    assert_eq!(harness.end_of(runtime, first).outcome, Outcome::Cancelled);
+    harness.until(runtime, "the steered prompt's turn", |s| {
+        s.iter().filter(|s| matches!(s, Signal::TurnEnded(_))).count() == 2
+    });
+    let last = (harness.signals(runtime).into_iter()).rev().find_map(|s| match s {
+        Signal::TurnEnded(end) => Some(end.outcome),
+        _ => None,
+    });
+    assert_eq!(last, Some(Outcome::Succeeded));
+    let driver = harness.registry.get_mut(orders).unwrap();
+    driver.stop();
+    assert_eq!(driver.steer(message("Still there?")), Err(SendError::Ended));
+}
+
+#[test]
+fn stopping_while_the_checkpoint_is_taken_also_stops_a_turn_the_agent_began_by_itself() {
+    let scratch = folder("stop-checkpointing");
+    let worktree = scratch.join("wt");
+    let git = repository(&scratch, &worktree);
+    let own = ScriptTurn::new(vec![Step::Say("On my own.".into())], End::Hang);
+    let script = Script {
+        turns: vec![own],
+        pace: Duration::ZERO,
+    };
+    let mut launch = Launch::new(AgentPath::Scripted(script), &worktree, Vec::new(), user());
+    launch.git = Some(git);
+    let mut harness = Harness::new();
+    let session = harness.registry.start(launch, Box::new(UserRule)).unwrap();
+    let watcher = harness.follow(session);
+    harness.until(watcher, "the open session", |s| s.contains(&Signal::Ready));
+    let driver = harness.registry.get_mut(session).unwrap();
+    driver.steer(message("Carry on")).unwrap();
+    let turn = driver.send(Prompt::new("Then this")).unwrap();
+    driver.stop_turn();
+    assert_eq!(harness.end_of(watcher, turn).outcome, Outcome::Cancelled);
+    harness.until_state("the agent's own turn to stop", |r| {
+        let thread = r.get(session).unwrap().thread();
+        thread.status() == Status::Idle
+            && (thread.entries(&Lane::Main).iter()).any(|e| matches!(e.kind, EntryKind::Notice(Notice::Interrupted)))
+    });
+    let thread = harness.registry.get(session).unwrap().thread().clone();
+    let prompts = (thread.entries(&Lane::Main).iter())
+        .filter(|e| matches!(e.kind, EntryKind::UserMessage(_)))
+        .count();
+    assert_eq!(prompts, 1, "the stopped prompt never went out");
+    assert!(!harness.signals(watcher).contains(&Signal::TurnStarted(turn)));
+}
+
+#[test]
+fn a_session_nobody_follows_any_more_is_stopped_and_let_go() {
+    let scratch = folder("ownerless");
+    let mut harness = Harness::new();
+    let hanging = ScriptTurn::new(Vec::new(), End::Hang);
+    let session = scripted(&mut harness, &scratch, vec![hanging], user());
+    let runtime = harness.follow(session);
+    let tab = harness.follow(session);
+    let turn = harness
+        .registry
+        .get_mut(session)
+        .unwrap()
+        .send(Prompt::new("Wait"))
+        .unwrap();
+    harness.until(runtime, "the hanging turn", |s| s.contains(&Signal::TurnStarted(turn)));
+    let driver = harness.registry.get_mut(session).unwrap();
+    assert!(driver.unsubscribe(tab));
+    driver.stop_turn();
+    assert_eq!(harness.end_of(runtime, turn).outcome, Outcome::Cancelled);
+    assert_eq!(harness.registry.ids(), [session], "one follower keeps it");
+    assert!(harness.registry.get_mut(session).unwrap().unsubscribe(runtime));
+    harness.until_state("the session let go", Registry::is_empty);
 }

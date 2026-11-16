@@ -10,6 +10,8 @@ mod requests;
 use std::collections::{HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
 use ide_process::Supervisor;
 use ide_thread::{EntryId, Status, Thread, UserMessage};
@@ -83,7 +85,7 @@ pub enum StreamState {
     Gap,
     /// Messages, requests and usage are being read again.
     Resyncing,
-    /// Reading them again failed; no prompt goes out until `Driver::resync` succeeds.
+    /// Reading them again failed; `Driver::resync` tries again.
     Paused(String),
 }
 
@@ -110,6 +112,8 @@ struct Open {
     /// Whether `Signal::TurnStarted` went out for it.
     announced: bool,
     checkpoint: Option<ide_git::Checkpoint>,
+    /// How often the path refused its prompt as still busy with the turn before.
+    busy: u32,
 }
 
 impl Open {
@@ -122,8 +126,21 @@ impl Open {
             cancel: false,
             announced: false,
             checkpoint: None,
+            busy: 0,
         }
     }
+}
+
+/// The first wait before a prompt the path was busy for goes out again; it doubles with each refusal.
+const RETRY_FIRST: Duration = Duration::from_millis(30);
+
+/// The longest wait between two tries of a prompt the path was busy for.
+const RETRY_MOST: Duration = Duration::from_secs(1);
+
+/// The wait before the next try of a prompt the path refused `refusals` times as busy.
+fn retry_delay(refusals: u32) -> Duration {
+    let doubled = RETRY_FIRST.saturating_mul(1 << refusals.saturating_sub(1).min(16));
+    doubled.min(RETRY_MOST)
 }
 
 /// The driver of one session.
@@ -151,6 +168,8 @@ pub struct Driver {
     stopping: bool,
     /// Signals of calls outside a flush, which the next flush publishes.
     outbox: Vec<Signal>,
+    /// Whether a later try of a prompt the path was busy for is set; any flush before it tries as well.
+    retry_set: Arc<AtomicBool>,
 }
 
 impl Driver {
@@ -200,6 +219,7 @@ impl Driver {
             ended: false,
             stopping: false,
             outbox: Vec::new(),
+            retry_set: Arc::new(AtomicBool::new(false)),
         })
     }
 
@@ -292,10 +312,12 @@ impl Driver {
     }
 
     /// Stops the turn that runs; background work goes on (E23). A prompt still waiting for its checkpoint does not
-    /// go out. For the user, it also stops a turn the agent began by itself, as an AI tab does.
+    /// go out. For the user, it also stops a turn the agent began by itself, as an AI tab does, also while a prompt
+    /// waits for its checkpoint.
     pub fn stop_turn(&mut self) {
+        let user = matches!(self.contract, Contract::User(_));
         let Some(open) = self.open.as_mut() else {
-            if matches!(self.contract, Contract::User(_)) {
+            if user {
                 self.backend.cancel();
             }
             return;
@@ -305,12 +327,20 @@ impl Driver {
                 let mut signals = Vec::new();
                 self.end_turn(Outcome::Cancelled, &mut signals);
                 self.later(signals);
+                if user && self.agent_works() {
+                    self.backend.cancel();
+                }
             }
             Phase::Running => {
                 open.cancel = true;
                 self.backend.cancel();
             }
         }
+    }
+
+    /// Whether the agent works on a turn as its session stands now, not as of the last flush.
+    fn agent_works(&self) -> bool {
+        self.backend.busy() || self.backend.snapshot().status() != Status::Idle
     }
 
     /// Drops the prompts that wait; each of their turns ends as cancelled. How many there were.
@@ -370,8 +400,7 @@ impl Driver {
         self.later(signals);
     }
 
-    /// Reads messages, waiting requests and usage from the agent again, as after a gap; for an order paused by a
-    /// failed attempt (C62).
+    /// Reads messages, waiting requests and usage from the agent again, as after a gap whose reading failed (C62).
     pub fn resync(&mut self) {
         self.begin_resync();
     }
@@ -386,9 +415,14 @@ impl Driver {
         self.feeds.take(subscriber, &self.thread)
     }
 
-    /// Ends `subscriber`'s feed, as its view closes; the session runs on.
+    /// Ends `subscriber`'s feed, as its view closes; the session runs on while another subscriber follows it, and
+    /// the registry ends it at the flush this asks for once none does.
     pub fn unsubscribe(&mut self, subscriber: SubscriberId) -> bool {
-        self.feeds.unsubscribe(subscriber)
+        let left = self.feeds.unsubscribe(subscriber);
+        if left && self.feeds.len() == 0 {
+            self.inbox.poke();
+        }
+        left
     }
 
     /// How many subscribers follow the session.
@@ -503,9 +537,6 @@ impl Driver {
             };
             return self.end_turn(outcome, signals);
         }
-        if self.stream != StreamState::Live && self.contract.order().is_some() {
-            return;
-        }
         let rests = status == Status::Idle && !busy && self.thread.pending_requests().is_empty();
         if rests && (open.running_seen || turn::answered(&self.thread, open.since)) {
             let outcome = turn::outcome(&self.thread, open.since);
@@ -528,23 +559,12 @@ impl Driver {
         signals.push(Signal::TurnEnded(end));
     }
 
-    /// Whether a gap in the event stream holds prompts and the end of a turn until the thread is reconciled (C62): an
-    /// order's session does; the user's goes on as the AI tab always ran it, reconciled once the stream is back.
-    fn holds_for_gaps(&self) -> bool {
-        self.contract.order().is_some()
-    }
-
-    /// Starts the next prompt that waits, when nothing keeps it: a turn that runs, a session not ready, an order's gap.
+    /// Starts the next prompt that waits, when no turn runs and the session takes prompts. A gap in the stream holds
+    /// nothing: only OpenCode's stream breaks off, and OpenCode takes no order, while the user's session goes on as
+    /// the AI tab always ran it, reconciled once the stream is back (C62).
     fn advance(&mut self, signals: &mut Vec<Signal>) {
         if self.open.is_some() || self.queue.is_empty() || !self.is_ready() {
             return;
-        }
-        if self.holds_for_gaps() {
-            match self.stream {
-                StreamState::Live => {}
-                StreamState::Gap => return self.begin_resync(),
-                StreamState::Resyncing | StreamState::Paused(_) => return,
-            }
         }
         let Some((turn, mut prompt)) = self.queue.pop_front() else {
             return;
@@ -602,7 +622,9 @@ impl Driver {
         let sent = match sent {
             Err(SendFailure::Busy) => {
                 open.phase = Phase::Retrying(prompt);
-                self.inbox.poke();
+                open.busy += 1;
+                let wait = retry_delay(open.busy);
+                self.retry_after(wait);
                 return;
             }
             Ok(id) => Ok(id),
@@ -621,6 +643,24 @@ impl Driver {
         });
         if let Err(message) = sent {
             self.end_turn(Outcome::Failed(message), signals);
+        }
+    }
+
+    /// Has a flush come after `wait`, unless one is set already: a path's busy state may end without an event.
+    fn retry_after(&self, wait: Duration) {
+        if self.retry_set.swap(true, Ordering::SeqCst) {
+            return;
+        }
+        let set = self.retry_set.clone();
+        let inbox = self.inbox.clone();
+        let spawned = std::thread::Builder::new().name("session-retry".into()).spawn(move || {
+            std::thread::sleep(wait);
+            set.store(false, Ordering::SeqCst);
+            inbox.poke();
+        });
+        if spawned.is_err() {
+            self.retry_set.store(false, Ordering::SeqCst);
+            self.inbox.poke();
         }
     }
 
@@ -652,4 +692,18 @@ fn cancelled(turn: TurnId, thread: &Thread) -> Signal {
 fn first_line(text: &str, most: usize) -> String {
     let line = text.lines().next().unwrap_or_default();
     line.chars().take(most).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_prompt_the_path_is_busy_for_waits_longer_each_time_up_to_a_second() {
+        assert_eq!(retry_delay(1), RETRY_FIRST);
+        assert_eq!(retry_delay(2), RETRY_FIRST * 2);
+        assert_eq!(retry_delay(3), RETRY_FIRST * 4);
+        assert_eq!(retry_delay(7), RETRY_MOST);
+        assert_eq!(retry_delay(u32::MAX), RETRY_MOST);
+    }
 }

@@ -60,7 +60,8 @@ impl AgentTab {
             .as_ref()
             .and_then(|sessions| source::replay(sessions, thread))
         {
-            tab.state.borrow_mut().started(source);
+            let replaced = tab.state.borrow_mut().started(source);
+            replaced.end();
         }
         tab.add_to_window(controller);
         tab
