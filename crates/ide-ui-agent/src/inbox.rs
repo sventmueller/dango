@@ -18,9 +18,9 @@ pub(super) struct Pending {
 impl Pending {
     pub(crate) fn push(&mut self, event: Incoming) {
         let changes = match event {
-            Incoming::Acp(ide_acp::Event::Changed(changes))
-            | Incoming::Own(ide_agent::Event::Changed(changes))
-            | Incoming::OpenCode(ide_opencode::Event::Changed(changes)) => changes,
+            Incoming::Acp(ide_acp::Event::Changed(changes)) | Incoming::Own(ide_agent::Event::Changed(changes)) => {
+                changes
+            }
             other => {
                 self.events.push(other);
                 return;

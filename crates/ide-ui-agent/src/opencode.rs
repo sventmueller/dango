@@ -6,12 +6,15 @@
 use std::path::Path;
 
 use ide_acp::capabilities::{Category, ConfigOption, Mode, OptionChoice, OptionValue};
+#[cfg(not(feature = "selftest"))]
 use ide_process::Supervisor;
+use ide_session::{AgentPath, Contract, Launch, LaunchError, UserChoices};
 use ide_thread::Thread;
 use splat_i18n::{t, tf};
 
+use crate::driven::Driven;
 use crate::source::{Problem, Source};
-use crate::tab::{AgentTab, Incoming};
+use crate::tab::AgentTab;
 
 #[cfg(feature = "selftest")]
 mod selftest_probe;
@@ -137,35 +140,39 @@ pub(crate) fn explained(error: &ide_opencode::SessionError) -> String {
     }
 }
 
-impl AgentTab {
-    /// Starts OpenCode's server with `launch` for `thread`, continuing the thread's OpenCode session where it has one.
-    pub(crate) fn launch_opencode(&self, mut launch: ide_opencode::Launch, thread: Thread) {
-        {
-            let state = self.state.borrow();
-            launch.resume = match state.fork() {
-                // A rewind continues the thread the agent cut, or one before the first prompt starts anew.
-                Some(fork) => fork.rewind.is_some().then(|| fork.session.clone()),
-                None => thread
-                    .session()
-                    .map(str::to_string)
-                    .or_else(|| state.resume().map(|r| r.session.clone())),
-            };
-        }
-        let sink = self.sink(Incoming::OpenCode);
-        match ide_opencode::Session::start(Supervisor::global(), launch, thread.clone(), sink) {
-            Ok(session) => {
-                self.state.borrow_mut().started(Source::OpenCode(session));
-                self.absorb(thread, &[ide_thread::Change::Cleared]);
-            }
-            Err(error) => self.start_failed(Problem::Start(explained(&error))),
-        }
+/// Why the OpenCode session did not start, as `explained` words OpenCode's own error.
+fn start_problem(error: LaunchError) -> String {
+    match error {
+        LaunchError::NotFound(program) => explained(&ide_opencode::SessionError::NotFound(program)),
+        LaunchError::Start(why) => tf("OpenCode: {}", &[&why]),
+        other => tf("OpenCode: {}", &[&other.to_string()]),
     }
+}
 
-    /// What an event of the OpenCode session that is not a change of the thread means for the tab.
-    pub(crate) fn opencode_problem(&self, event: &ide_opencode::Event) -> Option<Problem> {
-        match event {
-            ide_opencode::Event::Failed(error) => Some(Problem::Start(explained(error))),
-            _ => None,
+impl AgentTab {
+    /// Starts OpenCode's server as `launch` says for `thread` in the app's registry, continuing the thread's OpenCode
+    /// session where it has one; the registry takes the checkpoint before each message with `git` (I6).
+    pub(crate) fn launch_opencode(&self, launch: ide_opencode::Launch, thread: Thread, git: Option<ide_git::Git>) {
+        let resume = self.sdk_resume(&thread);
+        let Some(sessions) = self.sessions.clone() else {
+            return self.start_failed(Problem::Start(start_problem(LaunchError::Start(String::new()))));
+        };
+        let path = AgentPath::OpenCode {
+            program: launch.program,
+            version: launch.version,
+        };
+        let mut start = Launch::new(path, launch.cwd, launch.env, Contract::User(UserChoices::default()));
+        start.resume = resume;
+        start.thread = Some(thread);
+        start.git = git;
+        match Driven::start(&sessions, start) {
+            Ok((driven, first)) => {
+                self.state.borrow_mut().started(Source::Session(driven));
+                if let Some(first) = first {
+                    self.absorb(first.thread, &[ide_thread::Change::Cleared]);
+                }
+            }
+            Err(error) => self.start_failed(Problem::Start(start_problem(error))),
         }
     }
 }

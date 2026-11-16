@@ -239,7 +239,7 @@ pub(crate) fn of(tab: &AgentTab) -> Box<dyn Backend> {
         Agent::Acp(ref agent) => {
             let (codex, opencode) = {
                 let state = tab.state.borrow();
-                (state.source().codex(), state.source().opencode().cloned())
+                (state.source().codex(), state.source().opencode())
             };
             match (codex, opencode) {
                 (Some(session), _) => Box::new(codex::Codex::new(tab, session)),

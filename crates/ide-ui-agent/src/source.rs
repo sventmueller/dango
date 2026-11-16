@@ -1,6 +1,6 @@
-//! Where a tab's thread comes from: its own session in the app's session registry, on Claude or Codex, which a
-//! recording played for the self-test can take the place of; an agent over ACP, OpenCode, the own agent, or a session
-//! of the registry the tab did not start.
+//! Where a tab's thread comes from: its own session in the app's session registry, on Claude, Codex or OpenCode, which
+//! a recording played for the self-test can take the place of; an agent over ACP, the own agent, or a session of the
+//! registry the tab did not start.
 
 #[cfg(feature = "selftest")]
 use ide_core::LockIgnoringPoison;
@@ -62,15 +62,13 @@ pub(crate) enum Source {
     Idle,
     /// Looking for `claude` and the login shell's environment.
     Starting,
-    /// The tab's own session, which the app's registry runs (B37b): Claude, or Codex over its app-server (E147); in
-    /// the self-test, a played recording.
+    /// The tab's own session, which the app's registry runs (B37b): Claude, or Codex or OpenCode over their own
+    /// protocols (E147); in the self-test, a played recording.
     Session(Driven),
     /// An agent over ACP.
     Acp(ide_acp::Session),
     /// The app's own agent.
     Own(ide_agent::Session),
-    /// OpenCode over its v2 HTTP API (E147).
-    OpenCode(ide_opencode::Session),
     /// A session of the app's registry the tab did not start, such as a work order's (E184).
     Driven(Driven),
 }
@@ -94,7 +92,6 @@ impl Source {
         match self {
             Source::Acp(session) => Some(session.snapshot()),
             Source::Own(session) => Some(session.snapshot()),
-            Source::OpenCode(session) => Some(session.snapshot()),
             Source::Session(driven) | Source::Driven(driven) => driven.snapshot(),
             Source::Idle | Source::Starting => None,
         }
@@ -123,7 +120,6 @@ impl Source {
     pub(crate) fn is_live(&self) -> bool {
         match self {
             Source::Acp(session) => session.is_ready(),
-            Source::OpenCode(session) => session.is_ready() && !session.is_ended(),
             Source::Own(_) => true,
             Source::Session(driven) | Source::Driven(driven) => driven.is_live(),
             Source::Idle | Source::Starting => false,
@@ -157,11 +153,8 @@ impl Source {
     }
 
     /// The OpenCode session, when the tab runs one over its server.
-    pub(crate) fn opencode(&self) -> Option<&ide_opencode::Session> {
-        match self {
-            Source::OpenCode(session) => Some(session),
-            _ => None,
-        }
+    pub(crate) fn opencode(&self) -> Option<ide_opencode::Session> {
+        self.tab_session().and_then(Driven::opencode)
     }
 
     /// The Codex session, when the tab runs one over the app-server.
@@ -209,12 +202,6 @@ impl Source {
         if let Some(driven) = self.tab_session() {
             return driven.answer_option(request, option);
         }
-        if let Some(session) = self.opencode() {
-            let choice = option.map_or(ide_opencode::Choice::Dismiss, ide_opencode::Choice::Option);
-            return session
-                .answer(request, choice)
-                .map_err(|e| Explained(crate::opencode::explained(&e)));
-        }
         let choice = option.map_or(ide_acp::Choice::Dismiss, ide_acp::Choice::Option);
         self.acp()
             .map_or(Err(ide_acp::SessionError::Closed), |s| s.answer(request, choice))
@@ -228,10 +215,6 @@ impl Source {
             Source::Session(driven) => driven.steer(message),
             Source::Acp(session) => session.send(message).map(|()| None).map_err(|e| Explained::of(&e)),
             Source::Own(session) => session.send(message).map(|()| None).map_err(|e| Explained::of(&e)),
-            Source::OpenCode(session) => session
-                .send(message)
-                .map(|()| None)
-                .map_err(|e| Explained(crate::opencode::explained(&e))),
             Source::Driven(driven) => driven.send(message).map(|()| None),
             _ => Err(Explained::of(&SessionError::Closed)),
         }
@@ -245,9 +228,6 @@ impl Source {
             session.cancel();
         }
         if let Some(session) = self.own() {
-            session.cancel();
-        }
-        if let Some(session) = self.opencode() {
             session.cancel();
         }
     }
@@ -270,11 +250,6 @@ impl Source {
     /// Answers the questions of request `request`, whichever agent asked them; an MCP server's form of Codex takes
     /// the answers as its fields.
     pub(crate) fn answer_questions(&self, request: &str, answers: Vec<Answer>) -> Result<(), Explained> {
-        if let Some(session) = self.opencode() {
-            return session
-                .answer_questions(request, answers)
-                .map_err(|e| Explained(crate::opencode::explained(&e)));
-        }
         match self
             .driven()
             .or_else(|| self.tab_session().filter(|driven| !driven.is_replay()))
@@ -349,9 +324,6 @@ impl Source {
         }
         if let Some(session) = self.own() {
             session.stop();
-        }
-        if let Some(session) = self.opencode() {
-            session.stop(Duration::from_secs(2));
         }
     }
 }

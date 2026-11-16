@@ -286,13 +286,26 @@ impl AgentTab {
                 if let Some(tab) = super::get(key) {
                     match (codex, opencode) {
                         (Some(codex), _) => tab.launch_codex(codex, thread, git),
-                        (None, Some(opencode)) => tab.launch_opencode(opencode, thread),
+                        (None, Some(opencode)) => tab.launch_opencode(opencode, thread, git),
                         (None, None) => tab.launch_acp(launch, missing, thread),
                     }
                 }
             });
         }) {
             self.start_failed(Problem::Start(why.0));
+        }
+    }
+
+    /// The agent's id of the session Codex or OpenCode continue for `thread`: after a rewind the one the agent cut,
+    /// or none before the first prompt, which starts anew; else the thread's or the one the tab was opened to resume.
+    pub(super) fn sdk_resume(&self, thread: &Thread) -> Option<String> {
+        let state = self.state.borrow();
+        match state.fork() {
+            Some(fork) => fork.rewind.is_some().then(|| fork.session.clone()),
+            None => thread
+                .session()
+                .map(str::to_string)
+                .or_else(|| state.resume().map(|r| r.session.clone())),
         }
     }
 
@@ -335,7 +348,8 @@ impl AgentTab {
         let source = {
             let mut state = self.state.borrow_mut();
             let path = state.source().tab_session().map(crate::driven::Driven::kind);
-            if !matches!(state.source(), Source::Acp(_) | Source::OpenCode(_)) && path != Some(PathKind::Codex) {
+            let agent = matches!(path, Some(PathKind::Codex | PathKind::OpenCode));
+            if !matches!(state.source(), Source::Acp(_)) && !agent {
                 return;
             }
             state.end()
@@ -364,7 +378,7 @@ impl AgentTab {
             Some(terminal) => {
                 let program = match self.state.borrow().source() {
                     Source::Acp(_) | Source::Idle | Source::Starting => self.launch_program(),
-                    Source::Session(_) | Source::Own(_) | Source::OpenCode(_) | Source::Driven(_) => None,
+                    Source::Session(_) | Source::Own(_) | Source::Driven(_) => None,
                 };
                 let Some(program) = program else { return };
                 let mut parts: Vec<String> = terminal.env.iter().map(|(k, v)| format!("{k}={v}")).collect();

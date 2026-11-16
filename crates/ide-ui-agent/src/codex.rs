@@ -225,17 +225,7 @@ impl AgentTab {
     /// Starts Codex's app-server as `launch` says for `thread` in the app's registry, continuing the thread's Codex
     /// thread where it has one; the registry takes the checkpoint before each message with `git` (I6).
     pub(crate) fn launch_codex(&self, launch: ide_codex::Launch, thread: Thread, git: Option<ide_git::Git>) {
-        let resume = {
-            let state = self.state.borrow();
-            match state.fork() {
-                // A rewind continues the thread the agent cut, or one before the first prompt starts anew.
-                Some(fork) => fork.rewind.is_some().then(|| fork.session.clone()),
-                None => thread
-                    .session()
-                    .map(str::to_string)
-                    .or_else(|| state.resume().map(|r| r.session.clone())),
-            }
-        };
+        let resume = self.sdk_resume(&thread);
         let Some(sessions) = self.sessions.clone() else {
             return self.start_failed(Problem::Start(start_problem(LaunchError::Start(String::new()))));
         };

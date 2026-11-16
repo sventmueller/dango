@@ -170,18 +170,11 @@ impl AgentTab {
         let mut ended = None;
         for event in pending.events {
             match &event {
-                Incoming::Acp(ide_acp::Event::Changed(c))
-                | Incoming::Own(ide_agent::Event::Changed(c))
-                | Incoming::OpenCode(ide_opencode::Event::Changed(c)) => {
+                Incoming::Acp(ide_acp::Event::Changed(c)) | Incoming::Own(ide_agent::Event::Changed(c)) => {
                     debug_assert!(c.is_empty(), "invalidations are coalesced before scheduling");
                 }
                 Incoming::Own(other) => self.own_event(other),
-                Incoming::Acp(ide_acp::Event::Capabilities) | Incoming::OpenCode(ide_opencode::Event::Capabilities) => {
-                    learned = true
-                }
-                Incoming::OpenCode(ide_opencode::Event::Ended { stderr }) => ended = Some(stderr.clone()),
-                Incoming::OpenCode(ide_opencode::Event::McpChanged(_)) => {}
-                Incoming::OpenCode(other) => problem = self.opencode_problem(other).or(problem),
+                Incoming::Acp(ide_acp::Event::Capabilities) => learned = true,
                 Incoming::Acp(ide_acp::Event::Failed(error)) => problem = self.acp_problem(error),
                 Incoming::Acp(ide_acp::Event::Ended { stderr }) => ended = Some(stderr.clone()),
             }

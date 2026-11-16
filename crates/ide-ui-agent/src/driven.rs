@@ -159,6 +159,11 @@ impl Driven {
         self.with(|driver| driver.codex().cloned()).flatten()
     }
 
+    /// The OpenCode session behind the driver, for what only OpenCode does.
+    pub(crate) fn opencode(&self) -> Option<ide_opencode::Session> {
+        self.with(|driver| driver.opencode().cloned()).flatten()
+    }
+
     /// Hands `message` to the driver's queue, which sends it after the turn that runs and its checkpoint.
     pub(crate) fn send(&self, message: UserMessage) -> Result<(), Explained> {
         let prompt = Prompt {
