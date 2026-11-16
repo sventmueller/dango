@@ -1,5 +1,5 @@
 //! Writing one changed value back into the workflow file's text, with comments, order and formatting of everything
-//! else kept (E183); the dialog "Leitstand für <Ordner>" saves through it.
+//! else kept (E183); the dialog "Leitstand für `<Ordner>`" saves through it.
 
 use toml_edit::{Array, DocumentMut, Item, Table, Value};
 
@@ -145,10 +145,18 @@ network = [\"crates.io\"]
 
     #[test]
     fn lists_and_removal() {
-        let out = set(FILE, &["gates", "network"], EditValue::Texts(vec!["a.org".into(), "b.org".into()])).unwrap();
+        let out = set(
+            FILE,
+            &["gates", "network"],
+            EditValue::Texts(vec!["a.org".into(), "b.org".into()]),
+        )
+        .unwrap();
         assert!(out.contains("network = [\"a.org\", \"b.org\"]"), "{out}");
         let out = remove(FILE, &["limits", "attempts"]).unwrap();
-        assert!(!out.contains("attempts") && out.contains("# keep under an hour"), "{out}");
+        assert!(
+            !out.contains("attempts") && out.contains("# keep under an hour"),
+            "{out}"
+        );
         assert_eq!(remove(FILE, &["nothing", "here"]).unwrap(), FILE);
     }
 
@@ -158,6 +166,9 @@ network = [\"crates.io\"]
             set(FILE, &["version", "x"], EditValue::Switch(true)),
             Err(EditError::NotATable { key: "version".into() })
         );
-        assert!(matches!(set("a = [", &["a"], EditValue::Count(1)), Err(EditError::Invalid(_))));
+        assert!(matches!(
+            set("a = [", &["a"], EditValue::Count(1)),
+            Err(EditError::Invalid(_))
+        ));
     }
 }

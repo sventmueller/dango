@@ -2,8 +2,8 @@
 //! alike.
 
 use super::{Order, Slot, Turn, Visit};
-use crate::evidence::{Deviation, Provenance, order_deviations};
 use crate::event::{Action, Event, OpResult, PromptKind, TurnOutcome};
+use crate::evidence::{Deviation, Provenance, order_deviations};
 use crate::ids::{OperationId, PromptId, SessionKey};
 use crate::limits::TurnWatch;
 use crate::log::LogEntry;
@@ -22,7 +22,9 @@ impl Order {
             Event::OptionChanged { change } => self.change_option(change),
             Event::CriteriaChanged { criteria } => self.criteria.clone_from(criteria),
             Event::Entered { station } => self.enter(*station, at),
-            Event::Skipped { station: Station::Spec, .. } => self.g1_skipped = true,
+            Event::Skipped {
+                station: Station::Spec, ..
+            } => self.g1_skipped = true,
             Event::Skipped { .. } | Event::BackToLeitstand | Event::LeftoversStopped { .. } => {}
             Event::Condition { condition } => self.set_condition(condition.clone(), at),
             Event::Phase { phase } => self.phase = phase.clone(),
@@ -129,7 +131,8 @@ impl Order {
             Event::Intervened { .. } => {
                 self.interventions += 1;
                 let count = self.interventions;
-                self.deviations.retain(|d| !matches!(d, Deviation::Interventions { .. }));
+                self.deviations
+                    .retain(|d| !matches!(d, Deviation::Interventions { .. }));
                 self.deviate(Deviation::Interventions { count });
             }
             Event::ModelSwitched { role, model, vendor } => {
@@ -381,5 +384,4 @@ impl Order {
         self.deviations.push(deviation);
         order_deviations(&mut self.deviations);
     }
-
 }

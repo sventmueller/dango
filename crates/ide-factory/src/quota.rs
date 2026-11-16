@@ -171,7 +171,10 @@ mod tests {
         let mut book = QuotaBook::default();
         book.observe(seen("five_hour", 0.9, 0, None));
         assert_ne!(book.state("me", "claude-subscription", 5 * HOUR), QuotaState::Unknown);
-        assert_eq!(book.state("me", "claude-subscription", 5 * HOUR + 1), QuotaState::Unknown);
+        assert_eq!(
+            book.state("me", "claude-subscription", 5 * HOUR + 1),
+            QuotaState::Unknown
+        );
         let mut book = QuotaBook::default();
         book.observe(seen("five_hour", 0.9, 0, Some(HOUR)));
         assert_eq!(book.state("me", "claude-subscription", HOUR), QuotaState::Unknown);

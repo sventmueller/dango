@@ -105,7 +105,8 @@ impl Factory {
         }
         let mut rules = self.rules.clone();
         if !self.errors.is_empty() {
-            rules = crate::workflow::rules::Rules::invalid(&crate::workflow::UserDefaults::default(), self.errors.clone());
+            rules =
+                crate::workflow::rules::Rules::invalid(&crate::workflow::UserDefaults::default(), self.errors.clone());
         }
         let check = check_new_order(&order, &rules, self.stage, dirty, &self.agents);
         if !check.ok() {
@@ -126,7 +127,9 @@ impl Factory {
             base,
             stage: self.stage,
         };
-        let Some(mut created) = Order::create(id.clone(), cx.now, &event) else { return };
+        let Some(mut created) = Order::create(id.clone(), cx.now, &event) else {
+            return;
+        };
         let entry = crate::log::LogEntry {
             v: crate::log::LOG_VERSION,
             order: id.clone(),
@@ -142,7 +145,12 @@ impl Factory {
     }
 
     fn approve(&mut self, cx: &mut Cx, id: &OrderId) {
-        let waits = |o: &Order| matches!(o.condition(), Condition::Waiting(WaitReason::SpecApproval | WaitReason::LateSpecApproval));
+        let waits = |o: &Order| {
+            matches!(
+                o.condition(),
+                Condition::Waiting(WaitReason::SpecApproval | WaitReason::LateSpecApproval)
+            )
+        };
         if !self.fitting(cx, id, waits) {
             return;
         }
@@ -160,10 +168,19 @@ impl Factory {
     }
 
     fn comment_spec(&mut self, cx: &mut Cx, id: &OrderId, text: String) {
-        if !self.fitting(cx, id, |o| *o.condition() == Condition::Waiting(WaitReason::SpecApproval)) {
+        if !self.fitting(cx, id, |o| {
+            *o.condition() == Condition::Waiting(WaitReason::SpecApproval)
+        }) {
             return;
         }
-        self.emit(cx, id, Event::Commented { role: Role::Planner, text });
+        self.emit(
+            cx,
+            id,
+            Event::Commented {
+                role: Role::Planner,
+                text,
+            },
+        );
         self.run(cx, id);
         self.advance(cx, id);
     }
@@ -173,7 +190,10 @@ impl Factory {
             return;
         }
         let Some(order) = self.orders.get(id) else { return };
-        let current = order.evidence().filter(|e| e.invalid().is_none()).map(|e| e.fingerprint().to_string());
+        let current = order
+            .evidence()
+            .filter(|e| e.invalid().is_none())
+            .map(|e| e.fingerprint().to_string());
         if current.as_deref() != Some(fingerprint.as_str()) {
             cx.refuse(Some(id), Refused::StaleEvidence);
             return;
@@ -199,9 +219,27 @@ impl Factory {
             return;
         }
         self.stop_work(cx, id);
-        self.emit(cx, id, Event::Commented { role: Role::Builder, text });
-        if self.orders.get(id).and_then(Order::evidence).is_some_and(|e| e.invalid().is_none()) {
-            self.emit(cx, id, Event::Invalidated { why: Invalidation::Tree });
+        self.emit(
+            cx,
+            id,
+            Event::Commented {
+                role: Role::Builder,
+                text,
+            },
+        );
+        if self
+            .orders
+            .get(id)
+            .and_then(Order::evidence)
+            .is_some_and(|e| e.invalid().is_none())
+        {
+            self.emit(
+                cx,
+                id,
+                Event::Invalidated {
+                    why: Invalidation::Tree,
+                },
+            );
         }
         self.run(cx, id);
         self.enter(cx, id, Station::Build);
@@ -220,9 +258,22 @@ impl Factory {
             return;
         }
         self.stop_work(cx, id);
-        self.emit(cx, id, Event::Invalidated { why: Invalidation::Criteria });
+        self.emit(
+            cx,
+            id,
+            Event::Invalidated {
+                why: Invalidation::Criteria,
+            },
+        );
         let text = "The acceptance criteria changed; check your work against the new list.".to_string();
-        self.emit(cx, id, Event::Commented { role: Role::Builder, text });
+        self.emit(
+            cx,
+            id,
+            Event::Commented {
+                role: Role::Builder,
+                text,
+            },
+        );
         self.run(cx, id);
         self.enter(cx, id, Station::Build);
         self.advance(cx, id);
@@ -249,7 +300,10 @@ impl Factory {
     }
 
     fn by_hand(&mut self, cx: &mut Cx, id: &OrderId) {
-        let fits = |o: &Order| matches!(o.station(), Station::Build | Station::Review) && !matches!(o.condition(), Condition::Waiting(WaitReason::ByHand));
+        let fits = |o: &Order| {
+            matches!(o.station(), Station::Build | Station::Review)
+                && !matches!(o.condition(), Condition::Waiting(WaitReason::ByHand))
+        };
         if !self.fitting(cx, id, fits) {
             return;
         }
@@ -268,8 +322,19 @@ impl Factory {
         for role in Role::ALL {
             self.end_session(cx, id, role);
         }
-        if self.orders.get(id).and_then(Order::evidence).is_some_and(|e| e.invalid().is_none()) {
-            self.emit(cx, id, Event::Invalidated { why: Invalidation::ByHand });
+        if self
+            .orders
+            .get(id)
+            .and_then(Order::evidence)
+            .is_some_and(|e| e.invalid().is_none())
+        {
+            self.emit(
+                cx,
+                id,
+                Event::Invalidated {
+                    why: Invalidation::ByHand,
+                },
+            );
         }
         self.run(cx, id);
         if self.orders.get(id).is_some_and(|o| o.station() != Station::Build) {
@@ -387,7 +452,11 @@ impl Factory {
     fn answered_by_user(&mut self, cx: &mut Cx, id: &OrderId, request: crate::ids::RequestId) {
         self.emit(cx, id, Event::Answered { request });
         self.run(cx, id);
-        let prompt = self.orders.get(id).and_then(Order::turn).map(crate::order::Turn::prompt);
+        let prompt = self
+            .orders
+            .get(id)
+            .and_then(Order::turn)
+            .map(crate::order::Turn::prompt);
         match prompt {
             Some(prompt) => self.set_phase(cx, id, Phase::Turn { prompt }),
             None => self.advance(cx, id),

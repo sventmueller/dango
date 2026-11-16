@@ -39,7 +39,9 @@ pub fn default_template(kind: PromptKind) -> &'static str {
             "The checks of your work did not pass. Fix what they found, then end your turn.\n\n{{findings}}\n\n\
              {{comment}}\n\n## Acceptance criteria\n\n{{criteria}}"
         }
-        PromptKind::Resume => "Go on with the order where you stopped.\n\n# {{title}}\n\n## Acceptance criteria\n\n{{criteria}}",
+        PromptKind::Resume => {
+            "Go on with the order where you stopped.\n\n# {{title}}\n\n## Acceptance criteria\n\n{{criteria}}"
+        }
         PromptKind::Handoff => {
             "You take over this order from another agent; the worktree holds its work so far.\n\n# {{title}}\n\n\
              {{goal}}\n\n## Acceptance criteria\n\n{{criteria}}\n\n## What happened so far\n\n{{summary}}"
@@ -121,7 +123,10 @@ mod tests {
 
     #[test]
     fn placeholders_expand_once_and_unknown_ones_vanish() {
-        let values = BTreeMap::from([("goal", "Export {{criteria}}".to_string()), ("criteria", "- a".to_string())]);
+        let values = BTreeMap::from([
+            ("goal", "Export {{criteria}}".to_string()),
+            ("criteria", "- a".to_string()),
+        ]);
         let got = render("Goal: {{goal}}\n\n\n{{nothing}}\n\nCriteria:\n{{ criteria }}", &values);
         assert_eq!(got, "Goal: Export {{criteria}}\n\nCriteria:\n- a\n");
         assert_eq!(render("open {{ end", &values), "open {{ end\n");

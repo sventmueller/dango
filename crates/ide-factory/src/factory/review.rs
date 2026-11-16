@@ -46,7 +46,11 @@ impl Factory {
         }
         let (head, _) = Factory::head(order);
         let base = order.base().commit.clone();
-        let diffed = self.scratch.get(id).and_then(|s| s.diff.as_ref()).is_some_and(|(h, _)| *h == head);
+        let diffed = self
+            .scratch
+            .get(id)
+            .and_then(|s| s.diff.as_ref())
+            .is_some_and(|(h, _)| *h == head);
         if !diffed {
             self.set_phase(cx, id, Phase::Diffing);
             cx.effect(Effect::DiffNames {
@@ -85,7 +89,13 @@ impl Factory {
             Err(_) => Classification::default(),
         };
         let outside = PathScope::new(&order.options().scope)
-            .map(|scope| if order.options().scope.is_empty() { Vec::new() } else { scope.outside(&changes) })
+            .map(|scope| {
+                if order.options().scope.is_empty() {
+                    Vec::new()
+                } else {
+                    scope.outside(&changes)
+                }
+            })
             .unwrap_or_default();
         let same = order.acknowledged() && order.classification() == Some(&classification);
         let late = order.g1_skipped() && (classification.measured > order.expected_risk() || !outside.is_empty());
@@ -107,7 +117,12 @@ impl Factory {
 
     fn path_scope(&mut self, cx: &mut Cx, id: &OrderId) {
         let Some(order) = self.orders.get(id) else { return };
-        let changes = self.scratch.get(id).and_then(|s| s.diff.as_ref()).map(|(_, c)| c.clone()).unwrap_or_default();
+        let changes = self
+            .scratch
+            .get(id)
+            .and_then(|s| s.diff.as_ref())
+            .map(|(_, c)| c.clone())
+            .unwrap_or_default();
         if order.options().scope.is_empty() {
             self.emit(
                 cx,
@@ -124,7 +139,16 @@ impl Factory {
         let failure = PathScope::new(&order.options().scope)
             .ok()
             .and_then(|scope| judge_scope(&scope, &changes).err());
-        self.record(cx, id, GateStep::PathScope, "path scope", failure.clone(), None, None, false);
+        self.record(
+            cx,
+            id,
+            GateStep::PathScope,
+            "path scope",
+            failure.clone(),
+            None,
+            None,
+            false,
+        );
         match failure {
             Some(failure) => self.rework(cx, id, &format!("The diff leaves the order's path scope: {failure:?}")),
             None => self.review_next(cx, id),
@@ -172,7 +196,16 @@ impl Factory {
             },
             Phase::Scanning => {
                 let failure = judge_secrets(&scan).err();
-                self.record(cx, id, GateStep::Secrets, "secrets", failure.clone(), None, Some(scan), false);
+                self.record(
+                    cx,
+                    id,
+                    GateStep::Secrets,
+                    "secrets",
+                    failure.clone(),
+                    None,
+                    Some(scan),
+                    false,
+                );
                 self.set_phase(cx, id, Phase::Idle);
                 match failure {
                     Some(failure) => self.rework(cx, id, &format!("The secrets scan found secrets: {failure:?}")),
@@ -187,7 +220,10 @@ impl Factory {
         let Some(order) = self.orders.get(id) else { return };
         let gates = self.rules.gates_for(order.risk());
         let Some(gate) = gates.get(index) else { return };
-        let images = self.rules.images().map(|dir| format!("{dir}/{id}/{}", order.updated().wall));
+        let images = self
+            .rules
+            .images()
+            .map(|dir| format!("{dir}/{id}/{}", order.updated().wall));
         let effect = Effect::RunGate {
             order: id.clone(),
             index,
@@ -222,7 +258,16 @@ impl Factory {
             .map_or_else(|| format!("gate {index}"), |g| g.name.clone());
         let failure = judge_command(&outcome).err();
         let excerpt = outcome.excerpt.clone();
-        self.record(cx, id, GateStep::Command(index), &name, failure.clone(), Some(outcome), None, false);
+        self.record(
+            cx,
+            id,
+            GateStep::Command(index),
+            &name,
+            failure.clone(),
+            Some(outcome),
+            None,
+            false,
+        );
         self.scratch(id).gate_started = None;
         self.set_phase(cx, id, Phase::Idle);
         match failure {

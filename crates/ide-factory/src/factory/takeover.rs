@@ -14,7 +14,13 @@ use crate::station::{Condition, FailReason, Station, WaitReason};
 impl Factory {
     /// Whether another order is ahead of `order` in the take-over queue of its target branch (E174).
     fn queued_behind(&self, order: &Order) -> bool {
-        let entered = |o: &Order| o.visits().iter().rev().find(|v| v.station == Station::TakeOver).map(|v| v.at);
+        let entered = |o: &Order| {
+            o.visits()
+                .iter()
+                .rev()
+                .find(|v| v.station == Station::TakeOver)
+                .map(|v| v.at)
+        };
         let Some(mine) = entered(order) else { return false };
         self.orders.values().any(|other| {
             other.id() != order.id()
@@ -155,8 +161,17 @@ impl Factory {
     /// An operation finished.
     pub(super) fn done(&mut self, cx: &mut Cx, id: &OrderId, op: OperationId, result: OpResult) {
         let Some(order) = self.orders.get(id) else { return };
-        let Some(action) = order.open_ops().get(&op).cloned() else { return };
-        self.emit(cx, id, Event::Finished { op, result: result.clone() });
+        let Some(action) = order.open_ops().get(&op).cloned() else {
+            return;
+        };
+        self.emit(
+            cx,
+            id,
+            Event::Finished {
+                op,
+                result: result.clone(),
+            },
+        );
         if let OpResult::Failed { detail } = &result {
             let effect = action_name(&action).to_string();
             let detail = detail.clone();
@@ -179,7 +194,9 @@ impl Factory {
                     None => self.advance(cx, id),
                 }
             }
-            (Action::Commit { .. }, OpResult::Committed { .. } | OpResult::NothingToCommit) => self.after_commit(cx, id),
+            (Action::Commit { .. }, OpResult::Committed { .. } | OpResult::NothingToCommit) => {
+                self.after_commit(cx, id)
+            }
             (Action::MergeTarget { .. }, result) => self.merged(cx, id, result),
             (Action::TakeOver { .. }, OpResult::TakenOver { .. }) => self.cleanup_next(cx, id, false),
             (Action::TakeOver { .. }, OpResult::Blocked { blocker }) => {
@@ -191,7 +208,10 @@ impl Factory {
                 self.take_over_next(cx, id);
             }
             (Action::RemoveCheckpoints { .. } | Action::RemoveWorktree { .. }, _) => {
-                let aborted = self.orders.get(id).is_some_and(|o| *o.condition() == Condition::Aborted);
+                let aborted = self
+                    .orders
+                    .get(id)
+                    .is_some_and(|o| *o.condition() == Condition::Aborted);
                 self.cleanup_next(cx, id, false);
                 if aborted {
                     self.set_phase(cx, id, Phase::Idle);
@@ -210,10 +230,19 @@ impl Factory {
                 self.take_over_next(cx, id);
             }
             OpResult::Merged {
-                head, base, moved: true, ..
+                head,
+                base,
+                moved: true,
+                ..
             } => {
                 let Some((old_base, old_head)) = self.scratch(id).before_merge.take() else {
-                    self.emit(cx, id, Event::Invalidated { why: Invalidation::Base });
+                    self.emit(
+                        cx,
+                        id,
+                        Event::Invalidated {
+                            why: Invalidation::Base,
+                        },
+                    );
                     self.enter(cx, id, Station::Review);
                     self.advance(cx, id);
                     return;
@@ -233,7 +262,13 @@ impl Factory {
                      conflicts.",
                     paths.iter().map(|p| format!("- {p}")).collect::<Vec<_>>().join("\n")
                 );
-                self.emit(cx, id, Event::Invalidated { why: Invalidation::Base });
+                self.emit(
+                    cx,
+                    id,
+                    Event::Invalidated {
+                        why: Invalidation::Base,
+                    },
+                );
                 self.emit(cx, id, Event::Findings { text, round: false });
                 self.enter(cx, id, Station::Build);
                 self.advance(cx, id);
@@ -252,7 +287,13 @@ impl Factory {
         if identical && order.accepted().is_some() {
             self.emit(cx, id, Event::AcceptanceKept);
         }
-        self.emit(cx, id, Event::Invalidated { why: Invalidation::Base });
+        self.emit(
+            cx,
+            id,
+            Event::Invalidated {
+                why: Invalidation::Base,
+            },
+        );
         self.enter(cx, id, Station::Review);
         self.advance(cx, id);
     }
@@ -266,7 +307,10 @@ impl Factory {
             return;
         };
         self.set_phase(cx, id, Phase::Rejecting);
-        cx.effect(Effect::RejectHunks { order: id.clone(), hunks });
+        cx.effect(Effect::RejectHunks {
+            order: id.clone(),
+            hunks,
+        });
     }
 
     /// The hunks of the last partial acceptance, from the log.
@@ -296,13 +340,19 @@ impl Factory {
     /// After a restart: an operation's target state holds (it happened) or not (it is done again).
     pub(super) fn verified(&mut self, cx: &mut Cx, id: &OrderId, op: OperationId, reached: Option<OpResult>) {
         let Some(order) = self.orders.get(id) else { return };
-        let Some(action) = order.open_ops().get(&op).cloned() else { return };
+        let Some(action) = order.open_ops().get(&op).cloned() else {
+            return;
+        };
         let running = *order.condition() == Condition::Running || *order.condition() == Condition::Aborted;
         match reached {
             Some(result) if running => self.done(cx, id, op, result),
             Some(result) => {
                 self.emit(cx, id, Event::Finished { op, result });
-                let next = if matches!(action, Action::Commit { .. }) { Phase::Refs } else { Phase::Idle };
+                let next = if matches!(action, Action::Commit { .. }) {
+                    Phase::Refs
+                } else {
+                    Phase::Idle
+                };
                 self.set_phase(cx, id, next);
             }
             None => {

@@ -208,7 +208,10 @@ mod tests {
     use super::*;
 
     fn criteria() -> Vec<Criterion> {
-        vec![Criterion::new("K1", "exports CSV"), Criterion::new("K2", "keeps the header")]
+        vec![
+            Criterion::new("K1", "exports CSV"),
+            Criterion::new("K2", "keeps the header"),
+        ]
     }
 
     fn answer(criteria: &[(&str, &str)], findings: &str) -> String {
@@ -238,9 +241,15 @@ mod tests {
             (answer(&[("K1", "met")], ""), "unclear"),
             (answer(&[("K1", "met"), ("K1", "met"), ("K2", "met")], ""), "invalid"),
             ("I think it is fine.".to_string(), "unclear"),
-            (r#"{"criteria":[{"id":"K1","verdict":"great","reason":""}]}"#.to_string(), "unclear"),
             (
-                format!("Here it is:\n```json\n{}\n```\n", answer(&[("K1", "met"), ("K2", "met")], "")),
+                r#"{"criteria":[{"id":"K1","verdict":"great","reason":""}]}"#.to_string(),
+                "unclear",
+            ),
+            (
+                format!(
+                    "Here it is:\n```json\n{}\n```\n",
+                    answer(&[("K1", "met"), ("K2", "met")], "")
+                ),
                 "passed",
             ),
         ];

@@ -86,14 +86,7 @@ fn an_empty_file_is_version_one_with_nothing_set() {
 fn errors_name_key_line_and_kind() {
     let text = "version = 1\n[limits]\nturn_minutes = \"long\"\nbogus = 1\n[risk]\nhigh = [\"src/[a\"]\n";
     let got = kinds(text);
-    assert_eq!(
-        got[0],
-        (
-            "limits.bogus".into(),
-            Some(4),
-            WorkflowErrorKind::UnknownKey
-        )
-    );
+    assert_eq!(got[0], ("limits.bogus".into(), Some(4), WorkflowErrorKind::UnknownKey));
     assert_eq!(
         got[1],
         (
@@ -104,14 +97,19 @@ fn errors_name_key_line_and_kind() {
             }
         )
     );
-    assert!(matches!(&got[2], (key, Some(6), WorkflowErrorKind::Pattern { pattern, .. }) if key == "risk.high" && pattern == "src/[a"));
+    assert!(
+        matches!(&got[2], (key, Some(6), WorkflowErrorKind::Pattern { pattern, .. }) if key == "risk.high" && pattern == "src/[a")
+    );
 }
 
 #[test]
 fn syntax_errors_carry_the_place() {
     let got = kinds("version = 1\n[limits\n");
     assert_eq!(got.len(), 1);
-    assert!(matches!(got[0], (_, Some(2), WorkflowErrorKind::Syntax { .. })), "{got:?}");
+    assert!(
+        matches!(got[0], (_, Some(2), WorkflowErrorKind::Syntax { .. })),
+        "{got:?}"
+    );
 }
 
 #[test]
@@ -125,7 +123,10 @@ fn a_newer_version_is_refused() {
             WorkflowErrorKind::NewerVersion { found: 2, supported: 1 }
         )]
     );
-    assert!(matches!(kinds("version = 0\n")[0].2, WorkflowErrorKind::WrongKind { .. }));
+    assert!(matches!(
+        kinds("version = 0\n")[0].2,
+        WorkflowErrorKind::WrongKind { .. }
+    ));
 }
 
 #[test]
@@ -158,8 +159,12 @@ copy = ["../splat", "/etc/hosts"]
     assert!(got.contains(&WorkflowErrorKind::ImagesInsideRepository {
         path: "target/pictures".into()
     }));
-    assert!(got.contains(&WorkflowErrorKind::CopyOutsideRepository { path: "../splat".into() }));
-    assert!(got.contains(&WorkflowErrorKind::CopyOutsideRepository { path: "/etc/hosts".into() }));
+    assert!(got.contains(&WorkflowErrorKind::CopyOutsideRepository {
+        path: "../splat".into()
+    }));
+    assert!(got.contains(&WorkflowErrorKind::CopyOutsideRepository {
+        path: "/etc/hosts".into()
+    }));
 }
 
 #[test]
@@ -173,7 +178,11 @@ fn the_project_only_tightens_limits_and_budgets() {
     let rules = Rules::new(&defaults, Some(&parsed(FULL)), &Confirmations::default());
     let cases = [
         ("turn minutes from the project", rules.limits().turn_ms() / 60_000, 30),
-        ("attempts stay at the user's three", u64::from(rules.limits().attempts()), 3),
+        (
+            "attempts stay at the user's three",
+            u64::from(rules.limits().attempts()),
+            3,
+        ),
         ("stall from the default", rules.limits().stall_ms() / 60_000, 5),
     ];
     for (name, got, want) in cases {
@@ -256,7 +265,13 @@ fn detected_gates_fill_in_only_without_the_file_naming_any() {
 
 #[test]
 fn credential_files_are_recognised_by_name() {
-    for path in [".env", "config/.env.local", "certs/server.pem", ".npmrc", "keys/id_ed25519"] {
+    for path in [
+        ".env",
+        "config/.env.local",
+        "certs/server.pem",
+        ".npmrc",
+        "keys/id_ed25519",
+    ] {
         assert!(holds_credentials(path), "{path}");
     }
     for path in ["node_modules", "environment.rs", ".envrc-docs/readme.md", "target"] {

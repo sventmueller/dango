@@ -94,7 +94,11 @@ mod tests {
         let ids: Vec<(&str, &str)> = got.iter().map(|c| (c.id(), c.text())).collect();
         assert_eq!(
             ids,
-            [("K1", "exports CSV"), ("K2", "keeps the header"), ("K3", "handles UTF-8")]
+            [
+                ("K1", "exports CSV"),
+                ("K2", "keeps the header"),
+                ("K3", "handles UTF-8")
+            ]
         );
     }
 

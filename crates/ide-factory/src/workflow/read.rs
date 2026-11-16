@@ -66,7 +66,10 @@ impl<'t> Reader<'t> {
     pub(super) fn known(&mut self, table: &dyn TableLike, path: &str, known: &[&str]) {
         for (key, item) in table.iter() {
             if !known.contains(&key) {
-                let span = table.get_key_value(key).and_then(|(k, _)| k.span()).or_else(|| item.span());
+                let span = table
+                    .get_key_value(key)
+                    .and_then(|(k, _)| k.span())
+                    .or_else(|| item.span());
                 self.error(&join(path, key), span, WorkflowErrorKind::UnknownKey);
             }
         }

@@ -195,7 +195,10 @@ pub fn scopes_overlap(a: Option<&[String]>, b: Option<&[String]>) -> bool {
     let (Some(a), Some(b)) = (a, b) else {
         return true;
     };
-    a.iter().any(|x| b.iter().any(|y| prefixes_overlap(&literal_prefix(x), &literal_prefix(y))))
+    a.iter().any(|x| {
+        b.iter()
+            .any(|y| prefixes_overlap(&literal_prefix(x), &literal_prefix(y)))
+    })
 }
 
 /// The folders of `pattern` before its first wildcard.
@@ -235,7 +238,11 @@ mod tests {
         type Case = (&'static str, fn(&mut CommandOutcome), Result<(), GateFailure>);
         let cases: [Case; 8] = [
             ("passes", |_| {}, Ok(())),
-            ("non-zero exit", |o| o.exit = Some(2), Err(GateFailure::Exit { code: 2 })),
+            (
+                "non-zero exit",
+                |o| o.exit = Some(2),
+                Err(GateFailure::Exit { code: 2 }),
+            ),
             ("ended", |o| o.exit = None, Err(GateFailure::Ended)),
             ("deadline", |o| o.timed_out = true, Err(GateFailure::TimedOut)),
             ("endless output", |o| o.output_cut = true, Err(GateFailure::OutputCut)),

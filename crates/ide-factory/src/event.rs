@@ -142,9 +142,7 @@ impl Action {
     /// The state a restart checks before it repeats the action, so nothing happens twice (E167).
     pub fn target(&self, op: &OperationId) -> TargetState {
         match self {
-            Action::PrepareWorktree { branch, .. } => TargetState::WorktreeOn {
-                branch: branch.clone(),
-            },
+            Action::PrepareWorktree { branch, .. } => TargetState::WorktreeOn { branch: branch.clone() },
             Action::Commit { branch, parent } => TargetState::CommitWithTrailer {
                 branch: branch.clone(),
                 parent: parent.clone(),

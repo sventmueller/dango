@@ -94,7 +94,8 @@ impl Factory {
                 self.pause(cx, id, PauseReason::AppEnded);
             }
             let Some(order) = self.orders.get(id) else { continue };
-            let resumes = self.rules.resume_after_restart() && *order.condition() == Condition::Paused(PauseReason::AppEnded);
+            let resumes =
+                self.rules.resume_after_restart() && *order.condition() == Condition::Paused(PauseReason::AppEnded);
             if resumes {
                 continue;
             }
@@ -109,10 +110,9 @@ impl Factory {
                     target,
                 });
             }
-            let aborted_leftover = self
-                .orders
-                .get(id)
-                .is_some_and(|o| *o.condition() == Condition::Aborted && o.open_ops().is_empty() && o.worktree().is_some());
+            let aborted_leftover = self.orders.get(id).is_some_and(|o| {
+                *o.condition() == Condition::Aborted && o.open_ops().is_empty() && o.worktree().is_some()
+            });
             if aborted_leftover {
                 self.cleanup_next(cx, id, false);
             }

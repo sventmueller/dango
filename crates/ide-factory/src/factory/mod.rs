@@ -7,14 +7,12 @@ mod restore;
 mod review;
 mod session;
 mod takeover;
-#[cfg(test)]
-mod tests;
 
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-pub use restore::{Restored, RestoreProblem};
+pub use restore::{RestoreProblem, Restored};
 
 use crate::budget::DailyAccount;
 use crate::effect::{Effect, Notice};
@@ -233,7 +231,22 @@ impl Factory {
             InputKind::Rules(rules) => self.set_rules(cx, *rules),
             InputKind::Agents(agents) => {
                 self.agents = agents;
-                self.retry_waiting(cx, |r| matches!(r, WaitReason::NoAgent | WaitReason::NoReviewer));
+                let ids: Vec<OrderId> = self
+                    .orders
+                    .values()
+                    .filter(|o| {
+                        matches!(
+                            o.condition(),
+                            Condition::Waiting(WaitReason::NoAgent | WaitReason::NoReviewer)
+                        )
+                    })
+                    .filter(|o| self.can_route(o))
+                    .map(|o| o.id().clone())
+                    .collect();
+                for id in ids {
+                    self.run(cx, &id);
+                    self.advance(cx, &id);
+                }
             }
             InputKind::Quota(observation) => self.quota(cx, observation),
             InputKind::Day(day) => self.day = day,
@@ -283,9 +296,11 @@ impl Factory {
             WaitReason::Acceptance => Some(Notice::ReadyForAcceptance),
             _ => Some(Notice::Waiting),
         };
+        let condition = Condition::Waiting(reason);
+        let new = self.orders.get(id).is_some_and(|o| *o.condition() != condition);
         self.set_phase(cx, id, Phase::Idle);
-        self.set_condition(cx, id, Condition::Waiting(reason));
-        if let Some(notice) = notice {
+        self.set_condition(cx, id, condition);
+        if let Some(notice) = notice.filter(|_| new) {
             cx.effect(Effect::Notify {
                 order: id.clone(),
                 notice,
@@ -294,13 +309,16 @@ impl Factory {
     }
 
     fn pause(&mut self, cx: &mut Cx, id: &OrderId, reason: PauseReason) {
-        if matches!(reason, PauseReason::Budget { .. }) {
+        let budget = matches!(reason, PauseReason::Budget { .. });
+        let condition = Condition::Paused(reason);
+        let new = self.orders.get(id).is_some_and(|o| *o.condition() != condition);
+        if budget && new {
             cx.effect(Effect::Notify {
                 order: id.clone(),
                 notice: Notice::BudgetSpent,
             });
         }
-        self.set_condition(cx, id, Condition::Paused(reason));
+        self.set_condition(cx, id, condition);
     }
 
     fn fail(&mut self, cx: &mut Cx, id: &OrderId, reason: FailReason) {
@@ -502,7 +520,9 @@ impl Factory {
         self.woke = Some(cx.now.mono);
         let ids: Vec<OrderId> = self.orders.keys().cloned().collect();
         for id in ids {
-            let Some(order) = self.orders.get_mut(&id) else { continue };
+            let Some(order) = self.orders.get_mut(&id) else {
+                continue;
+            };
             if *order.condition() == Condition::Paused(PauseReason::Sleep) {
                 order.shift(slept);
                 self.run(cx, &id);

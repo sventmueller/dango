@@ -428,7 +428,11 @@ mod tests {
         evidence.deviate(Deviation::SecretsNotChecked);
         assert_eq!(
             evidence.deviations(),
-            [Deviation::SecretsNotChecked, Deviation::SameVendorReview, Deviation::Unmetered]
+            [
+                Deviation::SecretsNotChecked,
+                Deviation::SameVendorReview,
+                Deviation::Unmetered
+            ]
         );
         evidence.invalidate(Invalidation::Criteria);
         evidence.invalidate(Invalidation::Tree);

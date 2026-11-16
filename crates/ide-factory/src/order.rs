@@ -1,4 +1,4 @@
-//! One work order's state: nothing but its log's events applied in turn ([`Order::apply`]), so the running factory and
+//! One work order's state: nothing but its log's events applied in turn, so the running factory and
 //! a restart after a crash arrive at the same order. Only the factory changes it; a view reads it through methods
 //! (E98).
 
@@ -283,7 +283,15 @@ impl Order {
     }
 
     /// Notes what the session shows now, for the stall rule.
-    pub(crate) fn watch(&mut self, now: Millis, running: bool, tool: Option<Millis>, subagents: u32, background: u32, queued: u32) {
+    pub(crate) fn watch(
+        &mut self,
+        now: Millis,
+        running: bool,
+        tool: Option<Millis>,
+        subagents: u32,
+        background: u32,
+        queued: u32,
+    ) {
         if let Some(turn) = &mut self.turn {
             turn.watch.saw(now, running, tool, subagents, background);
             turn.queued = queued;
@@ -659,6 +667,11 @@ impl Order {
         self.g1_skipped
     }
 
+    /// How many operations are begun and not finished.
+    pub fn open_operations(&self) -> usize {
+        self.ops.len()
+    }
+
     /// Whether the take-over happened.
     pub fn taken_over(&self) -> bool {
         self.taken_over
@@ -669,6 +682,12 @@ impl Order {
         self.checkpoints_removed
     }
 
+    /// Whether its log and evidence may go: 90 days after it was done or aborted, wall clock `now` (E167, F77).
+    pub fn retention_over(&self, now: u64) -> bool {
+        const KEEP_MS: u64 = 90 * 24 * 60 * 60 * 1000;
+        self.finished() && now.saturating_sub(self.updated.wall) > KEEP_MS
+    }
+
     /// Whether it is done or aborted.
     pub fn finished(&self) -> bool {
         self.station == Station::Done || self.condition == Condition::Aborted
@@ -676,6 +695,9 @@ impl Order {
 
     /// The checkpoint threads of its sessions (F67).
     pub fn checkpoint_threads(&self) -> Vec<String> {
-        self.sessions.keys().map(|role| self.id.checkpoint_thread(*role)).collect()
+        self.sessions
+            .keys()
+            .map(|role| self.id.checkpoint_thread(*role))
+            .collect()
     }
 }

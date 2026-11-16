@@ -121,7 +121,13 @@ fn chosen(route: &Route) -> Option<usize> {
 #[test]
 fn routing_table() {
     type Setup = fn(&mut World);
-    type Case = (&'static str, Role, Setup, Option<usize>, &'static [(usize, &'static str)]);
+    type Case = (
+        &'static str,
+        Role,
+        Setup,
+        Option<usize>,
+        &'static [(usize, &'static str)],
+    );
     let cases: [Case; 9] = [
         ("first ready entry", Role::Builder, |_| {}, Some(0), &[]),
         (
@@ -197,7 +203,12 @@ fn routing_table() {
         let got: Vec<(usize, String)> = route
             .skipped
             .iter()
-            .map(|(i, skip)| (*i, serde_json::to_value(skip).unwrap()["why"].as_str().unwrap().to_string()))
+            .map(|(i, skip)| {
+                (
+                    *i,
+                    serde_json::to_value(skip).unwrap()["why"].as_str().unwrap().to_string(),
+                )
+            })
             .collect();
         let want: Vec<(usize, String)> = skips.iter().map(|(i, s)| (*i, s.to_string())).collect();
         assert_eq!(got, want, "{name}");

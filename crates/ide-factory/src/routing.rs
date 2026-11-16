@@ -243,7 +243,11 @@ impl Capabilities {
 
     /// Whether the path may take `role`.
     pub fn takes(&self, role: Role) -> bool {
-        if role.reads_only() { self.reads_only } else { self.builds }
+        if role.reads_only() {
+            self.reads_only
+        } else {
+            self.builds
+        }
     }
 }
 
@@ -407,7 +411,13 @@ fn pick(role: Role, list: &[RankEntry], cx: &RouteContext<'_>, other_vendor: boo
     }
 }
 
-fn judge(role: Role, index: usize, entry: &RankEntry, cx: &RouteContext<'_>, other_vendor: bool) -> Result<Choice, Skip> {
+fn judge(
+    role: Role,
+    index: usize,
+    entry: &RankEntry,
+    cx: &RouteContext<'_>,
+    other_vendor: bool,
+) -> Result<Choice, Skip> {
     if cx.excluded.contains(&index) {
         return Err(Skip::Excluded);
     }

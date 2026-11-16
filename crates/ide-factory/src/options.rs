@@ -246,12 +246,14 @@ pub fn check_change(change: &OptionChange, reached: Station, spent: &Spend) -> R
             Some(unit) => Err(ChangeRefusal::BelowSpent { unit }),
             None => Ok(()),
         },
-        OptionChange::Scope(scope) => PathScope::new(scope).map(|_| ()).map_err(|error| ChangeRefusal::Problem {
-            problem: OptionProblem::BadScope {
-                pattern: error.pattern,
-                message: error.message,
-            },
-        }),
+        OptionChange::Scope(scope) => PathScope::new(scope)
+            .map(|_| ())
+            .map_err(|error| ChangeRefusal::Problem {
+                problem: OptionProblem::BadScope {
+                    pattern: error.pattern,
+                    message: error.message,
+                },
+            }),
         _ => Ok(()),
     }
 }
@@ -294,10 +296,30 @@ mod tests {
         type Edit = fn(&mut NewOrder);
         let cases: [(&str, Edit, Stage, Vec<OptionProblem>); 8] = [
             ("complete", |_| {}, Stage::One, vec![]),
-            ("no title", |o| o.title = " ".into(), Stage::One, vec![OptionProblem::MissingTitle]),
-            ("no goal", |o| o.goal.clear(), Stage::One, vec![OptionProblem::MissingGoal]),
-            ("no criteria in stage 1", |o| o.criteria = "\n".into(), Stage::One, vec![OptionProblem::MissingCriteria]),
-            ("the planner writes them in stage 2", |o| o.criteria.clear(), Stage::Two, vec![]),
+            (
+                "no title",
+                |o| o.title = " ".into(),
+                Stage::One,
+                vec![OptionProblem::MissingTitle],
+            ),
+            (
+                "no goal",
+                |o| o.goal.clear(),
+                Stage::One,
+                vec![OptionProblem::MissingGoal],
+            ),
+            (
+                "no criteria in stage 1",
+                |o| o.criteria = "\n".into(),
+                Stage::One,
+                vec![OptionProblem::MissingCriteria],
+            ),
+            (
+                "the planner writes them in stage 2",
+                |o| o.criteria.clear(),
+                Stage::Two,
+                vec![],
+            ),
             (
                 "skip G1 without low risk and without the project's leave",
                 |o| o.skip_spec_approval = true,
@@ -352,7 +374,9 @@ mod tests {
         assert_eq!(check_change(&risk, Station::Spec, &spent), Ok(()));
         assert_eq!(
             check_change(&risk, Station::Build, &spent),
-            Err(ChangeRefusal::StationBegun { station: Station::Build })
+            Err(ChangeRefusal::StationBegun {
+                station: Station::Build
+            })
         );
         let reviewer = OptionChange::Casting(Role::Reviewer, None);
         assert_eq!(check_change(&reviewer, Station::Build, &spent), Ok(()));

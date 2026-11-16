@@ -123,7 +123,9 @@ impl Factory {
 
     /// Records the start of `action` with its operation id and enters `phase`.
     pub(super) fn begin(&mut self, cx: &mut Cx, id: &OrderId, action: Action, phase: Phase) {
-        let Some(op) = self.orders.get(id).map(Order::next_op) else { return };
+        let Some(op) = self.orders.get(id).map(Order::next_op) else {
+            return;
+        };
         let (pre, target) = (action.pre(), action.target(&op));
         self.emit(
             cx,
@@ -185,7 +187,9 @@ impl Factory {
             self.emit(cx, id, Event::OptionChanged { change });
         }
         let Some(order) = self.orders.get(id) else { return };
-        let skip = order.options().skip_spec_approval && self.rules.skip_spec_approval() && order.expected_risk() == RiskClass::Low;
+        let skip = order.options().skip_spec_approval
+            && self.rules.skip_spec_approval()
+            && order.expected_risk() == RiskClass::Low;
         self.set_phase(cx, id, Phase::Idle);
         if skip {
             self.emit(
@@ -251,7 +255,9 @@ impl Factory {
     /// Commits the worktree's changes, the operation named in the commit's trailer (E163, E192).
     pub(super) fn commit(&mut self, cx: &mut Cx, id: &OrderId, message: String) {
         let Some(order) = self.orders.get(id) else { return };
-        let parent = order.head().map_or_else(|| order.base().commit.clone(), |(c, _)| c.to_string());
+        let parent = order
+            .head()
+            .map_or_else(|| order.base().commit.clone(), |(c, _)| c.to_string());
         let op = order.next_op();
         let action = Action::Commit {
             branch: id.branch(),

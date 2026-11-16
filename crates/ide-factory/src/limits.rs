@@ -398,7 +398,11 @@ mod tests {
         assert_eq!(w.overdue(later, &limits), None);
         assert_eq!(w.overdue(Millis(30 * MINUTE + 1), &limits), Some(Overdue::ToolCall));
         w.saw(Millis(0), false, None, 0, 0);
-        assert_eq!(w.overdue(later, &limits), None, "a turn that is not running does not stall");
+        assert_eq!(
+            w.overdue(later, &limits),
+            None,
+            "a turn that is not running does not stall"
+        );
     }
 
     #[test]

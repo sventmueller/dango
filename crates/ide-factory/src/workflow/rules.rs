@@ -80,7 +80,16 @@ impl Confirmations {
 
 /// Names of files that hold credentials and are copied only when named on their own and confirmed (C50).
 const CREDENTIAL_NAMES: &[&str] = &[
-    ".env", ".npmrc", ".netrc", ".pypirc", ".pgpass", "credentials", "secrets", "id_rsa", "id_ed25519", "id_ecdsa",
+    ".env",
+    ".npmrc",
+    ".netrc",
+    ".pypirc",
+    ".pgpass",
+    "credentials",
+    "secrets",
+    "id_rsa",
+    "id_ed25519",
+    "id_ecdsa",
 ];
 const CREDENTIAL_ENDINGS: &[&str] = &[".pem", ".key", ".p12", ".pfx", ".keychain", ".keychain-db"];
 
@@ -166,7 +175,11 @@ impl Rules {
         let skip_spec_approval = file.skip_spec_approval() && allow(Loosening::SkipSpecApproval);
         let intake = file
             .intake()
-            .filter(|intake| allow(Loosening::IssueIntake { intake: (*intake).clone() }))
+            .filter(|intake| {
+                allow(Loosening::IssueIntake {
+                    intake: (*intake).clone(),
+                })
+            })
             .cloned();
         let tools = Role::ALL
             .into_iter()

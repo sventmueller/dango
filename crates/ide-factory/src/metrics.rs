@@ -23,7 +23,12 @@ pub struct Key {
 impl Key {
     /// A key of these parts.
     pub fn new(role: Role, agent: Agent, model: Option<String>, risk: RiskClass) -> Key {
-        Key { role, agent, model, risk }
+        Key {
+            role,
+            agent,
+            model,
+            risk,
+        }
     }
 
     /// The role.
@@ -109,7 +114,12 @@ impl Metrics {
             }
             for role in Role::ALL {
                 let Some(slot) = order.session(role) else { continue };
-                let key = Key::new(role, slot.entry().agent.clone(), slot.entry().model.clone(), order.risk());
+                let key = Key::new(
+                    role,
+                    slot.entry().agent.clone(),
+                    slot.entry().model.clone(),
+                    order.risk(),
+                );
                 let f = figures.entry(key).or_default();
                 f.orders += 1;
                 f.rounds += order.review_rounds();

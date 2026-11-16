@@ -1,17 +1,26 @@
 # ide-factory
 
-The Leitstand's orchestrator (docs/phase-13.md): work orders that agents of several vendors build and check in
-worktrees of their own. A state machine without AppKit and without an async runtime: the app hands it what happened
-and carries out what it asks for, so every rule is testable with a set clock.
+The Leitstand's orchestrator (docs/phase-13.md, E160): work orders that agents of several vendors build and check in
+worktrees of their own. A functional core without AppKit, threads, an async runtime, file or process I/O or clock
+reads: the app hands `Factory::handle` what happened, appends the returned log entries to each order's JSON-lines file,
+and only then carries out the returned effects on its lanes. Every rule is testable with a set clock.
 
 ```mermaid
 flowchart TB
-    input["Input: user command, turn ended, gate result, git result, tick, sleep/wake"] -->|"Factory::handle"| machine["state machine per order"]
-    machine -->|"appends"| log["event log (JSON lines, operation ids)"]
-    machine -->|"returns"| effects["Effect: prepare worktree, start session, send, run gate, commit, take over, notify"]
-    effects -->|"the app runs them on its lanes"| input
-    workflow[".dango/factory.toml + user defaults"] -->|"tightened only"| machine
-    log -->|"replay after a restart"| machine
+    user["user: new order, G1, G2, back to builder, criteria, by hand, abort, resume"] -->|"Input"| handle
+    session["session driver (ide-session), mapped: turn ended, activity, request, usage, gap"] -->|"Input"| handle
+    results["effect results: worktree, commit, diff, gate, scan, refs, merge, take-over, verify"] -->|"Input"| handle
+    clock["Tick, Sleep, Wake, Battery, Windows, Quit"] -->|"Input"| handle
+    rules["Rules: UserDefaults + .dango/factory.toml, tightened, loosenings confirmed per Mac"] -->|"InputKind::Rules"| handle
+    handle["Factory::handle"] -->|"events applied"| order["Order: station, condition, phase"]
+    handle -->|"Step.log first"| log[("order log, JSON lines, versioned")]
+    handle -->|"Step.effects after the log is written"| app["the app's lanes: git, supervisor, sessions, notifications, wake lock"]
+    app -->|"results with operation ids"| results
+    log -->|"Factory::restore after a restart: paused, open operations verified"| handle
+    order -->|"Panel, Board, Fleet, Metrics"| views["ide-ui-factory"]
 ```
 
-The API is documented in [`src/lib.rs`](src/lib.rs).
+What the app keeps for the factory: each order's log, the daily account (`DailyAccount`, across projects), the quota
+book (`QuotaBook`), the confirmation hashes per project (`Confirmations`) and the user defaults (`UserDefaults`).
+
+The API is documented in [`src/lib.rs`](src/lib.rs) and its modules.

@@ -30,7 +30,11 @@ impl Factory {
     /// The first budget scope reached for `order`, counting the billing service `service`.
     fn budget_reached(&self, order: &Order, service: Option<&str>) -> Option<BudgetScope> {
         let budgets = self.rules.budgets();
-        let order_budget = order.options().budget.clone().unwrap_or_else(|| budgets.order().clone());
+        let order_budget = order
+            .options()
+            .budget
+            .clone()
+            .unwrap_or_else(|| budgets.order().clone());
         if order_budget.reached(order.spend()).is_some() {
             return Some(BudgetScope::Order);
         }
@@ -131,14 +135,18 @@ impl Factory {
         resume: Option<String>,
     ) {
         let Some(order) = self.orders.get(id) else { return };
-        let capabilities = self
-            .agents
-            .get(&choice.entry.agent)
-            .map_or_else(|| crate::routing::Capabilities::of(&choice.entry.agent), |s| s.capabilities);
+        let capabilities = self.agents.get(&choice.entry.agent).map_or_else(
+            || crate::routing::Capabilities::of(&choice.entry.agent),
+            |s| s.capabilities,
+        );
         let budget_usd = capabilities
             .takes_budget
             .then(|| {
-                let budget = order.options().budget.clone().unwrap_or_else(|| self.rules.budgets().order().clone());
+                let budget = order
+                    .options()
+                    .budget
+                    .clone()
+                    .unwrap_or_else(|| self.rules.budgets().order().clone());
                 budget.dollars_left(order.spend())
             })
             .flatten();
@@ -163,10 +171,21 @@ impl Factory {
     }
 
     /// A session the factory asked for started.
-    pub(super) fn session_started(&mut self, cx: &mut Cx, id: &OrderId, role: Role, session: SessionKey, resume: Option<String>) {
+    pub(super) fn session_started(
+        &mut self,
+        cx: &mut Cx,
+        id: &OrderId,
+        role: Role,
+        session: SessionKey,
+        resume: Option<String>,
+    ) {
         let Some(order) = self.orders.get(id) else { return };
-        let Phase::Starting { role: wanted, index } = order.phase().clone() else { return };
-        let Some((choice, same_vendor)) = self.scratch(id).choice.take() else { return };
+        let Phase::Starting { role: wanted, index } = order.phase().clone() else {
+            return;
+        };
+        let Some((choice, same_vendor)) = self.scratch(id).choice.take() else {
+            return;
+        };
         if wanted != role || choice.index != index {
             return;
         }
@@ -189,9 +208,17 @@ impl Factory {
     }
 
     /// A session could not start: the entry counts as not ready, and routing passes to the next (E170).
-    pub(super) fn session_failed(&mut self, cx: &mut Cx, id: &OrderId, role: Role, readiness: crate::routing::Readiness) {
+    pub(super) fn session_failed(
+        &mut self,
+        cx: &mut Cx,
+        id: &OrderId,
+        role: Role,
+        readiness: crate::routing::Readiness,
+    ) {
         let Some(order) = self.orders.get(id) else { return };
-        let Phase::Starting { role: wanted, index } = order.phase().clone() else { return };
+        let Phase::Starting { role: wanted, index } = order.phase().clone() else {
+            return;
+        };
         if wanted != role {
             return;
         }
@@ -272,8 +299,16 @@ impl Factory {
                 .gates()
                 .iter()
                 .map(|g| {
-                    let log = g.command.as_ref().map(|c| untrusted("a gate log", &c.excerpt)).unwrap_or_default();
-                    format!("- {}: {}\n{log}", g.name, if g.failure.is_none() { "passed" } else { "failed" })
+                    let log = g
+                        .command
+                        .as_ref()
+                        .map(|c| untrusted("a gate log", &c.excerpt))
+                        .unwrap_or_default();
+                    format!(
+                        "- {}: {}\n{log}",
+                        g.name,
+                        if g.failure.is_none() { "passed" } else { "failed" }
+                    )
                 })
                 .collect();
             values.insert("gates", format!("## Gate results\n\n{}", gates.join("\n")));
@@ -307,7 +342,11 @@ impl Factory {
                 order.watch(now, running, tool_since, subagents, background, queued);
                 self.settle(cx, id);
             }
-            SessionEvent::TurnEnded { prompt, outcome, answer } => {
+            SessionEvent::TurnEnded {
+                prompt,
+                outcome,
+                answer,
+            } => {
                 let Some(turn) = order.turn() else { return };
                 if prompt.is_none() {
                     self.settle(cx, id);
@@ -331,7 +370,13 @@ impl Factory {
                     answer: Answer::Refuse("Orders do not take plan requests; carry on within the order.".into()),
                 }),
                 RequestKind::Question | RequestKind::OutsideBounds => {
-                    self.emit(cx, id, Event::Asked { request: request.clone() });
+                    self.emit(
+                        cx,
+                        id,
+                        Event::Asked {
+                            request: request.clone(),
+                        },
+                    );
                     self.wait(cx, id, WaitReason::Question { request });
                 }
             },
@@ -345,14 +390,20 @@ impl Factory {
             }
             SessionEvent::Exited => {
                 self.emit(cx, id, Event::SessionEnded { role });
-                let running = self.orders.get(id).and_then(Order::turn).is_some_and(|t| t.role() == role);
+                let running = self
+                    .orders
+                    .get(id)
+                    .and_then(Order::turn)
+                    .is_some_and(|t| t.role() == role);
                 if running {
                     self.turn_over(cx, id, role, TurnOutcome::ConnectionLost, None);
                 }
             }
             SessionEvent::Intervened => self.emit(cx, id, Event::Intervened { role }),
             SessionEvent::ModelSwitched { model } => {
-                let Some(agent) = order.session(role).map(|s| s.entry().agent.clone()) else { return };
+                let Some(agent) = order.session(role).map(|s| s.entry().agent.clone()) else {
+                    return;
+                };
                 let vendor = vendor_of(&agent, Some(&model));
                 self.emit(cx, id, Event::ModelSwitched { role, model, vendor });
             }
@@ -381,7 +432,11 @@ impl Factory {
         self.emit(cx, id, Event::Answered { request });
         if waiting {
             self.run(cx, id);
-            let prompt = self.orders.get(id).and_then(Order::turn).map(crate::order::Turn::prompt);
+            let prompt = self
+                .orders
+                .get(id)
+                .and_then(Order::turn)
+                .map(crate::order::Turn::prompt);
             match prompt {
                 Some(prompt) => self.set_phase(cx, id, Phase::Turn { prompt }),
                 None => self.advance(cx, id),
@@ -390,12 +445,26 @@ impl Factory {
     }
 
     /// A turn ended: success leads on, failure and a lost connection to a retry, a cancel to the user (E189).
-    pub(super) fn turn_over(&mut self, cx: &mut Cx, id: &OrderId, role: Role, outcome: TurnOutcome, answer: Option<String>) {
+    pub(super) fn turn_over(
+        &mut self,
+        cx: &mut Cx,
+        id: &OrderId,
+        role: Role,
+        outcome: TurnOutcome,
+        answer: Option<String>,
+    ) {
         let Some(order) = self.orders.get(id) else { return };
         let Some(turn) = order.turn() else { return };
         let (prompt, background) = (turn.prompt(), turn.watch().background());
         let session = order.session(role).map(|s| s.session().clone());
-        self.emit(cx, id, Event::TurnEnded { prompt, outcome: outcome.clone() });
+        self.emit(
+            cx,
+            id,
+            Event::TurnEnded {
+                prompt,
+                outcome: outcome.clone(),
+            },
+        );
         if outcome == TurnOutcome::ConnectionLost {
             self.emit(cx, id, Event::SessionEnded { role });
         }
@@ -464,7 +533,9 @@ impl Factory {
     /// Hands `role`'s station to the next entry of its list (E170).
     fn switch(&mut self, cx: &mut Cx, id: &OrderId, role: Role) {
         self.scratch(id).switch = false;
-        let Some(slot) = self.orders.get(id).and_then(|o| o.session(role)).cloned() else { return };
+        let Some(slot) = self.orders.get(id).and_then(|o| o.session(role)).cloned() else {
+            return;
+        };
         if slot.alive() {
             cx.effect(Effect::EndSession {
                 order: id.clone(),
@@ -486,9 +557,14 @@ impl Factory {
 
     fn spent(&mut self, cx: &mut Cx, id: &OrderId, role: Role, key: &SessionKey, report: UsageReport) {
         let Some(order) = self.orders.get(id) else { return };
-        let status = order.session(role).and_then(|s| self.agents.get(&s.entry().agent)).cloned();
+        let status = order
+            .session(role)
+            .and_then(|s| self.agents.get(&s.entry().agent))
+            .cloned();
         let service = status.as_ref().and_then(|s| s.service.clone());
-        let has_quota = status.as_ref().is_some_and(|s| s.account.is_some() && s.service.is_some());
+        let has_quota = status
+            .as_ref()
+            .is_some_and(|s| s.account.is_some() && s.service.is_some());
         let previous = self.scratch(id).usage.insert(key.clone(), report);
         let before = previous.unwrap_or_default();
         let dollars = match (report.dollars, before.dollars) {
@@ -510,7 +586,15 @@ impl Factory {
         self.record_spend(cx, id, role, service, spend, unmetered);
     }
 
-    fn record_spend(&mut self, cx: &mut Cx, id: &OrderId, role: Role, service: Option<String>, spend: Spend, unmetered: bool) {
+    fn record_spend(
+        &mut self,
+        cx: &mut Cx,
+        id: &OrderId,
+        role: Role,
+        service: Option<String>,
+        spend: Spend,
+        unmetered: bool,
+    ) {
         self.emit(
             cx,
             id,
@@ -571,7 +655,14 @@ impl Factory {
             let share = after - before;
             if share > 0.0 {
                 let (id, role) = (id.clone(), *role);
-                self.record_spend(cx, &id, role, Some(key.service.clone()), Spend::new(0.0, 0, share), false);
+                self.record_spend(
+                    cx,
+                    &id,
+                    role,
+                    Some(key.service.clone()),
+                    Spend::new(0.0, 0, share),
+                    false,
+                );
             }
         }
         for (id, role) in users {
@@ -612,7 +703,9 @@ impl Factory {
             match order.phase().clone() {
                 Phase::Turn { prompt } => {
                     let Some(turn) = order.turn() else { continue };
-                    let Some(why) = turn.watch().overdue(now, self.rules.limits()) else { continue };
+                    let Some(why) = turn.watch().overdue(now, self.rules.limits()) else {
+                        continue;
+                    };
                     let role = turn.role();
                     if let Some(slot) = order.session(role) {
                         let session = slot.session().clone();
@@ -667,7 +760,10 @@ fn summary(order: &Order) -> String {
         lines.push(format!("- entered {:?}", visit.station));
     }
     for record in order.gates() {
-        let result = record.failure.as_ref().map_or("passed".to_string(), |f| format!("failed: {f:?}"));
+        let result = record
+            .failure
+            .as_ref()
+            .map_or("passed".to_string(), |f| format!("failed: {f:?}"));
         lines.push(format!("- gate {}: {result}", record.name));
     }
     if let Some(findings) = order.findings() {

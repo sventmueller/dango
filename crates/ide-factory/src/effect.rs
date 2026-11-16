@@ -76,7 +76,7 @@ pub enum Notice {
 #[serde(rename_all = "snake_case", tag = "effect")]
 pub enum Effect {
     /// Create the order's worktree and branch at `base`, copy `copy` from the main checkout by `clonefile`, and run
-    /// the setup command in the gate sandbox (E188). Answered by [`crate::Input::Done`].
+    /// the setup command in the gate sandbox (E188). Answered by [`crate::InputKind::Done`].
     PrepareWorktree {
         /// The order.
         order: OrderId,
@@ -94,15 +94,15 @@ pub enum Effect {
         setup: Option<SandboxRun>,
     },
     /// Freeze the effective agent and scanner configuration from the main checkout outside the builder's reach
-    /// (E172). Answered by [`crate::Input::Frozen`].
+    /// (E172). Answered by [`crate::InputKind::Frozen`].
     FreezeConfig {
         /// The order.
         order: OrderId,
         /// The paths of the fixed group, as patterns.
         paths: Vec<String>,
     },
-    /// Start or resume a session for a role (E165, E170, E173). Answered by [`crate::Input::SessionStarted`] or
-    /// [`crate::Input::SessionFailed`].
+    /// Start or resume a session for a role (E165, E170, E173). Answered by [`crate::InputKind::SessionStarted`] or
+    /// [`crate::InputKind::SessionFailed`].
     StartSession {
         /// The order.
         order: OrderId,
@@ -179,12 +179,12 @@ pub enum Effect {
         /// The order.
         order: OrderId,
     },
-    /// Compare the main repository's refs with the snapshot. Answered by [`crate::Input::Refs`].
+    /// Compare the main repository's refs with the snapshot. Answered by [`crate::InputKind::Refs`].
     CompareRefs {
         /// The order.
         order: OrderId,
     },
-    /// Scan for secrets with the frozen gitleaks configuration (C52). Answered by [`crate::Input::Scanned`].
+    /// Scan for secrets with the frozen gitleaks configuration (C52). Answered by [`crate::InputKind::Scanned`].
     ScanSecrets {
         /// The order.
         order: OrderId,
@@ -192,7 +192,7 @@ pub enum Effect {
         range: ScanRange,
     },
     /// Commit the worktree's changes, without hooks (E192), with the operation in a trailer. Answered by
-    /// [`crate::Input::Done`].
+    /// [`crate::InputKind::Done`].
     Commit {
         /// The order.
         order: OrderId,
@@ -203,7 +203,7 @@ pub enum Effect {
         /// The head it expects.
         parent: String,
     },
-    /// List the paths the diff changes with their status. Answered by [`crate::Input::Diff`].
+    /// List the paths the diff changes with their status. Answered by [`crate::InputKind::Diff`].
     DiffNames {
         /// The order.
         order: OrderId,
@@ -212,7 +212,7 @@ pub enum Effect {
         /// The head.
         head: String,
     },
-    /// Run a gate command in the worktree under the gate sandbox. Answered by [`crate::Input::GateDone`].
+    /// Run a gate command in the worktree under the gate sandbox. Answered by [`crate::InputKind::GateDone`].
     RunGate {
         /// The order.
         order: OrderId,
@@ -230,7 +230,7 @@ pub enum Effect {
         /// The order.
         order: OrderId,
     },
-    /// Collect the reviewer's input: diff and commit messages (E179). Answered by [`crate::Input::ReviewInput`].
+    /// Collect the reviewer's input: diff and commit messages (E179). Answered by [`crate::InputKind::ReviewInput`].
     CollectReviewInput {
         /// The order.
         order: OrderId,
@@ -240,14 +240,14 @@ pub enum Effect {
         head: String,
     },
     /// Read the manifest of inputs outside the tree: the copied files' hashes and the state of path dependencies
-    /// outside the repository (C69). Answered by [`crate::Input::Manifest`].
+    /// outside the repository (C69). Answered by [`crate::InputKind::Manifest`].
     ReadManifest {
         /// The order.
         order: OrderId,
         /// The files copied into the worktree.
         copied: Vec<String>,
     },
-    /// Reverse the hunks the user rejected at G2 in the worktree (C55). Answered by [`crate::Input::Rejected`].
+    /// Reverse the hunks the user rejected at G2 in the worktree (C55). Answered by [`crate::InputKind::Rejected`].
     RejectHunks {
         /// The order.
         order: OrderId,
@@ -255,7 +255,7 @@ pub enum Effect {
         hunks: Vec<HunkId>,
     },
     /// Merge the target branch into the order's branch; on conflict, change nothing. Answered by
-    /// [`crate::Input::Done`].
+    /// [`crate::InputKind::Done`].
     MergeTarget {
         /// The order.
         order: OrderId,
@@ -265,7 +265,7 @@ pub enum Effect {
         target: String,
     },
     /// Tell whether the order's diff against the new base is byte for byte the one against the old (C56). Answered
-    /// by [`crate::Input::Compared`].
+    /// by [`crate::InputKind::Compared`].
     CompareDiffs {
         /// The order.
         order: OrderId,
@@ -279,7 +279,7 @@ pub enum Effect {
         new_head: String,
     },
     /// Take the order over into its target branch (E164), only if the working copy is on it and clean and its head
-    /// is `expected`. Answered by [`crate::Input::Done`].
+    /// is `expected`. Answered by [`crate::InputKind::Done`].
     TakeOver {
         /// The order.
         order: OrderId,
@@ -292,7 +292,7 @@ pub enum Effect {
         /// The target's expected head.
         expected: String,
     },
-    /// Remove the order's checkpoints, before the worktree (C70). Answered by [`crate::Input::Done`].
+    /// Remove the order's checkpoints, before the worktree (C70). Answered by [`crate::InputKind::Done`].
     RemoveCheckpoints {
         /// The order.
         order: OrderId,
@@ -301,7 +301,7 @@ pub enum Effect {
         /// The checkpoint threads.
         threads: Vec<String>,
     },
-    /// Remove the worktree, its build folder and the branch. Answered by [`crate::Input::Done`].
+    /// Remove the worktree, its build folder and the branch. Answered by [`crate::InputKind::Done`].
     RemoveWorktree {
         /// The order.
         order: OrderId,
@@ -315,7 +315,7 @@ pub enum Effect {
         keep_branch: bool,
     },
     /// After a restart: check whether an operation's target state holds (E167). Answered by
-    /// [`crate::Input::Verified`].
+    /// [`crate::InputKind::Verified`].
     Verify {
         /// The order.
         order: OrderId,

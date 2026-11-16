@@ -327,7 +327,12 @@ mod tests {
             ("tests/new_case.rs", Added, "", RiskClass::Low),
             ("tests/parser.rs", Modified, "tests", RiskClass::High),
             ("crates/a/tests/parser.rs", Deleted, "tests", RiskClass::High),
-            ("tests/moved.rs", Renamed("tests/parser.rs".into()), "tests", RiskClass::High),
+            (
+                "tests/moved.rs",
+                Renamed("tests/parser.rs".into()),
+                "tests",
+                RiskClass::High,
+            ),
             ("pkg/handler_test.go", Modified, "tests", RiskClass::High),
             ("web/app.test.ts", Added, "", RiskClass::Low),
             ("Cargo.toml", Modified, "config", RiskClass::High),

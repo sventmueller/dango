@@ -129,7 +129,11 @@ impl Panel {
 
     /// How many orders wait for the user, for the symbol's tooltip and VoiceOver text ("1 Auftrag wartet").
     pub fn waiting(&self) -> usize {
-        self.groups.iter().flat_map(|(_, rows)| rows).filter(|r| r.waits()).count()
+        self.groups
+            .iter()
+            .flat_map(|(_, rows)| rows)
+            .filter(|r| r.waits())
+            .count()
     }
 
     /// Whether the red dot shows.
@@ -311,13 +315,17 @@ impl Fleet {
     pub fn new(factory: &Factory, quotas: &QuotaBook, now: Stamp, day_start: u64, worktree_bytes: u64) -> Fleet {
         let orders: Vec<&Order> = factory.orders().collect();
         let count = |f: &dyn Fn(&Order) -> bool| orders.iter().filter(|o| f(o)).count();
-        let running = count(&|o| !o.finished() && o.station() != Station::Intake && *o.condition() == Condition::Running);
+        let running =
+            count(&|o| !o.finished() && o.station() != Station::Intake && *o.condition() == Condition::Running);
         let waiting = count(&|o| !o.finished() && o.condition().waits());
         let failed = count(&|o| matches!(o.condition(), Condition::Failed(_)));
-        let done_today = count(&|o| {
-            o.station() == Station::Done && o.visits().last().is_some_and(|v| v.at.wall >= day_start)
-        });
-        let mut waits: Vec<u64> = orders.iter().map(|o| o.waited_ms(now.wall)).filter(|ms| *ms > 0).collect();
+        let done_today =
+            count(&|o| o.station() == Station::Done && o.visits().last().is_some_and(|v| v.at.wall >= day_start));
+        let mut waits: Vec<u64> = orders
+            .iter()
+            .map(|o| o.waited_ms(now.wall))
+            .filter(|ms| *ms > 0)
+            .collect();
         waits.sort_unstable();
         let median_wait_ms = (!waits.is_empty()).then(|| waits[waits.len() / 2]);
         let quotas = quotas

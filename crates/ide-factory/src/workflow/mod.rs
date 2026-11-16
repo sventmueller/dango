@@ -237,7 +237,9 @@ impl Workflow {
 
     /// The file's limits over `base`, unset ones taken from it.
     pub fn limits_over(&self, base: &Limits) -> Limits {
-        self.limits.iter().fold(base.clone(), |limits, &(limit, value)| limits.with(limit, value))
+        self.limits
+            .iter()
+            .fold(base.clone(), |limits, &(limit, value)| limits.with(limit, value))
     }
 
     /// The budgets the file sets.
@@ -256,7 +258,11 @@ pub fn parse(text: &str) -> Result<Parsed, Vec<WorkflowError>> {
     let document = Document::parse(text).map_err(|error| vec![syntax(text, &error)])?;
     let version = match document.as_table().get("version") {
         None => 1,
-        Some(item) => match item.as_integer().and_then(|n| u64::try_from(n).ok()).filter(|n| *n >= 1) {
+        Some(item) => match item
+            .as_integer()
+            .and_then(|n| u64::try_from(n).ok())
+            .filter(|n| *n >= 1)
+        {
             Some(n) => n,
             None => {
                 let mut reader = Reader::new(text);
@@ -342,7 +348,9 @@ fn read_workflow(r: &mut Reader<'_>, top: &dyn TableLike) -> Workflow {
     }
     if let Some(review) = r.table(top, "", "review") {
         r.known(review, "review", &["rule"]);
-        workflow.reviewer_preferred = r.word(review, "review", "rule", &["required", "preferred"]).map(|w| w == "preferred");
+        workflow.reviewer_preferred = r
+            .word(review, "review", "rule", &["required", "preferred"])
+            .map(|w| w == "preferred");
     }
     if let Some(spec) = r.table(top, "", "spec") {
         r.known(spec, "spec", &["skip_approval"]);
@@ -402,7 +410,11 @@ fn read_gates(r: &mut Reader<'_>, gates: &dyn TableLike, workflow: &mut Workflow
         if run.trim().is_empty() {
             r.error(&join(path, "run"), item.span(), WorkflowErrorKind::EmptyCommand);
         } else if workflow.gates.iter().any(|g| g.name == name) {
-            r.error(&join(path, "name"), item.span(), WorkflowErrorKind::DuplicateGate { name });
+            r.error(
+                &join(path, "name"),
+                item.span(),
+                WorkflowErrorKind::DuplicateGate { name },
+            );
         } else {
             workflow.gates.push(GateCommand { name, run, classes });
         }
@@ -415,7 +427,11 @@ fn read_gates(r: &mut Reader<'_>, gates: &dyn TableLike, workflow: &mut Workflow
                 && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
             if !valid {
                 let span = env.get(name).and_then(Item::span);
-                r.error(&path, span, WorkflowErrorKind::BadVariableName { name: name.to_string() });
+                r.error(
+                    &path,
+                    span,
+                    WorkflowErrorKind::BadVariableName { name: name.to_string() },
+                );
             } else if let Some(value) = r.text(env, "gates.env", name) {
                 workflow.gate_env.insert(name.to_string(), value);
             }
@@ -426,7 +442,11 @@ fn read_gates(r: &mut Reader<'_>, gates: &dyn TableLike, workflow: &mut Workflow
             workflow.images = Some(images);
         } else {
             let span = gates.get("images").and_then(Item::span);
-            r.error("gates.images", span, WorkflowErrorKind::ImagesInsideRepository { path: images });
+            r.error(
+                "gates.images",
+                span,
+                WorkflowErrorKind::ImagesInsideRepository { path: images },
+            );
         }
     }
     workflow.network = r.texts(gates, "gates", "network");
@@ -435,9 +455,13 @@ fn read_gates(r: &mut Reader<'_>, gates: &dyn TableLike, workflow: &mut Workflow
 
 fn read_worktree(r: &mut Reader<'_>, worktree: &dyn TableLike, workflow: &mut Workflow) {
     r.known(worktree, "worktree", &["location", "copy", "setup"]);
-    workflow.location = r
-        .word(worktree, "worktree", "location", &["data", "sibling"])
-        .map(|w| if w == "sibling" { WorktreeLocation::Sibling } else { WorktreeLocation::DataFolder });
+    workflow.location = r.word(worktree, "worktree", "location", &["data", "sibling"]).map(|w| {
+        if w == "sibling" {
+            WorktreeLocation::Sibling
+        } else {
+            WorktreeLocation::DataFolder
+        }
+    });
     for path in r.texts(worktree, "worktree", "copy") {
         let leaves = path.starts_with('/') || path.split('/').any(|part| part == "..") || path.is_empty();
         if leaves {
@@ -461,7 +485,13 @@ fn read_roles(r: &mut Reader<'_>, roles: &dyn TableLike) -> BTreeMap<Role, Vec<R
             let Some(table) = item.as_table_like() else { continue };
             r.known(table, &path, &["agent", "model", "effort"]);
             let Some(agent) = r.text(table, &path, "agent") else {
-                r.error(&join(&path, "agent"), item.span(), WorkflowErrorKind::WrongKind { expected: Expected::Text });
+                r.error(
+                    &join(&path, "agent"),
+                    item.span(),
+                    WorkflowErrorKind::WrongKind {
+                        expected: Expected::Text,
+                    },
+                );
                 continue;
             };
             entries.push(RankEntry {
@@ -497,8 +527,12 @@ fn read_budget(r: &mut Reader<'_>, table: &dyn TableLike, path: &str) -> Budget 
 
 fn read_budgets(r: &mut Reader<'_>, budget: &dyn TableLike) -> Budgets {
     r.known(budget, "budget", &["order", "day", "providers"]);
-    let order = r.table(budget, "budget", "order").map(|t| read_budget(r, t, "budget.order"));
-    let day = r.table(budget, "budget", "day").map(|t| read_budget(r, t, "budget.day"));
+    let order = r
+        .table(budget, "budget", "order")
+        .map(|t| read_budget(r, t, "budget.order"));
+    let day = r
+        .table(budget, "budget", "day")
+        .map(|t| read_budget(r, t, "budget.day"));
     let mut providers = BTreeMap::new();
     if let Some(table) = r.table(budget, "budget", "providers") {
         for (service, _) in table.iter() {
@@ -527,7 +561,13 @@ fn read_relevance(r: &mut Reader<'_>, top: &dyn TableLike) -> RelevancePatterns 
                 Some((tool, _)) => patterns.tools.push(tool),
                 None => {
                     let span = relevant.get("tools").and_then(Item::span);
-                    r.error("relevant.tools", span, WorkflowErrorKind::WrongKind { expected: Expected::OneOf(TOOLS) });
+                    r.error(
+                        "relevant.tools",
+                        span,
+                        WorkflowErrorKind::WrongKind {
+                            expected: Expected::OneOf(TOOLS),
+                        },
+                    );
                 }
             }
         }
