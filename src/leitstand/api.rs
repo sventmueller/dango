@@ -73,6 +73,8 @@ pub(crate) enum Command {
     },
     /// Confirm the gate command set of this hash (E190).
     ConfirmGates(String),
+    /// Take the change of the order's issue over (E176).
+    TakeIssueChange(OrderId),
     /// Confirm a loosening the workflow file asks for (E190).
     ConfirmLoosening(Loosening),
 }
@@ -198,6 +200,7 @@ impl Leitstand {
             Command::Continue(order) => InputKind::Continue(order),
             Command::Answer { order, request, text } => InputKind::Answer { order, request, text },
             Command::ConfirmGates(hash) => InputKind::ConfirmGates(hash),
+            Command::TakeIssueChange(order) => InputKind::TakeIssueChange(order),
         };
         self.input(cx, root, input);
         None

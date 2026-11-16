@@ -38,6 +38,8 @@ impl Factory {
             InputKind::Continue(id) => self.continue_order(cx, &id),
             InputKind::Answer { order, request, text } => self.answer(cx, &order, request, text),
             InputKind::ConfirmGates(hash) => self.confirm_gates(cx, hash),
+            InputKind::TakeIssueChange(id) => self.take_issue_change(cx, &id),
+            InputKind::IssueRead { order, body } => self.issue_read(cx, &order, body),
             InputKind::Session(id, key, event) => self.session_event(cx, &id, &key, event),
             InputKind::SessionStarted {
                 order,
@@ -73,7 +75,7 @@ impl Factory {
     }
 
     /// Whether order `id` exists; refuses the command if not.
-    fn known(&self, cx: &mut Cx, id: &OrderId) -> bool {
+    pub(super) fn known(&self, cx: &mut Cx, id: &OrderId) -> bool {
         let known = self.orders.contains_key(id);
         if !known {
             cx.refuse(Some(id), Refused::UnknownOrder);
@@ -82,7 +84,7 @@ impl Factory {
     }
 
     /// The order if it exists and `fits` it; refuses the command otherwise.
-    fn fitting(&self, cx: &mut Cx, id: &OrderId, fits: impl Fn(&Order) -> bool) -> bool {
+    pub(super) fn fitting(&self, cx: &mut Cx, id: &OrderId, fits: impl Fn(&Order) -> bool) -> bool {
         if !self.known(cx, id) {
             return false;
         }
@@ -271,9 +273,15 @@ impl Factory {
         }
         let Some(order) = self.orders.get(id) else { return };
         let criteria = changed_criteria(order.criteria(), text);
-        let built = order.reached() >= Station::Build;
         self.emit(cx, id, Event::CriteriaChanged { criteria });
-        if !built {
+        let comment = "The acceptance criteria changed; check your work against the new list.".to_string();
+        self.rework_criteria(cx, id, comment);
+    }
+
+    /// After the criteria changed, an order that has built goes back to the builder with `comment`, its evidence void
+    /// (E184).
+    pub(super) fn rework_criteria(&mut self, cx: &mut Cx, id: &OrderId, comment: String) {
+        if self.orders.get(id).is_none_or(|o| o.reached() < Station::Build) {
             return;
         }
         self.stop_work(cx, id);
@@ -284,13 +292,12 @@ impl Factory {
                 why: Invalidation::Criteria,
             },
         );
-        let text = "The acceptance criteria changed; check your work against the new list.".to_string();
         self.emit(
             cx,
             id,
             Event::Commented {
                 role: Role::Builder,
-                text,
+                text: comment,
             },
         );
         self.run(cx, id);
@@ -427,6 +434,21 @@ impl Factory {
             WaitReason::ReviewRoundsSpent => {
                 self.run(cx, id);
                 self.enter(cx, id, Station::Build);
+                self.advance(cx, id);
+            }
+            WaitReason::CriteriaObjection { .. } => {
+                self.emit(cx, id, Event::ObjectionOverruled);
+                let text = "The user keeps the acceptance criteria as they are; carry out the order against them.";
+                self.emit(
+                    cx,
+                    id,
+                    Event::Commented {
+                        role: Role::Builder,
+                        text: text.to_string(),
+                    },
+                );
+                self.run(cx, id);
+                self.set_phase(cx, id, Phase::Idle);
                 self.advance(cx, id);
             }
             WaitReason::CancelledTurn

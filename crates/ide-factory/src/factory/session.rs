@@ -11,7 +11,7 @@ use crate::evidence::Deviation;
 use crate::ids::{OrderId, SessionKey};
 use crate::input::{RequestKind, SessionEvent};
 use crate::order::Order;
-use crate::prompt::{render, untrusted};
+use crate::prompt::{has_placeholder, render, untrusted};
 use crate::quota::{QuotaObservation, QuotaState};
 use crate::routing::{RankEntry, Route, RouteContext, Skip, route, vendor_of};
 use crate::station::{Condition, FailReason, PauseReason, Role, Station, WaitReason};
@@ -318,6 +318,10 @@ impl Factory {
         if kind == PromptKind::Handoff {
             values.insert("summary", summary(order));
         }
+        let contract = builds(kind) && order.contract_due();
+        if contract {
+            values.insert("contract", crate::contract::instructions());
+        }
         if kind == PromptKind::Review {
             values.insert("schema", VERDICT_SCHEMA.to_string());
             let gates: Vec<String> = order
@@ -342,7 +346,13 @@ impl Factory {
                 values.insert("commits", untrusted("the commit messages", &commits));
             }
         }
-        render(self.rules.template(kind), &values)
+        let template = self.rules.template(kind);
+        let text = render(template, &values);
+        if contract && !has_placeholder(template, "contract") {
+            format!("{text}\n{}\n", crate::contract::instructions())
+        } else {
+            text
+        }
     }
 
     /// Handles an event of a session of order `id`.
@@ -512,7 +522,7 @@ impl Factory {
                         Some(answer) if !answer.trim().is_empty() => self.specified(cx, id, &answer),
                         _ => self.failure(cx, id),
                     },
-                    Role::Builder => self.after_turn(cx, id),
+                    Role::Builder => self.built(cx, id, answer.as_deref()),
                     Role::Reviewer => self.reviewed(cx, id, answer.as_deref().unwrap_or_default()),
                 }
             }
@@ -775,6 +785,14 @@ pub(super) fn station_role(order: &Order) -> Role {
         Station::Review => Role::Reviewer,
         _ => Role::Builder,
     }
+}
+
+/// Whether a prompt of `kind` goes to the builder.
+fn builds(kind: PromptKind) -> bool {
+    matches!(
+        kind,
+        PromptKind::Build | PromptKind::Rework | PromptKind::Resume | PromptKind::Handoff
+    )
 }
 
 /// What happened in an order so far, for an entry that takes over its station (E170).

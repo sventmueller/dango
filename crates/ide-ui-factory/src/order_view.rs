@@ -20,6 +20,23 @@ const WIDTH: f64 = 640.0;
 /// Fills `body` with what `detail` shows; `rejected` are the sections turned down so far.
 pub(crate) fn fill(tab: &OrderTab, body: &NSStackView, detail: &Detail, rejected: &BTreeSet<HunkId>) {
     let mtm = tab.mtm();
+    if let Some(objection) = detail.objection() {
+        section(mtm, body, t("Einwand des Builders"));
+        let reasons = if objection.is_empty() {
+            t("Der Builder hat keinen Grund genannt.")
+        } else {
+            objection
+        };
+        body.addArrangedSubview(&ui::text(mtm, reasons, WIDTH));
+        body.addArrangedSubview(&ui::note(
+            mtm,
+            t("„Kriterien ändern …“ passt die Kriterien an, „Weiter“ lässt sie gelten, wie sie sind, und „Auftrag abbrechen …“ beendet den Auftrag."),
+            WIDTH,
+        ));
+    }
+    if let Some(change) = detail.issue_change() {
+        issue_change(tab, body, detail, change);
+    }
     section(mtm, body, t("Ziel"));
     body.addArrangedSubview(&ui::text(mtm, detail.goal(), WIDTH));
     section(mtm, body, t("Kriterien"));
@@ -43,6 +60,21 @@ pub(crate) fn fill(tab: &OrderTab, body: &NSStackView, detail: &Detail, rejected
     }
     evidence(mtm, body, detail);
     sections(tab, body, detail, rejected);
+}
+
+/// The issue's change since the order came in, with "Änderung übernehmen" (E176).
+fn issue_change(tab: &OrderTab, body: &NSStackView, detail: &Detail, change: &[String]) {
+    let mtm = tab.mtm();
+    section(mtm, body, t("Issue geändert"));
+    body.addArrangedSubview(&ui::note(
+        mtm,
+        t("Das Issue liest sich anders als beim Eingang des Auftrags. Erst „Änderung übernehmen“ ändert Ziel und Kriterien; ein gültiger Nachweis wird dabei ungültig."),
+        WIDTH,
+    ));
+    body.addArrangedSubview(&ui::code(mtm, &change.join("\n"), WIDTH));
+    let take = ui::button(mtm, t("Änderung übernehmen"), tab.me(), sel!(ideFactoryTakeIssue:), 0);
+    take.setEnabled(detail.take_issue_change().is_some());
+    body.addArrangedSubview(&take);
 }
 
 fn passage_words(passage: Passage) -> &'static str {

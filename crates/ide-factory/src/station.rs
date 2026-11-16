@@ -76,6 +76,11 @@ pub enum WaitReason {
     },
     /// The user cancelled the turn (E189).
     CancelledTurn,
+    /// The builder objected to the criteria before it built (E178).
+    CriteriaObjection {
+        /// Its reasons, in its words.
+        text: String,
+    },
     /// The diff changes agent or scanner configuration (E172).
     AgentConfigChanged {
         /// The changed paths.

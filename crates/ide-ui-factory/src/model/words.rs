@@ -133,6 +133,7 @@ pub fn wait(reason: &WaitReason) -> String {
         WaitReason::Acceptance => t("Nachweis abnehmen").into(),
         WaitReason::Question { .. } => t("Rückfrage des Agenten").into(),
         WaitReason::CancelledTurn => t("Zug abgebrochen").into(),
+        WaitReason::CriteriaObjection { .. } => t("Einwand des Builders gegen die Kriterien").into(),
         WaitReason::AgentConfigChanged { paths } => tf("Agenten-Konfiguration geändert: {}", &[&paths.join(", ")]),
         WaitReason::LateSpecApproval => t("Spezifikation nachträglich freigeben").into(),
         WaitReason::RefsChanged { refs } => tf("Refs des Repositorys geändert: {}", &[&refs.join(", ")]),

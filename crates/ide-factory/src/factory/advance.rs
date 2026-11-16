@@ -292,6 +292,20 @@ impl Factory {
         self.wait(cx, id, WaitReason::Acceptance);
     }
 
+    /// After a successful turn of the builder: its word on the criteria where the turn asked for it, then its changes;
+    /// an objection lets the order wait for the user instead (E178).
+    pub(super) fn built(&mut self, cx: &mut Cx, id: &OrderId, answer: Option<&str>) {
+        if self.orders.get(id).is_some_and(Order::contract_due) {
+            let reply = crate::contract::read_reply(answer);
+            self.emit(cx, id, Event::CriteriaReplied { reply: reply.clone() });
+            if let crate::contract::CriteriaReply::Objection(text) = reply {
+                self.wait(cx, id, WaitReason::CriteriaObjection { text });
+                return;
+            }
+        }
+        self.after_turn(cx, id);
+    }
+
     /// After a successful turn of the builder, or the user's work by hand: scan the changes before committing them
     /// (E163).
     pub(super) fn after_turn(&mut self, cx: &mut Cx, id: &OrderId) {

@@ -31,6 +31,66 @@ pub fn open_metrics(window: Window, state: &Rc<State>) -> bool {
     board.inspect(|board| board.open_metrics()).is_some()
 }
 
+/// What the tab of the order `order` in `window` shows, while the window has it.
+pub fn order(window: Window, state: &Rc<State>, order: &ide_factory::OrderId) -> Option<OrderSeen> {
+    let key = crate::order::tab_key(order);
+    let tab = window.tab_with_key(&key)?;
+    state
+        .orders
+        .live()
+        .into_iter()
+        .find(|order_tab| order_tab.tab() == Some(tab))
+        .map(|order_tab| order_tab.seen())
+}
+
+/// The dialog "Leitstand für <Ordner>" open on `window`.
+fn project_sheet(window: Window, state: &Rc<State>) -> Option<objc2::rc::Retained<crate::project::ProjectSheet>> {
+    state
+        .projects
+        .live()
+        .into_iter()
+        .find(|sheet| sheet.window() == window && sheet.open_now())
+}
+
+/// What each row of the dialog "Leitstand für <Ordner>" on `window` shows, while it is open.
+pub fn project(window: Window, state: &Rc<State>) -> Option<Vec<ProjectRowSeen>> {
+    project_sheet(window, state).map(|sheet| sheet.seen())
+}
+
+/// Presses "Auf Vorgabe zurücksetzen" of `value` in the dialog on `window`; whether the button could be pressed.
+pub fn reset_project_value(window: Window, state: &Rc<State>, value: crate::model::settings::ProjectValue) -> bool {
+    project_sheet(window, state).is_some_and(|sheet| sheet.press_reset(value))
+}
+
+/// Presses "Sichern" in the dialog on `window`; whether it was open.
+pub fn save_project(window: Window, state: &Rc<State>) -> bool {
+    project_sheet(window, state)
+        .inspect(|sheet| sheet.press_save())
+        .is_some()
+}
+
+/// What an order's tab shows, as the self-test reads it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OrderSeen {
+    /// The texts of its condition line and its body, in their order.
+    pub texts: Vec<String>,
+    /// Every button in it with whether it can be pressed.
+    pub buttons: Vec<(String, bool)>,
+}
+
+/// What a row of the dialog "Leitstand für <Ordner>" shows, as the self-test reads it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProjectRowSeen {
+    /// The row's title, such as "Prüfer:".
+    pub title: String,
+    /// The value as it shows.
+    pub value: String,
+    /// "Vorgabe" or "factory.toml".
+    pub origin: String,
+    /// Whether "Auf Vorgabe zurücksetzen" can be pressed.
+    pub resettable: bool,
+}
+
 /// What a panel shows, as the self-test reads it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PanelSeen {

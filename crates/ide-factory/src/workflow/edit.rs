@@ -95,6 +95,22 @@ pub fn set(text: &str, key: &[&str], value: EditValue) -> Result<String, EditErr
     Ok(doc.to_string())
 }
 
+/// Whether `text` sets a value at `key`, which the project dialog shows as coming from the file (E183); `false` for a
+/// text that is no valid TOML.
+pub fn has(text: &str, key: &[&str]) -> bool {
+    let Ok(doc) = text.parse::<DocumentMut>() else {
+        return false;
+    };
+    let mut item = doc.as_item();
+    for part in key {
+        match item.as_table_like().and_then(|table| table.get(part)) {
+            Some(inner) => item = inner,
+            None => return false,
+        }
+    }
+    !key.is_empty() && !item.is_none()
+}
+
 /// `text` without the value at `key`, so the default applies again ("zurücksetzen", E183).
 pub fn remove(text: &str, key: &[&str]) -> Result<String, EditError> {
     let (last, parents) = key.split_last().ok_or(EditError::EmptyKey)?;
@@ -158,6 +174,19 @@ network = [\"crates.io\"]
             "{out}"
         );
         assert_eq!(remove(FILE, &["nothing", "here"]).unwrap(), FILE);
+    }
+
+    #[test]
+    fn a_key_counts_as_set_where_the_text_has_it() {
+        assert!(has(FILE, &["limits", "turn_minutes"]));
+        assert!(has(FILE, &["gates", "network"]));
+        assert!(!has(FILE, &["limits", "review_rounds"]));
+        assert!(!has(FILE, &["version", "x"]));
+        assert!(!has("a = [", &["a"]));
+        let roles = "[[roles.builder]]\nagent = \"codex\"\n";
+        assert!(has(roles, &["roles", "builder"]));
+        let out = remove(roles, &["roles", "builder"]).unwrap();
+        assert!(!has(&out, &["roles", "builder"]), "{out}");
     }
 
     #[test]

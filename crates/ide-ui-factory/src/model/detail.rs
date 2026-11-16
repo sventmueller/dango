@@ -5,6 +5,7 @@
 use std::collections::BTreeSet;
 
 use ide_factory::evidence::{Evidence, GateRecord};
+use ide_factory::intake::{DiffLine, line_diff};
 use ide_factory::order::Order;
 use ide_factory::station::{Condition, RiskClass, Role, Station, WaitReason};
 use ide_factory::verdict::{Judgement, RoundOutcome};
@@ -209,6 +210,12 @@ pub struct Detail {
     spec: Option<String>,
     /// The branch the order's work is on once it is done: the kept branch, or the base it was taken over into.
     merge_branch: Option<String>,
+    /// The builder's objection to the criteria while the order waits on it (E178).
+    objection: Option<String>,
+    /// The lines of the difference between the issue as the order froze it and as it reads now (E176).
+    issue_change: Option<Vec<String>>,
+    /// Whether the issue's change can be taken over now.
+    issue_takeable: bool,
 }
 
 /// [`Command`] as a set's key.
@@ -283,7 +290,29 @@ impl Detail {
                 .filter(|_| *order.condition() == Condition::Waiting(WaitReason::SpecApproval))
                 .map(str::to_string),
             merge_branch: merge_branch(order),
+            objection: match order.condition() {
+                Condition::Waiting(WaitReason::CriteriaObjection { text }) => Some(text.clone()),
+                _ => None,
+            },
+            issue_change: issue_change(order),
+            issue_takeable: order.issue_update().is_some() && !order.finished() && order.station() != Station::TakeOver,
         }
+    }
+
+    /// The builder's objection to the criteria, while the order waits on it (E178).
+    pub fn objection(&self) -> Option<&str> {
+        self.objection.as_deref()
+    }
+
+    /// How the order's issue changed since the order came in, a line each with "- " for removed and "+ " for added
+    /// text, while the change waits for the user (E176).
+    pub fn issue_change(&self) -> Option<&[String]> {
+        self.issue_change.as_deref()
+    }
+
+    /// The input that takes the issue's change over, while it can be.
+    pub fn take_issue_change(&self) -> Option<InputKind> {
+        self.issue_takeable.then(|| InputKind::TakeIssueChange(self.id.clone()))
     }
 
     /// The specification while it waits for G1 (E178), which the tab shows with its comments.
@@ -528,6 +557,7 @@ fn passes(reason: &WaitReason) -> bool {
     matches!(
         reason,
         WaitReason::AgentConfigChanged { .. }
+            | WaitReason::CriteriaObjection { .. }
             | WaitReason::LateSpecApproval
             | WaitReason::RefsChanged { .. }
             | WaitReason::Unclear
@@ -538,6 +568,21 @@ fn passes(reason: &WaitReason) -> bool {
             | WaitReason::NoReviewer
             | WaitReason::TakeOverBlocked { .. }
     )
+}
+
+/// The difference of the issue's text since the order came in, while the change waits for the user.
+fn issue_change(order: &Order) -> Option<Vec<String>> {
+    let now = order.issue_update()?;
+    let before = &order.options().issue.as_ref()?.body;
+    let lines = line_diff(before, now)
+        .into_iter()
+        .map(|line| match line {
+            DiffLine::Kept(text) => format!("  {text}"),
+            DiffLine::Removed(text) => format!("- {text}"),
+            DiffLine::Added(text) => format!("+ {text}"),
+        })
+        .collect();
+    Some(lines)
 }
 
 fn timeline(order: &Order, now: u64) -> Vec<Stage> {

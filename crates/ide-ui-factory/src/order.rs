@@ -103,6 +103,11 @@ define_class!(
             guarded((), || self.decide(false));
         }
 
+        #[unsafe(method(ideFactoryTakeIssue:))]
+        fn take_issue_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || self.take_issue());
+        }
+
         #[unsafe(method(ideFactorySection:))]
         fn section_action(&self, sender: Option<&AnyObject>) {
             guarded((), || {
@@ -116,6 +121,7 @@ define_class!(
 
 /// Opens the tab of the order `id` in `target`'s window, or brings it to the front; whether it shows.
 pub(crate) fn open(target: &Target, id: &OrderId) -> bool {
+    host().check_issue(target.root(), id);
     let window = target.window();
     let key = tab_key(id);
     if window.select_tab(&key) {
@@ -372,6 +378,14 @@ impl OrderTab {
         );
     }
 
+    /// Takes the change of the order's issue over, on the user's word (E176).
+    fn take_issue(&self) {
+        let Some(input) = self.detail().and_then(|d| d.take_issue_change()) else {
+            return;
+        };
+        crate::actions::send(&self.ivars().target, input);
+    }
+
     fn decide(&self, allow: bool) {
         let Some(detail) = self.detail() else { return };
         let Some(request) = detail.request().cloned() else {
@@ -460,3 +474,6 @@ pub(crate) fn for_root(state: &crate::host::State, root: &std::path::Path) -> Ve
         .filter(|tab| tab.root() == root)
         .collect()
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

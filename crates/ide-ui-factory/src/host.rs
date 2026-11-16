@@ -27,6 +27,7 @@ pub struct State {
     pub(crate) panels: Registry<Retained<crate::panel::FactoryPanel>>,
     pub(crate) boards: Registry<Weak<crate::board::BoardTab>>,
     pub(crate) orders: Registry<Weak<crate::order::OrderTab>>,
+    pub(crate) projects: Registry<Weak<crate::project::ProjectSheet>>,
     pub(crate) commands: OnceCell<Retained<crate::commands::OrderCommands>>,
     pub(crate) notices: RefCell<HashMap<PathBuf, Notices>>,
 }
@@ -114,6 +115,9 @@ pub trait Host {
     fn notices(&self, root: &Path) -> FolderNotices;
     /// Confirms `loosening` for `root` on this Mac (E190).
     fn confirm_loosening(&self, root: &Path, loosening: &Loosening);
+    /// Reads the issue of `order` again, if it came from one, to tell whether its text changed since the order came
+    /// in (E176); the order notes a change and its tab shows it.
+    fn check_issue(&self, root: &Path, order: &OrderId);
 }
 
 /// What the Leitstand tab shows above the fleet line.

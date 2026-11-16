@@ -185,6 +185,7 @@ pub(crate) const SCENARIOS: &[Scenario] = &[
     limited("leitstand-order", leitstand::order::run, GIT),
     limited("leitstand-queue", leitstand::queue::run, Duration::from_secs(900)),
     limited("leitstand-metrics", leitstand::metrics::run, GIT),
+    limited("leitstand-gaps", leitstand::gaps::run, GIT),
     Scenario {
         offline: false,
         ..limited("companions", companions::run, Duration::from_secs(1200))

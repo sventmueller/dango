@@ -1,10 +1,12 @@
 //! Orders from issues (E176, R63): what an order keeps of the issue it came from, the issue's open task list as
 //! suggested criteria, the sheet's prefill, and which issues automatic intake takes. An issue's text is foreign text:
 //! it is frozen with its hash when the order comes in, goes into prompts marked as untrusted, and such an order never
-//! skips G1. Comments are never taken.
+//! skips G1. Comments are never taken. A later change of the issue shows as a [`line_diff`] and changes the order only
+//! when the user takes it over, its task list then updating the criteria ([`updated_criteria`]).
 
 use serde::{Deserialize, Serialize};
 
+use crate::criteria::Criterion;
 use crate::options::NewOrder;
 use crate::workflow::IssueIntake;
 
@@ -90,14 +92,75 @@ pub fn wanted(intake: &IssueIntake, author: Option<&str>, labels: &[String]) -> 
         && intake.authors.iter().any(|a| a.eq_ignore_ascii_case(author))
 }
 
+/// The criteria of an order over `criteria` once its issue changed from `before` to `after` (E176): criteria that
+/// were tasks the issue dropped go, tasks it gained come after the rest, and criteria the planner or the user wrote
+/// stay as they are, their ids kept.
+pub fn updated_criteria(criteria: &[Criterion], before: &str, after: &str) -> Vec<Criterion> {
+    let (old, new) = (task_list(before), task_list(after));
+    let mut texts: Vec<String> = criteria
+        .iter()
+        .map(|c| c.text().to_string())
+        .filter(|text| new.contains(text) || !old.contains(text))
+        .collect();
+    for task in new {
+        if !old.contains(&task) && !texts.contains(&task) {
+            texts.push(task);
+        }
+    }
+    crate::criteria::renumber(criteria, texts)
+}
+
+/// A line of the difference between two texts.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DiffLine {
+    /// In both.
+    Kept(String),
+    /// Only in the old text.
+    Removed(String),
+    /// Only in the new text.
+    Added(String),
+}
+
+/// The lines of `before` and `after` with what was removed and added, by their longest common sequence; texts too long
+/// for that come out as wholly removed and added.
+pub fn line_diff(before: &str, after: &str) -> Vec<DiffLine> {
+    const MOST: usize = 2_000;
+    let (old, new): (Vec<&str>, Vec<&str>) = (before.lines().collect(), after.lines().collect());
+    if old.len() > MOST || new.len() > MOST {
+        let removed = old.iter().map(|l| DiffLine::Removed((*l).to_string()));
+        return removed
+            .chain(new.iter().map(|l| DiffLine::Added((*l).to_string())))
+            .collect();
+    }
+    let mut common = vec![vec![0u32; new.len() + 1]; old.len() + 1];
+    for i in (0..old.len()).rev() {
+        for j in (0..new.len()).rev() {
+            common[i][j] = if old[i] == new[j] {
+                common[i + 1][j + 1] + 1
+            } else {
+                common[i + 1][j].max(common[i][j + 1])
+            };
+        }
+    }
+    let (mut i, mut j, mut out) = (0, 0, Vec::new());
+    while i < old.len() || j < new.len() {
+        if i < old.len() && j < new.len() && old[i] == new[j] {
+            out.push(DiffLine::Kept(old[i].to_string()));
+            (i, j) = (i + 1, j + 1);
+        } else if i < old.len() && (j == new.len() || common[i + 1][j] >= common[i][j + 1]) {
+            out.push(DiffLine::Removed(old[i].to_string()));
+            i += 1;
+        } else {
+            out.push(DiffLine::Added(new[j].to_string()));
+            j += 1;
+        }
+    }
+    out
+}
+
 /// The specification of an order from an issue in stage 1, where no planner writes one: its text for G1, which such
 /// an order never skips (E176).
-pub(crate) fn spec_of(
-    title: &str,
-    goal: &str,
-    criteria: &[crate::criteria::Criterion],
-    origin: &IssueOrigin,
-) -> String {
+pub(crate) fn spec_of(title: &str, goal: &str, criteria: &[Criterion], origin: &IssueOrigin) -> String {
     let items: Vec<String> = criteria.iter().map(|c| format!("- {}", c.text())).collect();
     format!(
         "# {title}\n\nFrom issue #{} ({}).\n\n## Goal\n\n{goal}\n\n## Criteria\n\n{}\n",
@@ -126,6 +189,40 @@ mod tests {
         assert!(order.goal.starts_with("Fix it."));
         assert!(origin.unchanged("Fix it.\n\n- [ ] it works\n") && !origin.unchanged("Fix it."));
         assert_eq!(order.issue, Some(origin));
+    }
+
+    #[test]
+    fn a_changed_task_list_updates_only_the_criteria_that_were_its_tasks() {
+        let before = "Fix it.\n\n- [ ] it opens\n- [ ] it saves\n";
+        let after = "Fix it now.\n\n- [ ] it opens\n- [ ] it exports\n";
+        let criteria = crate::criteria::criteria_from_lines("it opens\nit saves\nno panic on empty files");
+        let got = updated_criteria(&criteria, before, after);
+        let ids: Vec<(&str, &str)> = got.iter().map(|c| (c.id(), c.text())).collect();
+        assert_eq!(
+            ids,
+            [
+                ("K1", "it opens"),
+                ("K3", "no panic on empty files"),
+                ("K4", "it exports")
+            ]
+        );
+        assert_eq!(updated_criteria(&criteria, before, before), criteria);
+    }
+
+    #[test]
+    fn the_diff_keeps_common_lines_and_marks_the_rest() {
+        let got = line_diff("a\nb\nc", "a\nx\nc\nd");
+        assert_eq!(
+            got,
+            [
+                DiffLine::Kept("a".into()),
+                DiffLine::Removed("b".into()),
+                DiffLine::Added("x".into()),
+                DiffLine::Kept("c".into()),
+                DiffLine::Added("d".into()),
+            ]
+        );
+        assert_eq!(line_diff("", "new"), [DiffLine::Added("new".into())]);
     }
 
     #[test]

@@ -4,16 +4,23 @@
 //! becomes an order once: the issues taken are kept beside the folder's logs before their orders are handed over, so
 //! after a restart none is taken twice. A rate limit holds the folder's reads until the service says. Nothing is
 //! written to GitHub or GitLab (O2).
+//!
+//! The same reads, and a read of the one issue when its order's tab opens, tell the factory when the issue of an open
+//! order reads differently from what the order froze; the order changes only once the user takes the change over.
+//! Comments are never read.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::time::Duration;
 
 use ide_factory::intake::{IssueOrigin, issue_order, wanted};
 use ide_factory::options::{NewOrder, check_new_order};
+use ide_factory::{InputKind, Order, OrderId};
 use serde::{Deserialize, Serialize};
 
 use super::{Back, Command, Leitstand, store};
+use crate::context::AppContext;
 
 /// How often the issues are read; modest, since every read counts against the service's rate limit.
 const EVERY: Duration = Duration::from_secs(5 * 60);
@@ -35,6 +42,8 @@ struct FolderIntake {
     not_before: i64,
     /// The last failure reported, so one that lasts is reported once.
     failure: Option<String>,
+    /// The orders whose issue is being read again.
+    checking: BTreeSet<OrderId>,
 }
 
 /// The issues taken in as orders, by their page, kept per project on this Mac.
@@ -95,7 +104,7 @@ impl Leitstand {
                     taken: load_taken(&project),
                 },
                 move |read| {
-                    back.with(|cx| cx.leitstand().intake_read(&done_root, read));
+                    back.with(|cx| cx.leitstand().intake_read(cx, &done_root, read));
                 },
             );
             if !queued && let Some(state) = self.intake.borrow_mut().folders.get_mut(&root) {
@@ -118,7 +127,7 @@ impl Leitstand {
     }
 
     /// Takes in the new issues `read` found for `root`; the issues it takes are kept before their orders start.
-    fn intake_read(&self, root: &Path, read: Option<Read>) {
+    fn intake_read(&self, cx: &Rc<AppContext>, root: &Path, read: Option<Read>) {
         let failure = {
             let mut intake = self.intake.borrow_mut();
             let state = intake.folders.entry(root.to_path_buf()).or_default();
@@ -146,6 +155,7 @@ impl Leitstand {
         else {
             return;
         };
+        self.issue_updates(cx, root, &issues);
         let orders = self.new_issue_orders(root, &issues, &taken);
         if orders.is_empty() {
             return;
@@ -195,6 +205,111 @@ impl Leitstand {
             })
             .filter(|order| check_new_order(order, factory.rules(), factory.stage(), false, &folder.agents).ok())
             .collect()
+    }
+}
+
+impl Leitstand {
+    /// Hands the factory of `root` the text of each issue in `issues` that an open order came from and that reads
+    /// differently from what the order froze or last noted (E176).
+    fn issue_updates(&self, cx: &Rc<AppContext>, root: &Path, issues: &[ide_ci::Issue]) {
+        let reads: Vec<InputKind> = {
+            let folders = self.folders.borrow();
+            let Some(folder) = folders.get(root) else { return };
+            folder
+                .factory
+                .orders()
+                .filter(|o| !o.finished())
+                .filter_map(|o| {
+                    let origin = o.options().issue.as_ref()?;
+                    let issue = issues.iter().find(|i| i.url() == origin.url)?;
+                    news(o, issue.body()).then(|| InputKind::IssueRead {
+                        order: o.id().clone(),
+                        body: issue.body().to_string(),
+                    })
+                })
+                .collect()
+        };
+        for read in reads {
+            self.input(cx, root, read);
+        }
+    }
+
+    /// Reads the issue of `order` of `root` again when the order came from one and is open, the folder is trusted
+    /// and no rate limit holds its reads back; what the issue says now reaches the factory (E176).
+    pub(crate) fn check_issue(&self, root: &Path, order: &OrderId) {
+        let origin = self
+            .with_order(root, order, |o| {
+                let origin = o.options().issue.as_ref().filter(|_| !o.finished())?;
+                Some((origin.number, origin.url.clone()))
+            })
+            .flatten();
+        let Some((number, url)) = origin else { return };
+        if !crate::project::is_trusted(root) {
+            return;
+        }
+        {
+            let mut intake = self.intake.borrow_mut();
+            let state = intake.folders.entry(root.to_path_buf()).or_default();
+            if ide_ci::now() < state.not_before || !state.checking.insert(order.clone()) {
+                return;
+            }
+        }
+        let back = self.back();
+        let (folder, done_root, id) = (root.to_path_buf(), root.to_path_buf(), order.clone());
+        let queued = crate::ci_panel::on_lane(
+            move || crate::ci_panel::client(&folder).and_then(|client| client.issue(number)),
+            move |read| {
+                back.with(|cx| cx.leitstand().issue_checked(cx, &done_root, &id, &url, read));
+            },
+        );
+        if !queued && let Some(state) = self.intake.borrow_mut().folders.get_mut(root) {
+            state.checking.remove(order);
+        }
+    }
+
+    /// The issue of `order` as read again; a rate limit holds the folder's reads back, other failures leave the order
+    /// as it is.
+    fn issue_checked(
+        &self,
+        cx: &Rc<AppContext>,
+        root: &Path,
+        order: &OrderId,
+        url: &str,
+        read: Option<ide_ci::Result<ide_ci::Issue>>,
+    ) {
+        if let Some(state) = self.intake.borrow_mut().folders.get_mut(root) {
+            state.checking.remove(order);
+            if let Some(Err(ide_ci::Error::RateLimited { until })) = &read {
+                state.not_before = until.unwrap_or_else(|| ide_ci::now() + 15 * 60);
+            }
+        }
+        let Some(Ok(issue)) = read else { return };
+        if issue.url() == url {
+            let body = issue.body().to_string();
+            self.input(
+                cx,
+                root,
+                InputKind::IssueRead {
+                    order: order.clone(),
+                    body,
+                },
+            );
+        }
+    }
+}
+
+/// Whether `body` is news to `order`: it differs from what the order froze and from the change it noted, or it is
+/// the frozen text again while a change is noted.
+fn news(order: &Order, body: &str) -> bool {
+    let frozen = order
+        .options()
+        .issue
+        .as_ref()
+        .is_some_and(|origin| origin.unchanged(body));
+    if frozen {
+        order.issue_update().is_some()
+    } else {
+        order.issue_update() != Some(body)
     }
 }
 

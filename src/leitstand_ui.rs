@@ -91,6 +91,7 @@ fn command(kind: InputKind) -> Option<Command> {
         InputKind::Continue(id) => Command::Continue(id),
         InputKind::Answer { order, request, text } => Command::Answer { order, request, text },
         InputKind::ConfirmGates(hash) => Command::ConfirmGates(hash),
+        InputKind::TakeIssueChange(id) => Command::TakeIssueChange(id),
         _ => return None,
     })
 }
@@ -197,6 +198,10 @@ impl ide_ui_factory::Host for Orders {
             cx.leitstand()
                 .command(cx, root, Command::ConfirmLoosening(loosening.clone()))
         });
+    }
+
+    fn check_issue(&self, root: &Path, order: &OrderId) {
+        self.0.with(|cx| cx.leitstand().check_issue(root, order));
     }
 
     fn decide(&self, root: &Path, order: &OrderId, request: &ide_factory::RequestId, allow: bool) -> Vec<Refusal> {

@@ -184,6 +184,8 @@ pub struct Order {
     branch_kept: bool,
     checkpoints_removed: bool,
     g1_skipped: bool,
+    agreed: Option<Vec<Criterion>>,
+    issue_update: Option<String>,
     seq: u64,
 }
 
@@ -267,6 +269,8 @@ impl Order {
             branch_kept: false,
             checkpoints_removed: false,
             g1_skipped: false,
+            agreed: None,
+            issue_update: None,
             seq: 1,
         })
     }
@@ -681,6 +685,18 @@ impl Order {
     /// Whether G1 was skipped: in stage 1, where the user wrote the specification, or for class low (E185).
     pub fn g1_skipped(&self) -> bool {
         self.g1_skipped
+    }
+
+    /// Whether the builder's next prompt asks it to confirm the criteria or object to them: until it gave its word
+    /// on the criteria as they stand, or the user overruled its objection (E178).
+    pub fn contract_due(&self) -> bool {
+        self.agreed.as_deref() != Some(self.criteria.as_slice())
+    }
+
+    /// The issue's description as it reads now, while it differs from what the order froze and the user has not
+    /// taken it over (E176).
+    pub fn issue_update(&self) -> Option<&str> {
+        self.issue_update.as_deref()
     }
 
     /// How many operations are begun and not finished.

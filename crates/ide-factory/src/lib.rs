@@ -22,6 +22,7 @@
 //!   gate commands only with the confirmations the app stores (E190).
 //! - [`intake`] takes orders from issues (E176): the frozen origin, the task list as suggested criteria, and which
 //!   issues automatic intake takes; such orders always wait for G1, and their text goes into prompts as foreign text.
+//! - [`contract`] reads the builder's confirmation of or objection to the criteria in its first turn (E178).
 //! - [`relevance`] classifies a diff's paths (E172), [`gates`] judges the review row (E163), [`verdict`] reads the
 //!   reviewer's structured answer (E179), [`evidence`] binds the evidence to its fingerprint with the deviations
 //!   first, [`options`] checks the sheet "Neuer Auftrag" (E185), [`prompt`] renders the templates.
@@ -46,6 +47,7 @@
 #![warn(missing_docs)]
 
 pub mod budget;
+pub mod contract;
 pub mod criteria;
 pub mod effect;
 pub mod event;

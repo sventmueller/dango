@@ -562,6 +562,25 @@ pub enum Event {
         /// The request.
         request: RequestId,
     },
+    /// The builder confirmed the criteria, objected to them, or said neither, in a turn that asked for its word
+    /// (E178).
+    CriteriaReplied {
+        /// What it said.
+        reply: crate::contract::CriteriaReply,
+    },
+    /// The user overruled the builder's objection: the criteria stand as they are (E178).
+    ObjectionOverruled,
+    /// The order's issue reads differently from what the order froze; it is taken over only on the user's word
+    /// (E176).
+    IssueChanged {
+        /// The issue's description as it reads now.
+        body: String,
+    },
+    /// The user took the issue's change over: the order's origin, and its goal, are the issue's new text (E176).
+    IssueTaken {
+        /// The issue as it reads now, frozen with its hash.
+        origin: crate::intake::IssueOrigin,
+    },
     /// The base was merged in and is now this commit (F49, C56).
     Rebased {
         /// The new base commit.

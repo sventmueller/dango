@@ -61,6 +61,21 @@ impl Order {
             | Event::AcceptanceKept
             | Event::ByHand => self.apply_review(&entry.event),
             Event::BranchKept => self.branch_kept = true,
+            Event::CriteriaReplied { reply } => {
+                if !matches!(reply, crate::contract::CriteriaReply::Objection(_)) {
+                    self.agreed = Some(self.criteria.clone());
+                }
+            }
+            Event::ObjectionOverruled => self.agreed = Some(self.criteria.clone()),
+            Event::IssueChanged { body } => {
+                let frozen = self.options.issue.as_ref().is_some_and(|o| o.unchanged(body));
+                self.issue_update = (!frozen).then(|| body.clone());
+            }
+            Event::IssueTaken { origin } => {
+                self.goal = origin.body.trim().to_string();
+                self.options.issue = Some(origin.clone());
+                self.issue_update = None;
+            }
             Event::SessionStarted { .. }
             | Event::SessionFailed { .. }
             | Event::SessionEnded { .. }

@@ -33,18 +33,20 @@ pub fn default_template(kind: PromptKind) -> &'static str {
         PromptKind::Build => {
             "Carry out this order in this worktree. Do not commit; Dango commits after your turn. Stay within the \
              path scope if there is one.\n\n# {{title}}\n\n{{goal}}\n\n## Acceptance criteria\n\n{{criteria}}\n\n\
-             {{scope}}\n\nConfirm the criteria first; if you object to one, say so and stop."
+             {{scope}}\n\n{{contract}}"
         }
         PromptKind::Rework => {
             "The checks of your work did not pass. Fix what they found, then end your turn.\n\n{{findings}}\n\n\
-             {{comment}}\n\n## Acceptance criteria\n\n{{criteria}}"
+             {{comment}}\n\n## Acceptance criteria\n\n{{criteria}}\n\n{{contract}}"
         }
         PromptKind::Resume => {
-            "Go on with the order where you stopped.\n\n# {{title}}\n\n## Acceptance criteria\n\n{{criteria}}"
+            "Go on with the order where you stopped.\n\n# {{title}}\n\n## Acceptance criteria\n\n{{criteria}}\n\n\
+             {{contract}}"
         }
         PromptKind::Handoff => {
             "You take over this order from another agent; the worktree holds its work so far.\n\n# {{title}}\n\n\
-             {{goal}}\n\n## Acceptance criteria\n\n{{criteria}}\n\n## What happened so far\n\n{{summary}}"
+             {{goal}}\n\n## Acceptance criteria\n\n{{criteria}}\n\n## What happened so far\n\n{{summary}}\n\n\
+             {{contract}}"
         }
         PromptKind::Review => {
             "Judge this change against the criteria only. Do not change anything.\n\n# {{title}}\n\n{{goal}}\n\n\
@@ -99,6 +101,20 @@ fn collapse_blank_lines(text: &str) -> String {
     out
 }
 
+/// Whether `template` has a place for `key`, as `{{key}}` with or without spaces.
+pub fn has_placeholder(template: &str, key: &str) -> bool {
+    let mut rest = template;
+    while let Some(start) = rest.find("{{") {
+        let after = &rest[start + 2..];
+        let Some(end) = after.find("}}") else { return false };
+        if after[..end].trim() == key {
+            return true;
+        }
+        rest = &after[end + 2..];
+    }
+    false
+}
+
 /// The criteria as a list with their ids.
 pub fn criteria_list(criteria: &[Criterion]) -> String {
     criteria
@@ -130,6 +146,13 @@ mod tests {
         let got = render("Goal: {{goal}}\n\n\n{{nothing}}\n\nCriteria:\n{{ criteria }}", &values);
         assert_eq!(got, "Goal: Export {{criteria}}\n\nCriteria:\n- a\n");
         assert_eq!(render("open {{ end", &values), "open {{ end\n");
+    }
+
+    #[test]
+    fn placeholders_are_found_with_or_without_spaces() {
+        assert!(has_placeholder("a {{ contract }} b", "contract"));
+        assert!(has_placeholder("{{goal}}{{contract}}", "contract"));
+        assert!(!has_placeholder("{{goal}} contract {{ end", "contract"));
     }
 
     #[test]

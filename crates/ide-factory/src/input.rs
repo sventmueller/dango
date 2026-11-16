@@ -182,6 +182,15 @@ pub enum InputKind {
     },
     /// The user confirmed the gate command set of this hash (E190).
     ConfirmGates(String),
+    /// Take the change of the order's issue over, as the user's word (E176).
+    TakeIssueChange(OrderId),
+    /// The order's issue, read again, has this description; never its comments (E176).
+    IssueRead {
+        /// The order.
+        order: OrderId,
+        /// The issue's description as it reads now.
+        body: String,
+    },
     /// The rule set: user defaults, workflow file and confirmations merged (E190).
     Rules(Box<Rules>),
     /// What the app knows about each path (E58, E170).

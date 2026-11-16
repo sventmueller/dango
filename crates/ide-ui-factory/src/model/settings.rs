@@ -1,13 +1,14 @@
 //! The Leitstand's settings (E183): the user's defaults for all projects in "Einstellungen ▸ Aufträge", and the
 //! project's workflow file in "Leitstand für <Ordner>", each value with where it comes from and a way back to the
-//! default. Stage 1 offers the builder, limits, budgets, gates and copying (E183's stages).
+//! default: every role with model and effort, the reviewer rule, limits, budgets per order, day and provider, gates,
+//! copying and setup, risk patterns and the files that count for the review.
 
 use std::collections::BTreeMap;
 
 use ide_core::explain::Explained;
 use ide_factory::budget::{Budget, Budgets};
 use ide_factory::limits::Limit;
-use ide_factory::routing::{Agent, Capabilities, RankEntry};
+use ide_factory::routing::{Agent, Capabilities, RankEntry, ReviewerRule};
 use ide_factory::station::Role;
 use ide_factory::workflow::edit::{self, EditError, EditValue};
 use ide_factory::workflow::{UserDefaults, Workflow, WorkflowError, parse};
@@ -57,6 +58,19 @@ pub const AGENTS: [Agent; 5] = [
     Agent::OpenCode,
     Agent::Antigravity,
 ];
+
+/// The paths whose API spending a budget per day can hold (E168), each with its billing service as the app names it.
+pub const PROVIDERS: [Agent; 3] = [Agent::Claude, Agent::Codex, Agent::Own];
+
+/// The billing service of `agent`'s API, as the runtime counts its spending.
+pub fn api_service(agent: &Agent) -> String {
+    format!("{agent}-api")
+}
+
+/// The title of the row of `agent`'s budget per day.
+pub fn provider_title(agent: &Agent) -> String {
+    tf("{} über API je Tag ($):", &[&agent_name(agent)])
+}
 
 /// The name of `agent` in the lists.
 pub fn agent_name(agent: &Agent) -> String {
@@ -148,6 +162,54 @@ impl DefaultsForm {
             entry.model = (!model.is_empty()).then(|| model.to_string());
         }
         self.defaults.set_role(role, list);
+    }
+
+    /// Sets the reasoning effort of the entry at `index`; empty for the agent's default.
+    pub fn set_effort(&mut self, role: Role, index: usize, effort: &str) {
+        let mut list = self.list(role).to_vec();
+        if let Some(entry) = list.get_mut(index) {
+            let effort = effort.trim();
+            entry.effort = (!effort.is_empty()).then(|| effort.to_string());
+        }
+        self.defaults.set_role(role, list);
+    }
+
+    /// Whether a reviewer of the builders' vendor may review when no other is ready (E162).
+    pub fn reviewer_preferred(&self) -> bool {
+        self.defaults.reviewer_rule() == ReviewerRule::Preferred
+    }
+
+    /// Sets the reviewer rule: another vendor preferred, or required.
+    pub fn set_reviewer_preferred(&mut self, preferred: bool) {
+        let rule = if preferred {
+            ReviewerRule::Preferred
+        } else {
+            ReviewerRule::Required
+        };
+        self.defaults.set_reviewer_rule(rule);
+    }
+
+    /// The budget in dollars of the billing `service` per day; none for no limit.
+    pub fn provider_budget(&self, service: &str) -> Option<f64> {
+        self.defaults.budgets().provider(service).and_then(Budget::dollars)
+    }
+
+    /// Sets the dollars of `service`'s budget per day, keeping its other units and every other budget.
+    pub fn set_provider_budget(&mut self, service: &str, dollars: Option<f64>) {
+        let old = self.defaults.budgets();
+        let mut providers = BTreeMap::new();
+        for name in services(old) {
+            if let Some(budget) = old.provider(&name) {
+                providers.insert(name, budget.clone());
+            }
+        }
+        let kept = providers.remove(service).unwrap_or_default();
+        let budget = Budget::new(dollars, kept.tokens(), kept.window_percent());
+        if !budget.is_unlimited() {
+            providers.insert(service.to_string(), budget);
+        }
+        let budgets = Budgets::new(old.order().clone(), old.day().clone(), providers);
+        self.defaults.set_budgets(budgets);
     }
 
     /// The value of `limit`.
@@ -247,6 +309,125 @@ impl Origin {
     }
 }
 
+/// A value of the dialog "Leitstand für <Ordner>" that shows where it comes from and goes back to the default (E183).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProjectValue {
+    /// A role's ranked list.
+    Role(Role),
+    /// Whether the reviewer must come from another vendor.
+    ReviewerRule,
+    /// A limit (E168).
+    Limit(Limit),
+    /// The budget of one order in dollars.
+    OrderBudget,
+    /// The budget of one day in dollars.
+    DayBudget,
+    /// The paths copied into each worktree (E188).
+    Copy,
+    /// The setup command of a new worktree (E188).
+    Setup,
+    /// The path patterns of risk class high (E163).
+    RiskHigh,
+    /// The path patterns of risk class medium.
+    RiskMedium,
+    /// More test paths whose change counts as relevant (E172).
+    Tests,
+    /// More lint, CI and build configuration whose change counts as relevant.
+    Config,
+}
+
+impl ProjectValue {
+    /// Every value, in the dialog's order.
+    pub fn all() -> Vec<ProjectValue> {
+        let mut all: Vec<ProjectValue> = Role::ALL.into_iter().map(ProjectValue::Role).collect();
+        all.push(ProjectValue::ReviewerRule);
+        all.extend(LIMITS.into_iter().map(ProjectValue::Limit));
+        all.extend([
+            ProjectValue::OrderBudget,
+            ProjectValue::DayBudget,
+            ProjectValue::Copy,
+            ProjectValue::Setup,
+            ProjectValue::RiskHigh,
+            ProjectValue::RiskMedium,
+            ProjectValue::Tests,
+            ProjectValue::Config,
+        ]);
+        all
+    }
+
+    /// Its place in [`ProjectValue::all`], the tag of its controls.
+    pub fn tag(self) -> isize {
+        let index = ProjectValue::all().iter().position(|v| *v == self).unwrap_or(0);
+        isize::try_from(index).unwrap_or(0)
+    }
+
+    /// The value of `tag`.
+    pub fn of_tag(tag: isize) -> Option<ProjectValue> {
+        ProjectValue::all().get(usize::try_from(tag).ok()?).copied()
+    }
+
+    /// Its key in the workflow file.
+    pub fn key(self) -> Vec<&'static str> {
+        match self {
+            ProjectValue::Role(role) => vec!["roles", role.key()],
+            ProjectValue::ReviewerRule => vec!["review", "rule"],
+            ProjectValue::Limit(limit) => vec!["limits", limit.key()],
+            ProjectValue::OrderBudget => vec!["budget", "order", "dollars"],
+            ProjectValue::DayBudget => vec!["budget", "day", "dollars"],
+            ProjectValue::Copy => vec!["worktree", "copy"],
+            ProjectValue::Setup => vec!["worktree", "setup"],
+            ProjectValue::RiskHigh => vec!["risk", "high"],
+            ProjectValue::RiskMedium => vec!["risk", "medium"],
+            ProjectValue::Tests => vec!["relevant", "tests"],
+            ProjectValue::Config => vec!["relevant", "config"],
+        }
+    }
+
+    /// The title of its row.
+    pub fn title(self) -> String {
+        match self {
+            ProjectValue::Role(role) => role_title(role).into(),
+            ProjectValue::ReviewerRule => t("Prüfer-Regel:").into(),
+            ProjectValue::Limit(limit) => limit_title(limit).into(),
+            ProjectValue::OrderBudget => t("Budget je Auftrag ($):").into(),
+            ProjectValue::DayBudget => t("Budget je Tag ($):").into(),
+            ProjectValue::Copy => t("Mitkopieren:").into(),
+            ProjectValue::Setup => t("Einrichtung:").into(),
+            ProjectValue::RiskHigh => t("Risikoklasse hoch:").into(),
+            ProjectValue::RiskMedium => t("Risikoklasse mittel:").into(),
+            ProjectValue::Tests => t("Tests:").into(),
+            ProjectValue::Config => t("Konfiguration:").into(),
+        }
+    }
+
+    /// Whether the dialog edits it as a list of paths or patterns, one per line or separated by commas.
+    pub fn is_list(self) -> bool {
+        matches!(
+            self,
+            ProjectValue::Copy
+                | ProjectValue::RiskHigh
+                | ProjectValue::RiskMedium
+                | ProjectValue::Tests
+                | ProjectValue::Config
+        )
+    }
+}
+
+/// The title of the row of `role`'s ranked list.
+pub fn role_title(role: Role) -> &'static str {
+    match role {
+        Role::Planner => t("Planer:"),
+        Role::Builder => t("Builder:"),
+        Role::Reviewer => t("Prüfer:"),
+        Role::Scout => t("Späher:"),
+    }
+}
+
+/// The reviewer rule's choices, in their order: another vendor required, or preferred.
+pub fn reviewer_rules() -> [&'static str; 2] {
+    [t("Anderer Hersteller Pflicht"), t("Anderer Hersteller bevorzugt")]
+}
+
 /// The project's workflow file as the dialog "Leitstand für <Ordner>" edits it (E183).
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct ProjectFile {
@@ -301,6 +482,21 @@ impl ProjectFile {
         notes
     }
 
+    /// Where `value` comes from: the file when it sets the value's key, else the user's default.
+    pub fn origin(&self, value: ProjectValue) -> Origin {
+        if edit::has(&self.text, &value.key()) {
+            Origin::File
+        } else {
+            Origin::Default
+        }
+    }
+
+    /// Takes `value` out of the file, so the default applies again; comments and order of the rest stay.
+    pub fn reset(&mut self, value: ProjectValue) -> Result<(), Explained> {
+        let result = edit::remove(&self.text, &value.key());
+        self.edit(result)
+    }
+
     /// The value of `limit` and where it comes from.
     pub fn limit(&self, limit: Limit) -> (u64, Origin) {
         let own = self
@@ -320,20 +516,33 @@ impl ProjectFile {
             .unwrap_or_default()
     }
 
+    /// The paths or patterns of the list `value` as the file gives them; none by default, where only the built-in
+    /// patterns of each test tool apply.
+    pub fn list(&self, value: ProjectValue) -> (Vec<String>, Origin) {
+        let Ok(workflow) = self.read() else {
+            return (Vec::new(), self.origin(value));
+        };
+        let relevance = workflow.relevance();
+        let list = match value {
+            ProjectValue::Copy => workflow.copy().to_vec(),
+            ProjectValue::RiskHigh => relevance.high.clone(),
+            ProjectValue::RiskMedium => relevance.medium.clone(),
+            ProjectValue::Tests => relevance.tests.clone(),
+            ProjectValue::Config => relevance.config.clone(),
+            _ => Vec::new(),
+        };
+        (list, self.origin(value))
+    }
+
     /// The paths copied into each worktree (E188).
     pub fn copy(&self) -> (Vec<String>, Origin) {
-        match self.read() {
-            Ok(w) if !w.copy().is_empty() => (w.copy().to_vec(), Origin::File),
-            _ => (Vec::new(), Origin::Default),
-        }
+        self.list(ProjectValue::Copy)
     }
 
     /// The setup command (E188).
     pub fn setup(&self) -> (String, Origin) {
-        match self.read().ok().and_then(|w| w.setup().map(str::to_string)) {
-            Some(setup) => (setup, Origin::File),
-            None => (String::new(), Origin::Default),
-        }
+        let setup = self.read().ok().and_then(|w| w.setup().map(str::to_string));
+        (setup.unwrap_or_default(), self.origin(ProjectValue::Setup))
     }
 
     /// The budget of one order in dollars and where it comes from.
@@ -344,17 +553,39 @@ impl ProjectFile {
         }
     }
 
-    /// The builder's ranked list and where it comes from.
-    pub fn builders(&self) -> (Vec<String>, Origin) {
-        let own = self
-            .read()
-            .ok()
-            .and_then(|w| w.role(Role::Builder).map(<[RankEntry]>::to_vec));
+    /// The budget of one day in dollars and where it comes from.
+    pub fn day_budget(&self) -> (Option<f64>, Origin) {
+        match self.read().ok().and_then(|w| w.budgets().day().dollars()) {
+            Some(dollars) => (Some(dollars), Origin::File),
+            None => (self.defaults.budgets().day().dollars(), Origin::Default),
+        }
+    }
+
+    /// The ranked list of `role` in words and where it comes from.
+    pub fn role(&self, role: Role) -> (Vec<String>, Origin) {
+        let own = self.read().ok().and_then(|w| w.role(role).map(<[RankEntry]>::to_vec));
         let (list, origin) = match own {
             Some(list) => (list, Origin::File),
-            None => (self.defaults.role(Role::Builder).to_vec(), Origin::Default),
+            None => (self.defaults.role(role).to_vec(), Origin::Default),
         };
-        (list.iter().map(|e| entry_words(e, Role::Builder)).collect(), origin)
+        (list.iter().map(|e| entry_words(e, role)).collect(), origin)
+    }
+
+    /// The builder's ranked list and where it comes from.
+    pub fn builders(&self) -> (Vec<String>, Origin) {
+        self.role(Role::Builder)
+    }
+
+    /// Whether the rule lets a reviewer of the builders' vendor review when no other is ready, and where it comes
+    /// from; "preferred" in the file applies only once the user confirmed it (E190).
+    pub fn reviewer_preferred(&self) -> (bool, Origin) {
+        match self.read().ok().and_then(|w| w.reviewer_preferred()) {
+            Some(preferred) => (preferred, Origin::File),
+            None => (
+                self.defaults.reviewer_rule() == ReviewerRule::Preferred,
+                Origin::Default,
+            ),
+        }
     }
 
     fn edit(&mut self, result: Result<String, EditError>) -> Result<(), Explained> {
@@ -379,44 +610,67 @@ impl ProjectFile {
 
     /// Takes `limit` out of the file, so the default applies again.
     pub fn reset_limit(&mut self, limit: Limit) -> Result<(), Explained> {
-        let result = edit::remove(&self.text, &["limits", limit.key()]);
-        self.edit(result)
+        self.reset(ProjectValue::Limit(limit))
     }
 
-    /// Writes the paths to copy, one per line or separated by commas; none takes the key out.
-    pub fn set_copy(&mut self, text: &str) -> Result<(), Explained> {
-        let paths: Vec<String> = text
+    /// Writes the list `value` from `text`, one entry per line or separated by commas; none takes the key out.
+    pub fn set_list(&mut self, value: ProjectValue, text: &str) -> Result<(), Explained> {
+        let entries: Vec<String> = text
             .split(['\n', ','])
             .map(str::trim)
             .filter(|p| !p.is_empty())
             .map(str::to_string)
             .collect();
-        let result = if paths.is_empty() {
-            edit::remove(&self.text, &["worktree", "copy"])
-        } else {
-            edit::set(&self.text, &["worktree", "copy"], EditValue::Texts(paths))
-        };
+        if entries.is_empty() {
+            return self.reset(value);
+        }
+        if entries == self.list(value).0 {
+            return Ok(());
+        }
+        let result = edit::set(&self.text, &value.key(), EditValue::Texts(entries));
         self.edit(result)
+    }
+
+    /// Writes the paths to copy, one per line or separated by commas; none takes the key out.
+    pub fn set_copy(&mut self, text: &str) -> Result<(), Explained> {
+        self.set_list(ProjectValue::Copy, text)
     }
 
     /// Writes the setup command; an empty one takes the key out.
     pub fn set_setup(&mut self, command: &str) -> Result<(), Explained> {
         let command = command.trim();
-        let result = if command.is_empty() {
-            edit::remove(&self.text, &["worktree", "setup"])
-        } else {
-            edit::set(&self.text, &["worktree", "setup"], EditValue::Text(command.to_string()))
-        };
+        if command.is_empty() {
+            return self.reset(ProjectValue::Setup);
+        }
+        if command == self.setup().0 {
+            return Ok(());
+        }
+        let result = edit::set(&self.text, &["worktree", "setup"], EditValue::Text(command.to_string()));
         self.edit(result)
     }
 
     /// Writes the order budget in dollars; `None` takes it out.
     pub fn set_order_budget(&mut self, dollars: Option<f64>) -> Result<(), Explained> {
-        let key = ["budget", "order", "dollars"];
+        self.set_dollars(ProjectValue::OrderBudget, dollars)
+    }
+
+    /// Writes the day budget in dollars; `None` takes it out.
+    pub fn set_day_budget(&mut self, dollars: Option<f64>) -> Result<(), Explained> {
+        self.set_dollars(ProjectValue::DayBudget, dollars)
+    }
+
+    fn set_dollars(&mut self, value: ProjectValue, dollars: Option<f64>) -> Result<(), Explained> {
         let result = match dollars {
-            Some(dollars) => edit::set(&self.text, &key, EditValue::Number(dollars)),
-            None => edit::remove(&self.text, &key),
+            Some(dollars) => edit::set(&self.text, &value.key(), EditValue::Number(dollars)),
+            None => edit::remove(&self.text, &value.key()),
         };
+        self.edit(result)
+    }
+
+    /// Writes the reviewer rule: another vendor preferred, or required.
+    pub fn set_reviewer_preferred(&mut self, preferred: bool) -> Result<(), Explained> {
+        let word = if preferred { "preferred" } else { "required" };
+        let result = edit::set(&self.text, &["review", "rule"], EditValue::Text(word.into()));
         self.edit(result)
     }
 }
@@ -453,6 +707,72 @@ mod tests {
         assert_eq!(file.limit(Limit::TurnMinutes), (60, Origin::Default));
         file.set_limit(Limit::Attempts, 2).unwrap();
         assert_eq!(file.limit(Limit::Attempts), (2, Origin::File));
+    }
+
+    const FILE: &str = "\
+[[roles.reviewer]]
+agent = \"claude\"
+
+# Our rules.
+[review]
+rule = \"preferred\" # the team agreed
+
+[risk]
+# Payment code.
+high = [\"src/pay/**\"]
+";
+
+    #[test]
+    fn every_value_shows_its_origin_and_a_reset_keeps_the_rest_of_the_file() {
+        let mut file = ProjectFile::new(Some(FILE.into()), false, UserDefaults::default());
+        assert_eq!(file.origin(ProjectValue::Role(Role::Reviewer)), Origin::File);
+        assert_eq!(file.origin(ProjectValue::Role(Role::Builder)), Origin::Default);
+        assert_eq!(file.reviewer_preferred(), (true, Origin::File));
+        assert_eq!(
+            file.list(ProjectValue::RiskHigh),
+            (vec!["src/pay/**".to_string()], Origin::File)
+        );
+        assert_eq!(file.list(ProjectValue::Tests), (Vec::new(), Origin::Default));
+        file.reset(ProjectValue::Role(Role::Reviewer)).unwrap();
+        file.reset(ProjectValue::ReviewerRule).unwrap();
+        assert_eq!(file.origin(ProjectValue::Role(Role::Reviewer)), Origin::Default);
+        assert_eq!(file.reviewer_preferred(), (false, Origin::Default));
+        assert!(file.text().contains("# Payment code.") && file.text().contains("# Our rules."));
+        file.set_list(ProjectValue::Tests, "spec/**, e2e/**").unwrap();
+        assert_eq!(file.origin(ProjectValue::Tests), Origin::File);
+        file.set_list(ProjectValue::RiskHigh, "").unwrap();
+        assert_eq!(file.origin(ProjectValue::RiskHigh), Origin::Default);
+        assert!(file.errors().is_empty(), "{:?}", file.errors());
+    }
+
+    #[test]
+    fn a_bad_pattern_shows_as_an_error_of_the_file() {
+        let mut file = ProjectFile::new(None, false, UserDefaults::default());
+        file.set_list(ProjectValue::Config, "ci/[").unwrap();
+        assert_eq!(file.errors().len(), 1);
+    }
+
+    #[test]
+    fn values_come_back_from_their_tags() {
+        for value in ProjectValue::all() {
+            assert_eq!(ProjectValue::of_tag(value.tag()), Some(value));
+        }
+    }
+
+    #[test]
+    fn effort_reviewer_rule_and_provider_budgets_change_the_defaults() {
+        let mut form = DefaultsForm::default();
+        form.set_effort(Role::Reviewer, 0, " high ");
+        assert_eq!(form.list(Role::Reviewer)[0].effort.as_deref(), Some("high"));
+        form.set_reviewer_preferred(true);
+        assert!(form.reviewer_preferred());
+        let service = api_service(&Agent::Claude);
+        form.set_provider_budget(&service, Some(5.0));
+        form.set_budgets(Some(2.0), None);
+        assert_eq!(form.provider_budget(&service), Some(5.0));
+        form.set_provider_budget(&service, None);
+        assert_eq!(form.provider_budget(&service), None);
+        assert_eq!(form.budgets(), (Some(2.0), None));
     }
 
     #[test]

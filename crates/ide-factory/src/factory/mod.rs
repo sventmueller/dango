@@ -3,6 +3,7 @@
 
 mod advance;
 mod commands;
+mod issue;
 mod restore;
 mod review;
 mod session;

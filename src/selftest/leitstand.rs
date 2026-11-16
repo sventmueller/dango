@@ -4,6 +4,7 @@
 //! children are the scenarios that run orders.
 
 pub(super) mod attach;
+pub(super) mod gaps;
 pub(super) mod metrics;
 pub(super) mod order;
 pub(super) mod queue;

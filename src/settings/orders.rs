@@ -1,14 +1,17 @@
-//! The Orders tab (Einstellungen ▸ Aufträge, E183): the user's defaults for the Leitstand in every project. Stage 1
-//! offers the builder's ranked list, the limits, the budgets per order and per day, and how orders behave after a
-//! restart and on battery; a project's `.dango/factory.toml` can only tighten them (E190). The values are stored per
-//! Mac (E113) through the Leitstand's host.
+//! The Orders tab (Einstellungen ▸ Aufträge, E183): the user's defaults for the Leitstand in every project. It offers
+//! the ranked list of every role (planner, builder, reviewer, scout) with model and effort per entry, the reviewer
+//! rule, the limits, the budgets per order, per day and per provider, and how orders behave after a restart and on
+//! battery; a project's `.dango/factory.toml` can only tighten them (E190). The values are stored per Mac (E113)
+//! through the Leitstand's host.
 
-use std::cell::{OnceCell, RefCell};
+use std::cell::{Cell, OnceCell, RefCell};
 
 use ide_factory::station::Role;
 use ide_ui_factory::model::settings::{
-    AGENTS, DefaultsForm, LIMITS, agent_name, entry_words, limit_title, read_dollars, takes,
+    AGENTS, DefaultsForm, LIMITS, PROVIDERS, agent_name, api_service, entry_words, limit_title, provider_title,
+    read_dollars, reviewer_rules, takes,
 };
+use ide_ui_factory::model::words;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
@@ -25,21 +28,40 @@ use crate::util::{guarded, ns, set_action};
 /// The tag of the order budget's field; the day's is one more.
 const ORDER_BUDGET: isize = 100;
 
+/// The tag of the first provider's budget field; the others follow in the order of `PROVIDERS`.
+const PROVIDER_BUDGET: isize = 200;
+
 pub(crate) struct OrdersIvars {
     form: RefCell<DefaultsForm>,
+    /// The role whose ranked list the table shows.
+    role: Cell<Role>,
     ui: OnceCell<OrdersUi>,
 }
 
 struct OrdersUi {
     view: Retained<NSView>,
+    role: Retained<NSPopUpButton>,
     table: Retained<NSTableView>,
     model: Retained<NSTextField>,
+    effort: Retained<NSTextField>,
+    reviewer: Retained<NSPopUpButton>,
     limits: Vec<Retained<NSTextField>>,
     budgets: [Retained<NSTextField>; 2],
+    providers: Vec<Retained<NSTextField>>,
     resume: Retained<NSButton>,
     battery: Retained<NSButton>,
     proposals: Retained<NSButton>,
     problem: Retained<NSTextField>,
+}
+
+/// The controls of the roles' part, before they go into the tab.
+struct RolesPart {
+    views: Vec<Retained<NSView>>,
+    role: Retained<NSPopUpButton>,
+    table: Retained<NSTableView>,
+    model: Retained<NSTextField>,
+    effort: Retained<NSTextField>,
+    reviewer: Retained<NSPopUpButton>,
 }
 
 define_class!(
@@ -57,7 +79,7 @@ define_class!(
     unsafe impl NSTableViewDataSource for OrdersSettings {
         #[unsafe(method(numberOfRowsInTableView:))]
         fn row_count(&self, _table: &NSTableView) -> isize {
-            guarded(0, || isize::try_from(self.ivars().form.borrow().list(Role::Builder).len()).unwrap_or(0))
+            guarded(0, || isize::try_from(self.ivars().form.borrow().list(self.role()).len()).unwrap_or(0))
         }
     }
 
@@ -66,9 +88,10 @@ define_class!(
         fn view_for(&self, _table: &NSTableView, _column: Option<&NSTableColumn>, row: isize) -> Option<Retained<NSView>> {
             guarded(None, || {
                 let form = self.ivars().form.borrow();
-                let entry = form.list(Role::Builder).get(usize::try_from(row).ok()?)?;
-                let cell = form::cell(self.mtm(), &entry_words(entry, Role::Builder));
-                if !takes(entry, Role::Builder) {
+                let role = self.role();
+                let entry = form.list(role).get(usize::try_from(row).ok()?)?;
+                let cell = form::cell(self.mtm(), &entry_words(entry, role));
+                if !takes(entry, role) {
                     cell.setAlphaValue(0.5);
                 }
                 Some(cell)
@@ -77,11 +100,22 @@ define_class!(
 
         #[unsafe(method(tableViewSelectionDidChange:))]
         fn selection_changed(&self, _notification: &objc2_foundation::NSNotification) {
-            guarded((), || self.show_model());
+            guarded((), || self.show_entry());
         }
     }
 
     impl OrdersSettings {
+        #[unsafe(method(ideOrdersRole:))]
+        fn role_chosen(&self, _sender: Option<&AnyObject>) {
+            guarded((), || {
+                let index = usize::try_from(self.ui().role.indexOfSelectedItem()).unwrap_or(0);
+                self.ivars().role.set(Role::ALL.get(index).copied().unwrap_or(Role::Builder));
+                let none = objc2_foundation::NSIndexSet::new();
+                self.ui().table.selectRowIndexes_byExtendingSelection(&none, false);
+                self.show();
+            });
+        }
+
         #[unsafe(method(ideOrdersAdd:))]
         fn add(&self, sender: Option<&AnyObject>) {
             guarded((), || {
@@ -90,7 +124,8 @@ define_class!(
                     .map_or(-1, NSPopUpButton::indexOfSelectedItem);
                 // The pull-down's first item is its title.
                 if let Some(agent) = usize::try_from(index - 1).ok().and_then(|i| AGENTS.get(i)) {
-                    self.change(|form| form.add(Role::Builder, agent.clone()));
+                    let role = self.role();
+                    self.change(|form| form.add(role, agent.clone()));
                 }
             });
         }
@@ -99,7 +134,8 @@ define_class!(
         fn remove(&self, _sender: Option<&AnyObject>) {
             guarded((), || {
                 if let Some(index) = self.selected() {
-                    self.change(|form| form.remove(Role::Builder, index));
+                    let role = self.role();
+                    self.change(|form| form.remove(role, index));
                 }
             });
         }
@@ -109,8 +145,8 @@ define_class!(
             guarded((), || {
                 let up = sender.and_then(|s| s.downcast_ref::<NSButton>()).is_some_and(|b| b.tag() == 0);
                 if let Some(index) = self.selected() {
-                    let mut to = index;
-                    self.change(|form| to = form.shift(Role::Builder, index, up));
+                    let (role, mut to) = (self.role(), index);
+                    self.change(|form| to = form.shift(role, index, up));
                     self.select(to);
                 }
             });
@@ -120,10 +156,31 @@ define_class!(
         fn model(&self, _sender: Option<&AnyObject>) {
             guarded((), || {
                 if let Some(index) = self.selected() {
+                    let role = self.role();
                     let model = self.ui().model.stringValue().to_string();
-                    self.change(|form| form.set_model(Role::Builder, index, &model));
+                    self.change(|form| form.set_model(role, index, &model));
                     self.select(index);
                 }
+            });
+        }
+
+        #[unsafe(method(ideOrdersEffort:))]
+        fn effort(&self, _sender: Option<&AnyObject>) {
+            guarded((), || {
+                if let Some(index) = self.selected() {
+                    let role = self.role();
+                    let effort = self.ui().effort.stringValue().to_string();
+                    self.change(|form| form.set_effort(role, index, &effort));
+                    self.select(index);
+                }
+            });
+        }
+
+        #[unsafe(method(ideOrdersReviewer:))]
+        fn reviewer(&self, _sender: Option<&AnyObject>) {
+            guarded((), || {
+                let preferred = self.ui().reviewer.indexOfSelectedItem() == 1;
+                self.change(|form| form.set_reviewer_preferred(preferred));
             });
         }
 
@@ -156,6 +213,7 @@ impl OrdersSettings {
     pub(crate) fn new(mtm: MainThreadMarker) -> Retained<OrdersSettings> {
         let this = Self::alloc(mtm).set_ivars(OrdersIvars {
             form: RefCell::new(DefaultsForm::new(crate::leitstand_ui::defaults())),
+            role: Cell::new(Role::Builder),
             ui: OnceCell::new(),
         });
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
@@ -174,15 +232,25 @@ impl OrdersSettings {
         self.ivars().ui.get().expect("the tab builds its views in `new`")
     }
 
+    fn role(&self) -> Role {
+        self.ivars().role.get()
+    }
+
     /// Reads the stored defaults again, as when the settings window comes to the front.
     pub(crate) fn reload(&self) {
         *self.ivars().form.borrow_mut() = DefaultsForm::new(crate::leitstand_ui::defaults());
         self.show();
     }
 
-    fn build(&self, mtm: MainThreadMarker) -> OrdersUi {
+    /// The role menu, its ranked list with model and effort of the selected entry, and the reviewer rule.
+    fn roles_part(&self, mtm: MainThreadMarker) -> RolesPart {
         let me: &AnyObject = self.as_ref();
-        let (table, list) = form::table(mtm, self, &[(t("Builder"), form::WIDTH)], 110.0);
+        let role = NSPopUpButton::new(mtm);
+        for each in Role::ALL {
+            role.addItemWithTitle(&ns(words::role(each)));
+        }
+        set_action(&role, me, sel!(ideOrdersRole:));
+        let (table, list) = form::table(mtm, self, &[(t("Rangliste"), form::WIDTH)], 110.0);
         let add = NSPopUpButton::new(mtm);
         add.setPullsDown(true);
         add.addItemWithTitle(&ns(t("Hinzufügen")));
@@ -195,10 +263,49 @@ impl OrdersSettings {
         let up = button(mtm, t("Nach oben"), me, sel!(ideOrdersShift:), 0);
         let down = button(mtm, t("Nach unten"), me, sel!(ideOrdersShift:), 1);
         let bar = super::list_bar::bar(mtm, &[&remove], &[&add, &up, &down]);
-        let model = NSTextField::textFieldWithString(&ns(""), mtm);
-        model.setPlaceholderString(Some(&ns(t("Vorgabe des Agenten"))));
-        set_action(&model, me, sel!(ideOrdersModel:));
-        let mut rows = vec![Row::new(mtm, t("Modell:"), &model)];
+        let model = text_field(mtm, me, sel!(ideOrdersModel:), t("Vorgabe des Agenten"));
+        let effort = text_field(mtm, me, sel!(ideOrdersEffort:), t("Vorgabe des Agenten"));
+        let reviewer = NSPopUpButton::new(mtm);
+        for words in reviewer_rules() {
+            reviewer.addItemWithTitle(&ns(words));
+        }
+        set_action(&reviewer, me, sel!(ideOrdersReviewer:));
+        let entry = [
+            Row::new(mtm, t("Modell:"), &model),
+            Row::new(mtm, t("Denktiefe:"), &effort),
+        ];
+        let views = vec![
+            form::heading(mtm, t("Rollen")),
+            form::note(
+                mtm,
+                t("Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist."),
+            ),
+            Retained::into_super(form::grid(mtm, &[Row::new(mtm, t("Rolle:"), &role)])),
+            list,
+            bar,
+            Retained::into_super(form::grid(mtm, &entry)),
+            Retained::into_super(form::grid(mtm, &[Row::new(mtm, t("Prüfer-Regel:"), &reviewer)])),
+            form::note(
+                mtm,
+                t(
+                    "Ist kein Prüfer eines anderen Herstellers bereit, wartet der Auftrag bei „Pflicht“ auf dich; bei „bevorzugt“ prüft derselbe Hersteller, und der Nachweis sagt es.",
+                ),
+            ),
+        ];
+        RolesPart {
+            views,
+            role,
+            table,
+            model,
+            effort,
+            reviewer,
+        }
+    }
+
+    fn build(&self, mtm: MainThreadMarker) -> OrdersUi {
+        let me: &AnyObject = self.as_ref();
+        let roles = self.roles_part(mtm);
+        let mut rows = Vec::new();
         let mut limits = Vec::new();
         for (index, limit) in LIMITS.into_iter().enumerate() {
             let field = number_field(mtm, me, isize::try_from(index).unwrap_or(0));
@@ -209,10 +316,16 @@ impl OrdersSettings {
             number_field(mtm, me, ORDER_BUDGET),
             number_field(mtm, me, ORDER_BUDGET + 1),
         ];
-        let money = vec![
+        let mut money = vec![
             Row::new(mtm, t("Je Auftrag ($):"), &budgets[0]),
             Row::new(mtm, t("Je Tag ($):"), &budgets[1]),
         ];
+        let mut providers = Vec::new();
+        for (index, agent) in PROVIDERS.iter().enumerate() {
+            let field = number_field(mtm, me, PROVIDER_BUDGET + isize::try_from(index).unwrap_or(0));
+            money.push(Row::new(mtm, &provider_title(agent), &field));
+            providers.push(field);
+        }
         let resume = checkbox(mtm, me, t("Pausierte Aufträge nach einem Neustart selbst fortsetzen"));
         let battery = checkbox(mtm, me, t("Auf Batterie für laufende Aufträge wach bleiben"));
         let proposals = checkbox(
@@ -221,46 +334,37 @@ impl OrdersSettings {
             t("Nach gescheiterten Aufträgen Regeln für AGENTS.md oder CLAUDE.md vorschlagen"),
         );
         let problem = form::problem(mtm);
-        let content = form::stack(
-            mtm,
-            &[
-                form::heading(mtm, t("Builder")),
-                form::note(
-                    mtm,
-                    t("Die Reihenfolge ist die Rangliste: Ein Auftrag nimmt den ersten Eintrag, der bereit ist."),
-                ),
-                list,
-                bar,
-                Retained::into_super(form::grid(mtm, &rows[..1])),
-                form::heading(mtm, t("Grenzen")),
-                Retained::into_super(form::grid(mtm, &rows[1..])),
-                form::heading(mtm, t("Budgets")),
-                form::note(
-                    mtm,
-                    t(
-                        "Leer heißt ohne Grenze. Ein Projekt kann Grenzen und Budgets in .dango/factory.toml nur verschärfen.",
-                    ),
-                ),
-                Retained::into_super(form::grid(mtm, &money)),
-                form::heading(mtm, t("Verhalten")),
-                Retained::into_super(Retained::into_super(resume.clone())),
-                Retained::into_super(Retained::into_super(battery.clone())),
-                Retained::into_super(Retained::into_super(proposals.clone())),
-                form::note(
-                    mtm,
-                    t(
-                        "Ein Späher fasst wiederkehrende Befunde zusammen; sein Vorschlag ist ein eigener Auftrag, der auf deine Freigabe und Abnahme wartet.",
-                    ),
-                ),
-                Retained::into_super(Retained::into_super(problem.clone())),
-            ],
-        );
+        let mut views = roles.views;
+        views.extend([
+            form::heading(mtm, t("Grenzen")),
+            Retained::into_super(form::grid(mtm, &rows)),
+            form::heading(mtm, t("Budgets")),
+            form::note(
+                mtm,
+                t("Leer heißt ohne Grenze. Ein Projekt kann Grenzen und Budgets in .dango/factory.toml nur verschärfen."),
+            ),
+            Retained::into_super(form::grid(mtm, &money)),
+            form::heading(mtm, t("Verhalten")),
+            Retained::into_super(Retained::into_super(resume.clone())),
+            Retained::into_super(Retained::into_super(battery.clone())),
+            Retained::into_super(Retained::into_super(proposals.clone())),
+            form::note(
+                mtm,
+                t("Ein Späher fasst wiederkehrende Befunde zusammen; sein Vorschlag ist ein eigener Auftrag, der auf deine Freigabe und Abnahme wartet."),
+            ),
+            Retained::into_super(Retained::into_super(problem.clone())),
+        ]);
+        let content = form::stack(mtm, &views);
         OrdersUi {
             view: form::page(mtm, &content),
-            table,
-            model,
+            role: roles.role,
+            table: roles.table,
+            model: roles.model,
+            effort: roles.effort,
+            reviewer: roles.reviewer,
             limits,
             budgets,
+            providers,
             resume,
             battery,
             proposals,
@@ -272,13 +376,20 @@ impl OrdersSettings {
     fn show(&self) {
         let form = self.ivars().form.borrow();
         let ui = self.ui();
+        let role = Role::ALL.iter().position(|r| *r == self.role()).unwrap_or(0);
+        ui.role.selectItemAtIndex(isize::try_from(role).unwrap_or(0));
         ui.table.reloadData();
+        ui.reviewer.selectItemAtIndex(isize::from(form.reviewer_preferred()));
         for (limit, field) in LIMITS.into_iter().zip(&ui.limits) {
             field.setStringValue(&ns(&form.limit(limit).to_string()));
         }
+        let dollars = |amount: Option<f64>| amount.map(|d| format!("{d:.2}")).unwrap_or_default();
         let (order, day) = form.budgets();
-        for (field, dollars) in ui.budgets.iter().zip([order, day]) {
-            field.setStringValue(&ns(&dollars.map(|d| format!("{d:.2}")).unwrap_or_default()));
+        for (field, amount) in ui.budgets.iter().zip([order, day]) {
+            field.setStringValue(&ns(&dollars(amount)));
+        }
+        for (agent, field) in PROVIDERS.iter().zip(&ui.providers) {
+            field.setStringValue(&ns(&dollars(form.provider_budget(&api_service(agent)))));
         }
         let state = |on: bool| {
             if on {
@@ -291,18 +402,22 @@ impl OrdersSettings {
         ui.battery.setState(state(form.awake_on_battery()));
         ui.proposals.setState(state(form.rule_proposals()));
         drop(form);
-        self.show_model();
+        self.show_entry();
     }
 
-    fn show_model(&self) {
+    /// Shows model and effort of the selected entry.
+    fn show_entry(&self) {
         let form = self.ivars().form.borrow();
         let ui = self.ui();
-        let model = self
+        let entry = self
             .selected()
-            .and_then(|index| form.list(Role::Builder).get(index))
-            .and_then(|entry| entry.model.clone());
+            .and_then(|index| form.list(self.role()).get(index).cloned());
+        let model = entry.as_ref().and_then(|e| e.model.clone());
+        let effort = entry.as_ref().and_then(|e| e.effort.clone());
         ui.model.setStringValue(&ns(&model.unwrap_or_default()));
-        ui.model.setEnabled(self.selected().is_some());
+        ui.effort.setStringValue(&ns(&effort.unwrap_or_default()));
+        ui.model.setEnabled(entry.is_some());
+        ui.effort.setEnabled(entry.is_some());
     }
 
     fn selected(&self) -> Option<usize> {
@@ -334,6 +449,15 @@ impl OrdersSettings {
             let Ok(dollars) = read_dollars(&text) else {
                 return self.problem(t("Ein Budget ist ein Betrag in Dollar, etwa 4,50."));
             };
+            if tag >= PROVIDER_BUDGET {
+                let agent = usize::try_from(tag - PROVIDER_BUDGET)
+                    .ok()
+                    .and_then(|i| PROVIDERS.get(i));
+                if let Some(agent) = agent {
+                    self.change(|form| form.set_provider_budget(&api_service(agent), dollars));
+                }
+                return;
+            }
             let (order, day) = self.ivars().form.borrow().budgets();
             let (order, day) = if tag == ORDER_BUDGET {
                 (dollars, day)
@@ -366,6 +490,18 @@ fn number_field(mtm: MainThreadMarker, target: &AnyObject, tag: isize) -> Retain
     field.setTag(tag);
     set_action(&field, target, sel!(ideOrdersValue:));
     field.widthAnchor().constraintEqualToConstant(80.0).setActive(true);
+    field
+}
+
+fn text_field(
+    mtm: MainThreadMarker,
+    target: &AnyObject,
+    action: objc2::runtime::Sel,
+    placeholder: &str,
+) -> Retained<NSTextField> {
+    let field = NSTextField::textFieldWithString(&ns(""), mtm);
+    field.setPlaceholderString(Some(&ns(placeholder)));
+    set_action(&field, target, action);
     field
 }
 

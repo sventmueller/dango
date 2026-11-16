@@ -135,6 +135,29 @@ fn a_current_file_needs_no_migration() {
     assert_eq!(migrate(FULL, u64::from(VERSION)), None);
 }
 
+/// A stand-in for a future format change: version 1's `limits.turn_min` became `limits.turn_minutes`.
+fn rename_turn_minutes(document: &mut DocumentMut) {
+    let Some(limits) = document.get_mut("limits").and_then(Item::as_table_like_mut) else {
+        return;
+    };
+    if let Some(value) = limits.remove("turn_min") {
+        limits.insert("turn_minutes", value);
+    }
+}
+
+#[test]
+fn a_registered_migration_lifts_an_older_file_with_its_comments() {
+    let steps: &[fn(&mut DocumentMut)] = &[rename_turn_minutes];
+    let old = "# Long builds.\n[limits]\nturn_min = 45 # keep under an hour\n";
+    let lifted = migrate_with(steps, old, 1).expect("a version 1 file is lifted");
+    assert!(lifted.contains("version = 2"), "{lifted}");
+    assert!(lifted.contains("turn_minutes = 45 # keep under an hour"), "{lifted}");
+    assert!(lifted.contains("# Long builds."), "{lifted}");
+    assert!(!lifted.contains("turn_min ="), "{lifted}");
+    assert_eq!(migrate_with(steps, &lifted, 2), None, "a lifted file is current");
+    assert_eq!(migrate_with(&[], old, 1), None, "without migrations nothing changes");
+}
+
 #[test]
 fn gate_and_copy_mistakes_are_named() {
     let text = r#"

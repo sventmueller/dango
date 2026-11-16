@@ -33,7 +33,7 @@ pub const TEMPLATE_DIR: &str = ".dango/factory";
 /// The version this build writes and reads.
 pub const VERSION: u32 = 1;
 
-/// The migrations, the one at index `n` lifting a document from version `n` to `n + 1`; a file without `version` is
+/// The migrations, the one at index `n` lifting a document from version `n + 1` to `n + 2`; a file without `version` is
 /// version 1, so there is none yet.
 const MIGRATIONS: &[fn(&mut DocumentMut)] = &[];
 
@@ -323,8 +323,14 @@ pub fn parse(text: &str) -> Result<Parsed, Vec<WorkflowError>> {
 
 /// `text` lifted from `version` to [`VERSION`], or `None` when it is current.
 fn migrate(text: &str, version: u64) -> Option<String> {
+    migrate_with(MIGRATIONS, text, version)
+}
+
+/// `text` lifted from `version` through `migrations`, the one at index `n` lifting version `n + 1`, to the version
+/// after the last; `None` when there is nothing to lift.
+fn migrate_with(migrations: &[fn(&mut DocumentMut)], text: &str, version: u64) -> Option<String> {
     let from = usize::try_from(version).ok()?;
-    let steps = MIGRATIONS.get(from.saturating_sub(1)..)?;
+    let steps = migrations.get(from.saturating_sub(1)..)?;
     if steps.is_empty() {
         return None;
     }
@@ -332,7 +338,8 @@ fn migrate(text: &str, version: u64) -> Option<String> {
     for step in steps {
         step(&mut document);
     }
-    document.insert("version", toml_edit::value(i64::from(VERSION)));
+    let latest = i64::try_from(migrations.len() + 1).ok()?;
+    document.insert("version", toml_edit::value(latest));
     Some(document.to_string())
 }
 
