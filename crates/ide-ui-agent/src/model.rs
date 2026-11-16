@@ -6,7 +6,8 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Instant;
 
-use ide_claude::{Capabilities, PlanAnswer, SessionError};
+use ide_claude::{Capabilities, PlanAnswer};
+use ide_core::explain::Explained;
 use ide_git::Checkpoint;
 use ide_thread::{Attachment, Change, Entry, Lane, Status, Thread, UserMessage};
 use splat_i18n::{t, tf};
@@ -382,7 +383,7 @@ impl State {
     }
 
     /// Answers a plan; what a recording played for the self-test changed.
-    pub(crate) fn answer_plan(&mut self, request: &str, answer: PlanAnswer) -> Result<Vec<Change>, SessionError> {
+    pub(crate) fn answer_plan(&mut self, request: &str, answer: PlanAnswer) -> Result<Vec<Change>, Explained> {
         self.run.source.answer_plan(request, answer)
     }
 

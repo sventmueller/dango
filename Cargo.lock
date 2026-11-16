@@ -1868,6 +1868,7 @@ dependencies = [
  "ide-process",
  "ide-product",
  "ide-project",
+ "ide-session",
  "ide-thread",
  "ide-ui-common",
  "ide-ui-dictation",

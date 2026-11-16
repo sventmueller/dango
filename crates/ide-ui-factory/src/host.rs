@@ -43,6 +43,17 @@ pub struct Notification {
     pub body: String,
 }
 
+/// What the user does with an order's specification at G1 (E178), in the view the app's host builds.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SpecAction {
+    /// Approve it.
+    Approve,
+    /// Send it back to the planner with these comments, each under the passage it quotes.
+    Comment(String),
+    /// Throw it away, which aborts the order after asking.
+    Discard,
+}
+
 /// What the Leitstand needs of the app's orchestrator and settings; the rest of a window it reaches through
 /// `ide_ui_common::window`. Every folder is a window's project root.
 pub trait Host {
@@ -67,8 +78,18 @@ pub trait Host {
     fn send(&self, root: &Path, command: InputKind) -> Vec<Refusal>;
     /// Opens the diff of the order `order` against its base in `window`, in the diff tab of its worktree (C55).
     fn open_diff(&self, window: WindowId, root: &Path, order: &OrderId);
-    /// Opens the session of `order`'s current role to read, as far as stage 1 allows (E175).
+    /// Opens the session of `order`'s current role in `window` as an AI tab that writes into it visibly (E184), or,
+    /// where the AI tab does not follow the session's path yet, the order's worktree (E175).
     fn open_session(&self, window: WindowId, root: &Path, order: &OrderId);
+    /// The specification of `order` as a document with inline comments for `window`, while it waits for G1 (E178,
+    /// F63); `then` hears what the user does with it. `None` while there is none to show.
+    fn spec_view(
+        &self,
+        window: WindowId,
+        root: &Path,
+        order: &OrderId,
+        then: std::rc::Rc<dyn Fn(SpecAction)>,
+    ) -> Option<Retained<objc2_app_kit::NSView>>;
     /// Posts `notification` about an order of `root` (E175, I9); nothing while a self-test runs (R12).
     fn notify(&self, root: &Path, notification: Notification);
     /// The user's defaults for all projects (E183), as stored per Mac (E113).

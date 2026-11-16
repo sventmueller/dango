@@ -363,7 +363,9 @@ impl AgentTab {
                     Source::Acp(_) | Source::Idle | Source::Starting => self.launch_program(),
                     #[cfg(feature = "selftest")]
                     Source::Replay(_) => None,
-                    Source::Live(_) | Source::Own(_) | Source::Codex(_) | Source::OpenCode(_) => None,
+                    Source::Live(_) | Source::Own(_) | Source::Codex(_) | Source::OpenCode(_) | Source::Driven(_) => {
+                        None
+                    }
                 };
                 let Some(program) = program else { return };
                 let mut parts: Vec<String> = terminal.env.iter().map(|(k, v)| format!("{k}={v}")).collect();

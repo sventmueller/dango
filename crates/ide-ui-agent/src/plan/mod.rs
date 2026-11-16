@@ -4,6 +4,7 @@
 
 mod ask;
 mod doc;
+mod spec;
 
 use std::rc::Rc;
 
@@ -268,10 +269,32 @@ impl AgentTab {
             let quote = string.substringWithRange(selected).to_string();
             if !quote.trim().is_empty() {
                 let rect = rect_of(&text, selected);
-                return ask::open(self, id, None, (selected.location, quote), "", &text, rect);
+                let asking = self.asking(id, None, selected.location, quote, "");
+                return ask::open(self.mtm, self.key, asking, &text, rect);
             }
         }
-        ask::open(self, id, None, (0, String::new()), "", &text, text.visibleRect());
+        let asking = self.asking(id, None, 0, String::new(), "");
+        ask::open(self.mtm, self.key, asking, &text, text.visibleRect());
+    }
+
+    /// What the comment popover on plan `id` asks: comment `note` or a new one on `quote` at `location`.
+    fn asking<'a>(
+        &'a self,
+        id: u64,
+        note: Option<u64>,
+        location: usize,
+        quote: String,
+        current: &'a str,
+    ) -> ask::Asking<'a> {
+        ask::Asking {
+            target: &self.target,
+            entry: id,
+            note,
+            location,
+            quote,
+            current,
+            whole: t("Kommentar zum ganzen Plan"),
+        }
     }
 
     /// The plan comment `note` is on, and the comment.
@@ -288,15 +311,8 @@ impl AgentTab {
         let Some((id, note)) = self.find_note(note) else {
             return;
         };
-        ask::open(
-            self,
-            id,
-            Some(note.id),
-            (note.location, note.quote),
-            &note.comment,
-            anchor,
-            anchor.bounds(),
-        );
+        let asking = self.asking(id, Some(note.id), note.location, note.quote, &note.comment);
+        ask::open(self.mtm, self.key, asking, anchor, anchor.bounds());
     }
 
     /// Takes what was typed into the comment popover of plan `id`.
@@ -438,6 +454,7 @@ pub fn comment_from_keyboard(controller: &(impl AsWindow + ?Sized)) {
 
 pub(crate) use ask::close as close_comment;
 pub(crate) use doc::close_all as close_docs;
+pub use spec::{Spec, SpecAnswer, spec_view};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]

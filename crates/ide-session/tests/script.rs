@@ -304,3 +304,43 @@ fn a_slow_subscriber_at_a_high_event_rate_gets_every_control_event_in_order_and_
         "each signal once"
     );
 }
+
+#[test]
+fn a_view_that_joins_mid_run_writes_into_the_queue_stops_one_task_and_leaves_without_ending_the_session() {
+    let scratch = folder("attach");
+    let turns = vec![
+        ScriptTurn::new(vec![Step::Background("watcher".into())], End::Succeed),
+        ScriptTurn::new(vec![Step::Say("Semicolons too.".into())], End::Succeed),
+    ];
+    let mut harness = Harness::new();
+    let session = scripted(&mut harness, &scratch, turns, user());
+    let runtime = harness.follow(session);
+    let first = harness
+        .registry
+        .get_mut(session)
+        .unwrap()
+        .send(Prompt::new("build"))
+        .unwrap();
+    harness.end_of(runtime, first);
+    let tab = harness.follow(session);
+    assert!(
+        harness.batches[&tab][0].is_redraw(),
+        "a view that joins starts with the snapshot"
+    );
+    let driver = harness.registry.get_mut(session).unwrap();
+    assert!(driver.claude_capabilities().is_none());
+    assert!(
+        driver.set_model("claude-opus-5-5").is_err(),
+        "the scripted session keeps its model"
+    );
+    let task = driver.thread().background()[0].id.clone();
+    assert!(driver.stop_task(&task));
+    let asked = driver.send(Prompt::new("allow semicolons")).unwrap();
+    let end = harness.end_of(tab, asked);
+    assert_eq!(end.outcome, Outcome::Succeeded);
+    let driver = harness.registry.get_mut(session).unwrap();
+    assert_eq!(driver.subscribers(), 2);
+    assert!(driver.unsubscribe(tab));
+    assert_eq!(driver.subscribers(), 1);
+    assert!(!driver.is_ended(), "the session runs on without the view");
+}

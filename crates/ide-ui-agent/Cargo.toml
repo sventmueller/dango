@@ -21,6 +21,7 @@ ide-git.workspace = true
 ide-net.workspace = true
 ide-process.workspace = true
 ide-project.workspace = true
+ide-session.workspace = true
 ide-product.workspace = true
 ide-thread.workspace = true
 ide-ui-common.workspace = true

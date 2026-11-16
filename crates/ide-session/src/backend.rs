@@ -155,6 +155,25 @@ impl Backend {
         }
     }
 
+    /// What Claude Code offers: its models, commands and account; `None` on the other paths.
+    pub(crate) fn claude_capabilities(&self) -> Option<ide_claude::Capabilities> {
+        match self {
+            Backend::Claude(s) => Some(s.capabilities()),
+            _ => None,
+        }
+    }
+
+    /// Switches the model of the running session, where the path can do that without starting again.
+    pub(crate) fn set_model(&self, model: &str) -> Result<(), String> {
+        match self {
+            Backend::Claude(s) => {
+                s.set_model(Some(model)).then(drop);
+                Ok(())
+            }
+            _ => Err(unsupported("switch of the model")),
+        }
+    }
+
     /// Stops the background task or subagent `task`; false where the path cannot.
     pub(crate) fn stop_task(&self, task: &str) -> bool {
         match self {

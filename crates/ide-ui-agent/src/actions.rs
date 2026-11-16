@@ -71,6 +71,9 @@ impl AgentTab {
 
     /// Takes a checkpoint of the folder (I6), then sends `message`.
     pub(super) fn send_message(&self, message: UserMessage) {
+        if self.is_driven() {
+            return self.deliver(message, None);
+        }
         self.state.borrow_mut().begin_send();
         self.refresh_composer();
         let key = self.key;
@@ -132,6 +135,9 @@ impl AgentTab {
         self.composer
             .mode
             .setImagePosition(objc2_app_kit::NSCellImagePosition::ImageLeading);
+        let locked = state.source().driven().is_some();
+        self.composer.mode.setEnabled(!locked);
+        self.composer.sandbox.setEnabled(!locked);
         let look = state.sandbox_look();
         let tint = if look.on {
             objc2_app_kit::NSColor::systemGreenColor()
@@ -143,6 +149,11 @@ impl AgentTab {
             .setImage(ide_ui_common::util::symbol(look.symbol, look.tip).as_deref());
         self.composer.sandbox.setContentTintColor(Some(&tint));
         self.composer.sandbox.setToolTip(Some(&ns(look.tip)));
+        if locked {
+            let tip = t("Der Auftrag legt Modus und Sandbox fest");
+            self.composer.mode.setToolTip(Some(&ns(tip)));
+            self.composer.sandbox.setToolTip(Some(&ns(tip)));
+        }
         self.composer.set_placeholder(state.placeholder());
         drop(state);
         self.refresh_send(&self.composer.text());
@@ -415,8 +426,10 @@ impl AgentTab {
         menu.addItem(&objc2_app_kit::NSMenuItem::separatorItem(self.mtm));
         let heading = self.menu_item(&menu, t("Denktiefe"), sel!(ideAgentPickEffort:), -1);
         heading.setEnabled(false);
+        let driven = self.is_driven();
         for (n, level) in efforts.iter().enumerate() {
             let entry = self.menu_item(&menu, &effort_name(level), sel!(ideAgentPickEffort:), index_tag(n));
+            entry.setEnabled(!driven);
             if Some(level) == effort.as_ref() {
                 entry.setState(objc2_app_kit::NSControlStateValueOn);
             }
@@ -440,12 +453,17 @@ impl AgentTab {
             return;
         };
         self.state.borrow().source().set_model(&model);
-        super::choices::remember(self.agent.id(), |choice| choice.model = Some(model.clone()));
+        if !self.is_driven() {
+            super::choices::remember(self.agent.id(), |choice| choice.model = Some(model.clone()));
+        }
         self.state.borrow_mut().pick_model(model);
         self.refresh_composer();
     }
 
     pub(crate) fn pick_effort(&self, index: usize) {
+        if self.is_driven() {
+            return;
+        }
         if self.agent.is_own() {
             return self.own_pick_effort(index);
         }
@@ -499,6 +517,9 @@ impl AgentTab {
         if self.agent.is_own() {
             return self.own_pick_mode(index);
         }
+        if self.is_driven() {
+            return;
+        }
         let Some(mode) = self.state.borrow().offered().modes.get(index).cloned() else {
             return;
         };
@@ -530,6 +551,9 @@ impl AgentTab {
 
     /// The sandbox switch (E19): the CLI takes it at start, so a resting session starts again with it.
     pub fn toggle_sandbox(&self) {
+        if self.is_driven() {
+            return;
+        }
         if self.acp_agent().is_some_and(|a| !a.sandbox.is_available()) {
             return;
         }

@@ -7,7 +7,7 @@ pub fn type_comment(text: &str) -> bool {
     with_ask(|a| {
         a.borrow()
             .as_ref()
-            .map(|ask| ask.field.setStringValue(&ns(text)))
+            .map(|ask| ask.popover.field.setStringValue(&ns(text)))
             .is_some()
     })
 }
@@ -17,7 +17,7 @@ pub fn view() -> Option<(Retained<NSView>, String)> {
     with_ask(|a| {
         let a = a.borrow();
         let ask = a.as_ref()?;
-        let view = ask.popover.contentViewController()?.view();
-        Some((view, ask.field.stringValue().to_string()))
+        let view = ask.popover.popover.contentViewController()?.view();
+        Some((view, ask.popover.field.stringValue().to_string()))
     })
 }

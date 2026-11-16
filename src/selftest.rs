@@ -30,6 +30,7 @@ mod codex;
 mod containers;
 mod dialog_shapes;
 mod leitstand;
+mod leitstand_attach;
 mod markdown;
 mod markdown_commands;
 mod markdown_editor;

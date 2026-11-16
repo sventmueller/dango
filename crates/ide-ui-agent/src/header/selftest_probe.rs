@@ -13,6 +13,11 @@ impl Header {
         tip.filter(|_| !self.remote.isHidden())
     }
 
+    /// The badge beside the title, while it shows.
+    pub(crate) fn badge(&self) -> Option<String> {
+        (!self.badge.isHidden()).then(|| self.badge.stringValue().to_string())
+    }
+
     /// The width the title takes, the width its whole text would need, and the head's width, for the self-test.
     pub(crate) fn title_widths(&self) -> (f64, f64, f64) {
         self.view.layoutSubtreeIfNeeded();

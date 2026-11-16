@@ -1,14 +1,14 @@
-//! The popover that takes a new comment on a plan, or a changed one.
+//! The popover that takes a new comment on a plan or a specification, or a changed one.
 
 use std::cell::RefCell;
 
 use objc2::rc::Retained;
-use objc2::sel;
+use objc2::runtime::AnyObject;
+use objc2::{MainThreadMarker, sel};
 use objc2_app_kit::{NSColor, NSLineBreakMode, NSPopover, NSPopoverBehavior, NSTextField, NSView, NSViewController};
 use objc2_foundation::{NSRect, NSRectEdge};
 use splat_i18n::{t, tf};
 
-use super::super::tab::AgentTab;
 use super::super::{style, ui};
 use super::entry_tag;
 use crate::AgentKey;
@@ -25,14 +25,54 @@ pub(super) struct Asked {
     pub(crate) comment: String,
 }
 
-struct Ask {
-    agent: AgentKey,
-    entry: u64,
+/// What the popover asks about.
+pub(super) struct Asking<'a> {
+    /// What its buttons and its field send their actions to.
+    pub(super) target: &'a AnyObject,
+    /// The plan's entry, or the specification's number, which the controls' tags carry.
+    pub(super) entry: u64,
+    /// The comment changed, or `None` for a new one.
+    pub(super) note: Option<u64>,
+    pub(super) location: usize,
+    pub(super) quote: String,
+    /// What the field starts with.
+    pub(super) current: &'a str,
+    /// The heading of a comment that quotes nothing.
+    pub(super) whole: &'a str,
+}
+
+/// A popover on view and what it asks about.
+pub(super) struct Popover {
     note: Option<u64>,
     location: usize,
     quote: String,
     popover: Retained<NSPopover>,
     field: Retained<NSTextField>,
+}
+
+impl Popover {
+    /// Closes it and hands over what it holds.
+    pub(super) fn finish(self) -> Asked {
+        self.popover.close();
+        Asked {
+            note: self.note,
+            location: self.location,
+            quote: self.quote,
+            comment: self.field.stringValue().to_string(),
+        }
+    }
+
+    /// Closes it, dropping what was typed.
+    pub(super) fn dismiss(self) {
+        self.popover.close();
+    }
+}
+
+/// The popover on a plan of the AI tab `agent`.
+struct Ask {
+    agent: AgentKey,
+    entry: u64,
+    popover: Popover,
 }
 
 /// The question about a plan on view.
@@ -45,21 +85,27 @@ fn with_ask<R>(f: impl FnOnce(&RefCell<Option<Ask>>) -> R) -> R {
     f(&crate::host::state().plan.ask.ask)
 }
 
-/// Shows the popover at `rect` of `anchor` for comment `note` of plan `entry`, or a new one, on the passage `quote`
-/// at `location`; the field starts with `current`.
-pub(super) fn open(
-    tab: &AgentTab,
-    entry: u64,
-    note: Option<u64>,
-    (location, quote): (usize, String),
-    current: &str,
-    anchor: &NSView,
-    rect: NSRect,
-) {
+/// Shows the popover on plan `asking.entry` of the AI tab `agent` at `rect` of `anchor`, in place of the one open.
+pub(super) fn open(mtm: MainThreadMarker, agent: AgentKey, asking: Asking<'_>, anchor: &NSView, rect: NSRect) {
     close();
-    let mtm = tab.mtm;
+    let entry = asking.entry;
+    let popover = show(mtm, asking, anchor, rect);
+    with_ask(|a| *a.borrow_mut() = Some(Ask { agent, entry, popover }));
+}
+
+/// Shows a popover at `rect` of `anchor` for what `asking` names, which the caller keeps.
+pub(super) fn show(mtm: MainThreadMarker, asking: Asking<'_>, anchor: &NSView, rect: NSRect) -> Popover {
+    let Asking {
+        target,
+        entry,
+        note,
+        location,
+        quote,
+        current,
+        whole,
+    } = asking;
     let heading = if quote.trim().is_empty() {
-        t("Kommentar zum ganzen Plan").to_string()
+        whole.to_string()
     } else {
         let shown: String = quote.trim().chars().take(80).collect();
         tf("Kommentar zu „{}“", &[&shown.replace('\n', " ")])
@@ -78,12 +124,12 @@ pub(super) fn open(
     ui::fixed_width(&field, WIDTH);
     ui::fixed_height(&field, 58.0);
     let tag = entry_tag(entry, 0);
-    set_action(&field, &tab.target, sel!(ideAgentPlanCommit:));
+    set_action(&field, target, sel!(ideAgentPlanCommit:));
     field.setTag(tag);
-    let cancel = ui::button(mtm, t("Abbrechen"), &tab.target, sel!(ideAgentPlanCancel:), tag);
+    let cancel = ui::button(mtm, t("Abbrechen"), target, sel!(ideAgentPlanCancel:), tag);
     cancel.setKeyEquivalent(&ns("\u{1b}"));
     let title = if note.is_some() { t("Sichern") } else { t("Hinzufügen") };
-    let add = ui::button(mtm, title, &tab.target, sel!(ideAgentPlanCommit:), tag);
+    let add = ui::button(mtm, title, target, sel!(ideAgentPlanCommit:), tag);
     add.setKeyEquivalent(&ns("\r"));
     let spacer = ui::spacer(mtm);
     let buttons = ui::row(mtm, 8.0, &[&spacer, &cancel, &add]);
@@ -98,16 +144,13 @@ pub(super) fn open(
     if let Some(window) = field.window() {
         window.makeFirstResponder(Some(&field));
     }
-    let ask = Ask {
-        agent: tab.key,
-        entry,
+    Popover {
         note,
         location,
         quote,
         popover,
         field,
-    };
-    with_ask(|a| *a.borrow_mut() = Some(ask));
+    }
 }
 
 /// Closes the popover of plan `entry` in the AI tab `agent` and hands over what it holds.
@@ -120,18 +163,12 @@ pub(super) fn take(agent: AgentKey, entry: u64) -> Option<Asked> {
             None
         }
     })?;
-    ask.popover.close();
-    Some(Asked {
-        note: ask.note,
-        location: ask.location,
-        quote: ask.quote,
-        comment: ask.field.stringValue().to_string(),
-    })
+    Some(ask.popover.finish())
 }
 
 pub(crate) fn close() {
     if let Some(ask) = with_ask(|a| a.borrow_mut().take()) {
-        ask.popover.close();
+        ask.popover.dismiss();
     }
 }
 

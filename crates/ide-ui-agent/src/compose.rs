@@ -172,6 +172,10 @@ impl AgentTab {
     /// Sends `message` now, into the running turn where Claude Code takes it there, or queues it while a turn runs or
     /// the session is not there yet.
     fn dispatch(&self, message: UserMessage) {
+        if self.is_driven() {
+            self.deliver(message, None);
+            return;
+        }
         let (busy, into_turn) = {
             let state = self.state.borrow();
             let claude = state.source().session().is_some() && state.source().is_live();

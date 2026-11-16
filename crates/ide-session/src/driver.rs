@@ -327,6 +327,24 @@ impl Driver {
         tasks.iter().filter(|task| self.backend.stop_task(task)).count()
     }
 
+    /// Stops the subagent or background item `task` alone; false where the path cannot.
+    pub fn stop_task(&mut self, task: &str) -> bool {
+        self.backend.stop_task(task)
+    }
+
+    /// Switches the session's model while it runs (E184); the path's words where it cannot.
+    pub fn set_model(&mut self, model: &str) -> Result<(), String> {
+        if self.is_ended() {
+            return Err(SendError::Ended.to_string());
+        }
+        self.backend.set_model(model)
+    }
+
+    /// What Claude Code offers, such as the models a view lets the user switch to; `None` on the other paths.
+    pub fn claude_capabilities(&self) -> Option<ide_claude::Capabilities> {
+        self.backend.claude_capabilities()
+    }
+
     /// Ends the session and its process; the turn that runs and the prompts that wait end as cancelled.
     pub fn stop(&mut self) {
         if self.stopping {

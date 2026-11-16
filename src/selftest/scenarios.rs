@@ -181,6 +181,7 @@ pub(crate) const SCENARIOS: &[Scenario] = &[
     limited("tests-panel", tests_panel::run, Duration::from_secs(400)),
     plain("containers-panel", containers::run),
     plain("leitstand", leitstand::run),
+    plain("leitstand-attach", leitstand_attach::run),
     Scenario {
         offline: false,
         ..limited("companions", companions::run, Duration::from_secs(1200))

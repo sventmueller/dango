@@ -26,6 +26,8 @@ use splat_i18n::{t, tf};
 use super::{Back, Delivery, Leitstand};
 use crate::context::AppContext;
 
+mod attach;
+
 /// How long the hop to the main thread waits, so a burst of events from a session is taken in at once.
 const COALESCE: Duration = Duration::from_millis(30);
 
@@ -250,26 +252,35 @@ impl Leitstand {
     /// Takes in what session `id` reported and hands it to its order's factory.
     pub(super) fn flush(&self, cx: &Rc<AppContext>, id: SessionId) {
         let now = self.clock.now();
-        let (root, mapped) = {
+        let flushed = {
             let mut sessions = self.sessions.borrow_mut();
             let Sessions { registry, links } = &mut *sessions;
             let Some(registry) = registry.as_mut() else { return };
-            registry.flush(id);
-            let (Some(link), Some(driver)) = (links.get_mut(&id), registry.get_mut(id)) else {
-                return;
-            };
-            let signals = driver
-                .take(link.subscriber)
-                .map(|batch| batch.signals)
-                .unwrap_or_default();
-            let view = View {
-                thread: driver.thread(),
-                queued: driver.queued(),
-                session_id: driver.session_id(),
-                now,
-            };
-            (link.root.clone(), map(link, &signals, &view))
+            let woken = registry.flush(id);
+            match (links.get_mut(&id), registry.get_mut(id)) {
+                (Some(link), Some(driver)) => {
+                    let signals = driver
+                        .take(link.subscriber)
+                        .map(|batch| batch.signals)
+                        .unwrap_or_default();
+                    let view = View {
+                        thread: driver.thread(),
+                        queued: driver.queued(),
+                        session_id: driver.session_id(),
+                        now,
+                    };
+                    let views = woken.iter().any(|subscriber| *subscriber != link.subscriber);
+                    Some((link.root.clone(), map(link, &signals, &view), views))
+                }
+                _ => None,
+            }
         };
+        let Some((root, mapped, views)) = flushed else {
+            return self.views_fed(cx, id);
+        };
+        if views {
+            self.views_fed(cx, id);
+        }
         if mapped.ended {
             let mut sessions = self.sessions.borrow_mut();
             sessions.links.remove(&id);

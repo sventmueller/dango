@@ -174,6 +174,21 @@ impl AgentTab {
         )
     }
 
+    /// The badge over the conversation, while the tab follows a work order's session (E184).
+    pub fn badge(&self) -> Option<String> {
+        self.header.badge()
+    }
+
+    /// Whether the mode pill and the sandbox pill take clicks; an order's session keeps them as the order set them.
+    pub fn mode_and_sandbox_enabled(&self) -> (bool, bool) {
+        (self.composer.mode.isEnabled(), self.composer.sandbox.isEnabled())
+    }
+
+    /// The registry's session the tab follows without having started it.
+    pub fn followed_session(&self) -> Option<ide_session::SessionId> {
+        self.driven_session()
+    }
+
     /// Types `text` into the composer and sends it, as Return would.
     pub fn type_and_send(&self, text: &str) {
         self.composer.set_text(text);

@@ -29,7 +29,8 @@
 //! [`Driver::send`] queues a [`Prompt`]; it goes out when no turn runs, after the checkpoint
 //! (`ide_git::Checkpoints`, thread `<order>-<role>` for an order, the thread's id otherwise). For an order, a
 //! failed checkpoint fails the turn instead. [`Driver::stop_turn`], [`Driver::stop_background`],
-//! [`Driver::clear_queue`] and [`Driver::stop`] stop what they say. Requests go to the rule once: [`Verdict::Allow`],
+//! [`Driver::clear_queue`] and [`Driver::stop`] stop what they say; [`Driver::stop_task`] stops one subagent or
+//! background item and [`Driver::set_model`] switches the model where the path can while it runs (E184). Requests go to the rule once: [`Verdict::Allow`],
 //! [`Verdict::Deny`] with a reason the agent reads where the path carries one, or [`Verdict::User`], after which the
 //! user answers through [`Driver::answer_permission`], [`Driver::answer_questions`] and [`Driver::answer_plan`].
 //! [`OrderRule`] refuses what reaches beyond an order's bounds (or leaves it to the user without O1), leaves

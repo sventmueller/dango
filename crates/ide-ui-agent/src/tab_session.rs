@@ -21,6 +21,9 @@ use ide_ui_common::util::{main_after, main_soon};
 impl AgentTab {
     /// Looks for `claude` and the login shell's environment on a worker thread, then starts the session.
     pub(crate) fn start(&self) {
+        if self.is_driven() {
+            return;
+        }
         let Some(controller) = self.controller() else { return };
         if !controller.is_trusted() {
             self.set_problem(Some(Problem::Untrusted));

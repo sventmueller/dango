@@ -159,6 +159,14 @@
 "Lowspeak hat eigene Einstellungen für das Diktat. Möchtest du sie übernehmen?" = "Lowspeak has its own dictation settings. Do you want to use them?";
 "Löschen" = "Delete";
 "Markiere eine Stelle im Plan und wähle „Kommentieren“." = "Select a passage of the plan and choose “Comment”.";
+"Markiere eine Stelle in der Spezifikation und wähle „Kommentieren“." = "Select a passage of the specification and choose “Comment”.";
+"Kommentar zur ganzen Spezifikation" = "Comment on the whole specification";
+"Kommentiert die markierte Stelle, ohne Markierung die ganze Spezifikation" = "Comments on the selected passage, or on the whole specification when nothing is selected";
+"Kommentare gehen nur mit „Kommentare senden“ an den Planer, jeder unter der Stelle, die er meint." = "Comments reach the planner only with “Send Comments”, each under the passage it is about.";
+"Kommentare senden" = "Send Comments";
+"Kommentare gesendet" = "Comments sent";
+"Spezifikation zur Freigabe" = "Specification for Approval";
+"Freigegeben" = "Approved";
 "Minimal" = "Minimal";
 "Mit Kommentaren überarbeiten lassen" = "Revise with Comments";
 "Modell des Agenten" = "Agent's model";
@@ -2245,6 +2253,8 @@
 "Ein Budget ist ein Betrag in Dollar, etwa 4,50." = "A budget is an amount in dollars, such as 4.50.";
 "Eine Grenze ist eine ganze Zahl ab 1." = "A limit is a whole number from 1.";
 "Auftrag „{}“" = "Work Order “{}”";
+"Auftrag {} · {}" = "Work Order {} · {}";
+"Der Auftrag legt Modus und Sandbox fest" = "The work order sets the mode and the sandbox";
 "Aufträge laufen: {}" = "Work orders running: {}";
 "Das Budget ist aufgebraucht; der Auftrag pausiert." = "The budget is spent; the work order is paused.";
 "Der Auftrag ist übernommen." = "The work order was taken over.";

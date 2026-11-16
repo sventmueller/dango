@@ -1,6 +1,8 @@
 //! The AI tab: one agent session per tab with its timeline, composer and status, as the official Claude Code
 //! extension shows it, drawn natively. Claude runs through `ide_claude::Session`, other agents over ACP through
-//! `ide_acp::Session`; the self-test feeds recordings through `ide_claude::replay::Replay` instead.
+//! `ide_acp::Session`; the self-test feeds recordings through `ide_claude::replay::Replay` instead. [`attach`] opens a
+//! tab on a session of the app's `ide_session::Registry` it did not start, such as a work order's (E184), which the
+//! app feeds with [`session_fed`] after each flush; [`plan::spec_view`] shows a specification without a session (E178).
 
 mod acp;
 mod acp_install;
@@ -17,6 +19,7 @@ mod composer;
 mod context;
 mod context_view;
 mod dialogs;
+mod driven;
 mod enlarge;
 mod figures;
 mod format;
@@ -44,6 +47,7 @@ mod stop;
 pub mod style;
 mod suggest;
 mod tab;
+mod tab_driven;
 #[cfg(feature = "selftest")]
 mod tab_probe;
 mod tab_session;
@@ -66,6 +70,7 @@ pub use acp_install::confirm_install;
 pub(crate) use actions::ask_text;
 pub use cards::request::scope_name;
 pub use dialogs::remove_claude_rule;
+pub use driven::{Attach, Sessions};
 pub use format::{age, elapsed, tokens};
 pub(crate) use format::{iso_time, short_age, time_of_day};
 pub use host::{Host, install};
@@ -73,6 +78,7 @@ pub use outside::ci_log;
 pub use source::Resume;
 pub use stop::Stop;
 pub use tab::AgentTab;
+pub use tab_driven::{attach, session_fed};
 pub use ui::{framed, icon, insets, separator};
 
 /// An AI thread as the layout keeps it, opened again by resuming its session.
@@ -320,7 +326,12 @@ pub fn running() -> Vec<String> {
         .collect()
 }
 
+/// Whether `tab` works; a tab on a session of the registry leaves it to the registry, which names the session once
+/// (C58).
 fn works(tab: &AgentTab) -> bool {
+    if tab.is_driven() {
+        return false;
+    }
     let thread = tab.view_snapshot();
     thread.status() != ide_thread::Status::Idle
         || thread.subagents().iter().any(|s| !s.status.is_final())

@@ -1,5 +1,6 @@
 //! The tab of one order (E175): its condition and buttons G1, G2, back to the builder, change criteria, by hand,
-//! abort; the request that waits for the user as a card it answers without the AI tab (F72); its goal and criteria;
+//! abort; the specification with inline comments while it waits for G1 (E178); the request that waits for the user as
+//! a card it answers without the AI tab (F72); its goal and criteria;
 //! the timeline from the log; the evidence with the deviations first; and the diff's sections, each of which G2 can
 //! reject (C55).
 
@@ -19,13 +20,16 @@ use objc2_foundation::NSObjectProtocol;
 use splat_i18n::{t, tf};
 
 use crate::actions::Target;
-use crate::host::host;
+use crate::host::{SpecAction, host};
 use crate::model::detail::{AcceptBlock, Command, Detail};
 use crate::ui;
 use ide_ui_common::style::space;
 
 /// How wide the tab's text wraps.
 const WIDTH: f64 = 640.0;
+
+/// How tall the specification's view is at G1: its text and comments scroll inside it.
+const SPEC_HEIGHT: f64 = 460.0;
 
 /// The key of the tab of the order `id`, which the window finds it by and the layout keeps (E64).
 pub(crate) fn tab_key(id: &OrderId) -> String {
@@ -44,6 +48,8 @@ pub(crate) struct OrderIvars {
     detail: RefCell<Option<Detail>>,
     /// The sections the user turned down for G2.
     rejected: RefCell<BTreeSet<HunkId>>,
+    /// The specification the G1 view shows, which a new one replaces.
+    spec: RefCell<Option<String>>,
     ui: OnceCell<OrderUi>,
 }
 
@@ -52,6 +58,8 @@ struct OrderUi {
     condition: Retained<NSStackView>,
     buttons: Vec<Retained<NSButton>>,
     accept_note: Retained<NSTextField>,
+    /// Holds the specification's view at G1.
+    spec: Retained<NSView>,
     request: Retained<NSBox>,
     answer: Retained<NSTextField>,
     body: Retained<NSStackView>,
@@ -136,6 +144,7 @@ impl OrderTab {
             tab: Cell::new(None),
             detail: RefCell::new(None),
             rejected: RefCell::new(BTreeSet::new()),
+            spec: RefCell::new(None),
             ui: OnceCell::new(),
         };
         // SAFETY: NSView's initializer, called once on the newly allocated object.
@@ -166,6 +175,8 @@ impl OrderTab {
             buttons.push(button);
         }
         let accept_note = ui::note(mtm, "", WIDTH);
+        let spec = NSView::new(mtm);
+        spec.setHidden(true);
         let (request, answer) = request_card(mtm, me);
         let body = ui::column(mtm, space::M);
         let column = ui::column(mtm, space::M);
@@ -179,6 +190,7 @@ impl OrderTab {
             &*title as &NSView,
             &condition,
             &primary,
+            &spec,
             &secondary,
             &accept_note,
             &request,
@@ -186,6 +198,11 @@ impl OrderTab {
         ] {
             column.addArrangedSubview(view);
         }
+        ide_ui_common::util::activate([
+            spec.heightAnchor().constraintEqualToConstant(SPEC_HEIGHT),
+            spec.widthAnchor()
+                .constraintEqualToAnchor_constant(&column.widthAnchor(), -2.0 * space::GROUP),
+        ]);
         let scroll = ui::scrolling(mtm, &column);
         self.addSubview(&scroll);
         ide_ui_common::util::auto_layout(&[&scroll]);
@@ -195,6 +212,7 @@ impl OrderTab {
             condition,
             buttons,
             accept_note,
+            spec,
             request,
             answer,
             body,
@@ -251,6 +269,7 @@ impl OrderTab {
             }
             ui.request.setHidden(true);
             ui.accept_note.setHidden(true);
+            self.show_spec(None);
             return;
         };
         ui.title.setStringValue(&ns(detail.title()));
@@ -278,6 +297,7 @@ impl OrderTab {
         ui.accept_note.setStringValue(&ns(note.unwrap_or("")));
         ui.accept_note.setHidden(note.is_none());
         ui.request.setHidden(detail.request().is_none());
+        self.show_spec(Some(detail));
         crate::order_view::fill(self, &ui.body, detail, &self.ivars().rejected.borrow());
         if let Some(tab) = self.tab() {
             window.set_tab_title(tab, detail.title());
@@ -285,6 +305,39 @@ impl OrderTab {
             let waits = detail.tone() == crate::model::words::Tone::Waiting;
             window.set_tab_status(tab, waits.then_some(&*red));
         }
+    }
+
+    /// Shows the specification while it waits for G1, built again only when a new one replaces it.
+    fn show_spec(&self, detail: Option<&Detail>) {
+        let wanted = detail.and_then(Detail::spec).map(str::to_string);
+        if *self.ivars().spec.borrow() == wanted {
+            return;
+        }
+        let holder = &self.ui().spec;
+        for view in holder.subviews().iter() {
+            view.removeFromSuperview();
+        }
+        holder.setHidden(true);
+        *self.ivars().spec.borrow_mut() = None;
+        let (Some(detail), Some(_)) = (detail, &wanted) else {
+            return;
+        };
+        let target = self.ivars().target.clone();
+        let id = detail.id().clone();
+        let then = std::rc::Rc::new(move |action: SpecAction| match action {
+            SpecAction::Approve => crate::actions::run_on(&target, &id, Command::Approve),
+            SpecAction::Comment(text) => crate::actions::send(&target, InputKind::CommentSpec(id.clone(), text)),
+            SpecAction::Discard => crate::actions::run_on(&target, &id, Command::Abort),
+        });
+        let window = self.ivars().target.window().id();
+        let Some(view) = host().spec_view(window, self.root(), detail.id(), then) else {
+            return;
+        };
+        holder.addSubview(&view);
+        ide_ui_common::util::auto_layout(&[&view]);
+        ide_ui_common::util::pin_edges(&view, holder);
+        holder.setHidden(false);
+        *self.ivars().spec.borrow_mut() = wanted;
     }
 
     fn run(&self, command: Command) {

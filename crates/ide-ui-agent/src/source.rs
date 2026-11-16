@@ -72,6 +72,8 @@ pub(crate) enum Source {
     Codex(ide_codex::Session),
     /// OpenCode over its v2 HTTP API (E147).
     OpenCode(ide_opencode::Session),
+    /// A session of the app's registry the tab did not start, such as a work order's (E184).
+    Driven(crate::driven::Driven),
     #[cfg(feature = "selftest")]
     Replay(Box<Replay>),
 }
@@ -92,6 +94,7 @@ impl Source {
             Source::Own(session) => Some(session.snapshot()),
             Source::Codex(session) => Some(session.snapshot()),
             Source::OpenCode(session) => Some(session.snapshot()),
+            Source::Driven(driven) => driven.snapshot(),
             #[cfg(feature = "selftest")]
             Source::Replay(replay) => Some(replay.thread().clone()),
             Source::Idle | Source::Starting => None,
@@ -99,7 +102,18 @@ impl Source {
     }
 
     pub(crate) fn capabilities(&self) -> Option<Capabilities> {
+        if let Source::Driven(driven) = self {
+            return driven.capabilities();
+        }
         self.session().map(Session::capabilities)
+    }
+
+    /// The registry's session the tab follows, when it did not start its own.
+    pub(crate) fn driven(&self) -> Option<&crate::driven::Driven> {
+        match self {
+            Source::Driven(driven) => Some(driven),
+            _ => None,
+        }
     }
 
     /// Whether a recording plays instead of a process, which a restart must not replace with a real `claude`.
@@ -120,6 +134,7 @@ impl Source {
             Source::Codex(session) => session.is_ready() && !session.is_ended(),
             Source::OpenCode(session) => session.is_ready() && !session.is_ended(),
             Source::Own(_) => true,
+            Source::Driven(driven) => driven.is_live(),
             _ => self.session().is_some_and(|s| !s.is_ended()),
         }
     }
@@ -230,6 +245,7 @@ impl Source {
                 .send(message)
                 .map(|()| None)
                 .map_err(|e| Explained(crate::opencode::explained(&e))),
+            Source::Driven(driven) => driven.send(message).map(|()| None),
             _ => Err(Explained::of(&SessionError::Closed)),
         }
     }
@@ -250,11 +266,23 @@ impl Source {
         if let Some(session) = self.opencode() {
             session.cancel();
         }
+        if let Some(driven) = self.driven() {
+            driven.stop_turn();
+        }
     }
 
-    pub(crate) fn answer(&self, request: &str, answer: PermissionAnswer) -> Result<(), SessionError> {
+    /// Answers the permission request `request`; an order's session takes neither an edited input nor a rule to keep,
+    /// as its bounds decide what it may do (E173).
+    pub(crate) fn answer(&self, request: &str, answer: PermissionAnswer) -> Result<(), Explained> {
+        if let Some(driven) = self.driven() {
+            return match &answer {
+                PermissionAnswer::Allow { .. } => driven.answer_permission(request, true, None),
+                PermissionAnswer::Deny { message, .. } => driven.answer_permission(request, false, Some(message)),
+            };
+        }
         self.session()
             .map_or(Err(SessionError::Closed), |s| s.answer(request, answer))
+            .map_err(|e| Explained::of(&e))
     }
 
     /// Answers the questions of request `request`, whichever agent asked them; an MCP server's form of Codex takes
@@ -275,6 +303,9 @@ impl Source {
                 .answer_questions(request, answers)
                 .map_err(|e| Explained(crate::opencode::explained(&e)));
         }
+        if let Some(driven) = self.driven() {
+            return driven.answer_questions(request, answers);
+        }
         self.session()
             .map_or(Err(SessionError::Closed), |s| s.answer_questions(request, answers))
             .map_err(|e| Explained::of(&e))
@@ -285,19 +316,31 @@ impl Source {
         &mut self,
         request: &str,
         answer: PlanAnswer,
-    ) -> Result<Vec<ide_thread::Change>, SessionError> {
+    ) -> Result<Vec<ide_thread::Change>, Explained> {
         #[cfg(feature = "selftest")]
         if let Source::Replay(replay) = self {
             return Ok(replay.answer_plan(request, &answer));
         }
+        if let Some(driven) = self.driven() {
+            let reply = match answer {
+                PlanAnswer::Approve => ide_session::PlanReply::Approve,
+                PlanAnswer::Revise(feedback) => ide_session::PlanReply::Revise(feedback),
+                PlanAnswer::Reject => ide_session::PlanReply::Reject,
+            };
+            return driven.answer_plan(request, reply).map(|()| Vec::new());
+        }
         self.session()
             .map_or(Err(SessionError::Closed), |s| s.answer_plan(request, answer))
             .map(|()| Vec::new())
+            .map_err(|e| Explained::of(&e))
     }
 
     pub(crate) fn stop_task(&self, task: &str) {
         if let Some(session) = self.session() {
             session.stop_task(task).then(|_| ());
+        }
+        if let Some(driven) = self.driven() {
+            driven.stop_task(task);
         }
     }
 
@@ -324,6 +367,9 @@ impl Source {
         if let Some(session) = self.session() {
             session.set_model(Some(model)).then(|_| ());
         }
+        if let Some(driven) = self.driven() {
+            driven.set_model(model);
+        }
     }
 
     pub(crate) fn set_effort(&self, level: &str) {
@@ -332,8 +378,12 @@ impl Source {
         }
     }
 
-    /// Ends the process: input closed, then the supervisor's signals.
+    /// Ends the process: input closed, then the supervisor's signals. A session of the registry the tab did not start
+    /// runs on; the tab only leaves its feed.
     pub(crate) fn end(&self) {
+        if let Some(driven) = self.driven() {
+            driven.leave();
+        }
         if let Some(session) = self.session() {
             session.stop(Duration::from_secs(2));
         }

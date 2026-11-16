@@ -86,6 +86,8 @@ const TITLE_INSET: f64 = 8.0;
 pub(crate) struct Header {
     pub(crate) view: Retained<NSStackView>,
     title: Retained<NSTextField>,
+    /// Whom the session works for, when it is a work order's (E184).
+    badge: Retained<NSTextField>,
     bookmark: Retained<NSButton>,
     focus: Retained<NSButton>,
     /// Opens the list of the session's subagents.
@@ -115,6 +117,8 @@ impl Header {
         };
         rename.setNumberOfClicksRequired(2);
         title.addGestureRecognizer(&rename);
+        let badge = ui::label(mtm, "", &style::small(), &NSColor::systemOrangeColor());
+        badge.setHidden(true);
         let bookmark = ui::symbol_button(
             mtm,
             "bookmark",
@@ -169,6 +173,7 @@ impl Header {
             8.0,
             &[
                 &title,
+                &badge,
                 &spacer,
                 &remote,
                 &focus,
@@ -189,6 +194,7 @@ impl Header {
         Header {
             view,
             title,
+            badge,
             bookmark,
             focus,
             subagents,
@@ -279,6 +285,12 @@ impl Header {
             Part::Subagents | Part::All => &self.subagents,
             Part::Background => &self.background,
         }
+    }
+
+    /// Shows `badge` beside the title, such as "Auftrag CSV-Export · Builder", or none.
+    pub(crate) fn set_badge(&self, badge: Option<&str>) {
+        self.badge.setStringValue(&ns(badge.unwrap_or_default()));
+        self.badge.setHidden(badge.is_none());
     }
 
     pub(crate) fn set_title(&self, title: &str) {

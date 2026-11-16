@@ -390,9 +390,13 @@ impl AgentTab {
         self.controller.is_open() && self.controller == *controller
     }
 
-    /// The CLI's id for the conversation, once it has one.
+    /// The CLI's id for the conversation, once it has one; none for a session of the registry the tab did not start,
+    /// which the layout does not keep and no other tab resumes, as only its order may write in its worktree.
     pub fn session_id(&self) -> Option<String> {
         let state = self.state.borrow();
+        if state.source().driven().is_some() {
+            return None;
+        }
         state
             .thread()
             .session()
@@ -539,6 +543,9 @@ impl AgentTab {
     /// Records the session in the index the AI panel lists.
     pub(super) fn persist(&self) {
         let state = self.state.borrow();
+        if state.source().driven().is_some() {
+            return;
+        }
         if state.thread().session().is_none() && state.thread().entries(&ide_thread::Lane::Main).is_empty() {
             return;
         }

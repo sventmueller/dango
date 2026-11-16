@@ -196,6 +196,8 @@ pub struct Detail {
     sections: Vec<Section>,
     enabled: BTreeSet<CommandKey>,
     accept_block: Option<AcceptBlock>,
+    /// The specification while it waits for G1.
+    spec: Option<String>,
 }
 
 /// [`Command`] as a set's key.
@@ -265,7 +267,16 @@ impl Detail {
             sections,
             enabled,
             accept_block,
+            spec: order
+                .spec()
+                .filter(|_| *order.condition() == Condition::Waiting(WaitReason::SpecApproval))
+                .map(str::to_string),
         }
+    }
+
+    /// The specification while it waits for G1 (E178), which the tab shows with its comments.
+    pub fn spec(&self) -> Option<&str> {
+        self.spec.as_deref()
     }
 
     /// The order.

@@ -8,6 +8,7 @@ use ide_factory::options::NewOrder;
 use ide_factory::panel::{Board, Fleet, Panel};
 use ide_factory::workflow::{UserDefaults, WORKFLOW_FILE};
 use ide_factory::{Condition, InputKind, OrderId, Refusal, Refused, WaitReason};
+use ide_ui_agent::plan::{Spec, SpecAnswer};
 use ide_ui_common::window::WindowId;
 use ide_ui_factory::model::detail::Detail;
 use ide_ui_factory::model::settings::ProjectFile;
@@ -219,8 +220,35 @@ impl ide_ui_factory::Host for Orders {
     }
 
     fn open_session(&self, window: WindowId, root: &Path, order: &OrderId) {
-        // Until the AI tab drives the runtime's sessions (B37b), the order's worktree is what there is to show.
-        self.open_diff(window, root, order);
+        let opened = self.0.with(|cx| cx.leitstand().open_tab(cx, window, root, order));
+        if opened != Some(true) {
+            // A session on a path the AI tab does not follow yet, or none that runs: the worktree is what there is.
+            self.open_diff(window, root, order);
+        }
+    }
+
+    fn spec_view(
+        &self,
+        _window: WindowId,
+        root: &Path,
+        order: &OrderId,
+        then: std::rc::Rc<dyn Fn(ide_ui_factory::SpecAction)>,
+    ) -> Option<Retained<objc2_app_kit::NSView>> {
+        // The factory's text is the file's: the specification's file is written from it after the step's log.
+        let markdown = self
+            .0
+            .with(|cx| cx.leitstand().with_order(root, order, |o| o.spec().map(str::to_string)))
+            .flatten()
+            .flatten()?;
+        let answer = std::rc::Rc::new(move |answer: SpecAnswer| {
+            then(match answer {
+                SpecAnswer::Approve => ide_ui_factory::SpecAction::Approve,
+                SpecAnswer::Comment(text) => ide_ui_factory::SpecAction::Comment(text),
+                SpecAnswer::Discard => ide_ui_factory::SpecAction::Discard,
+            });
+        });
+        let mtm = MainThreadMarker::new()?;
+        Some(ide_ui_agent::plan::spec_view(mtm, Spec { markdown, answer }))
     }
 
     fn notify(&self, _root: &Path, _notification: ide_ui_factory::Notification) {

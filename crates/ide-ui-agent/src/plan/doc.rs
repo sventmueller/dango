@@ -1,5 +1,5 @@
 //! A plan as a document in a tab of its own: the plan on the left, where the user marks passages, and the comments
-//! in a column on the right.
+//! in a column on the right. A specification without a session (`spec.rs`) is laid out the same way.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -109,8 +109,8 @@ fn place(
     activate(constraints());
 }
 
-/// The comments' column: the list, scrolling, above a hint how comments reach the agent.
-fn side(mtm: MainThreadMarker, notes: &NSStackView) -> Retained<NSView> {
+/// The comments' column: the list, scrolling, above `hint`, how comments reach the agent.
+fn side(mtm: MainThreadMarker, notes: &NSStackView, hint: &str) -> Retained<NSView> {
     let side = NSView::new(mtm);
     let scroll = NSScrollView::new(mtm);
     let document = crate::agent_panel::flipped(mtm);
@@ -132,9 +132,7 @@ fn side(mtm: MainThreadMarker, notes: &NSStackView) -> Retained<NSView> {
         .setActive(true);
     let hint = ui::wrapping(
         mtm,
-        t(
-            "Kommentare gehen nur mit „Mit Kommentaren überarbeiten lassen“ an den Agenten, jeder unter der Stelle, die er meint.",
-        ),
+        hint,
         &style::small(),
         &NSColor::tertiaryLabelColor(),
         COLUMN - 28.0,
@@ -158,30 +156,123 @@ fn side(mtm: MainThreadMarker, notes: &NSStackView) -> Retained<NSView> {
     side
 }
 
+/// The parts of a document's tab that change with what it shows.
+pub(super) struct Frame {
+    /// The document's text, where the user marks passages.
+    pub(super) text: Retained<NSTextView>,
+    /// The comments' column.
+    pub(super) notes: Retained<NSStackView>,
+    /// Where the document stands, in its head.
+    pub(super) state: Retained<NSTextField>,
+}
+
+/// What a document's tab names in its head.
+pub(super) struct Heading<'a> {
+    /// The symbol before the title, and what VoiceOver calls it.
+    pub(super) icon: (&'a str, &'a str),
+    pub(super) title: &'a str,
+    /// How comments reach whoever reads them, below the comments.
+    pub(super) hint: &'a str,
+}
+
+/// Lays a document out in `root`: the head with `heading`, the state and `buttons`; the text on the left and the
+/// comments' column on the right.
+pub(super) fn frame(mtm: MainThreadMarker, root: &NSView, heading: &Heading<'_>, buttons: &[&NSButton]) -> Frame {
+    let scroll = NSTextView::scrollableTextView(mtm);
+    let text = scroll
+        .documentView()
+        .and_then(|v| v.downcast::<NSTextView>().ok())
+        .unwrap_or_else(|| NSTextView::new(mtm));
+    text.setEditable(false);
+    text.setSelectable(true);
+    text.setTextContainerInset(NSSize::new(28.0, 22.0));
+    let icon = ui::icon(
+        mtm,
+        heading.icon.0,
+        heading.icon.1,
+        15.0,
+        &NSColor::secondaryLabelColor(),
+    );
+    let title = ui::label(mtm, heading.title, &style::bold(15.0), &NSColor::labelColor());
+    let state = ui::label(mtm, "", &style::small(), &NSColor::secondaryLabelColor());
+    let spacer = ui::spacer(mtm);
+    let mut parts: Vec<&NSView> = vec![&icon, &title, &spacer, &state];
+    parts.extend(buttons.iter().map(|button| -> &NSView { button }));
+    let head = ui::row(mtm, 8.0, &parts);
+    head.setEdgeInsets(ui::insets(10.0, 16.0, 10.0, 14.0));
+    let notes = ui::column(mtm, 8.0, &[]);
+    let side = side(mtm, &notes, heading.hint);
+    let (line, divider) = (ui::separator(mtm), ui::separator(mtm));
+    place(root, &[&head, &line, &scroll, &divider, &side], || {
+        vec![
+            head.topAnchor().constraintEqualToAnchor(&root.topAnchor()),
+            head.leadingAnchor().constraintEqualToAnchor(&root.leadingAnchor()),
+            head.trailingAnchor().constraintEqualToAnchor(&root.trailingAnchor()),
+            line.topAnchor().constraintEqualToAnchor(&head.bottomAnchor()),
+            line.leadingAnchor().constraintEqualToAnchor(&root.leadingAnchor()),
+            line.trailingAnchor().constraintEqualToAnchor(&root.trailingAnchor()),
+            line.heightAnchor().constraintEqualToConstant(1.0),
+            scroll.topAnchor().constraintEqualToAnchor(&line.bottomAnchor()),
+            scroll.leadingAnchor().constraintEqualToAnchor(&root.leadingAnchor()),
+            scroll.bottomAnchor().constraintEqualToAnchor(&root.bottomAnchor()),
+            scroll
+                .trailingAnchor()
+                .constraintEqualToAnchor(&divider.leadingAnchor()),
+            divider.topAnchor().constraintEqualToAnchor(&line.bottomAnchor()),
+            divider.bottomAnchor().constraintEqualToAnchor(&root.bottomAnchor()),
+            divider.widthAnchor().constraintEqualToConstant(1.0),
+            divider.trailingAnchor().constraintEqualToAnchor(&side.leadingAnchor()),
+            side.topAnchor().constraintEqualToAnchor(&line.bottomAnchor()),
+            side.bottomAnchor().constraintEqualToAnchor(&root.bottomAnchor()),
+            side.trailingAnchor().constraintEqualToAnchor(&root.trailingAnchor()),
+            side.widthAnchor().constraintEqualToConstant(COLUMN),
+        ]
+    });
+    Frame { text, notes, state }
+}
+
+/// Shows `notes` in `frame`'s column, or `empty` while there are none, and marks their passages in `rendered`;
+/// `editable` while the document takes comments, whose links go to `target`.
+pub(super) fn show_notes(
+    mtm: MainThreadMarker,
+    frame: &Frame,
+    (rendered, notes): (&NSAttributedString, &[PlanNote]),
+    target: &objc2::runtime::AnyObject,
+    (empty, editable): (&str, bool),
+) {
+    if let Some(storage) = storage(&frame.text) {
+        let selected = frame.text.selectedRange();
+        storage.setAttributedString(&super::marked(rendered, notes));
+        if selected.location + selected.length <= storage.length() {
+            frame.text.setSelectedRange(selected);
+        }
+    }
+    for view in frame.notes.arrangedSubviews().iter() {
+        frame.notes.removeArrangedSubview(&view);
+        view.removeFromSuperview();
+    }
+    if notes.is_empty() {
+        let empty = ui::wrapping(
+            mtm,
+            empty,
+            &style::small(),
+            &NSColor::secondaryLabelColor(),
+            COLUMN - 28.0,
+        );
+        frame.notes.addArrangedSubview(&empty);
+    } else {
+        let list = super::note_list(mtm, target, notes, COLUMN - 28.0, (true, editable));
+        ui::add_full_width(&frame.notes, &list);
+    }
+}
+
 impl PlanDoc {
     fn build(tab: &AgentTab, entry: u64, plan: &str) -> Rc<PlanDoc> {
         let mtm = tab.mtm;
         let this = DocRoot::alloc(mtm).set_ivars(RootIvars { agent: tab.key, entry });
         // SAFETY: NSView's initializer, called once on the newly allocated object.
         let root: Retained<DocRoot> = unsafe { msg_send![super(this), init] };
-        let scroll = NSTextView::scrollableTextView(mtm);
-        let text = scroll
-            .documentView()
-            .and_then(|v| v.downcast::<NSTextView>().ok())
-            .unwrap_or_else(|| NSTextView::new(mtm));
-        text.setEditable(false);
-        text.setSelectable(true);
-        text.setTextContainerInset(NSSize::new(28.0, 22.0));
         let rendered = markdown::render(mtm, plan, style::BODY + 1.0, Tone::Primary);
-        let icon = ui::icon(
-            mtm,
-            "list.bullet.clipboard",
-            t("Plan"),
-            15.0,
-            &NSColor::secondaryLabelColor(),
-        );
-        let title = ui::label(mtm, t("Plan zur Freigabe"), &style::bold(15.0), &NSColor::labelColor());
-        let state = ui::label(mtm, "", &style::small(), &NSColor::secondaryLabelColor());
         let tag = |what: u8| super::entry_tag(entry, what);
         let target = &tab.target;
         let comment = ui::button(
@@ -205,41 +296,15 @@ impl PlanDoc {
         );
         let approve = ui::button(mtm, t("Plan annehmen"), target, sel!(ideAgentPlan:), tag(PLAN_APPROVE));
         approve.setBezelColor(Some(&NSColor::controlAccentColor()));
-        let spacer = ui::spacer(mtm);
-        let head = ui::row(
-            mtm,
-            8.0,
-            &[&icon, &title, &spacer, &state, &comment, &reject, &revise, &approve],
-        );
-        head.setEdgeInsets(ui::insets(10.0, 16.0, 10.0, 14.0));
-        let notes = ui::column(mtm, 8.0, &[]);
-        let side = side(mtm, &notes);
-        let (line, divider) = (ui::separator(mtm), ui::separator(mtm));
-        place(&root, &[&head, &line, &scroll, &divider, &side], || {
-            vec![
-                head.topAnchor().constraintEqualToAnchor(&root.topAnchor()),
-                head.leadingAnchor().constraintEqualToAnchor(&root.leadingAnchor()),
-                head.trailingAnchor().constraintEqualToAnchor(&root.trailingAnchor()),
-                line.topAnchor().constraintEqualToAnchor(&head.bottomAnchor()),
-                line.leadingAnchor().constraintEqualToAnchor(&root.leadingAnchor()),
-                line.trailingAnchor().constraintEqualToAnchor(&root.trailingAnchor()),
-                line.heightAnchor().constraintEqualToConstant(1.0),
-                scroll.topAnchor().constraintEqualToAnchor(&line.bottomAnchor()),
-                scroll.leadingAnchor().constraintEqualToAnchor(&root.leadingAnchor()),
-                scroll.bottomAnchor().constraintEqualToAnchor(&root.bottomAnchor()),
-                scroll
-                    .trailingAnchor()
-                    .constraintEqualToAnchor(&divider.leadingAnchor()),
-                divider.topAnchor().constraintEqualToAnchor(&line.bottomAnchor()),
-                divider.bottomAnchor().constraintEqualToAnchor(&root.bottomAnchor()),
-                divider.widthAnchor().constraintEqualToConstant(1.0),
-                divider.trailingAnchor().constraintEqualToAnchor(&side.leadingAnchor()),
-                side.topAnchor().constraintEqualToAnchor(&line.bottomAnchor()),
-                side.bottomAnchor().constraintEqualToAnchor(&root.bottomAnchor()),
-                side.trailingAnchor().constraintEqualToAnchor(&root.trailingAnchor()),
-                side.widthAnchor().constraintEqualToConstant(COLUMN),
-            ]
-        });
+        let heading = Heading {
+            icon: ("list.bullet.clipboard", t("Plan")),
+            title: t("Plan zur Freigabe"),
+            hint: t(
+                "Kommentare gehen nur mit „Mit Kommentaren überarbeiten lassen“ an den Agenten, jeder unter der Stelle, die er meint.",
+            ),
+        };
+        let buttons: [&NSButton; 4] = [&comment, &reject, &revise, &approve];
+        let Frame { text, notes, state } = frame(mtm, &root, &heading, &buttons);
         Rc::new(PlanDoc {
             agent: tab.key,
             entry,
@@ -254,32 +319,14 @@ impl PlanDoc {
 
     /// Shows `notes`, their marks in the text and where `plan` stands.
     fn show(&self, tab: &AgentTab, plan: &PlanApproval, notes: &[PlanNote]) {
-        let mtm = tab.mtm;
         let pending = plan.state == RequestState::Pending;
-        if let Some(storage) = storage(&self.text) {
-            let selected = self.text.selectedRange();
-            storage.setAttributedString(&super::marked(&self.rendered, notes));
-            if selected.location + selected.length <= storage.length() {
-                self.text.setSelectedRange(selected);
-            }
-        }
-        for view in self.notes.arrangedSubviews().iter() {
-            self.notes.removeArrangedSubview(&view);
-            view.removeFromSuperview();
-        }
-        if notes.is_empty() {
-            let empty = ui::wrapping(
-                mtm,
-                t("Markiere eine Stelle im Plan und wähle „Kommentieren“."),
-                &style::small(),
-                &NSColor::secondaryLabelColor(),
-                COLUMN - 28.0,
-            );
-            self.notes.addArrangedSubview(&empty);
-        } else {
-            let list = super::note_list(mtm, &tab.target, notes, COLUMN - 28.0, (true, pending));
-            ui::add_full_width(&self.notes, &list);
-        }
+        let frame = Frame {
+            text: self.text.clone(),
+            notes: self.notes.clone(),
+            state: self.state.clone(),
+        };
+        let empty = t("Markiere eine Stelle im Plan und wähle „Kommentieren“.");
+        show_notes(tab.mtm, &frame, (&self.rendered, notes), &tab.target, (empty, pending));
         let [comment, reject, revise, approve] = &self.buttons;
         comment.setEnabled(pending);
         for button in [reject, revise, approve] {

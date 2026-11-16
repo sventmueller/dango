@@ -21,6 +21,9 @@ pub use selftest_probe::*;
 impl AgentTab {
     /// The rewind menu of user message `id`: the conversation, the code, or both; only while the session rests.
     pub(crate) fn rewind_menu(&self, id: u64, view: Option<&NSView>) {
+        if self.is_driven() {
+            return;
+        }
         let Some(entry) = self.entry(id) else { return };
         let EntryKind::UserMessage(message) = &entry.kind else {
             return;
@@ -75,7 +78,7 @@ impl AgentTab {
 
     /// Rewinds to before user message `id`: `what` 1 the conversation, 2 the code, 3 both.
     pub fn rewind(&self, id: u64, what: u8) {
-        if self.status() != Status::Idle || (!self.rewinds_conversation() && what != 2) {
+        if self.is_driven() || self.status() != Status::Idle || (!self.rewinds_conversation() && what != 2) {
             return;
         }
         if what == 2 || what == 3 {
