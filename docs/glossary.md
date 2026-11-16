@@ -25,9 +25,9 @@ changes the table first.
   breaks as the English.
 - **Reuse:** a key that splat (`../splat/resources`) already translates takes splat's translation, so both apps say
   the same, unless splat's text means something else here or departs from macOS. So far that is the case for
-  Zeilenumbruch (here Wrap Lines), Neu (the diff's column of new lines), Weiter (Continue), Übernehmen (Use Key) and
-  Hinweis (the language server's severity Hint) in every language, Im Finder zeigen in ar, ca, ro, sl and zh-Hant,
-  Rückwärts suchen in sk, Vollbildmodus in vi and Zoomen in ja.
+  Zeilenumbruch (here Wrap Lines), Neu (the diff's column of new lines), Weiter (Continue), Übernehmen (Use Key),
+  Hinweis (the language server's severity Hint) and Freigeben (Approve, of a specification) in every language, Im
+  Finder zeigen in ar, ca, ro, sl and zh-Hant, Rückwärts suchen in sk, Vollbildmodus in vi and Zoomen in ja.
 
 ## Terms
 What each term means in this app. The Standard terms are macOS's own; the others are the app's.
@@ -202,6 +202,14 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | Risikoklasse | risk class | low, medium or high, expected by the user and measured from the diff |
 | Pfadbereich | path scope | the paths a work order may change |
 | Herkunft | provenance | which role, agent and model made each commit of a work order |
+| Station | station | one step of a work order's way from Eingang to Erledigt |
+| Kriterium, Kriterien | criterion, criteria | a testable condition of a work order's goal, one per line |
+| Prüfrunde | review round | one pass of the reviewer, with the builder's rework after it |
+| Befund | finding | what the reviewer reports on one criterion |
+| Hersteller, Herstellerwechsel | vendor, change of vendor | the company behind an agent's models, such as Anthropic or OpenAI; the reviewer is of another vendor than the builders |
+| Kontingent | quota | how much of a service's usage window is left, as the service reports it |
+| Workflow-Datei | workflow file | `.dango/factory.toml`, the project's rules for its work orders, shared with the team |
+| Stand | state | the commit of a work order that gates, reviewer and acceptance refer to |
 | **Agent configuration (E146)** | | |
 | Rechte | Permissions | the overlay with an agent's permission rules; the rules are Freigaben in the sense of the Freigabe term |
 | Erlauben / Fragen / Verbieten | Allow / Ask / Deny | the effect of a permission rule; Verbieten is the language's word for denying or forbidding an action, Fragen the agent asking first |
@@ -383,6 +391,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | الحاويات |
 | Docker-Kontext | سياق Docker |
+| **Leitstand (phase 13)** | |
+| Leitstand | غرفة التحكم |
+| Auftrag (Leitstand) | أمر عمل، أوامر العمل |
+| Nachweis | الإثبات |
+| Abweichung | انحراف، الانحرافات |
+| Abnahme, abnehmen | القبول، قبول |
+| Freigeben (Spezifikation) | اعتماد |
+| Planer | المخطِّط |
+| Builder | المنفّذ |
+| Prüfer | المراجِع |
+| Späher | المستكشف |
+| Prüfstation, Gate | بوابة |
+| Prüfbefehl | أمر البوابة |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | الاستلام / المواصفة / البناء / المراجعة / القبول / الضم / مكتمل |
+| Risikoklasse | فئة المخاطر |
+| Pfadbereich | نطاق المسارات |
+| Herkunft | المنشأ |
+| Station | محطة |
+| Kriterium, Kriterien | معيار، معايير |
+| Prüfrunde | جولة مراجعة |
+| Befund | ملاحظة |
+| Hersteller, Herstellerwechsel | المورّد، تغيير المورّد |
+| Kontingent | الحصة |
+| Workflow-Datei | ملف سير العمل |
+| Stand | الحالة |
 | Rechte | الأذونات |
 | Erlauben / Fragen / Verbieten | سماح / استئذان / رفض |
 | Gedächtnis | الذاكرة |
@@ -557,6 +590,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Contenidors |
 | Docker-Kontext | context de Docker |
+| **Leitstand (phase 13)** | |
+| Leitstand | Sala de control |
+| Auftrag (Leitstand) | ordre de treball |
+| Nachweis | evidència |
+| Abweichung | desviació |
+| Abnahme, abnehmen | acceptació, acceptar (“Accepta”) |
+| Freigeben (Spezifikation) | aprovar (“Aprova”) |
+| Planer | planificador |
+| Builder | constructor |
+| Prüfer | revisor |
+| Späher | explorador |
+| Prüfstation, Gate | control |
+| Prüfbefehl | ordre de control |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Entrada / Especificació / Construcció / Revisió / Acceptació / Incorporació / Acabat |
+| Risikoklasse | classe de risc |
+| Pfadbereich | àmbit de rutes |
+| Herkunft | procedència |
+| Station | etapa |
+| Kriterium, Kriterien | criteri, criteris |
+| Prüfrunde | ronda de revisió |
+| Befund | troballa |
+| Hersteller, Herstellerwechsel | fabricant, canvi de fabricant |
+| Kontingent | quota |
+| Workflow-Datei | fitxer de flux de treball |
+| Stand | estat |
 | Rechte | Permisos |
 | Erlauben / Fragen / Verbieten | Permet / Pregunta / Denega |
 | Gedächtnis | memòria |
@@ -731,6 +789,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Kontejnery |
 | Docker-Kontext | kontext Dockeru |
+| **Leitstand (phase 13)** | |
+| Leitstand | velín |
+| Auftrag (Leitstand) | zakázka |
+| Nachweis | doklad |
+| Abweichung | odchylka |
+| Abnahme, abnehmen | přijetí, přijmout |
+| Freigeben (Spezifikation) | schválit (schválení) |
+| Planer | Plánovač |
+| Builder | Stavitel |
+| Prüfer | Recenzent |
+| Späher | Průzkumník |
+| Prüfstation, Gate | brána |
+| Prüfbefehl | kontrolní příkaz |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Vstup / Specifikace / Stavba / Revize / Přijetí / Převzetí / Hotovo |
+| Risikoklasse | třída rizika (nízká / střední / vysoká) |
+| Pfadbereich | rozsah cest |
+| Herkunft | původ |
+| Station | stanice |
+| Kriterium, Kriterien | kritérium, kritéria |
+| Prüfrunde | cyklus revize (not kolo, which is Zug) |
+| Befund | zjištění |
+| Hersteller, Herstellerwechsel | výrobce, změna výrobce |
+| Kontingent | kvóta |
+| Workflow-Datei | soubor pracovního postupu |
+| Stand | stav |
 | Rechte | Povolení |
 | Erlauben / Fragen / Verbieten | Povolit / Zeptat se / Zamítnout |
 | Gedächtnis | paměť |
@@ -902,6 +985,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containere |
 | Docker-Kontext | Docker-kontekst |
+| **Leitstand (phase 13)** | |
+| Leitstand | Kontrolrum (Kontrolrummet) |
+| Auftrag (Leitstand) | arbejdsordre, arbejdsordrer |
+| Nachweis | dokumentation |
+| Abweichung | afvigelse, afvigelser |
+| Abnahme, abnehmen | accept, acceptere (button: Accepter) |
+| Freigeben (Spezifikation) | godkend (godkendelse) |
+| Planer | Planlægger |
+| Builder | Builder |
+| Prüfer | Reviewer |
+| Späher | Spejder |
+| Prüfstation, Gate | gate, gates |
+| Prüfbefehl | gate-kommando, gate-kommandoer |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Modtagelse / Specifikation / Build / Review / Accept / Overførsel / Færdig |
+| Risikoklasse | risikoklasse |
+| Pfadbereich | stiområde |
+| Herkunft | oprindelse |
+| Station | station |
+| Kriterium, Kriterien | kriterium, kriterier |
+| Prüfrunde | reviewrunde |
+| Befund | fund |
+| Hersteller, Herstellerwechsel | leverandør, leverandørskift |
+| Kontingent | kvote |
+| Workflow-Datei | workflow-arkiv |
+| Stand | tilstand |
 | Rechte | Tilladelser |
 | Erlauben / Fragen / Verbieten | Tillad / Spørg / Afvis |
 | Gedächtnis | hukommelse |
@@ -1076,6 +1184,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container |
 | Docker-Kontext | Docker context |
+| **Leitstand (phase 13)** | |
+| Leitstand | Κέντρο ελέγχου |
+| Auftrag (Leitstand) | δελτίο εργασίας |
+| Nachweis | τεκμηρίωση |
+| Abweichung | απόκλιση |
+| Abnahme, abnehmen | αποδοχή, αποδέχομαι |
+| Freigeben (Spezifikation) | Έγκριση (εγκρίνω) |
+| Planer | Σχεδιαστής |
+| Builder | Υλοποιητής |
+| Prüfer | Αξιολογητής |
+| Späher | Ανιχνευτής |
+| Prüfstation, Gate | πύλη ελέγχου |
+| Prüfbefehl | εντολή ελέγχου |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Παραλαβή / Προδιαγραφή / Υλοποίηση / Αξιολόγηση / Αποδοχή / Ενσωμάτωση / Ολοκληρώθηκε |
+| Risikoklasse | κατηγορία κινδύνου |
+| Pfadbereich | εύρος διαδρομών |
+| Herkunft | προέλευση |
+| Station | σταθμός |
+| Kriterium, Kriterien | κριτήριο, κριτήρια |
+| Prüfrunde | κύκλος αξιολόγησης |
+| Befund | εύρημα |
+| Hersteller, Herstellerwechsel | κατασκευαστής, αλλαγή κατασκευαστή |
+| Kontingent | ποσόστωση |
+| Workflow-Datei | αρχείο workflow |
+| Stand | κατάσταση |
 | Rechte | Άδειες |
 | Erlauben / Fragen / Verbieten | Να επιτρέπεται / Να ερωτάται / Άρνηση |
 | Gedächtnis | μνήμη |
@@ -1250,6 +1383,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Contenedores |
 | Docker-Kontext | contexto de Docker |
+| **Leitstand (phase 13)** | |
+| Leitstand | Sala de control |
+| Auftrag (Leitstand) | orden de trabajo |
+| Nachweis | evidencia |
+| Abweichung | desviación |
+| Abnahme, abnehmen | aceptación, aceptar |
+| Freigeben (Spezifikation) | aprobar |
+| Planer | planificador |
+| Builder | constructor |
+| Prüfer | revisor |
+| Späher | explorador |
+| Prüfstation, Gate | control |
+| Prüfbefehl | comando de control |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Entrada / Especificación / Construcción / Revisión / Aceptación / Incorporación / Terminado |
+| Risikoklasse | clase de riesgo |
+| Pfadbereich | ámbito de rutas |
+| Herkunft | procedencia |
+| Station | etapa |
+| Kriterium, Kriterien | criterio, criterios |
+| Prüfrunde | ronda de revisión |
+| Befund | hallazgo |
+| Hersteller, Herstellerwechsel | fabricante, cambio de fabricante |
+| Kontingent | cuota |
+| Workflow-Datei | archivo de flujo de trabajo |
+| Stand | estado |
 | Rechte | Permisos |
 | Erlauben / Fragen / Verbieten | Permitir / Preguntar / Denegar |
 | Gedächtnis | memoria |
@@ -1426,6 +1584,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Kontit |
 | Docker-Kontext | Docker-konteksti |
+| **Leitstand (phase 13)** | |
+| Leitstand | valvomo |
+| Auftrag (Leitstand) | työtilaus |
+| Nachweis | todiste |
+| Abweichung | poikkeama |
+| Abnahme, abnehmen | vastaanotto, ottaa vastaan (button: Ota vastaan) |
+| Freigeben (Spezifikation) | hyväksyä (button: Hyväksy) |
+| Planer | suunnittelija |
+| Builder | rakentaja |
+| Prüfer | katselmoija |
+| Späher | tiedustelija |
+| Prüfstation, Gate | laatuportti |
+| Prüfbefehl | tarkistuskomento |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Saapuneet / Määrittely / Rakentaminen / Katselmointi / Vastaanotto / Käyttöönotto / Valmis |
+| Risikoklasse | riskiluokka |
+| Pfadbereich | polkurajaus |
+| Herkunft | alkuperä |
+| Station | vaihe |
+| Kriterium, Kriterien | kriteeri, kriteerit |
+| Prüfrunde | katselmointikierros |
+| Befund | havainto |
+| Hersteller, Herstellerwechsel | valmistaja, valmistajan vaihto |
+| Kontingent | kiintiö |
+| Workflow-Datei | työnkulkutiedosto |
+| Stand | tila |
 | Rechte | Luvat |
 | Erlauben / Fragen / Verbieten | Salli / Kysy / Hylkää |
 | Gedächtnis | muisti |
@@ -1598,6 +1781,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Conteneurs |
 | Docker-Kontext | contexte Docker |
+| **Leitstand (phase 13)** | |
+| Leitstand | Salle de contrôle |
+| Auftrag (Leitstand) | ordre de travail |
+| Nachweis | preuves |
+| Abweichung | écart |
+| Abnahme, abnehmen | acceptation, accepter |
+| Freigeben (Spezifikation) | approuver |
+| Planer | planificateur |
+| Builder | builder |
+| Prüfer | relecteur |
+| Späher | éclaireur |
+| Prüfstation, Gate | contrôle |
+| Prüfbefehl | commande de contrôle |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Entrée / Spécification / Construction / Relecture / Acceptation / Intégration / Terminé |
+| Risikoklasse | classe de risque |
+| Pfadbereich | périmètre des chemins |
+| Herkunft | provenance |
+| Station | étape |
+| Kriterium, Kriterien | critère, critères |
+| Prüfrunde | cycle de relecture |
+| Befund | constat |
+| Hersteller, Herstellerwechsel | fabricant, changement de fabricant |
+| Kontingent | quota |
+| Workflow-Datei | fichier de workflow |
+| Stand | état |
 | Rechte | Autorisations |
 | Erlauben / Fragen / Verbieten | Autoriser / Demander / Refuser |
 | Gedächtnis | mémoire |
@@ -1774,6 +1982,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containers |
 | Docker-Kontext | הקשר Docker |
+| **Leitstand (phase 13)** | |
+| Leitstand | חדר הבקרה |
+| Auftrag (Leitstand) | הזמנת עבודה, הזמנות עבודה |
+| Nachweis | הוכחה |
+| Abweichung | חריגה |
+| Abnahme, abnehmen | קבלה, קבלה |
+| Freigeben (Spezifikation) | אישור |
+| Planer | מתכנן |
+| Builder | בונה |
+| Prüfer | סוקר |
+| Späher | סייר |
+| Prüfstation, Gate | שער |
+| Prüfbefehl | פקודת שער |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | קליטה / מפרט / בנייה / סקירה / קבלה / שילוב / הושלם |
+| Risikoklasse | דרגת סיכון |
+| Pfadbereich | טווח נתיבים |
+| Herkunft | מקור |
+| Station | תחנה |
+| Kriterium, Kriterien | קריטריון, קריטריונים |
+| Prüfrunde | סיבוב סקירה |
+| Befund | ממצא |
+| Hersteller, Herstellerwechsel | יצרן, החלפת יצרן |
+| Kontingent | מכסה |
+| Workflow-Datei | קובץ תהליך העבודה |
+| Stand | מצב |
 | Rechte | הרשאות |
 | Erlauben / Fragen / Verbieten | מתן גישה / בקשת אישור / סירוב |
 | Gedächtnis | זיכרון |
@@ -1946,6 +2179,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | कंटेनर |
 | Docker-Kontext | Docker कॉन्टेक्स्ट |
+| **Leitstand (phase 13)** | |
+| Leitstand | कंट्रोल रूम |
+| Auftrag (Leitstand) | वर्क ऑर्डर |
+| Nachweis | प्रमाण |
+| Abweichung | विचलन |
+| Abnahme, abnehmen | स्वीकृति, स्वीकार करें |
+| Freigeben (Spezifikation) | मंज़ूर करें (मंज़ूरी) |
+| Planer | योजनाकार |
+| Builder | बिल्डर |
+| Prüfer | समीक्षक |
+| Späher | स्काउट |
+| Prüfstation, Gate | गेट |
+| Prüfbefehl | गेट कमांड |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | इनटेक / स्पेसिफ़िकेशन / बिल्ड / समीक्षा / स्वीकृति / शामिल करना / पूर्ण |
+| Risikoklasse | जोखिम श्रेणी |
+| Pfadbereich | पाथ दायरा |
+| Herkunft | उद्गम |
+| Station | स्टेशन |
+| Kriterium, Kriterien | मानदंड, मानदंड |
+| Prüfrunde | समीक्षा दौर |
+| Befund | निष्कर्ष |
+| Hersteller, Herstellerwechsel | वेंडर, वेंडर परिवर्तन |
+| Kontingent | कोटा |
+| Workflow-Datei | वर्कफ़्लो फ़ाइल |
+| Stand | स्थिति |
 | Rechte | अनुमतियाँ |
 | Erlauben / Fragen / Verbieten | अनुमति दें / पूछें / अस्वीकार करें |
 | Gedächtnis | मेमोरी |
@@ -2119,6 +2377,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Kontejneri |
 | Docker-Kontext | Docker kontekst |
+| **Leitstand (phase 13)** | |
+| Leitstand | kontrolna soba |
+| Auftrag (Leitstand) | radni nalog |
+| Nachweis | dokazi |
+| Abweichung | odstupanje |
+| Abnahme, abnehmen | prihvaćanje, prihvatiti |
+| Freigeben (Spezifikation) | odobriti (odobrenje) |
+| Planer | Planer |
+| Builder | Izvođač |
+| Prüfer | Recenzent |
+| Späher | Izviđač |
+| Prüfstation, Gate | provjera |
+| Prüfbefehl | naredba provjere |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Prijem / Specifikacija / Izrada / Pregled / Prihvaćanje / Preuzimanje / Gotovo |
+| Risikoklasse | razred rizika |
+| Pfadbereich | opseg putanja |
+| Herkunft | podrijetlo |
+| Station | faza |
+| Kriterium, Kriterien | kriterij, kriteriji |
+| Prüfrunde | runda pregleda |
+| Befund | nalaz |
+| Hersteller, Herstellerwechsel | proizvođač, promjena proizvođača |
+| Kontingent | kvota |
+| Workflow-Datei | datoteka tijeka rada |
+| Stand | stanje |
 | Rechte | Dozvole |
 | Erlauben / Fragen / Verbieten | Dozvoli / Pitaj / Odbij |
 | Gedächtnis | memorija |
@@ -2294,6 +2577,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Konténerek |
 | Docker-Kontext | Docker-kontextus |
+| **Leitstand (phase 13)** | |
+| Leitstand | vezérlőterem |
+| Auftrag (Leitstand) | munkarendelés |
+| Nachweis | bizonyíték |
+| Abweichung | eltérés |
+| Abnahme, abnehmen | elfogadás, elfogad |
+| Freigeben (Spezifikation) | jóváhagyás, jóváhagy |
+| Planer | tervező |
+| Builder | építő |
+| Prüfer | ellenőr |
+| Späher | felderítő |
+| Prüfstation, Gate | ellenőrzőpont |
+| Prüfbefehl | ellenőrző parancs |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Beérkezés / Specifikáció / Építés / Ellenőrzés / Elfogadás / Átvétel / Kész |
+| Risikoklasse | kockázati osztály |
+| Pfadbereich | útvonal-hatókör |
+| Herkunft | eredet |
+| Station | állomás |
+| Kriterium, Kriterien | kritérium, kritériumok |
+| Prüfrunde | ellenőrzési forduló |
+| Befund | megállapítás |
+| Hersteller, Herstellerwechsel | gyártó, gyártóváltás |
+| Kontingent | kvóta |
+| Workflow-Datei | munkafolyamatfájl |
+| Stand | állapot |
 | Rechte | Engedélyek |
 | Erlauben / Fragen / Verbieten | Engedélyezés / Kérdezés / Tiltás |
 | Gedächtnis | memória |
@@ -2467,6 +2775,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container |
 | Docker-Kontext | konteks Docker |
+| **Leitstand (phase 13)** | |
+| Leitstand | Ruang Kendali |
+| Auftrag (Leitstand) | order kerja |
+| Nachweis | bukti |
+| Abweichung | penyimpangan |
+| Abnahme, abnehmen | penerimaan, terima |
+| Freigeben (Spezifikation) | Setujui (persetujuan) |
+| Planer | Perencana |
+| Builder | Builder |
+| Prüfer | Peninjau |
+| Späher | Pengintai |
+| Prüfstation, Gate | gerbang |
+| Prüfbefehl | perintah gerbang |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Kotak Masuk / Spesifikasi / Pembuatan / Tinjauan / Penerimaan / Pengambilan / Selesai |
+| Risikoklasse | kelas risiko |
+| Pfadbereich | cakupan path |
+| Herkunft | asal-usul |
+| Station | tahap |
+| Kriterium, Kriterien | kriteria, kriteria |
+| Prüfrunde | putaran tinjauan |
+| Befund | temuan |
+| Hersteller, Herstellerwechsel | vendor, pergantian vendor |
+| Kontingent | kuota |
+| Workflow-Datei | file workflow |
+| Stand | keadaan |
 | Rechte | Izin |
 | Erlauben / Fragen / Verbieten | Izinkan / Tanyakan / Larang |
 | Gedächtnis | memori |
@@ -2640,6 +2973,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container |
 | Docker-Kontext | contesto Docker |
+| **Leitstand (phase 13)** | |
+| Leitstand | Sala di controllo |
+| Auftrag (Leitstand) | ordine di lavoro, ordini di lavoro |
+| Nachweis | evidenza |
+| Abweichung | deviazione |
+| Abnahme, abnehmen | accettazione, accettare |
+| Freigeben (Spezifikation) | approvare (Approva) |
+| Planer | Pianificatore |
+| Builder | Builder |
+| Prüfer | Revisore |
+| Späher | Esploratore |
+| Prüfstation, Gate | gate |
+| Prüfbefehl | comando di verifica |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Ingresso / Specifica / Build / Revisione / Accettazione / Ripresa / Completato |
+| Risikoklasse | classe di rischio |
+| Pfadbereich | ambito dei percorsi |
+| Herkunft | provenienza |
+| Station | stazione |
+| Kriterium, Kriterien | criterio, criteri |
+| Prüfrunde | ciclo di revisione |
+| Befund | rilievo |
+| Hersteller, Herstellerwechsel | produttore, cambio di produttore |
+| Kontingent | quota |
+| Workflow-Datei | file del workflow |
+| Stand | stato |
 | Rechte | Permessi |
 | Erlauben / Fragen / Verbieten | Consenti / Chiedi / Nega |
 | Gedächtnis | memoria |
@@ -2814,6 +3172,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | コンテナ |
 | Docker-Kontext | Dockerコンテキスト |
+| **Leitstand (phase 13)** | |
+| Leitstand | 管制室 |
+| Auftrag (Leitstand) | 作業指示 |
+| Nachweis | エビデンス |
+| Abweichung | 逸脱 |
+| Abnahme, abnehmen | 検収, 検収する |
+| Freigeben (Spezifikation) | 承認 |
+| Planer | プランナー |
+| Builder | ビルダー |
+| Prüfer | レビュアー |
+| Späher | スカウト |
+| Prüfstation, Gate | ゲート |
+| Prüfbefehl | ゲートコマンド |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | 受付 / 仕様 / ビルド / レビュー / 検収 / 取り込み / 完了 |
+| Risikoklasse | リスククラス |
+| Pfadbereich | パス範囲 |
+| Herkunft | 来歴 |
+| Station | 工程 |
+| Kriterium, Kriterien | 基準, 基準 |
+| Prüfrunde | レビューラウンド |
+| Befund | 所見 |
+| Hersteller, Herstellerwechsel | ベンダー, ベンダー変更 |
+| Kontingent | クォータ |
+| Workflow-Datei | ワークフローファイル |
+| Stand | 状態 |
 | Rechte | 権限 |
 | Erlauben / Fragen / Verbieten | 許可 / 尋ねる / 拒否 |
 | Gedächtnis | メモリ |
@@ -2987,6 +3370,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | 컨테이너 |
 | Docker-Kontext | Docker 컨텍스트 |
+| **Leitstand (phase 13)** | |
+| Leitstand | 관제실 |
+| Auftrag (Leitstand) | 작업 주문 |
+| Nachweis | 증빙 |
+| Abweichung | 특이 사항 |
+| Abnahme, abnehmen | 검수, 검수 완료 |
+| Freigeben (Spezifikation) | 승인 |
+| Planer | 플래너 |
+| Builder | 빌더 |
+| Prüfer | 검토자 |
+| Späher | 스카우트 |
+| Prüfstation, Gate | 게이트 |
+| Prüfbefehl | 게이트 명령 |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | 접수 / 사양 / 빌드 / 검토 / 검수 / 가져오기 / 완료 |
+| Risikoklasse | 위험 등급 |
+| Pfadbereich | 경로 범위 |
+| Herkunft | 출처 |
+| Station | 단계 |
+| Kriterium, Kriterien | 기준 |
+| Prüfrunde | 검토 라운드 |
+| Befund | 발견 사항 |
+| Hersteller, Herstellerwechsel | 벤더, 벤더 교체 |
+| Kontingent | 할당량 |
+| Workflow-Datei | 워크플로 파일 |
+| Stand | 상태 |
 | Rechte | 권한 |
 | Erlauben / Fragen / Verbieten | 허용 / 묻기 / 거부 |
 | Gedächtnis | 메모리 |
@@ -3159,6 +3567,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container |
 | Docker-Kontext | konteks Docker |
+| **Leitstand (phase 13)** | |
+| Leitstand | Bilik Kawalan |
+| Auftrag (Leitstand) | pesanan kerja |
+| Nachweis | bukti |
+| Abweichung | sisihan |
+| Abnahme, abnehmen | penerimaan, terima |
+| Freigeben (Spezifikation) | Luluskan (kelulusan) |
+| Planer | Perancang |
+| Builder | Pembina |
+| Prüfer | Penyemak |
+| Späher | Peninjau |
+| Prüfstation, Gate | gerbang |
+| Prüfbefehl | perintah gerbang |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Kemasukan / Spesifikasi / Binaan / Semakan / Penerimaan / Ambil Alih / Selesai |
+| Risikoklasse | kelas risiko |
+| Pfadbereich | skop laluan |
+| Herkunft | asal usul |
+| Station | peringkat |
+| Kriterium, Kriterien | kriteria, kriteria |
+| Prüfrunde | pusingan semakan |
+| Befund | dapatan |
+| Hersteller, Herstellerwechsel | vendor, pertukaran vendor |
+| Kontingent | kuota |
+| Workflow-Datei | fail aliran kerja |
+| Stand | keadaan |
 | Rechte | Keizinan |
 | Erlauben / Fragen / Verbieten | Benarkan / Tanya / Larang |
 | Gedächtnis | memori |
@@ -3332,6 +3765,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containers |
 | Docker-Kontext | Docker-context |
+| **Leitstand (phase 13)** | |
+| Leitstand | Controlekamer |
+| Auftrag (Leitstand) | werkorder, werkorders |
+| Nachweis | bewijs |
+| Abweichung | afwijking, afwijkingen |
+| Abnahme, abnehmen | acceptatie, accepteren (button: Accepteer) |
+| Freigeben (Spezifikation) | goedkeuren (button: Keur goed; zonder goedkeuring) |
+| Planer | Planner |
+| Builder | Builder |
+| Prüfer | Reviewer |
+| Späher | Verkenner |
+| Prüfstation, Gate | gate, gates |
+| Prüfbefehl | gatecommando, gatecommando's |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Intake / Specificatie / Bouw / Review / Acceptatie / Overname / Voltooid |
+| Risikoklasse | risicoklasse |
+| Pfadbereich | padbereik |
+| Herkunft | herkomst |
+| Station | station |
+| Kriterium, Kriterien | criterium, criteria |
+| Prüfrunde | reviewronde |
+| Befund | bevinding |
+| Hersteller, Herstellerwechsel | leverancier, leverancierswissel |
+| Kontingent | quotum |
+| Workflow-Datei | workflowbestand |
+| Stand | toestand |
 | Rechte | Toestemmingen |
 | Erlauben / Fragen / Verbieten | Sta toe / Vraag / Verbied |
 | Gedächtnis | geheugen |
@@ -3505,6 +3963,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containere |
 | Docker-Kontext | Docker-kontekst |
+| **Leitstand (phase 13)** | |
+| Leitstand | kontrollrom |
+| Auftrag (Leitstand) | arbeidsordre |
+| Nachweis | bevis |
+| Abweichung | avvik |
+| Abnahme, abnehmen | aksept, akseptere |
+| Freigeben (Spezifikation) | godkjenne (button: Godkjenn) |
+| Planer | planlegger |
+| Builder | bygger |
+| Prüfer | kontrollør |
+| Späher | speider |
+| Prüfstation, Gate | kontrollpunkt |
+| Prüfbefehl | kontrollkommando |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Mottak / Spesifikasjon / Bygging / Gjennomgang / Aksept / Overtakelse / Ferdig |
+| Risikoklasse | risikoklasse |
+| Pfadbereich | stiområde |
+| Herkunft | opprinnelse |
+| Station | stasjon |
+| Kriterium, Kriterien | kriterium, kriterier |
+| Prüfrunde | gjennomgangsrunde |
+| Befund | funn |
+| Hersteller, Herstellerwechsel | produsent, produsentbytte |
+| Kontingent | kvote |
+| Workflow-Datei | arbeidsflytfil |
+| Stand | tilstand |
 | Rechte | Tillatelser |
 | Erlauben / Fragen / Verbieten | Tillat / Spør / Nekt |
 | Gedächtnis | minne |
@@ -3678,6 +4161,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Kontenery |
 | Docker-Kontext | kontekst Dockera |
+| **Leitstand (phase 13)** | |
+| Leitstand | sterownia |
+| Auftrag (Leitstand) | zamówienie |
+| Nachweis | dowód |
+| Abweichung | odstępstwo |
+| Abnahme, abnehmen | akceptacja, zaakceptować (button: Akceptuj) |
+| Freigeben (Spezifikation) | zatwierdzić (button: Zatwierdź; zatwierdzenie) |
+| Planer | Planista |
+| Builder | Wykonawca |
+| Prüfer | Recenzent |
+| Späher | Zwiadowca |
+| Prüfstation, Gate | bramka |
+| Prüfbefehl | polecenie kontrolne |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Wejście / Specyfikacja / Budowa / Recenzja / Akceptacja / Przejęcie / Gotowe |
+| Risikoklasse | klasa ryzyka (niska / średnia / wysoka) |
+| Pfadbereich | zakres ścieżek |
+| Herkunft | pochodzenie |
+| Station | stacja |
+| Kriterium, Kriterien | kryterium, kryteria |
+| Prüfrunde | runda recenzji |
+| Befund | ustalenie |
+| Hersteller, Herstellerwechsel | producent, zmiana producenta |
+| Kontingent | przydział |
+| Workflow-Datei | plik przepływu pracy |
+| Stand | stan |
 | Rechte | Uprawnienia |
 | Erlauben / Fragen / Verbieten | Pozwól / Zapytaj / Zabroń |
 | Gedächtnis | pamięć |
@@ -3852,6 +4360,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Contêineres |
 | Docker-Kontext | contexto do Docker |
+| **Leitstand (phase 13)** | |
+| Leitstand | Sala de Controle |
+| Auftrag (Leitstand) | ordem de serviço, ordens de serviço |
+| Nachweis | evidência |
+| Abweichung | desvio |
+| Abnahme, abnehmen | aceitação, aceitar |
+| Freigeben (Spezifikation) | aprovar |
+| Planer | Planejador |
+| Builder | Construtor |
+| Prüfer | Revisor |
+| Späher | Explorador |
+| Prüfstation, Gate | gate |
+| Prüfbefehl | comando de verificação |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Entrada / Especificação / Construção / Revisão / Aceitação / Incorporação / Concluído |
+| Risikoklasse | classe de risco |
+| Pfadbereich | escopo de caminhos |
+| Herkunft | procedência |
+| Station | estação |
+| Kriterium, Kriterien | critério, critérios |
+| Prüfrunde | rodada de revisão |
+| Befund | constatação |
+| Hersteller, Herstellerwechsel | fabricante, troca de fabricante |
+| Kontingent | cota |
+| Workflow-Datei | arquivo de workflow |
+| Stand | estado |
 | Rechte | Permissões |
 | Erlauben / Fragen / Verbieten | Permitir / Perguntar / Proibir |
 | Gedächtnis | memória |
@@ -4027,6 +4560,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Contentores |
 | Docker-Kontext | contexto do Docker |
+| **Leitstand (phase 13)** | |
+| Leitstand | Sala de controlo |
+| Auftrag (Leitstand) | ordem de trabalho, ordens de trabalho |
+| Nachweis | evidência |
+| Abweichung | desvio |
+| Abnahme, abnehmen | aceitação, aceitar |
+| Freigeben (Spezifikation) | aprovar |
+| Planer | Planeador |
+| Builder | Construtor |
+| Prüfer | Revisor |
+| Späher | Explorador |
+| Prüfstation, Gate | gate |
+| Prüfbefehl | comando de verificação |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Entrada / Especificação / Construção / Revisão / Aceitação / Incorporação / Concluído |
+| Risikoklasse | classe de risco |
+| Pfadbereich | âmbito de caminhos |
+| Herkunft | proveniência |
+| Station | estação |
+| Kriterium, Kriterien | critério, critérios |
+| Prüfrunde | ronda de revisão |
+| Befund | constatação |
+| Hersteller, Herstellerwechsel | fabricante, mudança de fabricante |
+| Kontingent | quota |
+| Workflow-Datei | ficheiro de workflow |
+| Stand | estado |
 | Rechte | Permissões |
 | Erlauben / Fragen / Verbieten | Permitir / Perguntar / Proibir |
 | Gedächtnis | memória |
@@ -4202,6 +4760,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containere |
 | Docker-Kontext | context Docker |
+| **Leitstand (phase 13)** | |
+| Leitstand | Camera de control |
+| Auftrag (Leitstand) | ordin de lucru |
+| Nachweis | dovadă |
+| Abweichung | abatere |
+| Abnahme, abnehmen | acceptare, acceptați |
+| Freigeben (Spezifikation) | Aprobați (aprobare) |
+| Planer | Planificator |
+| Builder | Constructor |
+| Prüfer | Evaluator |
+| Späher | Cercetaș |
+| Prüfstation, Gate | control |
+| Prüfbefehl | comandă de control |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Primire / Specificație / Construire / Evaluare / Acceptare / Preluare / Finalizat |
+| Risikoklasse | clasă de risc |
+| Pfadbereich | domeniu de căi |
+| Herkunft | proveniență |
+| Station | stație |
+| Kriterium, Kriterien | criteriu, criterii |
+| Prüfrunde | ciclu de evaluare |
+| Befund | constatare |
+| Hersteller, Herstellerwechsel | producător, schimbare de producător |
+| Kontingent | cotă |
+| Workflow-Datei | fișier workflow |
+| Stand | stare |
 | Rechte | Permisiuni |
 | Erlauben / Fragen / Verbieten | Permiteți / Întrebați / Refuzați (Verbieten as Ablehnen) |
 | Gedächtnis | memorie |
@@ -4376,6 +4959,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Контейнеры |
 | Docker-Kontext | контекст Docker |
+| **Leitstand (phase 13)** | |
+| Leitstand | диспетчерская |
+| Auftrag (Leitstand) | заказ |
+| Nachweis | доказательства |
+| Abweichung | отклонение |
+| Abnahme, abnehmen | приемка, принять |
+| Freigeben (Spezifikation) | утвердить (утверждение) |
+| Planer | Планировщик |
+| Builder | Исполнитель |
+| Prüfer | Рецензент |
+| Späher | Разведчик |
+| Prüfstation, Gate | шлюз |
+| Prüfbefehl | проверочная команда |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Входящие / Спецификация / Реализация / Проверка / Приемка / Перенос / Готово |
+| Risikoklasse | класс риска |
+| Pfadbereich | область путей |
+| Herkunft | происхождение |
+| Station | этап |
+| Kriterium, Kriterien | критерий, критерии |
+| Prüfrunde | раунд проверки |
+| Befund | замечание |
+| Hersteller, Herstellerwechsel | производитель, смена производителя |
+| Kontingent | квота |
+| Workflow-Datei | файл рабочего процесса |
+| Stand | состояние |
 | Rechte | Разрешения |
 | Erlauben / Fragen / Verbieten | Разрешить / Спрашивать / Запретить (Verbieten as Ablehnen) |
 | Gedächtnis | память |
@@ -4551,6 +5159,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Kontajnery |
 | Docker-Kontext | kontext Dockera |
+| **Leitstand (phase 13)** | |
+| Leitstand | velín |
+| Auftrag (Leitstand) | zákazka |
+| Nachweis | doklad |
+| Abweichung | odchýlka |
+| Abnahme, abnehmen | prijatie, prijať |
+| Freigeben (Spezifikation) | schváliť (schválenie) |
+| Planer | Plánovač |
+| Builder | Staviteľ |
+| Prüfer | Recenzent |
+| Späher | Prieskumník |
+| Prüfstation, Gate | brána |
+| Prüfbefehl | kontrolný príkaz |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Vstup / Špecifikácia / Stavba / Revízia / Prijatie / Prevzatie / Hotovo |
+| Risikoklasse | trieda rizika (nízka / stredná / vysoká) |
+| Pfadbereich | rozsah ciest |
+| Herkunft | pôvod |
+| Station | stanica |
+| Kriterium, Kriterien | kritérium, kritériá |
+| Prüfrunde | cyklus revízie (not kolo, which is Zug) |
+| Befund | zistenie |
+| Hersteller, Herstellerwechsel | výrobca, zmena výrobcu |
+| Kontingent | kvóta |
+| Workflow-Datei | súbor pracovného postupu |
+| Stand | stav |
 | Rechte | Povolenia |
 | Erlauben / Fragen / Verbieten | Povoliť / Spýtať sa / Zamietnuť (Verbieten as Ablehnen) |
 | Gedächtnis | pamäť |
@@ -4727,6 +5360,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Vsebniki |
 | Docker-Kontext | kontekst Docker |
+| **Leitstand (phase 13)** | |
+| Leitstand | Nadzorna soba |
+| Auftrag (Leitstand) | delovni nalog |
+| Nachweis | dokazilo |
+| Abweichung | odstopanje |
+| Abnahme, abnehmen | sprejem, sprejeti |
+| Freigeben (Spezifikation) | Odobri (odobritev) |
+| Planer | Načrtovalec |
+| Builder | Graditelj |
+| Prüfer | Pregledovalec |
+| Späher | Izvidnik |
+| Prüfstation, Gate | kontrola |
+| Prüfbefehl | kontrolni ukaz |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Vhod / Specifikacija / Gradnja / Pregled / Sprejem / Prevzem / Končano |
+| Risikoklasse | razred tveganja |
+| Pfadbereich | obseg poti |
+| Herkunft | izvor |
+| Station | postaja |
+| Kriterium, Kriterien | merilo, merila |
+| Prüfrunde | runda pregleda |
+| Befund | ugotovitev |
+| Hersteller, Herstellerwechsel | proizvajalec, menjava proizvajalca |
+| Kontingent | kvota |
+| Workflow-Datei | datoteka poteka dela |
+| Stand | stanje |
 | Rechte | Dovoljenja |
 | Erlauben / Fragen / Verbieten | Dovoli / Vprašaj / Zavrni (Verbieten as Ablehnen) |
 | Gedächtnis | spomin |
@@ -4900,6 +5558,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Containrar |
 | Docker-Kontext | Docker-kontext |
+| **Leitstand (phase 13)** | |
+| Leitstand | Kontrollrum (Kontrollrummet) |
+| Auftrag (Leitstand) | arbetsorder, arbetsordrar |
+| Nachweis | bevis |
+| Abweichung | avvikelse, avvikelser |
+| Abnahme, abnehmen | acceptans, acceptera |
+| Freigeben (Spezifikation) | godkänna (button: Godkänn; godkännande) |
+| Planer | Planerare |
+| Builder | Byggare |
+| Prüfer | Granskare |
+| Späher | Spanare |
+| Prüfstation, Gate | grind, grindar |
+| Prüfbefehl | grindkommando, grindkommandon |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Intag / Specifikation / Bygge / Granskning / Acceptans / Övertagande / Klar |
+| Risikoklasse | riskklass |
+| Pfadbereich | sökvägsomfång |
+| Herkunft | ursprung |
+| Station | station |
+| Kriterium, Kriterien | kriterium, kriterier |
+| Prüfrunde | granskningsrunda |
+| Befund | fynd |
+| Hersteller, Herstellerwechsel | tillverkare, tillverkarbyte |
+| Kontingent | kvot |
+| Workflow-Datei | workflowfil |
+| Stand | tillstånd |
 | Rechte | Behörigheter |
 | Erlauben / Fragen / Verbieten | Tillåt / Fråga / Neka (Verbieten as Ablehnen) |
 | Gedächtnis | minne |
@@ -5075,6 +5758,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | คอนเทนเนอร์ |
 | Docker-Kontext | บริบท Docker |
+| **Leitstand (phase 13)** | |
+| Leitstand | ศูนย์ควบคุม |
+| Auftrag (Leitstand) | ใบสั่งงาน |
+| Nachweis | หลักฐาน |
+| Abweichung | ข้อเบี่ยงเบน |
+| Abnahme, abnehmen | การตรวจรับ, ตรวจรับ |
+| Freigeben (Spezifikation) | อนุมัติ |
+| Planer | ผู้วางแผน |
+| Builder | ผู้สร้าง |
+| Prüfer | ผู้ตรวจทาน |
+| Späher | ผู้สำรวจ |
+| Prüfstation, Gate | ด่านตรวจ |
+| Prüfbefehl | คำสั่งด่านตรวจ |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | การรับเข้า / ข้อกำหนด / การสร้าง / การตรวจทาน / การตรวจรับ / การนำมาใช้ / เสร็จสิ้น |
+| Risikoklasse | ระดับความเสี่ยง |
+| Pfadbereich | ขอบเขตพาธ |
+| Herkunft | ที่มา |
+| Station | สถานี |
+| Kriterium, Kriterien | เกณฑ์ |
+| Prüfrunde | รอบการตรวจทาน |
+| Befund | ข้อค้นพบ |
+| Hersteller, Herstellerwechsel | ผู้ผลิต, การเปลี่ยนผู้ผลิต |
+| Kontingent | โควตา |
+| Workflow-Datei | ไฟล์เวิร์กโฟลว์ |
+| Stand | สถานะ |
 | Rechte | สิทธิ์ |
 | Erlauben / Fragen / Verbieten | อนุญาต / ถาม / ปฏิเสธ (Verbieten as Ablehnen) |
 | Gedächtnis | ความจำ |
@@ -5251,6 +5959,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container’lar |
 | Docker-Kontext | Docker bağlamı |
+| **Leitstand (phase 13)** | |
+| Leitstand | Kontrol Odası |
+| Auftrag (Leitstand) | iş emri, iş emirleri |
+| Nachweis | kanıt |
+| Abweichung | sapma |
+| Abnahme, abnehmen | kabul, kabul et |
+| Freigeben (Spezifikation) | onay, onayla |
+| Planer | Planlayıcı |
+| Builder | Builder |
+| Prüfer | İnceleyici |
+| Späher | Keşifçi |
+| Prüfstation, Gate | geçit |
+| Prüfbefehl | geçit komutu |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Alım / Belirtim / Yapım / İnceleme / Kabul / Aktarım / Tamamlandı |
+| Risikoklasse | risk sınıfı |
+| Pfadbereich | yol kapsamı |
+| Herkunft | köken |
+| Station | istasyon |
+| Kriterium, Kriterien | ölçüt, ölçütler |
+| Prüfrunde | inceleme döngüsü |
+| Befund | bulgu |
+| Hersteller, Herstellerwechsel | üretici, üretici değişikliği |
+| Kontingent | kota |
+| Workflow-Datei | iş akışı dosyası |
+| Stand | durum |
 | Rechte | İzinler |
 | Erlauben / Fragen / Verbieten | İzin Ver / Sor / Reddet (Verbieten as Ablehnen) |
 | Gedächtnis | bellek |
@@ -5424,6 +6157,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Контейнери |
 | Docker-Kontext | контекст Docker |
+| **Leitstand (phase 13)** | |
+| Leitstand | диспетчерська |
+| Auftrag (Leitstand) | замовлення |
+| Nachweis | докази |
+| Abweichung | відхилення |
+| Abnahme, abnehmen | приймання, прийняти |
+| Freigeben (Spezifikation) | затвердити (затвердження) |
+| Planer | Планувальник |
+| Builder | Виконавець |
+| Prüfer | Рецензент |
+| Späher | Розвідник |
+| Prüfstation, Gate | шлюз |
+| Prüfbefehl | команда перевірки |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Вхідні / Специфікація / Реалізація / Перевірка / Приймання / Перенесення / Готово |
+| Risikoklasse | клас ризику |
+| Pfadbereich | область шляхів |
+| Herkunft | походження |
+| Station | етап |
+| Kriterium, Kriterien | критерій, критерії |
+| Prüfrunde | раунд перевірки |
+| Befund | зауваження |
+| Hersteller, Herstellerwechsel | виробник, зміна виробника |
+| Kontingent | квота |
+| Workflow-Datei | файл робочого процесу |
+| Stand | стан |
 | Rechte | Дозволи |
 | Erlauben / Fragen / Verbieten | Дозволити / Запитувати / Заборонити (Verbieten as Ablehnen) |
 | Gedächtnis | памʼять |
@@ -5598,6 +6356,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | Container |
 | Docker-Kontext | ngữ cảnh Docker |
+| **Leitstand (phase 13)** | |
+| Leitstand | Phòng điều khiển |
+| Auftrag (Leitstand) | phiếu công việc |
+| Nachweis | bằng chứng |
+| Abweichung | sai lệch |
+| Abnahme, abnehmen | nghiệm thu, nghiệm thu |
+| Freigeben (Spezifikation) | phê duyệt |
+| Planer | người lập kế hoạch |
+| Builder | người xây dựng |
+| Prüfer | người xem xét |
+| Späher | người trinh sát |
+| Prüfstation, Gate | cổng kiểm tra |
+| Prüfbefehl | lệnh kiểm tra |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | Hộp đến / Đặc tả / Xây dựng / Xem xét / Nghiệm thu / Tiếp nhận / Hoàn tất |
+| Risikoklasse | mức rủi ro |
+| Pfadbereich | phạm vi đường dẫn |
+| Herkunft | nguồn gốc |
+| Station | trạm |
+| Kriterium, Kriterien | tiêu chí |
+| Prüfrunde | vòng xem xét |
+| Befund | phát hiện |
+| Hersteller, Herstellerwechsel | hãng, đổi hãng |
+| Kontingent | hạn mức |
+| Workflow-Datei | tệp quy trình |
+| Stand | trạng thái |
 | Rechte | Quyền |
 | Erlauben / Fragen / Verbieten | Cho phép / Hỏi / Từ chối (Verbieten as Ablehnen) |
 | Gedächtnis | bộ nhớ |
@@ -5770,6 +6553,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | 容器 |
 | Docker-Kontext | Docker 上下文 |
+| **Leitstand (phase 13)** | |
+| Leitstand | 控制室 |
+| Auftrag (Leitstand) | 工单 |
+| Nachweis | 证据 |
+| Abweichung | 偏差 |
+| Abnahme, abnehmen | 验收, 验收 |
+| Freigeben (Spezifikation) | 批准 |
+| Planer | 规划者 |
+| Builder | 构建者 |
+| Prüfer | 审查者 |
+| Späher | 侦察者 |
+| Prüfstation, Gate | 门禁 |
+| Prüfbefehl | 门禁命令 |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | 接收 / 规格 / 构建 / 审查 / 验收 / 并入 / 完成 |
+| Risikoklasse | 风险等级 |
+| Pfadbereich | 路径范围 |
+| Herkunft | 来源 |
+| Station | 阶段 |
+| Kriterium, Kriterien | 标准 |
+| Prüfrunde | 审查轮次 |
+| Befund | 发现 |
+| Hersteller, Herstellerwechsel | 厂商, 更换厂商 |
+| Kontingent | 配额 |
+| Workflow-Datei | 工作流文件 |
+| Stand | 状态 |
 | Rechte | 权限 |
 | Erlauben / Fragen / Verbieten | 允许 / 询问 / 拒绝 (Verbieten as Ablehnen) |
 | Gedächtnis | 记忆 |
@@ -5944,6 +6752,31 @@ What each term means in this app. The Standard terms are macOS's own; the others
 | **Containers** | |
 | Container | 容器 |
 | Docker-Kontext | Docker 上下文 |
+| **Leitstand (phase 13)** | |
+| Leitstand | 控制室 |
+| Auftrag (Leitstand) | 工單 |
+| Nachweis | 證據 |
+| Abweichung | 偏差 |
+| Abnahme, abnehmen | 驗收, 驗收 |
+| Freigeben (Spezifikation) | 核准 |
+| Planer | 規劃者 |
+| Builder | 建構者 |
+| Prüfer | 審查者 |
+| Späher | 偵察者 |
+| Prüfstation, Gate | 關卡 |
+| Prüfbefehl | 關卡指令 |
+| Eingang / Spezifikation / Bau / Prüfung / Abnahme / Übernahme / Erledigt | 接收 / 規格 / 建構 / 審查 / 驗收 / 整合 / 完成 |
+| Risikoklasse | 風險等級 |
+| Pfadbereich | 路徑範圍 |
+| Herkunft | 來源 |
+| Station | 階段 |
+| Kriterium, Kriterien | 標準 |
+| Prüfrunde | 審查輪次 |
+| Befund | 發現 |
+| Hersteller, Herstellerwechsel | 廠商, 更換廠商 |
+| Kontingent | 配額 |
+| Workflow-Datei | 工作流程檔案 |
+| Stand | 狀態 |
 | Rechte | 權限 |
 | Erlauben / Fragen / Verbieten | 允許 / 詢問 / 拒絕 (Verbieten as Ablehnen) |
 | Gedächtnis | 記憶 |
