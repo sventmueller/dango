@@ -167,7 +167,8 @@ fn check_casting(
             .get(&role)
             .map_or_else(|| rules.role(role).to_vec(), |entry| vec![entry.clone()])
     };
-    if !order.casting.contains_key(&Role::Builder) && !order.casting.contains_key(&Role::Reviewer) {
+    let refused = check.problems.iter().any(|p| matches!(p, OptionProblem::CannotTakeRole { .. }));
+    if refused || (!order.casting.contains_key(&Role::Builder) && !order.casting.contains_key(&Role::Reviewer)) {
         return;
     }
     let Some(builder) = list(Role::Builder).first().map(RankEntry::vendor) else {
