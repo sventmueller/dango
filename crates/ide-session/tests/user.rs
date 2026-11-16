@@ -380,7 +380,7 @@ fn the_own_agent_continues_a_conversation_its_caller_read_from_the_store() {
     });
     let turn = send(&mut harness, second, "Again");
     assert_eq!(harness.end_of(watcher, turn).outcome, Outcome::Succeeded);
-    assert!(says(&harness.registry, second, "Second answer."));
+    harness.until_state("the second answer shown", |r| says(r, second, "Second answer."));
     let asked = stub.seen().last().map(|seen| seen.body.clone()).unwrap_or_default();
     assert!(
         asked.contains("Build it") && asked.contains("First answer."),
