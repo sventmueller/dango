@@ -1,5 +1,5 @@
-//! What the driver's tests share: a registry whose hop to the main thread is a channel the test thread empties, and
-//! the signals each subscriber was handed.
+//! What the driver's tests share: a registry whose hop to the main thread is a channel the test thread empties, the
+//! signals each subscriber was handed, and the stand-ins of the agents.
 
 #![allow(dead_code, reason = "each test file uses its own part")]
 
@@ -10,7 +10,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use ide_process::Supervisor;
-use ide_session::{Batch, Outcome, Registry, SessionId, Signal, SubscriberId, TurnEnd, TurnId};
+use ide_session::{AgentPath, Batch, Outcome, Registry, SessionId, Signal, SubscriberId, TurnEnd, TurnId};
+use serde_json::{Value, json};
 
 /// The longest a test waits for anything.
 pub(crate) const WAIT: Duration = Duration::from_secs(20);
@@ -165,4 +166,119 @@ pub(crate) fn logged(log: &Path) -> Vec<serde_json::Value> {
         .lines()
         .filter_map(|line| serde_json::from_str(line).ok())
         .collect()
+}
+
+/// The environment of git without the user's configuration, with `home` as its home folder.
+pub(crate) fn git_env(home: &Path) -> Vec<(String, String)> {
+    vec![
+        ("PATH".into(), "/usr/bin:/bin:/usr/sbin:/sbin".into()),
+        ("HOME".into(), home.to_string_lossy().into_owned()),
+        ("GIT_CONFIG_GLOBAL".into(), "/dev/null".into()),
+        ("GIT_CONFIG_NOSYSTEM".into(), "1".into()),
+    ]
+}
+
+/// A `claude` in `dir` that answers `initialize`, waits for the prompt and plays `frames`, then, when `after` is
+/// given, waits for one more line and plays `after`; it ends after the frames when `exit`. It writes its arguments
+/// to `args.txt` and every line it reads after `initialize` to `sent.ndjson` beside it.
+pub(crate) fn claude(
+    dir: &Path,
+    frames: &[String],
+    after: &[String],
+    exit: bool,
+) -> (AgentPath, Vec<(String, String)>) {
+    let init = json!({"type": "control_response", "response": {"subtype": "success", "request_id": "req-1",
+        "response": {"commands": [], "models": [{"value": "haiku", "displayName": "Haiku"}],
+                     "account": {"tokenSource": "claude.ai", "apiProvider": "firstParty"}, "output_style": "default"}}});
+    std::fs::write(dir.join("init.json"), format!("{init}\n")).unwrap();
+    std::fs::write(dir.join("frames.ndjson"), frames.join("\n") + "\n").unwrap();
+    std::fs::write(dir.join("after.ndjson"), after.join("\n") + "\n").unwrap();
+    let sent = dir.join("sent.ndjson");
+    let script = dir.join("claude");
+    let then = if exit {
+        "exit 0".to_string()
+    } else {
+        format!("cat >> \"{}\"", sent.display())
+    };
+    let after = if after.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "read -r next\nprintf '%s\\n' \"$next\" >> \"{}\"\ncat \"{}\"\n",
+            sent.display(),
+            dir.join("after.ndjson").display()
+        )
+    };
+    let body = format!(
+        "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"{args}\"\nread -r init\ncat \"{init}\"\nread -r prompt\nprintf '%s\\n' \"$prompt\" >> \"{sent}\"\ncat \"{frames}\"\n{after}{then}\n",
+        args = dir.join("args.txt").display(),
+        init = dir.join("init.json").display(),
+        sent = sent.display(),
+        frames = dir.join("frames.ndjson").display(),
+    );
+    std::fs::write(&script, body).unwrap();
+    std::fs::set_permissions(&script, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
+    let env = vec![("PATH".to_string(), "/usr/bin:/bin".to_string())];
+    (AgentPath::claude(script), env)
+}
+
+/// What the `claude` of `claude` in `dir` read after `initialize`.
+pub(crate) fn claude_read(dir: &Path) -> String {
+    std::fs::read_to_string(dir.join("sent.ndjson")).unwrap_or_default()
+}
+
+/// The arguments the `claude` of `claude` in `dir` was started with.
+pub(crate) fn claude_args(dir: &Path) -> Vec<String> {
+    let args = std::fs::read_to_string(dir.join("args.txt")).unwrap_or_default();
+    args.lines().map(str::to_string).collect()
+}
+
+/// The frames the CLI printed in the recording `name` of `ide-claude`, before any line containing `until`.
+pub(crate) fn recorded(name: &str, until: Option<&str>) -> Vec<String> {
+    let path = format!("{}/../ide-claude/tests/fixtures/{name}", env!("CARGO_MANIFEST_DIR"));
+    std::fs::read_to_string(path)
+        .unwrap()
+        .lines()
+        .take_while(|l| until.is_none_or(|u| !l.contains(u)))
+        .filter(|l| !l.starts_with(ide_claude::replay::SENT) && !l.contains("control_response"))
+        .map(str::to_string)
+        .collect()
+}
+
+/// What the own agent's stub provider streams for an answer of `text` that ends the turn.
+pub(crate) fn own_answer(text: &str) -> String {
+    let event = |name: &str, value: Value| format!("event: {name}\ndata: {value}\n\n");
+    [
+        event("message_start", json!({"type": "message_start", "message": {"model": "m", "usage": {"input_tokens": 5, "output_tokens": 1}}})),
+        event("content_block_start", json!({"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}})),
+        event("content_block_delta", json!({"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": text}})),
+        event("message_delta", json!({"type": "message_delta", "delta": {"stop_reason": "end_turn"}, "usage": {"output_tokens": 2}})),
+        event("message_stop", json!({"type": "message_stop"})),
+    ]
+    .concat()
+}
+
+/// The own agent working in `project` against the stub provider at `url`, keeping its conversation in `store`.
+pub(crate) fn own_config(project: &Path, url: &str, store: Option<PathBuf>) -> ide_agent::Config {
+    let endpoint = ide_agent::Endpoint::new("stub", ide_agent::ProviderKind::AnthropicCompatible, "Stub", url);
+    let workspace = ide_agent::Workspace::new(project, Vec::new(), Supervisor::new(), ide_agent::Http::new()).unwrap();
+    ide_agent::Config {
+        thread: ide_thread::ThreadId::new(),
+        provider: ide_agent::Provider::new(endpoint, ide_agent::ApiKey::new("k"), ide_agent::Http::new()),
+        model: "m".into(),
+        effort: None,
+        workspace,
+        policy: ide_agent::Policy {
+            profile: ide_agent::Profile::Write,
+            approval: ide_agent::Approval::Manual,
+            sandbox: false,
+            rules: Vec::new(),
+        },
+        prices: ide_agent::PriceTable::default(),
+        listed_price: None,
+        context_size: Some(200_000),
+        max_tokens: None,
+        store,
+        wording: Arc::new(ide_agent::Plain),
+    }
 }

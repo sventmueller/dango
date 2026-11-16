@@ -27,32 +27,19 @@ impl AgentTab {
             self.set_problem(Some(Problem::Untrusted));
             return;
         }
+        let before = self.state.borrow_mut().start();
+        before.end();
+        self.refresh();
         if self.agent.is_own() {
-            self.state.borrow_mut().start();
-            self.refresh();
             self.start_own();
             return;
         }
         if let Some(agent) = self.acp_agent() {
-            let thread = {
-                let mut state = self.state.borrow_mut();
-                state.start();
-                state.thread().as_ref().clone()
-            };
-            self.refresh();
+            let thread = self.state.borrow().thread().as_ref().clone();
             self.start_acp(agent, thread);
             return;
         }
-        if self.state.borrow().source().tab_session().is_some() {
-            let old = self.state.borrow_mut().end();
-            old.end();
-        }
-        let transcript = {
-            let mut state = self.state.borrow_mut();
-            state.start();
-            state.resume().and_then(|r| r.transcript.clone())
-        };
-        self.refresh();
+        let transcript = self.state.borrow().resume().and_then(|r| r.transcript.clone());
         let key = self.key;
         let thread = self.snapshot();
         if let Err(why) = ide_ui_common::util::spawn("claude-start", move || {
@@ -95,7 +82,7 @@ impl AgentTab {
         let launch = self.claude_launch(exe, env, thread, git);
         match Driven::start(&sessions, launch) {
             Ok((driven, first)) => {
-                self.state.borrow_mut().started(Source::Session(driven));
+                self.run_session(driven);
                 if let Some(first) = first {
                     self.absorb(first.thread, &[Change::Cleared]);
                 }
@@ -110,6 +97,13 @@ impl AgentTab {
                 self.start_failed(problem);
             }
         }
+    }
+
+    /// Runs `driven`, the tab's own session the registry started, on any path; one a start that overtook this one
+    /// began ends.
+    pub(super) fn run_session(&self, driven: Driven) {
+        let replaced = self.state.borrow_mut().started(Source::Session(driven));
+        replaced.end();
     }
 
     /// The launch of the tab's Claude session with `exe` in `env` on `thread`, as the user's picks, the sandbox

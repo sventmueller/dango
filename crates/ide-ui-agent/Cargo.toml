@@ -45,6 +45,8 @@ serde_json.workspace = true
 [dev-dependencies]
 ide-agent = { workspace = true, features = ["testing"] }
 ide-core = { workspace = true, features = ["testing"] }
+# The scripted session, so the tests run a tab's session in a real registry.
+ide-session = { workspace = true, features = ["selftest"] }
 
 [features]
 # What the self-test reads of a tab and the panel and does with them, and the recordings and stubs it plays.

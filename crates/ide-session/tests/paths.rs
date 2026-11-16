@@ -13,7 +13,9 @@ use ide_session::{
 };
 use ide_thread::{EntryKind, Lane};
 use serde_json::{Value, json};
-use support::{Harness, failed_with, folder, logged, stand_in, stand_in_env, waiting};
+use support::{
+    Harness, claude, failed_with, folder, logged, own_answer, own_config, recorded, stand_in, stand_in_env, waiting,
+};
 
 fn user() -> Contract {
     Contract::User(UserChoices::default())
@@ -172,7 +174,7 @@ fn a_codex_order_runs_on_a_server_of_its_own_with_no_approvals_and_its_rule_refu
 }
 
 #[test]
-fn opencode_reports_a_lost_completion_event_and_ends_the_turn_once_it_read_the_session_again() {
+fn opencode_reports_a_lost_completion_event_ends_the_users_turn_and_reads_the_session_again() {
     let scratch = folder("opencode-gap");
     let log = scratch.join("sent.ndjson");
     let path = AgentPath::OpenCode {
@@ -188,7 +190,7 @@ fn opencode_reports_a_lost_completion_event_and_ends_the_turn_once_it_read_the_s
     let gap = send(&mut harness, session, Prompt::new("mind the gap"));
     let end = harness.end_of(watcher, gap);
     assert_eq!(end.outcome, Outcome::Succeeded);
-    // A user's session does not hold the turn's end for the gap, so the server is read again after it as well.
+    // Nothing holds the turn's end for the gap, so the server may be read again only after it.
     harness.until(watcher, "the session was read again", |s| s.contains(&Signal::Resynced));
     let signals = harness.signals(watcher);
     let at = |wanted: &Signal| signals.iter().position(|s| s == wanted);
@@ -256,46 +258,6 @@ fn opencode_acp_and_paths_without_an_allow_list_take_no_order_and_start_nothing(
         Some(LaunchError::Folder { .. })
     ));
     assert!(registry.is_empty());
-}
-
-/// A `claude` that answers `initialize`, waits for the prompt and plays `frames`, then, when `after` is given, waits
-/// for one more line and plays `after`; it ends after the frames when `exit`. It writes its arguments next to it.
-fn claude(dir: &Path, frames: &[String], after: &[String], exit: bool) -> (AgentPath, Vec<(String, String)>) {
-    let init = json!({"type": "control_response", "response": {"subtype": "success", "request_id": "req-1",
-        "response": {"commands": [], "models": [{"value": "haiku", "displayName": "Haiku"}],
-                     "account": {"tokenSource": "claude.ai", "apiProvider": "firstParty"}, "output_style": "default"}}});
-    std::fs::write(dir.join("init.json"), format!("{init}\n")).unwrap();
-    std::fs::write(dir.join("frames.ndjson"), frames.join("\n") + "\n").unwrap();
-    std::fs::write(dir.join("after.ndjson"), after.join("\n") + "\n").unwrap();
-    let script = dir.join("claude");
-    let then = if exit { "exit 0" } else { "cat > /dev/null" };
-    let after = if after.is_empty() {
-        String::new()
-    } else {
-        format!("read -r next\ncat \"{}\"\n", dir.join("after.ndjson").display())
-    };
-    let body = format!(
-        "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"{args}\"\nread -r init\ncat \"{init}\"\nread -r prompt\ncat \"{frames}\"\n{after}{then}\n",
-        args = dir.join("args.txt").display(),
-        init = dir.join("init.json").display(),
-        frames = dir.join("frames.ndjson").display(),
-    );
-    std::fs::write(&script, body).unwrap();
-    std::fs::set_permissions(&script, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
-    let env = vec![("PATH".to_string(), "/usr/bin:/bin".to_string())];
-    (AgentPath::claude(script), env)
-}
-
-/// The frames the CLI printed in the recording `name` of `ide-claude`, before any line containing `until`.
-fn recorded(name: &str, until: Option<&str>) -> Vec<String> {
-    let path = format!("{}/../ide-claude/tests/fixtures/{name}", env!("CARGO_MANIFEST_DIR"));
-    std::fs::read_to_string(path)
-        .unwrap()
-        .lines()
-        .take_while(|l| until.is_none_or(|u| !l.contains(u)))
-        .filter(|l| !l.starts_with(ide_claude::replay::SENT) && !l.contains("control_response"))
-        .map(str::to_string)
-        .collect()
 }
 
 fn claude_turn(name: &str, frames: Vec<String>, after: Vec<String>, exit: bool, stop: bool) -> Outcome {
@@ -368,49 +330,9 @@ fn the_own_agent_works_on_an_order_under_the_orders_policy_and_ends_its_turns_ty
     let project = scratch.join("project");
     std::fs::create_dir_all(&project).unwrap();
     let project = project.canonicalize().unwrap();
-    let event = |name: &str, value: Value| format!("event: {name}\ndata: {value}\n\n");
-    let says = [
-        event("message_start", json!({"type": "message_start", "message": {"model": "m", "usage": {"input_tokens": 5, "output_tokens": 1}}})),
-        event("content_block_start", json!({"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}})),
-        event("content_block_delta", json!({"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "Done."}})),
-        event("message_delta", json!({"type": "message_delta", "delta": {"stop_reason": "end_turn"}, "usage": {"output_tokens": 2}})),
-        event("message_stop", json!({"type": "message_stop"})),
-    ]
-    .concat();
     let refused = json!({"type": "error", "error": {"type": "authentication_error", "message": "invalid x-api-key"}});
-    let stub = Stub::script(vec![Answer::events(&says), Answer::json(401, &refused)]).unwrap();
-    let endpoint = ide_agent::Endpoint::new(
-        "stub",
-        ide_agent::ProviderKind::AnthropicCompatible,
-        "Stub",
-        &stub.url(),
-    );
-    let workspace = ide_agent::Workspace::new(
-        &project,
-        Vec::new(),
-        ide_process::Supervisor::new(),
-        ide_agent::Http::new(),
-    )
-    .unwrap();
-    let config = ide_agent::Config {
-        thread: ide_thread::ThreadId::new(),
-        provider: ide_agent::Provider::new(endpoint, ide_agent::ApiKey::new("k"), ide_agent::Http::new()),
-        model: "m".into(),
-        effort: None,
-        workspace,
-        policy: ide_agent::Policy {
-            profile: ide_agent::Profile::Write,
-            approval: ide_agent::Approval::Manual,
-            sandbox: false,
-            rules: Vec::new(),
-        },
-        prices: ide_agent::PriceTable::default(),
-        listed_price: None,
-        context_size: Some(200_000),
-        max_tokens: None,
-        store: None,
-        wording: std::sync::Arc::new(ide_agent::Plain),
-    };
+    let stub = Stub::script(vec![Answer::events(&own_answer("Done.")), Answer::json(401, &refused)]).unwrap();
+    let config = own_config(&project, &stub.url(), None);
     let mut elsewhere = order(&scratch, None);
     elsewhere.order = "o-2".into();
     let mut harness = Harness::new();

@@ -43,8 +43,8 @@
 //! Remote Control and the own agent's profiles; [`Driver::answer_option`] answers with any option a request offers,
 //! such as allowing for the whole session. A user's Codex session joins Codex's shared server when
 //! [`UserChoices::shared`] says so (E148), and the own agent continues a conversation its caller read from the store
-//! ([`AgentPath::OwnStored`]). A gap in OpenCode's stream holds prompts and the end of a turn only for an order; the
-//! user's session goes on and is reconciled once the stream is back.
+//! ([`AgentPath::OwnStored`]). A gap in OpenCode's stream holds neither prompts nor the end of a turn: OpenCode takes
+//! no order, and the user's session goes on and is reconciled once the stream is back.
 //! [`OrderRule`] refuses what reaches beyond an order's bounds (or leaves it to the user without O1), leaves
 //! questions to the user and refuses plans.
 //!
@@ -54,7 +54,9 @@
 //! thread; there the app calls [`Registry::flush`]. Each subscriber ([`Driver::subscribe`]) has a feed: control
 //! events ([`Signal`]) complete and in order, invalidations coalesced, a redraw from the snapshot after a backlog of
 //! more than 4096; a new subscriber's first [`Batch`] is the snapshot. `flush` returns the subscribers whose feed
-//! just filled, which [`Driver::take`] empties; [`Driver::unsubscribe`] ends a feed without ending the session.
+//! just filled, which [`Driver::take`] empties; [`Driver::unsubscribe`] ends a feed. The owners of a session, the
+//! order's runtime and the AI tab, each follow it; once nobody does, the next flush stops it and the registry lets it
+//! go.
 //!
 //! [`Signal::Delivered`] says that a prompt went out, with the agent's id of the message, which rewinding names,
 //! and the checkpoint taken before it (labelled as the AI tab labels it for the user's session);
@@ -68,9 +70,9 @@
 //! `Idle`, failed ones too; the outcome comes from the last interruption or error in the turn that no output of the
 //! agent follows, and from the process's end.
 //!
-//! When OpenCode's event stream breaks off, [`Signal::StreamGap`] follows; once it is back, and before any further
-//! prompt, the driver reads messages, waiting requests and usage from the server again ([`Signal::Resynced`]), or,
-//! when that fails, reports [`Signal::NeedsPause`] and sends nothing until [`Driver::resync`] succeeds (C62).
+//! When OpenCode's event stream breaks off, [`Signal::StreamGap`] follows; once it is back, the driver reads
+//! messages, waiting requests and usage from the server again ([`Signal::Resynced`]), or, when that fails, reports
+//! [`Signal::NeedsPause`], after which [`Driver::resync`] tries again (C62).
 //!
 //! The scripted session (feature `selftest`, F61) plays a [`Script`] per prompt, writes files in the folder and
 //! asks for permissions, so self-tests can run an order without an agent's CLI. A played recording of Claude

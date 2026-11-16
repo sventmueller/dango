@@ -9,7 +9,8 @@ publish.workspace = true
 [lints]
 workspace = true
 
-# The stand-ins of the Codex and OpenCode servers as one program, for the integration tests; not in the shipped app.
+# The stand-ins of the Codex and OpenCode servers and an ACP agent as one program, for the integration tests; not in
+# the shipped app.
 [[bin]]
 name = "session-stand-in"
 path = "src/bin/session-stand-in.rs"
@@ -17,8 +18,9 @@ test = false
 required-features = ["selftest"]
 
 [features]
-# The scripted session (F61), for the self-test and the tests; not in the shipped app.
-selftest = []
+# The scripted session (F61), for the self-test and the tests, and the ACP test agent of the stand-in; not in the
+# shipped app.
+selftest = ["ide-acp/testing"]
 
 [dependencies]
 ide-acp = { workspace = true }

@@ -14,7 +14,7 @@ use splat_i18n::{t, tf};
 
 use super::cards::request::{ALLOW_ALWAYS, ALLOW_ONCE};
 use super::driven::Driven;
-use super::source::{Problem, Source};
+use super::source::Problem;
 use super::tab::AgentTab;
 use crate::own_agent::{self, ModelChoice};
 use ide_ui_common::util::{item, main_soon, ns, separator};
@@ -191,11 +191,8 @@ impl AgentTab {
             apply_choice(session, &super::choices::of(self.agent.id()));
         }
         let snapshot = session.map(|s| s.snapshot()).or(first.map(|batch| batch.thread));
-        {
-            let mut state = self.state.borrow_mut();
-            state.pick_own(choice);
-            state.started(Source::Session(driven));
-        }
+        self.state.borrow_mut().pick_own(choice);
+        self.run_session(driven);
         if let Some(snapshot) = snapshot {
             self.absorb(snapshot, &[Change::Cleared]);
         }

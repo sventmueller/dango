@@ -18,7 +18,8 @@ pub enum AgentPath {
         /// before a prompt, guarded so that the CLI refuses rather than drops more than that prompt's turn (I6).
         rewind: Option<ide_thread::Rewind>,
     },
-    /// Codex over a server of its own (`ide-codex`); never the shared one of Remote Control (E193).
+    /// Codex over its app server (`ide-codex`): a server of its own, or Codex's shared one that Remote Control reaches
+    /// when the user's [`UserChoices::shared`] asks for it (E148); an order's session always has its own (E193).
     Codex {
         /// The `codex` executable.
         program: PathBuf,

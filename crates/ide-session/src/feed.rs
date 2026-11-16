@@ -47,7 +47,7 @@ pub enum Signal {
     StreamGap,
     /// Messages, waiting requests and usage were read from the agent again after a gap.
     Resynced,
-    /// Reconciling after a gap failed: no prompt goes out, and an order pauses (C62).
+    /// Reconciling after a gap failed; the thread may lag behind the agent until `Driver::resync` succeeds (C62).
     NeedsPause(String),
     /// A prompt that waited went out, after its checkpoint, or the path refused it.
     Delivered {

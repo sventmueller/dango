@@ -26,6 +26,9 @@ pub(super) fn label(text: &str) -> String {
 /// Why `always`, the suggestions of `asked` to keep as rules, may not be kept, with `edited` the input the user
 /// changed: a destructive git command is never allowed for good (E27, E33), and only offered suggestions are kept.
 fn refused_rules(asked: &PermissionRequest, edited: Option<&Value>, always: &[usize]) -> Option<String> {
+    if always.is_empty() {
+        return None;
+    }
     let destructive = asked.tool_name == "Bash"
         && [Some(&asked.input), edited]
             .into_iter()
@@ -171,6 +174,11 @@ mod tests {
         assert_eq!(refused_rules(&asked("cargo test"), None, &[1]), None);
         assert!(refused_rules(&asked("cargo test"), None, &[0]).is_some());
         assert!(refused_rules(&asked("git reset --hard"), None, &[1]).is_some());
+        assert_eq!(
+            refused_rules(&asked("git reset --hard"), None, &[]),
+            None,
+            "once is allowed"
+        );
         let edited = json!({ "command": "git push --force" });
         assert!(refused_rules(&asked("cargo test"), Some(&edited), &[1]).is_some());
     }
