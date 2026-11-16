@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "Copiate în plus, de exemplu node_modules, .env.local";
 "Einrichtungsbefehl, etwa npm ci" = "Comandă de configurare, de exemplu npm ci";
 "Prüfbefehle" = "Comenzi de control";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "Niciuna; Dango detectează instrumentul de testare al proiectului.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "Niciuna; {} detectează instrumentul de testare al proiectului.";
 "Workflow-Datei im Editor öffnen" = "Deschideți fișierul workflow în editor";
 "Prompt-Vorlage" = "Șablon de prompt";
 "Prompt-Vorlage:" = "Șablon de prompt:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "„{}” nu este un număr întreg.";
 "„{}“ ist kein Betrag in Dollar." = "„{}” nu este o sumă în dolari.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Șablonul nu a putut fi creat: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "Niciun ordin de lucru încă. Un ordin de lucru este un obiectiv cu criterii verificabile, pe care Dango îl construiește și îl verifică într-un worktree propriu.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Niciun ordin de lucru încă. Un ordin de lucru este un obiectiv cu criterii verificabile, pe care {} îl construiește și îl verifică într-un worktree propriu.";
 "Ziel" = "Obiectiv";
 "Kriterien" = "Criterii";
 "Zeitleiste" = "Cronologie";

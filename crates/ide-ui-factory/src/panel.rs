@@ -209,12 +209,7 @@ impl FactoryPanel {
         // SAFETY: The outline keeps the menu; its delegate, the panel, outlives the outline through the registry.
         unsafe { outline.setMenu(Some(&menu)) };
         let empty = crate::ui::column(mtm, ide_ui_common::style::space::M);
-        let note = NSTextField::wrappingLabelWithString(
-            &ns(t(
-                "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft.",
-            )),
-            mtm,
-        );
+        let note = NSTextField::wrappingLabelWithString(&ns(&crate::model::words::no_order_yet()), mtm);
         note.setTextColor(Some(&objc2_app_kit::NSColor::secondaryLabelColor()));
         note.setContentCompressionResistancePriority_forOrientation(
             objc2_app_kit::NSLayoutPriorityDefaultLow,

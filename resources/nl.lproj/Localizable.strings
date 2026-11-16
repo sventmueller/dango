@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "Meekopiëren, zoals node_modules, .env.local";
 "Einrichtungsbefehl, etwa npm ci" = "Instelcommando, zoals npm ci";
 "Prüfbefehle" = "Gatecommando's";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "Geen; Dango herkent de testtool van het project.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "Geen; {} herkent de testtool van het project.";
 "Workflow-Datei im Editor öffnen" = "Open workflowbestand in editor";
 "Prompt-Vorlage" = "Promptsjabloon";
 "Prompt-Vorlage:" = "Promptsjabloon:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "'{}' is geen geheel getal.";
 "„{}“ ist kein Betrag in Dollar." = "'{}' is geen bedrag in dollars.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Het sjabloon kon niet worden aangemaakt: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "Nog geen werkorder. Een werkorder is een doel met toetsbare criteria dat Dango in een eigen worktree bouwt en controleert.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Nog geen werkorder. Een werkorder is een doel met toetsbare criteria dat {} in een eigen worktree bouwt en controleert.";
 "Ziel" = "Doel";
 "Kriterien" = "Criteria";
 "Zeitleiste" = "Tijdlijn";

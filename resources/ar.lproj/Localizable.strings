@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "نسخ أيضًا، مثل: node_modules, ‎.env.local";
 "Einrichtungsbefehl, etwa npm ci" = "أمر الإعداد، مثل: npm ci";
 "Prüfbefehle" = "أوامر البوابات";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "لا شيء؛ يكتشف Dango أداة الاختبار الخاصة بالمشروع.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "لا شيء؛ يكتشف {} أداة الاختبار الخاصة بالمشروع.";
 "Workflow-Datei im Editor öffnen" = "فتح ملف سير العمل في المحرر";
 "Prompt-Vorlage" = "قالب الموجّه";
 "Prompt-Vorlage:" = "قالب الموجّه:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "ليس “{}” عددًا صحيحًا.";
 "„{}“ ist kein Betrag in Dollar." = "ليس “{}” مبلغًا بالدولار.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "تعذّر إنشاء القالب: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "لا يوجد أمر عمل بعد. أمر العمل هدف بمعايير قابلة للاختبار، يبنيه Dango ويفحصه في Worktree خاص به.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "لا يوجد أمر عمل بعد. أمر العمل هدف بمعايير قابلة للاختبار، يبنيه {} ويفحصه في Worktree خاص به.";
 "Ziel" = "الهدف";
 "Kriterien" = "المعايير";
 "Zeitleiste" = "المخطط الزمني";

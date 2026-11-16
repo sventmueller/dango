@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "Ikut disalin, misalnya node_modules, .env.local";
 "Einrichtungsbefehl, etwa npm ci" = "Perintah penyiapan, misalnya npm ci";
 "Prüfbefehle" = "Perintah Gerbang";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "Tidak ada; Dango mendeteksi alat tes proyek.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "Tidak ada; {} mendeteksi alat tes proyek.";
 "Workflow-Datei im Editor öffnen" = "Buka File Workflow di Editor";
 "Prompt-Vorlage" = "Templat prompt";
 "Prompt-Vorlage:" = "Templat prompt:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "“{}” bukan bilangan bulat.";
 "„{}“ ist kein Betrag in Dollar." = "“{}” bukan jumlah dalam dolar.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Templat tidak dapat dibuat: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "Belum ada order kerja. Order kerja adalah tujuan dengan kriteria yang dapat diuji, yang dibuat dan diperiksa Dango di worktree tersendiri.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Belum ada order kerja. Order kerja adalah tujuan dengan kriteria yang dapat diuji, yang dibuat dan diperiksa {} di worktree tersendiri.";
 "Ziel" = "Tujuan";
 "Kriterien" = "Kriteria";
 "Zeitleiste" = "Linimasa";

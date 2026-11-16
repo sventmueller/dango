@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "साथ में कॉपी करें, जैसे node_modules, .env.local";
 "Einrichtungsbefehl, etwa npm ci" = "सेटअप कमांड, जैसे npm ci";
 "Prüfbefehle" = "गेट कमांड";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "कोई नहीं; Dango प्रोजेक्ट का टेस्ट टूल ख़ुद पहचान लेता है।";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "कोई नहीं; {} प्रोजेक्ट का टेस्ट टूल ख़ुद पहचान लेता है।";
 "Workflow-Datei im Editor öffnen" = "वर्कफ़्लो फ़ाइल एडिटर में खोलें";
 "Prompt-Vorlage" = "प्रॉम्प्ट टेम्पलेट";
 "Prompt-Vorlage:" = "प्रॉम्प्ट टेम्पलेट :";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "“{}” पूर्ण संख्या नहीं है।";
 "„{}“ ist kein Betrag in Dollar." = "“{}” डॉलर में राशि नहीं है।";
 "Die Vorlage ließ sich nicht anlegen: {}" = "टेम्पलेट नहीं बनाया जा सका : {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "अभी कोई वर्क ऑर्डर नहीं। वर्क ऑर्डर जाँचे जा सकने वाले मानदंडों वाला एक लक्ष्य है, जिसे Dango अपने अलग वर्कट्री में बनाता और जाँचता है।";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "अभी कोई वर्क ऑर्डर नहीं। वर्क ऑर्डर जाँचे जा सकने वाले मानदंडों वाला एक लक्ष्य है, जिसे {} अपने अलग वर्कट्री में बनाता और जाँचता है।";
 "Ziel" = "लक्ष्य";
 "Kriterien" = "मानदंड";
 "Zeitleiste" = "टाइमलाइन";

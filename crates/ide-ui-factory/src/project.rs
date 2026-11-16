@@ -174,7 +174,7 @@ impl ProjectSheet {
         if gates.is_empty() {
             column.addArrangedSubview(&ui::note(
                 mtm,
-                t("Keine; Dango erkennt das Testwerkzeug des Projekts."),
+                &tf("Keine; {} erkennt das Testwerkzeug des Projekts.", &[ide_product::NAME]),
                 WIDTH,
             ));
         }

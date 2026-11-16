@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "คัดลอกไปด้วย เช่น node_modules, .env.local";
 "Einrichtungsbefehl, etwa npm ci" = "คำสั่งตั้งค่า เช่น npm ci";
 "Prüfbefehle" = "คำสั่งด่านตรวจ";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "ไม่มี; Dango จะตรวจพบเครื่องมือทดสอบของโปรเจ็กต์เอง";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "ไม่มี; {} จะตรวจพบเครื่องมือทดสอบของโปรเจ็กต์เอง";
 "Workflow-Datei im Editor öffnen" = "เปิดไฟล์เวิร์กโฟลว์ในตัวแก้ไข";
 "Prompt-Vorlage" = "เทมเพลตพรอมต์";
 "Prompt-Vorlage:" = "เทมเพลตพรอมต์:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "“{}” ไม่ใช่จำนวนเต็ม";
 "„{}“ ist kein Betrag in Dollar." = "“{}” ไม่ใช่จำนวนเงินเป็นดอลลาร์";
 "Die Vorlage ließ sich nicht anlegen: {}" = "สร้างเทมเพลตไม่ได้: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "ยังไม่มีใบสั่งงาน ใบสั่งงานคือเป้าหมายที่มีเกณฑ์ซึ่งทดสอบได้ โดย Dango จะสร้างและตรวจสอบใน Worktree ของตัวเอง";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "ยังไม่มีใบสั่งงาน ใบสั่งงานคือเป้าหมายที่มีเกณฑ์ซึ่งทดสอบได้ โดย {} จะสร้างและตรวจสอบใน Worktree ของตัวเอง";
 "Ziel" = "เป้าหมาย";
 "Kriterien" = "เกณฑ์";
 "Zeitleiste" = "ไทม์ไลน์";

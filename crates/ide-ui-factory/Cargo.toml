@@ -12,6 +12,7 @@ workspace = true
 [dependencies]
 ide-core.workspace = true
 ide-factory.workspace = true
+ide-product.workspace = true
 ide-ui-common.workspace = true
 splat-i18n.workspace = true
 block2.workspace = true

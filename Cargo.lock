@@ -1988,6 +1988,7 @@ dependencies = [
  "block2",
  "ide-core",
  "ide-factory",
+ "ide-product",
  "ide-ui-common",
  "objc2",
  "objc2-app-kit",

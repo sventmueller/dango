@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "Kopiraj zraven, na primer node_modules, .env.local";
 "Einrichtungsbefehl, etwa npm ci" = "Ukaz za pripravo, na primer npm ci";
 "Prüfbefehle" = "Kontrolni ukazi";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "Brez; Dango zazna orodje za testiranje projekta.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "Brez; {} zazna orodje za testiranje projekta.";
 "Workflow-Datei im Editor öffnen" = "Odpri datoteko poteka dela v urejevalniku";
 "Prompt-Vorlage" = "Predloga poziva";
 "Prompt-Vorlage:" = "Predloga poziva:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "»{}« ni celo število.";
 "„{}“ ist kein Betrag in Dollar." = "»{}« ni znesek v dolarjih.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Predloge ni bilo mogoče ustvariti: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "Še ni delovnega naloga. Delovni nalog je cilj s preverljivimi merili, ki ga Dango zgradi in preveri v lastnem worktreeju.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Še ni delovnega naloga. Delovni nalog je cilj s preverljivimi merili, ki ga {} zgradi in preveri v lastnem worktreeju.";
 "Ziel" = "Cilj";
 "Kriterien" = "Merila";
 "Zeitleiste" = "Časovnica";

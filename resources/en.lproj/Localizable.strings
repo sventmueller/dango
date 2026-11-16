@@ -2008,7 +2008,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "Copy along, such as node_modules, .env.local";
 "Einrichtungsbefehl, etwa npm ci" = "Setup command, such as npm ci";
 "Prüfbefehle" = "Gate Commands";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "None; Dango detects the project’s test tool.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "None; {} detects the project’s test tool.";
 "Workflow-Datei im Editor öffnen" = "Open Workflow File in Editor";
 "Prompt-Vorlage" = "Prompt template";
 "Prompt-Vorlage:" = "Prompt template:";
@@ -2017,7 +2017,7 @@
 "„{}“ ist keine ganze Zahl." = "“{}” is not a whole number.";
 "„{}“ ist kein Betrag in Dollar." = "“{}” is not an amount in dollars.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "The template could not be created: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "No work order yet. A work order is a goal with testable criteria that Dango builds and checks in a worktree of its own.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "No work order yet. A work order is a goal with testable criteria that {} builds and checks in a worktree of its own.";
 "Ziel" = "Goal";
 "Kriterien" = "Criteria";
 "Zeitleiste" = "Timeline";

@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "Copia anche, ad esempio node_modules, .env.local";
 "Einrichtungsbefehl, etwa npm ci" = "Comando di configurazione, ad esempio npm ci";
 "Prüfbefehle" = "Comandi di verifica";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "Nessuno; Dango rileva lo strumento di test del progetto.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "Nessuno; {} rileva lo strumento di test del progetto.";
 "Workflow-Datei im Editor öffnen" = "Apri il file del workflow nell’editor";
 "Prompt-Vorlage" = "Modello di prompt";
 "Prompt-Vorlage:" = "Modello di prompt:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "“{}” non è un numero intero.";
 "„{}“ ist kein Betrag in Dollar." = "“{}” non è un importo in dollari.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Impossibile creare il modello: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "Ancora nessun ordine di lavoro. Un ordine di lavoro è un obiettivo con criteri verificabili che Dango costruisce e verifica in un proprio worktree.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Ancora nessun ordine di lavoro. Un ordine di lavoro è un obiettivo con criteri verificabili che {} costruisce e verifica in un proprio worktree.";
 "Ziel" = "Obiettivo";
 "Kriterien" = "Criteri";
 "Zeitleiste" = "Linea temporale";

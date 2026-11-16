@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "Αντιγραφή επίσης, π.χ. node_modules, .env.local";
 "Einrichtungsbefehl, etwa npm ci" = "Εντολή προετοιμασίας, π.χ. npm ci";
 "Prüfbefehle" = "Εντολές ελέγχου";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "Καμία· το Dango εντοπίζει το εργαλείο δοκιμών του έργου.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "Καμία· το {} εντοπίζει το εργαλείο δοκιμών του έργου.";
 "Workflow-Datei im Editor öffnen" = "Άνοιγμα αρχείου workflow στον επεξεργαστή";
 "Prompt-Vorlage" = "Πρότυπο prompt";
 "Prompt-Vorlage:" = "Πρότυπο prompt:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "Το «{}» δεν είναι ακέραιος αριθμός.";
 "„{}“ ist kein Betrag in Dollar." = "Το «{}» δεν είναι ποσό σε δολάρια.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Δεν ήταν δυνατή η δημιουργία του προτύπου: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "Δεν υπάρχει ακόμα δελτίο εργασίας. Ένα δελτίο εργασίας είναι ένας στόχος με ελέγξιμα κριτήρια, τον οποίο το Dango υλοποιεί και ελέγχει σε δικό του worktree.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Δεν υπάρχει ακόμα δελτίο εργασίας. Ένα δελτίο εργασίας είναι ένας στόχος με ελέγξιμα κριτήρια, τον οποίο το {} υλοποιεί και ελέγχει σε δικό του worktree.";
 "Ziel" = "Στόχος";
 "Kriterien" = "Κριτήρια";
 "Zeitleiste" = "Χρονολόγιο";

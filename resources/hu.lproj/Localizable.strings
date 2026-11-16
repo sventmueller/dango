@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "Átmásolandó, például node_modules, .env.local";
 "Einrichtungsbefehl, etwa npm ci" = "Beállítási parancs, például npm ci";
 "Prüfbefehle" = "Ellenőrző parancsok";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "Nincs; a Dango felismeri a projekt tesztelőeszközét.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "Nincs; a {} felismeri a projekt tesztelőeszközét.";
 "Workflow-Datei im Editor öffnen" = "Munkafolyamatfájl megnyitása a szerkesztőben";
 "Prompt-Vorlage" = "Promptsablon";
 "Prompt-Vorlage:" = "Promptsablon:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "„{}” nem egész szám.";
 "„{}“ ist kein Betrag in Dollar." = "„{}” nem dollárösszeg.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "A sablon nem hozható létre: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "Még nincs munkarendelés. A munkarendelés ellenőrizhető kritériumokkal megadott cél, amelyet a Dango egy saját worktree-ben épít meg és ellenőriz.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Még nincs munkarendelés. A munkarendelés ellenőrizhető kritériumokkal megadott cél, amelyet a {} egy saját worktree-ben épít meg és ellenőriz.";
 "Ziel" = "Cél";
 "Kriterien" = "Kritériumok";
 "Zeitleiste" = "Idővonal";

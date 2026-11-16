@@ -251,13 +251,11 @@ impl BoardView {
     }
 
     /// What the table says when it has no rows.
-    pub fn empty_words(&self) -> &'static str {
+    pub fn empty_words(&self) -> String {
         if self.is_empty() {
-            t(
-                "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft.",
-            )
+            words::no_order_yet()
         } else {
-            t("Kein Auftrag an dieser Station.")
+            t("Kein Auftrag an dieser Station.").to_string()
         }
     }
 }

@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "Kopiera med, t.ex. node_modules, .env.local";
 "Einrichtungsbefehl, etwa npm ci" = "Konfigureringskommando, t.ex. npm ci";
 "Prüfbefehle" = "Grindkommandon";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "Inga; Dango identifierar projektets testverktyg.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "Inga; {} identifierar projektets testverktyg.";
 "Workflow-Datei im Editor öffnen" = "Öppna workflowfilen i redigeraren";
 "Prompt-Vorlage" = "Promptmall";
 "Prompt-Vorlage:" = "Promptmall:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "”{}” är inte ett heltal.";
 "„{}“ ist kein Betrag in Dollar." = "”{}” är inte ett belopp i dollar.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Mallen kunde inte skapas: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "Ingen arbetsorder än. En arbetsorder är ett mål med testbara kriterier som Dango bygger och kontrollerar i ett eget worktree.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Ingen arbetsorder än. En arbetsorder är ett mål med testbara kriterier som {} bygger och kontrollerar i ett eget worktree.";
 "Ziel" = "Mål";
 "Kriterien" = "Kriterier";
 "Zeitleiste" = "Tidslinje";

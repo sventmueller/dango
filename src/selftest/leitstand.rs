@@ -3,7 +3,6 @@
 //! at zero, the table's six columns and its empty note; window pictures of both and the accessibility audit.
 
 use objc2::rc::Retained;
-use splat_i18n::t;
 
 use super::helpers::{self, wait_until};
 use super::{check, finish, give_up, snapshot};
@@ -63,9 +62,7 @@ fn empty_panel(controller: &Retained<WindowController>) {
 /// The tab without orders: every station at zero, the six columns, the empty note, and nothing the audit finds.
 fn empty_tab(controller: &Retained<WindowController>) {
     let seen = ide_ui_factory::selftest::board(controller.handle(), controller.context().factory_ui());
-    let empty = t(
-        "Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft.",
-    );
+    let empty = ide_ui_factory::model::words::no_order_yet();
     check(
         "the Leitstand tab shows seven stations at zero, six columns, no row and its empty note",
         seen.as_ref().is_some_and(|seen| {

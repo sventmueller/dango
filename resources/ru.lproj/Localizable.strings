@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "Копировать также, например node_modules, .env.local";
 "Einrichtungsbefehl, etwa npm ci" = "Команда подготовки, например npm ci";
 "Prüfbefehle" = "Проверочные команды";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "Нет; Dango определяет средство тестирования проекта.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "Нет; {} определяет средство тестирования проекта.";
 "Workflow-Datei im Editor öffnen" = "Открыть файл рабочего процесса в редакторе";
 "Prompt-Vorlage" = "Шаблон промпта";
 "Prompt-Vorlage:" = "Шаблон промпта:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "«{}» — не целое число.";
 "„{}“ ist kein Betrag in Dollar." = "«{}» — не сумма в долларах.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Не удалось создать шаблон: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "Заказов пока нет. Заказ — это цель с проверяемыми критериями, которую Dango реализует и проверяет в отдельном worktree.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Заказов пока нет. Заказ — это цель с проверяемыми критериями, которую {} реализует и проверяет в отдельном worktree.";
 "Ziel" = "Цель";
 "Kriterien" = "Критерии";
 "Zeitleiste" = "Хронология";

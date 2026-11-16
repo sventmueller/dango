@@ -343,8 +343,11 @@ impl BoardTab {
             ui.strip.addArrangedSubview(&button);
         }
         let rows = view.rows();
-        ui.empty
-            .setStringValue(&ns(if rows.is_empty() { view.empty_words() } else { "" }));
+        ui.empty.setStringValue(&ns(&if rows.is_empty() {
+            view.empty_words()
+        } else {
+            String::new()
+        }));
         ui.empty.setHidden(!rows.is_empty());
         let waits = rows.iter().any(|row| row.tone() == crate::model::words::Tone::Waiting);
         drop(view);

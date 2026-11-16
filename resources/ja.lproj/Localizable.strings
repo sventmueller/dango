@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "一緒にコピー（例: node_modules、.env.local）";
 "Einrichtungsbefehl, etwa npm ci" = "セットアップコマンド（例: npm ci）";
 "Prüfbefehle" = "ゲートコマンド";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "なし。Dangoがプロジェクトのテストツールを検出します。";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "なし。{}がプロジェクトのテストツールを検出します。";
 "Workflow-Datei im Editor öffnen" = "ワークフローファイルをエディタで開く";
 "Prompt-Vorlage" = "プロンプトテンプレート";
 "Prompt-Vorlage:" = "プロンプトテンプレート:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "“{}”は整数ではありません。";
 "„{}“ ist kein Betrag in Dollar." = "“{}”はドル金額ではありません。";
 "Die Vorlage ließ sich nicht anlegen: {}" = "テンプレートを作成できませんでした: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "作業指示はまだありません。作業指示とは検証可能な基準を持つ目標で、Dangoが専用のワークツリーでビルドして検証します。";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "作業指示はまだありません。作業指示とは検証可能な基準を持つ目標で、{}が専用のワークツリーでビルドして検証します。";
 "Ziel" = "目標";
 "Kriterien" = "基準";
 "Zeitleiste" = "タイムライン";

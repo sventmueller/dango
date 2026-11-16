@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "一并拷贝，例如 node_modules、.env.local";
 "Einrichtungsbefehl, etwa npm ci" = "准备命令，例如 npm ci";
 "Prüfbefehle" = "门禁命令";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "无；Dango 会识别项目的测试工具。";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "无；{} 会识别项目的测试工具。";
 "Workflow-Datei im Editor öffnen" = "在编辑器中打开工作流文件";
 "Prompt-Vorlage" = "提示词模板";
 "Prompt-Vorlage:" = "提示词模板：";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "“{}”不是整数。";
 "„{}“ ist kein Betrag in Dollar." = "“{}”不是美元金额。";
 "Die Vorlage ließ sich nicht anlegen: {}" = "无法创建模板：{}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "还没有工单。工单是一个带有可检验标准的目标，由 Dango 在独立的工作树中构建并检查。";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "还没有工单。工单是一个带有可检验标准的目标，由 {} 在独立的工作树中构建并检查。";
 "Ziel" = "目标";
 "Kriterien" = "标准";
 "Zeitleiste" = "时间线";

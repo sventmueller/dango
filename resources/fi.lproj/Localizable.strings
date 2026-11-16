@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "Kopioi mukana, kuten node_modules, .env.local";
 "Einrichtungsbefehl, etwa npm ci" = "Asennuskomento, kuten npm ci";
 "Prüfbefehle" = "Tarkistuskomennot";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "Ei mitään; Dango tunnistaa projektin testityökalun.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "Ei mitään; {} tunnistaa projektin testityökalun.";
 "Workflow-Datei im Editor öffnen" = "Avaa työnkulkutiedosto editorissa";
 "Prompt-Vorlage" = "Kehotepohja";
 "Prompt-Vorlage:" = "Kehotepohja:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "”{}” ei ole kokonaisluku.";
 "„{}“ ist kein Betrag in Dollar." = "”{}” ei ole dollarimäärä.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Pohjaa ei voitu luoda: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "Ei vielä työtilauksia. Työtilaus on tavoite testattavine kriteereineen, jonka Dango rakentaa ja tarkistaa omassa worktreessään.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Ei vielä työtilauksia. Työtilaus on tavoite testattavine kriteereineen, jonka {} rakentaa ja tarkistaa omassa worktreessään.";
 "Ziel" = "Tavoite";
 "Kriterien" = "Kriteerit";
 "Zeitleiste" = "Aikajana";

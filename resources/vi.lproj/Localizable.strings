@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "Sao chép kèm, ví dụ node_modules, .env.local";
 "Einrichtungsbefehl, etwa npm ci" = "Lệnh thiết lập, ví dụ npm ci";
 "Prüfbefehle" = "Lệnh kiểm tra";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "Không có; Dango tự nhận biết công cụ kiểm thử của dự án.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "Không có; {} tự nhận biết công cụ kiểm thử của dự án.";
 "Workflow-Datei im Editor öffnen" = "Mở tệp quy trình trong trình soạn thảo";
 "Prompt-Vorlage" = "Mẫu prompt";
 "Prompt-Vorlage:" = "Mẫu prompt:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "“{}” không phải là số nguyên.";
 "„{}“ ist kein Betrag in Dollar." = "“{}” không phải là số tiền bằng đô la.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Không thể tạo mẫu: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "Chưa có phiếu công việc. Phiếu công việc là một mục tiêu với các tiêu chí kiểm tra được, mà Dango xây dựng và kiểm tra trong một worktree riêng.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Chưa có phiếu công việc. Phiếu công việc là một mục tiêu với các tiêu chí kiểm tra được, mà {} xây dựng và kiểm tra trong một worktree riêng.";
 "Ziel" = "Mục tiêu";
 "Kriterien" = "Tiêu chí";
 "Zeitleiste" = "Dòng thời gian";

@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "함께 복사(예: node_modules, .env.local)";
 "Einrichtungsbefehl, etwa npm ci" = "환경 구성 명령(예: npm ci)";
 "Prüfbefehle" = "게이트 명령";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "없음. Dango가 프로젝트의 테스트 도구를 감지합니다.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "없음. {}가 프로젝트의 테스트 도구를 감지합니다.";
 "Workflow-Datei im Editor öffnen" = "편집기에서 워크플로 파일 열기";
 "Prompt-Vorlage" = "프롬프트 템플릿";
 "Prompt-Vorlage:" = "프롬프트 템플릿:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "‘{}’은(는) 정수가 아닙니다.";
 "„{}“ ist kein Betrag in Dollar." = "‘{}’은(는) 달러 금액이 아닙니다.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "템플릿을 만들 수 없습니다: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "아직 작업 주문이 없습니다. 작업 주문은 검증 가능한 기준이 있는 목표로, Dango가 별도의 워크트리에서 빌드하고 검사합니다.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "아직 작업 주문이 없습니다. 작업 주문은 검증 가능한 기준이 있는 목표로, {}가 별도의 워크트리에서 빌드하고 검사합니다.";
 "Ziel" = "목표";
 "Kriterien" = "기준";
 "Zeitleiste" = "타임라인";

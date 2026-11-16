@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "Birlikte kopyala, örneğin node_modules, .env.local";
 "Einrichtungsbefehl, etwa npm ci" = "Kurulum komutu, örneğin npm ci";
 "Prüfbefehle" = "Geçit Komutları";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "Yok; Dango projenin test aracını algılar.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "Yok; {} projenin test aracını algılar.";
 "Workflow-Datei im Editor öffnen" = "İş Akışı Dosyasını Düzenleyicide Aç";
 "Prompt-Vorlage" = "İstem şablonu";
 "Prompt-Vorlage:" = "İstem şablonu:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "“{}” bir tam sayı değil.";
 "„{}“ ist kein Betrag in Dollar." = "“{}” dolar cinsinden bir tutar değil.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Şablon oluşturulamadı: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "Henüz iş emri yok. İş emri, test edilebilir ölçütleri olan ve Dango’nun kendi worktree’sinde yapıp denetlediği bir hedeftir.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Henüz iş emri yok. İş emri, test edilebilir ölçütleri olan ve {}’nun kendi worktree’sinde yapıp denetlediği bir hedeftir.";
 "Ziel" = "Hedef";
 "Kriterien" = "Ölçütler";
 "Zeitleiste" = "Zaman Çizelgesi";

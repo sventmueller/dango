@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "Kopírovat s sebou, např. node_modules, .env.local";
 "Einrichtungsbefehl, etwa npm ci" = "Příkaz přípravy, např. npm ci";
 "Prüfbefehle" = "Kontrolní příkazy";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "Žádné; Dango rozpozná testovací nástroj projektu.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "Žádné; {} rozpozná testovací nástroj projektu.";
 "Workflow-Datei im Editor öffnen" = "Otevřít soubor pracovního postupu v editoru";
 "Prompt-Vorlage" = "Šablona promptu";
 "Prompt-Vorlage:" = "Šablona promptu:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "„{}“ není celé číslo.";
 "„{}“ ist kein Betrag in Dollar." = "„{}“ není částka v dolarech.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Šablonu se nepodařilo vytvořit: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "Zatím žádná zakázka. Zakázka je cíl s ověřitelnými kritérii, který Dango postaví a zkontroluje ve vlastním worktree.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Zatím žádná zakázka. Zakázka je cíl s ověřitelnými kritérii, který {} postaví a zkontroluje ve vlastním worktree.";
 "Ziel" = "Cíl";
 "Kriterien" = "Kritéria";
 "Zeitleiste" = "Časová osa";

@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "העתקה נלווית, למשל node_modules, ‎.env.local";
 "Einrichtungsbefehl, etwa npm ci" = "פקודת הגדרה, למשל npm ci";
 "Prüfbefehle" = "פקודות שער";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "אין; Dango מזהה את כלי הבדיקה של הפרויקט.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "אין; {} מזהה את כלי הבדיקה של הפרויקט.";
 "Workflow-Datei im Editor öffnen" = "פתיחת קובץ תהליך העבודה בעורך";
 "Prompt-Vorlage" = "תבנית הנחיה";
 "Prompt-Vorlage:" = "תבנית הנחיה:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "״{}״ אינו מספר שלם.";
 "„{}“ ist kein Betrag in Dollar." = "״{}״ אינו סכום בדולרים.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "לא ניתן היה ליצור את התבנית: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "אין עדיין הזמנת עבודה. הזמנת עבודה היא יעד עם קריטריונים שניתן לבדוק, ש-Dango בונה ובודק ב-Worktree משלו.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "אין עדיין הזמנת עבודה. הזמנת עבודה היא יעד עם קריטריונים שניתן לבדוק, ש-{} בונה ובודק ב-Worktree משלו.";
 "Ziel" = "יעד";
 "Kriterien" = "קריטריונים";
 "Zeitleiste" = "ציר זמן";

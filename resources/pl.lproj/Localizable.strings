@@ -1971,7 +1971,7 @@
 "Mitkopieren, etwa node_modules, .env.local" = "Kopiuj także, np. node_modules, .env.local";
 "Einrichtungsbefehl, etwa npm ci" = "Polecenie przygotowania, np. npm ci";
 "Prüfbefehle" = "Polecenia kontrolne";
-"Keine; Dango erkennt das Testwerkzeug des Projekts." = "Brak; Dango rozpozna narzędzie testowe projektu.";
+"Keine; {} erkennt das Testwerkzeug des Projekts." = "Brak; {} rozpozna narzędzie testowe projektu.";
 "Workflow-Datei im Editor öffnen" = "Otwórz plik przepływu pracy w edytorze";
 "Prompt-Vorlage" = "Szablon promptu";
 "Prompt-Vorlage:" = "Szablon promptu:";
@@ -1980,7 +1980,7 @@
 "„{}“ ist keine ganze Zahl." = "„{}” nie jest liczbą całkowitą.";
 "„{}“ ist kein Betrag in Dollar." = "„{}” nie jest kwotą w dolarach.";
 "Die Vorlage ließ sich nicht anlegen: {}" = "Nie udało się utworzyć szablonu: {}";
-"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das Dango in einem eigenen Worktree baut und prüft." = "Brak zamówień. Zamówienie to cel ze sprawdzalnymi kryteriami, który Dango buduje i sprawdza we własnym worktree.";
+"Noch kein Auftrag. Ein Auftrag ist ein Ziel mit prüfbaren Kriterien, das {} in einem eigenen Worktree baut und prüft." = "Brak zamówień. Zamówienie to cel ze sprawdzalnymi kryteriami, który {} buduje i sprawdza we własnym worktree.";
 "Ziel" = "Cel";
 "Kriterien" = "Kryteria";
 "Zeitleiste" = "Oś czasu";
