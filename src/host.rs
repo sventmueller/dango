@@ -364,8 +364,9 @@ impl ide_ui_git::Host for AppHost {
         true
     }
 
-    fn thread_works_in(&self, folder: &Path) -> bool {
+    fn thread_works_in(&self, window: WindowId, folder: &Path) -> bool {
         ide_ui_agent::working_in(folder)
+            || self::window(window).is_some_and(|c| c.context().leitstand().working_in(folder))
     }
 
     fn open_thread(&self, window: WindowId, tree: &ide_git::ThreadTree) {

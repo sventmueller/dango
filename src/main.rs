@@ -11,6 +11,7 @@ mod editor;
 mod environment;
 mod host;
 mod leitstand_ui;
+mod leitstand;
 mod markdown;
 mod menu;
 mod navigation;

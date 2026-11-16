@@ -22,8 +22,8 @@ pub(crate) fn run() {
         let root = helpers::root("quit-project");
         check(
             "with nothing running, quitting would stop nothing",
-            crate::quit::running().is_empty(),
-            crate::quit::running().join(", "),
+            crate::quit::running(&crate::context::app()).is_empty(),
+            crate::quit::running(&crate::context::app()).join(", "),
         );
         let Some(tab) = ide_ui_agent::open_replay(&controller) else {
             return give_up(NAME, "an AI tab opens");
@@ -33,8 +33,8 @@ pub(crate) fn run() {
         let title = tab.title();
         check(
             "a running turn is work that quitting stops",
-            crate::quit::running().contains(&title),
-            crate::quit::running().join(", "),
+            crate::quit::running(&crate::context::app()).contains(&title),
+            crate::quit::running(&crate::context::app()).join(", "),
         );
         main_on_run_loop(move || quit_while_running(root, title));
     });
@@ -93,12 +93,12 @@ fn after_the_turn(root: PathBuf) {
     }
     check(
         "a turn that ended is no work that quitting stops",
-        tab.is_some() && crate::quit::running().is_empty(),
-        crate::quit::running().join(", "),
+        tab.is_some() && crate::quit::running(&crate::context::app()).is_empty(),
+        crate::quit::running(&crate::context::app()).join(", "),
     );
     let seen = Rc::new(RefCell::new(Seen::default()));
     let asking = inspect_and_cancel(&seen);
-    let may_quit = crate::quit::agents_may_stop(mtm);
+    let may_quit = crate::quit::agents_may_stop(&crate::context::app(), mtm);
     asking.stop();
     check(
         "without a running agent, quitting asks nothing",

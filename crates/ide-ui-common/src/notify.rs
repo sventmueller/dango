@@ -14,7 +14,7 @@ use objc2_user_notifications::{
     UNUserNotificationCenter,
 };
 
-use ide_ui_common::util::ns;
+use crate::util::ns;
 
 static ASKED: AtomicBool = AtomicBool::new(false);
 static NOTIFIED: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
@@ -26,7 +26,7 @@ fn allowed() -> bool {
 }
 
 /// Whether the user would miss what happens in a tab that is `shown` now.
-pub(crate) fn user_looks_elsewhere(shown: bool) -> bool {
+pub fn user_looks_elsewhere(shown: bool) -> bool {
     let Some(mtm) = MainThreadMarker::new() else {
         return false;
     };
@@ -34,7 +34,7 @@ pub(crate) fn user_looks_elsewhere(shown: bool) -> bool {
 }
 
 /// Posts a notification; asks for permission the first time.
-pub(crate) fn post(id: &str, title: &str, body: &str) {
+pub fn post(id: &str, title: &str, body: &str) {
     NOTIFIED.fetch_add(1, Ordering::Relaxed);
     if !allowed() {
         return;
@@ -48,6 +48,11 @@ pub(crate) fn post(id: &str, title: &str, body: &str) {
         );
     }
     center.addNotificationRequest_withCompletionHandler(&request(id, title, body), None);
+}
+
+/// How many notifications were posted, or would have been where posting is not allowed, for the self-test.
+pub fn posted() -> usize {
+    NOTIFIED.load(Ordering::Relaxed)
 }
 
 /// The notification for the tab `id`, with a sound, shown at once.
@@ -82,8 +87,3 @@ mod tests {
         assert!(NOTIFIED.load(Ordering::Relaxed) > before);
     }
 }
-
-#[cfg(feature = "selftest")]
-mod selftest_probe;
-#[cfg(feature = "selftest")]
-pub(crate) use selftest_probe::*;

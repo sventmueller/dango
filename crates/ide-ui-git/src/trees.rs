@@ -341,7 +341,9 @@ impl GitPanel {
 
     /// Refuses to take a worktree away from a thread that still works there; once it is closed, the refusal goes.
     fn refuse_while_open(&self, tree: &ThreadTree) -> bool {
-        let open = crate::host::host().thread_works_in(&tree.path);
+        let open = self
+            .controller()
+            .is_some_and(|controller| crate::host::host().thread_works_in(controller.id(), &tree.path));
         let refusal = tf(
             "Der Thread „{}“ ist noch offen. Schließ seinen Tab, bevor sein Worktree verschwindet.",
             &[&tree.title],

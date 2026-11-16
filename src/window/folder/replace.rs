@@ -25,6 +25,12 @@ impl Losses {
     fn of(controller: &WindowController) -> Losses {
         let mut running = ide_ui_agent::running_in(controller);
         running.extend(crate::terminal::running_in(controller));
+        running.extend(
+            controller
+                .context()
+                .leitstand()
+                .would_pause(controller.context(), controller),
+        );
         Losses {
             unsaved: crate::editor::unsaved_in(controller),
             running,

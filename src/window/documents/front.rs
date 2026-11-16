@@ -203,6 +203,11 @@ impl WindowController {
         }
     }
 
+    /// Whether the window has one tab left, whose closing closes the window.
+    pub(in crate::window) fn is_last_tab(&self) -> bool {
+        self.ivars().documents.tabs.borrow().len() <= 1
+    }
+
     /// A window tab closes: its documents go with it; the window goes with its last tab.
     pub(in crate::window) fn tab_closes(&self, tab: &Rc<TabWindow>) {
         let last = self.ivars().documents.tabs.borrow().len() == 1;

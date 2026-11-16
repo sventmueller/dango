@@ -46,9 +46,8 @@ pub(crate) fn attach(controller: &WindowController) {
 }
 
 /// The user trusts `root` now: its panels list their tests.
-pub(crate) fn trust_changed(root: &Path) {
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    for panel in crate::context::AppContext::get(mtm).tests_panels().for_root(root) {
+pub(crate) fn trust_changed(cx: &std::rc::Rc<crate::context::AppContext>, root: &Path) {
+    for panel in cx.tests_panels().for_root(root) {
         panel.list(false);
     }
 }

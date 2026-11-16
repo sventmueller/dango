@@ -23,6 +23,7 @@ use crate::window::WindowController;
 use crate::window::toolbar::kind_name;
 use ide_ui_agent::{AgentKey, AgentTab};
 
+mod orders;
 mod session;
 
 pub(crate) use session::Part;
@@ -49,6 +50,8 @@ enum Action {
     ShowDebug(u64),
     /// Stops the debug session with this number.
     StopDebug(u64),
+    /// Stops the turn of an order's session (C58).
+    StopOrder(ide_factory::SessionKey),
 }
 
 pub(crate) struct ActivityIvars {
@@ -479,7 +482,7 @@ impl Activity {
     fn update_count(&self) {
         let Some(controller) = self.controller() else { return };
         let tabs = ide_ui_agent::of_window(&controller);
-        let count = count(&tabs, &processes());
+        let count = count(&tabs, &processes()) + orders::lines(&controller).len();
         for item in self.items() {
             item.setToolTip(Some(&ns(&tf("Was gerade läuft: {}", &[&count.to_string()]))));
         }
@@ -570,6 +573,7 @@ impl Activity {
             Some((key, part)) => vec![(part.heading(), session_lines(&tabs, key, part, now))],
             None => vec![
                 (t("Agenten"), agent_lines(&tabs, now, false)),
+                (t("Aufträge"), orders::lines(controller)),
                 (t("Debuggen"), debug_lines(controller)),
                 (t("Prozesse"), process_lines(controller, &processes(), now)),
             ],
@@ -802,6 +806,7 @@ impl Activity {
             Action::ShowTerminal(tab) => controller.select_tab_by_id(tab),
             Action::ShowDebug(_) => crate::debug::show(&controller),
             Action::StopDebug(id) => crate::debug::stop(&controller, id),
+            Action::StopOrder(key) => controller.context().leitstand().stop_turn(&key),
         }
         self.changed();
     }

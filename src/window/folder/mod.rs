@@ -90,6 +90,7 @@ impl WindowController {
     fn ask_trust(&self, root: PathBuf) {
         let Some(window) = self.window() else { return };
         let message = splat_i18n::tf("Vertraust du den Dateien in „{}“?", &[&folder_name(&root)]);
+        let cx = self.context().clone();
         Alert::new(self.mtm(), &message)
             .informative(t(
                 "In einem vertrauten Ordner dürfen Git-Hooks, Sprachserver aus dem Projekt und Agenten laufen. \
@@ -100,7 +101,7 @@ impl WindowController {
             .sheet(&window, move |response| {
                 if first(response) {
                     crate::project::trust(&root);
-                    lifecycle::trust_changed(&root);
+                    lifecycle::trust_changed(&cx, &root);
                 }
             });
     }

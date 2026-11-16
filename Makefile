@@ -20,7 +20,7 @@ lint: ## Formatting, clippy, also with the selftest feature, the allowed thread-
 	cargo xtask structure
 	cargo xtask rules
 	cargo clippy --workspace --all-targets -- -D warnings
-	cargo clippy --package ide-app --package ide-ui-agent --package ide-ui-browser --package ide-ui-debug --package ide-ui-export --package ide-ui-factory --package ide-ui-git --package ide-ui-lsp --package ide-ui-terminal --package ide-git --all-targets --features ide-app/selftest,ide-ui-agent/selftest,ide-ui-browser/selftest,ide-ui-debug/selftest,ide-ui-export/selftest,ide-ui-factory/selftest,ide-ui-git/selftest,ide-git/selftest,ide-ui-lsp/selftest,ide-ui-terminal/selftest -- -D warnings
+	cargo clippy --package ide-app --package ide-ui-agent --package ide-ui-browser --package ide-ui-debug --package ide-ui-export --package ide-ui-factory --package ide-ui-git --package ide-ui-lsp --package ide-ui-terminal --package ide-git --package ide-session --all-targets --features ide-app/selftest,ide-ui-agent/selftest,ide-ui-browser/selftest,ide-ui-debug/selftest,ide-ui-export/selftest,ide-ui-factory/selftest,ide-ui-git/selftest,ide-git/selftest,ide-ui-lsp/selftest,ide-ui-terminal/selftest,ide-session/selftest -- -D warnings
 	cargo clippy --package ide-terminal --package ide-lsp --package ide-git --package ide-agent --package ide-predict --package ide-dap --package ide-thread --all-targets --features ide-terminal/fuzzing,ide-lsp/fuzzing,ide-git/fuzzing,ide-agent/fuzzing,ide-predict/fuzzing,ide-dap/fuzzing,ide-thread/fuzzing -- -D warnings
 
 check: lint ## lint, then all cargo tests; needs no keychain, no window and no network

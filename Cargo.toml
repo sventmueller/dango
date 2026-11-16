@@ -136,6 +136,7 @@ ide-predict.workspace = true
 ide-process.workspace = true
 ide-product.workspace = true
 ide-project.workspace = true
+ide-session.workspace = true
 ide-terminal.workspace = true
 ide-thread.workspace = true
 ide-ui-agent.workspace = true
@@ -175,16 +176,20 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 serde.workspace = true
 serde_json.workspace = true
 regex = "1"
+sha2 = "0.11.1"
+globset = "0.4.21"
 
 [dev-dependencies]
 # The scripted providers the app's own unit tests answer with.
 ide-agent = { workspace = true, features = ["testing"] }
 ide-predict = { workspace = true, features = ["testing"] }
 ide-core = { workspace = true, features = ["testing"] }
+# The scripted session (F61), which the Leitstand's tests drive instead of an agent's CLI.
+ide-session = { workspace = true, features = ["selftest"] }
 splat-i18n.workspace = true
 
 [features]
-selftest = ["ide-acp/testing", "ide-core/testing", "ide-agent/testing", "ide-dap/testing", "ide-predict/testing", "splat-decoder/selftest", "splat-render/selftest", "ide-ui-agent/selftest", "ide-ui-browser/selftest", "ide-ui-debug/selftest", "ide-ui-export/selftest", "ide-ui-factory/selftest", "ide-ui-git/selftest", "ide-ui-lsp/selftest", "ide-ui-terminal/selftest", "ide-ui-dictation?/selftest"]
+selftest = ["ide-acp/testing", "ide-core/testing", "ide-agent/testing", "ide-dap/testing", "ide-predict/testing", "splat-decoder/selftest", "splat-render/selftest", "ide-ui-agent/selftest", "ide-ui-browser/selftest", "ide-ui-debug/selftest", "ide-ui-export/selftest", "ide-ui-factory/selftest", "ide-ui-git/selftest", "ide-ui-lsp/selftest", "ide-ui-terminal/selftest", "ide-ui-dictation?/selftest", "ide-session/selftest"]
 # Speech to text through lowspeak (E13), which builds whisper.cpp with cmake; only release bundles turn it on.
 dictation = ["dep:ide-ui-dictation", "ide-ui-dictation/engine", "dep:lowspeak", "ide-ui-agent/dictation"]
 

@@ -51,6 +51,7 @@ pub(crate) struct AppContext {
     debug_rotors: crate::debug::Rotors,
     browser: Rc<ide_ui_browser::State>,
     secrets: Secrets,
+    leitstand: crate::leitstand::Leitstand,
     #[cfg(feature = "dictation")]
     dictation: Rc<ide_ui_dictation::State>,
 }
@@ -185,6 +186,10 @@ impl AppContext {
 
     pub(crate) fn secrets(&self) -> &Secrets {
         &self.secrets
+    }
+
+    pub(crate) fn leitstand(&self) -> &crate::leitstand::Leitstand {
+        &self.leitstand
     }
 
     #[cfg(feature = "dictation")]

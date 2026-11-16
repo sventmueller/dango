@@ -33,8 +33,8 @@ pub trait Host {
     fn check_disk_below(&self, root: &Path);
     /// Brings the open thread that works in `folder` to the front; whether there was one.
     fn select_thread_in(&self, folder: &Path) -> bool;
-    /// Whether a thread works in `folder`.
-    fn thread_works_in(&self, folder: &Path) -> bool;
+    /// Whether a thread, or the session of a work order of `window`'s app, works in `folder`.
+    fn thread_works_in(&self, window: WindowId, folder: &Path) -> bool;
     /// Opens a thread of the worktree's agent in `tree` in `window` (I1).
     fn open_thread(&self, window: WindowId, tree: &ThreadTree);
     /// Shows the work order `order` in the Leitstand of `window` (F50); nothing until the app has a Leitstand.

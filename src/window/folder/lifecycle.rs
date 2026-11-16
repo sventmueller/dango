@@ -3,9 +3,11 @@
 //! misses one of them.
 
 use std::path::Path;
+use std::rc::Rc;
 
 use objc2::DefinedClass;
 
+use crate::context::AppContext;
 use crate::window::WindowController;
 
 /// What a part of a window does when its folder opens, becomes trusted or closes.
@@ -13,7 +15,7 @@ struct Part {
     /// The window shows a folder now, a new one or the first.
     attached: fn(&WindowController),
     /// The user trusts `root` now (E22).
-    trust_changed: fn(&Path),
+    trust_changed: fn(&Rc<AppContext>, &Path),
     /// The window's folder closes, because the window closes or shows another folder; it still reports the old root.
     closed: fn(&WindowController),
 }
@@ -21,7 +23,7 @@ struct Part {
 impl Part {
     const NONE: Part = Part {
         attached: |_| {},
-        trust_changed: |_| {},
+        trust_changed: |_, _| {},
         closed: |_| {},
     };
 }
@@ -29,12 +31,12 @@ impl Part {
 const PARTS: &[Part] = &[
     Part {
         attached: ide_ui_git::attach,
-        trust_changed: ide_ui_git::trust_changed,
+        trust_changed: |_, root| ide_ui_git::trust_changed(root),
         ..Part::NONE
     },
     Part {
         attached: crate::ci_panel::attach,
-        trust_changed: crate::ci_panel::trust_changed,
+        trust_changed: |_, root| crate::ci_panel::trust_changed(root),
         closed: crate::ci_panel::window_closed,
     },
     Part {
@@ -62,11 +64,26 @@ const PARTS: &[Part] = &[
     },
     Part {
         attached: crate::debug::attach,
-        trust_changed: crate::debug::trust_changed,
+        trust_changed: |_, root| crate::debug::trust_changed(root),
         closed: crate::debug::window_closed,
     },
     Part {
-        trust_changed: ide_ui_lsp::trust_changed,
+        attached: |controller| {
+            controller
+                .context()
+                .leitstand()
+                .attached(controller.context(), controller)
+        },
+        trust_changed: |cx, root| cx.leitstand().trust_changed(cx, root),
+        closed: |controller| {
+            controller
+                .context()
+                .leitstand()
+                .folder_closed(controller.context(), controller)
+        },
+    },
+    Part {
+        trust_changed: |_, root| ide_ui_lsp::trust_changed(root),
         closed: |controller| {
             if let Some(root) = controller.project_root() {
                 ide_ui_lsp::window_closed(&root);
@@ -96,8 +113,8 @@ impl WindowController {
 }
 
 /// The user trusts `root` now; the parts of every window that shows it may start what they waited for.
-pub(in crate::window) fn trust_changed(root: &Path) {
+pub(in crate::window) fn trust_changed(cx: &Rc<AppContext>, root: &Path) {
     for part in PARTS {
-        (part.trust_changed)(root);
+        (part.trust_changed)(cx, root);
     }
 }

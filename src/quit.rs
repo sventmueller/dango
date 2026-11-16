@@ -1,26 +1,33 @@
-//! Quitting while agents work (E23): one question names what runs before anything stops; the supervisor then ends it
-//! as it ends every process.
+//! Quitting while agents work (E23): one question names what runs before anything stops, AI tabs and orders alike; the
+//! supervisor then ends it as it ends every process.
 
 use ide_ui_common::alert::{Alert, Role};
 use objc2::MainThreadMarker;
 use objc2_app_kit::NSAlertSecondButtonReturn;
 use splat_i18n::{t, tf};
 
-/// What quitting would stop, by name: AI tabs with a turn, a subagent or background work that runs, and coding agents
-/// in terminals.
-pub(crate) fn running() -> Vec<String> {
+use crate::context::AppContext;
+
+/// What quitting would stop, by name: AI tabs with a turn, a subagent or background work that runs, coding agents in
+/// terminals, and the sessions of orders (C58), each once.
+pub(crate) fn running(cx: &AppContext) -> Vec<String> {
     let mut running = ide_ui_agent::running();
     running.extend(crate::terminal::agents_running());
+    for order in cx.leitstand().running() {
+        if !running.contains(&order) {
+            running.push(order);
+        }
+    }
     running
 }
 
 /// Whether the app may quit as far as agents go: none works, or the user chose to quit anyway.
-pub(crate) fn agents_may_stop(mtm: MainThreadMarker) -> bool {
+pub(crate) fn agents_may_stop(cx: &AppContext, mtm: MainThreadMarker) -> bool {
     #[cfg(feature = "selftest")]
     if !asks_in_selftest() {
         return true;
     }
-    let running = running();
+    let running = running(cx);
     if running.is_empty() {
         return true;
     }

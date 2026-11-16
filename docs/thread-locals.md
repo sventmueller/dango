@@ -147,8 +147,8 @@ whose static is gone.
 |---|---|---|---|
 
 | `crates/ide-ui-agent/src/host.rs` | `HOST` | the AI tab's `Host` | install-once hook |
-| `crates/ide-ui-agent/src/notify.rs` | `ASKED` | whether macOS was asked to allow notifications | once per process |
-| `crates/ide-ui-agent/src/notify.rs` | `NOTIFIED` | how many notifications were posted, which the self-test reads | serial |
+| `crates/ide-ui-common/src/notify.rs` | `ASKED` | whether macOS was asked to allow notifications | once per process |
+| `crates/ide-ui-common/src/notify.rs` | `NOTIFIED` | how many notifications were posted, which the self-test reads | serial |
 | `crates/ide-ui-agent/src/own_agent/mod.rs` | `CACHE` | the models each endpoint offered last | cache |
 | `crates/ide-ui-agent/src/own_agent/mod.rs` | `STORE` | the app's store of secrets, handed over from the app context, where the keys are | once per process |
 | `crates/ide-ui-browser/src/host.rs` | `HOST` | the browser's `Host` | install-once hook |
@@ -178,6 +178,7 @@ whose static is gone.
 | `src/ci_panel/work.rs` | `NETWORK` | the CI panel's HTTP transport | once per process |
 | `src/ci_panel/work.rs` | `STORE` | the app's store of secrets, handed over from the app context, where the tokens are | once per process |
 | `src/editor/recovery.rs` | `COPIES` | the thread that writes copies of unsaved text | worker threads |
+| `src/leitstand/mod.rs` | `GIT` | the thread of the orchestrator's git calls, one after the other | worker threads |
 | `crates/ide-ui-lsp/src/edits.rs` | `EDITS` | the thread that applies a server's workspace edits | worker threads |
 | `src/environment.rs` | `ENVIRONMENT` | the login shell's environment | once per process |
 | `src/environment.rs` | `READY` | whether that environment is read, for threads that wait for it | once per process |

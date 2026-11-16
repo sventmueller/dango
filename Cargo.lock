@@ -1511,6 +1511,7 @@ version = "0.0.0"
 dependencies = [
  "block2",
  "dispatch2",
+ "globset",
  "ide-acp",
  "ide-agent",
  "ide-ci",
@@ -1529,6 +1530,7 @@ dependencies = [
  "ide-process",
  "ide-product",
  "ide-project",
+ "ide-session",
  "ide-terminal",
  "ide-test",
  "ide-thread",
@@ -1559,6 +1561,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "sha2",
  "splat-decoder",
  "splat-editor-state",
  "splat-file-state",
@@ -1913,6 +1916,7 @@ dependencies = [
  "objc2-app-kit",
  "objc2-core-foundation",
  "objc2-foundation",
+ "objc2-user-notifications",
  "splat-i18n",
  "splat-markdown",
 ]

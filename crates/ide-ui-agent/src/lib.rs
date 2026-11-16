@@ -26,7 +26,7 @@ mod inbox;
 mod markdown;
 mod mention;
 mod model;
-mod notify;
+use ide_ui_common::notify;
 mod opencode;
 mod outside;
 mod overlay;

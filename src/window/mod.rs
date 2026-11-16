@@ -156,7 +156,10 @@ define_class!(
         #[unsafe(method(windowShouldClose:))]
         fn should_close(&self, window: &NSWindow) -> bool {
             guarded(true, || match self.tab_of_window(window) {
-                Some(tab) => self.documents_may_close(&tab.documents()),
+                Some(tab) => {
+                    (!self.is_last_tab() || self.context().leitstand().may_close(self.context(), self, self.mtm()))
+                        && self.documents_may_close(&tab.documents())
+                }
                 None => true,
             })
         }
@@ -512,6 +515,11 @@ impl WindowController {
     pub(crate) fn context(&self) -> &Rc<AppContext> {
         &self.ivars().context
     }
+
+    /// Whether the window closed, though it is still among the open ones until the main queue gets to it.
+    pub(crate) fn is_closed(&self) -> bool {
+        self.ivars().closed.get()
+    }
 }
 
 /// The open windows, in the order they opened.
@@ -635,7 +643,9 @@ impl WindowController {
             .filter_map(|window| self.tab_of_window(window))
             .flat_map(|tab| tab.documents())
             .collect();
-        if !self.documents_may_close(&documents) {
+        if !self.context().leitstand().may_close(self.context(), self, self.mtm())
+            || !self.documents_may_close(&documents)
+        {
             return;
         }
         layout::save(self);

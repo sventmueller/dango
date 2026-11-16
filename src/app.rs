@@ -47,7 +47,9 @@ define_class!(
         fn did_finish_launching(&self, _notification: &NSNotification) {
             guarded((), || {
                 let mtm = self.mtm();
-                ide_core::settings::on_change(|_, names| {
+                let leitstand = self.context().leitstand().back();
+                ide_core::settings::on_change(move |_, names| {
+                    leitstand.settings_changed(names);
                     let names = names.to_vec();
                     crate::util::main_soon(move || {
                         crate::editor::settings_changed(&names);
@@ -68,12 +70,16 @@ define_class!(
         #[unsafe(method(applicationShouldTerminate:))]
         fn should_terminate(&self, _app: &NSApplication) -> NSApplicationTerminateReply {
             guarded(NSApplicationTerminateReply::TerminateNow, || {
-                if !crate::quit::agents_may_stop(self.mtm()) || !crate::editor::confirm_quit(self.mtm()) {
+                let cx = self.context();
+                if !crate::quit::agents_may_stop(&cx, self.mtm()) || !crate::editor::confirm_quit(self.mtm()) {
                     return NSApplicationTerminateReply::TerminateCancel;
                 }
-                remember_open_projects(&crate::context::AppContext::get(self.mtm()));
+                remember_open_projects(&cx);
                 crate::editor::recovery::quit(RECOVERY_GRACE);
+                // Running orders pause with "app ended" before the supervisor ends their builders and gates (E167).
+                let orders = cx.leitstand().quit(&cx);
                 if Supervisor::global().running().is_empty() {
+                    orders.wait();
                     return NSApplicationTerminateReply::TerminateNow;
                 }
                 let reply = || {
@@ -83,7 +89,8 @@ define_class!(
                         }
                     });
                 };
-                let stopping = crate::util::spawn("ide-quit", move || {
+                let stopping = ide_ui_common::util::spawn_with("ide-quit", orders, move |orders| {
+                    orders.wait();
                     // Launched programs end and attached ones are let go before the supervisor ends the adapters; the
                     // app quits even if that fails, since macOS waits for the reply.
                     ide_core::lane::contained(|| {
@@ -92,7 +99,8 @@ define_class!(
                     });
                     reply();
                 });
-                if stopping.is_err() {
+                if let Err((orders, _)) = stopping {
+                    orders.wait();
                     ide_core::lane::contained(|| {
                         ide_dap::stop_all(QUIT_GRACE);
                         Supervisor::global().shutdown(QUIT_GRACE);
@@ -187,6 +195,7 @@ define_class!(
 impl AppDelegate {
     pub(crate) fn new(mtm: MainThreadMarker) -> Retained<Self> {
         let context = Rc::new(AppContext::default());
+        context.leitstand().bind(&context, mtm);
         ide_ui_agent::own_agent::use_secrets(context.secrets().store());
         crate::ci_panel::use_secrets(context.secrets().store());
         let this = Self::alloc(mtm).set_ivars(context);
