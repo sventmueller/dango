@@ -234,6 +234,11 @@ define_class!(
             guarded((), || self.open_thread(&self.keys_for(sender)));
         }
 
+        #[unsafe(method(ideGitShowOrder:))]
+        fn show_order_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || self.show_order(&self.keys_for(sender)));
+        }
+
         #[unsafe(method(ideGitKeepBranch:))]
         fn keep_branch_action(&self, sender: Option<&AnyObject>) {
             guarded((), || self.keep_branch(&self.keys_for(sender)));

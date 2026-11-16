@@ -166,7 +166,6 @@ whose static is gone.
 | `crates/ide-ui-git/src/message/claude.rs` | `NEXT` | the number of the next empty folder `claude` runs in | serial |
 | `crates/ide-ui-git/src/work.rs` | `GIT` | the git program and its environment | once per process |
 | `crates/ide-ui-git/src/work.rs` | `LOCAL` | the thread of local git work | worker threads |
-| `crates/ide-ui-git/src/worktrees/read.rs` | `CACHE` | worktree readings and how often each was marked changed, shared with the Git panel's thread | cache |
 | `crates/ide-ui-terminal/src/host.rs` | `HOST` | the terminal's `Host` | install-once hook |
 | `crates/ide-ui-terminal/src/host.rs` | `NEXT_ID` | the next terminal view id | serial |
 | `crates/ide-ui-terminal/src/host.rs` | `OPTION_AS_META` | the setting ⌥ as Meta as last chosen | cache (of the setting) |

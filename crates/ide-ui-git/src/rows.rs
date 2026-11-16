@@ -458,6 +458,8 @@ impl GitPanel {
             self.open_thread(&keys);
         } else if action == sel!(ideGitKeepBranch:) {
             self.keep_branch(&keys);
+        } else if action == sel!(ideGitShowOrder:) {
+            self.show_order(&keys);
         } else if action == sel!(ideGitRemoveTree:) {
             self.remove_tree(&keys);
         } else if action == sel!(ideGitApplyStash:) {
@@ -769,8 +771,10 @@ fn menu_entries(keys: &[RowKey], model: &super::model::Model) -> Vec<(&'static s
             Section::Conflicts | Section::Stashes | Section::Worktrees | Section::Commits => vec![],
         };
     }
-    if let [RowKey::Worktree(_) | RowKey::WorktreeFile(..)] = keys {
-        return super::trees::menu(keys);
+    if let [RowKey::Worktree(path) | RowKey::WorktreeFile(path, _)] = keys {
+        let ordered =
+            matches!(keys, [RowKey::Worktree(_)]) && model.tree(path).is_some_and(|state| state.tree.order.is_some());
+        return super::trees::menu(keys, ordered);
     }
     if let [RowKey::Commit(_) | RowKey::CommitFile(..)] = keys {
         return super::history::menu(keys);

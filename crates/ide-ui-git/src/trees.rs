@@ -1,6 +1,7 @@
 //! The worktree threads in the Git panel (I1): a row per worktree with its branch, how far it is ahead of and behind
 //! its base and how many files it changed, the files below it with their diff against the base, and taking its work
-//! over, keeping its branch or removing it.
+//! over, keeping its branch or removing it. A work order's worktree is the orchestrator's to take over or remove
+//! (F50); its row only leads to the order in the Leitstand.
 
 use ide_ui_common::window::Files;
 use std::path::Path;
@@ -27,9 +28,10 @@ use crate::worktrees::{TakeOver, ThreadTree, TreeState};
 use ide_ui_common::alert::{Alert, Role, first};
 use ide_ui_common::util::{activate, label, ns, symbol};
 
-/// The menu of a worktree row.
-pub(crate) fn menu(keys: &[RowKey]) -> Vec<(&'static str, Option<Sel>)> {
+/// The menu of a worktree row; `ordered` when a work order owns the worktree.
+pub(crate) fn menu(keys: &[RowKey], ordered: bool) -> Vec<(&'static str, Option<Sel>)> {
     match keys {
+        [RowKey::Worktree(_)] if ordered => vec![(t("Im Leitstand zeigen"), Some(sel!(ideGitShowOrder:)))],
         [RowKey::Worktree(_)] => vec![
             (t("Übernehmen …"), Some(sel!(ideGitTakeOver:))),
             (t("Thread öffnen"), Some(sel!(ideGitOpenThread:))),
@@ -113,7 +115,7 @@ impl GitPanel {
         cell.setToolTip(Some(&ns(&format!("{described}\n{}", state.tree.path.display()))));
         cell.setAccessibilityLabel(Some(&ns(&described)));
         let key = RowKey::Worktree(state.tree.path.clone());
-        let custom = self.custom_actions(&key, &menu(std::slice::from_ref(&key)));
+        let custom = self.custom_actions(&key, &menu(std::slice::from_ref(&key), state.tree.order.is_some()));
         cell.setAccessibilityCustomActions(Some(&NSArray::from_retained_slice(&custom)));
         // SAFETY: The label is a subview of the cell, which keeps it.
         unsafe { cell.setTextField(Some(&title)) };
@@ -169,7 +171,7 @@ impl GitPanel {
         cell.setToolTip(Some(&ns(&format!("{described}\n{}", tree.join(file).display()))));
         cell.setAccessibilityLabel(Some(&ns(&described)));
         let key = RowKey::WorktreeFile(tree.to_path_buf(), file.to_path_buf());
-        let custom = self.custom_actions(&key, &menu(std::slice::from_ref(&key)));
+        let custom = self.custom_actions(&key, &menu(std::slice::from_ref(&key), false));
         cell.setAccessibilityCustomActions(Some(&NSArray::from_retained_slice(&custom)));
         // SAFETY: The label is a subview of the cell, which keeps it.
         unsafe { cell.setTextField(Some(&name)) };
@@ -201,6 +203,19 @@ impl GitPanel {
                 )
             })
             .collect()
+    }
+
+    /// The worktree a row belongs to, unless a work order owns it, whose orchestrator alone changes it (F50).
+    fn thread_tree_of(&self, keys: &[RowKey]) -> Option<TreeState> {
+        self.tree_of(keys).filter(|state| state.tree.order.is_none())
+    }
+
+    /// Shows the work order that owns the row's worktree in the Leitstand.
+    pub(crate) fn show_order(&self, keys: &[RowKey]) {
+        let Some(controller) = self.controller() else { return };
+        if let Some(order) = self.tree_of(keys).and_then(|state| state.tree.order) {
+            crate::host::host().show_order(controller.id(), &order);
+        }
     }
 
     /// The thread worktree a row belongs to.
@@ -235,7 +250,7 @@ impl GitPanel {
 
     /// Selects the thread that works in the worktree, or starts a new one there.
     pub(crate) fn open_thread(&self, keys: &[RowKey]) {
-        let (Some(controller), Some(state)) = (self.controller(), self.tree_of(keys)) else {
+        let (Some(controller), Some(state)) = (self.controller(), self.thread_tree_of(keys)) else {
             return;
         };
         if crate::host::host().select_thread_in(&state.tree.path) {
@@ -246,7 +261,8 @@ impl GitPanel {
 
     /// Asks how to take the thread's work over, then does it.
     pub(crate) fn take_over(&self, keys: &[RowKey]) {
-        let (Some(window), Some(state)) = (self.controller().and_then(|c| c.window()), self.tree_of(keys)) else {
+        let (Some(window), Some(state)) = (self.controller().and_then(|c| c.window()), self.thread_tree_of(keys))
+        else {
             return;
         };
         let into = self.read().branch.head.clone().unwrap_or_else(|| "HEAD".into());
@@ -274,7 +290,7 @@ impl GitPanel {
 
     /// Removes the worktree but keeps its branch, after committing what the thread left there.
     pub(crate) fn keep_branch(&self, keys: &[RowKey]) {
-        let Some(state) = self.tree_of(keys) else { return };
+        let Some(state) = self.thread_tree_of(keys) else { return };
         if self.refuse_while_open(&state.tree) {
             return;
         }
@@ -283,7 +299,8 @@ impl GitPanel {
 
     /// Asks before removing the worktree and perhaps its branch (E27), then does it.
     pub(crate) fn remove_tree(&self, keys: &[RowKey]) {
-        let (Some(window), Some(state)) = (self.controller().and_then(|c| c.window()), self.tree_of(keys)) else {
+        let (Some(window), Some(state)) = (self.controller().and_then(|c| c.window()), self.thread_tree_of(keys))
+        else {
             return;
         };
         if self.refuse_while_open(&state.tree) {
@@ -425,7 +442,7 @@ impl GitPanel {
                     crate::host::host().open_thread(controller.id(), &tree);
                 }
             }
-            Some(Err(TreeError::NoCommit)) => {
+            Some(Err(TreeError::NoCommit | TreeError::NoBranch(_))) => {
                 self.set_problem(Some(Problem::plain(t("Ein Worktree braucht einen ersten Commit."))));
             }
             Some(Err(TreeError::Git(error))) => self.report(&error),

@@ -5,7 +5,14 @@
 //! message.
 //!
 //! [`panel`] is what the app's Git panel decides without AppKit: its rows, the commit graph and its words for git's
-//! errors; [`ThreadTree`] and [`TreeState`] describe the worktree of an AI thread.
+//! errors; [`ThreadTree`] and [`TreeState`] describe the worktree of an AI thread or a work order, and
+//! [`thread_trees`] makes, reads, takes over and removes them, with the variants a work order needs in
+//! [`thread_trees::order`] (B45a).
+//!
+//! For the orchestrator of work orders (phase 13) there are also: [`Git::unattended`], git without the repository's
+//! hooks, with a given environment and a deadline (E192); [`Repository::ref_snapshot`] for the ref watch (E173);
+//! [`Git::scan_text_frozen`], the secrets check with rules frozen from the user's working copy (C52);
+//! [`Repository::full_diff`], [`Repository::changes_between`] and [`Repository::branch_head`] to compare and verify.
 //!
 //! git runs code a repository controls — hooks, `core.fsmonitor`, filters from its configuration — so callers use this
 //! crate only in folders the user trusts (E22). The crate does not check that itself; the project's trust decision
@@ -36,6 +43,7 @@ mod message;
 mod operation;
 pub mod panel;
 mod path;
+mod refs;
 mod remote;
 mod repo;
 mod run;
@@ -45,10 +53,11 @@ mod staging;
 mod stash;
 mod status;
 mod thread_tree;
+pub mod thread_trees;
 mod worktree;
 
 pub use blame::{Blame, BlameCommit};
-pub use branch::{Branch, Commit};
+pub use branch::{Branch, BranchHead, Commit};
 pub use checkpoint::{
     Checkpoint, CheckpointKind, CheckpointThread, Checkpoints, Created, Prune, Restore, RestoreOptions, Restored,
 };
@@ -61,12 +70,13 @@ pub use id::CommitId;
 pub use integrate::ChangedFile;
 pub use message::{CheckedRequest, MessageRequest, Place, RequestFinding, RequestScan, SUBJECTS};
 pub use operation::Operation;
+pub use refs::{RefChange, RefChanges, RefKind, RefSnapshot};
 pub use remote::{
     FetchOptions, Progress, PullMode, PullOptions, PushFlag, PushOptions, PushOutcome, PushedRef, Remote,
 };
 pub use repo::Repository;
 pub use run::{Cancel, Git};
-pub use secrets::{Finding, SecretScan};
+pub use secrets::{Finding, FrozenRules, SecretScan};
 pub use stash::{Applied, Stash, StashApply, StashOptions, Unstash};
 pub use status::{
     BranchStatus, Conflict, EntryKind, FileState, Status, StatusEntry, StatusOptions, Submodule, Untracked,

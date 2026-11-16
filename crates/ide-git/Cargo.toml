@@ -12,6 +12,8 @@ workspace = true
 # Entry points for the fuzz targets in `fuzz/`, which reach parts that are not public.
 [features]
 fuzzing = []
+# What the self-test reads of the worktree readings.
+selftest = []
 
 [dependencies]
 ide-core = { path = "../ide-core" }

@@ -28,4 +28,4 @@ ide-agent = { workspace = true, features = ["testing"] }
 
 [features]
 # What the self-test reads of the panel and the diff tab and does with them.
-selftest = []
+selftest = ["ide-git/selftest"]

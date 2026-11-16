@@ -19,6 +19,8 @@ pub struct ChangedFile {
     pub path: PathBuf,
     /// What happened to it; an untracked file counts as added.
     pub change: Change,
+    /// The path it had before a rename or copy.
+    pub from: Option<PathBuf>,
 }
 
 impl Repository {
@@ -64,9 +66,59 @@ impl Repository {
         files.extend(self.untracked(&[])?.into_iter().map(|path| ChangedFile {
             path,
             change: Change::Added,
+            from: None,
         }));
         files.sort_by(|a, b| a.path.cmp(&b.path));
         Ok(files)
+    }
+
+    /// The files that differ between the commits `from` and `to`, each with what happened to it; a renamed or copied
+    /// file keeps the path it had (C54).
+    pub fn changes_between(&self, from: &str, to: &str) -> Result<Vec<ChangedFile>> {
+        let output = self.git().ok(self.call([
+            "diff",
+            "--name-status",
+            "-z",
+            "-M",
+            "--no-ext-diff",
+            "--ignore-submodules=none",
+            word(from)?,
+            word(to)?,
+            "--",
+        ]))?;
+        Ok(name_status(&output.stdout))
+    }
+
+    /// The whole diff from `from` to `to` as bytes, binary files included with full object names, the same for the
+    /// same two trees whatever the user's diff settings: two such diffs are equal byte for byte exactly when the
+    /// changes are, which a patch id does not tell, as it passes over whitespace (C56).
+    pub fn full_diff(&self, from: &str, to: &str) -> Result<Vec<u8>> {
+        let output = self.git().ok(self.call([
+            "-c",
+            "core.quotepath=true",
+            "-c",
+            "diff.suppressBlankEmpty=false",
+            "diff",
+            "--binary",
+            "--full-index",
+            "--no-color",
+            "--no-ext-diff",
+            "--no-textconv",
+            "--no-renames",
+            "--no-relative",
+            "--diff-algorithm=myers",
+            "--indent-heuristic",
+            "--unified=3",
+            "--src-prefix=a/",
+            "--dst-prefix=b/",
+            "--ignore-submodules=none",
+            "--submodule=short",
+            "-O/dev/null",
+            word(from)?,
+            word(to)?,
+            "--",
+        ]))?;
+        Ok(output.stdout)
     }
 
     /// The diffs of `paths` between `revision` and the working tree, staged or not, untracked files as new ones; of
@@ -153,13 +205,14 @@ pub(crate) fn name_status(output: &[u8]) -> Vec<ChangedFile> {
             Some(b'U') => Change::Unmerged,
             _ => Change::Modified,
         };
-        if matches!(change, Change::Renamed { .. } | Change::Copied { .. }) {
-            fields.next();
-        }
+        let from = matches!(change, Change::Renamed { .. } | Change::Copied { .. })
+            .then(|| fields.next().map(from_bytes))
+            .flatten();
         if let Some(path) = fields.next() {
             files.push(ChangedFile {
                 path: from_bytes(path),
                 change,
+                from,
             });
         }
     }
@@ -174,6 +227,8 @@ mod tests {
     fn name_status_reads_letters_scores_and_the_new_path_of_a_rename() {
         let files = name_status(b"M\0src/a.rs\0R087\0old.rs\0new.rs\0A\0n\xc3\xa4u.txt\0D\0gone\0");
         let read: Vec<_> = files.iter().map(|f| (f.path.display().to_string(), f.change)).collect();
+        assert_eq!(files[1].from, Some(PathBuf::from("old.rs")));
+        assert_eq!(files[0].from, None);
         assert_eq!(
             read,
             [

@@ -206,6 +206,7 @@ impl Repository {
         files.extend(self.untracked_of(stash)?.into_iter().map(|path| ChangedFile {
             path,
             change: Change::Added,
+            from: None,
         }));
         files.sort_by(|a, b| a.path.cmp(&b.path));
         Ok(files)

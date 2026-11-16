@@ -92,7 +92,16 @@ struct Inner {
     path: Option<String>,
     environment: Vec<(OsString, OsString)>,
     supervisor: Supervisor,
+    /// `-c` settings before every git command.
+    settings: Vec<&'static str>,
+    /// When every call of this git fails with `Error::TimedOut`, whatever its own limit.
+    deadline: Option<Instant>,
 }
+
+/// The settings of git for the orchestrator (E192): no hooks, since a builder could plant them or point
+/// `core.hooksPath` at its worktree; no fsmonitor, which runs a program the repository names; no credential helper.
+/// `/dev/null` is an empty folder nothing can be written into.
+const UNATTENDED: [&str; 3] = ["core.hooksPath=/dev/null", "core.fsmonitor=false", "credential.helper="];
 
 impl std::fmt::Debug for Git {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -117,8 +126,33 @@ impl Git {
                 path,
                 environment,
                 supervisor: supervisor.clone(),
+                settings: Vec::new(),
+                deadline: None,
             }),
         }
+    }
+
+    /// The same git for the orchestrator of work orders (E192): every command runs without the repository's hooks,
+    /// fsmonitor and credential helpers, with `environment` instead of the login shell's, such as
+    /// `ide_process::order_env::for_orders` gives, and fails with `Error::TimedOut` once `deadline` passed. The git the
+    /// user's own commits go through keeps its hooks.
+    pub fn unattended(&self, environment: Vec<(String, String)>, deadline: Instant) -> Git {
+        let path = tool::var(&environment, "PATH").map(str::to_string);
+        Git {
+            inner: Arc::new(Inner {
+                program: self.inner.program.clone(),
+                path,
+                environment: prepared(environment),
+                supervisor: self.inner.supervisor.clone(),
+                settings: UNATTENDED.to_vec(),
+                deadline: Some(deadline),
+            }),
+        }
+    }
+
+    /// Whether this git runs without hooks, from [`Git::unattended`].
+    pub fn is_unattended(&self) -> bool {
+        !self.inner.settings.is_empty()
     }
 
     /// The git program in use, if one was found.
@@ -149,13 +183,26 @@ impl Git {
     }
 
     /// Runs `call` to its end; the exit code is the caller's to judge.
-    pub(crate) fn run(&self, call: Call<'_>) -> Result<Output> {
+    pub(crate) fn run(&self, mut call: Call<'_>) -> Result<Output> {
         let program = self.inner.program.as_ref().ok_or(Error::GitMissing)?;
+        if !self.inner.settings.is_empty() {
+            let mut args: Vec<OsString> = self
+                .inner
+                .settings
+                .iter()
+                .flat_map(|setting| [OsString::from("-c"), OsString::from(setting)])
+                .collect();
+            args.append(&mut call.args);
+            call.args = args;
+        }
         self.run_program(program, call)
     }
 
     /// Runs another program the same way, such as gitleaks.
     pub(crate) fn run_program(&self, program: &Path, call: Call<'_>) -> Result<Output> {
+        if self.inner.deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+            return Err(Error::TimedOut);
+        }
         let mut command = Command::new(program);
         command
             .args(&call.args)
@@ -192,7 +239,10 @@ impl Git {
         let pipes = Pipes::new(spawned.stdin, call.input.take(), spawned.stdout, spawned.stderr);
         let (mut stdout, mut stderr) = (Limited::new(STDOUT_LIMIT), Errors::new(STDERR_LIMIT));
         let served = pipes.and_then(|mut pipes| {
-            let deadline = call.timeout.map(|t| Instant::now() + t);
+            let deadline = match (call.timeout.map(|t| Instant::now() + t), self.inner.deadline) {
+                (Some(own), Some(overall)) => Some(own.min(overall)),
+                (own, overall) => own.or(overall),
+            };
             let mut stopped = None;
             let mut ended: Option<(Ending, Instant)> = None;
             while pipes.open() {

@@ -37,6 +37,10 @@ pub trait Host {
     fn thread_works_in(&self, folder: &Path) -> bool;
     /// Opens a thread of the worktree's agent in `tree` in `window` (I1).
     fn open_thread(&self, window: WindowId, tree: &ThreadTree);
+    /// Shows the work order `order` in the Leitstand of `window` (F50); nothing until the app has a Leitstand.
+    fn show_order(&self, window: WindowId, order: &str) {
+        let _ = (window, order);
+    }
     /// The `claude` program on the login shell's PATH.
     fn claude_program(&self, env: &[(String, String)]) -> Option<PathBuf>;
     /// The own agent's endpoint `id` (E6).

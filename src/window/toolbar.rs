@@ -79,6 +79,7 @@ pub(crate) fn kind_name(kind: Kind) -> &'static str {
         Kind::Tool => t("Werkzeug"),
         Kind::Test => t("Test"),
         Kind::AgentCommand => t("Agent-Befehl"),
+        Kind::Gate => t("Prüfstation"),
     }
 }
 

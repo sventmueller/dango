@@ -1969,3 +1969,5 @@
 "Handy koppeln" = "Pair Phone";
 "Gib den Code {} in Codex auf dem Handy ein. Er gilt bis {}." = "Enter the code {} in Codex on your phone. It is valid until {}.";
 "Koppeln fehlgeschlagen" = "Pairing Failed";
+"Prüfstation" = "Gate";
+"Im Leitstand zeigen" = "Show in Control Room";

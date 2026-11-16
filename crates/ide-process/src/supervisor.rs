@@ -29,6 +29,8 @@ pub enum Kind {
     Tool,
     /// A command an agent runs through the app, such as the own agent's shell tool.
     AgentCommand,
+    /// A check a work order must pass, such as its `make check`, run by the orchestrator in the gate sandbox (E187).
+    Gate,
 }
 
 /// How the supervisor knows a process.
@@ -90,6 +92,8 @@ pub enum Event {
 #[expect(missing_docs, reason = "the names say it")]
 pub struct Spawned {
     pub id: ProcessId,
+    /// The system's process number, which is also the number of its process group.
+    pub pid: u32,
     pub stdin: Option<ChildStdin>,
     pub stdout: Option<ChildStdout>,
     pub stderr: Option<ChildStderr>,
@@ -265,6 +269,7 @@ impl Supervisor {
         }
         Ok(Spawned {
             id,
+            pid,
             stdin,
             stdout,
             stderr,

@@ -54,7 +54,51 @@ pub struct Commit {
     pub refs: Vec<String>,
 }
 
+/// The commit a branch points at, as far as a caller needs to check that an expected commit happened (C66): its
+/// parents, tree and message.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BranchHead {
+    /// The commit.
+    pub commit: CommitId,
+    /// Its parents, the first one first.
+    pub parents: Vec<CommitId>,
+    /// The name of its tree, which a proof is bound to.
+    pub tree: String,
+    /// Its whole message, trailers included.
+    pub message: String,
+}
+
 impl Repository {
+    /// The commit the local branch `name` points at with its parents, tree and message; `None` when there is no such
+    /// branch.
+    pub fn branch_head(&self, name: &str) -> Result<Option<BranchHead>> {
+        word(name)?;
+        let Some(commit) = self.resolve(&format!("refs/heads/{name}"))? else {
+            return Ok(None);
+        };
+        let output = self.git().ok(self.call(["cat-file", "commit", commit.as_str()]))?;
+        let text = String::from_utf8_lossy(&output.stdout);
+        let (header, message) = text.split_once("\n\n").unwrap_or((&text, ""));
+        let mut tree = None;
+        let mut parents = Vec::new();
+        for line in header.lines() {
+            if let Some(name) = line.strip_prefix("tree ") {
+                tree = Some(name.to_string());
+            } else if let Some(parent) = line.strip_prefix("parent ") {
+                parents.push(CommitId::from_git(parent));
+            }
+        }
+        let tree = tree.ok_or_else(|| Error::Unexpected {
+            what: format!("commit {commit} without a tree"),
+        })?;
+        Ok(Some(BranchHead {
+            commit,
+            parents,
+            tree,
+            message: message.to_string(),
+        }))
+    }
+
     /// The local branches, then the remote-tracking ones.
     pub fn branches(&self) -> Result<Vec<Branch>> {
         let format = "--format=%(refname)%00%(refname:short)%00%(objectname)%00%(HEAD)%00%(upstream:short)%00\

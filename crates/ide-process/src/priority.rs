@@ -57,7 +57,7 @@ pub(crate) const AGENT_COMMAND_NICE: i32 = 20;
 pub(crate) fn nice(kind: Kind) -> Option<i32> {
     match kind {
         Kind::LanguageServer | Kind::Tool => Some(5),
-        Kind::AgentCommand => Some(AGENT_COMMAND_NICE),
+        Kind::AgentCommand | Kind::Gate => Some(AGENT_COMMAND_NICE),
         Kind::Terminal | Kind::Agent | Kind::DevServer | Kind::Git | Kind::DebugAdapter | Kind::Test => None,
     }
 }
@@ -204,6 +204,11 @@ mod tests {
     fn language_servers_yield_a_little_and_agent_commands_most() {
         assert_eq!(nice(Kind::LanguageServer), Some(5));
         assert_eq!(nice(Kind::AgentCommand), Some(AGENT_COMMAND_NICE));
+        assert_eq!(
+            nice(Kind::Gate),
+            Some(AGENT_COMMAND_NICE),
+            "gates yield like agents' commands (F70)"
+        );
         assert_eq!(nice(Kind::Terminal), None);
         assert!(runs_commands("-zsh") && runs_commands("cargo") && !runs_commands("claude"));
     }

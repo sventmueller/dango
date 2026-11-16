@@ -107,6 +107,20 @@ impl Repository {
         self.git_dir != self.common_dir
     }
 
+    /// This repository for the orchestrator's commits, merges and worktree commands (E192): through
+    /// [`Git::unattended`], without hooks, with `environment` and failing once `deadline` passed.
+    pub fn unattended(&self, environment: Vec<(String, String)>, deadline: std::time::Instant) -> Repository {
+        Repository {
+            git: self.git.unattended(environment, deadline),
+            ..self.clone()
+        }
+    }
+
+    /// Whether this repository runs git without hooks, from [`Repository::unattended`].
+    pub fn is_unattended(&self) -> bool {
+        self.git.is_unattended()
+    }
+
     /// The git this repository runs.
     pub(crate) fn git(&self) -> &Git {
         &self.git

@@ -148,16 +148,8 @@ impl Workspace {
     /// The `sandbox-exec` profile of a command: writes only in the project, the allowed folders and the terminal
     /// devices, no network beyond local sockets; reading stays open.
     pub(crate) fn sandbox_profile(&self) -> String {
-        let quoted = |path: &Path| path.display().to_string().replace('\\', "\\\\").replace('"', "\\\"");
-        let folders: Vec<String> = std::iter::once(&self.root)
-            .chain(&self.allowed)
-            .map(|folder| format!("(subpath \"{}\")", quoted(folder)))
-            .collect();
-        format!(
-            "(version 1)\n(allow default)\n(deny network*)\n(allow network* (remote unix-socket))\n(deny file-write*)\n\
-             (allow file-write* {} (literal \"/dev/null\") (regex #\"^/dev/tty\") (regex #\"^/dev/fd/\"))\n",
-            folders.join(" ")
-        )
+        let folders: Vec<PathBuf> = std::iter::once(&self.root).chain(&self.allowed).cloned().collect();
+        ide_process::sandbox::Profile::writes_only(&folders).render()
     }
 }
 

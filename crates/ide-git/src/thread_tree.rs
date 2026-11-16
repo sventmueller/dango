@@ -1,4 +1,5 @@
-//! A worktree an AI thread works in (I1): what the app keeps about it and how it stands against its base.
+//! A worktree an AI thread or a work order works in (I1, F50): what the app keeps about it and how it stands against
+//! its base.
 
 use std::path::PathBuf;
 
@@ -22,6 +23,10 @@ pub struct ThreadTree {
     /// The agent its thread runs, by the id threads name it with; empty means Claude.
     #[serde(default)]
     pub agent: String,
+    /// The id of the work order that owns it (F50), whose orchestrator alone takes its work over or removes it;
+    /// `None` for an AI thread's worktree.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub order: Option<String>,
 }
 
 /// A thread's worktree as it is now.
@@ -55,6 +60,23 @@ mod tests {
         });
         let tree: ThreadTree = serde_json::from_value(stored.clone()).unwrap();
         assert_eq!(tree.base.as_str(), "3333333333333333333333333333333333333333");
+        assert_eq!(tree.order, None, "what was stored before orders belongs to a thread");
+        assert_eq!(serde_json::to_value(&tree).unwrap(), stored);
+    }
+
+    #[test]
+    fn an_order_tree_keeps_its_order() {
+        let stored = serde_json::json!({
+            "path": "/w/.worktrees/csv",
+            "branch": "order/csv",
+            "title": "CSV",
+            "base": "3333333333333333333333333333333333333333",
+            "base_branch": "main",
+            "agent": "codex",
+            "order": "o-17",
+        });
+        let tree: ThreadTree = serde_json::from_value(stored.clone()).unwrap();
+        assert_eq!(tree.order.as_deref(), Some("o-17"));
         assert_eq!(serde_json::to_value(&tree).unwrap(), stored);
     }
 }

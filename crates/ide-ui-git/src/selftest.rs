@@ -252,6 +252,7 @@ pub enum TreeAction {
     OpenThread,
     KeepBranch,
     Remove,
+    ShowOrder,
 }
 
 /// Runs `action` on the worktree at `tree`, as its menu item does.
@@ -262,6 +263,7 @@ pub fn tree_action(controller: &(impl AsWindow + ?Sized), tree: &Path, action: T
         TreeAction::OpenThread => sel!(ideGitOpenThread:),
         TreeAction::KeepBranch => sel!(ideGitKeepBranch:),
         TreeAction::Remove => sel!(ideGitRemoveTree:),
+        TreeAction::ShowOrder => sel!(ideGitShowOrder:),
     };
     if let Some(panel) = panel::of(controller) {
         panel.run_row_action(selector, vec![RowKey::Worktree(tree.to_path_buf())]);

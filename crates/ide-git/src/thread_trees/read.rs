@@ -9,9 +9,9 @@ use std::path::{Path, PathBuf};
 use std::sync::{LazyLock, Mutex};
 use std::time::SystemTime;
 
-use ide_git::{Branch, CommitId, Git, Repository, Worktree};
+use crate::{Branch, CommitId, Git, Repository, ThreadTree, TreeState, Worktree};
 
-use super::{ThreadTree, TreeState, forget, list};
+use super::{forget, list};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 #[cfg(feature = "selftest")]
@@ -47,7 +47,7 @@ fn cache() -> std::sync::MutexGuard<'static, Cache> {
 }
 
 /// Files in the worktree at `path` changed, so its next reading looks at them again.
-pub(super) fn mark(path: &Path) {
+pub fn mark(path: &Path) {
     *cache().marks.entry(path.to_path_buf()).or_default() += 1;
 }
 
@@ -58,8 +58,8 @@ pub(super) fn evict(path: &Path) {
     cache.marks.remove(path);
 }
 
-/// The thread worktrees of the project at `root` as they are now; those git no longer knows or whose folder is gone
-/// are forgotten. `branches` are the repository's branches as the same refresh read them.
+/// The thread and order worktrees of the project at `root` as they are now; those git no longer knows or whose folder
+/// is gone are forgotten. `branches` are the repository's branches as the same refresh read them.
 pub fn read(git: &Git, repo: &Repository, root: &Path, branches: &[Branch]) -> Vec<TreeState> {
     let trees = list(root);
     if trees.is_empty() {

@@ -19,9 +19,23 @@ flowchart TB
     loop -->|"Cancel or timeout: Supervisor::stop"| process
     supervisor["Supervisor::wait"] -->|"the end the reaper reported, kept until the call takes it"| loop
     loop -->|"Output parsed: FileDiff, Status, Commit, ..."| callers
+    orchestrator["the orchestrator of work orders"] -->|"Repository::unattended: -c core.hooksPath=/dev/null, its environment, a deadline"| repo
+    orchestrator -->|"thread_trees::order: create, merge_base, take_over into the base, remove with checkpoints"| trees["thread_trees: worktrees of threads and orders, JSON beside each"]
+    callers -->|"thread_trees: create, list, read, take_over, keep_branch, remove"| trees
+    trees --> repo
+    orchestrator -->|"ref_snapshot, full_diff, changes_between, branch_head"| repo
+    orchestrator -->|"Git::scan_text_frozen: --config and ignore file from the user's copy, --ignore-gitleaks-allow"| run
 ```
 
 `panel` holds what the app's Git panel decides without AppKit (E98): its rows and sections, the commit graph's
-lanes, and its words for git's errors; `ThreadTree` and `TreeState` describe the worktree of an AI thread (I1).
+lanes, and its words for git's errors; `ThreadTree` and `TreeState` describe the worktree of an AI thread (I1) or a
+work order (F50), and `thread_trees` makes, lists, reads, takes over and removes them (F49), so the orchestrator of
+work orders, which may not depend on a UI crate (E99), uses the same logic as the Git panel.
+
+For that orchestrator (phase 13) the crate also has git without the repository's hooks, with a given environment
+and a deadline (`Git::unattended`, E192); snapshots of every ref for the ref watch (`Repository::ref_snapshot`, E173);
+the secrets check with rules frozen from the user's working copy (`Git::scan_text_frozen`, C52); a byte-exact diff
+between two commits (`Repository::full_diff`, C56), the files changed between them (`changes_between`, C54) and a
+branch's head with parents, tree and message (`branch_head`, C66).
 
 The API is documented in [`src/lib.rs`](src/lib.rs) and its modules.
