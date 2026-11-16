@@ -181,10 +181,10 @@ pub(crate) const SCENARIOS: &[Scenario] = &[
     limited("tests-panel", tests_panel::run, Duration::from_secs(400)),
     plain("containers-panel", containers::run),
     plain("leitstand", leitstand::run),
-    plain("leitstand-attach", leitstand_attach::run),
-    limited("leitstand-order", leitstand_order::run, GIT),
-    limited("leitstand-queue", leitstand_queue::run, Duration::from_secs(900)),
-    limited("leitstand-metrics", leitstand_metrics::run, GIT),
+    plain("leitstand-attach", leitstand::attach::run),
+    limited("leitstand-order", leitstand::order::run, GIT),
+    limited("leitstand-queue", leitstand::queue::run, Duration::from_secs(900)),
+    limited("leitstand-metrics", leitstand::metrics::run, GIT),
     Scenario {
         offline: false,
         ..limited("companions", companions::run, Duration::from_secs(1200))

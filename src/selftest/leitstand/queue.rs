@@ -15,9 +15,9 @@ use ide_factory::{Condition, OrderId, Role, Station, WaitReason};
 use ide_git::CommitOptions;
 use ide_session::{End, Script, ScriptTurn, Step};
 
-use super::git::{append, fixture_git};
-use super::helpers::{self, wait_within};
-use super::{check, finish, give_up, give_up_saying};
+use super::super::git::{append, fixture_git};
+use super::super::helpers::{self, wait_within};
+use super::super::{check, finish, give_up, give_up_saying};
 use crate::leitstand::Command;
 use crate::util::main_soon;
 

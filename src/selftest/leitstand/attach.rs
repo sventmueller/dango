@@ -11,8 +11,8 @@ use ide_ui_agent::AgentTab;
 use objc2::rc::Retained;
 use splat_i18n::{t, tf};
 
-use super::helpers::{self, wait_until};
-use super::{check, finish, give_up, snapshot};
+use super::super::helpers::{self, wait_until};
+use super::super::{check, finish, give_up, snapshot};
 use crate::window::WindowController;
 
 const SCENARIO: &str = "leitstand-attach";

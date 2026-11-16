@@ -20,9 +20,9 @@ use ide_ui_factory::model::words;
 use objc2::rc::Retained;
 use splat_i18n::{t, tf};
 
-use super::git::{append, fixture_git};
-use super::helpers::{self, wait_for_window, wait_within};
-use super::{check, finish, give_up, give_up_saying, snapshot};
+use super::super::git::{append, fixture_git};
+use super::super::helpers::{self, wait_for_window, wait_within};
+use super::super::{check, finish, give_up, give_up_saying, snapshot};
 use crate::leitstand::Command;
 use crate::util::main_soon;
 use crate::window::WindowController;

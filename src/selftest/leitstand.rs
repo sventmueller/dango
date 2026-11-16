@@ -1,6 +1,12 @@
 //! The `leitstand` scenario (E175): a folder without orders shows the Leitstand panel's empty state under ⌘9, its
 //! symbol named only "Leitstand" since no order waits (E69); the Leitstand tab opens with every station of the strip
-//! at zero, the table's six columns and its empty note; window pictures of both and the accessibility audit.
+//! at zero, the table's six columns and its empty note; window pictures of both and the accessibility audit. Its
+//! children are the scenarios that run orders.
+
+pub(super) mod attach;
+pub(super) mod metrics;
+pub(super) mod order;
+pub(super) mod queue;
 
 use objc2::rc::Retained;
 
