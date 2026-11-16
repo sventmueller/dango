@@ -113,6 +113,62 @@ Jede Stufe endet wie die Phasen in plan.md:
 - HIG-Abnahme (E101)
 - jede neue Crate mit README und Mermaid-Diagramm (E100, `tests/crate_readmes.rs`)
 
+## Stand der Umsetzung
+
+Umgesetzt auf dem Branch `phase-13-leitstand`, mit grünem `make check`: der Orchestrator-Kern `ide-factory` (B38,
+B39, die Logik von B40, B41a, B41b, B44a, B45a/b, E175, E180, E183), die Git- und Prozess-Bausteine (B41a, B43, B45a)
+und der Sitzungstreiber `ide-session` mit den Auftragsverträgen (B37a, B43). Was dabei anders wurde als oben
+beschrieben, gilt so, wie es hier steht:
+
+- **Ort der Worktree-Logik:** `ide_git::thread_trees`, die Varianten für Aufträge in `thread_trees::order`.
+  - Die Übernahme eines Auftrags committet keine Reste mehr; sie verlangt den abgenommenen Commit und lehnt ab,
+    solange die Basis Commits hat, die dem Auftrag fehlen. Unversionierte Dateien zählen beim Urteil „sauber“ nicht,
+    weil git sie ohnehin nicht überschreibt.
+  - Zeilen von Auftrags-Worktrees im Git-Panel bieten auch „Thread öffnen“ nicht an: Es öffnete einen normalen Thread,
+    der unprotokolliert im Worktree des Auftrags schreiben könnte.
+  - Der Ort der Worktrees ist noch nicht wählbar (E188); sie liegen im Datenordner der App.
+- **Git ohne Hooks (E192):** `core.hooksPath=/dev/null` wie schon bei den Checkpoints, dazu `core.fsmonitor=false` und
+  ein leerer `credential.helper`.
+- **Netz (E173, E187):** `sandbox-exec` filtert nicht nach Domains. Gates und der eigene Agent haben das Netz ganz an oder
+  ganz aus; eine Liste von Domains lehnen Codex und der eigene Agent ab. Nur Claude setzt die Liste über seinen
+  Netz-Proxy durch. Lokales TCP ist in Gates aus, bis die Workflow-Datei es erlaubt.
+- **Ein Gate entkommt,** wenn es eine eigene Prozessgruppe oder Sitzung beginnt; das Ende der Gruppe erreicht es dann
+  nicht.
+- **Codex (E173, A21):** Das stabile Schema des App-Servers hat keine Lese-Wurzeln; ein Codex-Builder oder -Prüfer kann
+  außerhalb des Worktrees lesen. Abgeschaltet werden über `-c` Apps, Plugins, Browser, Computer Use, Bildgenerierung,
+  Subagenten, Websuche und MCP-Server; ob `mcp_servers={}` vorhandene Server wirklich entfernt, ist offen. Das Schema
+  der Antwort geht über `Session::send_with_schema` mit (A19).
+- **Claude (E173):** geprüft gegen die Einstellungen von Claude Code 2.1.325.
+  - Leser laufen in `dontAsk` ohne Schreibregeln, nicht in `plan`.
+  - Beide Lesesperren sind gesetzt (`permissions.blockReadsOutsideWorkingDirectories` und
+    `sandbox.filesystem.denyRead`), dazu `blockWritesOutsideWorkingDirectories`, `disableBypassPermissionsMode`,
+    `--strict-mcp-config` und `--no-chrome`.
+  - 27 Deny-Regeln für Git über den Worktree hinaus.
+  - `--json-schema` gibt es nur je Start im Print-Modus, nicht je Zug (A19).
+- **Begründete Ablehnungen** erreichen den Agenten nur bei Claude und in der Skript-Sitzung; die übrigen Wege lehnen ohne
+  Text ab.
+- **Ausnahme für Git im eigenen Worktree (E173, C47):** noch nicht umgesetzt. Der eigene Agent fragt weiter bei
+  zerstörerischem Git, und die Regel des Auftrags lehnt dann ab.
+- **Ende eines Zugs (E189):** Ein Ergebnis, das kommt, während Subagenten oder Nachrichten der Warteschlange noch laufen,
+  wartet auf sie.
+  - Endet der Prozess bei offenem Zug ohne Fehler oder Abbruch im Thread, ist das Ergebnis „Verbindung verloren“.
+  - Bei OpenCode entscheiden `time.busy` und `time.idle` der Sitzung, ob der Zug noch läuft (C62).
+- **Checkpoint:** Scheitert er in einem Auftrag, scheitert der Zug, ohne dass der Prompt hinausgeht.
+- **Commits nach einem Zug** tragen `Dango-Operation: <id>` als Trailer; daran erkennt der Wiederanlauf, ob der Commit
+  schon geschah (E167). Findet die Secrets-Prüfung etwas, wird nichts committet, und der Builder bekommt den Befund.
+- **Budgets (E168):** werden zwischen den Zügen geprüft. Das Budget eines Auftrags aus dem Sheet ersetzt die Vorgabe.
+  Die 70-%-Grenze gilt beim Beginn einer Station; Wiederholungen innerhalb einer Station hält nur ein erschöpftes
+  Kontingent auf.
+- **Urteile (E179):** Ein Urteil, das ein Kriterium doppelt behandelt, gilt wie ein unlesbares und geht an den Nutzer.
+- **Agenten-Konfiguration (E172):** `CLAUDE.md` und `AGENTS.md` zählen in jeder Tiefe, dazu `CLAUDE.local.md`.
+  Rust-Tests in Quelldateien zählen nicht als Teständerung, weil sie sich am Pfad nicht erkennen lassen.
+- **Spätes G1:** In Stufe 1 gilt G1 immer als übersprungen; ein Diff, der hoch gemessen wird, wartet vor der Prüfung.
+- **Noch nicht umgesetzt:**
+  - der Einwand des Builders gegen die Kriterien (E178);
+  - der Gleichstand im Routing über die Erstdurchlaufquote (Stufe 4, E180; die Kennzahl ist da);
+  - die Herkunft je Einstellung (E183);
+  - eine Migration der Workflow-Datei über Version 1 hinaus (der Haken ist da).
+
 ## Stufe 1 — Ein Auftrag
 
 ### B37a Sitzungstreiber ohne Tab (Sperre)
