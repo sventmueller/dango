@@ -21,3 +21,6 @@ CLAUDE.md
 
 # Plans and notes stay local; files already tracked there stay tracked, because xtask and CI read some of them.
 /docs/
+
+# Coverage profiles of test children started with a cleared environment, which land in their working folder.
+*.profraw
