@@ -290,6 +290,14 @@ impl ide_ui_factory::Host for Orders {
         }
     }
 
+    fn open_terminal(&self, window: WindowId, cwd: &Path) {
+        self.0.with(|cx| {
+            if let Some(controller) = cx.windows().get(window.get()) {
+                crate::terminal::open_tab(&controller, Some(cwd));
+            }
+        });
+    }
+
     fn spec_view(
         &self,
         _window: WindowId,

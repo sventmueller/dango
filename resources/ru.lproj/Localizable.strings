@@ -2036,6 +2036,8 @@
 "Abnehmen" = "Принять";
 "Diff öffnen" = "Открыть различия";
 "Sitzung öffnen" = "Открыть сеанс";
+"Bericht öffnen" = "Открыть отчёт";
+"Der Auftrag hat {} nicht geschrieben." = "Заказ не записал {}.";
 "Zurück an den Builder …" = "Вернуть исполнителю…";
 "Kriterien ändern …" = "Изменить критерии…";
 "Von Hand weiter" = "Продолжить вручную";

@@ -2036,6 +2036,8 @@
 "Abnehmen" = "Elfogadás";
 "Diff öffnen" = "Különbségek megnyitása";
 "Sitzung öffnen" = "Munkamenet megnyitása";
+"Bericht öffnen" = "Jelentés megnyitása";
+"Der Auftrag hat {} nicht geschrieben." = "A munkarendelés nem írta meg ezt: {}.";
 "Zurück an den Builder …" = "Vissza az építőnek…";
 "Kriterien ändern …" = "Kritériumok módosítása…";
 "Von Hand weiter" = "Folytatás kézzel";

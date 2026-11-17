@@ -2036,6 +2036,8 @@
 "Abnehmen" = "Accepta";
 "Diff öffnen" = "Obre el diff";
 "Sitzung öffnen" = "Obre la sessió";
+"Bericht öffnen" = "Obre l'informe";
+"Der Auftrag hat {} nicht geschrieben." = "L’ordre de treball no ha escrit {}.";
 "Zurück an den Builder …" = "Retorna al constructor…";
 "Kriterien ändern …" = "Canvia els criteris…";
 "Von Hand weiter" = "Continua a mà";

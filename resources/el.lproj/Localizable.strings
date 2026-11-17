@@ -2036,6 +2036,8 @@
 "Abnehmen" = "Αποδοχή";
 "Diff öffnen" = "Άνοιγμα διαφορών";
 "Sitzung öffnen" = "Άνοιγμα συνεδρίας";
+"Bericht öffnen" = "Άνοιγμα αναφοράς";
+"Der Auftrag hat {} nicht geschrieben." = "Το δελτίο εργασίας δεν έγραψε το {}.";
 "Zurück an den Builder …" = "Επιστροφή στον υλοποιητή…";
 "Kriterien ändern …" = "Αλλαγή κριτηρίων…";
 "Von Hand weiter" = "Χειροκίνητη συνέχεια";

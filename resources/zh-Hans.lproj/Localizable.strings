@@ -2036,6 +2036,8 @@
 "Abnehmen" = "验收";
 "Diff öffnen" = "打开差异";
 "Sitzung öffnen" = "打开会话";
+"Bericht öffnen" = "打开报告";
+"Der Auftrag hat {} nicht geschrieben." = "工单没有写入 {}。";
 "Zurück an den Builder …" = "退回给构建者…";
 "Kriterien ändern …" = "更改标准…";
 "Von Hand weiter" = "手动继续";

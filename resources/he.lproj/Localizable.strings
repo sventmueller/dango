@@ -2036,6 +2036,8 @@
 "Abnehmen" = "קבלה";
 "Diff öffnen" = "פתיחת ההבדלים";
 "Sitzung öffnen" = "פתיחת הסשן";
+"Bericht öffnen" = "פתיחת הדוח";
+"Der Auftrag hat {} nicht geschrieben." = "הזמנת העבודה לא כתבה את {}.";
 "Zurück an den Builder …" = "החזרה לבונה…";
 "Kriterien ändern …" = "שינוי הקריטריונים…";
 "Von Hand weiter" = "המשך ידני";

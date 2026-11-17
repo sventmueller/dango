@@ -9,7 +9,7 @@ use std::rc::Weak;
 use ide_factory::{HunkId, InputKind, OrderId, Refusal};
 use ide_ui_common::alert::{Alert, Role, first};
 use ide_ui_common::util::ns;
-use ide_ui_common::window::Window;
+use ide_ui_common::window::{Files, Window};
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{NSAccessibility, NSScrollView, NSTextField, NSTextView, NSWindow};
@@ -80,6 +80,12 @@ pub(crate) fn run(target: &Target, detail: &Detail, command: Command, rejected: 
             send(target, InputKind::DiffOpened(id));
         }
         Command::OpenSession => host().open_session(target.window().id(), target.root(), &id),
+        Command::OpenReport => open_reports(target, detail),
+        Command::OpenTerminal => {
+            if let Some(tree) = detail.worktree() {
+                host().open_terminal(target.window().id(), Path::new(tree));
+            }
+        }
         Command::MergeRequest => {
             if let Some(branch) = detail.merge_branch() {
                 host().open_merge_request(target.window().id(), target.root(), branch);
@@ -132,6 +138,26 @@ fn tell(target: &Target, words: &str) {
         .informative(words)
         .button(t("OK"), Role::Plain)
         .sheet(&window, |_| {});
+}
+
+/// Opens each Markdown file of the path scope the order wrote in its worktree, or says that it wrote none.
+fn open_reports(target: &Target, detail: &Detail) {
+    let Some(tree) = detail.worktree() else { return };
+    let written: Vec<PathBuf> = detail
+        .reports()
+        .iter()
+        .map(|report| Path::new(tree).join(report))
+        .filter(|path| path.is_file())
+        .collect();
+    if written.is_empty() {
+        tell(
+            target,
+            &tf("Der Auftrag hat {} nicht geschrieben.", &[&detail.reports().join(", ")]),
+        );
+    }
+    for path in written {
+        target.window().open_file(&path);
+    }
 }
 
 fn accept(target: &Target, detail: &Detail, rejected: &BTreeSet<HunkId>) {

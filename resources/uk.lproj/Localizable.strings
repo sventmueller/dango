@@ -2036,6 +2036,8 @@
 "Abnehmen" = "Прийняти";
 "Diff öffnen" = "Відкрити відмінності";
 "Sitzung öffnen" = "Відкрити сеанс";
+"Bericht öffnen" = "Відкрити звіт";
+"Der Auftrag hat {} nicht geschrieben." = "Замовлення не записало {}.";
 "Zurück an den Builder …" = "Повернути виконавцеві…";
 "Kriterien ändern …" = "Змінити критерії…";
 "Von Hand weiter" = "Продовжити вручну";

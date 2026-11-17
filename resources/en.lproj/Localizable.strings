@@ -2081,6 +2081,8 @@
 "Abnehmen" = "Accept";
 "Diff öffnen" = "Open Diff";
 "Sitzung öffnen" = "Open Session";
+"Bericht öffnen" = "Open Report";
+"Der Auftrag hat {} nicht geschrieben." = "The work order did not write {}.";
 "Zurück an den Builder …" = "Back to the Builder…";
 "Kriterien ändern …" = "Change Criteria…";
 "Von Hand weiter" = "Continue by Hand";

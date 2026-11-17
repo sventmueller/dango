@@ -107,6 +107,10 @@ pub enum Command {
     OpenDiff,
     /// Opens the session of the current role to read.
     OpenSession,
+    /// Opens the Markdown files the specification's path scope names, as the order wrote them, in the editor.
+    OpenReport,
+    /// Opens a terminal in the order's worktree.
+    OpenTerminal,
     /// Pushes the kept branch, opens a merge request and comments the order's issue, or goes on where that stopped
     /// (E177).
     Publish,
@@ -133,13 +137,15 @@ pub enum Command {
 
 impl Command {
     /// Every command, in the order the tab and the menus list them.
-    pub const ALL: [Command; 16] = [
+    pub const ALL: [Command; 18] = [
         Command::Approve,
         Command::Accept,
         Command::AcceptAsChange,
         Command::KeepBranch,
         Command::OpenDiff,
         Command::OpenSession,
+        Command::OpenReport,
+        Command::OpenTerminal,
         Command::Publish,
         Command::ShowChange,
         Command::MergeRequest,
@@ -164,6 +170,8 @@ impl Command {
             Command::MergeRequest => t("Merge Request anlegen"),
             Command::OpenDiff => t("Diff öffnen"),
             Command::OpenSession => t("Sitzung öffnen"),
+            Command::OpenReport => t("Bericht öffnen"),
+            Command::OpenTerminal => t("Im Terminal öffnen"),
             Command::BackToBuilder => t("Zurück an den Builder …"),
             Command::ChangeCriteria => t("Kriterien ändern …"),
             Command::ByHand => t("Von Hand weiter"),
@@ -270,6 +278,9 @@ pub struct Detail {
     /// The commands of publishing that fit where the order stands, whether the folder can publish or not.
     publish_fits: Vec<Command>,
     forge: ForgeAccess,
+    worktree: Option<String>,
+    /// The Markdown files of the path scope, relative to the worktree.
+    reports: Vec<String>,
 }
 
 /// [`Command`] as a set's key.
@@ -358,6 +369,8 @@ impl Detail {
                 .map(|c| c.url().to_string()),
             publish_fits: publish_fits(order, accept_block),
             forge: ForgeAccess::Unknown,
+            worktree: order.worktree().map(str::to_string),
+            reports: reports(&order.options().scope),
         }
     }
 
@@ -409,6 +422,16 @@ impl Detail {
     /// The specification while it waits for G1 (E178), which the tab shows with its comments.
     pub fn spec(&self) -> Option<&str> {
         self.spec.as_deref()
+    }
+
+    /// The order's worktree, while it has one.
+    pub fn worktree(&self) -> Option<&str> {
+        self.worktree.as_deref()
+    }
+
+    /// The Markdown files the specification's path scope names, relative to the worktree.
+    pub fn reports(&self) -> &[String] {
+        &self.reports
     }
 
     /// The order.
@@ -585,6 +608,8 @@ impl Detail {
             Command::Accept
             | Command::OpenDiff
             | Command::OpenSession
+            | Command::OpenReport
+            | Command::OpenTerminal
             | Command::ShowChange
             | Command::MergeRequest
             | Command::BackToBuilder
@@ -640,6 +665,11 @@ fn commands(order: &Order) -> (BTreeSet<CommandKey>, Option<AcceptBlock>) {
         ),
         (Command::OpenDiff, order.head().is_some()),
         (Command::OpenSession, order.current().is_some()),
+        (
+            Command::OpenReport,
+            order.worktree().is_some() && !reports(&order.options().scope).is_empty(),
+        ),
+        (Command::OpenTerminal, order.worktree().is_some()),
         (
             Command::BackToBuilder,
             open && order.reached() >= Station::Build && order.station() != Station::TakeOver,
@@ -715,12 +745,15 @@ fn primary(can: &dyn Fn(Command) -> bool, accept_block: Option<AcceptBlock>) -> 
     .find(|c| can(*c))
 }
 
-/// The commands beside the next step: G2 with a merge request, the diff and the session, and "Kriterien ändern …"
-/// while the builder objects to the criteria (E178).
+/// The commands beside the next step: G2 with a merge request, the diff and the session, "Kriterien ändern …" while
+/// the builder objects to the criteria (E178), and the report and a terminal in the worktree while G2 waits.
 fn companions(can: &dyn Fn(Command) -> bool, accept_block: Option<AcceptBlock>, objection: bool) -> Vec<Command> {
     let first = primary(can, accept_block);
+    let accepting = can(Command::Accept) || accept_block.is_some();
     [
         (Command::ChangeCriteria, objection),
+        (Command::OpenReport, accepting),
+        (Command::OpenTerminal, accepting),
         (Command::AcceptAsChange, true),
         (Command::OpenDiff, true),
         (Command::OpenSession, true),
@@ -729,6 +762,20 @@ fn companions(can: &dyn Fn(Command) -> bool, accept_block: Option<AcceptBlock>, 
     .filter(|(command, fits)| *fits && can(*command) && Some(*command) != first)
     .map(|(command, _)| command)
     .collect()
+}
+
+/// The Markdown files `scope` names one by one; a pattern or a path that leaves the worktree names none.
+fn reports(scope: &[String]) -> Vec<String> {
+    scope
+        .iter()
+        .filter(|path| {
+            let inside = std::path::Path::new(path.as_str())
+                .components()
+                .all(|c| matches!(c, std::path::Component::Normal(_) | std::path::Component::CurDir));
+            inside && !path.contains(['*', '?', '[', '{']) && path.to_ascii_lowercase().ends_with(".md")
+        })
+        .cloned()
+        .collect()
 }
 
 /// Whether "Weiter" lets the wait for `reason` pass, as the factory's `Continue` does.
@@ -901,78 +948,4 @@ fn rounds(order: &Order) -> Vec<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn every_command_comes_back_from_its_tag() {
-        for command in Command::ALL {
-            assert_eq!(Command::of_tag(command.tag()), Some(command));
-        }
-        assert_eq!(Command::of_tag(-1), None);
-    }
-
-    #[test]
-    fn the_next_step_is_the_command_that_moves_the_order_on() {
-        let only = |allowed: &'static [Command]| move |c: Command| allowed.contains(&c);
-        let running = only(&[
-            Command::OpenDiff,
-            Command::OpenSession,
-            Command::ChangeCriteria,
-            Command::Abort,
-        ]);
-        assert_eq!(primary(&running, None), None);
-        assert_eq!(
-            companions(&running, None, false),
-            [Command::OpenDiff, Command::OpenSession]
-        );
-        let acceptance = only(&[
-            Command::Accept,
-            Command::AcceptAsChange,
-            Command::KeepBranch,
-            Command::OpenDiff,
-            Command::Abort,
-        ]);
-        assert_eq!(primary(&acceptance, None), Some(Command::Accept));
-        assert_eq!(
-            companions(&acceptance, None, false),
-            [Command::AcceptAsChange, Command::OpenDiff]
-        );
-        let unread = only(&[Command::OpenDiff, Command::Abort]);
-        assert_eq!(
-            primary(&unread, Some(AcceptBlock::OpenDiffFirst)),
-            Some(Command::OpenDiff)
-        );
-        assert!(companions(&unread, Some(AcceptBlock::OpenDiffFirst), false).is_empty());
-        let objected = only(&[
-            Command::Continue,
-            Command::ChangeCriteria,
-            Command::OpenSession,
-            Command::Abort,
-        ]);
-        assert_eq!(primary(&objected, None), Some(Command::Continue));
-        assert_eq!(
-            companions(&objected, None, true),
-            [Command::ChangeCriteria, Command::OpenSession]
-        );
-        assert_eq!(companions(&objected, None, false), [Command::OpenSession]);
-    }
-
-    #[test]
-    fn a_station_the_order_went_back_from_is_not_passed() {
-        use Station::{Acceptance, Build, Intake, Review, Spec, TakeOver};
-        let back = [Intake, Build, Review, Build];
-        assert_eq!(passage(Intake, Build, &back, true), Passage::Passed);
-        assert_eq!(passage(Spec, Build, &back, true), Passage::Skipped);
-        assert_eq!(passage(Build, Build, &back, true), Passage::Current);
-        assert_eq!(passage(Review, Build, &back, true), Passage::Ahead);
-        let partial = [Intake, Spec, Build, Review, Acceptance, Review];
-        assert_eq!(passage(Spec, Review, &partial, false), Passage::Passed);
-        assert_eq!(passage(Build, Review, &partial, false), Passage::Passed);
-        assert_eq!(passage(Review, Review, &partial, false), Passage::Current);
-        assert_eq!(passage(Acceptance, Review, &partial, false), Passage::Ahead);
-        assert_eq!(passage(TakeOver, Review, &partial, false), Passage::Ahead);
-        let again = [Intake, Build, Review, Build, Review, Acceptance];
-        assert_eq!(passage(Review, Acceptance, &again, false), Passage::Passed);
-    }
-}
+mod tests;

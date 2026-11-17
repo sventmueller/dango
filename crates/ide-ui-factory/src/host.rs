@@ -90,6 +90,8 @@ pub trait Host {
     /// Opens the session of `order`'s current role in `window` as an AI tab that writes into it visibly (E184), or,
     /// where the AI tab does not follow the session's path yet, the order's worktree (E175).
     fn open_session(&self, window: WindowId, root: &Path, order: &OrderId);
+    /// Opens a terminal tab in `window` whose shell starts in `cwd`.
+    fn open_terminal(&self, window: WindowId, cwd: &Path);
     /// The specification of `order` as a document with inline comments for `window`, while it waits for G1 (E178,
     /// F63); `then` hears what the user does with it. `None` while there is none to show.
     fn spec_view(

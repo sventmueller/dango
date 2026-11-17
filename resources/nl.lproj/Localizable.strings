@@ -2036,6 +2036,8 @@
 "Abnehmen" = "Accepteer";
 "Diff öffnen" = "Open diff";
 "Sitzung öffnen" = "Open sessie";
+"Bericht öffnen" = "Rapport openen";
+"Der Auftrag hat {} nicht geschrieben." = "De werkorder heeft {} niet geschreven.";
 "Zurück an den Builder …" = "Terug naar de builder…";
 "Kriterien ändern …" = "Wijzig criteria…";
 "Von Hand weiter" = "Ga handmatig verder";

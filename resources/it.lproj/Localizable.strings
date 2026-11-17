@@ -2036,6 +2036,8 @@
 "Abnehmen" = "Accetta";
 "Diff öffnen" = "Apri diff";
 "Sitzung öffnen" = "Apri sessione";
+"Bericht öffnen" = "Apri report";
+"Der Auftrag hat {} nicht geschrieben." = "L’ordine di lavoro non ha scritto {}.";
 "Zurück an den Builder …" = "Restituisci al builder…";
 "Kriterien ändern …" = "Modifica criteri…";
 "Von Hand weiter" = "Continua a mano";

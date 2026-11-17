@@ -2036,6 +2036,8 @@
 "Abnehmen" = "Kabul Et";
 "Diff öffnen" = "Farkı Aç";
 "Sitzung öffnen" = "Oturumu Aç";
+"Bericht öffnen" = "Raporu Aç";
+"Der Auftrag hat {} nicht geschrieben." = "İş emri {} dosyasını yazmadı.";
 "Zurück an den Builder …" = "Builder’a Geri Gönder…";
 "Kriterien ändern …" = "Ölçütleri Değiştir…";
 "Von Hand weiter" = "Elle Devam Et";

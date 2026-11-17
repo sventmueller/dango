@@ -2036,6 +2036,8 @@
 "Abnehmen" = "Prijať";
 "Diff öffnen" = "Otvoriť rozdiely";
 "Sitzung öffnen" = "Otvoriť reláciu";
+"Bericht öffnen" = "Otvoriť správu";
+"Der Auftrag hat {} nicht geschrieben." = "Zákazka nezapísala {}.";
 "Zurück an den Builder …" = "Vrátiť staviteľovi…";
 "Kriterien ändern …" = "Zmeniť kritériá…";
 "Von Hand weiter" = "Pokračovať ručne";

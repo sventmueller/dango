@@ -2036,6 +2036,8 @@
 "Abnehmen" = "Ota vastaan";
 "Diff öffnen" = "Avaa erot";
 "Sitzung öffnen" = "Avaa istunto";
+"Bericht öffnen" = "Avaa raportti";
+"Der Auftrag hat {} nicht geschrieben." = "Työtilaus ei kirjoittanut tiedostoa {}.";
 "Zurück an den Builder …" = "Takaisin rakentajalle…";
 "Kriterien ändern …" = "Muuta kriteerejä…";
 "Von Hand weiter" = "Jatka käsin";

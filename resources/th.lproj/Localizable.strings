@@ -2036,6 +2036,8 @@
 "Abnehmen" = "ตรวจรับ";
 "Diff öffnen" = "เปิดความแตกต่าง";
 "Sitzung öffnen" = "เปิดเซสชัน";
+"Bericht öffnen" = "เปิดรายงาน";
+"Der Auftrag hat {} nicht geschrieben." = "ใบสั่งงานไม่ได้เขียน {}";
 "Zurück an den Builder …" = "ส่งกลับไปให้ผู้สร้าง…";
 "Kriterien ändern …" = "เปลี่ยนเกณฑ์…";
 "Von Hand weiter" = "ทำต่อด้วยตนเอง";

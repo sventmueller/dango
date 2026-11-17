@@ -2036,6 +2036,8 @@
 "Abnehmen" = "Terima";
 "Diff öffnen" = "Buka Diff";
 "Sitzung öffnen" = "Buka Sesi";
+"Bericht öffnen" = "Buka Laporan";
+"Der Auftrag hat {} nicht geschrieben." = "Pesanan kerja tidak menulis {}.";
 "Zurück an den Builder …" = "Kembali kepada Pembina…";
 "Kriterien ändern …" = "Ubah Kriteria…";
 "Von Hand weiter" = "Teruskan Secara Manual";

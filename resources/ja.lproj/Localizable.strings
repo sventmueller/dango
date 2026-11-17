@@ -2036,6 +2036,8 @@
 "Abnehmen" = "検収";
 "Diff öffnen" = "差分を開く";
 "Sitzung öffnen" = "セッションを開く";
+"Bericht öffnen" = "レポートを開く";
+"Der Auftrag hat {} nicht geschrieben." = "作業指示は {} を書き込みませんでした。";
 "Zurück an den Builder …" = "ビルダーに差し戻す…";
 "Kriterien ändern …" = "基準を変更…";
 "Von Hand weiter" = "手動で続行";

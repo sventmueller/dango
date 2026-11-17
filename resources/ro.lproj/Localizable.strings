@@ -2036,6 +2036,8 @@
 "Abnehmen" = "Acceptați";
 "Diff öffnen" = "Deschideți diferențele";
 "Sitzung öffnen" = "Deschideți sesiunea";
+"Bericht öffnen" = "Deschide raportul";
+"Der Auftrag hat {} nicht geschrieben." = "Ordinul de lucru nu a scris {}.";
 "Zurück an den Builder …" = "Înapoi la constructor…";
 "Kriterien ändern …" = "Modificați criteriile…";
 "Von Hand weiter" = "Continuați manual";

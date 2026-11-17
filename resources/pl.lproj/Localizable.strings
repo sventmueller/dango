@@ -2036,6 +2036,8 @@
 "Abnehmen" = "Akceptuj";
 "Diff öffnen" = "Otwórz różnice";
 "Sitzung öffnen" = "Otwórz sesję";
+"Bericht öffnen" = "Otwórz raport";
+"Der Auftrag hat {} nicht geschrieben." = "Zlecenie nie zapisało {}.";
 "Zurück an den Builder …" = "Odeślij do wykonawcy…";
 "Kriterien ändern …" = "Zmień kryteria…";
 "Von Hand weiter" = "Kontynuuj ręcznie";

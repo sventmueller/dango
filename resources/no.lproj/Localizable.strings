@@ -2036,6 +2036,8 @@
 "Abnehmen" = "Aksepter";
 "Diff öffnen" = "Åpne diff";
 "Sitzung öffnen" = "Åpne økt";
+"Bericht öffnen" = "Åpne rapport";
+"Der Auftrag hat {} nicht geschrieben." = "Arbeidsordren skrev ikke {}.";
 "Zurück an den Builder …" = "Tilbake til byggeren…";
 "Kriterien ändern …" = "Endre kriterier…";
 "Von Hand weiter" = "Fortsett manuelt";

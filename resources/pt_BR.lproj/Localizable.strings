@@ -2036,6 +2036,8 @@
 "Abnehmen" = "Aceitar";
 "Diff öffnen" = "Abrir Diff";
 "Sitzung öffnen" = "Abrir Sessão";
+"Bericht öffnen" = "Abrir relatório";
+"Der Auftrag hat {} nicht geschrieben." = "A ordem de serviço não gravou {}.";
 "Zurück an den Builder …" = "Devolver ao Construtor…";
 "Kriterien ändern …" = "Alterar Critérios…";
 "Von Hand weiter" = "Continuar Manualmente";

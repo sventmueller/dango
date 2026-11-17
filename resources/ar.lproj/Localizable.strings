@@ -2036,6 +2036,8 @@
 "Abnehmen" = "قبول";
 "Diff öffnen" = "فتح الفروقات";
 "Sitzung öffnen" = "فتح الجلسة";
+"Bericht öffnen" = "فتح التقرير";
+"Der Auftrag hat {} nicht geschrieben." = "لم يكتب أمر العمل {}.";
 "Zurück an den Builder …" = "إعادة إلى المنفّذ…";
 "Kriterien ändern …" = "تغيير المعايير…";
 "Von Hand weiter" = "متابعة يدويًا";

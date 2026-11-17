@@ -2036,6 +2036,8 @@
 "Abnehmen" = "Prihvati";
 "Diff öffnen" = "Otvori razlike";
 "Sitzung öffnen" = "Otvori sesiju";
+"Bericht öffnen" = "Otvori izvješće";
+"Der Auftrag hat {} nicht geschrieben." = "Radni nalog nije zapisao {}.";
 "Zurück an den Builder …" = "Vrati izvođaču…";
 "Kriterien ändern …" = "Promijeni kriterije…";
 "Von Hand weiter" = "Nastavi ručno";

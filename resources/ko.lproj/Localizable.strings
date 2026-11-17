@@ -2036,6 +2036,8 @@
 "Abnehmen" = "검수 완료";
 "Diff öffnen" = "차이점 열기";
 "Sitzung öffnen" = "세션 열기";
+"Bericht öffnen" = "보고서 열기";
+"Der Auftrag hat {} nicht geschrieben." = "작업 주문이 {}을(를) 작성하지 않았습니다.";
 "Zurück an den Builder …" = "빌더에게 돌려보내기…";
 "Kriterien ändern …" = "기준 변경…";
 "Von Hand weiter" = "수동으로 계속";

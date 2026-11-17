@@ -2036,6 +2036,8 @@
 "Abnehmen" = "Nghiệm thu";
 "Diff öffnen" = "Mở khác biệt";
 "Sitzung öffnen" = "Mở phiên";
+"Bericht öffnen" = "Mở báo cáo";
+"Der Auftrag hat {} nicht geschrieben." = "Phiếu công việc chưa ghi {}.";
 "Zurück an den Builder …" = "Gửi lại cho người xây dựng…";
 "Kriterien ändern …" = "Thay đổi tiêu chí…";
 "Von Hand weiter" = "Tiếp tục thủ công";
