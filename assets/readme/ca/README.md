@@ -1,4 +1,4 @@
-<p><img src="../../readme-icon.png" alt="Icona del Dango" width="168" height="168"></p>
+<p><img src="../../readme-icon.png" alt="Icona del Dango" width="147" height="147"></p>
 
 # Dango
 
@@ -6,7 +6,9 @@
 
 El Dango reuneix el codi, els agents que el canvien i tot el que els envolta en una finestra per carpeta: un editor amb servidors de llenguatge i prediccions mentre escrius, terminals, un navegador, Git, CI, un depurador i fils d’IA amb Claude, Codex, Antigravity, OpenCode o un agent integrat a l’app. Cada agent treballa a la mateixa línia de temps, pregunta abans de canviar fitxers o executar ordres i deixa un punt de control abans de cada prompt, perquè puguis revisar i retrocedir el que ha fet, missatge a missatge. Res del que configura una carpeta s’executa abans que hi confiïs, i el text de fora arriba a un agent marcat com a no fiable. Dicta a l’editor i al camp del missatge; el reconeixement de veu es pot quedar al teu Mac. El Dango està escrit en Rust sobre controls reals d’AppKit, sense Electron, parla 35 idiomes i no té telemetria.
 
-**Encara no publicat.** La primera versió serà una imatge de disc signada amb un Developer ID i notaritzada per Apple, per a macOS 14 o posterior en Apple Silicon i Intel. Fins aleshores, [compila el Dango des del codi font](#compilar-des-del-codi-font).
+[![Descarrega Dango.dmg](https://img.shields.io/badge/Descarrega_Dango-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Descarrega Dango.dmg](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: signat i notaritzat per Apple, per a macOS 14 o posterior en Apple Silicon i Intel. L’enllaç estarà disponible amb la primera publicació.
 
 **Has trobat un error?** [Obre un issue](https://github.com/sventmueller/dango/issues/new) i indica amb quin agent i en quin tipus de projecte s’ha produït.
 
@@ -357,13 +359,14 @@ Necessites:
 | Ordre | Què fa |
 |---|---|
 | `make run` | compila l’app de depuració (`target/debug/Dango Debug.app`) i l’obre |
-| `make build` | compila l’app de versió (`target/release/Dango.app`), signada amb un certificat local que la primera compilació crea al clauer d’inici de sessió; augmenta el número de compilació a `VERSION` |
+| `make build` | compila l’app de versió (`target/release/Dango.app`), signada amb un certificat local que la primera compilació crea al clauer d’inici de sessió; deixa `VERSION` sense canvis |
 | `make lint` | format i clippy; els avisos el fan fallar |
 | `make check` | `lint` i després totes les proves; no necessita clauer, finestra ni xarxa |
 | `make test` | `check` i després l’autoprova `probe` i l’auditoria d’accessibilitat, d’esquerra a dreta i de dreta a esquerra, a l’app real |
 | `make perf` | els pressupostos de temps, en una compilació de versió; només té sentit en un Mac que altrament estigui inactiu |
 | `make release` | un assaig de la publicació a `target/release-dry-run/`, signat amb el certificat local; no envia res enlloc |
-| `make release-notarized` | `check` i després la publicació mateixa a `dist/`: signatura amb Developer ID, notarització, el canal d’actualitzacions signat amb la clau pròpia de l’app; augmenta el número de compilació |
+| `make release-notarized` | `check` i després la publicació mateixa a `dist/`: signatura amb Developer ID, notarització, el canal d’actualitzacions signat amb la clau pròpia de l’app; deixa `VERSION` sense canvis |
+| `make deploy` | en un `main` net i amb segell verd de CI: notaritza la versió següent, actualitza i commet `VERSION`, puja els fitxers de publicació i envia el codi, el segell de CI i l’etiqueta de versió; GitHub publica la versió automàticament |
 
 Depuració i versió són apps separades amb la seva pròpia configuració i dades. La compilació, les proves, les autoproves, la publicació i les regles que segueix el codi es descriuen a [docs/development.md](../../../docs/development.md), i les decisions que hi ha al darrere, a [docs/plan.md](../../../docs/plan.md). Les notes de la versió són [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), traduïdes al costat de cada README a `assets/readme/<language>/`.
 

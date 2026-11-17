@@ -157,6 +157,13 @@ pub(crate) fn access(root: &Path) -> ide_ui_factory::model::detail::ForgeAccess 
     }
 }
 
+/// The branch the remote of `root`'s service points its HEAD at, where a merge request goes by default.
+pub(crate) fn default_branch(root: &Path) -> Option<String> {
+    let (repo, _) = head(root).ok()?;
+    let (name, _) = remote(&repo)?;
+    repo.default_branch(&name).ok().flatten()
+}
+
 /// The runs of a commit on the forge that answered.
 struct RunsRead {
     forge: Forge,

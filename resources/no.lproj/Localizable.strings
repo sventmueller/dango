@@ -2375,3 +2375,4 @@
 "Gelockert" = "Lempet";
 "Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Kontrollpunkter kjører kode som agenten har skrevet. «Lempet» tillater i tillegg lokale porter og terminaler, «Av» starter kontrollpunkter med dine rettigheter. Et prosjekt kan angi en annen verdi i .dango/factory.toml.";
 "„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "«Lempet» tillater lokale porter og terminaler, «Av» starter kontrollpunkter med dine rettigheter. Lemper prosjektet sandkassen, bekrefter du det ved neste arbeidsordre med «Fortsett».";
+"Lizenz: MIT oder Apache 2.0" = "Lisens: MIT eller Apache 2.0";

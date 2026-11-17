@@ -1,4 +1,4 @@
-<p><img src="../../readme-icon.png" alt="Ikon Dango" width="168" height="168"></p>
+<p><img src="../../readme-icon.png" alt="Ikon Dango" width="147" height="147"></p>
 
 # Dango
 
@@ -6,7 +6,9 @@
 
 Dango menyatukan kode, agen yang mengubahnya, dan semua hal di sekitarnya dalam satu jendela per folder: editor dengan server bahasa dan prediksi saat mengetik, terminal, browser, Git, CI, debugger, dan utas AI dengan Claude, Codex, Antigravity, OpenCode, atau agen yang dibangun ke dalam app. Setiap agen bekerja di lini masa yang sama, bertanya sebelum mengubah file atau menjalankan perintah, dan meninggalkan checkpoint sebelum setiap prompt, sehingga Anda dapat meninjau dan membatalkan apa yang dilakukannya, pesan demi pesan. Tidak ada yang dikonfigurasi oleh sebuah folder yang berjalan sebelum Anda memercayainya, dan teks dari luar sampai ke agen dengan tanda tidak tepercaya. Diktekan ke editor dan kolom pesan; pengenalan suara bisa tetap di Mac Anda. Dango ditulis dalam Rust di atas kontrol AppKit asli, tanpa Electron, berbicara dalam 35 bahasa, dan tidak memiliki telemetri.
 
-**Belum dirilis.** Rilis pertama akan berupa image disk yang ditandatangani dengan Developer ID dan dinotarisasi oleh Apple, untuk macOS 14 atau lebih baru di Apple Silicon dan Intel. Hingga saat itu, [bangun Dango dari kode sumber](#membangun-dari-kode-sumber).
+[![Unduh Dango.dmg](https://img.shields.io/badge/Unduh_Dango-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Unduh Dango.dmg](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: ditandatangani dan dinotarisasi oleh Apple, untuk macOS 14 atau lebih baru di Apple Silicon dan Intel. Tautan tersedia mulai rilis pertama.
 
 **Menemukan bug?** [Buka issue](https://github.com/sventmueller/dango/issues/new) dan sebutkan dengan agen apa dan di jenis proyek apa bug itu terjadi.
 
@@ -357,13 +359,14 @@ Anda memerlukan:
 | Perintah | Yang dilakukan |
 |---|---|
 | `make run` | membangun app debug (`target/debug/Dango Debug.app`) dan membukanya |
-| `make build` | membangun app rilis (`target/release/Dango.app`), ditandatangani dengan sertifikat lokal yang dibuat build pertama di rantai kunci login; menaikkan nomor build di `VERSION` |
+| `make build` | membangun app rilis (`target/release/Dango.app`), ditandatangani dengan sertifikat lokal yang dibuat build pertama di rantai kunci login; membiarkan `VERSION` tetap sama |
 | `make lint` | pemformatan dan clippy; peringatan membuatnya gagal |
 | `make check` | `lint`, lalu semua tes; tidak memerlukan rantai kunci, jendela, atau jaringan |
 | `make test` | `check`, lalu swauji `probe` dan audit aksesibilitas, kiri ke kanan dan kanan ke kiri, di app sungguhan |
 | `make perf` | anggaran waktu, dalam build rilis; hanya bermakna di Mac yang sedang tidak sibuk |
 | `make release` | uji coba rilis ke `target/release-dry-run/`, ditandatangani dengan sertifikat lokal; tidak mengirim apa pun ke mana pun |
-| `make release-notarized` | `check`, lalu rilis itu sendiri ke `dist/`: tanda tangan Developer ID, notarisasi, feed pembaruan yang ditandatangani dengan kunci milik app sendiri; menaikkan nomor build |
+| `make release-notarized` | `check`, lalu rilis itu sendiri ke `dist/`: tanda tangan Developer ID, notarisasi, feed pembaruan yang ditandatangani dengan kunci milik app sendiri; membiarkan `VERSION` tetap sama |
+| `make deploy` | pada `main` yang bersih dengan segel CI hijau: menotarisasi versi berikutnya, memperbarui dan melakukan commit `VERSION`, mengunggah berkas rilis dan melakukan push kode, segel CI serta tag versi; GitHub menerbitkan rilis secara otomatis |
 
 Debug dan rilis adalah app terpisah dengan pengaturan dan data masing-masing. Pembangunan, pengujian, swauji, rilis, dan aturan yang diikuti kode dijelaskan di [docs/development.md](../../../docs/development.md), keputusan di baliknya di [docs/plan.md](../../../docs/plan.md). Catatan rilis adalah [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), diterjemahkan di samping setiap README di `assets/readme/<language>/`.
 

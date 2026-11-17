@@ -2375,3 +2375,4 @@
 "Gelockert" = "緩和";
 "Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "ゲートはエージェントが書いたコードを実行します。“緩和”ではさらにローカルポートとターミナルも許可し、“オフ”ではゲートをあなたの権限で起動します。プロジェクトは.dango/factory.tomlで別の値を設定できます。";
 "„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“緩和”ではローカルポートとターミナルを許可し、“オフ”ではゲートをあなたの権限で起動します。プロジェクトがサンドボックスを緩和した場合は、次の作業指示で“続ける”を選んで確認します。";
+"Lizenz: MIT oder Apache 2.0" = "ライセンス: MIT または Apache 2.0";

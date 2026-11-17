@@ -5,7 +5,7 @@
 //! timestamp, leaves notarization, stapling and the EdDSA signature out, writes into `target/release-dry-run/` and
 //! leaves VERSION alone; nothing goes to Apple or anywhere else. `--notarize` signs with the Developer ID, has Apple
 //! notarize the app and the image, staples both, signs the image for Sparkle with the keychain's key and writes the
-//! release into `dist/`, then raises the build number. Uploading the files and pushing the Cask stay with the owner.
+//! release into `dist/`. Only deploy changes VERSION and uploads the release; adding the Cask to a tap stays manual.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -44,9 +44,13 @@ const DRAFT: &str = "<!-- DRAFT";
 
 /// Builds the release and returns the folder that holds the disk image, its notes, the feed and the Cask.
 pub(crate) fn release(options: Options) -> Result<PathBuf, String> {
+    release_version(options, &version()?)
+}
+
+/// Builds a particular version; deploy chooses the next one without changing VERSION before notarization succeeds.
+pub(crate) fn release_version(options: Options, version: &str) -> Result<PathBuf, String> {
     let sh: &mut dyn Shell = &mut System;
     let dry_run = !options.notarize;
-    let version = version()?;
     let releases = updates::releases(dry_run)?;
     let homepage = cask::homepage(dry_run)?;
     let out = if dry_run {
@@ -71,7 +75,7 @@ pub(crate) fn release(options: Options) -> Result<PathBuf, String> {
     }
     check_translations(sh)?;
     let feed = updates::feed_url(releases);
-    let app = assemble(Build::Distribution, &version, Some(&updates::Feed { url: &feed, key }))?;
+    let app = assemble(Build::Distribution, version, Some(&updates::Feed { url: &feed, key }))?;
     println!("signing {version} with {name}");
     let sparkle = updates::sparkle(sh)?;
     let (image, signature) = package(
@@ -90,7 +94,7 @@ pub(crate) fn release(options: Options) -> Result<PathBuf, String> {
         &out,
         dry_run,
         &Published {
-            version: &version,
+            version,
             image: &image,
             signature: signature.trim(),
             releases,
@@ -98,9 +102,6 @@ pub(crate) fn release(options: Options) -> Result<PathBuf, String> {
             notes: &notes,
         },
     )?;
-    if !dry_run {
-        next_build(&version)?;
-    }
     Ok(out)
 }
 

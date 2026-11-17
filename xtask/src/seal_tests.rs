@@ -6,7 +6,7 @@ use super::*;
 use crate::shell::fake::scratch;
 
 /// A repository with one commit of `a.txt`, `VERSION` and a `.gitignore` for `ignored.txt`, and a bare origin.
-fn repository(name: &str) -> (PathBuf, Git) {
+pub(crate) fn repository(name: &str) -> (PathBuf, Git) {
     let dir = scratch(name);
     let home = dir.join("home");
     std::fs::create_dir_all(&home).unwrap();
@@ -235,7 +235,7 @@ fn explain_says_what_separates_heads_content_from_the_nearest_green_seal() {
 fn deploy_pushes_main_with_its_green_seal_and_refuses_everything_else() {
     let (dir, git) = repository("seal-deploy");
     let head = fp(&git, Content::Head);
-    let refused = |git: &Git| deploy_in(&mut System, git).unwrap_err();
+    let refused = |git: &Git| ready(&mut System, git).unwrap_err();
 
     git.output(&mut System, &["switch", "--quiet", "-c", "topic"]).unwrap();
     assert!(
@@ -265,11 +265,13 @@ fn deploy_pushes_main_with_its_green_seal_and_refuses_everything_else() {
     }
     .output(&mut System, &["update-ref", "-d", &Seal::Red.reference(&head)])
     .unwrap();
-    assert_eq!(deploy_in(&mut System, &git), Ok(()));
+    git.output(&mut System, &["tag", "v0.1.0"]).unwrap();
+    assert_eq!(push(&mut System, &git, "v0.1.0"), Ok(()));
     let pushed = origin_refs(&dir);
     let main = git.output(&mut System, &["rev-parse", BRANCH]).unwrap();
     assert!(pushed.contains(&format!("refs/heads/main {}", main.trim())), "{pushed}");
     assert!(pushed.contains(&Seal::Green.reference(&head)), "{pushed}");
+    assert!(pushed.contains("refs/tags/v0.1.0"), "{pushed}");
     assert_eq!(
         check_in(&mut System, &git, None),
         Ok(Verdict::Green),

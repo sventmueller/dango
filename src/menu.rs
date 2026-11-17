@@ -55,12 +55,7 @@ fn app_menu(app: &NSApplication, mtm: MainThreadMarker, keys: &Keys) -> Retained
     let name = ide_product::NAME;
     let (services_item, services) = submenu(mtm, t("Dienste"), vec![]);
     app.setServicesMenu(Some(&services));
-    let about = item(
-        mtm,
-        &tf("Über {}", &[name]),
-        Some(sel!(orderFrontStandardAboutPanel:)),
-        "",
-    );
+    let about = item(mtm, &tf("Über {}", &[name]), Some(sel!(ideShowAbout:)), "");
     let head = std::iter::once(about).chain(crate::updates::menu_item(mtm));
     submenu(
         mtm,

@@ -411,14 +411,18 @@ impl Leitstand {
                 None
             }
         };
-        let forge = self.forge_access(root);
+        let (forge, default_branch) = self.forge_access(root);
         let now = self.clock.now().wall;
         let folders = self.folders.borrow();
         let factory = &folders.get(root)?.factory;
         let o = factory.order(order)?;
         let held = ide_factory::panel::Hold::of(factory, o);
         let detail = ide_ui_factory::model::detail::Detail::new(o, now, sections.unwrap_or_default());
-        Some(detail.with_hold(held.as_ref()).with_forge(forge))
+        Some(
+            detail
+                .with_hold(held.as_ref())
+                .with_forge(forge, default_branch.as_deref()),
+        )
     }
 
     /// Reads the hunks of the order's diff since its base on the git lane, named as G2 rejects them, for the diff

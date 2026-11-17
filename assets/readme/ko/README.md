@@ -1,4 +1,4 @@
-<p><img src="../../readme-icon.png" alt="Dango 앱 아이콘" width="168" height="168"></p>
+<p><img src="../../readme-icon.png" alt="Dango 앱 아이콘" width="147" height="147"></p>
 
 # Dango
 
@@ -6,7 +6,9 @@
 
 Dango는 코드와 그 코드를 변경하는 에이전트, 그리고 그 주변의 모든 것을 폴더마다 하나의 윈도우에 모읍니다. 언어 서버와 편집 예측을 갖춘 편집기, 터미널, 브라우저, Git, CI, 디버거, 그리고 Claude, Codex, Antigravity, OpenCode 또는 앱에 내장된 에이전트와의 AI 스레드가 그 안에 있습니다. 모든 에이전트는 같은 타임라인에서 작업하고, 파일을 변경하거나 명령을 실행하기 전에 묻고, 각 프롬프트 전에 체크포인트를 남깁니다. 따라서 에이전트가 한 일을 메시지별로 검토하고 되감을 수 있습니다. 폴더가 구성한 것은 그 폴더를 신뢰하기 전에는 아무것도 실행되지 않으며, 외부에서 온 텍스트는 신뢰할 수 없음으로 표시되어 에이전트에 전달됩니다. 편집기와 메시지 필드에 받아쓰기할 수 있으며, 음성 인식을 Mac 안에서만 처리할 수도 있습니다. Dango는 Electron 없이 진짜 AppKit 컨트롤 위에서 Rust로 작성되었고, 35개 언어를 지원하며, 원격 측정이 없습니다.
 
-**아직 출시되지 않았습니다.** 첫 번째 릴리스는 Developer ID로 서명되고 Apple의 공증을 받은 디스크 이미지로, Apple Silicon 및 Intel 기반의 macOS 14 이상을 지원합니다. 그때까지는 [소스에서 Dango를 빌드](#소스에서-빌드하기)하십시오.
+[![Dango.dmg 다운로드](https://img.shields.io/badge/Dango_%EB%8B%A4%EC%9A%B4%EB%A1%9C%EB%93%9C-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Dango.dmg 다운로드](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: 서명되고 Apple의 공증을 받은 디스크 이미지로, Apple Silicon 및 Intel 기반의 macOS 14 이상을 지원합니다. 첫 번째 릴리스부터 링크를 사용할 수 있습니다.
 
 **버그를 발견했습니까?** [이슈를 열고](https://github.com/sventmueller/dango/issues/new) 어떤 에이전트와 어떤 종류의 프로젝트에서 발생했는지 알려 주십시오.
 
@@ -357,13 +359,14 @@ Claude는 자체 세션을 `~/.claude/projects` 아래에 보관합니다. Dango
 | 명령 | 하는 일 |
 |---|---|
 | `make run` | 디버그 앱(`target/debug/Dango Debug.app`)을 빌드하고 엽니다 |
-| `make build` | 릴리스 앱(`target/release/Dango.app`)을 빌드합니다. 첫 빌드가 로그인 키체인에 만드는 로컬 인증서로 서명하며, `VERSION`의 빌드 번호를 올립니다 |
+| `make build` | 릴리스 앱(`target/release/Dango.app`)을 빌드합니다. 첫 빌드가 로그인 키체인에 만드는 로컬 인증서로 서명하며, `VERSION`은 변경하지 않습니다 |
 | `make lint` | 포맷과 clippy. 경고가 있으면 실패합니다 |
 | `make check` | `lint` 후 모든 테스트. 키체인, 윈도우, 네트워크가 필요하지 않습니다 |
 | `make test` | `check` 후 실제 앱에서 자체 테스트 `probe`와 손쉬운 사용 감사를 왼쪽에서 오른쪽, 오른쪽에서 왼쪽으로 실행합니다 |
 | `make perf` | 릴리스 빌드에서의 시간 예산. 다른 작업이 없는 Mac에서만 의미가 있습니다 |
 | `make release` | `target/release-dry-run/`으로의 릴리스 시험 실행. 로컬 인증서로 서명하며, 아무 데도 아무것도 보내지 않습니다 |
-| `make release-notarized` | `check` 후 `dist/`로의 실제 릴리스. Developer ID 서명, 공증, 앱 고유의 키로 서명된 업데이트 피드. 빌드 번호를 올립니다 |
+| `make release-notarized` | `check` 후 `dist/`로의 실제 릴리스. Developer ID 서명, 공증, 앱 고유의 키로 서명된 업데이트 피드. `VERSION`은 변경하지 않습니다 |
+| `make deploy` | 변경 사항이 없고 녹색 CI 봉인이 있는 `main`에서 다음 버전을 공증하고 `VERSION`을 업데이트하여 커밋합니다. 릴리스 파일을 업로드하고 코드, CI 봉인 및 버전 태그를 푸시하면 GitHub가 릴리스를 자동으로 게시합니다 |
 
 디버그 앱과 릴리스 앱은 각자의 설정과 데이터를 가진 별개의 앱입니다. 빌드, 테스트, 자체 테스트, 릴리스, 코드가 따르는 규칙은 [docs/development.md](../../../docs/development.md)에, 그 바탕이 되는 결정은 [docs/plan.md](../../../docs/plan.md)에 설명되어 있습니다. 릴리스 노트는 [RELEASE_NOTES.md](../../../RELEASE_NOTES.md)이며, 각 README 옆의 `assets/readme/<language>/`에 번역되어 있습니다.
 

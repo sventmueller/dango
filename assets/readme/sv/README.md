@@ -1,4 +1,4 @@
-<p><img src="../../readme-icon.png" alt="Dango-symbol" width="168" height="168"></p>
+<p><img src="../../readme-icon.png" alt="Dango-symbol" width="147" height="147"></p>
 
 # Dango
 
@@ -6,7 +6,9 @@
 
 Dango samlar koden, agenterna som ändrar den och allt runt omkring i ett fönster per mapp: en redigerare med språkservrar och förutsägelser medan du skriver, terminaler, en webbläsare, Git, CI, en felsökare och AI-trådar med Claude, Codex, Antigravity, OpenCode eller en agent som är inbyggd i appen. Varje agent arbetar i samma tidslinje, frågar innan den ändrar filer eller kör kommandon och lämnar en kontrollpunkt före varje prompt, så att du kan granska och spola tillbaka det den gjort, meddelande för meddelande. Inget som en mapp konfigurerar körs innan du litar på den, och text utifrån når en agent märkt som opålitlig. Diktera i redigeraren och meddelandefältet, och taligenkänningen kan stanna på din Mac. Dango är skrivet i Rust på äkta AppKit-reglage, utan Electron, talar 35 språk och har ingen telemetri.
 
-**Inte släppt än.** Den första versionen blir en skivavbild, signerad med ett Developer ID och notariserad av Apple, för macOS 14 eller senare på Apple Silicon och Intel. Tills dess [bygger du Dango från källkoden](#bygga-från-källkoden).
+[![Hämta Dango.dmg](https://img.shields.io/badge/H%C3%A4mta_Dango-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Hämta Dango.dmg](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: signerad och notariserad av Apple, för macOS 14 eller senare på Apple Silicon och Intel. Länken blir tillgänglig med den första utgåvan.
 
 **Hittat en bugg?** [Öppna ett issue](https://github.com/sventmueller/dango/issues/new) och berätta med vilken agent och i vilken sorts projekt det hände.
 
@@ -357,13 +359,14 @@ Du behöver:
 | Kommando | Vad det gör |
 |---|---|
 | `make run` | bygger felsökningsappen (`target/debug/Dango Debug.app`) och öppnar den |
-| `make build` | bygger versionsappen (`target/release/Dango.app`), signerad med ett lokalt certifikat som det första bygget skapar i inloggningsnyckelringen; höjer byggnumret i `VERSION` |
+| `make build` | bygger versionsappen (`target/release/Dango.app`), signerad med ett lokalt certifikat som det första bygget skapar i inloggningsnyckelringen; lämnar `VERSION` oförändrad |
 | `make lint` | formatering och clippy; varningar får det att misslyckas |
 | `make check` | `lint`, sedan alla tester; behöver ingen nyckelring, inget fönster och inget nätverk |
 | `make test` | `check`, sedan självtestet `probe` och hjälpmedelsgranskningen, vänster till höger och höger till vänster, i den riktiga appen |
 | `make perf` | tidsbudgetarna i ett versionsbygge; meningsfullt bara på en Mac som annars är i vila |
 | `make release` | en provkörning av versionen till `target/release-dry-run/`, signerad med det lokala certifikatet; skickar ingenting någonstans |
-| `make release-notarized` | `check`, sedan själva versionen till `dist/`: Developer ID-signatur, notarisering, uppdateringsflödet signerat med appens egen nyckel; höjer byggnumret |
+| `make release-notarized` | `check`, sedan själva versionen till `dist/`: Developer ID-signatur, notarisering, uppdateringsflödet signerat med appens egen nyckel; lämnar `VERSION` oförändrad |
+| `make deploy` | på en ren `main` med grönt CI-sigill: notariserar nästa version, uppdaterar och committar `VERSION`, laddar upp utgivningsfilerna och pushar koden, CI-sigillet och versionstaggen; GitHub publicerar utgåvan automatiskt |
 
 Felsökning och version är separata appar med egna inställningar och data. Bygge, tester, självtesterna, versionen och reglerna som koden följer beskrivs i [docs/development.md](../../../docs/development.md), besluten bakom i [docs/plan.md](../../../docs/plan.md). Versionsinformationen är [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), översatt bredvid varje README i `assets/readme/<language>/`.
 

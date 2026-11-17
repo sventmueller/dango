@@ -1,4 +1,4 @@
-<p><img src="../../readme-icon.png" alt="Dango-Symbol" width="168" height="168"></p>
+<p><img src="../../readme-icon.png" alt="Dango-Symbol" width="147" height="147"></p>
 
 # Dango
 
@@ -6,7 +6,9 @@
 
 Dango bringt den Code, die Agenten, die ihn ändern, und alles drumherum in ein Fenster je Ordner: einen Editor mit Sprachservern und Vorhersagen beim Tippen, Terminals, einen Browser, Git, CI, einen Debugger und AI-Threads mit Claude, Codex, Antigravity, OpenCode oder einem Agenten, der in die App eingebaut ist. Jeder Agent arbeitet in derselben Zeitleiste, fragt, bevor er Dateien ändert oder Befehle ausführt, und hinterlässt vor jedem Prompt einen Sicherungspunkt, sodass du Nachricht für Nachricht prüfen und zurückspulen kannst, was er getan hat. Nichts, was ein Ordner einrichtet, läuft, bevor du ihm vertraust, und fremder Text erreicht einen Agenten als nicht vertrauenswürdig gekennzeichnet. Diktiere in den Editor und ins Nachrichtenfeld, auf Wunsch mit einer Spracherkennung, die auf deinem Mac bleibt. Dango ist in Rust auf echten AppKit-Steuerelementen geschrieben, ohne Electron, spricht 35 Sprachen und hat keine Telemetrie.
 
-**Noch nicht veröffentlicht.** Die erste Ausgabe wird ein Disk-Image sein, mit einer Developer ID signiert und von Apple notarisiert, für macOS 14 oder neuer auf Apple Silicon und Intel. Bis dahin [baust du Dango aus dem Quellcode](#aus-dem-quellcode-bauen).
+[![Dango für macOS herunterladen](https://img.shields.io/badge/Download-Dango_für_macOS-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Dango.dmg herunterladen](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: signiert und von Apple notarisiert, für macOS 14 oder neuer auf Apple Silicon und Intel. Der Link ist ab der ersten Veröffentlichung verfügbar.
 
 **Einen Fehler gefunden?** [Eröffne ein Issue](https://github.com/sventmueller/dango/issues/new) und schreib dazu, mit welchem Agenten und in welcher Art von Projekt er auftrat.
 
@@ -357,13 +359,14 @@ Du brauchst:
 | Befehl | Was er tut |
 |---|---|
 | `make run` | baut die Debug-App (`target/debug/Dango Debug.app`) und öffnet sie |
-| `make build` | baut die Release-App (`target/release/Dango.app`), signiert mit einem lokalen Zertifikat, das der erste Build im Anmelde-Schlüsselbund anlegt; erhöht die Build-Nummer in `VERSION` |
+| `make build` | baut die Release-App (`target/release/Dango.app`), signiert mit einem lokalen Zertifikat, das der erste Build im Anmelde-Schlüsselbund anlegt; lässt `VERSION` unverändert |
 | `make lint` | Formatierung und clippy; Warnungen lassen ihn scheitern |
 | `make check` | `lint`, dann alle Tests; braucht keinen Schlüsselbund, kein Fenster und kein Netzwerk |
 | `make test` | `check`, dann den Selbsttest `probe` und die Prüfung der Barrierefreiheit, von links nach rechts und von rechts nach links, in der echten App |
 | `make perf` | die Zeitbudgets in einem Release-Build; aussagekräftig nur auf einem sonst untätigen Mac |
 | `make release` | ein Probelauf der Ausgabe nach `target/release-dry-run/`, signiert mit dem lokalen Zertifikat; sendet nichts irgendwohin |
-| `make release-notarized` | `check`, dann die Ausgabe selbst nach `dist/`: Signatur mit Developer ID, Notarisierung, der Update-Feed mit dem eigenen Schlüssel der App signiert; erhöht die Build-Nummer |
+| `make release-notarized` | `check`, dann die aktuelle Version nach `dist/`: Signatur mit Developer ID, Notarisierung, der Update-Feed mit dem eigenen Schlüssel der App signiert; lässt `VERSION` unverändert |
+| `make deploy` | notarisiert die nächste Version auf sauberem, grün versiegeltem `main`, committet `VERSION`, lädt die Ausgabedateien hoch und pusht Code, CI-Siegel und Versions-Tag; GitHub veröffentlicht die Ausgabe automatisch |
 
 Debug und Release sind getrennte Apps mit eigenen Einstellungen und Daten. Bauen, Testen, die Selbsttests, die Ausgabe und die Regeln, denen der Code folgt, beschreibt [docs/development.md](../../../docs/development.md), die Entscheidungen dahinter [docs/plan.md](../../../docs/plan.md). Die Versionshinweise sind [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), übersetzt neben jeder README in `assets/readme/<language>/`.
 

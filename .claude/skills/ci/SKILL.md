@@ -22,7 +22,7 @@ CI runs `make check` again. This skill never pushes; that is `/deploy`'s job (`m
   stage's duration; a stage that fails while the screen is locked seals nothing.
 - The fingerprint (`xtask/src/seal.rs`) is the git tree of the **working tree** (temporary index: `read-tree HEAD` +
   `add --all`) without `VERSION`. Untracked, non-ignored files are part of it; ignored files are not. `VERSION` is left
-  out because `make build` raises it, so a bumped `VERSION` never costs the seal.
+  out because only `make deploy` raises it after notarization, so the release commit keeps the seal.
 - Only a complete run of content that did not change during the run mints: green → `refs/ci-seals/green/<fp>`, a failed
   stage → `refs/ci-seals/red/<fp>`. **Red beats green** for the same fingerprint, so a red run poisons that content
   until the code changes (or Phase 3b).

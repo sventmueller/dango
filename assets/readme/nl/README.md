@@ -1,4 +1,4 @@
-<p><img src="../../readme-icon.png" alt="Dango-symbool" width="168" height="168"></p>
+<p><img src="../../readme-icon.png" alt="Dango-symbool" width="147" height="147"></p>
 
 # Dango
 
@@ -6,7 +6,9 @@
 
 Dango brengt de code, de agents die hem veranderen en alles daaromheen samen in één venster per map: een editor met taalservers en voorspellingen tijdens het typen, terminals, een browser, Git, CI, een debugger en AI-threads met Claude, Codex, Antigravity, OpenCode of een agent die in de app is ingebouwd. Elke agent werkt in dezelfde tijdlijn, vraagt het voordat hij bestanden wijzigt of commando's uitvoert, en laat vóór elke prompt een checkpoint achter, zodat je per bericht kunt nakijken en terugdraaien wat hij heeft gedaan. Niets wat een map instelt, draait voordat je die map vertrouwt, en tekst van buitenaf bereikt een agent gemarkeerd als niet te vertrouwen. Dicteer in de editor en in het berichtveld; de spraakherkenning kan op je Mac blijven. Dango is geschreven in Rust op echte AppKit-bedieningselementen, zonder Electron, spreekt 35 talen en heeft geen telemetrie.
 
-**Nog niet uitgebracht.** De eerste release wordt een schijfkopie, ondertekend met een Developer ID en genotariseerd door Apple, voor macOS 14 of nieuwer op Apple silicon en Intel. Tot die tijd [bouw je Dango vanuit de broncode](#bouwen-vanuit-de-broncode).
+[![Download Dango.dmg](https://img.shields.io/badge/Download_Dango-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Download Dango.dmg](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: ondertekend en genotariseerd door Apple, voor macOS 14 of nieuwer op Apple silicon en Intel. De link wordt beschikbaar bij de eerste release.
 
 **Een fout gevonden?** [Open een issue](https://github.com/sventmueller/dango/issues/new) en vermeld met welke agent en in wat voor project het gebeurde.
 
@@ -357,13 +359,14 @@ Je hebt nodig:
 | Commando | Wat het doet |
 |---|---|
 | `make run` | bouwt de debug-app (`target/debug/Dango Debug.app`) en opent hem |
-| `make build` | bouwt de release-app (`target/release/Dango.app`), ondertekend met een lokaal certificaat dat de eerste build in de inlogsleutelhanger aanmaakt; verhoogt het buildnummer in `VERSION` |
+| `make build` | bouwt de release-app (`target/release/Dango.app`), ondertekend met een lokaal certificaat dat de eerste build in de inlogsleutelhanger aanmaakt; laat `VERSION` ongewijzigd |
 | `make lint` | opmaak en clippy; waarschuwingen laten hem mislukken |
 | `make check` | `lint`, daarna alle tests; heeft geen sleutelhanger, venster of netwerk nodig |
 | `make test` | `check`, daarna de zelftest `probe` en de toegankelijkheidscontrole, van links naar rechts en van rechts naar links, in de echte app |
 | `make perf` | de tijdsbudgetten, in een release-build; alleen zinvol op een verder ongebruikte Mac |
 | `make release` | een proefrun van de release naar `target/release-dry-run/`, ondertekend met het lokale certificaat; verstuurt niets |
-| `make release-notarized` | `check`, daarna de release zelf naar `dist/`: Developer ID-handtekening, notarisatie, de updatefeed ondertekend met de eigen sleutel van de app; verhoogt het buildnummer |
+| `make release-notarized` | `check`, daarna de release zelf naar `dist/`: Developer ID-handtekening, notarisatie, de updatefeed ondertekend met de eigen sleutel van de app; laat `VERSION` ongewijzigd |
+| `make deploy` | op een schone `main` met een groen CI-zegel: notariseert de volgende versie, werkt `VERSION` bij en commit die, uploadt de releasebestanden en pusht de code, het CI-zegel en de versietag; GitHub publiceert de release automatisch |
 
 Debug en release zijn aparte apps met hun eigen instellingen en gegevens. Bouwen, testen, de zelftests, de release en de regels die de code volgt, staan in [docs/development.md](../../../docs/development.md), de beslissingen erachter in [docs/plan.md](../../../docs/plan.md). De release-opmerkingen zijn [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), vertaald naast elke README in `assets/readme/<language>/`.
 

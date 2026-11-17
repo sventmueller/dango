@@ -1,4 +1,4 @@
-<p><img src="../../readme-icon.png" alt="סמל היישום Dango" width="168" height="168"></p>
+<p><img src="../../readme-icon.png" alt="סמל היישום Dango" width="147" height="147"></p>
 
 # Dango
 
@@ -6,7 +6,9 @@
 
 ‏Dango מאגד את הקוד, את הסוכנים שמשנים אותו ואת כל מה שסביבם בחלון אחד לכל תיקיה: עורך עם שרתי שפה וחיזויי עריכה, מסופים, דפדפן, ‏Git, ‏CI, מנפה באגים ושרשורי AI עם Claude, ‏Codex, ‏Antigravity, ‏OpenCode או סוכן שמובנה ביישום. כל סוכן עובד באותו ציר זמן, שואל לפני שהוא משנה קבצים או מריץ פקודות, ומשאיר נקודת שחזור לפני כל הנחיה, כך שניתן לבדוק את מה שעשה ולהחזיר אותו לאחור, הודעה אחר הודעה. שום דבר שתיקיה מגדירה אינו רץ לפני שניתן לה אמון, וטקסט שמגיע מבחוץ מגיע לסוכן כשהוא מסומן כלא מהימן. ניתן להכתיב לעורך ולשדה ההודעה, וזיהוי הדיבור יכול להישאר ב-Mac. Dango כתוב ב-Rust על גבי פקדי AppKit אמיתיים, ללא Electron, מדבר 35 שפות ואין בו טלמטריה.
 
-**עדיין לא שוחרר.** הגרסה הראשונה תהיה תמונת דיסק חתומה עם Developer ID ומאושרת (notarized) על ידי Apple, ל-macOS 14 ואילך ב-Apple Silicon וב-Intel. עד אז ניתן [לבנות את Dango מקוד המקור](#בנייה-מקוד-המקור).
+[![הורדת Dango.dmg](https://img.shields.io/badge/%D7%94%D7%95%D7%A8%D7%93%D7%AA_Dango-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[הורדת Dango.dmg](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: חתום ומאושר (notarized) על ידי Apple, ל-macOS 14 ואילך ב-Apple Silicon וב-Intel. הקישור יהיה זמין עם פרסום הגרסה הראשונה.
 
 **נמצא באג?** [אפשר לפתוח Issue](https://github.com/sventmueller/dango/issues/new) ולציין עם איזה סוכן ובאיזה סוג פרויקט הוא קרה.
 
@@ -357,13 +359,14 @@
 | פקודה | מה היא עושה |
 |---|---|
 | `make run` | בונה את יישום ניפוי הבאגים (`target/debug/Dango Debug.app`) ופותח אותו |
-| `make build` | בונה את יישום השחרור (`target/release/Dango.app`), חתום בתעודה מקומית שהבנייה הראשונה יוצרת בצרור המפתחות של ההתחברות; מעלה את מספר הבנייה ב-`VERSION` |
+| `make build` | בונה את יישום השחרור (`target/release/Dango.app`), חתום בתעודה מקומית שהבנייה הראשונה יוצרת בצרור המפתחות של ההתחברות; משאיר את `VERSION` ללא שינוי |
 | `make lint` | עיצוב קוד ו-clippy; אזהרות גורמות לכישלון |
 | `make check` | ‏`lint`, ואחר כך כל הבדיקות; אינו דורש צרור מפתחות, חלון או רשת |
 | `make test` | ‏`check`, ואחר כך הבדיקה העצמית `probe` וביקורת הנגישות, משמאל לימין ומימין לשמאל, ביישום האמיתי |
 | `make perf` | תקציבי הזמן, בבניית שחרור; בעל משמעות רק ב-Mac שאינו עסוק בדבר אחר |
 | `make release` | הרצת ניסיון של השחרור אל `target/release-dry-run/`‎, חתומה בתעודה המקומית; אינה שולחת דבר לשום מקום |
-| `make release-notarized` | ‏`check`, ואחר כך השחרור עצמו אל `dist/`‎: חתימת Developer ID, אישור (notarization), פיד העדכונים חתום במפתח של היישום עצמו; מעלה את מספר הבנייה |
+| `make release-notarized` | ‏`check`, ואחר כך השחרור עצמו אל `dist/`‎: חתימת Developer ID, אישור (notarization), פיד העדכונים חתום במפתח של היישום עצמו; משאיר את `VERSION` ללא שינוי |
+| `make deploy` | בענף `main` נקי עם חותמת CI ירוקה: מאשר את הגרסה הבאה, מעדכן ויוצר commit של `VERSION`, מעלה את קובצי הגרסה ודוחף את הקוד, חותמת ה-CI ותג הגרסה; GitHub מפרסם את הגרסה אוטומטית |
 
 גרסאות ניפוי הבאגים והשחרור הן יישומים נפרדים עם הגדרות ונתונים משלהם. הבנייה, הבדיקות, הבדיקות העצמיות, השחרור והכללים שהקוד עוקב אחריהם מתוארים ב-[docs/development.md](../../../docs/development.md), וההחלטות שמאחוריהם ב-[docs/plan.md](../../../docs/plan.md). הערות הגרסה נמצאות ב-[RELEASE_NOTES.md](../../../RELEASE_NOTES.md), ומתורגמות לצד כל README ב-`assets/readme/<language>/`‎.
 

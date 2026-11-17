@@ -120,6 +120,18 @@ impl Repository {
         Ok((output.code == 0).then(|| output.text()))
     }
 
+    /// The branch `remote`'s HEAD points at, as a clone or `git remote set-head` recorded it; `None` when nothing did.
+    pub fn default_branch(&self, remote: &str) -> Result<Option<String>> {
+        let head = format!("refs/remotes/{remote}/HEAD");
+        let output = self
+            .git()
+            .run(self.call(["symbolic-ref", "--quiet", "--short", head.as_str()]))?;
+        let prefix = format!("{remote}/");
+        Ok((output.code == 0)
+            .then(|| output.text())
+            .and_then(|name| name.strip_prefix(&prefix).map(str::to_string)))
+    }
+
     /// Creates the branch `name` at `start`, or at HEAD, and stays where HEAD is.
     pub fn create_branch(&self, name: &str, start: Option<&str>) -> Result<()> {
         self.new_branch(vec!["branch", name], name, start)

@@ -1,4 +1,4 @@
-<p><img src="../../readme-icon.png" alt="Ikona aplikace Dango" width="168" height="168"></p>
+<p><img src="../../readme-icon.png" alt="Ikona aplikace Dango" width="147" height="147"></p>
 
 # Dango
 
@@ -6,7 +6,9 @@
 
 Dango spojuje kód, agenty, kteří ho mění, a vše kolem nich do jednoho okna pro každou složku: editor s jazykovými servery a předpověďmi při psaní, terminály, prohlížeč, Git, CI, ladicí nástroj a AI vlákna s Claude, Codex, Antigravity, OpenCode nebo agentem vestavěným do aplikace. Každý agent pracuje ve stejné časové ose, ptá se, než změní soubory nebo spustí příkazy, a před každým promptem zanechá kontrolní bod, takže můžete zkontrolovat a přetočit zpět, co udělal, zprávu po zprávě. Nic, co složka nastavuje, se nespustí, dokud jí nedůvěřujete, a text zvenčí dorazí k agentovi označený jako nedůvěryhodný. Diktujte do editoru a do pole zprávy; rozpoznávání řeči může zůstat na vašem Macu. Dango je napsané v Rustu na skutečných ovládacích prvcích AppKitu, bez Electronu, mluví 35 jazyky a nemá telemetrii.
 
-**Zatím nevydáno.** První verze bude obraz disku podepsaný identifikátorem Developer ID a notářsky ověřený společností Apple, pro macOS 14 nebo novější na Apple Silicon a Intel. Do té doby [sestavte Dango ze zdrojového kódu](#sestavení-ze-zdrojového-kódu).
+[![Stáhnout Dango.dmg](https://img.shields.io/badge/St%C3%A1hnout_Dango-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Stáhnout Dango.dmg](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: podepsaný a notářsky ověřený společností Apple, pro macOS 14 nebo novější na Apple Silicon a Intel. Odkaz bude dostupný od prvního vydání.
 
 **Našli jste chybu?** [Založte issue](https://github.com/sventmueller/dango/issues/new) a uveďte, s jakým agentem a v jakém typu projektu nastala.
 
@@ -357,13 +359,14 @@ Potřebujete:
 | Příkaz | Co dělá |
 |---|---|
 | `make run` | sestaví ladicí aplikaci (`target/debug/Dango Debug.app`) a otevře ji |
-| `make build` | sestaví vydávanou aplikaci (`target/release/Dango.app`), podepsanou lokálním certifikátem, který první sestavení vytvoří v přihlašovací klíčence; zvýší číslo sestavení ve `VERSION` |
+| `make build` | sestaví vydávanou aplikaci (`target/release/Dango.app`), podepsanou lokálním certifikátem, který první sestavení vytvoří v přihlašovací klíčence; ponechá `VERSION` beze změny |
 | `make lint` | formátování a clippy; varování vedou k selhání |
 | `make check` | `lint`, pak všechny testy; nepotřebuje klíčenku, okno ani síť |
 | `make test` | `check`, pak autotest `probe` a audit zpřístupnění, zleva doprava a zprava doleva, ve skutečné aplikaci |
 | `make perf` | časové rozpočty ve vydávaném sestavení; vypovídající jen na jinak nečinném Macu |
 | `make release` | zkouška vydání do `target/release-dry-run/`, podepsaná lokálním certifikátem; nic nikam neodesílá |
-| `make release-notarized` | `check`, pak samotné vydání do `dist/`: podpis Developer ID, notářské ověření, kanál aktualizací podepsaný vlastním klíčem aplikace; zvýší číslo sestavení |
+| `make release-notarized` | `check`, pak samotné vydání do `dist/`: podpis Developer ID, notářské ověření, kanál aktualizací podepsaný vlastním klíčem aplikace; ponechá `VERSION` beze změny |
+| `make deploy` | na čisté větvi `main` se zelenou pečetí CI: notářsky ověří další verzi, aktualizuje a commituje `VERSION`, nahraje soubory vydání a odešle kód, pečeť CI a značku verze; GitHub vydání automaticky zveřejní |
 
 Ladicí a vydávaná verze jsou oddělené aplikace s vlastním nastavením a daty. Sestavení, testy, autotesty, vydání a pravidla, kterými se kód řídí, popisuje [docs/development.md](../../../docs/development.md), rozhodnutí za nimi [docs/plan.md](../../../docs/plan.md). Poznámky k vydání jsou [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), přeložené vedle každého README v `assets/readme/<language>/`.
 

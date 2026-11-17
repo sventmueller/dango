@@ -1,4 +1,4 @@
-<p><img src="../../readme-icon.png" alt="Dango 应用程序图标" width="168" height="168"></p>
+<p><img src="../../readme-icon.png" alt="Dango 应用程序图标" width="147" height="147"></p>
 
 # Dango
 
@@ -6,7 +6,9 @@
 
 Dango 把代码、修改代码的智能体以及围绕它们的一切，按文件夹放进一个窗口：带语言服务器和编辑预测的编辑器、终端、浏览器、Git、CI、调试器，以及与 Claude、Codex、Antigravity、OpenCode 或 App 内置智能体进行的 AI 对话。每个智能体都在同一条时间线中工作，在更改文件或运行命令之前先询问你，并在每次发送提示词之前留下一个检查点，因此你可以逐条消息地查看并回退它所做的一切。在你信任文件夹之前，它所配置的任何内容都不会运行；来自外部的文本在交给智能体时会被标记为不可信。你可以在编辑器和消息栏中听写，语音识别可以完全留在你的 Mac 上。Dango 用 Rust 基于真正的 AppKit 控件编写，不使用 Electron，支持 35 种语言，没有遥测功能。
 
-**尚未发布。** 首个版本将是使用 Developer ID 签名并经 Apple 公证的磁盘映像，适用于 Apple 芯片和 Intel 处理器上的 macOS 14 或更高版本。在此之前，请[从源代码构建 Dango](#从源代码构建)。
+[![下载 Dango.dmg](https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD_Dango-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[下载 Dango.dmg](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: 已签名并经 Apple 公证的磁盘映像，适用于 Apple 芯片和 Intel 处理器上的 macOS 14 或更高版本。链接将在首个版本发布后可用。
 
 **发现了错误？** 请[提交 Issue](https://github.com/sventmueller/dango/issues/new)，并说明问题出现在哪个智能体和哪类项目中。
 
@@ -357,13 +359,14 @@ Claude 将自己的会话保存在 `~/.claude/projects` 下；Dango 会读取它
 | 命令 | 作用 |
 |---|---|
 | `make run` | 构建调试版 App（`target/debug/Dango Debug.app`）并打开它 |
-| `make build` | 构建正式版 App（`target/release/Dango.app`），使用首次构建时在登录钥匙串中创建的本地证书签名；提高 `VERSION` 中的构建号 |
+| `make build` | 构建正式版 App（`target/release/Dango.app`），使用首次构建时在登录钥匙串中创建的本地证书签名；保持 `VERSION` 不变 |
 | `make lint` | 格式化和 clippy；有警告即失败 |
 | `make check` | 先 `lint`，然后运行所有测试；不需要钥匙串、窗口或网络 |
 | `make test` | 先 `check`，然后在真实 App 中运行自检 `probe` 和辅助功能审查，分别按从左到右和从右到左 |
 | `make perf` | 在正式版构建中检查时间预算；只有在 Mac 没有其他负载时才有意义 |
 | `make release` | 将正式版演练到 `target/release-dry-run/`，使用本地证书签名；不向任何地方发送任何内容 |
-| `make release-notarized` | 先 `check`，然后将正式版本身发布到 `dist/`：Developer ID 签名、公证、使用 App 自己的密钥签名的更新源；提高构建号 |
+| `make release-notarized` | 先 `check`，然后将正式版本身发布到 `dist/`：Developer ID 签名、公证、使用 App 自己的密钥签名的更新源；保持 `VERSION` 不变 |
+| `make deploy` | 在干净且带有绿色 CI 印章的 `main` 上公证下一个版本，更新并提交 `VERSION`，上传发布文件，然后推送代码、CI 印章和版本标签；GitHub 自动发布该版本 |
 
 调试版和正式版是两个独立的 App，各有自己的设置和数据。构建、测试、自检、发布以及代码遵循的规则见 [docs/development.md](../../../docs/development.md)，其背后的决策见 [docs/plan.md](../../../docs/plan.md)。发布说明是 [RELEASE_NOTES.md](../../../RELEASE_NOTES.md)，其译文与每份 README 一起放在 `assets/readme/<language>/` 中。
 

@@ -1,4 +1,4 @@
-<p><img src="../../readme-icon.png" alt="Biểu tượng ứng dụng Dango" width="168" height="168"></p>
+<p><img src="../../readme-icon.png" alt="Biểu tượng ứng dụng Dango" width="147" height="147"></p>
 
 # Dango
 
@@ -6,7 +6,9 @@
 
 Dango đặt mã, các tác nhân thay đổi mã và mọi thứ xung quanh chúng vào một cửa sổ cho mỗi thư mục: trình soạn thảo với máy chủ ngôn ngữ và dự đoán chỉnh sửa, terminal, trình duyệt, Git, CI, trình gỡ lỗi và các luồng AI với Claude, Codex, Antigravity, OpenCode hoặc một tác nhân tích hợp sẵn trong ứng dụng. Mọi tác nhân đều làm việc trong cùng một dòng thời gian, hỏi trước khi thay đổi tệp hoặc chạy lệnh, và để lại một điểm kiểm tra trước mỗi prompt, nên bạn có thể xem lại và tua lại những gì nó đã làm theo từng tin nhắn. Không có gì do thư mục cấu hình được chạy trước khi bạn tin cậy thư mục đó, và văn bản từ bên ngoài đến với tác nhân kèm dấu không đáng tin cậy. Đọc chính tả vào trình soạn thảo và trường tin nhắn, và tính năng nhận dạng giọng nói có thể ở lại trên máy Mac của bạn. Dango được viết bằng Rust trên các điều khiển AppKit thực thụ, không dùng Electron, có 35 ngôn ngữ và không có dữ liệu đo từ xa.
 
-**Chưa phát hành.** Bản phát hành đầu tiên sẽ là một ảnh đĩa được ký bằng Developer ID và được Apple công chứng, dành cho macOS 14 trở lên trên Apple Silicon và Intel. Cho đến lúc đó, hãy [biên dịch Dango từ mã nguồn](#biên-dịch-từ-mã-nguồn).
+[![Tải Dango.dmg](https://img.shields.io/badge/T%E1%BA%A3i_Dango-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Tải Dango.dmg](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: được ký và được Apple công chứng, dành cho macOS 14 trở lên trên Apple Silicon và Intel. Liên kết sẽ khả dụng từ bản phát hành đầu tiên.
 
 **Phát hiện lỗi?** [Mở một issue](https://github.com/sventmueller/dango/issues/new) và cho biết lỗi xảy ra với tác nhân nào và trong loại dự án nào.
 
@@ -357,13 +359,14 @@ Bạn cần:
 | Lệnh | Tác dụng |
 |---|---|
 | `make run` | biên dịch ứng dụng gỡ lỗi (`target/debug/Dango Debug.app`) và mở nó |
-| `make build` | biên dịch ứng dụng phát hành (`target/release/Dango.app`), được ký bằng chứng chỉ cục bộ mà bản build đầu tiên tạo trong chuỗi khóa đăng nhập; tăng số build trong `VERSION` |
+| `make build` | biên dịch ứng dụng phát hành (`target/release/Dango.app`), được ký bằng chứng chỉ cục bộ mà bản build đầu tiên tạo trong chuỗi khóa đăng nhập; giữ nguyên `VERSION` |
 | `make lint` | định dạng và clippy; cảnh báo sẽ làm lệnh thất bại |
 | `make check` | `lint`, sau đó toàn bộ kiểm thử; không cần chuỗi khóa, cửa sổ hay mạng |
 | `make test` | `check`, sau đó tự kiểm thử `probe` và kiểm tra trợ năng, từ trái sang phải và từ phải sang trái, trong ứng dụng thật |
 | `make perf` | ngân sách thời gian, trong bản build phát hành; chỉ có ý nghĩa trên một máy Mac không làm việc gì khác |
 | `make release` | chạy thử bản phát hành vào `target/release-dry-run/`, được ký bằng chứng chỉ cục bộ; không gửi gì đi đâu cả |
-| `make release-notarized` | `check`, sau đó là bản phát hành thật vào `dist/`: chữ ký Developer ID, công chứng, nguồn cập nhật được ký bằng khóa riêng của ứng dụng; tăng số build |
+| `make release-notarized` | `check`, sau đó là bản phát hành thật vào `dist/`: chữ ký Developer ID, công chứng, nguồn cập nhật được ký bằng khóa riêng của ứng dụng; giữ nguyên `VERSION` |
+| `make deploy` | trên `main` sạch có dấu CI xanh: công chứng phiên bản tiếp theo, cập nhật và commit `VERSION`, tải lên các tệp phát hành rồi đẩy mã nguồn, dấu CI và thẻ phiên bản; GitHub tự động công bố bản phát hành |
 
 Bản gỡ lỗi và bản phát hành là hai ứng dụng riêng biệt với cài đặt và dữ liệu riêng. Việc biên dịch, kiểm thử, tự kiểm thử, phát hành và các quy tắc mà mã tuân theo được mô tả trong [docs/development.md](../../../docs/development.md), còn các quyết định đằng sau chúng nằm trong [docs/plan.md](../../../docs/plan.md). Ghi chú phát hành là [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), được dịch bên cạnh mỗi README trong `assets/readme/<language>/`.
 

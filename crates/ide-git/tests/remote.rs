@@ -33,6 +33,19 @@ fn pair(scratch: &Scratch) -> (Repository, Repository) {
     (mine, theirs)
 }
 
+#[test]
+fn the_default_branch_is_what_a_clone_recorded_of_the_remote_head() {
+    let scratch = Scratch::new("default-branch");
+    let (mine, theirs) = pair(&scratch);
+    assert_eq!(theirs.default_branch("origin").unwrap().as_deref(), Some("main"));
+    assert_eq!(
+        mine.default_branch("origin").unwrap(),
+        None,
+        "a push records no remote HEAD"
+    );
+    assert_eq!(theirs.default_branch("elsewhere").unwrap(), None);
+}
+
 fn commit(repository: &Repository, path: &str, content: &str, message: &str) {
     write(repository.root(), path, content);
     repository.stage(&[path]).unwrap();

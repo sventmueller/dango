@@ -4,9 +4,8 @@ use ide_product::{BUNDLE_ID, CASK, NAME};
 
 use crate::*;
 
-/// The product's web page, which the Cask names. Empty until the owner names one; a dry run uses a placeholder and a
-/// notarized release refuses to start.
-pub(crate) const HOMEPAGE: &str = "";
+/// The product's web page, which the Cask names.
+pub(crate) const HOMEPAGE: &str = "https://github.com/sventmueller/dango";
 
 const DRY_RUN_HOMEPAGE: &str = "https://example.invalid/";
 
