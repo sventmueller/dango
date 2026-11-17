@@ -1,6 +1,6 @@
 //! Vim's own search and Ex prompt (E106, F11): the editor's find bar gives no matches or patterns, so `/`, `?`, `n`,
-//! `N`, `*`, `:s` and `:%s` search here, with Rust's regular expressions. Where they differ from Vim's patterns, such
-//! as `\v` or `\<`, is in the help (R24).
+//! `N`, `*`, `#`, `:s` and `:%s` search here, with Rust's regular expressions. Where they differ from Vim's patterns,
+//! such as `\v` or `\<`, is in the help (R24).
 
 use modalkit::key::TerminalKey;
 use regex::Regex;
@@ -16,26 +16,23 @@ pub(crate) struct Search {
     last: Option<(String, bool)>,
 }
 
+/// A match, from its first character to the one after its last, each a line and a column in characters.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Found {
+    pub(crate) start: (usize, usize),
+    pub(crate) end: (usize, usize),
+}
+
 /// What a key in the prompt did.
 pub(crate) enum Step {
-    /// The prompt goes on.
+    /// The prompt goes on, or was left.
     Typing,
-    /// The search found a match at this line and column; the pattern is to be marked.
-    Jump(usize, usize, String),
+    /// The search found this match.
+    Jump(Found),
     /// An Ex command was entered.
     Command(String),
     /// Nothing was found, or the pattern is not valid.
     Failed(Note),
-}
-
-/// Whether `key` opens the prompt in Normal mode.
-pub(crate) fn opens(key: &TerminalKey) -> bool {
-    matches!(key.to_string().as_str(), "/" | "?" | ":")
-}
-
-/// Whether `key` repeats or starts a search without a prompt.
-pub(crate) fn repeats(key: &TerminalKey) -> bool {
-    matches!(key.to_string().as_str(), "n" | "N" | "*")
 }
 
 impl Search {
@@ -48,13 +45,16 @@ impl Search {
         self.open.as_ref().map(|(kind, typed)| format!("{kind}{typed}"))
     }
 
-    /// Takes `key` while the prompt is open, or opens it, in the text `text` gives with the cursor at `cursor`; only a
-    /// search asks for the text, which in a large file costs a copy of it.
+    /// Opens the prompt of `kind`, `/`, `?` or `:`.
+    pub(crate) fn open(&mut self, kind: char) {
+        self.open = Some((kind, String::new()));
+    }
+
+    /// Takes `key` while the prompt is open, in the text `text` gives with the cursor at `cursor`; only a search asks
+    /// for the text, which in a large file costs a copy of it.
     pub(crate) fn key(&mut self, key: &TerminalKey, text: impl FnOnce() -> String, cursor: (usize, usize)) -> Step {
         let name = key.to_string();
         let Some((kind, typed)) = self.open.as_mut() else {
-            let kind = name.chars().next().unwrap_or('/');
-            self.open = Some((kind, String::new()));
             return Step::Typing;
         };
         match name.as_str() {
@@ -84,7 +84,10 @@ impl Search {
                     typed
                 };
                 self.last = Some((pattern.clone(), forward));
-                find(&pattern, &text(), cursor, forward)
+                match find(&pattern, &text(), cursor, forward, 1) {
+                    Ok(found) => Step::Jump(found),
+                    Err(note) => Step::Failed(note),
+                }
             }
             one if one.chars().count() == 1 => {
                 typed.push_str(one);
@@ -98,43 +101,56 @@ impl Search {
         }
     }
 
-    /// `n`, `N` or `*` in `text` with the cursor at `cursor`: where the next match is.
-    pub(crate) fn again(&mut self, key: &TerminalKey, text: &str, cursor: (usize, usize)) -> Option<(usize, usize)> {
-        let name = key.to_string();
-        if name == "*" {
-            let word = word_at(text, cursor)?;
-            let pattern = format!(r"\b{}\b", regex::escape(&word));
-            self.last = Some((pattern, true));
-        }
-        let (pattern, forward) = self.last.clone()?;
-        let forward = if name == "N" { !forward } else { forward };
-        match find(&pattern, text, cursor, forward) {
-            Step::Jump(line, column, _) => Some((line, column)),
-            _ => None,
-        }
+    /// `n`, or `N` with `flip`, `count` times in `text` with the cursor at `cursor`.
+    pub(crate) fn again(&self, flip: bool, count: usize, text: &str, cursor: (usize, usize)) -> Result<Found, Note> {
+        let (pattern, forward) = self.last.clone().ok_or(Note::NoPreviousPattern)?;
+        find(&pattern, text, cursor, forward != flip, count)
+    }
+
+    /// `*` or `#`, and `g*` or `g#` without `whole`: the word under the cursor `count` times forward or back, which
+    /// `n` and `N` then repeat.
+    pub(crate) fn word(
+        &mut self,
+        forward: bool,
+        whole: bool,
+        count: usize,
+        text: &str,
+        cursor: (usize, usize),
+    ) -> Result<Found, Note> {
+        let word = word_at(text, cursor).ok_or(Note::NoWordUnderCursor)?;
+        let pattern = if whole {
+            format!(r"\b{}\b", regex::escape(&word))
+        } else {
+            regex::escape(&word)
+        };
+        self.last = Some((pattern.clone(), forward));
+        find(&pattern, text, cursor, forward, count)
     }
 }
 
-/// The next match of `pattern` in `text` after `cursor`, or before it backwards, wrapping around the end.
-fn find(pattern: &str, text: &str, cursor: (usize, usize), forward: bool) -> Step {
-    let regex = match Regex::new(pattern) {
-        Ok(regex) => regex,
-        Err(error) => return Step::Failed(invalid(pattern, &error)),
-    };
-    let at = byte_of(text, cursor);
-    let starts: Vec<usize> = regex.find_iter(text).map(|m| m.start()).collect();
-    let found = if forward {
-        starts.iter().find(|s| **s > at).or_else(|| starts.first())
-    } else {
-        starts.iter().rev().find(|s| **s < at).or_else(|| starts.last())
-    };
-    match found {
-        Some(start) => {
-            let (line, column) = place_of(text, *start);
-            Step::Jump(line, column, pattern.to_string())
-        }
-        None => Step::Failed(Note::PatternNotFound(pattern.to_string())),
+/// The `count`th next match of `pattern` in `text` after `cursor`, or before it backwards, wrapping around the end.
+fn find(pattern: &str, text: &str, cursor: (usize, usize), forward: bool, count: usize) -> Result<Found, Note> {
+    let regex = Regex::new(pattern).map_err(|error| invalid(pattern, &error))?;
+    let matches: Vec<(usize, usize)> = regex.find_iter(text).map(|m| (m.start(), m.end())).collect();
+    let mut at = byte_of(text, cursor);
+    let mut found = None;
+    for _ in 0..count.max(1) {
+        let next = if forward {
+            matches.iter().find(|m| m.0 > at).or_else(|| matches.first())
+        } else {
+            matches.iter().rev().find(|m| m.0 < at).or_else(|| matches.last())
+        };
+        let Some(&next) = next else {
+            return Err(Note::PatternNotFound(pattern.to_string()));
+        };
+        at = next.0;
+        found = Some(next);
     }
+    let (start, end) = found.ok_or_else(|| Note::PatternNotFound(pattern.to_string()))?;
+    Ok(Found {
+        start: place_of(text, start),
+        end: place_of(text, end),
+    })
 }
 
 /// `:s/old/new/[g]` on the cursor's line `line` or `:%s/…` on every line of `text`: the text after it, or why not;
@@ -154,13 +170,15 @@ pub(crate) fn substitute(command: &str, text: &str, line: usize) -> Option<Resul
         Err(error) => return Some(Err(invalid(old, &error))),
     };
     let replacement = new.replace('&', "$0");
+    let mut matched = false;
     let lines: Vec<String> = text
         .split_inclusive('\n')
         .enumerate()
         .map(|(n, content)| {
-            if !(whole || n == line) {
+            if !(whole || n == line) || !regex.is_match(content) {
                 return content.to_string();
             }
+            matched = true;
             if global {
                 regex.replace_all(content, replacement.as_str()).into_owned()
             } else {
@@ -168,6 +186,9 @@ pub(crate) fn substitute(command: &str, text: &str, line: usize) -> Option<Resul
             }
         })
         .collect();
+    if !matched {
+        return Some(Err(Note::PatternNotFound((*old).to_string())));
+    }
     Some(Ok(lines.concat()))
 }
 
@@ -216,14 +237,34 @@ mod tests {
         };
         assert_eq!(pattern, "(");
         assert!(!detail.is_empty());
+        assert_eq!(
+            find("zz", "a\n", (0, 0), true, 1),
+            Err(Note::PatternNotFound("zz".into()))
+        );
         assert!(matches!(
-            find("zz", "a\n", (0, 0), true),
-            Step::Failed(Note::PatternNotFound(pattern)) if pattern == "zz"
-        ));
-        assert!(matches!(
-            find("(", "a\n", (0, 0), true),
-            Step::Failed(Note::InvalidPattern { .. })
+            find("(", "a\n", (0, 0), true, 1),
+            Err(Note::InvalidPattern { .. })
         ));
         assert_eq!(substitute("s/a/b/", "a\n", 0).map(Result::ok), Some(Some("b\n".into())));
+        assert_eq!(
+            substitute("s/q/z/", "a\n", 0),
+            Some(Err(Note::PatternNotFound("q".into())))
+        );
+    }
+
+    #[test]
+    fn a_match_spans_from_its_first_character_to_after_its_last_and_counts_repeat() {
+        let text = "alpha\nbeta\ngamma beta\n";
+        let first = Found {
+            start: (1, 0),
+            end: (1, 4),
+        };
+        assert_eq!(find("beta", text, (0, 0), true, 1), Ok(first));
+        assert_eq!(find("beta", text, (0, 0), true, 2).map(|f| f.start), Ok((2, 6)));
+        assert_eq!(
+            find("beta", text, (0, 0), true, 3),
+            Ok(first),
+            "the search wraps around"
+        );
     }
 }

@@ -234,8 +234,9 @@ fn finished(serial: EditorSerial, id: u64, answer: Option<Result<Vec<TextEdit>, 
     }
 }
 
-/// Saves `view` as ⌘S does: formatted first when the setting asks for it and the server can.
-pub fn save(view: &dyn Editor) {
+/// Saves `view` as ⌘S does, with `write`, such as `Editor::save_soon`: fixed and formatted first when the settings ask
+/// for it and the servers can.
+pub fn save(view: &dyn Editor, write: Then) {
     let wanted = view
         .project_root()
         .is_some_and(|root| Settings::load_user().in_project(&root).get(&keys::FORMAT_ON_SAVE));
@@ -246,9 +247,9 @@ pub fn save(view: &dyn Editor) {
     });
     let format_then_save = move |view: &dyn Editor| {
         if wanted && (can || super::prettier::formats(view)) {
-            format(view, Some(Box::new(|view| view.save_soon())));
+            format(view, Some(write));
         } else {
-            view.save_soon();
+            write(view);
         }
     };
     let fixes = ide_core::settings::Settings::load_user().get(&keys::ESLINT_FIX_ON_SAVE);

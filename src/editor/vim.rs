@@ -2,8 +2,9 @@
 //! key does on its copy of the text, and this module feeds it the keys and applies what it hands back. Every key goes
 //! through the input context, so that dead keys of a German keyboard work; in Normal and Visual mode
 //! `insertText:` and `doCommandBySelector:` give their result to Vim instead of the text. Insert mode types as the
-//! editor always does, and a pass from `i` to Esc is one undo step. ⌃-keys go to Vim before the menu bar while the
-//! editor has the focus. The caret is a block outside Insert mode, drawn by the overlay.
+//! editor always does, but through Vim after `I` or `A` in Visual block mode, and a pass from `i` to Esc is one undo
+//! step. ⌃-keys go to Vim before the menu bar while the editor has the focus. The caret is a block outside Insert mode,
+//! drawn by the overlay.
 
 use std::cell::Cell;
 
@@ -19,6 +20,10 @@ use splat_i18n::{t, tf};
 
 use super::view::EditorTextView;
 use crate::util::OnDrop;
+
+mod closing;
+mod keyboard;
+mod mark;
 
 /// Whether editors use Vim's keys, as the user last chose; read from the settings once.
 #[derive(Default)]
@@ -47,7 +52,13 @@ pub(crate) struct State {
     clipboard: isize,
     /// The document's lines end in CRLF, as its whole text showed when Vim last took it.
     crlf: bool,
+    /// How the document closes once the key that typed `:q`, `:q!`, `:wq` or `:x` is handled.
+    closing: Option<closing::Closing>,
+    /// The UTF-16 range of the last search's match, marked until `:noh`.
+    marked: Option<std::ops::Range<usize>>,
 }
+
+pub(crate) use closing::due as close_due;
 
 fn context() -> Option<std::rc::Rc<crate::context::AppContext>> {
     MainThreadMarker::new().map(crate::context::AppContext::get)
@@ -115,7 +126,8 @@ pub(crate) fn mode(view: &EditorTextView) -> Option<Mode> {
 }
 
 /// Text from the input context: Vim's in Normal and Visual mode, else the editor's, which Vim follows for `.`;
-/// whether Vim took it.
+/// whether Vim took it. Insert mode after `I` or `A` in Visual block mode types through Vim, which types in every line
+/// of the block.
 pub(crate) fn insert_text(view: &EditorTextView, text: &AnyObject) -> bool {
     let Some(mode) = mode(view) else { return false };
     let typed = if let Some(s) = text.downcast_ref::<NSString>() {
@@ -125,21 +137,41 @@ pub(crate) fn insert_text(view: &EditorTextView, text: &AnyObject) -> bool {
     } else {
         return false;
     };
-    if mode == Mode::Insert {
+    if mode == Mode::Insert && !in_block(view) {
         follow_typing(view, |vim| typed.chars().for_each(|c| drop(vim.char(c))));
         return false;
     }
-    let typed: String = typed.chars().map(ascii_key).collect();
+    let latin = typed.is_ascii() || keyboard::types_ascii();
     run(view, |vim| {
         let mut outcome = Outcome::default();
         for c in typed.chars() {
-            let one = vim.char(c);
+            let one = vim.char(key_of(c, vim.mode(), latin));
             outcome.replacements.extend(one.replacements);
             outcome.effects.extend(one.effects);
         }
         outcome
     });
     true
+}
+
+/// Whether Vim types at several places at once, after `I` or `A` in Visual block mode.
+fn in_block(view: &EditorTextView) -> bool {
+    view.ivars()
+        .vim
+        .borrow()
+        .vim
+        .as_ref()
+        .is_some_and(|vim| vim.mode() == Mode::Insert && vim.carets() > 1)
+}
+
+/// What the character `c`, typed in `mode` on a layout that types ASCII with `latin`, is to Vim: in Normal and Visual
+/// mode on a layout that does not, the key at its place on the US layout (E105); else as typed, such as `π` on a German
+/// layout or a pattern after `/`.
+fn key_of(c: char, mode: Mode, latin: bool) -> char {
+    match mode {
+        Mode::Normal | Mode::Visual | Mode::VisualLine | Mode::VisualBlock if !latin => ascii_key(c),
+        _ => c,
+    }
 }
 
 /// A command of the input context, such as Esc or Return: Vim's outside Insert mode, and Esc there too; whether Vim
@@ -167,11 +199,14 @@ pub(crate) fn command(view: &EditorTextView, command: Sel) -> bool {
         return mode != Mode::Insert;
     };
     if mode == Mode::Insert {
-        if key != "<Esc>" {
+        if key == "<Esc>" {
+            leave_insert(view);
+        } else if in_block(view) {
+            run(view, |vim| vim.keys(key));
+        } else {
             follow_typing(view, |vim| drop(vim.keys(key)));
             return false;
         }
-        leave_insert(view);
         return true;
     }
     run(view, |vim| vim.keys(key));
@@ -249,6 +284,7 @@ pub(crate) fn control_key(view: &EditorTextView, event: &NSEvent) -> bool {
 /// The editor's text changed by something other than Vim, such as the agent, the file or the user typing in Insert
 /// mode: Vim's copy follows, but not keystroke by keystroke while it types along in Insert mode.
 pub(crate) fn changed(view: &EditorTextView) {
+    mark::clear(view);
     let (applying, inserting) = {
         let state = view.ivars().vim.borrow();
         (
@@ -384,12 +420,10 @@ fn perform(view: &EditorTextView, effect: Effect) {
                 vim.set_cursor(line, column);
             }
         }
-        Effect::Save => ide_ui_lsp::save(view),
-        Effect::Close(_) => {
-            let app = objc2_app_kit::NSApplication::sharedApplication(view.mtm());
-            // SAFETY: The window's close command with no sender, as the menu item sends it to the first responder.
-            unsafe { app.sendAction_to_from(sel!(performClose:), None, None) };
-        }
+        Effect::Save => ide_ui_lsp::save(view, Box::new(|view| view.save_soon())),
+        Effect::Close => closing::soon(view, closing::Closing::Ask),
+        Effect::Discard => closing::soon(view, closing::Closing::Discard),
+        Effect::SaveAndClose(always) => closing::soon(view, closing::Closing::Save(always)),
         Effect::Note(note) => ide_ui_lsp::status::note(view, &say(&note)),
         Effect::Copy(text) => {
             let pasteboard = objc2_app_kit::NSPasteboard::generalPasteboard();
@@ -399,8 +433,9 @@ fn perform(view: &EditorTextView, effect: Effect) {
             pasteboard.setString_forType(&crate::util::ns(&text), kind);
             view.ivars().vim.borrow_mut().clipboard = pasteboard.changeCount();
         }
-        Effect::Highlight(pattern) => highlight(view, pattern.as_deref()),
+        Effect::Highlight(found) => mark::show(view, found),
         Effect::Indent(lines, levels) => super::indent::shift_lines(view, lines, levels),
+        Effect::Reindent(lines) => super::indent::reindent_lines(view, lines),
     }
 }
 
@@ -426,23 +461,6 @@ fn say(note: &Note) -> String {
             crate::diag::report("a Vim command", detail);
             t("Das kann der Vim-Modus nicht").to_string()
         }
-    }
-}
-
-/// Marks the match under the caret of the last search, or nothing after `:noh`.
-fn highlight(view: &EditorTextView, pattern: Option<&str>) {
-    let Some(pattern) = pattern else {
-        view.clear_found();
-        return;
-    };
-    let Ok(regex) = regex::Regex::new(pattern) else { return };
-    let caret = view.selectedRange().location;
-    let text = view.document().text().to_string();
-    let byte = view.document().text().utf16_to_byte(caret).unwrap_or(0);
-    if let Some(found) = regex.find_at(&text, byte.min(text.len())) {
-        let (line, start) = line_column(view, caret);
-        let length = found.as_str().encode_utf16().count();
-        view.select_columns(line, start..start + length, false);
     }
 }
 
@@ -596,12 +614,15 @@ fn utf16_of(view: &EditorTextView, (line, column): (usize, usize)) -> usize {
 }
 
 /// The key of the US layout at the place of `c` where a keyboard's layout is not Latin, so that `j` is `j` on a
-/// Russian, Greek or Hebrew keyboard too; Latin characters stay.
+/// Russian, Greek or Hebrew keyboard too; an ASCII character stays what it is, whichever layout typed it.
 fn ascii_key(c: char) -> char {
     const RUSSIAN: &str = "йцукенгшщзхъфывапролджэячсмитьбю";
     const US: &str = "qwertyuiop[]asdfghjkl;'zxcvbnm,.";
     const GREEK: &str = ";ςερτυθιοπ[]ασδφγηξκλ΄'ζχψωβνμ,.";
     const HEBREW: &str = "/'קראטוןםפ][שדגכעיחלךף,זסבהנמצתץ";
+    if c.is_ascii() {
+        return c;
+    }
     let lower: Vec<char> = c.to_lowercase().collect();
     let Some(&lower) = lower.first() else { return c };
     for layout in [RUSSIAN, GREEK, HEBREW] {
@@ -619,7 +640,7 @@ fn ascii_key(c: char) -> char {
 
 #[cfg(test)]
 mod tests {
-    use super::ascii_key;
+    use super::{Mode, ascii_key, key_of};
 
     #[test]
     fn the_vim_mode_shadows_only_go_to_line_among_the_apps_shortcuts() {
@@ -632,8 +653,37 @@ mod tests {
         assert_eq!(ascii_key('л'), 'k');
         assert_eq!(ascii_key('Ш'), 'I');
         assert_eq!(ascii_key('ξ'), 'j');
+        assert_eq!(ascii_key('ח'), 'j');
         assert_eq!(ascii_key('j'), 'j');
         assert_eq!(ascii_key('^'), '^');
+    }
+
+    #[test]
+    fn a_layout_that_types_ascii_hands_every_character_to_vim_as_typed() {
+        for mode in [
+            Mode::Normal,
+            Mode::Visual,
+            Mode::VisualBlock,
+            Mode::Prompt,
+            Mode::Insert,
+        ] {
+            for c in "/;',.[]:%?nN*\"`πüçξо".chars() {
+                assert_eq!(key_of(c, mode, true), c, "{c} in {mode:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn a_layout_without_ascii_maps_keys_only_outside_the_prompt_and_insert_mode() {
+        for c in "/;',.[]:%?nN*\"`".chars() {
+            assert_eq!(key_of(c, Mode::Normal, false), c, "{c}");
+        }
+        assert_eq!(key_of('о', Mode::Normal, false), 'j');
+        assert_eq!(key_of('ξ', Mode::VisualBlock, false), 'j');
+        assert_eq!(key_of('ח', Mode::Visual, false), 'j');
+        assert_eq!(key_of('о', Mode::Prompt, false), 'о');
+        assert_eq!(key_of('ח', Mode::Prompt, false), 'ח');
+        assert_eq!(key_of('ξ', Mode::Insert, false), 'ξ');
     }
 }
 

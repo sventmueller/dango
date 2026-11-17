@@ -307,56 +307,359 @@ const CASES: &[Case] = &[
         after: "a\nb\nc\n",
         cursor: (2, 0),
     },
+    Case {
+        text: "one\ntwo\n",
+        at: (0, 0),
+        keys: "/two<Enter>",
+        after: "one\ntwo\n",
+        cursor: (1, 0),
+    },
+    Case {
+        text: "x x\ny x\n",
+        at: (0, 0),
+        keys: ":s#x#z#<Enter>",
+        after: "z x\ny x\n",
+        cursor: (0, 0),
+    },
+    Case {
+        text: "x x\ny x\n",
+        at: (0, 0),
+        keys: ":%s#x#z#g<Enter>",
+        after: "z z\ny z\n",
+        cursor: (0, 0),
+    },
+    Case {
+        text: "x x\ny x\n",
+        at: (0, 0),
+        keys: ":s#x#z#<Enter>x",
+        after: " x\ny x\n",
+        cursor: (0, 0),
+    },
+    // A key that waits for a character or a register takes the next one, search keys too
+    Case {
+        text: "axbxcxd\n",
+        at: (0, 0),
+        keys: "fx;x",
+        after: "axbcxd\n",
+        cursor: (0, 3),
+    },
+    Case {
+        text: "one two\n",
+        at: (0, 0),
+        keys: "fn",
+        after: "one two\n",
+        cursor: (0, 1),
+    },
+    Case {
+        text: "one two\n",
+        at: (0, 0),
+        keys: "rn",
+        after: "nne two\n",
+        cursor: (0, 0),
+    },
+    Case {
+        text: "one two\n",
+        at: (0, 0),
+        keys: "dnx",
+        after: "ne two\n",
+        cursor: (0, 0),
+    },
+    Case {
+        text: "one two\n",
+        at: (0, 0),
+        keys: "d/x",
+        after: "ne two\n",
+        cursor: (0, 0),
+    },
+    Case {
+        text: "one\ntwo\nthree\n",
+        at: (0, 0),
+        keys: "\"*yyj\"*p",
+        after: "one\ntwo\none\nthree\n",
+        cursor: (2, 0),
+    },
+    Case {
+        text: "alpha beta\nbeta\n",
+        at: (0, 0),
+        keys: "w*",
+        after: "alpha beta\nbeta\n",
+        cursor: (1, 0),
+    },
+    Case {
+        text: "alpha beta\nbeta\n",
+        at: (1, 0),
+        keys: "#",
+        after: "alpha beta\nbeta\n",
+        cursor: (0, 6),
+    },
+    // Lines at the end of the text
+    Case {
+        text: "a\nb\nc\n",
+        at: (0, 0),
+        keys: "jdG",
+        after: "a\n",
+        cursor: (0, 0),
+    },
+    Case {
+        text: "one\ntwo\nthree\n",
+        at: (0, 0),
+        keys: "yyjddG\"0p",
+        after: "one\nthree\none\n",
+        cursor: (2, 0),
+    },
+    Case {
+        text: "one\ntwo\nthree\n",
+        at: (0, 0),
+        keys: "jddG\"1p",
+        after: "one\nthree\ntwo\n",
+        cursor: (2, 0),
+    },
+    Case {
+        text: "one\ntwo\nthree\n",
+        at: (0, 0),
+        keys: "yyj\"_ddGp",
+        after: "one\nthree\none\n",
+        cursor: (2, 0),
+    },
+    Case {
+        text: "one\ntwo\nthree\n",
+        at: (0, 0),
+        keys: "\"ayyj\"AyyG\"ap",
+        after: "one\ntwo\nthree\none\ntwo\n",
+        cursor: (3, 0),
+    },
+    Case {
+        text: "a\nb\n",
+        at: (0, 0),
+        keys: "Gdd",
+        after: "a\n",
+        cursor: (0, 0),
+    },
+    Case {
+        text: "a\nb\n",
+        at: (0, 0),
+        keys: "GoX<Esc>",
+        after: "a\nb\nX\n",
+        cursor: (2, 0),
+    },
+    // Visual block, gv and U
+    Case {
+        text: "abc\ndef\nghi\n",
+        at: (0, 0),
+        keys: "<C-V>jIX<Esc>",
+        after: "Xabc\nXdef\nghi\n",
+        cursor: (0, 0),
+    },
+    Case {
+        text: "abc\ndef\nghi\n",
+        at: (0, 0),
+        keys: "<C-V>jAX<Esc>",
+        after: "aXbc\ndXef\nghi\n",
+        cursor: (0, 1),
+    },
+    Case {
+        text: "abc def\n",
+        at: (0, 0),
+        keys: "vl<Esc>gvd",
+        after: "c def\n",
+        cursor: (0, 0),
+    },
+    Case {
+        text: "abc def\n",
+        at: (0, 0),
+        keys: "vl<Esc>$gvd",
+        after: "c def\n",
+        cursor: (0, 0),
+    },
+    Case {
+        text: "one two\n",
+        at: (0, 0),
+        keys: "xxU",
+        after: "one two\n",
+        cursor: (0, 0),
+    },
+    Case {
+        text: "one two\n",
+        at: (0, 0),
+        keys: "xxUU",
+        after: "e two\n",
+        cursor: (0, 0),
+    },
+    // Paragraphs and sentences
+    Case {
+        text: "a\n\nb\nc\n\nd\n",
+        at: (0, 0),
+        keys: "}",
+        after: "a\n\nb\nc\n\nd\n",
+        cursor: (1, 0),
+    },
+    Case {
+        text: "a\n\nb\nc\n\nd\n",
+        at: (0, 0),
+        keys: "}}",
+        after: "a\n\nb\nc\n\nd\n",
+        cursor: (4, 0),
+    },
+    Case {
+        text: "a\n\nb\nc\n\nd\n",
+        at: (0, 0),
+        keys: "2}",
+        after: "a\n\nb\nc\n\nd\n",
+        cursor: (4, 0),
+    },
+    Case {
+        text: "a\n\nb\nc\n\nd\n",
+        at: (0, 0),
+        keys: "}}}",
+        after: "a\n\nb\nc\n\nd\n",
+        cursor: (5, 0),
+    },
+    Case {
+        text: "a\n\nb\nc\n\nd\n",
+        at: (5, 0),
+        keys: "{",
+        after: "a\n\nb\nc\n\nd\n",
+        cursor: (4, 0),
+    },
+    Case {
+        text: "a\n\nb\nc\n\nd\n",
+        at: (5, 0),
+        keys: "{{",
+        after: "a\n\nb\nc\n\nd\n",
+        cursor: (1, 0),
+    },
+    Case {
+        text: "a\n\nb\nc\n\nd\n",
+        at: (5, 0),
+        keys: "{{{",
+        after: "a\n\nb\nc\n\nd\n",
+        cursor: (0, 0),
+    },
+    Case {
+        text: "a b\nc\n\nd\n",
+        at: (0, 2),
+        keys: "d}",
+        after: "a \n\nd\n",
+        cursor: (0, 1),
+    },
+    Case {
+        text: "One.  Two!\nThree? Four\n",
+        at: (0, 0),
+        keys: ")",
+        after: "One.  Two!\nThree? Four\n",
+        cursor: (0, 6),
+    },
+    Case {
+        text: "One.  Two!\nThree? Four\n",
+        at: (0, 0),
+        keys: "))",
+        after: "One.  Two!\nThree? Four\n",
+        cursor: (1, 0),
+    },
+    Case {
+        text: "One.  Two!\nThree? Four\n",
+        at: (0, 0),
+        keys: ")))",
+        after: "One.  Two!\nThree? Four\n",
+        cursor: (1, 7),
+    },
+    Case {
+        text: "One\n\nTwo.\n",
+        at: (0, 0),
+        keys: ")",
+        after: "One\n\nTwo.\n",
+        cursor: (1, 0),
+    },
+    Case {
+        text: "One\n\nTwo.\n",
+        at: (0, 0),
+        keys: "))",
+        after: "One\n\nTwo.\n",
+        cursor: (2, 0),
+    },
+    Case {
+        text: "Hi there. Bye.\n",
+        at: (0, 12),
+        keys: "(",
+        after: "Hi there. Bye.\n",
+        cursor: (0, 10),
+    },
+    Case {
+        text: "Hi there. Bye.\n",
+        at: (0, 12),
+        keys: "((",
+        after: "Hi there. Bye.\n",
+        cursor: (0, 0),
+    },
 ];
 
-fn run(case: &Case, crlf: bool) -> Option<String> {
-    let text = if crlf {
-        case.text.replace('\n', "\r\n")
-    } else {
-        case.text.to_string()
+/// The editor's text with `crlf` line ends after `replacements`, applied one after the other as the editor applies
+/// them, or which of them reaches outside the text.
+pub(crate) fn apply(text: &str, crlf: bool, replacements: &[Replacement]) -> Result<String, String> {
+    let ending = if crlf { "\r\n" } else { "\n" };
+    let mut text = text.to_string();
+    for replacement in replacements {
+        let offset = |(line, column): (usize, usize)| -> Option<usize> {
+            let start = if line == 0 {
+                0
+            } else {
+                text.match_indices('\n').nth(line - 1)?.0 + 1
+            };
+            let content = text[start..].split('\n').next()?;
+            let content = content.strip_suffix('\r').unwrap_or(content);
+            let mut within = content.char_indices().map(|(at, _)| at).chain([content.len()]);
+            Some(start + within.nth(column)?)
+        };
+        let (Some(start), Some(end)) = (offset(replacement.start), offset(replacement.end)) else {
+            return Err(format!("{replacement:?} outside {text:?}"));
+        };
+        text.replace_range(start..end, &replacement.text.replace('\n', ending));
+    }
+    Ok(text)
+}
+
+/// What `case` does to its text with `crlf` line ends, without the text's last line break with `cut`: a complaint
+/// when the text, the cursor or the editor's text after the replacements are not Vim's.
+fn run(case: &Case, crlf: bool, cut: bool) -> Option<String> {
+    let trim = |text: &'static str| {
+        if cut {
+            text.strip_suffix('\n').unwrap_or(text)
+        } else {
+            text
+        }
     };
-    let mut vim = Vim::new(&text);
+    let (text, wanted) = (trim(case.text), trim(case.after));
+    let ending = |text: &str| {
+        if crlf {
+            text.replace('\n', "\r\n")
+        } else {
+            text.to_string()
+        }
+    };
+    let mut vim = Vim::new(&ending(text));
     vim.set_cursor(case.at.0, case.at.1);
-    vim.keys(case.keys);
+    let done = vim.keys(case.keys);
     let (after, cursor) = (vim.text(), vim.cursor());
-    (after != case.after || cursor != case.cursor).then(|| {
+    let applied = apply(&ending(text), crlf, &done.replacements);
+    let right = after == wanted && cursor == case.cursor && applied.as_deref() == Ok(&ending(wanted));
+    (!right).then(|| {
         format!(
-            "{:?} on {:?}{}: {after:?} at {cursor:?}, wanted {:?} at {:?}",
+            "{:?} on {text:?}{}: {after:?} at {cursor:?}, the editor's {applied:?}, wanted {wanted:?} at {:?}",
             case.keys,
-            case.text,
             if crlf { " (CRLF)" } else { "" },
-            case.after,
             case.cursor
         )
     })
 }
 
 #[test]
-fn every_operator_motion_and_text_object_does_what_vim_does_with_lf_and_crlf() {
+fn every_operator_motion_and_text_object_does_what_vim_does_with_lf_and_crlf_and_without_a_last_line_break() {
     let wrong: Vec<String> = CASES
         .iter()
-        .flat_map(|case| [run(case, false), run(case, true)])
+        .flat_map(|case| [(false, false), (true, false), (false, true), (true, true)].map(|(c, t)| run(case, c, t)))
         .flatten()
         .collect();
     assert!(wrong.is_empty(), "{}", wrong.join("\n"));
-}
-
-#[test]
-fn the_replacements_turn_the_editors_text_into_the_copy() {
-    let mut vim = Vim::new("say hello world\n");
-    vim.set_cursor(0, 6);
-    let done = vim.keys("ciwbye<Esc>");
-    let mut text = String::from("say hello world\n");
-    for replacement in &done.replacements {
-        let lines: Vec<&str> = text.split_inclusive('\n').collect();
-        let offset = |(line, column): (usize, usize)| -> usize {
-            lines[..line].iter().map(|l| l.len()).sum::<usize>()
-                + lines[line].chars().take(column).map(char::len_utf8).sum::<usize>()
-        };
-        let (start, end) = (offset(replacement.start), offset(replacement.end));
-        text.replace_range(start..end, &replacement.text);
-    }
-    assert_eq!(text, vim.text());
 }
 
 #[test]
@@ -365,8 +668,11 @@ fn undo_and_redo_go_to_the_editor_and_ex_commands_to_the_app() {
     assert_eq!(vim.keys("u").effects, [Effect::Undo(1)]);
     assert_eq!(vim.keys("3u").effects, [Effect::Undo(3)]);
     assert_eq!(vim.keys("<C-R>").effects, [Effect::Redo(1)]);
-    assert_eq!(vim.keys(":wq<Enter>").effects, [Effect::Save, Effect::Close(true)]);
-    assert_eq!(vim.keys(":x<Enter>").effects, [Effect::Save, Effect::Close(true)]);
+    assert_eq!(vim.keys(":w<Enter>").effects, [Effect::Save]);
+    assert_eq!(vim.keys(":q<Enter>").effects, [Effect::Close]);
+    assert_eq!(vim.keys(":q!<Enter>").effects, [Effect::Discard]);
+    assert_eq!(vim.keys(":wq<Enter>").effects, [Effect::SaveAndClose(true)]);
+    assert_eq!(vim.keys(":x<Enter>").effects, [Effect::SaveAndClose(false)]);
     assert_eq!(vim.keys(":noh<Enter>").effects, [Effect::Highlight(None)]);
     assert_eq!(
         vim.keys(":vsplit<Enter>").effects,

@@ -374,6 +374,42 @@ fn the_comment_marker_follows_the_language() {
 }
 
 #[test]
+fn reindenting_follows_the_line_above_and_the_brackets_as_return_does() {
+    let whole = |text: &str, unit: &str| {
+        let Step::Replace { range, text: indented } = reindent(text, 0..utf16_len(text), unit) else {
+            panic!("a replacement");
+        };
+        assert_eq!(range, 0..utf16_len(text));
+        indented
+    };
+    assert_eq!(whole("a {\nb\n    }\n", "    "), "a {\n    b\n}\n");
+    assert_eq!(whole("if x:\n  y\nz\n", "\t"), "if x:\n\ty\n\tz\n");
+    assert_eq!(whole("f(\r\n  a,\r\n   \r\n)", "  "), "f(\r\n  a,\r\n\r\n)");
+    assert_eq!(whole("\t\ta {\n}\n", "    "), "a {\n}\n");
+    let second = reindent("  a\nb\n", 4..5, "    ");
+    assert_eq!(
+        second,
+        Step::Replace {
+            range: 4..6,
+            text: "  b\n".into()
+        },
+        "the line above the selection counts as it is"
+    );
+    let below_blank = reindent("  a {\n\n  b\n", 7..7, "  ");
+    assert_eq!(
+        below_blank,
+        Step::Replace {
+            range: 7..11,
+            text: "    b\n".into()
+        },
+        "a blank line above counts as none"
+    );
+    assert_eq!(one_level_less("\t\t", "    "), "\t");
+    assert_eq!(one_level_less("      ", "    "), "  ");
+    assert_eq!(one_level_less("  ", "    "), "");
+}
+
+#[test]
 fn a_piece_of_the_text_gives_the_same_step_as_the_whole() {
     let whole = "fn f() {\n    g(x)\n}\n";
     let piece = &whole[9..18];

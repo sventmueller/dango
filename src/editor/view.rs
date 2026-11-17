@@ -488,7 +488,7 @@ define_class!(
 
         #[unsafe(method(ideSave:))]
         fn save_action(&self, _sender: Option<&AnyObject>) {
-            self.guarded((), || ide_ui_lsp::save(self));
+            self.guarded((), || ide_ui_lsp::save(self, Box::new(|view| view.save_soon())));
         }
 
         #[unsafe(method(ideComplete:))]
@@ -758,6 +758,11 @@ define_class!(
         #[unsafe(method(ideToggleVimMode:))]
         fn toggle_vim(&self, _sender: Option<&AnyObject>) {
             self.guarded((), super::vim::toggle);
+        }
+
+        #[unsafe(method(ideVimClose))]
+        fn vim_close(&self) {
+            self.guarded((), || super::vim::close_due(self));
         }
 
         #[unsafe(method(ideToggleDiagnosticsAtLineEnd:))]

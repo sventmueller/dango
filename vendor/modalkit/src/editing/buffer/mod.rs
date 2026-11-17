@@ -837,7 +837,8 @@ where
         self.get_group_mut(id).leader.set_cursor(cursor);
     }
 
-    fn get_leader_state(&mut self, id: CursorGroupId) -> &CursorState {
+    /// Get the position and selection of the leader of a cursor group.
+    pub fn get_leader_state(&mut self, id: CursorGroupId) -> &CursorState {
         &self.get_group_mut(id).leader
     }
 

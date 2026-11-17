@@ -63,7 +63,6 @@ mod clipboard {
 ///
 /// This copies what vim does
 /// [here](https://github.com/vim/vim/blob/2ec2a612c7ac9315a17d70f6a2a5ea89ddaea854/src/register.c#L3246-L3248).
-#[cfg(feature = "clipboard")]
 fn with_guessed_clipboard_shape(text: String) -> RegisterCell {
     let shape = match text.as_bytes().last() {
         Some(b'\n') | Some(b'\r') => TargetShape::LineWise,
@@ -289,9 +288,9 @@ impl RegisterStore {
         }
     }
 
-    /// Dango: puts the system clipboard's `text` into `"+` and `"*`.
+    /// Dango: puts the system clipboard's `text` into `"+` and `"*`, linewise when it ends with a line break.
     pub fn set_system_text(&mut self, text: &str) {
-        self.system = RegisterCell::new(CharWise, EditRope::from(text));
+        self.system = with_guessed_clipboard_shape(text.to_string());
     }
 
     /// Dango: the text a command wrote into `"+` or `"*` since the last call, for the system clipboard.
@@ -304,9 +303,10 @@ impl RegisterStore {
         self.unnamed.value.to_string()
     }
 
-    /// Dango: puts `text` into the unnamed register, as the system clipboard when it is shared.
+    /// Dango: puts `text` into the unnamed register, as the system clipboard when it is shared; linewise when it ends
+    /// with a line break.
     pub fn set_unnamed_text(&mut self, text: &str) {
-        self.unnamed = RegisterCell::new(CharWise, EditRope::from(text));
+        self.unnamed = with_guessed_clipboard_shape(text.to_string());
     }
 
     /// Returns the default register to use for storing text.

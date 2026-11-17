@@ -1,5 +1,6 @@
 //! Typing help as edits for the view to make: brackets and quotes closed as they are typed and stepped over, a new
-//! line indented like the one above, Tab over several lines, and lines commented out and in again.
+//! line indented like the one above and lines indented anew by the same rule, Tab over several lines, and lines
+//! commented out and in again.
 //!
 //! Every function works on a piece of the text and a selection in it, both in AppKit's UTF-16 units, and returns the
 //! `Step` the view makes. The piece may be the whole text; what it must hold at least is said at each function. Lines
@@ -122,6 +123,56 @@ pub fn tab(text: &str, selection: Range<usize>, unit: &str) -> Step {
         range: utf16_range(text, lines),
         text: indented,
     }
+}
+
+/// What Vim's `=` makes of the lines `selection` touches in `text`, by the rule of `newline`: each line indented like
+/// the line above it that is not blank, one `unit` deeper after an opening bracket or a colon, and one `unit` less
+/// where it starts with a closing bracket; blank lines lose their white space.
+///
+/// `text` holds at least the whole lines the selection touches and those before them up to one that is not blank.
+pub fn reindent(text: &str, selection: Range<usize>, unit: &str) -> Step {
+    let lines = lines_of(text, &selection);
+    let mut above = split_lines(&text[..lines.start])
+        .map(|line| line.trim_end_matches(['\n', '\r']))
+        .filter(|line| !line.trim().is_empty())
+        .last()
+        .map(str::to_string);
+    let mut indented = String::new();
+    for line in split_lines(&text[lines.clone()]) {
+        let content = line.trim_end_matches(['\n', '\r']);
+        let (body, ending) = (content.trim_start(), &line[content.len()..]);
+        if body.is_empty() {
+            indented.push_str(ending);
+            continue;
+        }
+        let mut indent = above.as_deref().map(indentation).unwrap_or_default().to_string();
+        if above
+            .as_deref()
+            .is_some_and(|above| above.trim_end().ends_with(['{', '(', '[', ':']))
+        {
+            indent.push_str(unit);
+        }
+        if body.starts_with(['}', ']', ')']) {
+            indent = one_level_less(&indent, unit);
+        }
+        let line = format!("{indent}{body}");
+        indented.push_str(&line);
+        indented.push_str(ending);
+        above = Some(line);
+    }
+    Step::Replace {
+        range: utf16_range(text, lines),
+        text: indented,
+    }
+}
+
+/// `indent` without its last level: one `unit`, a tab, or as many spaces as `unit` is wide.
+fn one_level_less(indent: &str, unit: &str) -> String {
+    if let Some(less) = indent.strip_suffix(unit).or_else(|| indent.strip_suffix('\t')) {
+        return less.to_string();
+    }
+    let spaces = indent.len() - indent.trim_end_matches(' ').len();
+    indent[..indent.len() - spaces.min(unit.chars().count().max(1))].to_string()
 }
 
 /// What commenting the lines of `selection` in `text` out with the line comment `marker` does, or in again when every

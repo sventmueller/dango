@@ -24,6 +24,7 @@ use crate::editing::{
 use crate::prelude::*;
 
 mod diff;
+mod prose;
 
 type CowStr<'a> = Cow<'a, str>;
 
@@ -2492,15 +2493,13 @@ impl CursorMovements<Cursor> for EditRope {
             },
 
             // paragraph-wise movement
-            (MoveType::ParagraphBegin(_), _) => {
-                // XXX: implement
-                return None;
+            (MoveType::ParagraphBegin(dir), count) => {
+                return self.paragraph(&nc, *dir, count, ctx.action.is_motion());
             },
 
             // sentence-wise movement
-            (MoveType::SentenceBegin(_), _) => {
-                // XXX: implement
-                return None;
+            (MoveType::SentenceBegin(dir), count) => {
+                return self.sentence(&nc, *dir, count, ctx.action.is_motion());
             },
 
             // section-wise movement
@@ -2778,6 +2777,10 @@ impl CursorMovements<Cursor> for EditRope {
                 EditRange { start: cc, end: nc, shape, inclusive }
             }
         };
+
+        if matches!(movement, MoveType::ParagraphBegin(_) | MoveType::SentenceBegin(_)) {
+            return Some(self.exclusive_rules(range));
+        }
 
         Some(range)
     }
