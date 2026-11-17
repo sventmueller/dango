@@ -429,6 +429,7 @@ fn git_inside_a_gate_reads_a_private_copy_of_the_repository_and_none_of_its_conf
         images: Some(pictures),
         common_dir: Some(copy.common_dir().to_path_buf()),
         dependencies: Vec::new(),
+        links: Vec::new(),
         env: ide_process::order_env::for_orders(&login(&scratch), &[]),
         rules: ide_git::FrozenRules::default(),
         label: "gate".into(),

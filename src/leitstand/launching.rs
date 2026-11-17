@@ -56,7 +56,8 @@ impl Leitstand {
                 },
                 None => found,
             };
-            let read_roots = siblings::targets(&root);
+            let mut read_roots = siblings::targets(&root);
+            read_roots.extend(siblings::links(&root, &wanted.worktree));
             back.deliver(Delivery::Launch(Box::new(Ready {
                 order: wanted.order,
                 title,

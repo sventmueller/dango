@@ -38,6 +38,8 @@ pub(super) struct Job {
     /// The folders of path dependencies beside the repository, which the build reads through the links beside the
     /// worktree (E188).
     pub(super) dependencies: Vec<PathBuf>,
+    /// The links beside the worktree that lead to them.
+    pub(super) links: Vec<PathBuf>,
     /// E186's environment.
     pub(super) env: Vec<(String, String)>,
     /// The order's gitleaks rules, frozen from the main checkout (C52), which its output is cleaned with.
@@ -113,6 +115,7 @@ fn profile(job: &Job, temp: &Path, private: Option<&ide_git::GateGitDir>) -> Pro
     readable.extend(job.common_dir.iter().cloned());
     let mut profile = Profile::gate(&writable, temp, &ide_core::paths::home())
         .readable(&readable)
+        .links(&job.links)
         .unreadable(&remote_records(job.common_dir.as_deref()));
     if !job.run.network.is_empty() {
         profile = profile.network(Network::On);

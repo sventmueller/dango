@@ -155,6 +155,8 @@ struct Confined {
     readable: Vec<PathBuf>,
     /// Files and folders that stay unreadable even inside readable folders.
     unreadable: Vec<PathBuf>,
+    /// Links below them that a path to a readable folder passes through.
+    links: Vec<PathBuf>,
     /// The `.git` of each folder the gate writes in, which stays unwritable.
     pointers: Vec<PathBuf>,
     /// The run's own temporary folder, the one folder where the gate makes and reaches Unix sockets.
@@ -205,6 +207,7 @@ impl Profile {
                 hidden,
                 readable,
                 unreadable,
+                links: Vec::new(),
                 pointers,
                 temp,
             }),
@@ -232,6 +235,21 @@ impl Profile {
     pub fn readable(mut self, paths: &[PathBuf]) -> Profile {
         if let Some(confined) = self.confined.as_mut() {
             confined.readable.extend(paths.iter().map(|path| resolved(path)));
+        }
+        self
+    }
+
+    /// The same with the links at `paths` below a hidden folder followable, such as those beside a worktree to its
+    /// path dependencies: the sandbox refuses a path through a link it may not read, whatever the link leads to.
+    #[must_use]
+    pub fn links(mut self, paths: &[PathBuf]) -> Profile {
+        if let Some(confined) = self.confined.as_mut() {
+            confined
+                .links
+                .extend(paths.iter().map(|path| match (path.parent(), path.file_name()) {
+                    (Some(parent), Some(name)) => resolved(parent).join(name),
+                    _ => path.clone(),
+                }));
         }
         self
     }
@@ -333,7 +351,8 @@ impl Confined {
             .filter(|path| below_hidden(path))
             .collect();
         let mut ancestors: Vec<PathBuf> = self.hidden.clone();
-        for path in &open {
+        ancestors.extend(self.links.iter().filter(|link| below_hidden(link)).cloned());
+        for path in open.iter().copied().chain(&self.links) {
             let mut at = path.parent();
             while let Some(folder) = at.filter(|folder| below_hidden(folder)) {
                 ancestors.push(folder.to_path_buf());
