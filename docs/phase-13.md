@@ -184,8 +184,11 @@ beschrieben, gilt so, wie es hier steht:
   - **Menüs:** „Ablage ▸ Neuer Auftrag …“, „Ablage ▸ Auftrag“ (mit „Auftrag abbrechen …“ und „Auftrag fortsetzen“,
     weil „Abbrechen“ und „Fortsetzen“ als Schlüssel schon feste Bedeutungen haben), „Darstellung ▸ Leitstand“.
   - **Mitteilungen** schickt nur die Laufzeit, aus der Wirkung der Fabrik; die Ansichten schicken keine.
-  - **Ref-Wache:** Als von Dango gemacht gelten bisher nur Checkpoints und die Branches anderer Aufträge. Ein Commit
-    des Nutzers im Git-Panel während eines Zugs lässt den Auftrag warten.
+  - **Ref-Wache** (Entscheidung des Owners 2026-11-17): Sie prüft nur noch den Branch des Auftrags. Steht er nach einem
+    Zug woanders als auf dem Commit der Factory, wartet der Auftrag. Andere Branches, Tags, Siegel und Remotes bewegen
+    sich mit der Arbeit des Nutzers und anderer Aufträge, etwa `main` bei einer Übernahme; sie halten keinen Auftrag
+    mehr an. Den Hauptstand schützt allein die Sandbox, die keinem Weg Schreiben im Git-Ordner des Haupt-Repos
+    erlaubt.
   - **Testzahlen der Gates** kommen aus den Zusammenfassungen von libtest, nextest, pytest, Jest und Vitest; andere
     Ausgaben zählen als „unbekannt“.
   - **Der Worktree** beginnt an der Spitze des Basis-Branches, nicht genau am gemerkten Commit.
@@ -778,7 +781,8 @@ und wird ein roter Punkt *(C72)*.
     - Nach jedem Zug vergleicht der Orchestrator die Refs des Haupt-Repos: Branches, `refs/ide-checkpoints/*`, im
       eigenen Repo `refs/ci-seals/*`.
     - Änderungen, die Dango selbst in der Zeit vorgenommen hat (Commits des Nutzers, andere Aufträge), ordnet er zu.
-    - Jede andere Änderung, auch eine aus dem Terminal, lässt den Auftrag auf den Nutzer warten.
+    - Jede andere Änderung, auch eine aus dem Terminal, lässt den Auftrag auf den Nutzer warten. Eingeschränkt durch
+      die Korrektur oben: Es zählt nur der Branch des Auftrags.
   - **E191 Werkzeuge je Rolle** *(C51)*.
     - MCP-Server, Apps und Connectoren, Browser- und Web-Werkzeuge sind in Auftrags-Sitzungen aus. Sie haben eigene
       Anmeldungen und gehen an der Netz-Sperre der Shell vorbei.

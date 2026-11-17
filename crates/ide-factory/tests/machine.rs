@@ -242,12 +242,18 @@ fn a_measured_class_above_the_skipped_g1_waits_and_g2_at_high_needs_the_diff_ope
 }
 
 #[test]
-fn an_unexplained_ref_change_waits_for_the_user() {
+fn other_refs_moving_during_a_turn_let_the_order_go_on() {
     let mut app = app();
     app.refs.push_back(vec![
         RefChange {
             name: "refs/heads/main".into(),
             before: Some("a".into()),
+            after: Some("b".into()),
+            by_dango: false,
+        },
+        RefChange {
+            name: "refs/tags/v1".into(),
+            before: None,
             after: Some("b".into()),
             by_dango: false,
         },
@@ -260,10 +266,24 @@ fn an_unexplained_ref_change_waits_for_the_user() {
     ]);
     let id = app.order("o1");
     app.settle();
+    assert_eq!(app.station(&id), Station::Acceptance);
+}
+
+#[test]
+fn the_orders_branch_moved_elsewhere_waits_for_the_user() {
+    let mut app = app();
+    app.refs.push_back(vec![RefChange {
+        name: "refs/heads/order/o1".into(),
+        before: None,
+        after: Some("elsewhere".into()),
+        by_dango: false,
+    }]);
+    let id = app.order("o1");
+    app.settle();
     assert_eq!(
         app.condition(&id),
         Condition::Waiting(WaitReason::RefsChanged {
-            refs: vec!["refs/heads/main".into()]
+            refs: vec!["refs/heads/order/o1".into()]
         })
     );
     app.send(InputKind::Continue(id.clone()));

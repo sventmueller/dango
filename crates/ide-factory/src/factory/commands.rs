@@ -554,7 +554,8 @@ impl Factory {
         }
     }
 
-    /// The ref watch after a turn (E173): changes Dango cannot account for let the order wait.
+    /// The ref watch after a turn (E173): the order's own branch moved anywhere but to the commit the factory made lets
+    /// the order wait; other branches, tags and the like move with the user's and other orders' work.
     fn refs(&mut self, cx: &mut Cx, id: &OrderId, changes: Vec<crate::input::RefChange>) {
         let Some(order) = self.orders.get(id) else { return };
         if *order.phase() != Phase::Refs {
@@ -565,7 +566,7 @@ impl Factory {
         let unexplained: Vec<String> = changes
             .into_iter()
             .filter(|c| !c.by_dango)
-            .filter(|c| !(c.name == branch && c.after == own))
+            .filter(|c| c.name == branch && c.after != own)
             .map(|c| c.name)
             .collect();
         if unexplained.is_empty() {
