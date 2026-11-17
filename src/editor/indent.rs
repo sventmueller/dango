@@ -432,11 +432,16 @@ pub(crate) fn reindent_lines(view: &EditorTextView, lines: std::ops::Range<usize
     else {
         return;
     };
+    let before = text.encode_utf16().skip(range.start).take(range.len());
+    if before.eq(indented.encode_utf16()) {
+        return;
+    }
     let edit = ide_document::Edit {
         range_utf16: range,
         text: indented,
     };
-    match view.document_mut().apply(edit) {
+    let applied = view.document_mut().apply(edit);
+    match applied {
         Ok(change) => view.apply_vim_change(&change),
         Err(error) => crate::diag::report("indenting anew for Vim", error),
     }

@@ -33,18 +33,19 @@ enum Wait {
 }
 
 /// Saves `view` and waits until the file is written, for the steps that depend on it, such as closing; `save_as`
-/// always asks for a file.
-pub(crate) fn save(view: &EditorTextView, save_as: bool) {
-    let Some(target) = target(view, save_as) else { return };
+/// always asks for a file. Whether the file was written: not when the user cancelled or the write failed, which the
+/// user was told.
+pub(crate) fn save(view: &EditorTextView, save_as: bool) -> bool {
+    let Some(target) = target(view, save_as) else {
+        return false;
+    };
     // A write still running holds what the document knows of the file; this one waits behind it and replaces it.
     let changed = if view.ivars().file.writing.get() == Writing::Idle {
         ChangedOnDisk::Refuse
     } else {
         ChangedOnDisk::Overwrite
     };
-    if let Some(job) = begin(view, target.as_deref(), changed) {
-        finish(view, target, wait_for(job), Wait::Done);
-    }
+    begin(view, target.as_deref(), changed).is_some_and(|job| finish(view, target, wait_for(job), Wait::Done))
 }
 
 /// Saves `view` as ⌘S does: the write runs on the disk lane, and the editor takes note when it is done.
@@ -52,7 +53,8 @@ pub(crate) fn save_soon(view: &EditorTextView, save_as: bool) {
     let writing = view.ivars().file.writing.get();
     if writing != Writing::Idle {
         if save_as {
-            return save(view, true);
+            save(view, true);
+            return;
         }
         view.ivars().file.writing.set(Writing::Again);
         return;
@@ -93,7 +95,9 @@ fn write_soon(view: &EditorTextView, job: SaveJob, target: Option<PathBuf>) {
     );
     match queued {
         Ok(()) => view.ivars().file.writing.set(Writing::Running),
-        Err(_) => finish(view, kept, Some(pending.run()), Wait::Done),
+        Err(_) => {
+            finish(view, kept, Some(pending.run()), Wait::Done);
+        }
     }
 }
 
@@ -117,11 +121,19 @@ fn wait_for(job: SaveJob) -> Option<Result<Saved, SaveError>> {
     }
 }
 
-fn finish(view: &EditorTextView, target: Option<PathBuf>, written: Option<Result<Saved, SaveError>>, wait: Wait) {
+/// Takes what the write of `view` to `target` brought; whether the file is written, which a write still running
+/// with `Wait::Not` is not yet.
+fn finish(
+    view: &EditorTextView,
+    target: Option<PathBuf>,
+    written: Option<Result<Saved, SaveError>>,
+    wait: Wait,
+) -> bool {
     match written {
         Some(Ok(done)) => {
             view.document_mut().end_save(done);
             saved(view, target.as_deref());
+            true
         }
         Some(Err(SaveError::ChangedOnDisk)) => {
             let name = view.document().path().map(display_name).unwrap_or_default();
@@ -131,19 +143,32 @@ fn finish(view: &EditorTextView, target: Option<PathBuf>, written: Option<Result
                 t("Sichern überschreibt diese Änderungen."),
                 t("Überschreiben"),
             );
-            if agreed && let Some(job) = begin(view, None, ChangedOnDisk::Overwrite) {
-                match wait {
-                    Wait::Done => finish(view, None, wait_for(job), Wait::Done),
-                    Wait::Not => write_soon(view, job, None),
+            if !agreed {
+                return false;
+            }
+            let Some(job) = begin(view, None, ChangedOnDisk::Overwrite) else {
+                return false;
+            };
+            match wait {
+                Wait::Done => finish(view, None, wait_for(job), Wait::Done),
+                Wait::Not => {
+                    write_soon(view, job, None);
+                    false
                 }
             }
         }
-        Some(Err(error)) => failed(view, &error),
-        None => warn(
-            view.mtm(),
-            t("Sichern fehlgeschlagen"),
-            t("Das Schreiben der Datei ist abgebrochen."),
-        ),
+        Some(Err(error)) => {
+            failed(view, &error);
+            false
+        }
+        None => {
+            warn(
+                view.mtm(),
+                t("Sichern fehlgeschlagen"),
+                t("Das Schreiben der Datei ist abgebrochen."),
+            );
+            false
+        }
     }
 }
 

@@ -22,6 +22,7 @@ use super::view::EditorTextView;
 use crate::util::OnDrop;
 
 mod closing;
+mod keyboard;
 mod mark;
 
 /// Whether editors use Vim's keys, as the user last chose; read from the settings once.
@@ -140,10 +141,11 @@ pub(crate) fn insert_text(view: &EditorTextView, text: &AnyObject) -> bool {
         follow_typing(view, |vim| typed.chars().for_each(|c| drop(vim.char(c))));
         return false;
     }
+    let latin = typed.is_ascii() || keyboard::types_ascii();
     run(view, |vim| {
         let mut outcome = Outcome::default();
         for c in typed.chars() {
-            let one = vim.char(key_of(c, vim.mode()));
+            let one = vim.char(key_of(c, vim.mode(), latin));
             outcome.replacements.extend(one.replacements);
             outcome.effects.extend(one.effects);
         }
@@ -162,12 +164,13 @@ fn in_block(view: &EditorTextView) -> bool {
         .is_some_and(|vim| vim.mode() == Mode::Insert && vim.carets() > 1)
 }
 
-/// What the character `c`, typed in `mode`, is to Vim: in Normal and Visual mode the key at its place on the US
-/// layout where the keyboard's layout is not Latin (E105); else as typed, such as a pattern after `/`.
-fn key_of(c: char, mode: Mode) -> char {
+/// What the character `c`, typed in `mode` on a layout that types ASCII with `latin`, is to Vim: in Normal and Visual
+/// mode on a layout that does not, the key at its place on the US layout (E105); else as typed, such as `π` on a German
+/// layout or a pattern after `/`.
+fn key_of(c: char, mode: Mode, latin: bool) -> char {
     match mode {
-        Mode::Normal | Mode::Visual | Mode::VisualLine | Mode::VisualBlock => ascii_key(c),
-        Mode::Insert | Mode::Replace | Mode::Prompt => c,
+        Mode::Normal | Mode::Visual | Mode::VisualLine | Mode::VisualBlock if !latin => ascii_key(c),
+        _ => c,
     }
 }
 
@@ -656,17 +659,31 @@ mod tests {
     }
 
     #[test]
-    fn an_ascii_character_reaches_vim_as_typed_and_a_prompt_takes_any_as_typed() {
-        for mode in [Mode::Normal, Mode::Visual, Mode::Prompt, Mode::Insert] {
-            for c in "/;',.[]:%?nN*\"`".chars() {
-                assert_eq!(key_of(c, mode), c, "{c} in {mode:?}");
+    fn a_layout_that_types_ascii_hands_every_character_to_vim_as_typed() {
+        for mode in [
+            Mode::Normal,
+            Mode::Visual,
+            Mode::VisualBlock,
+            Mode::Prompt,
+            Mode::Insert,
+        ] {
+            for c in "/;',.[]:%?nN*\"`πüçξо".chars() {
+                assert_eq!(key_of(c, mode, true), c, "{c} in {mode:?}");
             }
         }
-        assert_eq!(key_of('о', Mode::Normal), 'j');
-        assert_eq!(key_of('ξ', Mode::VisualBlock), 'j');
-        assert_eq!(key_of('о', Mode::Prompt), 'о');
-        assert_eq!(key_of('ח', Mode::Prompt), 'ח');
-        assert_eq!(key_of('ü', Mode::Normal), 'ü');
+    }
+
+    #[test]
+    fn a_layout_without_ascii_maps_keys_only_outside_the_prompt_and_insert_mode() {
+        for c in "/;',.[]:%?nN*\"`".chars() {
+            assert_eq!(key_of(c, Mode::Normal, false), c, "{c}");
+        }
+        assert_eq!(key_of('о', Mode::Normal, false), 'j');
+        assert_eq!(key_of('ξ', Mode::VisualBlock, false), 'j');
+        assert_eq!(key_of('ח', Mode::Visual, false), 'j');
+        assert_eq!(key_of('о', Mode::Prompt, false), 'о');
+        assert_eq!(key_of('ח', Mode::Prompt, false), 'ח');
+        assert_eq!(key_of('ξ', Mode::Insert, false), 'ξ');
     }
 }
 

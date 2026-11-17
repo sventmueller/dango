@@ -47,12 +47,11 @@ pub(crate) fn due(view: &EditorTextView) {
     }
 }
 
-/// Writes `view`'s document, formatted already, and waits for the disk, then closes it unless changes are left
-/// unsaved: a write that failed shows its error as ⌘S does, and an untitled document whose file the user did not
-/// pick stays open.
+/// Writes `view`'s document, formatted already, and waits for the disk, then closes it once the file is written: a
+/// write that failed shows its error as ⌘S does and keeps the document open, as does an untitled one whose file the
+/// user did not pick.
 fn written(view: &EditorTextView) {
-    crate::editor::save(view, false);
-    if !view.document().is_dirty() {
+    if crate::editor::save(view, false) && !view.document().is_dirty() {
         close(view, true);
     }
 }
