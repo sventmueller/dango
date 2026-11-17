@@ -2375,3 +2375,4 @@
 "Gelockert" = "Ослабленная";
 "Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Шлюзы запускают код, написанный агентом. «Ослабленная» дополнительно разрешает локальные порты и терминалы, «Выкл.» запускает шлюзы с Вашими правами. Проект может задать другое значение в .dango/factory.toml.";
 "„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "«Ослабленная» разрешает локальные порты и терминалы, «Выкл.» запускает шлюзы с Вашими правами. Если проект ослабляет песочницу, Вы подтверждаете это в следующем заказе кнопкой «Продолжить».";
+"Lizenz: MIT oder Apache 2.0" = "Лицензия: MIT или Apache 2.0";

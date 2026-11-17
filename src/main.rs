@@ -1,3 +1,4 @@
+mod about;
 mod activity;
 mod app;
 mod browser;

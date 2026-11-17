@@ -2375,3 +2375,4 @@
 "Gelockert" = "Assoupli";
 "Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Les contrôles exécutent du code écrit par l’agent. « Assoupli » autorise en plus les ports locaux et les terminaux, « Désactivé » lance les contrôles avec vos droits. Un projet peut définir une autre valeur dans .dango/factory.toml.";
 "„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "« Assoupli » autorise les ports locaux et les terminaux, « Désactivé » lance les contrôles avec vos droits. Si le projet assouplit la sandbox, vous le confirmez sur l’ordre de travail suivant avec « Continuer ».";
+"Lizenz: MIT oder Apache 2.0" = "Licence : MIT ou Apache 2.0";

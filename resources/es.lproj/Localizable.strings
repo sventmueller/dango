@@ -2375,3 +2375,4 @@
 "Gelockert" = "Relajado";
 "Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Los controles ejecutan código que ha escrito el agente. «Relajado» permite además puertos locales y terminales, «Desactivado» inicia los controles con tus permisos. Un proyecto puede fijar otro valor en .dango/factory.toml.";
 "„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "«Relajado» permite puertos locales y terminales, «Desactivado» inicia los controles con tus permisos. Si el proyecto relaja el sandbox, lo confirmas en la siguiente orden de trabajo con «Continuar».";
+"Lizenz: MIT oder Apache 2.0" = "Licencia: MIT o Apache 2.0";

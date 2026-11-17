@@ -150,6 +150,11 @@ define_class!(
     }
 
     impl AppDelegate {
+        #[unsafe(method(ideShowAbout:))]
+        fn show_about(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::about::show(self.mtm()));
+        }
+
         #[unsafe(method(ideOpenFolder:))]
         fn open_folder(&self, _sender: Option<&AnyObject>) {
             guarded((), || ask_for_folder(self.mtm()));
