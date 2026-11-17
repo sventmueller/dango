@@ -47,6 +47,7 @@ const DICTATION_TAB: isize = 6;
 pub(crate) struct Ivars {
     settings: RefCell<Settings>,
     font_label: RefCell<Option<Retained<NSTextField>>>,
+    chat_font_label: RefCell<Option<Retained<NSTextField>>>,
     ci: Retained<ci::CiSettings>,
     agents: Retained<agents::AgentsSettings>,
     orders: Retained<orders::OrdersSettings>,
@@ -163,6 +164,18 @@ define_class!(
             });
         }
 
+        #[unsafe(method(ideChatFontSizeChanged:))]
+        fn chat_font_size_changed(&self, sender: Option<&AnyObject>) {
+            guarded((), || {
+                let Some(stepper) = sender.and_then(|s| s.downcast_ref::<NSStepper>()) else { return };
+                let size = stepper.doubleValue().round();
+                self.store(|settings| settings.set(&ide_ui_agent::CHAT_FONT_SIZE, &size));
+                if let Some(field) = self.ivars().chat_font_label.borrow().as_ref() {
+                    field.setStringValue(&ns(&font_size_text(size)));
+                }
+            });
+        }
+
         #[unsafe(method(ideSearchEngineChanged:))]
         fn search_engine_changed(&self, sender: Option<&AnyObject>) {
             guarded((), || {
@@ -203,6 +216,7 @@ impl SettingsController {
         let this = Self::alloc(mtm).set_ivars(Ivars {
             settings: RefCell::new(Settings::load_user()),
             font_label: RefCell::new(None),
+            chat_font_label: RefCell::new(None),
             ci: ci::CiSettings::new(mtm),
             agents: agents::AgentsSettings::new(mtm),
             orders: orders::OrdersSettings::new(mtm),
@@ -581,6 +595,7 @@ fn general_view(mtm: MainThreadMarker, controller: &SettingsController) -> Retai
         Row::new(mtm, t("Tabs:"), &previews),
         Row::new(mtm, t("Dateien:"), &files),
         font_size_row(mtm, controller, settings.get(&keys::FONT_SIZE)),
+        chat_font_size_row(mtm, controller, settings.get(&ide_ui_agent::CHAT_FONT_SIZE)),
         Row::new(mtm, t("Code:"), &format_on_save),
         Row::under(&eslint),
         Row::under(&emmet),
@@ -606,22 +621,54 @@ fn general_view(mtm: MainThreadMarker, controller: &SettingsController) -> Retai
     form::page(mtm, &form::grid(mtm, &rows))
 }
 
-/// The font size and the stepper that changes it.
+/// The font size of editors and terminals and the stepper that changes it.
 fn font_size_row(mtm: MainThreadMarker, controller: &SettingsController, size: f64) -> Row {
+    let (row, size_label) = size_row(
+        mtm,
+        controller,
+        t("Schriftgröße:"),
+        (size, 9.0, 32.0),
+        sel!(ideFontSizeChanged:),
+    );
+    *controller.ivars().font_label.borrow_mut() = Some(size_label);
+    row
+}
+
+/// The text size of the AI tabs and the stepper that changes it.
+fn chat_font_size_row(mtm: MainThreadMarker, controller: &SettingsController, size: f64) -> Row {
+    let (row, size_label) = size_row(
+        mtm,
+        controller,
+        t("Schriftgröße im AI-Tab:"),
+        (size, ide_ui_agent::CHAT_FONT_MIN, ide_ui_agent::CHAT_FONT_MAX),
+        sel!(ideChatFontSizeChanged:),
+    );
+    *controller.ivars().chat_font_label.borrow_mut() = Some(size_label);
+    row
+}
+
+/// A row titled `caption` with a size in points and a stepper that sends `action`; `size` is the value, then the
+/// smallest and the largest the stepper offers.
+fn size_row(
+    mtm: MainThreadMarker,
+    controller: &SettingsController,
+    caption: &str,
+    (size, min, max): (f64, f64, f64),
+    action: objc2::runtime::Sel,
+) -> (Row, Retained<NSTextField>) {
     let size_label = label(mtm, &font_size_text(size));
     let stepper = NSStepper::new(mtm);
-    stepper.setMinValue(9.0);
-    stepper.setMaxValue(32.0);
+    stepper.setMinValue(min);
+    stepper.setMaxValue(max);
     stepper.setIncrement(1.0);
     stepper.setDoubleValue(size);
-    set_action(&stepper, controller, sel!(ideFontSizeChanged:));
+    set_action(&stepper, controller, action);
     let line = form::line(mtm, &[&size_label, &stepper]);
-    let row = Row::group(mtm, t("Schriftgröße:"), &line, &size_label);
+    let row = Row::group(mtm, caption, &line, &size_label);
     if let Some(caption) = row.caption() {
         crate::util::set_title_element(&stepper, caption);
     }
-    *controller.ivars().font_label.borrow_mut() = Some(size_label);
-    row
+    (row, size_label)
 }
 
 /// A checkbox titled `title` that sends `action` to `controller`, ticked when `on`.

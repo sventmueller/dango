@@ -53,6 +53,7 @@ needs a row here first, and a reason from the list above.
 | `crates/ide-ui-agent/src/context_view.rs` | `GAUGES` | the context gauge of each AI tab by tab key | while the tab is open | AppContext: `agent.context_gauges` |
 | `crates/ide-ui-agent/src/context_view.rs` | `OPENER` | action target of the context gauges, without state | app (buttons hold their target weakly) | stays: cache (stateless object that aims at no window) |
 | `crates/ide-ui-agent/src/context_view.rs` | `SHOWN` | the breakdown popover on view | while it shows | AppContext: `agent.context_gauges` |
+| `crates/ide-ui-agent/src/text_size.rs` | `SIZE` | the AI tabs' text size as last read from the settings | app | stays: cache (a setting as last read) |
 | `crates/ide-ui-agent/src/enlarge.rs` | `OPENER` | action target of the enlarge buttons, without state | app (buttons hold their target weakly) | stays: cache (stateless object that aims at no window) |
 | `crates/ide-ui-agent/src/enlarge.rs` | `SHOWN` | the picture shown large | while it shows | AppContext: `agent.enlarged_picture` |
 | `crates/ide-ui-agent/src/figures.rs` | `ASKED` | the formulas and diagrams asked of the renderer, with their receiver | until the answers came | AppContext: `agent.figures` |

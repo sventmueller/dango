@@ -235,6 +235,7 @@
 "Schließen" = "닫기";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "쓰기는 프로젝트 안에서만 가능하고, 읽기는 어디서나 가능하며 네트워크도 열려 있습니다";
 "Schriftgröße:" = "서체 크기:";
+"Schriftgröße im AI-Tab:" = "AI 탭 서체 크기:";
 "Seite des Browser-Tabs" = "브라우저 탭의 페이지";
 "Seitenleiste ein-/ausblenden" = "사이드바 토글";
 "Seitenleisten-Auswahl" = "사이드바 선택기";

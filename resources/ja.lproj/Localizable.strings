@@ -235,6 +235,7 @@
 "Schließen" = "閉じる";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "書き込みはプロジェクト内のみ。読み込みはどこでも可能で、ネットワークも使用できます";
 "Schriftgröße:" = "フォントサイズ:";
+"Schriftgröße im AI-Tab:" = "AIタブのフォントサイズ:";
 "Seite des Browser-Tabs" = "ブラウザタブのページ";
 "Seitenleiste ein-/ausblenden" = "サイドバーを切り替え";
 "Seitenleisten-Auswahl" = "サイドバーの選択";

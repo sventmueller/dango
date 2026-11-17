@@ -107,14 +107,14 @@ impl StatusLine {
     pub(crate) fn new(mtm: MainThreadMarker, key: AgentKey) -> StatusLine {
         let ring = ContextRing::new(mtm);
         let small = |color: Retained<NSColor>| {
-            let label = ui::label(mtm, "", &style::small(), &color);
+            let label = ui::label(mtm, "", &style::chat_small(), &color);
             ui::hug(&label);
             label
         };
         let context = small(NSColor::secondaryLabelColor());
         let cost = small(NSColor::secondaryLabelColor());
         let activity = small(NSColor::secondaryLabelColor());
-        let problem = ui::label(mtm, "", &style::small(), &NSColor::systemRedColor());
+        let problem = ui::label(mtm, "", &style::chat_small(), &NSColor::systemRedColor());
         let spacer = ui::spacer(mtm);
         #[cfg(feature = "dictation")]
         let dictation = ide_ui_dictation::line(mtm);
@@ -136,6 +136,13 @@ impl StatusLine {
             problem,
             #[cfg(feature = "dictation")]
             dictation,
+        }
+    }
+
+    /// Takes the text size the user chose for the AI tabs.
+    pub(crate) fn text_size_changed(&self) {
+        for label in [&self.context, &self.cost, &self.activity, &self.problem] {
+            label.setFont(Some(&style::chat_small()));
         }
     }
 

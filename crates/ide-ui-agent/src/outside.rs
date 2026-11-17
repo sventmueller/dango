@@ -174,9 +174,15 @@ pub(crate) fn explanation() -> &'static str {
 /// The mark on the chip of outside text, which explains on hover and to VoiceOver what it means.
 pub(crate) fn marker(mtm: MainThreadMarker) -> Retained<NSView> {
     let orange = NSColor::systemOrangeColor();
-    let icon = ui::icon(mtm, "exclamationmark.shield", t("Fremder Inhalt"), 9.0, &orange);
+    let icon = ui::icon(
+        mtm,
+        "exclamationmark.shield",
+        t("Fremder Inhalt"),
+        style::chat(9.0),
+        &orange,
+    );
     ide_ui_common::util::hide_from_voiceover(&icon);
-    let label = ui::label(mtm, t("Fremder Inhalt"), &style::small(), &orange);
+    let label = ui::label(mtm, t("Fremder Inhalt"), &style::chat_small(), &orange);
     ui::hug(&label);
     let help = ns(explanation());
     label.setAccessibilityHelp(Some(&help));

@@ -15,6 +15,12 @@ pub(crate) const LINE_X: f64 = 13.0;
 pub(crate) const DOT_Y: f64 = 13.0;
 const DOT_RADIUS: f64 = 3.5;
 
+/// Where the dot sits at the text size the user chose, still in the middle of the first line.
+fn dot_y() -> f64 {
+    let top = crate::timeline::TOP;
+    top + (DOT_Y - top) * crate::style::chat(1.0)
+}
+
 /// How a row is marked.
 #[derive(Clone, Default)]
 pub(crate) struct Mark {
@@ -93,14 +99,15 @@ impl TimelineRow {
     fn draw_mark(&self) {
         let mark = self.ivars().mark.borrow();
         let bounds = self.bounds();
+        let dot_y = dot_y();
         let x = if self.ivars().rtl.get() {
             bounds.size.width - LINE_X
         } else {
             LINE_X
         };
         if mark.line_above || mark.line_below {
-            let top = if mark.line_above { 0.0 } else { DOT_Y };
-            let bottom = if mark.line_below { bounds.size.height } else { DOT_Y };
+            let top = if mark.line_above { 0.0 } else { dot_y };
+            let bottom = if mark.line_below { bounds.size.height } else { dot_y };
             if bottom > top {
                 NSColor::separatorColor().setFill();
                 NSBezierPath::fillRect(NSRect::new(NSPoint::new(x - 0.5, top), NSSize::new(1.0, bottom - top)));
@@ -108,7 +115,7 @@ impl TimelineRow {
         }
         if let Some(color) = &mark.dot {
             let rect = NSRect::new(
-                NSPoint::new(x - DOT_RADIUS, DOT_Y - DOT_RADIUS),
+                NSPoint::new(x - DOT_RADIUS, dot_y - DOT_RADIUS),
                 NSSize::new(DOT_RADIUS * 2.0, DOT_RADIUS * 2.0),
             );
             color.setFill();

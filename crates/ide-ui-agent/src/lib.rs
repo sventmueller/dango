@@ -54,6 +54,7 @@ mod tab_probe;
 mod tab_session;
 mod target;
 mod text;
+mod text_size;
 mod timeline;
 #[cfg(feature = "selftest")]
 mod timeline_probe;
@@ -80,6 +81,7 @@ pub use source::Resume;
 pub use stop::Stop;
 pub use tab::AgentTab;
 pub use tab_driven::{attach, session_fed};
+pub use text_size::{CHAT_FONT_MAX, CHAT_FONT_MIN, CHAT_FONT_SIZE, set_text_size, settings_changed};
 pub use ui::{framed, icon, insets, separator};
 
 /// An AI thread as the layout keeps it, opened again by resuming its session.
@@ -101,6 +103,7 @@ pub const SETTINGS: &[ide_core::settings::Declared] = &[
     own_agent::PRICES.declared(),
     own_agent::RULES.declared(),
     own_agent::ALLOWED.declared(),
+    text_size::CHAT_FONT_SIZE.declared(),
 ];
 
 /// Every open AI tab, in the order they were opened; a tab leaves when it is closed.

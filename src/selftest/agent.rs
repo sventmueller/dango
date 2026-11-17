@@ -669,6 +669,7 @@ fn dark(root: PathBuf, key: AgentKey) {
                 };
                 picture(&controller, "agent-contrast");
                 appearance(&controller, constant!(NSAppearanceNameAqua));
+                super::agent_text_size::run(key);
                 controller.activate_panel(Panel::Files);
                 requests(root, key);
             });

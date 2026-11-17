@@ -76,7 +76,7 @@ pub(super) fn card(ctx: &Ctx<'_>, id: EntryId, call: &ToolCall) -> Retained<NSVi
 fn status(ctx: &Ctx<'_>, call: &ToolCall) -> Vec<Retained<NSView>> {
     let mtm = ctx.mtm;
     let small = |text: &str, color: &NSColor| {
-        let label = ui::label(mtm, text, &style::small(), color);
+        let label = ui::label(mtm, text, &style::chat_small(), color);
         ui::hug(&label);
         ui::view(&label)
     };
@@ -122,7 +122,12 @@ fn command_card(
     let mtm = ctx.mtm;
     let detail = description.unwrap_or(&call.title);
     let badge = (background || call.background_task.is_some()).then(|| {
-        let label = ui::label(mtm, t("Hintergrund"), &style::small(), &NSColor::secondaryLabelColor());
+        let label = ui::label(
+            mtm,
+            t("Hintergrund"),
+            &style::chat_small(),
+            &NSColor::secondaryLabelColor(),
+        );
         ui::hug(&label);
         ui::view(&ui::framed(
             mtm,
@@ -181,7 +186,7 @@ fn io_card(ctx: &Ctx<'_>, id: EntryId, call: &ToolCall, name: &str, detail: &str
 /// The box with the IN row and, once there is output, the OUT row.
 fn io_box(ctx: &Ctx<'_>, id: EntryId, input: &str, output: Option<&str>, call: &ToolCall) -> Retained<NSView> {
     let mtm = ctx.mtm;
-    let inner = ctx.width - 2.0 - 16.0 - LABEL_WIDTH - 8.0;
+    let inner = ctx.width - 2.0 - 16.0 - style::chat(LABEL_WIDTH) - 8.0;
     let mut rows: Vec<Retained<NSView>> = Vec::new();
     if !input.is_empty() {
         rows.push(io_row(ctx, "IN", &input_view(ctx, id, input, inner)));
@@ -206,8 +211,13 @@ fn io_box(ctx: &Ctx<'_>, id: EntryId, input: &str, output: Option<&str>, call: &
 }
 
 fn io_row(ctx: &Ctx<'_>, name: &str, content: &NSView) -> Retained<NSView> {
-    let label = ui::label(ctx.mtm, name, &style::mono(9.5), &NSColor::secondaryLabelColor());
-    ui::fixed_width(&label, LABEL_WIDTH);
+    let label = ui::label(
+        ctx.mtm,
+        name,
+        &style::mono(style::chat(9.5)),
+        &NSColor::secondaryLabelColor(),
+    );
+    ui::fixed_width(&label, style::chat(LABEL_WIDTH));
     let line = ui::row(ctx.mtm, 8.0, &[&label, content]);
     line.setAlignment(NSLayoutAttribute::Top);
     // Code reads left to right in any interface, so the box keeps that order too.
@@ -228,7 +238,12 @@ fn input_view(ctx: &Ctx<'_>, id: EntryId, input: &str, width: f64) -> Retained<N
         return ui::view(&line);
     }
     let first = input.lines().next().unwrap_or_default();
-    let label = ui::label(mtm, first, &style::mono(style::CODE), &NSColor::labelColor());
+    let label = ui::label(
+        mtm,
+        first,
+        &style::mono(style::chat(style::CODE)),
+        &NSColor::labelColor(),
+    );
     label.setUserInterfaceLayoutDirection(objc2_app_kit::NSUserInterfaceLayoutDirection::LeftToRight);
     label.setBaseWritingDirection(NSWritingDirection::LeftToRight);
     label.setSelectable(true);
@@ -251,7 +266,7 @@ fn output_view(ctx: &Ctx<'_>, id: EntryId, output: &str, width: f64, failed: boo
         return ui::view(&ui::label(
             mtm,
             t("(keine Ausgabe)"),
-            &style::small(),
+            &style::chat_small(),
             &NSColor::tertiaryLabelColor(),
         ));
     }
@@ -315,7 +330,7 @@ fn compact_card(
     let mtm = ctx.mtm;
     let mut extra: Vec<Retained<NSView>> = Vec::new();
     if let Some(count) = count {
-        let label = ui::label(mtm, count, &style::small(), &NSColor::secondaryLabelColor());
+        let label = ui::label(mtm, count, &style::chat_small(), &NSColor::secondaryLabelColor());
         ui::hug(&label);
         extra.push(ui::view(&label));
     }
@@ -329,7 +344,7 @@ fn compact_card(
         parts.push(ui::view(&ui::wrapping(
             mtm,
             note,
-            &style::small(),
+            &style::chat_small(),
             &NSColor::secondaryLabelColor(),
             ctx.width,
         )));
@@ -377,7 +392,7 @@ fn diff_card(ctx: &Ctx<'_>, id: EntryId, call: &ToolCall, path: &str, proposed: 
     let counts = ui::label(
         mtm,
         &format!("+{added} −{removed}"),
-        &style::mono(style::SMALL),
+        &style::mono(style::chat(style::SMALL)),
         &NSColor::secondaryLabelColor(),
     );
     counts.setBaseWritingDirection(NSWritingDirection::LeftToRight);
@@ -470,7 +485,7 @@ fn write_lines(content: &str) -> Vec<String> {
 /// Diff lines in code type, each on a full-width red or green ground.
 fn diff_text(lines: &[String]) -> Retained<NSAttributedString> {
     let out = NSMutableAttributedString::new();
-    let font = style::mono(style::CODE);
+    let font = style::mono(style::chat(style::CODE));
     let count = lines.len();
     for (n, line) in lines.iter().enumerate() {
         let (background, color) = match line.chars().next() {

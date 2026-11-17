@@ -979,6 +979,7 @@ fn at_bottom(scroll: &NSScrollView) -> bool {
 mod tests;
 
 mod follow;
+mod text_size;
 
 #[cfg(feature = "selftest")]
 mod selftest_probe;

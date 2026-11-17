@@ -8,9 +8,10 @@ use std::time::SystemTime;
 use ide_claude::Session;
 use ide_thread::{Change, Status, Thread, ThreadId};
 use objc2::rc::{Retained, Weak};
+use objc2::runtime::ProtocolObject;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{NSColor, NSEvent, NSLayoutConstraint, NSResponder, NSStackView, NSView};
-use objc2_foundation::{NSObjectProtocol, NSRect};
+use objc2_foundation::{NSNotificationCenter, NSObjectProtocol, NSRect};
 use splat_i18n::t;
 
 use super::AgentKey;
@@ -150,6 +151,17 @@ pub struct AgentTab {
     pub(super) codex_remote: RefCell<Option<crate::codex::Turning>>,
     /// The app's session registry, where the tab runs its session (B37b).
     pub(super) sessions: Option<Rc<dyn crate::Sessions>>,
+    /// Lays the tab out anew when the user changes the text size.
+    text_size: RefCell<Option<Retained<ProtocolObject<dyn NSObjectProtocol>>>>,
+}
+
+impl Drop for AgentTab {
+    fn drop(&mut self) {
+        if let Some(observer) = self.text_size.take() {
+            // SAFETY: An observer this center handed out.
+            unsafe { NSNotificationCenter::defaultCenter().removeObserver(observer.as_ref()) };
+        }
+    }
 }
 
 impl AgentTab {
@@ -251,6 +263,7 @@ impl AgentTab {
             me: RefCell::new(std::rc::Weak::new()),
             codex_remote: RefCell::new(None),
             sessions,
+            text_size: RefCell::new(None),
         };
         tab.lay_out();
         tab
@@ -260,6 +273,7 @@ impl AgentTab {
     pub(super) fn shared(tab: AgentTab) -> Rc<AgentTab> {
         let tab = Rc::new(tab);
         *tab.me.borrow_mut() = Rc::downgrade(&tab);
+        *tab.text_size.borrow_mut() = Some(crate::text_size::follow(&tab));
         tab
     }
 
@@ -454,6 +468,15 @@ impl AgentTab {
     pub(crate) fn show_pending(&self) {
         self.timeline.show_pending();
         self.start_ticking();
+    }
+
+    /// Shows the timeline, the composer and the status line at the text size the user chose.
+    pub(crate) fn text_size_changed(&self) {
+        self.timeline.text_size_changed();
+        self.composer.text_size_changed();
+        self.status.text_size_changed();
+        self.refresh_chips();
+        self.refresh_queue();
     }
 
     /// Shows the thread as `snapshot` has it and reacts to how its status moved.

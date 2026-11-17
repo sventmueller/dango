@@ -139,8 +139,8 @@ pub(crate) fn permission(ctx: &Ctx<'_>, id: EntryId, request: &PermissionRequest
 }
 
 fn status_line(ctx: &Ctx<'_>, symbol: &str, color: &NSColor, text: &str) -> Retained<NSView> {
-    let icon = ui::icon(ctx.mtm, symbol, text, 11.0, color);
-    let label = ui::label(ctx.mtm, text, &style::small(), &NSColor::secondaryLabelColor());
+    let icon = ui::icon(ctx.mtm, symbol, text, style::chat(11.0), color);
+    let label = ui::label(ctx.mtm, text, &style::chat_small(), &NSColor::secondaryLabelColor());
     let spacer = ui::spacer(ctx.mtm);
     ui::view(&ui::row(ctx.mtm, 5.0, &[&icon, &label, &spacer]))
 }
@@ -153,7 +153,7 @@ fn pending_permission(ctx: &Ctx<'_>, id: EntryId, request: &PermissionRequest) -
         mtm,
         "exclamationmark.shield",
         t("Freigabe"),
-        13.0,
+        style::chat(13.0),
         &NSColor::systemOrangeColor(),
     );
     let title = ui::label(
@@ -162,13 +162,13 @@ fn pending_permission(ctx: &Ctx<'_>, id: EntryId, request: &PermissionRequest) -
             "{} möchte {} verwenden",
             &[&crate::agent_name(ctx.thread.agent()), &tool],
         ),
-        &style::bold(style::BODY),
+        &style::bold(style::chat(style::BODY)),
         &NSColor::labelColor(),
     );
     let spacer = ui::spacer(mtm);
     let mut parts: Vec<Retained<NSView>> = vec![ui::view(&ui::row(mtm, 6.0, &[&icon, &title, &spacer]))];
     let mut note = |text: String, color: Retained<NSColor>| {
-        parts.push(ui::view(&ui::wrapping(mtm, &text, &style::small(), &color, inner)));
+        parts.push(ui::view(&ui::wrapping(mtm, &text, &style::chat_small(), &color, inner)));
     };
     if let Some(description) = &request.description {
         note(description.clone(), NSColor::secondaryLabelColor());
@@ -185,7 +185,7 @@ fn pending_permission(ctx: &Ctx<'_>, id: EntryId, request: &PermissionRequest) -
             parts.push(ui::view(&ui::label(
                 mtm,
                 caption,
-                &style::small(),
+                &style::chat_small(),
                 &NSColor::secondaryLabelColor(),
             )));
         }
@@ -275,7 +275,7 @@ fn editor(ctx: &Ctx<'_>, id: EntryId, request: &PermissionRequest, width: f64) -
     scroll.heightAnchor().constraintEqualToConstant(height).setActive(true);
     let view = NSTextView::initWithFrame(NSTextView::alloc(mtm), frame);
     view.setRichText(false);
-    view.setFont(Some(&style::mono(style::CODE)));
+    view.setFont(Some(&style::mono(style::chat(style::CODE))));
     view.setAutomaticQuoteSubstitutionEnabled(false);
     view.setAutomaticDashSubstitutionEnabled(false);
     view.setAutomaticTextReplacementEnabled(false);
@@ -297,7 +297,7 @@ fn field(ctx: &Ctx<'_>, id: EntryId, what: u8, placeholder: &str) -> Retained<NS
     }
     let field = NSTextField::textFieldWithString(&ns(""), ctx.mtm);
     field.setPlaceholderString(Some(&ns(placeholder)));
-    field.setFont(Some(&style::body()));
+    field.setFont(Some(&style::chat_body()));
     field.setTranslatesAutoresizingMaskIntoConstraints(false);
     ctx.inputs.borrow_mut().fields.insert((id.get(), what), field.clone());
     field
@@ -314,7 +314,7 @@ pub(crate) fn question(ctx: &Ctx<'_>, id: EntryId, question: &Question) -> Retai
             let text = ui::wrapping(
                 mtm,
                 &lines.join("\n"),
-                &style::body(),
+                &style::chat_body(),
                 &NSColor::labelColor(),
                 ctx.width - 20.0,
             );
@@ -322,7 +322,7 @@ pub(crate) fn question(ctx: &Ctx<'_>, id: EntryId, question: &Question) -> Retai
                 mtm,
                 "questionmark.bubble",
                 t("Rückfrage"),
-                12.0,
+                style::chat(12.0),
                 &NSColor::secondaryLabelColor(),
             );
             let line = ui::row(mtm, 6.0, &[&icon, &text]);
@@ -365,14 +365,14 @@ fn question_item(ctx: &Ctx<'_>, id: EntryId, index: u8, item: &QuestionItem, wai
         parts.push(ui::view(&ui::label(
             mtm,
             &header.to_uppercase(),
-            &style::medium(style::SMALL - 1.0),
+            &style::medium(style::chat(style::SMALL - 1.0)),
             &NSColor::secondaryLabelColor(),
         )));
     }
     parts.push(ui::view(&ui::wrapping(
         mtm,
         &item.question,
-        &style::bold(style::BODY),
+        &style::bold(style::chat(style::BODY)),
         &NSColor::labelColor(),
         inner,
     )));
@@ -420,7 +420,7 @@ fn question_item(ctx: &Ctx<'_>, id: EntryId, index: u8, item: &QuestionItem, wai
         parts.push(ui::view(&ui::wrapping(
             mtm,
             &described.join("\n"),
-            &style::small(),
+            &style::chat_small(),
             &NSColor::secondaryLabelColor(),
             inner,
         )));
@@ -485,8 +485,8 @@ pub(crate) fn plan_outcome(plan: &PlanApproval) -> (&'static str, Retained<NSCol
 fn decided_plan(ctx: &Ctx<'_>, id: EntryId, plan: &PlanApproval) -> Retained<NSView> {
     let mtm = ctx.mtm;
     let (symbol, color, text, comments) = plan_outcome(plan);
-    let icon = ui::icon(mtm, symbol, text, 11.0, &color);
-    let label = ui::label(mtm, text, &style::small(), &NSColor::secondaryLabelColor());
+    let icon = ui::icon(mtm, symbol, text, style::chat(11.0), &color);
+    let label = ui::label(mtm, text, &style::chat_small(), &NSColor::secondaryLabelColor());
     let chevron = disclosure(ctx, id, Part::Plan);
     let spacer = ui::spacer(mtm);
     let line = ui::row(mtm, 5.0, &[&icon, &label, &chevron, &spacer]);
@@ -525,13 +525,13 @@ fn pending_plan(ctx: &Ctx<'_>, id: EntryId, plan: &PlanApproval) -> Retained<NSV
         mtm,
         "list.bullet.clipboard",
         t("Plan"),
-        13.0,
+        style::chat(13.0),
         &NSColor::secondaryLabelColor(),
     );
     let title = ui::label(
         mtm,
         t("Plan zur Freigabe"),
-        &style::bold(style::BODY),
+        &style::bold(style::chat(style::BODY)),
         &NSColor::labelColor(),
     );
     let spacer = ui::spacer(mtm);
@@ -556,7 +556,7 @@ fn pending_plan(ctx: &Ctx<'_>, id: EntryId, plan: &PlanApproval) -> Retained<NSV
         "Öffnet den Plan in einem eigenen Tab, mit den Kommentaren daneben",
     ))));
     let head = ui::row(mtm, 10.0, &[&icon, &title, &spacer, &comment, &open]);
-    let rendered = super::super::markdown::render(mtm, &plan.plan, style::BODY, Tone::Primary);
+    let rendered = super::super::markdown::render(mtm, &plan.plan, style::chat(style::BODY), Tone::Primary);
     let body = CardText::new(mtm, &plan::marked(&rendered, &notes), inner.width, true);
     ctx.inputs
         .borrow_mut()

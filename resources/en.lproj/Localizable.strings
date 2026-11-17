@@ -244,6 +244,7 @@
 "Schließen" = "Close";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "Writing only inside the project; reading anywhere and the network stay open";
 "Schriftgröße:" = "Font size:";
+"Schriftgröße im AI-Tab:" = "AI tab font size:";
 "Seite des Browser-Tabs" = "Page of the browser tab";
 "Seitenleiste ein-/ausblenden" = "Toggle Sidebar";
 "Seitenleisten-Auswahl" = "Sidebar selector";

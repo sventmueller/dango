@@ -233,11 +233,12 @@ impl Renderer {
         let style = &para.style;
         let st = NSMutableParagraphStyle::new();
         let framed_alone = matches!(style.kind, ParaKind::Code { .. } | ParaKind::TableCell { .. });
-        let list = f64::from(style.list_depth) * LIST_INDENT;
+        let indent = s / super::style::BODY;
+        let list = f64::from(style.list_depth) * LIST_INDENT * indent;
         let quote = if framed_alone {
             0.0
         } else {
-            f64::from(style.quote_depth) * QUOTE_INDENT
+            f64::from(style.quote_depth) * QUOTE_INDENT * indent
         };
         let head = list + quote;
         st.setBaseWritingDirection(match style.rtl {
@@ -247,7 +248,7 @@ impl Renderer {
         });
         st.setHeadIndent(head);
         st.setFirstLineHeadIndent(if style.marker.is_some() {
-            head - LIST_INDENT * 0.85
+            head - LIST_INDENT * indent * 0.85
         } else {
             head
         });

@@ -24,10 +24,16 @@ pub(super) fn user(ctx: &Ctx<'_>, entry: &Entry, message: &UserMessage) -> Retai
     let mtm = ctx.mtm;
     if ctx.nested {
         let text = tf("Auftrag: {}", &[&format::first_line(&message.text, 400)]);
-        let label = ui::wrapping(mtm, &text, &style::small(), &NSColor::secondaryLabelColor(), ctx.width);
+        let label = ui::wrapping(
+            mtm,
+            &text,
+            &style::chat_small(),
+            &NSColor::secondaryLabelColor(),
+            ctx.width,
+        );
         return ui::view(&label);
     }
-    let inner_width = ctx.width - 2.0 - 20.0 - REWIND_WIDTH - 6.0;
+    let inner_width = ctx.width - 2.0 - 20.0 - style::chat(REWIND_WIDTH) - 6.0;
     let text = CardText::new(mtm, &user_text(&message.text), inner_width, true);
     let mut content: Vec<Retained<NSView>> = vec![ui::view(&text)];
     if !message.attachments.is_empty() {
@@ -39,13 +45,13 @@ pub(super) fn user(ctx: &Ctx<'_>, entry: &Entry, message: &UserMessage) -> Retai
         mtm,
         "arrow.uturn.backward",
         t("Zurückspulen"),
-        11.0,
+        style::chat(11.0),
         ctx.target,
         sel!(ideAgentRewind:),
         pack(entry.id, 0),
     );
     rewind.setEnabled(message.message_id.is_some());
-    ui::fixed_width(&rewind, REWIND_WIDTH);
+    ui::fixed_width(&rewind, style::chat(REWIND_WIDTH));
     let line = ui::row(mtm, 6.0, &[&body, &rewind]);
     line.setAlignment(objc2_app_kit::NSLayoutAttribute::Top);
     let frame = ui::framed(
@@ -59,7 +65,7 @@ pub(super) fn user(ctx: &Ctx<'_>, entry: &Entry, message: &UserMessage) -> Retai
     let time = ui::label(
         mtm,
         &format::time_of_day(entry.at),
-        &style::small(),
+        &style::chat_small(),
         &NSColor::tertiaryLabelColor(),
     );
     ui::hug(&time);
@@ -70,7 +76,7 @@ pub(super) fn user(ctx: &Ctx<'_>, entry: &Entry, message: &UserMessage) -> Retai
 
 /// What the user typed; a leading slash command in code type, as the CLI reads it.
 fn user_text(text: &str) -> Retained<objc2_foundation::NSAttributedString> {
-    let body = style::body();
+    let body = style::chat_body();
     let out = NSMutableAttributedString::new();
     let (command, rest) = match text.strip_prefix('/') {
         Some(after) if !after.starts_with(char::is_whitespace) => {
@@ -83,7 +89,7 @@ fn user_text(text: &str) -> Retained<objc2_foundation::NSAttributedString> {
         out.appendAttributedString(&attributed(
             command,
             &[
-                Attribute::font(&style::mono(style::BODY)),
+                Attribute::font(&style::mono(style::chat(style::BODY))),
                 Attribute::foreground(&NSColor::labelColor()),
             ],
         ));
@@ -130,8 +136,14 @@ fn attachment_row(ctx: &Ctx<'_>, attachments: &[Attachment]) -> Retained<objc2_a
 
 /// The chip of outside text the message took along, with its mark.
 fn outside_chip(ctx: &Ctx<'_>, text: &str) -> Retained<NSView> {
-    let icon = ui::icon(ctx.mtm, "globe", text, 10.0, &NSColor::secondaryLabelColor());
-    let label = ui::label(ctx.mtm, text, &style::small(), &NSColor::secondaryLabelColor());
+    let icon = ui::icon(
+        ctx.mtm,
+        "globe",
+        text,
+        style::chat(10.0),
+        &NSColor::secondaryLabelColor(),
+    );
+    let label = ui::label(ctx.mtm, text, &style::chat_small(), &NSColor::secondaryLabelColor());
     let marker = super::super::outside::marker(ctx.mtm);
     let line = ui::row(ctx.mtm, 3.0, &[&icon, &label, &marker]);
     ui::framed(
@@ -147,8 +159,14 @@ fn outside_chip(ctx: &Ctx<'_>, text: &str) -> Retained<NSView> {
 
 /// A small framed label with a symbol, as attachments show.
 pub(super) fn chip(ctx: &Ctx<'_>, symbol_name: &str, text: &str) -> Retained<NSView> {
-    let icon = ui::icon(ctx.mtm, symbol_name, text, 10.0, &NSColor::secondaryLabelColor());
-    let label = ui::label(ctx.mtm, text, &style::small(), &NSColor::secondaryLabelColor());
+    let icon = ui::icon(
+        ctx.mtm,
+        symbol_name,
+        text,
+        style::chat(10.0),
+        &NSColor::secondaryLabelColor(),
+    );
+    let label = ui::label(ctx.mtm, text, &style::chat_small(), &NSColor::secondaryLabelColor());
     let line = ui::row(ctx.mtm, 3.0, &[&icon, &label]);
     ui::framed(
         ctx.mtm,
@@ -170,7 +188,7 @@ pub(super) fn answer(ctx: &Ctx<'_>, id: EntryId, markdown: &str, streaming: bool
         return ui::view(&ui::label(
             ctx.mtm,
             "…",
-            &style::body(),
+            &style::chat_body(),
             &NSColor::secondaryLabelColor(),
         ));
     }
@@ -180,17 +198,17 @@ pub(super) fn answer(ctx: &Ctx<'_>, id: EntryId, markdown: &str, streaming: bool
     if ctx.nested {
         return ui::view(&markdown_text(ctx, markdown, Tone::Primary));
     }
-    let text = markdown_text(&ctx.narrower(COPY_WIDTH + 6.0), markdown, Tone::Primary);
+    let text = markdown_text(&ctx.narrower(style::chat(COPY_WIDTH) + 6.0), markdown, Tone::Primary);
     let copy = ui::symbol_button(
         ctx.mtm,
         "doc.on.doc",
         t("Antwort kopieren"),
-        11.0,
+        style::chat(11.0),
         ctx.target,
         sel!(ideAgentCopy:),
         pack(id, 0),
     );
-    ui::fixed_width(&copy, COPY_WIDTH);
+    ui::fixed_width(&copy, style::chat(COPY_WIDTH));
     let line = ui::row(ctx.mtm, 6.0, &[&text, &copy]);
     line.setAlignment(objc2_app_kit::NSLayoutAttribute::Top);
     ui::view(&line)
@@ -208,7 +226,7 @@ pub(super) fn thought(ctx: &Ctx<'_>, id: EntryId, thought: &Thought) -> Retained
     // SAFETY: Without a target and an action the button sends nothing until `set_action` gives it both.
     let button = unsafe { NSButton::buttonWithTitle_target_action(&ns(&title), None, None, mtm) };
     button.setBordered(false);
-    button.setFont(Some(&NSFont::systemFontOfSize(style::BODY - 1.0)));
+    button.setFont(Some(&NSFont::systemFontOfSize(style::chat(style::BODY - 1.0))));
     button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
     let open = has_text && ctx.is_open(id, Part::Thought);
     if has_text {
@@ -251,11 +269,11 @@ pub(super) fn todos(ctx: &Ctx<'_>, todos: &[Todo]) -> Retained<NSView> {
             ),
             TodoStatus::Pending => ("circle", NSColor::tertiaryLabelColor(), todo.content.clone()),
         };
-        let icon = ui::icon(mtm, symbol_name, &text, 12.0, &color);
+        let icon = ui::icon(mtm, symbol_name, &text, style::chat(12.0), &color);
         let (font, text_color) = match todo.status {
-            TodoStatus::InProgress => (style::medium(style::BODY), NSColor::labelColor()),
-            TodoStatus::Completed => (style::body(), NSColor::secondaryLabelColor()),
-            TodoStatus::Pending => (style::body(), NSColor::labelColor()),
+            TodoStatus::InProgress => (style::medium(style::chat(style::BODY)), NSColor::labelColor()),
+            TodoStatus::Completed => (style::chat_body(), NSColor::secondaryLabelColor()),
+            TodoStatus::Pending => (style::chat_body(), NSColor::labelColor()),
         };
         let label = ui::wrapping(mtm, &text, &font, &text_color, ctx.width - 24.0);
         if todo.status == TodoStatus::Completed {

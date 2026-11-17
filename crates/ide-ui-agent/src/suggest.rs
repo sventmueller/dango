@@ -168,10 +168,10 @@ impl Suggestions {
         button.setBordered(false);
         button.setImage(symbol(item.symbol, &item.label).as_deref());
         button.setImagePosition(NSCellImagePosition::ImageLeading);
-        button.setFont(Some(&style::body()));
+        button.setFont(Some(&style::chat_body()));
         ide_ui_common::util::set_label(&button, Some(&format!("{} {}", item.label, item.detail)));
         ui::hug(&button);
-        let detail = ui::label(mtm, &item.detail, &style::small(), &NSColor::secondaryLabelColor());
+        let detail = ui::label(mtm, &item.detail, &style::chat_small(), &NSColor::secondaryLabelColor());
         let spacer = ui::spacer(mtm);
         let line = ui::row(mtm, 6.0, &[&button, &detail, &spacer]);
         let frame = ui::framed(

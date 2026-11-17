@@ -48,6 +48,7 @@ mod tests {
         "agentModel",
         "agentPrices",
         "blameAtLineEnd",
+        "chatFontSize",
         "ciHosts",
         "ciOAuthClients",
         "commitMessageModel",

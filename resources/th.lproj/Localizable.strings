@@ -235,6 +235,7 @@
 "Schließen" = "ปิด";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "เขียนได้เฉพาะในโปรเจ็กต์ ส่วนการอ่านได้ทุกที่และเครือข่ายยังเปิดอยู่";
 "Schriftgröße:" = "ขนาดแบบอักษร:";
+"Schriftgröße im AI-Tab:" = "ขนาดแบบอักษรในแถบ AI:";
 "Seite des Browser-Tabs" = "หน้าของแถบเบราว์เซอร์";
 "Seitenleiste ein-/ausblenden" = "แสดง/ซ่อนแถบด้านข้าง";
 "Seitenleisten-Auswahl" = "ตัวเลือกแถบด้านข้าง";

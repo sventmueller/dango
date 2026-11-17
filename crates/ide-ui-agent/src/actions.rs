@@ -220,20 +220,20 @@ impl AgentTab {
                 mtm,
                 "clock",
                 t("Wartet"),
-                11.0,
+                style::chat(11.0),
                 &objc2_app_kit::NSColor::secondaryLabelColor(),
             );
             let label = ui::label(
                 mtm,
                 &tf("Wartet: {}", &[&format::first_line(text, 120)]),
-                &style::small(),
+                &style::chat_small(),
                 &objc2_app_kit::NSColor::secondaryLabelColor(),
             );
             let remove = ui::symbol_button(
                 mtm,
                 "xmark.circle.fill",
                 t("Aus der Warteschlange nehmen"),
-                11.0,
+                style::chat(11.0),
                 &self.target,
                 sel!(ideAgentRemoveQueued:),
                 isize::try_from(n).unwrap_or(-1),

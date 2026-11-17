@@ -235,6 +235,7 @@
 "Schließen" = "Sulje";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "Kirjoitus vain projektiin; lukeminen kaikkialta ja verkko pysyvät avoimina";
 "Schriftgröße:" = "Fonttikoko:";
+"Schriftgröße im AI-Tab:" = "AI-välilehden fonttikoko:";
 "Seite des Browser-Tabs" = "Selainvälilehden sivu";
 "Seitenleiste ein-/ausblenden" = "Näytä tai kätke sivupalkki";
 "Seitenleisten-Auswahl" = "Sivupalkin valitsin";

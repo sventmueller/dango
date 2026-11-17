@@ -235,6 +235,7 @@
 "Schließen" = "Fechar";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "Gravação apenas dentro do projeto; leitura em qualquer lugar e rede continuam abertas";
 "Schriftgröße:" = "Tamanho da fonte:";
+"Schriftgröße im AI-Tab:" = "Tamanho da fonte na aba de IA:";
 "Seite des Browser-Tabs" = "Página da aba do navegador";
 "Seitenleiste ein-/ausblenden" = "Mostrar/Ocultar Barra Lateral";
 "Seitenleisten-Auswahl" = "Seletor da barra lateral";

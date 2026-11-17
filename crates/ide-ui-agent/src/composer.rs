@@ -178,7 +178,7 @@ fn pill(mtm: MainThreadMarker, target: &AgentTarget, action: objc2::runtime::Sel
     let button = unsafe { NSButton::buttonWithTitle_target_action(&ns(""), None, None, mtm) };
     ide_ui_common::util::set_action(&button, target, action);
     button.setBordered(false);
-    button.setFont(Some(&style::small()));
+    button.setFont(Some(&style::chat_small()));
     button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
     button.setImage(symbol("chevron.up.chevron.down", label).as_deref());
     button.setImagePosition(NSCellImagePosition::ImageTrailing);
@@ -202,7 +202,7 @@ impl Composer {
         let placeholder = ui::label(
             mtm,
             t("⌘Esc zum Fokussieren oder Verlassen"),
-            &style::body(),
+            &style::chat_body(),
             &NSColor::placeholderTextColor(),
         );
         let chips = ui::row(mtm, 4.0, &[]);
@@ -299,10 +299,19 @@ impl Composer {
             }
             _ => MIN_TEXT,
         };
-        let height = (used + 4.0).clamp(MIN_TEXT, MAX_TEXT);
+        let height = (used + 4.0).clamp(style::chat(MIN_TEXT), MAX_TEXT);
         if (self.height.constant() - height).abs() > 0.5 {
             self.height.setConstant(height);
         }
+    }
+
+    /// Takes the text size the user chose for the AI tabs.
+    pub(crate) fn text_size_changed(&self) {
+        self.text.setFont(Some(&style::chat_body()));
+        self.placeholder.setFont(Some(&style::chat_body()));
+        self.model.setFont(Some(&style::chat_small()));
+        self.mode.setFont(Some(&style::chat_small()));
+        self.fit();
     }
 
     /// Shows `text` while the composer is empty.
@@ -387,7 +396,7 @@ fn text_view(mtm: MainThreadMarker, key: AgentKey, target: &AgentTarget, frame: 
     // SAFETY: NSTextView's initializer, called once on the newly allocated object.
     let text: Retained<ComposerText> = unsafe { msg_send![super(this), initWithFrame: frame] };
     text.setRichText(false);
-    text.setFont(Some(&style::body()));
+    text.setFont(Some(&style::chat_body()));
     text.setTextColor(Some(&NSColor::labelColor()));
     text.setDrawsBackground(false);
     text.setAllowsUndo(true);

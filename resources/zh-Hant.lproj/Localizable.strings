@@ -235,6 +235,7 @@
 "Schließen" = "關閉";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "只能寫入專案內；讀取任何位置和網路存取則不受限制";
 "Schriftgröße:" = "字體大小：";
+"Schriftgröße im AI-Tab:" = "AI 標籤頁字體大小：";
 "Seite des Browser-Tabs" = "瀏覽器標籤頁的頁面";
 "Seitenleiste ein-/ausblenden" = "顯示／隱藏側邊欄";
 "Seitenleisten-Auswahl" = "側邊欄選擇器";

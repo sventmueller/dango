@@ -164,8 +164,8 @@ pub(super) fn hook_group(ctx: &Ctx<'_>, entry: &Entry) -> Retained<NSView> {
     let mtm = ctx.mtm;
     let runs = turn_hooks(ctx.thread, entry);
     let title = hook_group_text(ctx.thread, entry);
-    let icon = ui::icon(mtm, "link", &title, 10.0, &NSColor::tertiaryLabelColor());
-    let label = ui::label(mtm, &title, &style::small(), &NSColor::tertiaryLabelColor());
+    let icon = ui::icon(mtm, "link", &title, style::chat(10.0), &NSColor::tertiaryLabelColor());
+    let label = ui::label(mtm, &title, &style::chat_small(), &NSColor::tertiaryLabelColor());
     let chevron = disclosure(ctx, entry.id, Part::Detail);
     let spacer = ui::spacer(mtm);
     let line = ui::row(mtm, 5.0, &[&icon, &label, &chevron, &spacer]);
@@ -183,7 +183,7 @@ pub(super) fn hook_group(ctx: &Ctx<'_>, entry: &Entry) -> Retained<NSView> {
         parts.push(ui::view(&ui::label(
             mtm,
             &format!("{name} ({event})"),
-            &style::small(),
+            &style::chat_small(),
             &NSColor::secondaryLabelColor(),
         )));
         if !output.trim().is_empty() {
@@ -203,8 +203,8 @@ pub(super) fn card(ctx: &Ctx<'_>, id: EntryId, notice: &Notice) -> Retained<NSVi
     let mtm = ctx.mtm;
     let color = notice_color(notice);
     let line_text = text(notice);
-    let icon = ui::icon(mtm, symbol(notice), &line_text, 11.0, &color);
-    let label = ui::wrapping(mtm, &line_text, &style::small(), &color, ctx.width - 60.0);
+    let icon = ui::icon(mtm, symbol(notice), &line_text, style::chat(11.0), &color);
+    let label = ui::wrapping(mtm, &line_text, &style::chat_small(), &color, ctx.width - 60.0);
     let mut views: Vec<Retained<NSView>> = vec![ui::view(&icon), ui::view(&label)];
     let output = match notice {
         Notice::Hook { output, .. } if !output.trim().is_empty() => Some(output.clone()),

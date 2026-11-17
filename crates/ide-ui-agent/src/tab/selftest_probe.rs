@@ -48,6 +48,14 @@ impl AgentTab {
         (card.size.width, off)
     }
 
+    /// The point size of the composer's text and the height of the timeline's last row, once laid out.
+    pub fn text_size_seen(&self) -> (f64, f64) {
+        self.timeline.settle();
+        let font = self.composer.text.font().map_or(0.0, |font| font.pointSize());
+        let last = self.timeline.count().checked_sub(1);
+        (font, last.map_or(0.0, |row| self.timeline.row_height(row)))
+    }
+
     /// Whether a `claude` process runs for the tab.
     pub fn is_live(&self) -> bool {
         self.state.borrow().source().is_live()

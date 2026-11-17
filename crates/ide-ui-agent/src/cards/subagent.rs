@@ -59,7 +59,12 @@ pub(super) fn card(ctx: &Ctx<'_>, id: EntryId, call: &ToolCall) -> Retained<NSVi
         ..
     } = &call.view
     else {
-        return ui::view(&ui::label(mtm, &call.title, &style::body(), &NSColor::labelColor()));
+        return ui::view(&ui::label(
+            mtm,
+            &call.title,
+            &style::chat_body(),
+            &NSColor::labelColor(),
+        ));
     };
     let sub = ctx.thread.subagent(&call.call_id);
     let name = agent_type.clone().unwrap_or_else(|| call.name.clone());
@@ -85,7 +90,7 @@ pub(super) fn card(ctx: &Ctx<'_>, id: EntryId, call: &ToolCall) -> Retained<NSVi
             parts.push(ui::view(&ui::wrapping(
                 mtm,
                 summary,
-                &style::small(),
+                &style::chat_small(),
                 &NSColor::secondaryLabelColor(),
                 ctx.width,
             )));
@@ -163,7 +168,7 @@ fn facts_line(ctx: &Ctx<'_>, sub: &Subagent) -> Retained<NSView> {
         TaskStatus::Stopped => NSColor::systemOrangeColor(),
         _ => NSColor::secondaryLabelColor(),
     };
-    ui::view(&ui::label(ctx.mtm, &facts(ctx, sub), &style::small(), &color))
+    ui::view(&ui::label(ctx.mtm, &facts(ctx, sub), &style::chat_small(), &color))
 }
 
 /// The subagent's own timeline, set in behind a line, its latest entries only.
@@ -180,7 +185,7 @@ fn nested(ctx: &Ctx<'_>, lane: &Lane) -> Retained<NSView> {
         cards.push(ui::view(&ui::label(
             mtm,
             &tf("{} frühere Einträge ausgeblendet", &[&skipped.to_string()]),
-            &style::small(),
+            &style::chat_small(),
             &NSColor::tertiaryLabelColor(),
         )));
     }

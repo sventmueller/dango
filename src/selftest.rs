@@ -19,6 +19,7 @@ mod agent_rewind;
 mod agent_rows;
 mod agent_sessions;
 mod agent_stand_in;
+mod agent_text_size;
 mod app_context;
 mod app_menus;
 pub(crate) mod application;

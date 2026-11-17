@@ -53,12 +53,16 @@ define_class!(
                     let names = names.to_vec();
                     crate::util::main_soon(move || {
                         crate::editor::settings_changed(&names);
+                        ide_ui_agent::settings_changed(&names);
                         if let Some(mtm) = MainThreadMarker::new() {
                             crate::settings_sync::request(mtm);
                         }
                     });
                 });
                 crate::settings_sync::launched(mtm);
+                ide_ui_agent::set_text_size(
+                    ide_core::settings::Settings::load_user().get(&ide_ui_agent::CHAT_FONT_SIZE),
+                );
                 open_initial_windows(mtm);
                 #[cfg(feature = "dictation")]
                 ide_ui_dictation::launched();

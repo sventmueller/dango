@@ -23,6 +23,8 @@ pub(crate) struct Streaming {
     dark: bool,
     macros: std::sync::Arc<str>,
     width: f64,
+    /// The text size the blocks were rendered at.
+    size: f64,
 }
 
 impl Streaming {
@@ -39,6 +41,7 @@ impl Streaming {
             dark: false,
             macros: "".into(),
             width: 0.0,
+            size: 0.0,
         };
         let (text, _) = streaming.render_now(mtm, markdown, width);
         (streaming, text)
@@ -52,7 +55,8 @@ impl Streaming {
         width: f64,
     ) -> Option<(Retained<NSAttributedString>, usize)> {
         let dark = super::super::figures::is_dark(mtm);
-        if markdown == self.doc.text() && self.width == width && self.dark == dark {
+        let size = super::super::style::chat(super::super::style::BODY);
+        if markdown == self.doc.text() && self.width == width && self.dark == dark && self.size == size {
             return None;
         }
         Some(self.render_now(mtm, markdown, width))
@@ -79,7 +83,8 @@ impl Streaming {
         };
         let wanted = js::wanted(&self.doc, dark);
         super::super::figures::want(wanted.keys);
-        let same_style = self.dark == dark && self.macros == wanted.macros && self.width == width;
+        let size = super::super::style::chat(super::super::style::BODY);
+        let same_style = self.dark == dark && self.macros == wanted.macros && self.width == width && self.size == size;
         let ready = js::Ready {
             dark,
             macros: wanted.macros.clone(),
@@ -100,13 +105,14 @@ impl Streaming {
         self.dark = dark;
         self.macros = wanted.macros;
         self.width = width;
+        self.size = size;
         self.render_blocks(mtm)
     }
 
     fn render_blocks(&mut self, mtm: MainThreadMarker) -> (Retained<NSAttributedString>, usize) {
         let renderer = Renderer {
             mtm,
-            size: super::super::style::BODY,
+            size: self.size,
             tone: Tone::Primary,
             dark: self.dark,
             macros: self.macros.clone(),

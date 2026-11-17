@@ -161,7 +161,7 @@ impl Ctx<'_> {
         let label = ui::label(
             self.mtm,
             &format::elapsed(self.now.duration_since(since).unwrap_or_default()),
-            &style::small(),
+            &style::chat_small(),
             &NSColor::secondaryLabelColor(),
         );
         ui::hug(&label);
@@ -196,13 +196,13 @@ pub(crate) fn build(ctx: &Ctx<'_>, entry: &Entry) -> Retained<NSView> {
 
 /// Markdown in a text view as wide as the context.
 pub(crate) fn markdown_text(ctx: &Ctx<'_>, markdown: &str, tone: Tone) -> Retained<CardText> {
-    let text = markdown::render_with_figures(ctx.mtm, markdown, style::BODY, tone, ctx.width);
+    let text = markdown::render_with_figures(ctx.mtm, markdown, style::chat(style::BODY), tone, ctx.width);
     CardText::new(ctx.mtm, &text, ctx.width, true)
 }
 
 /// Monospaced text in a text view `width` points wide, left to right in any interface.
 pub(crate) fn mono_text(ctx: &Ctx<'_>, text: &str, width: f64, color: &NSColor) -> Retained<CardText> {
-    let shown = markdown::code(text, &style::mono(style::CODE), color);
+    let shown = markdown::code(text, &style::mono(style::chat(style::CODE)), color);
     let view = CardText::new(ctx.mtm, &shown, width, true);
     view.left_to_right();
     view
@@ -220,7 +220,7 @@ pub(crate) fn disclosure(ctx: &Ctx<'_>, id: EntryId, part: Part) -> Retained<NSB
         ctx.mtm,
         name,
         description,
-        9.0,
+        style::chat(9.0),
         ctx.target,
         sel!(ideAgentToggle:),
         pack(id, part as u8),
@@ -231,7 +231,7 @@ pub(crate) fn disclosure(ctx: &Ctx<'_>, id: EntryId, part: Part) -> Retained<NSB
 
 /// The head line of a card: a bold name, a quieter detail, then whatever goes on the trailing side.
 pub(crate) fn head(ctx: &Ctx<'_>, name: &str, detail: &str, trailing: &[&NSView]) -> Retained<NSStackView> {
-    let size = if ctx.nested { style::BODY - 1.0 } else { style::BODY };
+    let size = style::chat(if ctx.nested { style::BODY - 1.0 } else { style::BODY });
     let name = ui::label(ctx.mtm, name, &style::bold(size), &NSColor::labelColor());
     ui::hug(&name);
     let detail = ui::label(
@@ -304,6 +304,12 @@ pub(crate) fn mark(entries: &[std::sync::Arc<Entry>], index: usize) -> Mark {
 
 /// A guess at a card's height before it is built, so the timeline's length is right without building every card.
 pub(crate) fn estimate(entry: &Entry, width: f64) -> f64 {
+    let scale = style::chat(1.0);
+    scale_estimate(entry, width / scale) * scale
+}
+
+/// `estimate` at the default text size.
+fn scale_estimate(entry: &Entry, width: f64) -> f64 {
     let per_line = (width / 7.0).max(20.0);
     let lines = |text: &str| -> f64 {
         text.lines()

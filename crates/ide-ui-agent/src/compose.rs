@@ -381,7 +381,7 @@ impl AgentTab {
                     self.mtm,
                     "xmark.circle.fill",
                     &removal,
-                    13.0,
+                    style::chat(13.0),
                     &self.target,
                     sel!(ideAgentRemoveAttachment:),
                     tag,
@@ -393,7 +393,7 @@ impl AgentTab {
                 self.mtm,
                 "xmark",
                 &removal,
-                8.0,
+                style::chat(8.0),
                 &self.target,
                 sel!(ideAgentRemoveAttachment:),
                 tag,
@@ -405,7 +405,7 @@ impl AgentTab {
                 self.mtm,
                 "plus.circle",
                 t("Auswahl anhängen"),
-                10.0,
+                style::chat(10.0),
                 &self.target,
                 sel!(ideAgentUseSelection:),
                 0,
@@ -455,8 +455,8 @@ impl AgentTab {
         } else {
             NSColor::labelColor()
         };
-        let icon = ui::icon(mtm, symbol, name, 10.0, &NSColor::secondaryLabelColor());
-        let label = ui::label(mtm, name, &style::small(), &tone);
+        let icon = ui::icon(mtm, symbol, name, style::chat(10.0), &NSColor::secondaryLabelColor());
+        let label = ui::label(mtm, name, &style::chat_small(), &tone);
         let line = if outside {
             ui::row(mtm, 3.0, &[&icon, &label, &super::outside::marker(mtm), button])
         } else {
