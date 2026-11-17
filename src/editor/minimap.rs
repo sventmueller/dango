@@ -301,7 +301,7 @@ impl Minimap {
                 NSColor::systemGreenColor().colorWithAlphaComponent(0.35).setFill();
                 objc2_app_kit::NSRectFill(NSRect::new(NSPoint::new(1.0, y), NSSize::new(size.width, ROW)));
             }
-            let Some(text) = document.text().line(line) else {
+            let Some(text) = document.text().line_head(line, columns) else {
                 continue;
             };
             let start = editor_line_start(&document, line);

@@ -98,7 +98,7 @@ pub fn mcp_servers(
         .collect())
 }
 
-/// The names of the `[mcp_servers.<name>]` tables of Codex's configuration file under `CODEX_HOME` or `~/.codex`.
+/// The names of the MCP servers Codex's configuration file under `CODEX_HOME` or `~/.codex` defines.
 fn configured_servers(env: &[(String, String)]) -> Vec<String> {
     let var = |name: &str| env.iter().find(|(k, _)| k == name).map(|(_, v)| v.clone());
     let home = var("CODEX_HOME")
@@ -107,11 +107,67 @@ fn configured_servers(env: &[(String, String)]) -> Vec<String> {
     let Some(text) = home.and_then(|home| std::fs::read_to_string(home.join("config.toml")).ok()) else {
         return Vec::new();
     };
-    text.lines()
-        .filter_map(|line| line.trim().strip_prefix("[mcp_servers.")?.strip_suffix(']'))
-        .filter(|name| !name.contains('.'))
-        .map(|name| name.trim_matches('"').to_string())
-        .collect()
+    server_names(&text)
+}
+
+/// The servers a `config.toml` defines in its `mcp_servers` table, however TOML spells that: `[mcp_servers.<name>]`
+/// headers with or without quotes, spaces and comments, keys of an `[mcp_servers]` table, or dotted keys.
+fn server_names(text: &str) -> Vec<String> {
+    let mut names: Vec<String> = Vec::new();
+    let mut table: Vec<String> = Vec::new();
+    for line in text.lines() {
+        let line = without_comment(line).trim();
+        let path = if let Some(header) = line.strip_prefix('[') {
+            table = key_path(header.trim_start_matches('[').split(']').next().unwrap_or_default());
+            table.clone()
+        } else if let Some((key, _)) = line.split_once('=') {
+            table.iter().cloned().chain(key_path(key)).collect()
+        } else {
+            continue;
+        };
+        // A name with other characters would not survive the dotted `-c` path that switches it off.
+        if let [first, name, ..] = path.as_slice()
+            && first == "mcp_servers"
+            && !name.is_empty()
+            && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+            && !names.contains(name)
+        {
+            names.push(name.clone());
+        }
+    }
+    names
+}
+
+/// `line` up to a `#` outside quotes.
+fn without_comment(line: &str) -> &str {
+    let mut quote = None;
+    for (at, c) in line.char_indices() {
+        match (quote, c) {
+            (None, '#') => return &line[..at],
+            (None, '"' | '\'') => quote = Some(c),
+            (Some(open), c) if c == open => quote = None,
+            _ => {}
+        }
+    }
+    line
+}
+
+/// The parts of a dotted TOML key, without their quotes.
+fn key_path(key: &str) -> Vec<String> {
+    let mut parts = Vec::new();
+    let mut part = String::new();
+    let mut quote = None;
+    for c in key.chars() {
+        match (quote, c) {
+            (Some(open), c) if c == open => quote = None,
+            (Some(_), c) => part.push(c),
+            (None, '"' | '\'') => quote = Some(c),
+            (None, '.') => parts.push(std::mem::take(&mut part).trim().to_string()),
+            (None, c) => part.push(c),
+        }
+    }
+    parts.push(part.trim().to_string());
+    parts
 }
 
 /// The standard output of `program args` with the environment `env`, ended after the probe's time limit.
@@ -189,6 +245,42 @@ mod tests {
                 found: None,
                 tested: TESTED
             })
+        );
+    }
+
+    #[test]
+    fn every_spelling_of_a_server_in_config_toml_is_found() {
+        let text = r#"model = "gpt-5.5"
+mcp_servers.inline.command = "a"
+
+[mcp_servers.plain]
+command = "npx"
+args = [
+  "--port=1",
+]
+
+[mcp_servers."quoted"] # the docs server
+url = "https://example.test/#top"
+
+[ mcp_servers.spaced ]
+command = "b"
+
+[mcp_servers.plain.env]
+TOKEN = "x"
+
+[mcp_servers]
+keyed = { command = "c" }
+dotted.command = "d"
+
+[mcp_servers."dot.ted"]
+command = "e"
+
+[profiles.work]
+model = "o3"
+"#;
+        assert_eq!(
+            server_names(text),
+            ["inline", "plain", "quoted", "spaced", "keyed", "dotted"]
         );
     }
 }

@@ -381,6 +381,72 @@ fn a_tarball_unpacks_with_tar_and_its_program_must_be_inside_it() {
 }
 
 #[test]
+fn a_program_that_links_out_of_its_folder_is_refused_and_left_alone() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = scratch("tarball-link");
+    let outside = dir.join("outside");
+    std::fs::write(&outside, "secret\n").unwrap();
+    std::fs::set_permissions(&outside, std::fs::Permissions::from_mode(0o600)).unwrap();
+    let content = dir.join("content");
+    std::fs::create_dir_all(content.join("dist")).unwrap();
+    std::os::unix::fs::symlink(&outside, content.join("dist/agent")).unwrap();
+    let file = dir.join("linked.tar.gz");
+    let status = std::process::Command::new("/usr/bin/tar")
+        .arg("-czf")
+        .arg(&file)
+        .arg("-C")
+        .arg(&content)
+        .arg("dist")
+        .status()
+        .unwrap();
+    assert!(status.success());
+    let net = Arc::new(FakeNet::default());
+    let url = "https://example.test/linked.tar.gz";
+    net.files
+        .lock()
+        .unwrap()
+        .push((url.into(), std::fs::read(&file).unwrap()));
+    let (installer, installs) = installer(&dir, &dir, &[], net);
+    let error = installer
+        .install(&archive_plan(url, "dist/agent"), true, &|_| {})
+        .unwrap_err();
+    assert_eq!(error.to_string(), "dist/agent leaves its folder");
+    assert!(installs.current("bin-agent").is_none());
+    let mode = std::fs::metadata(&outside).unwrap().permissions().mode() & 0o777;
+    assert_eq!(mode, 0o600, "nothing outside the folder is made executable");
+}
+
+#[test]
+fn an_id_or_version_that_is_no_folder_name_installs_nothing() {
+    let dir = scratch("tarball-names");
+    let keep = dir.join("keep");
+    std::fs::create_dir_all(keep.join("inside")).unwrap();
+    let net = Arc::new(FakeNet::default());
+    let url = "https://example.test/agent.tar.gz";
+    net.files.lock().unwrap().push((url.into(), tarball(&dir)));
+    let (installer, _) = installer(&dir, &dir, &[], net);
+    for (id, version) in [
+        ("bin-agent", "../../keep"),
+        ("bin-agent", "1.0.0-x/../../../keep"),
+        ("bin-agent", ""),
+        ("..", "2.0.0"),
+        ("a/b", "2.0.0"),
+    ] {
+        let plan = Plan {
+            id: id.into(),
+            version: version.into(),
+            ..archive_plan(url, "dist/agent")
+        };
+        let error = installer.install(&plan, true, &|_| {}).unwrap_err();
+        assert!(matches!(error, InstallError::Unusable(_)), "{id} {version}: {error:?}");
+    }
+    assert!(
+        keep.join("inside").is_dir(),
+        "nothing outside the agents folder was removed"
+    );
+}
+
+#[test]
 fn install_errors_tell_what_went_wrong() {
     let texts = [
         InstallError::NotConfirmed.to_string(),

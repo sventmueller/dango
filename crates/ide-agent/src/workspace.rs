@@ -186,8 +186,51 @@ impl Workspace {
     }
 }
 
-/// `path` with `.` and `..` resolved by name and symbolic links resolved through its longest existing part.
+/// How many links one path may lead through before it names nothing; macOS itself follows 32.
+const MAX_LINKS: usize = 40;
+
+/// `path` with `.` and `..` resolved by name and symbolic links resolved through its longest existing part, also a
+/// link to something that does not exist yet, which a write through it would create; empty when its links do not end.
 fn real(path: &Path) -> PathBuf {
+    let mut plain = lexical(path);
+    for _ in 0..=MAX_LINKS {
+        let mut existing = plain.clone();
+        let mut rest = Vec::new();
+        while std::fs::symlink_metadata(&existing).is_err() {
+            let Some(name) = existing.file_name().map(std::ffi::OsStr::to_os_string) else {
+                break;
+            };
+            rest.push(name);
+            if !existing.pop() {
+                break;
+            }
+        }
+        let mut out = match existing.canonicalize() {
+            Ok(real) => real,
+            Err(_) => match dangling_target(&existing) {
+                Some(target) => {
+                    plain = target;
+                    plain.extend(rest.iter().rev());
+                    continue;
+                }
+                None => existing,
+            },
+        };
+        out.extend(rest.iter().rev());
+        return out;
+    }
+    PathBuf::new()
+}
+
+/// Where the link at `link`, which does not resolve, points: its target against the real folder it lies in.
+fn dangling_target(link: &Path) -> Option<PathBuf> {
+    let target = std::fs::read_link(link).ok()?;
+    let folder = link.parent()?.canonicalize().ok()?;
+    Some(lexical(&folder.join(target)))
+}
+
+/// `path` with `.` and `..` resolved by name.
+fn lexical(path: &Path) -> PathBuf {
     let mut plain = PathBuf::new();
     for component in path.components() {
         match component {
@@ -198,22 +241,7 @@ fn real(path: &Path) -> PathBuf {
             other => plain.push(other),
         }
     }
-    let mut existing = plain.clone();
-    let mut rest = Vec::new();
-    while !existing.exists() {
-        let Some(name) = existing.file_name().map(std::ffi::OsStr::to_os_string) else {
-            break;
-        };
-        rest.push(name);
-        if !existing.pop() {
-            break;
-        }
-    }
-    let mut out = existing.canonicalize().unwrap_or(existing);
-    for name in rest.into_iter().rev() {
-        out.push(name);
-    }
-    out
+    plain
 }
 
 #[cfg(test)]
@@ -250,6 +278,24 @@ mod tests {
         let allowed = ws.clone().allow(&[dir.join("other")]);
         assert!(allowed.reaches(&allowed.resolve("link/escape.txt")));
         assert_eq!(ws.display(&root.join("src/a.rs")), "src/a.rs");
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn a_link_to_a_file_not_there_yet_leads_where_it_points() {
+        let (dir, ws) = workspace("dangling");
+        let root = ws.root().to_path_buf();
+        std::os::unix::fs::symlink(dir.join("other/planted.plist"), root.join("notes.md")).unwrap();
+        let planted = ws.resolve("notes.md");
+        assert!(
+            !ws.reaches(&planted),
+            "a write through the link lands outside: {planted:?}"
+        );
+        assert_eq!(planted.file_name(), Some(std::ffi::OsStr::new("planted.plist")));
+        std::os::unix::fs::symlink("src/later.rs", root.join("inner")).unwrap();
+        assert_eq!(ws.resolve("inner"), root.join("src/later.rs"));
+        std::os::unix::fs::symlink("circle", root.join("circle")).unwrap();
+        assert!(!ws.reaches(&ws.resolve("circle")));
         let _ = std::fs::remove_dir_all(dir);
     }
 

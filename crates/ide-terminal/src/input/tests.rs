@@ -367,6 +367,27 @@ fn bracketed_paste_wraps_the_text_and_strips_every_end_marker() {
 }
 
 #[test]
+fn markers_nested_deep_inside_each_other_all_go_in_one_pass() {
+    let bracketed = InputModes {
+        bracketed_paste: true,
+        ..InputModes::default()
+    };
+    let depth = 20_000;
+    let nested = format!("x{}\x1b[201~{}y", "\x1b[20".repeat(depth), "1~".repeat(depth));
+    assert_eq!(encode_paste(&nested, &bracketed), b"\x1b[200~xy\x1b[201~");
+    assert_eq!(
+        encode_paste("\x1b[201\x1b[201~~", &bracketed),
+        b"\x1b[200~\x1b[201~",
+        "what is left after the inner marker went is a marker too"
+    );
+    assert_eq!(
+        encode_paste("\x1b[20\x1b[201~", &bracketed),
+        b"\x1b[200~\x1b[20\x1b[201~",
+        "a part of a marker in front of one stays"
+    );
+}
+
+#[test]
 fn modes_are_read_from_the_terminal() {
     let mode = TermMode::APP_CURSOR
         | TermMode::BRACKETED_PASTE

@@ -127,11 +127,23 @@ fn copy_folder(root: &Path, into: &Path, relative: &Path, listed: &str, copy: &[
 
 /// Copies `from` to `to` byte for byte, for a volume that cannot clone.
 fn copy(from: &Path, to: &Path) -> io::Result<()> {
+    copy_below(from, to, &mut Vec::new())
+}
+
+/// [`copy`] below the resolved folders `open`; a link back into one of them fails with the system's error for link
+/// loops at once, which the system itself gives only after 32 nested copies.
+fn copy_below(from: &Path, to: &Path, open: &mut Vec<PathBuf>) -> io::Result<()> {
     if from.is_dir() {
+        let real = from.canonicalize()?;
+        if open.contains(&real) {
+            return Err(io::Error::from_raw_os_error(libc::ELOOP));
+        }
+        open.push(real);
         std::fs::create_dir_all(to)?;
         for entry in std::fs::read_dir(from)?.flatten() {
-            copy(&entry.path(), &to.join(entry.file_name()))?;
+            copy_below(&entry.path(), &to.join(entry.file_name()), open)?;
         }
+        open.pop();
         return Ok(());
     }
     std::fs::copy(from, to).map(|_| ())
@@ -245,6 +257,23 @@ mod tests {
             ["secrets/id_ed25519"],
             "a folder named like credentials was confirmed as a whole"
         );
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn a_byte_for_byte_copy_follows_links_but_stops_at_one_back_into_itself() {
+        let base = std::env::temp_dir().join(format!("leitstand-loop-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        let from = base.join("repo/assets");
+        std::fs::create_dir_all(from.join("icons")).unwrap();
+        std::fs::write(from.join("icons/a.svg"), "a").unwrap();
+        std::os::unix::fs::symlink("icons", from.join("same")).unwrap();
+        copy(&from, &base.join("plain")).unwrap();
+        assert_eq!(files(&base.join("plain")), ["icons/a.svg", "same/a.svg"]);
+        std::os::unix::fs::symlink("..", from.join("icons/up")).unwrap();
+        let looped = copy(&from, &base.join("looped")).unwrap_err();
+        assert_eq!(looped.raw_os_error(), Some(libc::ELOOP));
+        assert!(!base.join("looped/icons/up/icons").exists(), "no copy inside the copy");
         let _ = std::fs::remove_dir_all(&base);
     }
 }

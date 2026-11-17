@@ -444,6 +444,12 @@ impl From<io::Error> for InstallError {
     }
 }
 
+/// Whether `name` is one plain folder name, as an agent's id and version must be to name a folder inside the agents
+/// folder.
+fn plain_name(name: &str) -> bool {
+    !name.is_empty() && name != "." && name != ".." && !name.contains(['/', '\0'])
+}
+
 /// `path` inside `folder`, refusing anything that climbs out of it.
 fn inside(folder: &Path, path: &str) -> Option<PathBuf> {
     let relative = Path::new(path);
@@ -525,6 +531,10 @@ impl Installer {
     ) -> Result<Installed, InstallError> {
         if plan.needs_confirmation() && !confirmed {
             return Err(InstallError::NotConfirmed);
+        }
+        // A registry entry names both, and the version's folder is emptied before it is filled.
+        if let Some(name) = [&plan.id, &plan.version].into_iter().find(|name| !plain_name(name)) {
+            return Err(InstallError::Unusable(format!("{name} leaves its folder")));
         }
         progress(Progress::Checking);
         if let Some(problem) = self.missing(plan) {
@@ -622,6 +632,10 @@ impl Installer {
         let path = inside(folder, cmd).ok_or_else(|| InstallError::Unusable(format!("{cmd} leaves its folder")))?;
         if !path.is_file() {
             return Err(InstallError::Unusable(format!("{cmd} is not in the archive")));
+        }
+        // tar and ditto unpack symbolic links as they are, pointing anywhere.
+        if !path.canonicalize()?.starts_with(folder.canonicalize()?) {
+            return Err(InstallError::Unusable(format!("{cmd} leaves its folder")));
         }
         make_executable(&path)?;
         Ok(path.strip_prefix(folder).map(Path::to_path_buf).unwrap_or(path))
@@ -766,6 +780,14 @@ mod tests {
         assert_eq!(inside(folder, "./bin/agent"), Some(folder.join("bin/agent")));
         assert_eq!(inside(folder, "../../evil"), None);
         assert_eq!(inside(folder, "/usr/bin/evil"), None);
+    }
+
+    #[test]
+    fn only_a_plain_name_names_an_agent_s_folder() {
+        assert!(plain_name("codex-acp") && plain_name("1.0.0-beta.2"));
+        for name in ["", ".", "..", "../../x", "1.0.0-a/../..", "/abs", "a\0b"] {
+            assert!(!plain_name(name), "{name:?}");
+        }
     }
 
     #[test]

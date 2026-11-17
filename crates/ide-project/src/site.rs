@@ -7,11 +7,13 @@ use std::net::{Shutdown, TcpListener, TcpStream};
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// The name of the cookie a request must carry.
 pub const COOKIE: &str = "dango_preview";
 const LONGEST_HEAD: usize = 16 * 1024;
+/// How long a connection may take to send its request.
+const HEAD_TIME: Duration = Duration::from_secs(2);
 
 /// A running server for one folder; it stops when dropped.
 pub struct Site {
@@ -223,9 +225,11 @@ fn answer(rules: &Rules, request: &Request) -> Answer {
 
 fn serve(stream: TcpStream, rules: &Rules) {
     let _ = stream.set_nonblocking(false);
-    let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
     let Ok(mut write) = stream.try_clone() else { return };
-    let mut reader = BufReader::new(stream);
+    let mut reader = BufReader::new(Timed {
+        stream,
+        until: Instant::now() + HEAD_TIME,
+    });
     let Ok(request) = read_request(&mut reader) else {
         let _ = respond_status(&mut write, 400, "Bad Request");
         return;
@@ -235,6 +239,24 @@ fn serve(stream: TcpStream, rules: &Rules) {
         Answer::Status(code, text) => respond_status(&mut write, code, text),
     };
     let _ = write.shutdown(Shutdown::Both);
+}
+
+/// A connection whose reads fail once `until` passed, so that a client sending its request a byte at a time holds the
+/// server's one thread no longer than one that sends nothing.
+struct Timed {
+    stream: TcpStream,
+    until: Instant,
+}
+
+impl Read for Timed {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let left = self.until.saturating_duration_since(Instant::now());
+        if left.is_zero() {
+            return Err(io::ErrorKind::TimedOut.into());
+        }
+        self.stream.set_read_timeout(Some(left))?;
+        self.stream.read(buf)
+    }
 }
 
 fn respond_status(out: &mut impl Write, code: u16, text: &str) -> io::Result<()> {
@@ -247,17 +269,17 @@ fn respond_status(out: &mut impl Write, code: u16, text: &str) -> io::Result<()>
 }
 
 fn respond_file(out: &mut impl Write, path: &Path, head_only: bool) -> io::Result<()> {
-    let mut body = Vec::new();
-    std::fs::File::open(path)?.read_to_end(&mut body)?;
+    let file = std::fs::File::open(path)?;
+    let length = file.metadata()?.len();
     write!(
         out,
         "HTTP/1.1 200 OK\r\nContent-Type: {}\r\nContent-Length: {}\r\nCache-Control: no-store\r\n\
          Connection: close\r\n\r\n",
         content_type(path),
-        body.len()
+        length
     )?;
     if !head_only {
-        out.write_all(&body)?;
+        io::copy(&mut file.take(length), out)?;
     }
     Ok(())
 }
@@ -390,6 +412,45 @@ mod tests {
         assert_eq!(site.url_of(Path::new("/etc/hosts")), None);
         assert_eq!(percent_decode("a%20b"), Some("a b".into()));
         assert_eq!(percent_encode("a b.html"), "a%20b.html");
+    }
+
+    #[test]
+    fn a_head_request_gets_the_length_of_the_file_without_its_bytes() {
+        let dir = folder();
+        let site = Site::start(&dir, "k".into()).unwrap();
+        let mut stream = TcpStream::connect(("127.0.0.1", site.port())).unwrap();
+        let port = site.port();
+        write!(
+            stream,
+            "HEAD /index.html HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nCookie: {COOKIE}=k\r\n\r\n"
+        )
+        .unwrap();
+        let mut text = String::new();
+        stream.read_to_string(&mut text).unwrap();
+        assert!(text.starts_with("HTTP/1.1 200 OK\r\n"), "{text}");
+        assert!(text.contains("Content-Length: 11\r\n"), "{text}");
+        assert!(text.ends_with("\r\n\r\n"), "no body: {text}");
+    }
+
+    #[test]
+    fn a_request_that_trickles_in_is_cut_off_once_its_time_is_up() {
+        let dir = folder();
+        let site = Site::start(&dir, "k".into()).unwrap();
+        let mut stream = TcpStream::connect(("127.0.0.1", site.port())).unwrap();
+        let started = Instant::now();
+        // Each byte comes long before a timeout per read would fire, so only a limit on the whole request ends it.
+        for byte in b"GET / H" {
+            if started.elapsed() + Duration::from_millis(300) >= HEAD_TIME {
+                break;
+            }
+            stream.write_all(&[*byte]).unwrap();
+            std::thread::sleep(Duration::from_millis(250));
+        }
+        let mut text = String::new();
+        stream.read_to_string(&mut text).unwrap();
+        let took = started.elapsed();
+        assert!(text.starts_with("HTTP/1.1 400"), "{text}");
+        assert!(took < HEAD_TIME + Duration::from_millis(900), "{took:?}");
     }
 
     #[test]

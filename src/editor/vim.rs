@@ -580,10 +580,7 @@ fn line_column(view: &EditorTextView, at: usize) -> (usize, usize) {
     let document = view.document();
     let text = document.text();
     let byte = text.utf16_to_byte(at.min(text.len_utf16())).unwrap_or(0);
-    let line = text.line_of(byte);
-    let start = text.offset(line, 0, Unit::Utf8).unwrap_or(0);
-    let column = text.to_string()[start..byte].chars().count();
-    (line, column)
+    text.point(byte).map_or((0, 0), |point| (point.line, point.utf32))
 }
 
 /// The UTF-16 offset of `(line, column)` in characters of `view`'s text, kept within the line.

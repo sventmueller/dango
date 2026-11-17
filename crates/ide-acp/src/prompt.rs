@@ -1,6 +1,7 @@
 //! A user message as the content of a prompt: the text, images where the agent takes them, and files and selections
 //! embedded where it takes embedded context, else linked, which every agent must understand.
 
+use std::io::Read;
 use std::path::Path;
 
 use agent_client_protocol::v1::schema as acp;
@@ -65,11 +66,25 @@ fn lines_of(text: &str, (first, last): (u32, u32)) -> String {
         .join("\n")
 }
 
+/// The text of the regular file at `path` if it is no larger than `MAX_EMBEDDED`; a pipe or device is never opened,
+/// as reading one may not end.
+fn small_text(path: &Path) -> Option<String> {
+    if !std::fs::metadata(path).is_ok_and(|m| m.is_file() && m.len() <= MAX_EMBEDDED) {
+        return None;
+    }
+    let mut text = String::new();
+    std::fs::File::open(path)
+        .ok()?
+        .take(MAX_EMBEDDED + 1)
+        .read_to_string(&mut text)
+        .ok()?;
+    u64::try_from(text.len())
+        .is_ok_and(|n| n <= MAX_EMBEDDED)
+        .then_some(text)
+}
+
 fn file(path: &Path, lines: Option<(u32, u32)>, caps: &Capabilities) -> Vec<acp::ContentBlock> {
-    let small = std::fs::metadata(path).is_ok_and(|m| m.len() <= MAX_EMBEDDED);
-    let text = (caps.embedded_context && small)
-        .then(|| std::fs::read_to_string(path).ok())
-        .flatten();
+    let text = caps.embedded_context.then(|| small_text(path)).flatten();
     match (text, lines) {
         (Some(text), Some(range)) => vec![embedded(
             format!("{}#L{}-{}", file_uri(path), range.0, range.1),
@@ -184,5 +199,22 @@ mod tests {
         assert_eq!(text.text, "two\nthree");
         assert!(matches!(&full[2], acp::ContentBlock::Image(_)));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn only_a_regular_file_is_embedded() {
+        let rich = Capabilities {
+            embedded_context: true,
+            ..Capabilities::default()
+        };
+        assert!(matches!(
+            file(Path::new("/dev/zero"), None, &rich).as_slice(),
+            [acp::ContentBlock::ResourceLink(_)]
+        ));
+        let dir = ide_core::testing::scratch("acp-prompt-big");
+        assert_eq!(small_text(&dir), None);
+        let big = dir.join("big.txt");
+        std::fs::write(&big, "x".repeat(usize::try_from(MAX_EMBEDDED).unwrap() + 1)).unwrap();
+        assert_eq!(small_text(&big), None);
     }
 }

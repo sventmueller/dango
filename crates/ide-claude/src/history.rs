@@ -120,6 +120,13 @@ fn read_summary(path: &Path) -> Option<PastSession> {
         path: path.to_path_buf(),
     };
     for line in BufReader::new(&file).lines().take(HEAD_LINES).map_while(Result::ok) {
+        // Answers and tool results, which can run to megabytes, add nothing here and are not parsed.
+        let wanted = (session.git_branch.is_none() && line.contains("\"gitBranch\""))
+            || (session.first_prompt.is_none() && line.contains("\"user\""))
+            || names_a_title(&line);
+        if !wanted {
+            continue;
+        }
         let Ok(record) = serde_json::from_str::<Value>(&line) else {
             continue;
         };
@@ -135,13 +142,23 @@ fn read_summary(path: &Path) -> Option<PastSession> {
     if length > 0 && file.seek(SeekFrom::Start(length.saturating_sub(TAIL_BYTES))).is_ok() {
         let mut tail = Vec::new();
         let _ = file.read_to_end(&mut tail);
-        for line in String::from_utf8_lossy(&tail).lines() {
+        for line in String::from_utf8_lossy(&tail)
+            .lines()
+            .filter(|line| names_a_title(line))
+        {
             if let Ok(record) = serde_json::from_str::<Value>(line) {
                 learn_titles(&record, &mut session);
             }
         }
     }
     (session.first_prompt.is_some() || session.title.is_some()).then_some(session)
+}
+
+/// Whether a transcript line may be one of the records `learn_titles` reads, judged by its text alone.
+fn names_a_title(line: &str) -> bool {
+    ["\"custom-title\"", "\"ai-title\"", "\"summary\"", "\"last-prompt\""]
+        .iter()
+        .any(|kind| line.contains(kind))
 }
 
 fn text(record: &Value, field: &str) -> Option<String> {
@@ -455,6 +472,31 @@ mod tests {
         );
         std::fs::remove_file(folder.join("a.jsonl")).unwrap();
         assert_eq!(titles(list(&config, cwd)), [("b".to_string(), None)]);
+    }
+
+    #[test]
+    fn records_with_nothing_for_the_list_are_skipped_without_losing_one_that_has_something() {
+        let folder = scratch("prefilter");
+        let path = folder.join("s4.jsonl");
+        let answer = format!(
+            r#"{{"type":"assistant","message":{{"content":[{{"type":"text","text":"{}"}}]}}}}"#,
+            "x".repeat(64 * 1024)
+        );
+        let transcript = [
+            answer.as_str(),
+            r#"{"type":"attachment","gitBranch":"dev"}"#,
+            r#"{"type":"user","message":{"role":"user","content":"First prompt"}}"#,
+            r#"{"type":"summary","summary":"A summary"}"#,
+            r#"{"type":"last-prompt","lastPrompt":"Last"}"#,
+        ];
+        std::fs::write(&path, transcript.join("\n")).unwrap();
+        let session = read_summary(&path).unwrap();
+        assert_eq!(session.git_branch.as_deref(), Some("dev"));
+        assert_eq!(session.first_prompt.as_deref(), Some("First prompt"));
+        assert_eq!(session.title.as_deref(), Some("A summary"));
+        assert_eq!(session.last_prompt.as_deref(), Some("Last"));
+        assert!(names_a_title(r#"{"type":"custom-title"}"#));
+        assert!(!names_a_title(&answer));
     }
 
     #[test]

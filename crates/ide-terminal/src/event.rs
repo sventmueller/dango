@@ -11,11 +11,12 @@ use crate::sys;
 pub enum Event {
     /// The screen changed. Sent once until the next `Session::snapshot`, however much output arrives meanwhile.
     Redraw,
-    /// The program set the window title, or reset it with `None`.
+    /// The program set the window title, or reset it with `None`; of several in one read of its output, the last.
     Title(Option<String>),
-    /// The program rang the bell.
+    /// The program rang the bell, once for all its bells in one read of its output.
     Bell,
-    /// The program asked to put `text` on a clipboard (OSC 52).
+    /// The program asked to put `text` on a clipboard (OSC 52); of several for one clipboard in one read of its
+    /// output, the last, unless it also asked to read a clipboard in that read.
     ClipboardStore {
         /// Which clipboard.
         clipboard: Clipboard,

@@ -12,7 +12,7 @@ mod reply;
 mod resync;
 
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader};
+use std::io::BufReader;
 use std::net::{Shutdown, TcpStream};
 use std::path::PathBuf;
 use std::process::{ChildStdin, ChildStdout};
@@ -21,6 +21,7 @@ use std::sync::mpsc::{Sender, channel};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use ide_process::framing::{self, Line};
 use ide_process::tail::{self, Tail};
 use ide_process::{Kind, ProcessId, Supervisor};
 use ide_thread::{Change, ErrorKind, RequestState, Status, Thread, Update, UserMessage};
@@ -38,6 +39,9 @@ pub(crate) use reply::{raw, unit};
 
 /// What the stderr tail keeps.
 const STDERR_LIMIT: usize = 64 * 1024;
+
+/// The longest line of the server's standard output read; a longer one is dropped.
+const STDOUT_LINE_LIMIT: usize = 64 * 1024;
 
 /// How long the end of a session waits for the stderr of a server that exited on its own.
 const LAST_WORDS: Duration = Duration::from_millis(500);
@@ -216,6 +220,12 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|e| e.into_inner())
 }
 
+/// The address a line of the server's standard output names, `{"url":"http://127.0.0.1:<port>"}`.
+fn address_line(line: &[u8]) -> Option<String> {
+    let value: Value = serde_json::from_slice(line.trim_ascii()).ok()?;
+    value.get("url").and_then(Value::as_str).map(str::to_string)
+}
+
 impl Shared {
     fn state(&self) -> MutexGuard<'_, State> {
         lock(&self.state)
@@ -359,17 +369,17 @@ impl Shared {
     /// Reads the server's standard output: the line with its address, then whatever else until the process ends.
     fn read_stdout(self: Arc<Self>, stdout: ChildStdout, url: Sender<String>) {
         let mut reader = BufReader::new(stdout);
-        let mut line = String::new();
+        let mut line = Vec::new();
         let mut url = Some(url);
         loop {
-            line.clear();
-            match reader.read_line(&mut line) {
-                Ok(0) | Err(_) => break,
-                Ok(_) => {
-                    let named = serde_json::from_str::<Value>(line.trim())
-                        .ok()
-                        .and_then(|v| v.get("url").and_then(Value::as_str).map(str::to_string));
-                    if let (Some(address), Some(tx)) = (named, url.take()) {
+            match framing::read_line(&mut reader, &mut line, STDOUT_LINE_LIMIT) {
+                Ok(Line::End) | Err(_) => break,
+                Ok(Line::TooLong) => {}
+                Ok(Line::Read) => {
+                    if url.is_some()
+                        && let Some(address) = address_line(&line)
+                        && let Some(tx) = url.take()
+                    {
                         drop(tx.send(address));
                     }
                 }
@@ -550,17 +560,17 @@ impl Session {
             return Err(SessionError::Closed);
         }
         let path = self.shared.session_path("/prompt")?;
-        let (running, starting) = {
+        let (running, starting, images) = {
             let state = self.shared.state();
-            (state.mapper.is_running(), state.starting)
+            (state.mapper.is_running(), state.starting, state.caps.images())
         };
         if starting && !running {
             return Err(SessionError::Busy);
         }
-        let (body, updates) = {
+        // Attached files are read here, so the state stays unlocked for the event stream meanwhile.
+        let body = crate::prompt::body(&message, images, &self.shared.launch.cwd, running);
+        let updates = {
             let mut state = self.shared.state();
-            let images = state.caps.images();
-            let body = crate::prompt::body(&message, images, &self.shared.launch.cwd, running);
             let mut updates = Vec::new();
             if running {
                 updates.extend(state.mapper.steered(&message, now()));
@@ -574,7 +584,7 @@ impl Session {
                 updates.extend(state.mapper.begin_turn(&message, now()));
                 state.starting = true;
             }
-            (body, updates)
+            updates
         };
         let user = crate::mapping::user_key(&updates);
         self.shared.apply(updates);

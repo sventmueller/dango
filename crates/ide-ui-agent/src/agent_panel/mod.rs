@@ -208,6 +208,9 @@ fn terminal_sessions(cwd: &Path) -> Vec<ide_claude::history::PastSession> {
 }
 
 fn transcript(cwd: &Path, session: &str) -> Option<std::path::PathBuf> {
+    if session.contains('/') {
+        return None;
+    }
     let path = config_dir()
         .join("projects")
         .join(ide_claude::history::project_folder(cwd))

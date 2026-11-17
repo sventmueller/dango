@@ -253,7 +253,7 @@ fn last_line(log: &mut std::fs::File) -> io::Result<(Option<String>, bool)> {
         if line_start.is_some() || start == 0 {
             break;
         }
-        let from = start.saturating_sub(CHUNK);
+        let from = start.saturating_sub(CHUNK.max(length - start));
         let mut chunk = vec![0; usize::try_from(start - from).unwrap_or(0)];
         log.seek(SeekFrom::Start(from))?;
         log.read_exact(&mut chunk)?;
@@ -269,14 +269,9 @@ fn last_line(log: &mut std::fs::File) -> io::Result<(Option<String>, bool)> {
     Ok((Some(String::from_utf8_lossy(&tail[begin..=end]).into_owned()), broken))
 }
 
-/// Writes `text` to `file` whole, through a file beside it, so a crash leaves the old or the new one.
+/// Writes `text` to `file` whole, through a file beside it, so a crash or a power loss leaves the old or the new one.
 pub(super) fn write_atomically(file: &Path, text: &[u8]) -> io::Result<()> {
-    if let Some(folder) = file.parent() {
-        std::fs::create_dir_all(folder)?;
-    }
-    let beside = file.with_extension("partial");
-    std::fs::write(&beside, text)?;
-    std::fs::rename(&beside, file)
+    ide_core::atomic_write::write(file, text)
 }
 
 fn load<T: DeserializeOwned + Default>(file: &Path) -> T {
@@ -496,6 +491,31 @@ mod tests {
         let confirmed = Confirmations::new(["abc".to_string()]);
         save_confirmations(&project, &confirmed);
         assert!(load_confirmations(&project).has("abc"));
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn two_writers_of_one_file_each_leave_it_whole_and_nothing_beside_it() {
+        let base = temp("whole");
+        let file = base.join("intake.json");
+        let writers: Vec<_> = b"ab"
+            .iter()
+            .copied()
+            .map(|byte| {
+                let file = file.clone();
+                std::thread::spawn(move || {
+                    for _ in 0..20 {
+                        write_atomically(&file, &[byte; 4096]).unwrap();
+                    }
+                })
+            })
+            .collect();
+        for writer in writers {
+            writer.join().unwrap();
+        }
+        let bytes = std::fs::read(&file).unwrap();
+        assert!(bytes.len() == 4096 && bytes.iter().all(|b| *b == bytes[0]));
+        assert_eq!(std::fs::read_dir(&base).unwrap().count(), 1);
         let _ = std::fs::remove_dir_all(&base);
     }
 }

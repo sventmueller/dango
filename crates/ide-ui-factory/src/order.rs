@@ -48,6 +48,8 @@ pub(crate) struct OrderIvars {
     order: OrderId,
     tab: Cell<Option<TabId>>,
     detail: RefCell<Option<Detail>>,
+    /// Whether the views show `detail`, which a step that leaves the order as it was does not build again.
+    shown: Cell<bool>,
     /// The sections the user turned down for G2.
     rejected: RefCell<BTreeSet<HunkId>>,
     /// The specification the G1 view shows, which a new one replaces.
@@ -163,6 +165,7 @@ impl OrderTab {
             order,
             tab: Cell::new(None),
             detail: RefCell::new(None),
+            shown: Cell::new(false),
             rejected: RefCell::new(BTreeSet::new()),
             spec: RefCell::new(None),
             wrap: Cell::new(WIDTH),
@@ -279,6 +282,9 @@ impl OrderTab {
         if let Some(detail) = &detail {
             let live: BTreeSet<HunkId> = detail.sections().iter().map(|s| s.id().clone()).collect();
             self.ivars().rejected.borrow_mut().retain(|id| live.contains(id));
+        }
+        if self.ivars().shown.replace(true) && *self.ivars().detail.borrow() == detail {
+            return;
         }
         *self.ivars().detail.borrow_mut() = detail.clone();
         self.show(detail.as_ref());

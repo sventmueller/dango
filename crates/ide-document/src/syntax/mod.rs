@@ -103,6 +103,37 @@ pub(crate) struct Syntax {
     indents: folding::Indents,
 }
 
+/// Lines `first..first + removed` replaced by `added` lines.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct LineEdit {
+    pub(crate) first: usize,
+    pub(crate) removed: usize,
+    pub(crate) added: usize,
+}
+
+/// Makes `edits` in `lines` one after the other, every line an edit puts in being `None`, as one splice of the vector
+/// per edit would; while the edits run from the end towards the start, as those of a whole new text do, each line that
+/// stays moves once rather than once per edit in front of it.
+pub(crate) fn splice_lines<T>(lines: &mut Vec<Option<T>>, edits: &[LineEdit]) {
+    // The lines are those of `lines` followed by those of `after` from its last to its first.
+    let mut after: Vec<Option<T>> = Vec::new();
+    for edit in edits {
+        let end = (edit.first + edit.removed).min(lines.len() + after.len());
+        let start = edit.first.min(end);
+        if start > lines.len() {
+            lines.extend(after.drain(..).rev());
+        }
+        let from_after = end.saturating_sub(lines.len());
+        after.truncate(after.len() - from_after);
+        if end < lines.len() {
+            after.extend(lines.drain(end..).rev());
+        }
+        lines.truncate(start);
+        after.extend((0..edit.added).map(|_| None));
+    }
+    lines.extend(after.into_iter().rev());
+}
+
 /// The lines whose colours or brackets changed.
 #[derive(Default)]
 struct Changed(Option<Range<usize>>);
@@ -137,15 +168,17 @@ impl Syntax {
         self.language
     }
 
-    /// Lines `first..first + removed` were replaced by `added` lines.
-    pub(crate) fn edited(&mut self, first: usize, removed: usize, added: usize) {
-        let end = (first + removed).min(self.lines.len());
-        self.lines.splice(first.min(end)..end, std::iter::repeat_n(None, added));
+    /// The lines of `edits` were replaced, one edit after the other.
+    pub(crate) fn edited(&mut self, edits: &[LineEdit]) {
+        let Some(first) = edits.iter().map(|edit| edit.first).min() else {
+            return;
+        };
+        splice_lines(&mut self.lines, edits);
         self.frontier = self.frontier.min(first);
         if let Some(markdown) = &mut self.markdown {
-            markdown.edited(first, removed, added);
+            markdown.edited(edits);
         }
-        self.indents.edited(first, removed, added);
+        self.indents.edited(edits);
     }
 
     /// The folds by indentation of `text`, which is the text the edits so far led to.

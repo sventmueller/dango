@@ -3,6 +3,7 @@
 //! `ide_git::thread_trees::order`; and the checks a restart makes before it repeats a side effect. Everything here
 //! blocks and runs on the Leitstand's git lane.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -558,19 +559,24 @@ pub(super) fn hunk_id(path: &str, hunk: &ide_git::Hunk) -> ide_factory::HunkId {
 /// another diff.
 pub(super) fn reject_hunks(copy: &Repository, base: &str, hunks: &[ide_factory::HunkId]) -> ide_git::Result<()> {
     let diffs = copy.diff_since(base, &[] as &[PathBuf])?;
+    let mut named: BTreeMap<ide_factory::HunkId, (usize, usize)> = BTreeMap::new();
+    for (file, diff) in diffs.iter().enumerate() {
+        let path = diff.path().to_string_lossy();
+        for (index, hunk) in diff.hunks.iter().enumerate() {
+            named.entry(hunk_id(&path, hunk)).or_insert((file, index));
+        }
+    }
     let mut chosen: Vec<(&ide_git::FileDiff, Vec<usize>)> = Vec::new();
     let mut missing: Vec<&str> = Vec::new();
     for wanted in hunks {
-        let found = diffs.iter().find_map(|diff| {
-            let path = diff.path().to_string_lossy();
-            let index = diff.hunks.iter().position(|hunk| hunk_id(&path, hunk) == *wanted)?;
-            Some((diff, index))
-        });
-        match found {
-            Some((diff, index)) => match chosen.iter_mut().find(|(d, _)| std::ptr::eq(*d, diff)) {
-                Some((_, indices)) => indices.push(index),
-                None => chosen.push((diff, vec![index])),
-            },
+        match named.get(wanted) {
+            Some(&(file, index)) => {
+                let diff = &diffs[file];
+                match chosen.iter_mut().find(|(d, _)| std::ptr::eq(*d, diff)) {
+                    Some((_, indices)) => indices.push(index),
+                    None => chosen.push((diff, vec![index])),
+                }
+            }
             None => missing.push(&wanted.0),
         }
     }

@@ -168,7 +168,8 @@ pub(crate) fn short_path(path: &str, cwd: &Path) -> String {
 pub(crate) fn first_line(text: &str, limit: usize) -> String {
     let line = text.lines().find(|l| !l.trim().is_empty()).unwrap_or_default().trim();
     let mut out: String = line.chars().take(limit).collect();
-    if line.chars().count() > limit || text.trim().lines().count() > 1 {
+    // Looking no further than the second line, as a streamed answer asks for this with each part that arrives.
+    if line.chars().nth(limit).is_some() || text.trim().lines().nth(1).is_some() {
         out.push('…');
     }
     out
@@ -193,6 +194,10 @@ mod tests {
         assert_eq!(first_line("one\ntwo", 10), "one…");
         assert_eq!(first_line("abcdef", 3), "abc…");
         assert_eq!(first_line("abc", 3), "abc");
+        assert_eq!(first_line("\n  one  \n\n", 10), "one");
+        assert_eq!(first_line("one\n\ntwo\nthree", 10), "one…");
+        assert_eq!(first_line("äöü", 2), "äö…");
+        assert_eq!(first_line("äöü", 3), "äöü");
     }
 
     #[test]

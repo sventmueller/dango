@@ -67,7 +67,11 @@ pub fn remove_allow_rule(project: &Path, scope: Scope, rule: &str) -> io::Result
     let Some(changed) = without_rule(&text, rule)? else {
         return Ok(false);
     };
-    std::fs::write(&path, changed)?;
+    // Replaced whole where the name leads, so a crash leaves the old rules and a linked file stays linked.
+    let target = std::fs::canonicalize(&path)?;
+    let permissions = std::fs::metadata(&target)?.permissions();
+    ide_core::atomic_write::write(&target, changed.as_bytes())?;
+    let _ = std::fs::set_permissions(&target, permissions);
     Ok(true)
 }
 
@@ -364,5 +368,24 @@ mod tests {
         assert!(!remove_allow_rule(&project, Scope::Local, "Bash(git log:*)").unwrap());
         assert_eq!(allow_rules(&project).len(), 3);
         assert!(allow_rules(&project.join("missing")).is_empty());
+    }
+
+    #[test]
+    fn a_linked_settings_file_stays_linked_and_keeps_its_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+        let project = ide_core::testing::scratch("claude-rules-link");
+        std::fs::create_dir_all(project.join(".claude")).unwrap();
+        let shared = project.join("shared.json");
+        std::fs::write(&shared, FILE).unwrap();
+        std::fs::set_permissions(&shared, std::fs::Permissions::from_mode(0o600)).unwrap();
+        std::os::unix::fs::symlink(&shared, Scope::Local.file(&project)).unwrap();
+        assert!(remove_allow_rule(&project, Scope::Local, "Bash(git log:*)").unwrap());
+        let link = std::fs::symlink_metadata(Scope::Local.file(&project)).unwrap();
+        assert!(link.file_type().is_symlink());
+        assert_eq!(
+            std::fs::read_to_string(&shared).unwrap(),
+            FILE.replace("      \"Bash(git log:*)\",\n", "")
+        );
+        assert_eq!(std::fs::metadata(&shared).unwrap().permissions().mode() & 0o777, 0o600);
     }
 }

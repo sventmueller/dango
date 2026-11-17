@@ -225,6 +225,10 @@ pub fn manual_workflows(root: &std::path::Path) -> Vec<Workflow> {
             if !(file.ends_with(".yml") || file.ends_with(".yaml")) {
                 return None;
             }
+            // A link to a pipe or a device such as `/dev/zero` would block the CI lane or fill the memory.
+            if !std::fs::metadata(entry.path()).is_ok_and(|meta| meta.is_file()) {
+                return None;
+            }
             let text = std::fs::read_to_string(entry.path()).ok()?;
             workflow(&file, &text)
         })

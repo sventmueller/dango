@@ -2,6 +2,7 @@
 //! takes them, and files and selections as text after the message. OpenCode turns a `data:` URI into an inline
 //! attachment itself; a `file://` one would be read by the server, which a file outside the project must not be.
 
+use std::io::Read;
 use std::path::Path;
 
 use base64::Engine;
@@ -26,9 +27,25 @@ fn fenced(name: &str, content: &str) -> String {
     format!("{name}\n{fence}\n{content}\n{fence}")
 }
 
+/// The text of the regular file at `path` if it is no larger than `MAX_EMBEDDED`; a pipe or device is never opened,
+/// as reading one may not end.
+fn small_text(path: &Path) -> Option<String> {
+    if !std::fs::metadata(path).is_ok_and(|m| m.is_file() && m.len() <= MAX_EMBEDDED) {
+        return None;
+    }
+    let mut text = String::new();
+    std::fs::File::open(path)
+        .ok()?
+        .take(MAX_EMBEDDED + 1)
+        .read_to_string(&mut text)
+        .ok()?;
+    u64::try_from(text.len())
+        .is_ok_and(|n| n <= MAX_EMBEDDED)
+        .then_some(text)
+}
+
 fn file(shown: &Path, full: &Path, lines: Option<(u32, u32)>) -> String {
-    let small = std::fs::metadata(full).is_ok_and(|m| m.len() <= MAX_EMBEDDED);
-    let content = small.then(|| std::fs::read_to_string(full).ok()).flatten();
+    let content = small_text(full);
     match (content, lines) {
         (Some(content), Some(range)) => fenced(
             &format!("{}:{}-{}", shown.display(), range.0, range.1),
@@ -120,5 +137,17 @@ mod tests {
         let steered = body(&message, false, &dir, true);
         assert!(steered.get("files").is_none());
         assert_eq!(steered["delivery"], "steer");
+    }
+
+    #[test]
+    fn only_a_regular_file_is_embedded() {
+        assert_eq!(file(Path::new("zero"), Path::new("/dev/zero"), None), "See /dev/zero.");
+        let dir = std::env::temp_dir().join(format!("ide-opencode-prompt-big-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        assert_eq!(small_text(&dir), None);
+        let big = dir.join("big.txt");
+        std::fs::write(&big, "x".repeat(usize::try_from(MAX_EMBEDDED).unwrap() + 1)).unwrap();
+        assert_eq!(small_text(&big), None);
+        let _ = std::fs::remove_dir_all(dir);
     }
 }

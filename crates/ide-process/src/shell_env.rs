@@ -12,6 +12,10 @@ use crate::supervisor::{Kind, Supervisor};
 /// Marks the start and end of the environment in the shell's output, which may also hold what its startup files print.
 const MARK: &str = "__IDE_ENV_7f3a__";
 
+/// The most the shell may print, startup files included, before it is given up on; the system caps a process's
+/// arguments and environment together far below this.
+const MOST_PRINTED: usize = 64 * 1024 * 1024;
+
 /// Variables that describe the capturing shell itself, not the user's environment.
 const SESSION_ONLY: [&str; 4] = ["SHLVL", "PWD", "OLDPWD", "_"];
 
@@ -103,6 +107,10 @@ pub fn capture(
         {
             break;
         }
+        if output.len() > MOST_PRINTED {
+            stop();
+            return Err(CaptureError::NoEnvironment);
+        }
     }
     parse(&output).ok_or(CaptureError::NoEnvironment)
 }
@@ -176,6 +184,20 @@ mod tests {
         std::fs::set_permissions(&shell, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
         let result = capture(&supervisor, &shell, &script_dir, Duration::from_millis(300));
         assert!(matches!(result, Err(CaptureError::Timeout)));
+    }
+
+    #[test]
+    fn a_shell_that_prints_without_end_is_given_up_on_before_its_time() {
+        let supervisor = Supervisor::new();
+        let script_dir = ide_core::testing::scratch("flood");
+        let shell = script_dir.join("flood.sh");
+        let script = format!("#!/bin/sh\nhead -c {} /dev/zero\nsleep 30\n", MOST_PRINTED + 1024);
+        std::fs::write(&shell, script).unwrap();
+        std::fs::set_permissions(&shell, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
+        let started = Instant::now();
+        let result = capture(&supervisor, &shell, &script_dir, Duration::from_secs(60));
+        assert!(matches!(result, Err(CaptureError::NoEnvironment)), "{result:?}");
+        assert!(started.elapsed() < Duration::from_secs(30));
     }
 
     #[test]

@@ -14,6 +14,8 @@ pub struct Console {
     pub finished: bool,
     /// The expressions evaluated, for ↑ and ↓ in the input field.
     asked: Vec<String>,
+    /// How many of its oldest lines went beyond the limit so far.
+    dropped: usize,
 }
 
 impl Console {
@@ -23,6 +25,7 @@ impl Console {
             lines: history,
             finished: true,
             asked: Vec::new(),
+            dropped: 0,
         };
         console.trim();
         console
@@ -31,6 +34,11 @@ impl Console {
     /// What it shows.
     pub fn lines(&self) -> &[ConsoleLine] {
         &self.lines
+    }
+
+    /// How many of its oldest lines went beyond the limit so far; with it a view tells which lines it shows are gone.
+    pub fn dropped(&self) -> usize {
+        self.dropped
     }
 
     /// Adds `text` of `kind`; output that does not end its line continues on the last line of the same kind.
@@ -92,7 +100,9 @@ impl Console {
 
     fn trim(&mut self) {
         if self.lines.len() > LIMIT {
-            self.lines.drain(..self.lines.len() - LIMIT);
+            let gone = self.lines.len() - LIMIT;
+            self.lines.drain(..gone);
+            self.dropped += gone;
         }
     }
 }
@@ -147,5 +157,17 @@ mod tests {
         }
         assert_eq!(console.lines().len(), LIMIT);
         assert_eq!(console.lines()[0].text, "10");
+        assert_eq!(console.dropped(), 10);
+        console.push(ConsoleKind::Error, "more");
+        assert_eq!(console.dropped(), 11);
+        let back = Console::finished(
+            console
+                .lines()
+                .iter()
+                .cloned()
+                .chain(console.lines().iter().cloned())
+                .collect(),
+        );
+        assert_eq!((back.lines().len(), back.dropped()), (LIMIT, LIMIT));
     }
 }

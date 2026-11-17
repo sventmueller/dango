@@ -99,8 +99,9 @@ pub(crate) fn mcp_servers(result: Value) -> Result<Vec<McpServer>, SessionError>
         .collect())
 }
 
-/// How OpenCode reaches an MCP server, as `PUT /api/experimental/mcp/{server}` takes it.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// How OpenCode reaches an MCP server, as `PUT /api/experimental/mcp/{server}` takes it; `Debug` names the
+/// variables and headers without their values, which often are tokens (R42).
+#[derive(Clone, PartialEq, Eq)]
 pub enum McpConfig {
     /// A program OpenCode starts.
     Local {
@@ -126,6 +127,35 @@ pub enum McpConfig {
 
 fn pairs(pairs: &[(String, String)]) -> Value {
     Value::Object(pairs.iter().map(|(k, v)| (k.clone(), json!(v))).collect::<Map<_, _>>())
+}
+
+fn names(pairs: &[(String, String)]) -> Vec<&str> {
+    pairs.iter().map(|(name, _)| name.as_str()).collect()
+}
+
+impl std::fmt::Debug for McpConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            McpConfig::Local {
+                command,
+                environment,
+                cwd,
+                disabled,
+            } => f
+                .debug_struct("Local")
+                .field("command", command)
+                .field("environment", &names(environment))
+                .field("cwd", cwd)
+                .field("disabled", disabled)
+                .finish(),
+            McpConfig::Remote { url, headers, disabled } => f
+                .debug_struct("Remote")
+                .field("url", url)
+                .field("headers", &names(headers))
+                .field("disabled", disabled)
+                .finish(),
+        }
+    }
 }
 
 impl McpConfig {
@@ -433,5 +463,13 @@ mod tests {
             disabled: true,
         };
         assert_eq!(remote.body()["config"]["type"], "remote");
+        let shown = format!("{local:?}");
+        assert!(shown.contains("TOKEN") && !shown.contains("\"t\""), "{shown}");
+        let remote = McpConfig::Remote {
+            url: "https://mcp.example.test".into(),
+            headers: vec![("Authorization".into(), "Bearer sk-secret".into())],
+            disabled: false,
+        };
+        assert!(!format!("{remote:?}").contains("sk-secret"));
     }
 }

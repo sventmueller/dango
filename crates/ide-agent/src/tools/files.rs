@@ -1,6 +1,8 @@
 //! Reading, editing and writing files; every change comes back as hunks for the card's diff.
 
 use std::fs;
+use std::io::Read;
+use std::path::Path;
 
 use ide_thread::{Hunk, ToolOutput};
 use serde_json::Value;
@@ -25,6 +27,36 @@ fn io(shown: &str) -> impl FnOnce(std::io::Error) -> ToolNote + '_ {
     }
 }
 
+/// The bytes of what is at `path` and no regular file, such as a device a link in the project leads to, which can
+/// go on without end: at most `MAX_FILE` of them.
+fn bounded(path: &Path, shown: &str) -> Result<Vec<u8>, ToolNote> {
+    let mut bytes = Vec::new();
+    fs::File::open(path)
+        .and_then(|file| file.take(MAX_FILE + 1).read_to_end(&mut bytes))
+        .map_err(io(shown))?;
+    let read = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
+    if read > MAX_FILE {
+        return Err(ToolNote::TooLarge {
+            path: shown.to_string(),
+            bytes: read,
+        });
+    }
+    Ok(bytes)
+}
+
+/// The text of the file at `path`, as `fs::read_to_string` reads it; [`bounded`] when it is no regular file.
+fn text_of(path: &Path, shown: &str) -> Result<String, ToolNote> {
+    if fs::metadata(path).is_ok_and(|meta| meta.is_file()) {
+        return fs::read_to_string(path).map_err(io(shown));
+    }
+    String::from_utf8(bounded(path, shown)?).map_err(|_| {
+        io(shown)(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "stream did not contain valid UTF-8",
+        ))
+    })
+}
+
 pub(super) fn read(input: &Value, workspace: &Workspace) -> Result<Outcome, ToolNote> {
     let path = workspace.resolve(required(input, "path")?);
     let shown = workspace.display(&path);
@@ -38,7 +70,11 @@ pub(super) fn read(input: &Value, workspace: &Workspace) -> Result<Outcome, Tool
             bytes: meta.len(),
         });
     }
-    let bytes = fs::read(&path).map_err(io(&shown))?;
+    let bytes = if meta.is_file() {
+        fs::read(&path).map_err(io(&shown))?
+    } else {
+        bounded(&path, &shown)?
+    };
     if bytes.iter().take(8192).any(|b| *b == 0) {
         return Err(ToolNote::Binary(shown));
     }
@@ -96,7 +132,7 @@ pub(super) fn edit(input: &Value, workspace: &Workspace) -> Result<Outcome, Tool
     if old == new {
         return Err(ToolNote::NoChange);
     }
-    let before = fs::read_to_string(&path).map_err(io(&shown))?;
+    let before = text_of(&path, &shown)?;
     let crlf = before.contains("\r\n") && !old.contains('\r');
     let (old, new) = if crlf {
         (old.replace('\n', "\r\n"), new.replace('\n', "\r\n"))
@@ -134,7 +170,7 @@ pub(super) fn write(input: &Value, workspace: &Workspace) -> Result<Outcome, Too
     if path.is_dir() {
         return Err(ToolNote::Folder(shown));
     }
-    let before = fs::read_to_string(&path).ok();
+    let before = text_of(&path, &shown).ok();
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(io(&workspace.display(parent)))?;
     }
@@ -203,5 +239,23 @@ mod tests {
         assert!(hunk.lines.contains(&"-d".to_string()) && hunk.lines.contains(&"+D".to_string()));
         assert_eq!(hunk.lines.last().map(String::as_str), Some("+I"));
         assert!(super::hunks("x\n", "x\n").is_empty());
+    }
+
+    #[test]
+    fn a_link_to_a_device_without_end_is_read_no_further_than_a_large_file() {
+        let dir = ide_core::testing::scratch("agent-files-device");
+        std::os::unix::fs::symlink("/dev/zero", dir.join("zero")).unwrap();
+        let workspace = Workspace::new(
+            dir.path(),
+            Vec::new(),
+            ide_process::Supervisor::new(),
+            crate::http::Http::new(),
+        )
+        .unwrap();
+        let input = serde_json::json!({"path": "zero"});
+        assert!(matches!(read(&input, &workspace), Err(ToolNote::TooLarge { .. })));
+        let change = serde_json::json!({"path": "zero", "old_string": "a", "new_string": "b"});
+        assert!(matches!(edit(&change, &workspace), Err(ToolNote::TooLarge { .. })));
+        let _ = std::fs::remove_dir_all(dir);
     }
 }

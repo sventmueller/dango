@@ -142,7 +142,8 @@ fn decode(text: &str) -> String {
     while let Some(amp) = rest.find('&') {
         out.push_str(&rest[..amp]);
         rest = &rest[amp..];
-        let Some(semi) = rest[..rest.len().min(12)].find(';') else {
+        // Bytes, not characters: the twelfth byte can fall inside a character of the page's text.
+        let Some(semi) = rest.as_bytes()[..rest.len().min(12)].iter().position(|b| *b == b';') else {
             out.push('&');
             rest = &rest[1..];
             continue;
@@ -194,5 +195,12 @@ mod tests {
                     <h1>Title</h1><p>One &amp; two&nbsp;&lt;three&gt; &#x41;&#66;</p><!-- hidden --><ul><li>a</li>\
                     <li>b</li></ul></body></html>";
         assert_eq!(html_text(html), "Title\nOne & two <three> AB\na\nb");
+    }
+
+    #[test]
+    fn an_ampersand_before_text_of_several_bytes_a_character_stays_as_it_is() {
+        assert_eq!(html_text("<p>R&日本語の文書</p>"), "R&日本語の文書");
+        assert_eq!(html_text("Müller & Söhne &amp; Töchter"), "Müller & Söhne & Töchter");
+        assert_eq!(html_text("&日本語;"), "&日本語;");
     }
 }

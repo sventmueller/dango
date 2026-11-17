@@ -427,14 +427,14 @@ impl Mapper {
             }
         }
         let status = fields.status.as_ref().map(tool_status);
-        let content = fields.content.clone().unwrap_or_default();
+        let content = fields.content.as_deref().unwrap_or_default();
         let kind = fields.kind.as_ref().map(tool_kind);
         let input = fields.raw_input.clone();
         let view = (input.is_some() || !content.is_empty()).then(|| {
             view(
                 kind.unwrap_or(ToolKind::Other),
                 input.as_ref().unwrap_or(&Value::Null),
-                &content,
+                content,
                 fields.locations.as_deref().unwrap_or_default(),
             )
         });
@@ -443,7 +443,7 @@ impl Mapper {
             title: fields.title.clone(),
             view: view.filter(|v| *v != ToolView::Other),
             status,
-            output: output(&content, fields.raw_output.as_ref()),
+            output: output(content, fields.raw_output.as_ref()),
             started: (status == Some(ToolStatus::InProgress)).then_some(at),
             ended: matches!(status, Some(ToolStatus::Completed | ToolStatus::Failed)).then_some(at),
             ..ToolPatch::default()

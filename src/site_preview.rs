@@ -72,10 +72,13 @@ pub(crate) fn open(controller: &WindowController, page: &Path) {
             .position(|site| root.canonicalize().is_ok_and(|r| site.root() == r))
         {
             Some(index) => Ok(index),
-            None => Site::start(&root, secret()).map(|site| {
-                sites.push(site);
-                sites.len() - 1
-            }),
+            None => secret()
+                .ok_or_else(|| std::io::Error::other("the system's random source gave nothing"))
+                .and_then(|secret| Site::start(&root, secret))
+                .map(|site| {
+                    sites.push(site);
+                    sites.len() - 1
+                }),
         }
     };
     let index = match started {
@@ -111,22 +114,27 @@ pub(crate) fn page_of(mtm: MainThreadMarker, url: &str) -> Option<PathBuf> {
 /// Files below `root` changed on disk: the previews of that folder reload once they rest.
 pub(crate) fn files_changed(mtm: MainThreadMarker, root: &Path, files: &[PathBuf]) {
     let cx = previews(mtm);
-    let origins: Vec<String> = cx
-        .site_previews()
-        .sites
-        .borrow()
-        .iter()
-        .filter(|site| {
-            files.iter().any(|file| {
-                file.starts_with(site.root())
-                    || root.canonicalize().is_ok_and(|r| r == site.root())
-                        && !file
-                            .components()
-                            .any(|c| c.as_os_str().to_string_lossy().starts_with('.'))
+    let origins: Vec<String> = {
+        let sites = cx.site_previews().sites.borrow();
+        if sites.is_empty() {
+            return;
+        }
+        let canonical = root.canonicalize().ok();
+        sites
+            .iter()
+            .filter(|site| {
+                let same_root = canonical.as_deref() == Some(site.root());
+                files.iter().any(|file| {
+                    file.starts_with(site.root())
+                        || same_root
+                            && !file
+                                .components()
+                                .any(|c| c.as_os_str().to_string_lossy().starts_with('.'))
+                })
             })
-        })
-        .map(Site::origin)
-        .collect();
+            .map(Site::origin)
+            .collect()
+    };
     if origins.is_empty() {
         return;
     }
@@ -171,13 +179,12 @@ fn sweep_later(mtm: MainThreadMarker) {
     });
 }
 
-/// A value no other process of the Mac can guess, from the system's random source.
-fn secret() -> String {
+/// A value no other process of the Mac can guess, from the system's random source; `None` when it gave nothing.
+fn secret() -> Option<String> {
     let mut bytes = [0u8; 16];
-    if let Ok(mut random) = std::fs::File::open("/dev/urandom") {
-        let _ = std::io::Read::read_exact(&mut random, &mut bytes);
-    }
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
+    let mut random = std::fs::File::open("/dev/urandom").ok()?;
+    std::io::Read::read_exact(&mut random, &mut bytes).ok()?;
+    Some(bytes.iter().map(|b| format!("{b:02x}")).collect())
 }
 
 #[cfg(feature = "selftest")]

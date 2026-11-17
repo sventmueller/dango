@@ -82,7 +82,7 @@ define_class!(
     unsafe impl NSTableViewDataSource for AgentSettings {
         #[unsafe(method(numberOfRowsInTableView:))]
         fn row_count(&self, table: &NSTableView) -> isize {
-            guarded(0, || isize::try_from(self.rows(self.list_of(table)).len()).unwrap_or(0))
+            guarded(0, || isize::try_from(self.count(self.list_of(table))).unwrap_or(0))
         }
     }
 
@@ -91,8 +91,8 @@ define_class!(
         fn view_for(&self, table: &NSTableView, column: Option<&NSTableColumn>, row: isize) -> Option<Retained<NSView>> {
             guarded(None, || {
                 let index: usize = column?.identifier().to_string().parse().ok()?;
-                let row = self.rows(self.list_of(table)).into_iter().nth(usize::try_from(row).ok()?)?;
-                Some(form::cell(self.mtm(), row.get(index)?))
+                let text = self.cell_text(self.list_of(table), usize::try_from(row).ok()?, index)?;
+                Some(form::cell(self.mtm(), &text))
             })
         }
 
@@ -221,47 +221,48 @@ impl AgentSettings {
         }
     }
 
-    /// The rows of `list` as its table shows them.
-    pub(crate) fn rows(&self, list: List) -> Vec<Vec<String>> {
+    /// How many rows `list` has.
+    fn count(&self, list: List) -> usize {
+        match list {
+            List::Endpoints => self.ivars().endpoints.borrow().len(),
+            List::Prices => self.ivars().prices.borrow().len(),
+            List::Rules => self.ivars().rules.borrow().len(),
+            List::Folders => self.ivars().folders.borrow().len(),
+        }
+    }
+
+    /// What column `column` of row `row` of `list` shows; `None` past its last column. Only the column of an
+    /// endpoint's key asks the keychain, once for its cell.
+    fn cell_text(&self, list: List, row: usize, column: usize) -> Option<String> {
         let dollars = |value: f64| format!("{value:.2}");
         match list {
-            List::Endpoints => self
-                .ivars()
-                .endpoints
-                .borrow()
-                .iter()
-                .map(|e| {
-                    let key = if !e.kind.takes_key() {
-                        t("nicht nötig").to_string()
-                    } else if own_agent::key(e).is_some() {
-                        t("im Schlüsselbund").to_string()
-                    } else {
-                        "—".to_string()
-                    };
-                    vec![e.name.clone(), e.base_url.clone(), key]
-                })
-                .collect(),
-            List::Prices => self
-                .ivars()
-                .prices
-                .borrow()
-                .iter()
-                .map(|(model, price)| vec![model.clone(), dollars(price.input), dollars(price.output)])
-                .collect(),
-            List::Rules => self
-                .ivars()
-                .rules
-                .borrow()
-                .iter()
-                .map(|(project, _, rule)| vec![project.clone(), own_agent::rule_text(rule)])
-                .collect(),
-            List::Folders => self
-                .ivars()
-                .folders
-                .borrow()
-                .iter()
-                .map(|folder| vec![crate::app::display_path(folder)])
-                .collect(),
+            List::Endpoints => {
+                let endpoints = self.ivars().endpoints.borrow();
+                let e = endpoints.get(row)?;
+                match column {
+                    0 => Some(e.name.clone()),
+                    1 => Some(e.base_url.clone()),
+                    2 => Some(key_state(e)),
+                    _ => None,
+                }
+            }
+            List::Prices => {
+                let prices = self.ivars().prices.borrow();
+                let (model, price) = prices.get(row)?;
+                [model.clone(), dollars(price.input), dollars(price.output)]
+                    .into_iter()
+                    .nth(column)
+            }
+            List::Rules => {
+                let rules = self.ivars().rules.borrow();
+                let (project, _, rule) = rules.get(row)?;
+                [project.clone(), own_agent::rule_text(rule)].into_iter().nth(column)
+            }
+            List::Folders => {
+                let folders = self.ivars().folders.borrow();
+                let folder = folders.get(row).filter(|_| column == 0)?;
+                Some(crate::app::display_path(folder))
+            }
         }
     }
 
@@ -348,6 +349,17 @@ impl AgentSettings {
             List::Endpoints => {}
         }
         self.reload();
+    }
+}
+
+/// What the endpoints' table says of `endpoint`'s key.
+fn key_state(endpoint: &Endpoint) -> String {
+    if !endpoint.kind.takes_key() {
+        t("nicht nötig").to_string()
+    } else if own_agent::key(endpoint).is_some() {
+        t("im Schlüsselbund").to_string()
+    } else {
+        "—".to_string()
     }
 }
 
@@ -855,7 +867,13 @@ pub(crate) mod selftest {
 
     /// The rows the table of `list` shows.
     pub(crate) fn rows(owner: &AgentSettings, list: List) -> Vec<Vec<String>> {
-        owner.rows(list)
+        (0..owner.count(list))
+            .map(|row| {
+                (0..)
+                    .map_while(|column| owner.cell_text(list, row, column))
+                    .collect::<Vec<_>>()
+            })
+            .collect()
     }
 
     /// Adds an endpoint as the add sheet does.

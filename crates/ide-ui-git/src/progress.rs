@@ -1,5 +1,6 @@
 //! The branch popup, the distance to the upstream, and what the panel shows while something runs.
 
+use std::collections::HashSet;
 use std::time::{Duration, Instant};
 
 use ide_git::{Operation, Progress};
@@ -66,12 +67,13 @@ impl GitPanel {
         for name in &names {
             menu.addItem(&self.branch_item(name, name));
         }
+        let local: HashSet<&str> = locals.iter().copied().collect();
         let remotes: Vec<&str> = state
             .branches
             .iter()
             .filter(|b| b.remote && !b.name.ends_with("/HEAD"))
             .map(|b| b.name.as_str())
-            .filter(|name| name.split_once('/').is_none_or(|(_, short)| !locals.contains(&short)))
+            .filter(|name| name.split_once('/').is_none_or(|(_, short)| !local.contains(short)))
             .collect();
         if !remotes.is_empty() {
             menu.addItem(&separator(mtm));

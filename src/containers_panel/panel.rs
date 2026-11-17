@@ -319,7 +319,7 @@ impl ContainersPanel {
             }
         }
         *self.ivars().reach.borrow_mut() = read.reach.clone();
-        self.ivars().board.borrow_mut().files = ide_docker::compose_files(self.root());
+        self.ivars().board.borrow_mut().files = read.files;
         if let Some(board) = read.board {
             let mut mine = self.ivars().board.borrow_mut();
             mine.containers = board.containers;
@@ -633,14 +633,18 @@ struct Read {
     contexts: Vec<ide_docker::Context>,
     reach: Reach,
     board: Option<Board>,
+    /// The Compose files of the folder, whatever Docker answered.
+    files: Vec<PathBuf>,
 }
 
 fn read_all(env: &[(String, String)], context: &str, root: &std::path::Path) -> Read {
+    let files = ide_docker::compose_files(root);
     if docker::program(env).is_none() {
         return Read {
             contexts: Vec::new(),
             reach: Reach::Missing,
             board: None,
+            files,
         };
     }
     let contexts = docker::run(&ide_docker::list_contexts(), env)
@@ -663,6 +667,7 @@ fn read_all(env: &[(String, String)], context: &str, root: &std::path::Path) -> 
                 contexts,
                 reach: Reach::NotRunning(error.explain()),
                 board: None,
+                files,
             };
         }
     };
@@ -671,6 +676,7 @@ fn read_all(env: &[(String, String)], context: &str, root: &std::path::Path) -> 
             contexts,
             reach: Reach::TooOld(version),
             board: None,
+            files,
         };
     }
     let list = |command: ide_docker::Command| docker::run(&command, env).unwrap_or_default();
@@ -678,12 +684,13 @@ fn read_all(env: &[(String, String)], context: &str, root: &std::path::Path) -> 
         containers: ide_docker::containers(&list(ide_docker::list_containers(&context))),
         images: ide_docker::images(&list(ide_docker::list_images(&context))),
         volumes: ide_docker::volumes(&list(ide_docker::list_volumes(&context))),
-        files: ide_docker::compose_files(root),
+        files: files.clone(),
     };
     Read {
         contexts,
         reach: Reach::Ready,
         board: Some(board),
+        files,
     }
 }
 

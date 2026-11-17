@@ -165,8 +165,9 @@ fn forget_models(endpoint: &str) {
 
 /// Asks `endpoint` for its models off the main thread and tells `done` on it.
 pub fn load_models(endpoint: Endpoint, done: impl FnOnce(Result<Vec<ModelInfo>, Explained>) + Send + 'static) {
-    let key = key(&endpoint);
     if let Err((done, why)) = ide_ui_common::util::spawn_with("agent-models", done, move |done| {
+        // The keychain answers through another process, so the key is read here rather than on the main thread.
+        let key = key(&endpoint);
         let result = Provider::new(endpoint.clone(), key, Http::new()).models();
         if let Ok(models) = &result {
             models_cache()

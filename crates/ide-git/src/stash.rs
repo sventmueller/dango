@@ -258,7 +258,11 @@ impl Repository {
         };
         self.git().ok(self.call(["reset", "--hard", "--quiet", "HEAD", "--"]))?;
         for path in &state.brought {
-            match std::fs::remove_file(self.root().join(path)) {
+            // The record lies in the git folder, so a path in it that leads outside the working tree is left alone.
+            let Ok(inside) = relative(self.root(), path) else {
+                continue;
+            };
+            match std::fs::remove_file(self.root().join(inside)) {
                 Err(error) if error.kind() != std::io::ErrorKind::NotFound => return Err(error.into()),
                 _ => {}
             }

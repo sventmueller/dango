@@ -13,7 +13,7 @@ use crate::edit::{ByteEdit, Change, Edit, EditError, edits_between};
 use crate::merge::{self, Conflict, Reconciliation};
 #[cfg(test)]
 use crate::syntax::BracketPair;
-use crate::syntax::{Fold, Language, Span, Styled, Syntax};
+use crate::syntax::{Fold, Language, LineEdit, Span, Styled, Syntax};
 use crate::text::{PositionError, Text};
 
 /// A kind of line break.
@@ -519,10 +519,25 @@ impl Document {
 
     fn replace_text(&mut self, text: &str) -> Result<Vec<Change>, PositionError> {
         let old = self.text.to_string();
-        let changes = edits_between(&old, text)
-            .into_iter()
-            .map(|edit| self.replace(edit))
-            .collect::<Result<Vec<_>, _>>()?;
+        let (mut changes, mut lines, mut failed) = (Vec::new(), Vec::new(), None);
+        for edit in edits_between(&old, text) {
+            match self.change_text(edit) {
+                Ok((change, edited)) => {
+                    changes.push(change);
+                    lines.push(edited);
+                }
+                Err(error) => {
+                    failed = Some(error);
+                    break;
+                }
+            }
+        }
+        // The lines follow once for all edits, of which a new text from an agent or the file may have thousands.
+        self.syntax.edited(&lines);
+        if let Some(error) = failed {
+            return Err(error);
+        }
+        debug_assert_eq!(self.syntax.line_count(), self.text.line_count());
         self.refresh_dirty();
         Ok(changes)
     }
@@ -530,6 +545,15 @@ impl Document {
     /// Makes one edit, widened where it would end between the CR and the LF of a line break, which a language server
     /// cannot name.
     fn replace(&mut self, edit: ByteEdit) -> Result<Change, PositionError> {
+        let (change, lines) = self.change_text(edit)?;
+        self.syntax.edited(&[lines]);
+        debug_assert_eq!(self.syntax.line_count(), self.text.line_count());
+        Ok(change)
+    }
+
+    /// The text of `replace` without the lines of the colours, bracket pairs and folds, which follow the lines it
+    /// returns.
+    fn change_text(&mut self, edit: ByteEdit) -> Result<(Change, LineEdit), PositionError> {
         let ByteEdit { mut range, mut text } = edit;
         if self.text.inside_crlf(range.start) {
             range.start -= 1;
@@ -558,9 +582,7 @@ impl Document {
         let first = start.line.min(self.text.line_of(range.start));
         let removed = old_end.line - first + 1;
         let added = (removed + self.text.line_count()).saturating_sub(old_lines);
-        self.syntax.edited(first, removed, added);
-        debug_assert_eq!(self.syntax.line_count(), self.text.line_count());
-        Ok(Change {
+        let change = Change {
             revision: self.revision,
             bytes: range,
             utf16,
@@ -569,7 +591,8 @@ impl Document {
             new_end,
             text_utf16,
             text,
-        })
+        };
+        Ok((change, LineEdit { first, removed, added }))
     }
 
     fn refresh_dirty(&mut self) {
@@ -822,10 +845,9 @@ fn differs(disk: &OnDisk, text: &Text) -> bool {
     if start.saturating_add(end) >= length {
         return false;
     }
-    let middle = start..length - end;
-    match (text.slice(middle.clone()), disk.base.slice(middle)) {
-        (Some(ours), Some(theirs)) => ours != theirs,
-        _ => disk.base != *text,
+    match text.same_bytes(&disk.base, start..length - end) {
+        Some(same) => !same,
+        None => disk.base != *text,
     }
 }
 

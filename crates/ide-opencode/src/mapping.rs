@@ -33,7 +33,17 @@ struct Tool {
     key: String,
     name: String,
     input: Value,
-    output: String,
+}
+
+/// The last `OUTPUT_LIMIT` bytes of `output`, starting at a whole character.
+fn output_tail(output: &str) -> &str {
+    let Some(mut cut) = output.len().checked_sub(OUTPUT_LIMIT) else {
+        return output;
+    };
+    while !output.is_char_boundary(cut) {
+        cut += 1;
+    }
+    &output[cut..]
 }
 
 /// Turns what the server reports into changes of the thread.
@@ -444,7 +454,8 @@ impl Mapper {
             return Vec::new();
         };
         let mut out = Vec::new();
-        if self.open.insert(key.clone(), thought).is_none() {
+        if !self.open.contains_key(&key) {
+            self.open.insert(key.clone(), thought);
             out.push(streaming(key.clone(), at, thought));
         }
         out.push(Update::Append {
@@ -484,7 +495,6 @@ impl Mapper {
                 key: key.clone(),
                 name: name.to_string(),
                 input: Value::Null,
-                output: String::new(),
             },
         );
         if is_list(name) {
@@ -510,7 +520,6 @@ impl Mapper {
             key: key.clone(),
             name: "tool".into(),
             input: Value::Null,
-            output: String::new(),
         });
         tool.input = input.clone();
         let todos = (tool.name == "todowrite").then(|| cards::todos(&input)).flatten();
@@ -548,23 +557,15 @@ impl Mapper {
         let Some((id, _)) = Self::tool_ref(data) else {
             return Vec::new();
         };
-        let Some(tool) = self.tools.get_mut(&id).filter(|t| !is_list(&t.name)) else {
+        let Some(tool) = self.tools.get(&id).filter(|t| !is_list(&t.name)) else {
             return Vec::new();
         };
         let Some(output) = data.get("metadata").and_then(|m| text(m, "output")) else {
             return Vec::new();
         };
-        tool.output = output.to_string();
-        if tool.output.len() > OUTPUT_LIMIT {
-            let mut cut = tool.output.len() - OUTPUT_LIMIT;
-            while !tool.output.is_char_boundary(cut) {
-                cut += 1;
-            }
-            tool.output.drain(..cut);
-        }
         let patch = ToolPatch {
             output: Some(ToolOutput::Terminal {
-                stdout: tool.output.clone(),
+                stdout: output_tail(output).to_string(),
                 stderr: String::new(),
                 interrupted: false,
             }),
@@ -624,5 +625,45 @@ impl Mapper {
         };
         let key = self.key("compaction");
         vec![Update::Activity(None), put(key, at, EntryKind::Notice(notice))]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn streamed_command_output_keeps_its_last_part_from_a_whole_character() {
+        assert_eq!(output_tail("short"), "short");
+        let long = format!("{}ä{}", "x".repeat(10), "y".repeat(OUTPUT_LIMIT - 1));
+        assert_eq!(output_tail(&long), "y".repeat(OUTPUT_LIMIT - 1));
+        let mut mapper = Mapper::new(1);
+        let mut caps = Capabilities::default();
+        let event = |kind: &str, data: Value| json!({"type": kind, "data": data});
+        let tool = json!({"id": "call_1", "assistantMessageID": "msg_1", "name": "shell"});
+        mapper.event(&event("session.tool.input.started", tool), &mut caps, UNIX_EPOCH);
+        let progress = json!({"id": "call_1", "assistantMessageID": "msg_1", "metadata": {"output": long}});
+        let (updates, _) = mapper.event(&event("session.tool.progress", progress), &mut caps, UNIX_EPOCH);
+        let [Update::Tool { key, patch }] = updates.as_slice() else {
+            panic!("{updates:?}")
+        };
+        assert_eq!(key, "tool:msg_1:call_1");
+        assert!(matches!(&patch.output, Some(ToolOutput::Terminal { stdout, .. }) if stdout.len() == OUTPUT_LIMIT - 1));
+    }
+
+    #[test]
+    fn deltas_open_their_entry_once() {
+        let mut mapper = Mapper::new(1);
+        let mut caps = Capabilities::default();
+        let delta = json!({"type": "session.text.delta",
+            "data": {"assistantMessageID": "msg_1", "ordinal": 0, "delta": "a"}});
+        let (first, _) = mapper.event(&delta, &mut caps, UNIX_EPOCH);
+        let (second, _) = mapper.event(&delta, &mut caps, UNIX_EPOCH);
+        assert_eq!(first.len(), 2);
+        assert!(
+            matches!(second.as_slice(), [Update::Append { key, text: appended }] if key == "text:msg_1:0" && appended == "a")
+        );
     }
 }

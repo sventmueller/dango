@@ -13,11 +13,19 @@ use ide_ui_common::util::{guarded, ns};
 /// Finds the form's user name and password fields and sets them as typing would, so the page's scripts see it.
 const SCRIPT: &str = include_str!("fill_login.js");
 
-/// Writes `user` and `password` into the login form of `web`'s page if it still shows `host`; `done` gets how many
-/// fields took a value, none on a page without a login form.
-pub(crate) fn fill(web: &WKWebView, host: &str, user: &str, password: &str, done: impl Fn(usize) + 'static) {
-    let keys = [&*ns("host"), &*ns("user"), &*ns("password")];
-    let values: Vec<Retained<AnyObject>> = [host, user, password]
+/// Writes `user` and `password` into the login form of `web`'s page if it still shows `host`, and still encrypted
+/// where `protocol`, the page's when the user was asked, is `https:`; `done` gets how many fields took a value, none
+/// on a page without a login form.
+pub(crate) fn fill(
+    web: &WKWebView,
+    protocol: &str,
+    host: &str,
+    user: &str,
+    password: &str,
+    done: impl Fn(usize) + 'static,
+) {
+    let keys = [&*ns("protocol"), &*ns("host"), &*ns("user"), &*ns("password")];
+    let values: Vec<Retained<AnyObject>> = [protocol, host, user, password]
         .into_iter()
         .map(|value| ns(value).into_super().into_super())
         .collect();

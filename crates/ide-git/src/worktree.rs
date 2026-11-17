@@ -36,7 +36,7 @@ impl Repository {
     /// Adds a working tree at `path` on a new branch `branch` that starts at `start`, or at HEAD, and returns it.
     pub fn add_worktree(&self, path: &Path, branch: &str, start: Option<&str>) -> Result<Repository> {
         self.check_branch_name(branch)?;
-        let mut args: Vec<OsString> = ["worktree", "add", "-b", branch].map(OsString::from).to_vec();
+        let mut args: Vec<OsString> = ["worktree", "add", "-b", branch, "--"].map(OsString::from).to_vec();
         args.push(path.as_os_str().to_os_string());
         if let Some(start) = start {
             args.push(word(start)?.into());
@@ -91,6 +91,7 @@ impl Repository {
         if force {
             args.push("--force".into());
         }
+        args.push("--".into());
         args.push(path.as_os_str().to_os_string());
         let output = self.git().run(self.call(args))?;
         if output.code == 0 {

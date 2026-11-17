@@ -173,6 +173,33 @@ impl Shared {
         format!("{prefix}{}", state.counter)
     }
 
+    /// Puts the user's `message` into the conversation as the model reads it, with what is attached to it, and keeps
+    /// the conversation.
+    pub(crate) fn take_message(&self, message: &UserMessage) {
+        let text = with_attachments(message, &self.workspace);
+        let mut content = vec![Block::text(&text)];
+        content.extend(message.attachments.iter().filter_map(|attachment| match attachment {
+            ide_thread::Attachment::Image { media_type, data, .. } => Some(Block::Image {
+                media_type: media_type.clone(),
+                data: base64::engine::general_purpose::STANDARD.encode(data),
+            }),
+            _ => None,
+        }));
+        {
+            // A turn that failed before any answer, or a compaction, leaves a user message last; providers want the
+            // roles to alternate, so the new message joins it.
+            let mut state = self.lock();
+            match state.conversation.last_mut() {
+                Some(last) if last.role == Role::User => last.content.extend(content),
+                _ => state.conversation.push(Message {
+                    role: Role::User,
+                    content,
+                }),
+            }
+        }
+        self.save();
+    }
+
     /// Keeps the conversation where resuming finds it.
     pub(crate) fn save(&self) {
         let Some(path) = &self.store else { return };
@@ -188,7 +215,7 @@ impl Shared {
                 by_model: state.by_model.clone(),
             }
         };
-        if let Err(error) = store::save(path, &stored) {
+        if let Err(error) = store::save(path, stored) {
             (self.sink)(Event::Failed(error.to_string()));
         }
     }
@@ -296,7 +323,6 @@ impl Session {
             return self.compact(focus);
         }
         let cancel = self.begin()?;
-        let text = with_attachments(&message, &self.shared.workspace);
         let key = self.shared.key("u");
         let mut updates = vec![Update::Put {
             lane: Lane::Main,
@@ -308,28 +334,17 @@ impl Session {
             updates.push(Update::Title(ide_thread::title_from(&message.text)));
         }
         self.shared.apply(updates);
-        let mut content = vec![Block::text(&text)];
-        content.extend(message.attachments.iter().filter_map(|attachment| match attachment {
-            ide_thread::Attachment::Image { media_type, data, .. } => Some(Block::Image {
-                media_type: media_type.clone(),
-                data: base64::engine::general_purpose::STANDARD.encode(data),
-            }),
-            _ => None,
-        }));
-        {
-            // A turn that failed before any answer, or a compaction, leaves a user message last; providers want the
-            // roles to alternate, so the new message joins it.
-            let mut state = self.shared.lock();
-            match state.conversation.last_mut() {
-                Some(last) if last.role == Role::User => last.content.extend(content),
-                _ => state.conversation.push(Message {
-                    role: Role::User,
-                    content,
-                }),
-            }
+        // Reading the attached files and writing the whole conversation wait for the disk, which the caller, the
+        // main thread, must not; the turn's thread does both before its first request.
+        let message = Arc::new(message);
+        let taken = message.clone();
+        let work = move |shared: &Shared, cancel: &Cancel| {
+            shared.take_message(&taken);
+            crate::turn::run(shared, cancel);
+        };
+        if !self.spawn("own-agent-turn", work, cancel) {
+            self.shared.take_message(&message);
         }
-        self.shared.save();
-        self.spawn("own-agent-turn", crate::turn::run, cancel);
         Ok(())
     }
 
@@ -359,7 +374,8 @@ impl Session {
         Ok(state.cancel.clone())
     }
 
-    fn spawn(&self, name: &str, work: impl FnOnce(&Shared, &Cancel) + Send + 'static, cancel: Cancel) {
+    /// Runs `work` on a thread of its own; whether it started.
+    fn spawn(&self, name: &str, work: impl FnOnce(&Shared, &Cancel) + Send + 'static, cancel: Cancel) -> bool {
         let shared = self.shared.clone();
         let started = std::thread::Builder::new()
             .name(name.into())
@@ -367,6 +383,7 @@ impl Session {
         if started.is_err() {
             self.shared.lock().running = false;
         }
+        started.is_ok()
     }
 
     /// Stops the running turn: the stream ends at once, as its connection is closed, a waiting request is withdrawn,

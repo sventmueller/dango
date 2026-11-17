@@ -68,9 +68,10 @@ pub(super) fn replace(
 ) {
     let mut result = Done::default();
     let mut closed = Vec::new();
+    let editors = open_editors();
     for path in files {
-        match open_editor(&path) {
-            Some(view) => result.count(&path, in_editor(&view, &options, &with, &only)),
+        match editor_of(&editors, &path) {
+            Some(view) => result.count(&path, in_editor(view, &options, &with, &only)),
             None => closed.push(path),
         }
     }
@@ -90,14 +91,27 @@ pub(super) fn replace(
     }
 }
 
-/// The editor that shows the file at `path`, whose document all its editors share.
-fn open_editor(path: &Path) -> Option<Retained<EditorTextView>> {
+/// The open editors of files, each with the resolved path of its file, read once for all the files of a replacement.
+fn open_editors() -> Vec<(PathBuf, Retained<EditorTextView>)> {
+    crate::editor::all_editors()
+        .into_iter()
+        .filter_map(|view| {
+            let path = view
+                .document()
+                .path()
+                .map(|p| p.canonicalize().unwrap_or_else(|_| p.to_path_buf()))?;
+            Some((path, view))
+        })
+        .collect()
+}
+
+/// The editor among `editors` that shows the file at `path`, whose document all its editors share.
+fn editor_of<'a>(editors: &'a [(PathBuf, Retained<EditorTextView>)], path: &Path) -> Option<&'a EditorTextView> {
     let wanted = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-    crate::editor::all_editors().into_iter().find(|view| {
-        view.document()
-            .path()
-            .is_some_and(|p| p.canonicalize().unwrap_or_else(|_| p.to_path_buf()) == wanted)
-    })
+    editors
+        .iter()
+        .find(|(file, _)| *file == wanted)
+        .map(|(_, view)| &**view)
 }
 
 fn chosen(found: Vec<Replacement>, only: &Only) -> Vec<Replacement> {

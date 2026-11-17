@@ -18,6 +18,9 @@ use ide_process::tool::{self, Helper, RunError};
 /// The latest rust-analyzer release, as GitHub's API describes it.
 const RUST_ANALYZER_RELEASE: &str = "https://api.github.com/repos/rust-lang/rust-analyzer/releases/latest";
 
+/// The most of the release's description that is read; GitHub's is a few hundred kilobytes.
+const RELEASE_LIMIT: u64 = 8 * 1024 * 1024;
+
 /// How long `go install` or `npm install` may take.
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(15 * 60);
 
@@ -238,13 +241,14 @@ impl Installer {
     }
 
     fn release_asset(&self) -> Result<Asset, InstallError> {
-        let mut download = self
+        let download = self
             .net
             .get(RUST_ANALYZER_RELEASE, "application/vnd.github+json")
             .map_err(|e| InstallError::Network(e.to_string()))?;
         let mut json = Vec::new();
         download
             .body
+            .take(RELEASE_LIMIT)
             .read_to_end(&mut json)
             .map_err(|e| InstallError::Network(e.to_string()))?;
         let release: Release = serde_json::from_slice(&json).map_err(|e| InstallError::Network(e.to_string()))?;

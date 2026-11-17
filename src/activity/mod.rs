@@ -3,7 +3,8 @@
 //! to its tab.
 
 use std::cell::{Cell, RefCell};
-use std::sync::Once;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Once};
 use std::time::{Duration, SystemTime};
 
 use ide_process::{Kind, ProcessId, Supervisor};
@@ -158,9 +159,16 @@ pub(crate) fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarI
 fn watch_supervisor() {
     static WATCH: Once = Once::new();
     WATCH.call_once(|| {
+        let pending = Arc::new(AtomicBool::new(false));
         Supervisor::global()
-            .subscribe(|_| {
-                main_soon(|| {
+            .subscribe(move |_| {
+                // Every git call starts and ends a process, so events come in bursts that one hop serves.
+                if pending.swap(true, Ordering::AcqRel) {
+                    return;
+                }
+                let pending = pending.clone();
+                main_soon(move || {
+                    pending.store(false, Ordering::Release);
                     let all: Vec<Retained<Activity>> = with_activities(|a| a.borrow().clone());
                     for activity in all {
                         activity.changed();

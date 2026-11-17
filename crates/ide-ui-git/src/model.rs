@@ -188,9 +188,6 @@ impl State {
     /// Takes what a refresh read; whether anything the panel shows changed.
     pub(crate) fn apply(&mut self, loaded: Loaded) -> bool {
         let was_ready = self.phase == Phase::Ready;
-        if was_ready && self.shows_already(&loaded) {
-            return false;
-        }
         match loaded {
             Loaded::NoGit => (self.phase, self.repo) = (Phase::NoGit, None),
             Loaded::NotRepository => (self.phase, self.repo) = (Phase::NotRepository, None),
@@ -209,13 +206,17 @@ impl State {
                     entries: stashes,
                     apply,
                 } = *stash;
+                let model = Model::new(&status, log, worktrees, stashes, self.history_limit());
+                if was_ready && self.shows_already(&model, &status.branch, &branches, &operation, &apply) {
+                    return false;
+                }
                 self.phase = Phase::Ready;
                 self.operation = operation;
                 self.stash_apply = apply;
                 self.repo = Some(repo);
                 self.branch = status.branch.clone();
                 self.branches = branches;
-                self.model = Model::new(&status, log, worktrees, stashes, self.history_limit());
+                self.model = model;
                 let kept: HashSet<&CommitId> = self.model.stashes.iter().map(|s| &s.hash).collect();
                 self.open_stashes.retain(|hash| kept.contains(hash));
             }
@@ -229,32 +230,20 @@ impl State {
         true
     }
 
-    /// Whether `loaded` is what the panel shows already.
-    fn shows_already(&self, loaded: &Loaded) -> bool {
-        let Loaded::Ready {
-            status,
-            branches,
-            log,
-            operation,
-            worktrees,
-            stash,
-            ..
-        } = loaded
-        else {
-            return false;
-        };
-        let model = Model::new(
-            status,
-            log.clone(),
-            worktrees.clone(),
-            stash.entries.clone(),
-            self.history_limit(),
-        );
-        self.model == model
-            && self.branch == status.branch
-            && self.branches == *branches
+    /// Whether a read that yields these rows, branch, branches and stopped operations is what the panel shows already.
+    fn shows_already(
+        &self,
+        model: &Model,
+        branch: &BranchStatus,
+        branches: &[Branch],
+        operation: &Option<Operation>,
+        stash_apply: &Option<StashApply>,
+    ) -> bool {
+        self.model == *model
+            && self.branch == *branch
+            && self.branches == branches
             && self.operation == *operation
-            && self.stash_apply == stash.apply
+            && self.stash_apply == *stash_apply
     }
 
     /// The rows below `parent`, the sections for the top.

@@ -684,11 +684,12 @@ impl BrowserView {
         };
         let host = address::host_of(&url).unwrap_or_else(|| page.clone());
         let plain = scheme.as_deref() == Some("http") && !address::is_local(&url);
+        let protocol = format!("{}:", scheme.as_deref().unwrap_or_default());
         let view = Weak::from(self);
         dialogs::fill_login(&window, &host, plain, move |user, password| {
             let Some(view) = view.load() else { return };
             let weak = Weak::from(&*view);
-            autofill::fill(&view.parts().web, &page, &user, &password, move |filled| {
+            autofill::fill(&view.parts().web, &protocol, &page, &user, &password, move |filled| {
                 if filled == 0
                     && let Some(view) = weak.load()
                 {

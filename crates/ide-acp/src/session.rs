@@ -8,6 +8,7 @@
 use ide_core::LockIgnoringPoison;
 use std::collections::HashMap;
 use std::future::Future;
+use std::io::{self, BufReader, Read};
 use std::path::PathBuf;
 use std::process::{ChildStdin, ChildStdout};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -18,6 +19,7 @@ use agent_client_protocol::schema::ProtocolVersion;
 use agent_client_protocol::v1::schema as acp;
 use agent_client_protocol::{Agent, Builder, ByteStreams, Client, ConnectionTo, JsonRpcRequest, Responder};
 use futures::channel::oneshot;
+use ide_process::framing::{self, Line};
 use ide_process::tail::{self, Tail};
 use ide_process::{Kind, ProcessId, Supervisor};
 use ide_thread::{Change, Decision, ErrorKind, RequestState, Status, Thread, Update, UserMessage};
@@ -47,6 +49,55 @@ const LOAD_SESSION: Duration = Duration::from_secs(180);
 
 /// How long the agent may take to switch a mode or an option.
 const SETTING: Duration = Duration::from_secs(30);
+
+/// The longest line of the agent's output that is read; a longer one is skipped, so that it costs neither the memory
+/// nor the session.
+const LINE_LIMIT: usize = 64 * 1024 * 1024;
+
+/// The agent's output as the connection reads it: whole lines, without those longer than `limit`.
+struct Lines<R> {
+    reader: BufReader<R>,
+    limit: usize,
+    line: Vec<u8>,
+    at: usize,
+}
+
+impl<R: Read> Lines<R> {
+    fn new(inner: R, limit: usize) -> Lines<R> {
+        Lines {
+            reader: BufReader::with_capacity(64 * 1024, inner),
+            limit,
+            line: Vec::new(),
+            at: 0,
+        }
+    }
+}
+
+impl<R: Read> Read for Lines<R> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        if buf.is_empty() {
+            return Ok(0);
+        }
+        while self.at == self.line.len() {
+            if self.line.capacity() > 1024 * 1024 {
+                self.line = Vec::new();
+            }
+            self.at = 0;
+            match framing::read_line(&mut self.reader, &mut self.line, self.limit)? {
+                Line::Read => {}
+                Line::TooLong => ide_core::diag::report(
+                    "acp: a line of the agent was skipped",
+                    format_args!("it is longer than {} MiB", self.limit >> 20),
+                ),
+                Line::End => return Ok(0),
+            }
+        }
+        let n = buf.len().min(self.line.len() - self.at);
+        buf[..n].copy_from_slice(&self.line[self.at..self.at + n]);
+        self.at += n;
+        Ok(n)
+    }
+}
 
 /// What a session tells the UI, on one of the session's threads.
 #[derive(Debug, Clone, PartialEq)]
@@ -734,7 +785,10 @@ fn watch(supervisor: &Supervisor, process: ProcessId, shared: &Weak<Shared>) {
 
 /// Runs the connection over the agent's pipes until it closes or `closed` fires.
 fn connect(shared: Arc<Shared>, stdin: ChildStdin, stdout: ChildStdout, closed: oneshot::Receiver<()>) {
-    let transport = ByteStreams::new(blocking::Unblock::new(stdin), blocking::Unblock::new(stdout));
+    let transport = ByteStreams::new(
+        blocking::Unblock::new(stdin),
+        blocking::Unblock::new(Lines::new(stdout, LINE_LIMIT)),
+    );
     let updates = shared.clone();
     let asks = shared.clone();
     let main = shared.clone();
@@ -897,6 +951,23 @@ mod tests {
             SessionError::Timeout("initialize").to_string(),
             "the agent did not answer initialize in time"
         );
+    }
+
+    #[test]
+    fn an_overlong_line_of_the_agent_is_skipped_and_the_lines_after_it_pass_whole() {
+        let input = b"{\"a\":1}\nxxxxxxxxxxxx\n{\"b\":22}\n{\"c\":3}".to_vec();
+        let mut lines = Lines::new(&input[..], 9);
+        let (mut out, mut buf) = (Vec::new(), [0u8; 3]);
+        loop {
+            let n = lines.read(&mut buf).unwrap();
+            if n == 0 {
+                break;
+            }
+            out.extend_from_slice(&buf[..n]);
+        }
+        assert_eq!(out, b"{\"a\":1}\n{\"b\":22}\n{\"c\":3}");
+        assert_eq!(lines.read(&mut buf).unwrap(), 0);
+        assert_eq!(lines.read(&mut []).unwrap(), 0);
     }
 
     #[test]

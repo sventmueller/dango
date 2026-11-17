@@ -55,6 +55,11 @@ pub struct FileContent {
 impl FileContent {
     /// Reads the file at `path`, following symbolic links. A file that changes while it is read is read again.
     pub fn read(path: &Path) -> io::Result<FileContent> {
+        // Opening a named pipe waits until a program writes into it, so only files and folders are opened.
+        let kind = fs::metadata(path)?.file_type();
+        if !kind.is_file() && !kind.is_dir() {
+            return Err(io::Error::from(io::ErrorKind::Unsupported));
+        }
         let mut file = File::open(path)?;
         let mut tries = 0;
         loop {
@@ -417,5 +422,22 @@ pub(crate) mod tests {
         assert_eq!(read.fingerprint, Fingerprint::of(b"text"));
         assert_eq!(FileContent::read(&dir).unwrap_err().kind(), io::ErrorKind::IsADirectory);
         assert_eq!(stamp(&dir.join("missing")), Stamp::UNREACHABLE);
+    }
+
+    #[test]
+    fn reading_refuses_what_is_neither_a_file_nor_a_folder() {
+        let device = Path::new("/dev/zero");
+        assert_eq!(
+            FileContent::read(device).unwrap_err().kind(),
+            io::ErrorKind::Unsupported
+        );
+        let dir = scratch("special");
+        let link = dir.join("zero");
+        symlink(device, &link).unwrap();
+        assert_eq!(FileContent::read(&link).unwrap_err().kind(), io::ErrorKind::Unsupported);
+        assert_eq!(
+            FileContent::read(&dir.join("missing")).unwrap_err().kind(),
+            io::ErrorKind::NotFound
+        );
     }
 }

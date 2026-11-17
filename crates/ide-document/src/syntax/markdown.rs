@@ -17,7 +17,7 @@ use splat_markdown::doc::Doc;
 pub use splat_markdown::highlight::{Style, Token};
 use splat_markdown::incremental::{Parsed, parse_and_color, parse_shared_and_color, reparse_part_and_color};
 
-use super::{Changed, Columns, LINES_PER_STEP};
+use super::{Changed, Columns, LINES_PER_STEP, LineEdit, splice_lines};
 use crate::text::Text;
 
 /// The longest text parsed on the spot; about 7 ms of a release build.
@@ -100,10 +100,12 @@ impl Markdown {
         }
     }
 
-    /// Lines `first..first + removed` were replaced by `added` lines.
-    pub(crate) fn edited(&mut self, first: usize, removed: usize, added: usize) {
-        let end = (first + removed).min(self.lines.len());
-        self.lines.splice(first.min(end)..end, std::iter::repeat_n(None, added));
+    /// The lines of `edits` were replaced, one edit after the other.
+    pub(crate) fn edited(&mut self, edits: &[LineEdit]) {
+        let Some(first) = edits.iter().map(|edit| edit.first).min() else {
+            return;
+        };
+        splice_lines(&mut self.lines, edits);
         self.todo = self.todo.min(first);
         match &mut self.opening {
             Some(opening) => {

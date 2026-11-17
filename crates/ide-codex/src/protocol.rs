@@ -249,7 +249,7 @@ pub(crate) enum Item {
 
 impl Item {
     pub(crate) fn read(value: &Value) -> Option<Item> {
-        serde_json::from_value(value.clone()).ok()
+        Item::deserialize(value).ok()
     }
 
     pub(crate) fn id(&self) -> Option<&str> {

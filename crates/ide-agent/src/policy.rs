@@ -258,7 +258,8 @@ pub(crate) fn discards_only_own_work(command: &str) -> bool {
     let parts = segments(command);
     let moves = parts.iter().any(|part| {
         words(part)
-            .first()
+            .iter()
+            .find(|w| !matches!(w.as_str(), "command" | "builtin"))
             .is_some_and(|w| matches!(w.as_str(), "cd" | "pushd"))
     });
     let destructive: Vec<&String> = parts.iter().filter(|part| destructive_git(part).is_some()).collect();
@@ -278,6 +279,7 @@ fn elsewhere(word: &str) -> bool {
         name,
         "sh" | "bash" | "zsh" | "dash" | "ksh" | "fish" | "eval" | "env" | "xargs"
     ) || word == "-C"
+        || word.to_ascii_lowercase().contains("core.worktree")
         || [
             "--git-dir",
             "--work-tree",
@@ -561,6 +563,10 @@ mod tests {
             "GIT_DIR=../main/.git git reset --hard",
             "sh -c 'git reset --hard'",
             "cd ../main && git reset --hard",
+            "command cd ../main && git reset --hard",
+            "builtin pushd ../main; git clean -fd",
+            "git -c core.worktree=../main clean -fd",
+            "GIT_CONFIG_KEY_0=core.worktree GIT_CONFIG_VALUE_0=../main GIT_CONFIG_COUNT=1 git reset --hard",
         ] {
             assert!(!discards_only_own_work(command), "{command}");
         }

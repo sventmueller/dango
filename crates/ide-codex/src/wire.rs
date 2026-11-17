@@ -1,8 +1,9 @@
 //! The app-server's framing on stdio: one JSON-RPC 2.0 message per line, without the `"jsonrpc"` member, which the
 //! server neither sends nor needs (`docs/codex.md`).
 
+use serde::ser::{SerializeMap, Serializer};
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value, json};
+use serde_json::Value;
 
 /// The id of a request; the server's own requests use numbers, and either side may use strings.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -116,38 +117,47 @@ impl Message {
 
     /// The message as one line, without the line break.
     pub fn encode(&self) -> String {
-        let mut map = Map::new();
-        match self {
-            Message::Request { id, method, params } => {
-                map.insert("id".into(), json!(id));
-                map.insert("method".into(), json!(method));
-                with_params(&mut map, params);
-            }
-            Message::Notification { method, params } => {
-                map.insert("method".into(), json!(method));
-                with_params(&mut map, params);
-            }
-            Message::Response { id, result } => {
-                map.insert("id".into(), json!(id));
-                map.insert("result".into(), result.clone());
-            }
-            Message::Error { id, error } => {
-                map.insert("id".into(), json!(id));
-                map.insert("error".into(), json!(error));
-            }
-        }
-        Value::Object(map).to_string()
+        serde_json::to_string(&Wire(self)).unwrap_or_default()
     }
 }
 
-fn with_params(map: &mut Map<String, Value>, params: &Value) {
-    if !params.is_null() {
-        map.insert("params".into(), params.clone());
+/// A message in its shape on the wire, written from the message's own parameters and result.
+struct Wire<'a>(&'a Message);
+
+impl Serialize for Wire<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(None)?;
+        match self.0 {
+            Message::Request { id, method, params } => {
+                map.serialize_entry("id", id)?;
+                map.serialize_entry("method", method)?;
+                if !params.is_null() {
+                    map.serialize_entry("params", params)?;
+                }
+            }
+            Message::Notification { method, params } => {
+                map.serialize_entry("method", method)?;
+                if !params.is_null() {
+                    map.serialize_entry("params", params)?;
+                }
+            }
+            Message::Response { id, result } => {
+                map.serialize_entry("id", id)?;
+                map.serialize_entry("result", result)?;
+            }
+            Message::Error { id, error } => {
+                map.serialize_entry("id", id)?;
+                map.serialize_entry("error", error)?;
+            }
+        }
+        map.end()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
+
     use super::*;
 
     #[test]
@@ -210,5 +220,29 @@ mod tests {
         .encode();
         assert!(!line.contains("jsonrpc") && !line.contains('\n'), "{line}");
         assert_eq!(Message::parse(&line).map(|m| m.encode()), Some(line));
+        let line = Message::Error {
+            id: None,
+            error: RpcError::new(RpcError::METHOD_NOT_FOUND, "x is not supported"),
+        }
+        .encode();
+        assert_eq!(
+            line,
+            r#"{"id":null,"error":{"code":-32601,"message":"x is not supported"}}"#
+        );
+        let params = json!({"input": [{"type": "text", "text": "Hi\n\"there\""}]});
+        let line = Message::Request {
+            id: Id::Text("s1".into()),
+            method: "turn/start".into(),
+            params: params.clone(),
+        }
+        .encode();
+        assert_eq!(
+            Message::parse(&line),
+            Some(Message::Request {
+                id: Id::Text("s1".into()),
+                method: "turn/start".into(),
+                params,
+            })
+        );
     }
 }

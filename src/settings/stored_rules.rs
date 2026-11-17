@@ -87,6 +87,15 @@ fn rows() -> Vec<Row> {
         .collect()
 }
 
+/// The texts of `row` as the list shows them: project, rule, where it applies.
+fn row_cells(row: &Row) -> [String; 3] {
+    [
+        crate::app::display_path(&row.project),
+        row.rule.clone(),
+        ide_ui_agent::scope_name(&row.scope.into()),
+    ]
+}
+
 pub(crate) struct StoredRulesIvars {
     rows: RefCell<Vec<Row>>,
     table: OnceCell<Retained<NSTableView>>,
@@ -120,7 +129,7 @@ define_class!(
         fn view_for(&self, _table: &NSTableView, column: Option<&NSTableColumn>, row: isize) -> Option<Retained<NSView>> {
             guarded(None, || {
                 let index: usize = column?.identifier().to_string().parse().ok()?;
-                let text = self.cells().into_iter().nth(usize::try_from(row).ok()?)?.into_iter().nth(index)?;
+                let text = self.cell(usize::try_from(row).ok()?, index)?;
                 Some(form::cell(self.mtm(), &text))
             })
         }
@@ -197,20 +206,10 @@ impl StoredRules {
         self.update_button();
     }
 
-    /// The rows as the list shows them: project, rule, where it applies.
-    pub(crate) fn cells(&self) -> Vec<Vec<String>> {
-        self.ivars()
-            .rows
-            .borrow()
-            .iter()
-            .map(|row| {
-                vec![
-                    crate::app::display_path(&row.project),
-                    row.rule.clone(),
-                    ide_ui_agent::scope_name(&row.scope.into()),
-                ]
-            })
-            .collect()
+    /// What column `column` of row `row` shows.
+    fn cell(&self, row: usize, column: usize) -> Option<String> {
+        let rows = self.ivars().rows.borrow();
+        row_cells(rows.get(row)?).into_iter().nth(column)
     }
 
     fn selected(&self) -> Option<Row> {

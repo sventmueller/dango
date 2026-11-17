@@ -245,7 +245,8 @@ impl Client {
         http::checked(self.transport.send(&request)?, &self.forge.host, what)
     }
 
-    /// Every page of a list from `url` on, up to `MAX_PAGES`, each read by `read`.
+    /// Every page of a list from `url` on, up to `MAX_PAGES`, each read by `read`. A `Link` to a page off the API's
+    /// scheme, host and port is not followed, since the token goes along; GitLab's page number takes its place.
     pub(crate) fn pages<T>(&self, url: &str, what: &str, read: impl Fn(&Response) -> Result<Vec<T>>) -> Result<Vec<T>> {
         let mut items = Vec::new();
         let mut next = Some(url.to_string());
@@ -253,7 +254,9 @@ impl Client {
             let Some(url) = next.take() else { break };
             let response = self.get(&url, what)?;
             items.extend(read(&response)?);
-            next = http::next_page(&response).or_else(|| gitlab::next_page(&url, &response));
+            next = http::next_page(&response)
+                .filter(|page| same_origin(page, &self.forge.api))
+                .or_else(|| gitlab::next_page(&url, &response));
         }
         Ok(items)
     }
@@ -282,6 +285,16 @@ pub fn locate(candidates: &[Forge], token: Option<&str>, transport: Arc<dyn Tran
     Err(Error::NotFound { what: "project".into() })
 }
 
+/// Whether `a` and `b` have the same scheme, host and port, as written.
+fn same_origin(a: &str, b: &str) -> bool {
+    let origin = |url: &str| {
+        let (scheme, rest) = url.split_once("://")?;
+        let end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+        Some((scheme.to_ascii_lowercase(), rest[..end].to_ascii_lowercase()))
+    };
+    origin(a).is_some_and(|origin_a| origin(b) == Some(origin_a))
+}
+
 /// `text` with every character but the unreserved ones percent-encoded, for a path segment or query value.
 pub(crate) fn encode(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
@@ -298,6 +311,68 @@ pub(crate) fn encode(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn run(id: u64) -> Run {
+        Run {
+            id,
+            name: "CI".into(),
+            state: crate::model::State::Failed,
+            url: String::new(),
+            branch: None,
+            sha: "abc".into(),
+            event: None,
+            number: 1,
+            created: None,
+            updated: None,
+        }
+    }
+
+    fn asked(recorded: &crate::http::Recorded) -> Vec<String> {
+        recorded.asked().into_iter().map(|request| request.url).collect()
+    }
+
+    #[test]
+    fn a_next_page_off_the_apis_origin_is_not_asked_with_the_token() {
+        assert!(same_origin("https://API.github.com/x?page=2", "https://api.github.com"));
+        assert!(!same_origin("http://api.github.com/x", "https://api.github.com"));
+        assert!(!same_origin(
+            "https://api.github.com.example/x",
+            "https://api.github.com"
+        ));
+        assert!(!same_origin(
+            "https://gitlab.example.com:8443/x",
+            "https://gitlab.example.com/api/v4"
+        ));
+        let github = crate::forge::candidates("git@github.com:acme/widget.git", &[]).remove(0);
+        let first = "https://api.github.com/repos/acme/widget/actions/runs/7/jobs?filter=latest&per_page=100";
+        let recorded = Arc::new(crate::http::Recorded::new().answer(
+            Method::Get,
+            first,
+            200,
+            r#"{"jobs": []}"#,
+            &[("link", "<https://elsewhere.example/jobs?page=2>; rel=\"next\"")],
+        ));
+        let client = Client::new(github, Some("secret".into()), recorded.clone());
+        assert!(client.jobs(&run(7)).unwrap().is_empty());
+        assert_eq!(asked(&recorded), [first]);
+
+        let gitlab = crate::forge::candidates("git@gitlab.com:group/app.git", &[]).remove(0);
+        let first = "https://gitlab.com/api/v4/projects/group%2Fapp/pipelines/7/jobs?per_page=100";
+        let second = "https://gitlab.com/api/v4/projects/group%2Fapp/pipelines/7/jobs?per_page=100&page=2";
+        let plain = "<http://gitlab.com/api/v4/projects/group%2Fapp/pipelines/7/jobs?page=2>; rel=\"next\"";
+        let recorded = Arc::new(
+            crate::http::Recorded::new()
+                .answer(Method::Get, first, 200, "[]", &[("link", plain), ("x-next-page", "2")])
+                .answer(Method::Get, second, 200, "[]", &[]),
+        );
+        let client = Client::new(gitlab, Some("secret".into()), recorded.clone());
+        assert!(client.jobs(&run(7)).unwrap().is_empty());
+        assert_eq!(
+            asked(&recorded),
+            [first, second],
+            "the page number keeps the request on HTTPS"
+        );
+    }
 
     #[test]
     fn paths_and_branch_names_are_encoded_whole() {
