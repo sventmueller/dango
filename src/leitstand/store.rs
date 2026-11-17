@@ -498,8 +498,9 @@ mod tests {
     fn two_writers_of_one_file_each_leave_it_whole_and_nothing_beside_it() {
         let base = temp("whole");
         let file = base.join("intake.json");
-        let writers: Vec<_> = [b'a', b'b']
-            .into_iter()
+        let writers: Vec<_> = b"ab"
+            .iter()
+            .copied()
             .map(|byte| {
                 let file = file.clone();
                 std::thread::spawn(move || {
