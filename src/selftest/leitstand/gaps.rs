@@ -284,9 +284,22 @@ fn objection_tab(root: PathBuf, id: OrderId, controller: &Retained<WindowControl
                 window.displayIfNeeded();
                 snapshot(&window, "leitstand-gaps-objection");
             }
+            narrow_sidebar(&controller);
             overrule(root, id);
         },
     );
+}
+
+/// An order's tab lets the sidebar beside it be dragged to its narrowest and back.
+fn narrow_sidebar(controller: &WindowController) {
+    let before = controller.inspect().sidebar_width;
+    let dragged = controller.drag_sidebar(0.0);
+    check(
+        "with an order's tab open the sidebar still drags to its narrowest",
+        dragged.is_some_and(|(width, min)| (width - min).abs() < 1.0),
+        format!("{dragged:?}"),
+    );
+    controller.drag_sidebar(before);
 }
 
 /// "Weiter" overrules the objection; the builder's next turn carries the order on to acceptance.

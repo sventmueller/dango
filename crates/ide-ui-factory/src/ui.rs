@@ -83,38 +83,6 @@ pub(crate) fn scrolling(mtm: MainThreadMarker, content: &NSView) -> Retained<NSS
     scroll
 }
 
-/// `content` in a scroll view that starts at its top, centred and as wide as the scroll view up to `max`; nothing in
-/// it holds the window wider than its narrowest parts.
-pub(crate) fn reading(mtm: MainThreadMarker, content: &NSView, max: f64) -> Retained<NSScrollView> {
-    let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(600.0, 400.0));
-    let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
-    scroll.setHasVerticalScroller(true);
-    scroll.setAutohidesScrollers(true);
-    scroll.setDrawsBackground(false);
-    let page = TopDown::new(mtm);
-    page.addSubview(content);
-    content.setTranslatesAutoresizingMaskIntoConstraints(false);
-    page.setTranslatesAutoresizingMaskIntoConstraints(false);
-    scroll.setDocumentView(Some(&page));
-    let clip = scroll.contentView();
-    let fill = content.widthAnchor().constraintEqualToAnchor(&page.widthAnchor());
-    fill.setPriority(490.0);
-    ide_ui_common::util::activate([
-        content.topAnchor().constraintEqualToAnchor(&page.topAnchor()),
-        content.bottomAnchor().constraintEqualToAnchor(&page.bottomAnchor()),
-        content.centerXAnchor().constraintEqualToAnchor(&page.centerXAnchor()),
-        content
-            .leadingAnchor()
-            .constraintGreaterThanOrEqualToAnchor(&page.leadingAnchor()),
-        content.widthAnchor().constraintLessThanOrEqualToConstant(max),
-        fill,
-        page.topAnchor().constraintEqualToAnchor(&clip.topAnchor()),
-        page.leadingAnchor().constraintEqualToAnchor(&clip.leadingAnchor()),
-        page.widthAnchor().constraintEqualToAnchor(&clip.widthAnchor()),
-    ]);
-    scroll
-}
-
 /// Lets every wrapping label in `view` wrap at the room `width` leaves it, so none holds its container wider.
 pub(crate) fn wrap(view: &NSView, width: f64) {
     let width = width.max(MIN_WRAP);
@@ -122,7 +90,7 @@ pub(crate) fn wrap(view: &NSView, width: f64) {
         if field.cell().is_some_and(|cell| cell.wraps()) {
             field.setPreferredMaxLayoutWidth(width);
             field.setContentCompressionResistancePriority_forOrientation(
-                250.0,
+                GIVES_WAY,
                 NSLayoutConstraintOrientation::Horizontal,
             );
         }
@@ -162,6 +130,10 @@ pub(crate) fn wrap(view: &NSView, width: f64) {
         wrap(&child, width);
     }
 }
+
+/// How firmly a label keeps its width: below the split view's holding priorities, so no text holds the window or the
+/// sidebar beside the tab at a width.
+pub(crate) const GIVES_WAY: f32 = 200.0;
 
 /// The narrowest a label wraps at, so a very narrow window still shows a few words a line.
 const MIN_WRAP: f64 = 120.0;

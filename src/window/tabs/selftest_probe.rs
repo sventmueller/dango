@@ -92,6 +92,15 @@ impl TabWindow {
         (self.sidebar.minimumThickness(), self.sidebar.maximumThickness())
     }
 
+    /// Moves the sidebar's edge to `width`, as a drag of it does, at least to its narrowest, and gives the width the
+    /// sidebar took.
+    pub(crate) fn drag_sidebar(&self, width: f64) -> f64 {
+        let split = self.split.splitView();
+        split.setPosition_ofDividerAtIndex(width.max(self.sidebar.minimumThickness()), 0);
+        split.layoutSubtreeIfNeeded();
+        self.sidebar_width()
+    }
+
     /// Folds the sidebar away or back, as the menu's command does.
     pub(crate) fn toggle_sidebar(&self) {
         // SAFETY: The action takes no sender.

@@ -216,6 +216,13 @@ impl WindowController {
         self.tab_of_document(id).map(|tab| tab.sidebar_range())
     }
 
+    /// Moves the sidebar's edge in the window tab in front to `width`, as a drag of it does, and gives the width the
+    /// sidebar took and the narrowest it may take.
+    pub(crate) fn drag_sidebar(&self, width: f64) -> Option<(f64, f64)> {
+        self.current_tab()
+            .map(|tab| (tab.drag_sidebar(width), tab.sidebar_range().0))
+    }
+
     /// Folds the sidebar away or back, as ⌃⌘S does.
     pub(crate) fn toggle_sidebar(&self) {
         if let Some(tab) = self.current_tab() {

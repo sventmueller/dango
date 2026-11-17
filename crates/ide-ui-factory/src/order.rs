@@ -30,9 +30,6 @@ use ide_ui_common::style::space;
 /// How wide the tab's text wraps before the tab knows its width.
 const WIDTH: f64 = 640.0;
 
-/// The widest the tab's column grows, so lines stay readable in a wide window.
-const MAX_WIDTH: f64 = 760.0;
-
 /// How tall the specification's view is at G1: its text and comments scroll inside it.
 const SPEC_HEIGHT: f64 = 460.0;
 
@@ -180,7 +177,10 @@ impl OrderTab {
     fn build(&self, mtm: MainThreadMarker) -> OrderUi {
         let me: &AnyObject = self.as_ref();
         let title = ui::title(mtm, "");
-        title.setContentCompressionResistancePriority_forOrientation(250.0, NSLayoutConstraintOrientation::Horizontal);
+        title.setContentCompressionResistancePriority_forOrientation(
+            ui::GIVES_WAY,
+            NSLayoutConstraintOrientation::Horizontal,
+        );
         let condition = ui::row(mtm, space::S);
         let buttons: Vec<Retained<NSButton>> = Command::ALL
             .iter()
@@ -201,7 +201,7 @@ impl OrderTab {
         let body = ui::column(mtm, space::M);
         let column = ui::column(mtm, space::M);
         column.setEdgeInsets(objc2_foundation::NSEdgeInsets {
-            top: space::GROUP,
+            top: space::M,
             left: space::GROUP,
             bottom: space::GROUP,
             right: space::GROUP,
@@ -230,7 +230,7 @@ impl OrderTab {
             body.widthAnchor()
                 .constraintEqualToAnchor_constant(&column.widthAnchor(), inner),
         ]);
-        let scroll = ui::reading(mtm, &column, MAX_WIDTH);
+        let scroll = ui::scrolling(mtm, &column);
         self.addSubview(&scroll);
         ide_ui_common::util::auto_layout(&[&scroll]);
         ide_ui_common::util::pin_edges(&scroll, self);
@@ -376,7 +376,7 @@ impl OrderTab {
         if width < 1.0 {
             return;
         }
-        let wrap = width.min(MAX_WIDTH) - 2.0 * space::GROUP;
+        let wrap = width - 2.0 * space::GROUP;
         if (wrap - self.ivars().wrap.replace(wrap)).abs() < 0.5 {
             return;
         }

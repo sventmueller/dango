@@ -254,7 +254,10 @@ fn checkbox(mtm: MainThreadMarker, tab: &OrderTab, title: &str, index: usize) ->
     button.setTag(isize::try_from(index).unwrap_or(0));
     button.setToolTip(Some(&ns(title)));
     button.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingMiddle);
-    button.setContentCompressionResistancePriority_forOrientation(250.0, NSLayoutConstraintOrientation::Horizontal);
+    button.setContentCompressionResistancePriority_forOrientation(
+        ui::GIVES_WAY,
+        NSLayoutConstraintOrientation::Horizontal,
+    );
     button.setFont(Some(&ide_ui_common::style::mono(ide_ui_common::style::CODE)));
     button.setUserInterfaceLayoutDirection(objc2_app_kit::NSUserInterfaceLayoutDirection::LeftToRight);
     button
