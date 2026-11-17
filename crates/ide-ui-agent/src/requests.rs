@@ -340,9 +340,16 @@ impl AgentTab {
         session.task_output(&task).then(move |output| {
             let Ok(output) = output else { return };
             let _ = ide_core::lane::DISK.try_run(move || {
+                // The agent names the task, and a name with a folder in it must not lead out of the app's folder.
+                let Some(name) = std::path::Path::new(&task)
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                else {
+                    return;
+                };
                 let file = ide_core::paths::data_dir()
                     .join("task-output")
-                    .join(format!("{task}.txt"));
+                    .join(format!("{name}.txt"));
                 let written = file
                     .parent()
                     .map(std::fs::create_dir_all)

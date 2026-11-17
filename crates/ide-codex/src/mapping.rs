@@ -12,6 +12,7 @@ use ide_thread::{
     Activity, AgentMessage, EntryKind, ErrorKind, InfoLevel, Lane, Notice, Status, Thought, Todo, TodoStatus,
     ToolOutput, ToolPatch, Update, UserMessage,
 };
+use serde::Deserialize;
 use serde_json::Value;
 
 use crate::capabilities::{Account, Capabilities};
@@ -606,16 +607,16 @@ impl Mapper {
         let Some(key) = Self::item_ref(params).filter(|k| self.open.contains_key(k)) else {
             return Vec::new();
         };
-        let changes: Vec<FileChange> = params
+        let changes = params
             .get("changes")
-            .and_then(|c| serde_json::from_value(c.clone()).ok())
+            .and_then(|c| Vec::<FileChange>::deserialize(c).ok())
             .unwrap_or_default();
         let card = cards::file_change(&changes, "inProgress");
         let patch = ToolPatch {
-            title: Some(card.title.clone()),
-            view: Some(card.view.clone()),
-            output: card.output.clone(),
-            input: Some(card.input.clone()),
+            title: Some(card.title),
+            view: Some(card.view),
+            output: card.output,
+            input: Some(card.input),
             ..ToolPatch::default()
         };
         vec![Update::Tool { key, patch }]

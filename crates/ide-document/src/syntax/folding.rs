@@ -64,10 +64,9 @@ pub(crate) struct Indents {
 }
 
 impl Indents {
-    /// Lines `first..first + removed` were replaced by `added` lines.
-    pub(crate) fn edited(&mut self, first: usize, removed: usize, added: usize) {
-        let end = (first + removed).min(self.lines.len());
-        self.lines.splice(first.min(end)..end, std::iter::repeat_n(None, added));
+    /// The lines of `edits` were replaced, one edit after the other.
+    pub(crate) fn edited(&mut self, edits: &[super::LineEdit]) {
+        super::splice_lines(&mut self.lines, edits);
     }
 
     /// The folds of `text`, as `indentation_folds` finds them.
@@ -132,7 +131,11 @@ mod tests {
             let rope = text.rope_mut();
             let char_at = rope.byte_to_char(at);
             rope.insert(char_at, typed);
-            indents.edited(line, 1, 1 + added);
+            indents.edited(&[crate::syntax::LineEdit {
+                first: line,
+                removed: 1,
+                added: 1 + added,
+            }]);
             assert_eq!(indents.folds(&text, 4), indentation_folds(&text, 4), "after {typed:?}");
         }
     }

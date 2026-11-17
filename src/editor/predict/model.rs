@@ -6,7 +6,7 @@ use std::ops::Range;
 use std::path::Path;
 
 use ide_core::settings::Key;
-use ide_document::Revision;
+use ide_document::{Revision, Text};
 use ide_predict::Prediction;
 use serde::{Deserialize, Serialize};
 
@@ -117,7 +117,8 @@ fn glob(pattern: &str, text: &str) -> bool {
 /// Whether `url` names this Mac: localhost or a loopback address.
 pub(crate) fn loopback(url: &str) -> bool {
     let rest = url.split_once("://").map_or(url, |(_, rest)| rest);
-    let authority = rest.split('/').next().unwrap_or("");
+    // The host ends where an HTTP client ends it, so that `http://example.com?@localhost` names example.com here too.
+    let authority = rest.split(['/', '?', '#', '\\']).next().unwrap_or("");
     let authority = authority.rsplit_once('@').map_or(authority, |(_, host)| host);
     let host = if let Some(bracketed) = authority.strip_prefix('[') {
         bracketed.split(']').next().unwrap_or("")
@@ -249,8 +250,8 @@ impl Proposal {
     }
 
     /// Whether it still fits the document: the same revision and selection, and its range holding what it held.
-    pub(crate) fn holds(&self, revision: Revision, selection: &Range<usize>, text: &str) -> bool {
-        self.revision == revision && self.selection == *selection && text.get(self.range.clone()) == Some(&self.old)
+    pub(crate) fn holds(&self, revision: Revision, selection: &Range<usize>, text: &Text) -> bool {
+        self.revision == revision && self.selection == *selection && text.has_at(self.range.clone(), &self.old)
     }
 
     /// The same proposal after the caret went to it on purpose, as the first Tab does: bound to `selection` now.
@@ -363,6 +364,20 @@ mod tests {
             Some("ollama http://studio.local:11434")
         );
         assert_eq!(consent_id(Choice::Off, None), None);
+        for elsewhere in [
+            "http://studio.example?@localhost:11434",
+            "http://studio.example#@127.0.0.1",
+            "http://studio.example\\@localhost/",
+        ] {
+            assert!(
+                consent_id(Choice::Ollama, Some(&local(elsewhere))).is_some(),
+                "{elsewhere} leaves the Mac"
+            );
+        }
+        assert_eq!(
+            consent_id(Choice::Ollama, Some(&local("http://me@localhost:11434/"))),
+            None
+        );
     }
 
     #[test]
@@ -421,16 +436,22 @@ mod tests {
     fn a_proposal_holds_only_for_its_revision_selection_and_text() {
         let text = "let a = 1;\n";
         let proposal = Proposal::first(text, Revision::new(7), 10..10, vec![prediction(10..10, " // one")]).unwrap();
-        assert!(proposal.holds(Revision::new(7), &(10..10), text));
+        let whole = Text::new(text);
+        assert!(proposal.holds(Revision::new(7), &(10..10), &whole));
         assert!(
-            !proposal.holds(Revision::new(8), &(10..10), text),
+            !proposal.holds(Revision::new(8), &(10..10), &whole),
             "an answer that arrives after a further edit is dropped"
         );
-        assert!(!proposal.holds(Revision::new(7), &(9..9), text), "the caret moved");
+        assert!(!proposal.holds(Revision::new(7), &(9..9), &whole), "the caret moved");
         let replace = Proposal::first(text, Revision::new(7), 4..4, vec![prediction(4..5, "b")]).unwrap();
+        assert!(replace.holds(Revision::new(7), &(4..4), &whole));
         assert!(
-            !replace.holds(Revision::new(7), &(4..4), "let x = 1;\n"),
+            !replace.holds(Revision::new(7), &(4..4), &Text::new("let x = 1;\n")),
             "its range no longer holds what it replaces"
+        );
+        assert!(
+            !replace.holds(Revision::new(7), &(4..4), &Text::new("let")),
+            "its range lies beyond the text"
         );
     }
 
@@ -449,7 +470,7 @@ mod tests {
             (rest.range.clone(), rest.text.as_str(), rest.revision),
             (13..13, "(21, 2)", Revision::new(2))
         );
-        assert!(rest.holds(Revision::new(2), &(13..13), after));
+        assert!(rest.holds(Revision::new(2), &(13..13), &Text::new(after)));
         assert_eq!(proposal.rest(10, "", Revision::new(2)), None, "nothing left");
         let replace = Proposal::first("let a;\n", Revision::new(1), 4..4, vec![prediction(4..5, "b")]).unwrap();
         assert_eq!(replace.word(), None);

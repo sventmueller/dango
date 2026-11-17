@@ -343,8 +343,7 @@ fn current(view: &EditorTextView) -> Option<(Proposal, Arc<dyn Provider>)> {
     let shown = view.ivars().predict.borrow().shown.clone()?;
     let holds = {
         let document = view.document();
-        let text = document.text().to_string();
-        shown.0.holds(document.revision(), &selection(view), &text)
+        shown.0.holds(document.revision(), &selection(view), document.text())
     };
     if !holds {
         forget(view);

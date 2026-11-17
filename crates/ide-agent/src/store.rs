@@ -98,8 +98,7 @@ impl std::error::Error for SaveError {
 }
 
 /// Writes `stored` to `path` whole, with `ide_core::atomic_write`.
-pub(crate) fn save(path: &Path, stored: &Stored) -> Result<(), SaveError> {
-    let mut stored = stored.clone();
+pub(crate) fn save(path: &Path, mut stored: Stored) -> Result<(), SaveError> {
     stored.version = VERSION;
     let text = serde_json::to_vec(&stored).map_err(SaveError::Encode)?;
     ide_core::atomic_write::write(path, &text).map_err(|error| SaveError::Io {
@@ -128,7 +127,7 @@ mod tests {
             },
             ..Stored::default()
         };
-        save(&path, &stored).unwrap();
+        save(&path, stored).unwrap();
         let read = load(&path).unwrap();
         assert_eq!(
             (read.title.as_str(), read.messages.len(), read.totals.cost_usd),

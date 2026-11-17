@@ -250,10 +250,15 @@ impl CiPanel {
             .unwrap_or_default();
         let id = self.id();
         work::run(
-            move || client.log(&job).map(|raw| (job, client.forge().to_string(), raw)),
+            move || {
+                client.log(&job).map(|raw| {
+                    let excerpt = ide_ci::log::excerpt(&ide_ci::log::lines(&raw), EXCERPT_LINES);
+                    (job, client.forge().to_string(), excerpt)
+                })
+            },
             move |result| {
                 with_panel(id, |panel| match result {
-                    Some(Ok((job, place, raw))) => panel.draft_for_agent(&job, &run, &place, &raw),
+                    Some(Ok((job, place, excerpt))) => panel.draft_for_agent(&job, &run, &place, excerpt),
                     Some(Err(error)) => panel.set_problem(Some(text::problem(&error))),
                     None => {}
                 });
@@ -261,9 +266,8 @@ impl CiPanel {
         );
     }
 
-    fn draft_for_agent(&self, job: &Job, run: &str, place: &str, raw: &str) {
+    fn draft_for_agent(&self, job: &Job, run: &str, place: &str, excerpt: String) {
         let Some(controller) = self.controller() else { return };
-        let excerpt = ide_ci::log::excerpt(&ide_ci::log::lines(raw), EXCERPT_LINES);
         if let Some(tab) = open_agent(&controller) {
             tab.set_draft(&draft(&job.name, run, place));
             tab.attach_outside(ide_ui_agent::ci_log(&job.name, run, excerpt));

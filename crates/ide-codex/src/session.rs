@@ -10,7 +10,7 @@ mod open;
 mod reply;
 
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufReader, Write};
 use std::path::PathBuf;
 use std::process::{ChildStdin, ChildStdout};
 use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU64, Ordering};
@@ -18,6 +18,7 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+use ide_process::framing::{self, Line};
 use ide_process::tail::{self, Tail};
 use ide_process::{Kind, ProcessId, Supervisor};
 use ide_thread::{Change, ErrorKind, RequestState, Status, Thread, Update, UserMessage};
@@ -38,6 +39,9 @@ pub(crate) use reply::typed;
 
 /// What the stderr tail keeps.
 const STDERR_LIMIT: usize = 64 * 1024;
+
+/// How much of the server's output one read takes in, as much as a pipe holds.
+const READ_BUFFER: usize = 64 * 1024;
 
 /// How long the end of a session waits for the stderr of a server that exited on its own.
 const LAST_WORDS: Duration = Duration::from_millis(500);
@@ -348,19 +352,22 @@ impl Shared {
 
     /// Reads the server's output until it ends; `upgraded` hears when the shared server accepted the WebSocket.
     fn read(self: Arc<Self>, stdout: ChildStdout, upgraded: Sender<()>) {
-        let mut reader = BufReader::new(stdout);
+        let mut reader = BufReader::with_capacity(READ_BUFFER, stdout);
         if self.launch.shared {
             self.read_websocket(&mut reader, &upgraded);
             self.finish();
             return;
         }
-        let mut line = String::new();
+        let mut line = Vec::new();
         loop {
-            line.clear();
-            match reader.read_line(&mut line) {
-                Ok(0) | Err(_) => break,
-                Ok(_) => {
-                    if let Some(message) = Message::parse(&line) {
+            match framing::read_line(&mut reader, &mut line, crate::ws::MAX_MESSAGE) {
+                Ok(Line::End) | Err(_) => break,
+                Ok(Line::TooLong) => {}
+                Ok(Line::Read) => {
+                    let Ok(text) = std::str::from_utf8(&line) else {
+                        break;
+                    };
+                    if let Some(message) = Message::parse(text) {
                         self.dispatch(message);
                     }
                 }
@@ -799,9 +806,9 @@ impl Session {
         if starting {
             return Err(SessionError::Busy);
         }
+        let input = self.input(&message);
         let (params, overrides, updates) = {
             let mut state = self.shared.state();
-            let input = crate::prompt::input(&message, state.caps.images(), &self.shared.launch.cwd);
             let mut updates = Vec::new();
             if state.thread.title().is_empty() {
                 let title = ide_thread::title_from(&message.text);
@@ -812,7 +819,9 @@ impl Session {
             let (key, begun) = state.mapper.begin_turn(&message, now());
             updates.extend(begun);
             let overrides = std::mem::take(&mut state.overrides);
-            let mut params = json!({"threadId": thread, "input": input, "clientUserMessageId": key});
+            let mut params = json!({"threadId": thread});
+            params["input"] = Value::Array(input);
+            params["clientUserMessageId"] = json!(key);
             overrides.write(&mut params);
             if let Some(bounds) = &self.shared.launch.confinement {
                 bounds.bound_turn(&mut params);
@@ -852,13 +861,21 @@ impl Session {
         Ok(())
     }
 
+    /// The `input` items of `message`, built without the state's lock, as they read files and encode images.
+    fn input(&self, message: &UserMessage) -> Vec<Value> {
+        let images = self.shared.state().caps.images();
+        crate::prompt::input(message, images, &self.shared.launch.cwd)
+    }
+
     fn steer(&self, thread: &str, turn: &str, message: &UserMessage) -> Result<(), SessionError> {
+        let input = self.input(message);
         let (params, updates) = {
             let mut state = self.shared.state();
-            let input = crate::prompt::input(message, state.caps.images(), &self.shared.launch.cwd);
             let (key, updates) = state.mapper.steered(message, now());
-            let params = json!({"threadId": thread, "input": input, "expectedTurnId": turn,
-                                "clientUserMessageId": key});
+            let mut params = json!({"threadId": thread});
+            params["input"] = Value::Array(input);
+            params["expectedTurnId"] = json!(turn);
+            params["clientUserMessageId"] = json!(key);
             (params, updates)
         };
         self.shared.apply(updates);

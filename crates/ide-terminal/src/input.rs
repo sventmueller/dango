@@ -805,15 +805,19 @@ pub(crate) fn encode_paste(text: &str, modes: &InputModes) -> Vec<u8> {
     if !modes.bracketed_paste {
         return text.replace("\r\n", "\r").replace('\n', "\r").into_bytes();
     }
-    let mut inner = text.to_string();
-    // Removing one marker can join the text around it into a new one.
-    while inner.contains(PASTE_END) {
-        inner = inner.replace(PASTE_END, "");
-    }
-    let mut bytes = Vec::with_capacity(inner.len() + 12);
+    let end = PASTE_END.as_bytes();
+    let mut bytes = Vec::with_capacity(text.len() + 12);
     bytes.extend_from_slice(b"\x1b[200~");
-    bytes.extend_from_slice(inner.as_bytes());
-    bytes.extend_from_slice(PASTE_END.as_bytes());
+    let inner = bytes.len();
+    // A marker that removing another one joins together ends at the `~` that completes it, and the marker overlaps
+    // no copy of itself, so this one pass leaves what removing markers until none is left would.
+    for piece in text.as_bytes().split_inclusive(|&byte| byte == b'~') {
+        bytes.extend_from_slice(piece);
+        if bytes.len() - inner >= end.len() && bytes.ends_with(end) {
+            bytes.truncate(bytes.len() - end.len());
+        }
+    }
+    bytes.extend_from_slice(end);
     bytes
 }
 

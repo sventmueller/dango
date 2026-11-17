@@ -124,10 +124,15 @@ fn note(text: &str) {
         .push(text.to_string());
 }
 
-/// Opens `url` in the browser.
+/// Opens `url` in the browser; the service names the device flow's page, so an address that is no web page is left
+/// alone rather than handed to whichever app claims its scheme.
 fn open_url(url: &str) {
     if under_selftest() {
         return note(url);
+    }
+    let lower = url.to_ascii_lowercase();
+    if !(lower.starts_with("https://") || lower.starts_with("http://")) {
+        return;
     }
     if let Some(url) = NSURL::URLWithString(&ns(url)) {
         NSWorkspace::sharedWorkspace().openURL(&url);

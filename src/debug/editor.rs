@@ -189,12 +189,18 @@ fn uses(line: &str, name: &str) -> bool {
     })
 }
 
+/// `value` on one line, cut after `INLINE_LENGTH` characters; only that much of a value is copied, however long it is.
 fn shorten(value: &str) -> String {
-    let flat: String = value.split_whitespace().collect::<Vec<_>>().join(" ");
-    if flat.chars().count() <= INLINE_LENGTH {
-        return flat;
+    let flat: Vec<char> = value
+        .split_whitespace()
+        .enumerate()
+        .flat_map(|(index, word)| (index > 0).then_some(' ').into_iter().chain(word.chars()))
+        .take(INLINE_LENGTH + 1)
+        .collect();
+    if flat.len() <= INLINE_LENGTH {
+        return flat.into_iter().collect();
     }
-    let cut: String = flat.chars().take(INLINE_LENGTH).collect();
+    let cut: String = flat[..INLINE_LENGTH].iter().collect();
     format!("{cut}…")
 }
 
@@ -289,5 +295,9 @@ mod tests {
         let long = "a".repeat(INLINE_LENGTH + 5);
         assert!(shorten(&long).ends_with('…'));
         assert_eq!(shorten(&long).chars().count(), INLINE_LENGTH + 1);
+        let exact = "b".repeat(INLINE_LENGTH);
+        assert_eq!(shorten(&format!("  {exact}\n")), exact);
+        let words = format!("{} {}", "c".repeat(INLINE_LENGTH - 1), "d".repeat(10));
+        assert_eq!(shorten(&words), format!("{} …", "c".repeat(INLINE_LENGTH - 1)));
     }
 }

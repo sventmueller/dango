@@ -106,7 +106,9 @@ pub(crate) fn relative(root: &Path, path: &Path) -> Result<PathBuf> {
         }
         return Ok(path.to_path_buf());
     }
-    if let Ok(inside) = path.strip_prefix(root) {
+    if let Ok(inside) = path.strip_prefix(root)
+        && !climbs_out(inside)
+    {
         return Ok(inside.to_path_buf());
     }
     let resolved = match (path.parent(), path.file_name()) {
@@ -121,6 +123,20 @@ pub(crate) fn relative(root: &Path, path: &Path) -> Result<PathBuf> {
         .ok_or_else(|| Error::OutsideFolder {
             path: path.to_path_buf(),
         })
+}
+
+/// Whether the relative `path` leaves the folder it starts in through its `..` names, such as `a/../../b`.
+fn climbs_out(path: &Path) -> bool {
+    let mut depth = 0usize;
+    for component in path.components() {
+        match component {
+            std::path::Component::ParentDir if depth == 0 => return true,
+            std::path::Component::ParentDir => depth -= 1,
+            std::path::Component::Normal(_) => depth += 1,
+            std::path::Component::CurDir | std::path::Component::RootDir | std::path::Component::Prefix(_) => {}
+        }
+    }
+    false
 }
 
 /// All `paths` relative to `root`.
@@ -183,6 +199,24 @@ mod tests {
             relative(root, Path::new("/elsewhere/x")),
             Err(Error::OutsideFolder { .. })
         ));
+    }
+
+    #[test]
+    fn an_absolute_path_that_climbs_out_of_the_root_is_outside() {
+        let root = Path::new("/nonexistent-repo");
+        assert!(matches!(
+            relative(root, Path::new("/nonexistent-repo/../etc/passwd")),
+            Err(Error::OutsideFolder { .. })
+        ));
+        assert!(matches!(
+            relative(root, Path::new("/nonexistent-repo/a/../../x")),
+            Err(Error::OutsideFolder { .. })
+        ));
+        assert_eq!(
+            relative(root, Path::new("/nonexistent-repo/a/../b")).unwrap(),
+            PathBuf::from("a/../b"),
+            "a path that stays inside is taken as it was"
+        );
     }
 
     #[test]

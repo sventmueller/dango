@@ -20,6 +20,18 @@ pub const TESTED: Version = Version {
 /// How long `opencode --version` may take.
 const PROBE_TIMEOUT: Duration = Duration::from_secs(10);
 
+/// The most of `opencode --version`'s output kept; the rest is read and dropped.
+const OUTPUT_LIMIT: u64 = 64 * 1024;
+
+/// The first `limit` bytes of `stream` as text, empty when they are not UTF-8; the rest is read to its end, so the
+/// writer never blocks on a full pipe.
+fn read_capped(stream: &mut impl Read, limit: u64) -> String {
+    let mut bytes = Vec::new();
+    let _ = stream.by_ref().take(limit).read_to_end(&mut bytes);
+    let _ = std::io::copy(stream, &mut std::io::sink());
+    String::from_utf8(bytes).unwrap_or_default()
+}
+
 /// A release of OpenCode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Version {
@@ -89,11 +101,7 @@ pub fn probe(supervisor: &Supervisor, program: &Path, env: &[(String, String)]) 
         return Err(SessionError::Start("the pipes are missing".into()));
     };
     let output = std::thread::scope(|scope| {
-        let reader = scope.spawn(move || {
-            let mut text = String::new();
-            let _ = stdout.read_to_string(&mut text);
-            text
-        });
+        let reader = scope.spawn(move || read_capped(&mut stdout, OUTPUT_LIMIT));
         if supervisor.wait(spawned.id, PROBE_TIMEOUT).is_none() {
             supervisor.stop(spawned.id, Duration::ZERO);
         }
@@ -105,6 +113,14 @@ pub fn probe(supervisor: &Supervisor, program: &Path, env: &[(String, String)]) 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_probe_keeps_only_the_start_of_its_output() {
+        let mut long = std::io::Cursor::new(format!("opencode v2.2.6\n{}", "x".repeat(100)).into_bytes());
+        assert_eq!(read_capped(&mut long, 16), "opencode v2.2.6\n");
+        assert_eq!(long.position(), 116, "the rest is drained");
+        assert_eq!(read_capped(&mut std::io::Cursor::new(vec![0xff, b'1']), 16), "");
+    }
 
     #[test]
     fn the_version_line_of_opencode_reads_and_older_releases_are_refused() {

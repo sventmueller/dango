@@ -260,12 +260,12 @@ fn permission_buttons(ctx: &Ctx<'_>, id: EntryId, request: &PermissionRequest) -
 
 /// The input the tool would run with, editable; the same editor as before when the card is built again.
 fn editor(ctx: &Ctx<'_>, id: EntryId, request: &PermissionRequest, width: f64) -> Retained<NSScrollView> {
-    let text = editable_input(&request.tool_name, &request.input);
-    let lines = text.lines().count().clamp(1, 10);
-    let height = lines as f64 * 15.5 + 10.0;
     if let Some(kept) = ctx.inputs.borrow().editors.get(&id.get()) {
         return kept.clone();
     }
+    let text = editable_input(&request.tool_name, &request.input);
+    let lines = text.lines().count().clamp(1, 10);
+    let height = lines as f64 * 15.5 + 10.0;
     let mtm = ctx.mtm;
     let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(width, height));
     let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);

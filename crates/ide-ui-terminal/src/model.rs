@@ -219,9 +219,18 @@ pub(crate) fn selection_lines(before: Option<Highlight>, now: Option<Highlight>)
     }
 }
 
-/// The title a program set, if it holds more than spaces.
+/// The most characters of a program's title that the tab and VoiceOver get, far more than either shows; a title of
+/// megabytes would otherwise be laid out whole by AppKit on every change.
+const LONGEST_TITLE: usize = 1024;
+
+/// The title a program set, if it holds more than spaces, up to its `LONGEST_TITLE`-th character.
 pub(crate) fn shown_title(title: Option<String>) -> Option<String> {
-    title.filter(|t| !t.trim().is_empty())
+    title.filter(|t| !t.trim().is_empty()).map(|mut title| {
+        if let Some((cut, _)) = title.char_indices().nth(LONGEST_TITLE) {
+            title.truncate(cut);
+        }
+        title
+    })
 }
 
 /// What VoiceOver calls the view.
@@ -414,6 +423,16 @@ mod tests {
             selection_lines(Some(block), Some(Highlight { end: at(3, 6), ..block })),
             [1, 2, 3, 1, 2, 3]
         );
+    }
+
+    #[test]
+    fn a_title_of_megabytes_is_cut_after_its_first_characters() {
+        let long = "ä".repeat(2_000_000);
+        let shown = shown_title(Some(long)).unwrap();
+        assert_eq!(shown.chars().count(), LONGEST_TITLE);
+        assert!(shown.chars().all(|c| c == 'ä'));
+        let fits = "x".repeat(LONGEST_TITLE);
+        assert_eq!(shown_title(Some(fits.clone())), Some(fits));
     }
 
     #[test]

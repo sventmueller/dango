@@ -1,7 +1,7 @@
 //! Signing in through the browser (E12): GitHub's device flow, and GitLab's authorization code with PKCE for a
 //! public client, whose browser comes back to a one-shot listener on the loopback address. Both give a [`Grant`].
 
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::time::{Duration, Instant};
 
@@ -25,6 +25,9 @@ pub const CALLBACK_PORT: u16 = 47819;
 
 /// How long the browser has to come back.
 pub const CALLBACK_TIMEOUT: Duration = Duration::from_secs(300);
+
+/// The most of the browser's request line that is read; the callback's is a few hundred bytes.
+const REQUEST_LINE_LIMIT: u64 = 16 * 1024;
 
 /// A token from signing in, with what renews it where the service hands that out.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -201,7 +204,7 @@ pub fn device_token(
         match answer.error.as_deref() {
             None => return answer.grant().ok_or(LoginError::Refused("no token".into())),
             Some("authorization_pending") => {}
-            Some("slow_down") => interval = answer.interval.unwrap_or(interval + 5),
+            Some("slow_down") => interval = answer.interval.unwrap_or(interval + 5).max(1),
             Some("expired_token" | "token_expired") => return Err(LoginError::Expired),
             Some("access_denied") => return Err(LoginError::Denied),
             Some(_) => return Err(answer.refused()),
@@ -312,7 +315,8 @@ fn answer_browser(stream: TcpStream, state: &str, page: &str) -> Option<Result<S
     let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
     let mut reader = BufReader::new(stream.try_clone().ok()?);
     let mut line = String::new();
-    reader.read_line(&mut line).ok()?;
+    // Any local program can connect to the port; a request line without an end must not fill the memory.
+    reader.by_ref().take(REQUEST_LINE_LIMIT).read_line(&mut line).ok()?;
     let target = line.split_whitespace().nth(1).unwrap_or("");
     let mut out = stream;
     let Some(query) = target.strip_prefix("/callback?") else {
@@ -445,6 +449,54 @@ mod tests {
                 .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
         );
         assert_ne!(fresh.state, Pkce::new().unwrap().state);
+    }
+
+    #[test]
+    fn a_slow_down_without_a_wait_still_waits_a_second() {
+        let url = "https://github.com/login/oauth/access_token";
+        let recorded = crate::http::Recorded::new()
+            .answer(Method::Post, url, 200, r#"{"error":"slow_down","interval":0}"#, &[])
+            .answer(Method::Post, url, 200, r#"{"access_token":"t"}"#, &[]);
+        let code = DeviceCode {
+            device_code: "d".into(),
+            user_code: "WDJB-MJHT".into(),
+            verification_uri: "https://github.com/login/device".into(),
+            expires_in: 900,
+            interval: 5,
+        };
+        let mut waits = Vec::new();
+        let grant = device_token(&recorded, "https://github.com", "id", &code, &mut |wait| {
+            waits.push(wait);
+            true
+        })
+        .unwrap();
+        assert_eq!(grant.token, "t");
+        assert_eq!(waits, [Duration::from_secs(5), Duration::from_secs(1)]);
+    }
+
+    #[test]
+    fn a_request_line_without_an_end_is_cut_off_and_the_real_callback_still_counts() {
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let browser = std::thread::spawn(move || {
+            let mut flood = TcpStream::connect(("127.0.0.1", port)).unwrap();
+            let _ = flood.write_all(&vec![b'x'; 64 * 1024]);
+            let mut real = TcpStream::connect(("127.0.0.1", port)).unwrap();
+            let _ = real.write_all(b"GET /callback?code=c0de&state=s1 HTTP/1.1\r\n\r\n");
+            let mut answer = String::new();
+            let _ = real.read_to_string(&mut answer);
+            drop(flood);
+            answer
+        });
+        let started = Instant::now();
+        let code = callback_code(&listener, "s1", Duration::from_secs(30), &|| false, "done");
+        assert_eq!(code, Ok("c0de".to_string()));
+        assert!(
+            started.elapsed() < Duration::from_secs(4),
+            "the endless line held the login for {:?}",
+            started.elapsed()
+        );
+        assert!(browser.join().unwrap().contains("200 OK"));
     }
 
     #[test]

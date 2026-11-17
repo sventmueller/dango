@@ -137,6 +137,80 @@ fn random_edits_keep_every_line_as_lexing_the_whole_text_would() {
 }
 
 #[test]
+fn edits_made_together_leave_the_lines_one_splice_per_edit_would() {
+    let mut rng = Rng(0x5911_ce11_7e57);
+    for round in 0..2_000 {
+        let length = rng.below(40);
+        let mut together: Vec<Option<usize>> = (0..length).map(Some).collect();
+        let mut one_by_one = together.clone();
+        let mut edits = Vec::new();
+        let mut before = length + 2;
+        for _ in 0..rng.below(8) {
+            // Mostly towards the start, as the edits of a new text run, and now and then not.
+            let first = if rng.below(5) == 0 {
+                rng.below(length + 3)
+            } else {
+                rng.below(before + 1)
+            };
+            before = first;
+            edits.push(LineEdit {
+                first,
+                removed: rng.below(4),
+                added: rng.below(4),
+            });
+        }
+        for edit in &edits {
+            let end = (edit.first + edit.removed).min(one_by_one.len());
+            one_by_one.splice(edit.first.min(end)..end, std::iter::repeat_n(None, edit.added));
+        }
+        splice_lines(&mut together, &edits);
+        assert_eq!(together, one_by_one, "round {round}: {edits:?}");
+    }
+}
+
+#[test]
+fn a_new_text_with_many_changes_keeps_every_line_as_lexing_it_anew_would() {
+    let mut rng = Rng(0x0dd5_eed5_7e47);
+    for language in Language::all() {
+        for _ in 0..20 {
+            let pieces: Vec<&str> = (0..rng.below(80)).map(|_| rng.pick(&PIECES)).collect();
+            let mut changed = pieces.clone();
+            for _ in 0..rng.below(12) {
+                let at = rng.below(changed.len() + 1);
+                let piece = rng.pick(&PIECES);
+                match rng.below(3) {
+                    0 => changed.insert(at, piece),
+                    1 if at < changed.len() => {
+                        changed.remove(at);
+                    }
+                    _ if at < changed.len() => changed[at] = piece,
+                    _ => {}
+                }
+            }
+            let (old, new) = (pieces.concat(), changed.concat());
+            let mut document = Document::untitled(&old);
+            document.set_language(Some(language));
+            document.highlight(0..usize::MAX);
+            let _ = document.folds(4);
+            document.replace_all(&new).unwrap();
+            document.highlight(0..usize::MAX);
+            assert_eq!(document.text().to_string(), new);
+            assert_eq!(
+                all_spans(&document),
+                all_spans(&lexed(language, &new)),
+                "{} {old:?} → {new:?}",
+                language.name()
+            );
+            assert_eq!(
+                document.folds(4),
+                super::folding::indentation_folds(&Text::new(&new), 4),
+                "{old:?} → {new:?}"
+            );
+        }
+    }
+}
+
+#[test]
 fn a_keystroke_relexes_its_line_and_an_opened_comment_runs_to_its_end() {
     let rust = Language::named("rust").unwrap();
     let text: String = (0..200).map(|n| format!("let x{n} = {n}; // c\n")).collect();

@@ -1,4 +1,4 @@
-if (location.host !== host) return 0;
+if (location.host !== host || (protocol === 'https:' && location.protocol !== protocol)) return 0;
 const usable = (el) => !el.disabled && !el.readOnly && el.getClientRects().length > 0;
 const inputs = [...document.querySelectorAll('input')].filter(usable);
 const secret =

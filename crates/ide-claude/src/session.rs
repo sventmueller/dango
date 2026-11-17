@@ -46,6 +46,9 @@ const STDERR_LIMIT: usize = 64 * 1024;
 /// nor the session. Frames with pictures stay well below it.
 const LINE_LIMIT: usize = 64 * 1024 * 1024;
 
+/// How much room for a line the reader keeps between lines.
+const LINE_KEPT: usize = 1024 * 1024;
+
 /// Words in the CLI's output that mean it has no usable sign-in.
 const SIGN_IN_HINTS: [&str; 3] = ["Not logged in", "Please run /login", "Invalid API key"];
 
@@ -326,16 +329,19 @@ impl Session {
 
     /// Answers the permission request `request_id`.
     pub fn answer(&self, request_id: &str, answer: PermissionAnswer) -> Result<(), SessionError> {
-        let decision = |ask: &PermissionAsk| match &answer {
-            PermissionAnswer::Allow { updated_input, always } => Decision::Allowed {
-                always: !always.is_empty(),
-                edited: updated_input.as_ref().is_some_and(|input| *input != ask.input),
-            },
-            PermissionAnswer::Deny { message, .. } => Decision::Denied {
-                message: Some(message.clone()),
-            },
-        };
-        self.settle(request_id, |ask| (answer.payload(ask), decision(ask)))
+        self.settle(request_id, |ask| {
+            let answer = answer.offered_by(ask);
+            let decision = match &answer {
+                PermissionAnswer::Allow { updated_input, always } => Decision::Allowed {
+                    always: !always.is_empty(),
+                    edited: updated_input.as_ref().is_some_and(|input| *input != ask.input),
+                },
+                PermissionAnswer::Deny { message, .. } => Decision::Denied {
+                    message: Some(message.clone()),
+                },
+            };
+            (answer.payload(ask), decision)
+        })
     }
 
     /// Answers the AskUserQuestion request `request_id`; several labels of one question are joined by a comma.
@@ -776,6 +782,10 @@ impl Shared {
         let mut reader = BufReader::with_capacity(256 * 1024, stdout);
         let mut line = Vec::new();
         loop {
+            // One frame with large pictures would otherwise keep its size reserved for the session's life.
+            if line.capacity() > LINE_KEPT {
+                line = Vec::new();
+            }
             match framing::read_line(&mut reader, &mut line, LINE_LIMIT) {
                 Ok(Line::End) => break,
                 Err(error) => {

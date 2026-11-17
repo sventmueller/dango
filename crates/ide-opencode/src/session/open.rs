@@ -94,14 +94,10 @@ pub(super) fn messages(shared: &Shared, id: &str) -> Result<Vec<Value>, SessionE
     let mut target = format!("{base}?order=asc&limit={PAGE}");
     let mut all = Vec::new();
     for _ in 0..PAGES {
-        let page = shared.request_now("GET", &target, None)?;
-        all.extend(
-            page.get("data")
-                .and_then(Value::as_array)
-                .into_iter()
-                .flatten()
-                .cloned(),
-        );
+        let mut page = shared.request_now("GET", &target, None)?;
+        if let Some(Value::Array(messages)) = page.get_mut("data").map(Value::take) {
+            all.extend(messages);
+        }
         match page.get("cursor").and_then(|c| c.get("next")).and_then(Value::as_str) {
             Some(cursor) => target = format!("{base}?cursor={}&limit={PAGE}", encode(cursor)),
             None => break,

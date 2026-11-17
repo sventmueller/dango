@@ -53,8 +53,8 @@ impl Line {
 
 /// The address at `point`: the target of a link the program marked, else a URL written in the text.
 pub(crate) fn url_at(rows: &[Vec<Cell>], point: Point) -> Option<String> {
-    if let Some(link) = rows.get(point.line)?.get(point.column)?.hyperlink.clone() {
-        return Some(link);
+    if let Some(link) = &rows.get(point.line)?.get(point.column)?.hyperlink {
+        return Some(link.to_string());
     }
     let line = Line::around(rows, point);
     let at = line.index_of(point)?;
@@ -101,19 +101,20 @@ fn ends_url(c: char) -> bool {
 
 /// `end` without punctuation that closes the sentence or a bracket opened before the URL.
 fn trim_trailing(chars: &[char], start: usize, mut end: usize) -> usize {
+    let count = |c: char| chars[start..end].iter().filter(|&&x| x == c).count();
+    // Only closing brackets and punctuation are cut, so the opening brackets stay as they are counted here.
+    let (round, square) = (count('('), count('['));
+    let (mut closed_round, mut closed_square) = (count(')'), count(']'));
     while end > start {
         let last = chars[end - 1];
-        let unbalanced = |open: char, close: char| {
-            last == close && {
-                let inner = &chars[start..end];
-                inner.iter().filter(|&&c| c == open).count() < inner.iter().filter(|&&c| c == close).count()
-            }
-        };
-        if ".,;:!?".contains(last) || unbalanced('(', ')') || unbalanced('[', ']') {
-            end -= 1;
-        } else {
+        if last == ')' && round < closed_round {
+            closed_round -= 1;
+        } else if last == ']' && square < closed_square {
+            closed_square -= 1;
+        } else if !".,;:!?".contains(last) {
             break;
         }
+        end -= 1;
     }
     end
 }
@@ -211,6 +212,16 @@ mod tests {
         assert_eq!(url_at(&screen, at(0, 1)), None);
         let local = rows(&["  ➜  Local:   http://localhost:5173/"], &[]);
         assert_eq!(url_at(&local, at(0, 20)).as_deref(), Some("http://localhost:5173/"));
+    }
+
+    #[test]
+    fn closing_brackets_without_an_opening_one_are_cut_however_many_follow() {
+        let line: Vec<char> = format!("x https://a.example/(b)[c]{}.", ")]".repeat(50_000))
+            .chars()
+            .collect();
+        assert_eq!(urls(&line), [(2, 26)]);
+        let screen = rows(&["(see https://a.example/w_(x)).)"], &[]);
+        assert_eq!(url_at(&screen, at(0, 8)).as_deref(), Some("https://a.example/w_(x)"));
     }
 
     #[test]

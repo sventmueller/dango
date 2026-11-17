@@ -38,6 +38,10 @@ const READ_BUFFER: usize = 0x10_0000;
 /// Bytes parsed under one hold of the lock.
 const MAX_LOCKED_READ: usize = u16::MAX as usize;
 
+/// Writes waiting for the PTY beyond which the emulator's answers to the program are dropped: a program that leaves
+/// this many unread does not read its input, and output asking for answers would otherwise grow the queue without end.
+const MAX_QUEUED_WRITES: usize = 4096;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Output {
     Open,
@@ -226,7 +230,7 @@ impl Reader {
     /// Acts on what the emulator and the scanner reported while the screen was locked.
     fn dispatch(&mut self) {
         let reported = std::mem::take(&mut *self.term_events.lock_ignoring_poison());
-        for event in reported {
+        for event in coalesce(reported) {
             self.on_term_event(event);
         }
         for event in self.scanner.take_events() {
@@ -241,22 +245,22 @@ impl Reader {
             TermEvent::ResetTitle => shared.emit(Event::Title(None)),
             TermEvent::Bell => shared.emit(Event::Bell),
             TermEvent::ClipboardStore(target, text) => shared.emit(Event::ClipboardStore {
-                clipboard: clipboard(target),
+                clipboard: clipboard(&target),
                 text,
             }),
             TermEvent::ClipboardLoad(target, reply) => {
                 *shared.clipboard_reply.lock_ignoring_poison() = Some(reply);
-                shared.emit(Event::ClipboardLoad(clipboard(target)));
+                shared.emit(Event::ClipboardLoad(clipboard(&target)));
             }
             TermEvent::ColorRequest(index, reply) => {
                 let color = self.color(index);
-                self.pending.push_back(reply(color).into_bytes());
+                self.answer(reply(color).into_bytes());
             }
-            TermEvent::PtyWrite(text) => self.pending.push_back(text.into_bytes()),
+            TermEvent::PtyWrite(text) => self.answer(text.into_bytes()),
             TermEvent::TextAreaSizeRequest(_) => {
                 // Answered here because alacritty's own answer multiplies in 16 bits.
                 let (width, height) = shared.size.lock_ignoring_poison().pixels();
-                self.pending.push_back(format!("\x1b[4;{height};{width}t").into_bytes());
+                self.answer(format!("\x1b[4;{height};{width}t").into_bytes());
             }
             TermEvent::Wakeup | TermEvent::CursorBlinkingChange | TermEvent::MouseCursorDirty => shared.wake(),
             TermEvent::Exit | TermEvent::ChildExit(_) => {}
@@ -279,6 +283,13 @@ impl Reader {
                 b: rgb.b,
             }
         })
+    }
+
+    /// Queues the emulator's answer to the program.
+    fn answer(&mut self, bytes: Vec<u8>) {
+        if self.pending.len() < MAX_QUEUED_WRITES {
+            self.pending.push_back(bytes);
+        }
     }
 
     /// Writes as much pending input as the PTY takes without blocking.
@@ -304,9 +315,103 @@ impl Reader {
     }
 }
 
-fn clipboard(target: alacritty_terminal::term::ClipboardType) -> Clipboard {
+fn clipboard(target: &alacritty_terminal::term::ClipboardType) -> Clipboard {
     match target {
         alacritty_terminal::term::ClipboardType::Clipboard => Clipboard::Clipboard,
         alacritty_terminal::term::ClipboardType::Selection => Clipboard::Selection,
+    }
+}
+
+/// What the emulator reported while parsing one read of the output, without what a later report of the same read
+/// makes moot: the bells after the first, every title but the last, and every write to a clipboard but the last one
+/// to it unless the program also asked to read one. Output that repeats these would otherwise send the main thread
+/// one event apiece.
+fn coalesce(reported: Vec<TermEvent>) -> Vec<TermEvent> {
+    let reads = reported
+        .iter()
+        .any(|event| matches!(event, TermEvent::ClipboardLoad(..)));
+    let mut later_title = false;
+    let mut later_stores: Vec<Clipboard> = Vec::new();
+    let mut kept = Vec::with_capacity(reported.len());
+    for event in reported.into_iter().rev() {
+        let moot = match &event {
+            TermEvent::Title(_) | TermEvent::ResetTitle => std::mem::replace(&mut later_title, true),
+            TermEvent::ClipboardStore(target, _) if !reads => {
+                let target = clipboard(target);
+                let seen = later_stores.contains(&target);
+                if !seen {
+                    later_stores.push(target);
+                }
+                seen
+            }
+            _ => false,
+        };
+        if !moot {
+            kept.push(event);
+        }
+    }
+    kept.reverse();
+    let mut rung = false;
+    kept.retain(|event| !matches!(event, TermEvent::Bell) || !std::mem::replace(&mut rung, true));
+    kept
+}
+
+#[cfg(test)]
+mod tests {
+    use alacritty_terminal::term::ClipboardType;
+
+    use super::*;
+
+    fn names(events: &[TermEvent]) -> Vec<String> {
+        events
+            .iter()
+            .map(|event| match event {
+                TermEvent::Title(title) => format!("title {title}"),
+                TermEvent::ResetTitle => "reset".to_string(),
+                TermEvent::Bell => "bell".to_string(),
+                TermEvent::ClipboardStore(target, text) => format!("store {:?} {text}", clipboard(target)),
+                TermEvent::ClipboardLoad(target, _) => format!("load {:?}", clipboard(target)),
+                _ => "other".to_string(),
+            })
+            .collect()
+    }
+
+    fn store(target: ClipboardType, text: &str) -> TermEvent {
+        TermEvent::ClipboardStore(target, text.to_string())
+    }
+
+    #[test]
+    fn one_read_keeps_the_first_bell_the_last_title_and_the_last_write_to_each_clipboard() {
+        let reported = vec![
+            TermEvent::Bell,
+            TermEvent::Title("one".into()),
+            store(ClipboardType::Clipboard, "a"),
+            TermEvent::Wakeup,
+            TermEvent::Bell,
+            store(ClipboardType::Selection, "s"),
+            TermEvent::ResetTitle,
+            TermEvent::Title("two".into()),
+            store(ClipboardType::Clipboard, "b"),
+            TermEvent::Bell,
+        ];
+        assert_eq!(
+            names(&coalesce(reported)),
+            ["bell", "other", "store Selection s", "title two", "store Clipboard b"]
+        );
+        assert_eq!(names(&coalesce(vec![TermEvent::ResetTitle])), ["reset"]);
+    }
+
+    #[test]
+    fn writes_to_a_clipboard_all_stay_when_the_program_also_reads_one() {
+        let load = TermEvent::ClipboardLoad(ClipboardType::Clipboard, Arc::new(|text: &str| text.to_string()));
+        let reported = vec![
+            store(ClipboardType::Clipboard, "a"),
+            load,
+            store(ClipboardType::Clipboard, "b"),
+        ];
+        assert_eq!(
+            names(&coalesce(reported)),
+            ["store Clipboard a", "load Clipboard", "store Clipboard b"]
+        );
     }
 }

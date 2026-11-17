@@ -7,6 +7,16 @@
 use super::*;
 
 impl StoredRules {
+    /// The rows as the list shows them: project, rule, where it applies.
+    pub(crate) fn cells(&self) -> Vec<Vec<String>> {
+        self.ivars()
+            .rows
+            .borrow()
+            .iter()
+            .map(|row| Vec::from(row_cells(row)))
+            .collect()
+    }
+
     /// Selects the row `row` and removes its rule, as the user does, for the self-test.
     pub(crate) fn remove_row(&self, row: usize) {
         if let Some(table) = self.ivars().table.get() {

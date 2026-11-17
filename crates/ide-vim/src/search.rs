@@ -48,8 +48,9 @@ impl Search {
         self.open.as_ref().map(|(kind, typed)| format!("{kind}{typed}"))
     }
 
-    /// Takes `key` while the prompt is open, or opens it, in `text` with the cursor at `cursor`.
-    pub(crate) fn key(&mut self, key: &TerminalKey, text: &str, cursor: (usize, usize)) -> Step {
+    /// Takes `key` while the prompt is open, or opens it, in the text `text` gives with the cursor at `cursor`; only a
+    /// search asks for the text, which in a large file costs a copy of it.
+    pub(crate) fn key(&mut self, key: &TerminalKey, text: impl FnOnce() -> String, cursor: (usize, usize)) -> Step {
         let name = key.to_string();
         let Some((kind, typed)) = self.open.as_mut() else {
             let kind = name.chars().next().unwrap_or('/');
@@ -83,7 +84,7 @@ impl Search {
                     typed
                 };
                 self.last = Some((pattern.clone(), forward));
-                find(&pattern, text, cursor, forward)
+                find(&pattern, &text(), cursor, forward)
             }
             one if one.chars().count() == 1 => {
                 typed.push_str(one);

@@ -42,12 +42,7 @@ impl<R: BufRead> Iterator for Events<R> {
             match framing::read_line(&mut self.reader, &mut self.line, MAX_LINE) {
                 Err(e) => return Some(Err(e)),
                 Ok(Line::End) => return None,
-                Ok(Line::TooLong) => {
-                    return Some(Err(io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        format!("the stream sent a line longer than {} MiB", MAX_LINE >> 20),
-                    )));
-                }
+                Ok(Line::TooLong) => return Some(Err(too_long())),
                 Ok(Line::Read) => {}
             }
             let line = match std::str::from_utf8(&self.line) {
@@ -77,8 +72,20 @@ impl<R: BufRead> Iterator for Events<R> {
                 },
                 _ => {}
             }
+            // An event's data lines are one value, so a server cannot grow it without end line by line either.
+            if data.as_ref().is_some_and(|data| data.len() > MAX_LINE) {
+                return Some(Err(too_long()));
+            }
         }
     }
+}
+
+/// The failure of a stream that sent more in one go than any answer does.
+fn too_long() -> io::Error {
+    io::Error::new(
+        io::ErrorKind::InvalidData,
+        format!("the stream sent a line longer than {} MiB", MAX_LINE >> 20),
+    )
 }
 
 #[cfg(test)]
@@ -133,6 +140,19 @@ mod tests {
         let error = events.next().unwrap().unwrap_err();
         assert_eq!(error.kind(), io::ErrorKind::InvalidData);
         assert!(error.to_string().contains("longer than 16 MiB"));
+    }
+
+    #[test]
+    fn an_event_of_many_short_lines_cannot_grow_past_the_limit() {
+        let line = format!("data: {}\n", "x".repeat(1 << 20));
+        let mut text = String::from("data: first\n\n");
+        for _ in 0..17 {
+            text.push_str(&line);
+        }
+        text.push('\n');
+        let mut events = Events::new(text.as_bytes());
+        assert_eq!(events.next().unwrap().unwrap().data, "first");
+        assert_eq!(events.next().unwrap().unwrap_err().kind(), io::ErrorKind::InvalidData);
     }
 
     #[test]

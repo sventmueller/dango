@@ -20,10 +20,10 @@ const BINARY: u8 = 0x2;
 const CLOSE: u8 = 0x8;
 
 /// The largest message taken in; a longer one ends the connection.
-const MAX_MESSAGE: usize = 256 * 1024 * 1024;
+pub(crate) const MAX_MESSAGE: usize = 256 * 1024 * 1024;
 
 /// The longest answer to the upgrade request taken in.
-const MAX_HEAD: usize = 16 * 1024;
+const MAX_HEAD: u64 = 16 * 1024;
 
 /// Four bytes nobody can predict, for a mask or a key.
 fn random() -> [u8; 4] {
@@ -51,14 +51,12 @@ pub(crate) fn upgrade_request() -> Vec<u8> {
 
 /// Reads the answer to the upgrade request up to its blank line; an error unless it switches protocols.
 pub(crate) fn read_upgrade(reader: &mut impl BufRead) -> io::Result<()> {
+    let mut head = reader.by_ref().take(MAX_HEAD);
     let mut status = String::new();
-    reader.read_line(&mut status)?;
-    let mut read = status.len();
+    head.read_line(&mut status)?;
     loop {
         let mut line = String::new();
-        let n = reader.read_line(&mut line)?;
-        read += n;
-        if n == 0 || read > MAX_HEAD {
+        if head.read_line(&mut line)? == 0 {
             return Err(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
                 "the upgrade's answer ended early",
@@ -280,5 +278,20 @@ mod tests {
         read_upgrade(&mut answer).unwrap();
         assert!(read_upgrade(&mut &b"HTTP/1.1 403 Forbidden\r\n\r\n"[..]).is_err());
         assert!(read_upgrade(&mut &b"HTTP/1.1 101 Switching"[..]).is_err());
+    }
+
+    #[test]
+    fn the_upgrade_answer_is_read_within_its_limit_and_leaves_the_frames_after_it() {
+        let endless = &mut io::BufReader::new(io::repeat(b'x'));
+        assert!(read_upgrade(endless).is_err(), "a status line without end");
+        let mut bytes = upgrade_answer().to_vec();
+        bytes.extend(frame(TEXT, b"Hello", false));
+        let mut reader = &bytes[..];
+        read_upgrade(&mut reader).unwrap();
+        let mut none = |_: u8, _: Vec<u8>| panic!("no ping");
+        assert_eq!(
+            read_message(&mut reader, Peer::Server, &mut none).unwrap().as_deref(),
+            Some("Hello")
+        );
     }
 }

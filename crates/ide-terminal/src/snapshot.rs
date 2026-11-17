@@ -1,9 +1,11 @@
 //! What the view draws: the visible cells with their final colours, the cursor, the selection and what changed.
 
+use std::sync::Arc;
+
 use alacritty_terminal::event::EventListener;
 use alacritty_terminal::grid::Dimensions;
 use alacritty_terminal::index::{Column, Line};
-use alacritty_terminal::term::cell::{Cell as TermCell, Flags};
+use alacritty_terminal::term::cell::{Cell as TermCell, Flags, Hyperlink};
 use alacritty_terminal::term::color::{COUNT, Colors};
 use alacritty_terminal::term::{RenderableCursor, Term, TermDamage};
 use alacritty_terminal::vte::ansi::{Color, CursorShape as TermCursorShape, NamedColor};
@@ -194,8 +196,8 @@ pub struct Cell {
     pub underline_color: Option<Rgb>,
     /// Attributes.
     pub flags: CellFlags,
-    /// The target of an OSC 8 hyperlink over this cell.
-    pub hyperlink: Option<String>,
+    /// The target of an OSC 8 hyperlink over this cell, shared by the cells next to it that the same link covers.
+    pub hyperlink: Option<Arc<str>>,
 }
 
 /// A cell position on the visible screen.
@@ -374,18 +376,38 @@ fn cursor<T>(term: &Term<T>, cursor: &RenderableCursor, display_offset: usize) -
 fn visible_rows<T>(term: &Term<T>, table: &[Rgb], bold_is_bright: bool) -> Vec<Vec<Cell>> {
     let grid = term.grid();
     let offset = i32::try_from(grid.display_offset()).unwrap_or(0);
+    let mut links = Links::default();
     (0..term.screen_lines())
         .map(|line| {
             let line = Line(i32::try_from(line).unwrap_or(0) - offset);
             let row = &grid[line];
             (0..term.columns())
-                .map(|column| cell(&row[Column(column)], table, bold_is_bright))
+                .map(|column| cell(&row[Column(column)], table, bold_is_bright, &mut links))
                 .collect()
         })
         .collect()
 }
 
-fn cell(cell: &TermCell, table: &[Rgb], bold_is_bright: bool) -> Cell {
+/// The link a snapshot met last with its target; the cells of one link share the emulator's copy of its address, and
+/// holding that copy keeps its place from going to another one while it is compared with.
+#[derive(Default)]
+struct Links(Option<(Hyperlink, Arc<str>)>);
+
+impl Links {
+    /// The target of `link`, shared with the cells before it that hold the same copy.
+    fn target(&mut self, link: Hyperlink) -> Arc<str> {
+        match &self.0 {
+            Some((seen, target)) if std::ptr::eq(seen.uri(), link.uri()) => target.clone(),
+            _ => {
+                let target: Arc<str> = link.uri().into();
+                self.0 = Some((link, target.clone()));
+                target
+            }
+        }
+    }
+}
+
+fn cell(cell: &TermCell, table: &[Rgb], bold_is_bright: bool, links: &mut Links) -> Cell {
     let mut fg = foreground(cell.fg, cell.flags, table, bold_is_bright);
     let mut bg = background(cell.bg, table);
     if cell.flags.contains(Flags::INVERSE) {
@@ -398,7 +420,7 @@ fn cell(cell: &TermCell, table: &[Rgb], bold_is_bright: bool) -> Cell {
         bg,
         underline_color: cell.underline_color().map(|color| background(color, table)),
         flags: CellFlags::from_term(cell.flags),
-        hyperlink: cell.hyperlink().map(|link| link.uri().to_string()),
+        hyperlink: cell.hyperlink().map(|link| links.target(link)),
     }
 }
 
@@ -472,6 +494,42 @@ mod tests {
     use alacritty_terminal::vte::ansi::Rgb as TermRgb;
 
     use super::*;
+
+    #[test]
+    fn the_cells_of_one_link_share_its_target() {
+        struct Size;
+        impl Dimensions for Size {
+            fn total_lines(&self) -> usize {
+                2
+            }
+            fn screen_lines(&self) -> usize {
+                2
+            }
+            fn columns(&self) -> usize {
+                12
+            }
+        }
+        let config = alacritty_terminal::term::Config::default();
+        let mut term = Term::new(config, &Size, alacritty_terminal::event::VoidListener);
+        let mut parser: alacritty_terminal::vte::ansi::Processor = alacritty_terminal::vte::ansi::Processor::new();
+        let output = b"\x1b]8;;https://a.example/\x07link\x1b]8;;\x07 \x1b]8;;https://a.example/\x07x\x1b]8;;\x07";
+        parser.advance(&mut term, output);
+        let screen = take(&mut term, &Palette::default());
+        let row = &screen.rows[0];
+        let first = row[0].hyperlink.clone().expect("a link");
+        assert_eq!(&*first, "https://a.example/");
+        assert!(
+            row[1..4]
+                .iter()
+                .all(|cell| cell.hyperlink.as_ref().is_some_and(|l| Arc::ptr_eq(l, &first)))
+        );
+        assert_eq!(row[4].hyperlink, None);
+        assert_eq!(
+            row[5].hyperlink.as_deref(),
+            Some("https://a.example/"),
+            "a link of its own"
+        );
+    }
 
     #[test]
     fn the_256_colour_table_has_the_cube_and_the_grey_ramp() {

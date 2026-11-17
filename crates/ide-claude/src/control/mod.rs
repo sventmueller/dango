@@ -578,7 +578,29 @@ pub enum PermissionAnswer {
     },
 }
 
+impl PermissionAsk {
+    /// Whether the user may keep a rule for this call: not where the CLI says so, nor for a destructive git
+    /// command (E27).
+    pub(crate) fn keeps_rules(&self) -> bool {
+        !self.suppress_always_allow_rule
+            && !(self.tool_name == "Bash" && ide_thread::shell::destructive_input(&self.input).is_some())
+    }
+}
+
 impl PermissionAnswer {
+    /// This answer without rules to keep where `ask` lets the user keep none.
+    pub(crate) fn offered_by(&self, ask: &PermissionAsk) -> PermissionAnswer {
+        match self {
+            PermissionAnswer::Allow { updated_input, always } if !always.is_empty() && !ask.keeps_rules() => {
+                PermissionAnswer::Allow {
+                    updated_input: updated_input.clone(),
+                    always: Vec::new(),
+                }
+            }
+            other => other.clone(),
+        }
+    }
+
     /// The success payload answering `ask`.
     pub(crate) fn payload(&self, ask: &PermissionAsk) -> Value {
         let mut payload = Map::new();
@@ -794,6 +816,31 @@ mod tests {
         assert_eq!(
             Suggestion::read(&ask.permission_suggestions[1]).unwrap().rule,
             "mode acceptEdits"
+        );
+    }
+
+    #[test]
+    fn no_rule_is_kept_for_a_destructive_git_command_or_where_the_cli_offers_none() {
+        let rule = json!({"type": "addRules", "rules": [{"toolName": "Bash", "ruleContent": "git push:*"}], "behavior": "allow", "destination": "localSettings"});
+        let mut asked = ask(json!([rule]));
+        let always = PermissionAnswer::Allow {
+            updated_input: None,
+            always: vec![0],
+        };
+        assert_eq!(always.offered_by(&asked), always);
+        asked.input = json!({"command": "git push --force origin main"});
+        let payload = always.offered_by(&asked).payload(&asked);
+        assert!(payload.get("updatedPermissions").is_none(), "{payload}");
+        assert_eq!(payload["decisionClassification"], "user_temporary");
+        assert_eq!(payload["behavior"], "allow");
+        asked.input = json!({"command": "git push origin main"});
+        asked.suppress_always_allow_rule = true;
+        assert_eq!(
+            always.offered_by(&asked),
+            PermissionAnswer::Allow {
+                updated_input: None,
+                always: Vec::new()
+            }
         );
     }
 

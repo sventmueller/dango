@@ -53,9 +53,12 @@ pub(super) fn load(root: &Path, defaults: &UserDefaults, confirmed: &Confirmatio
             Err(errors) => Rules::invalid(defaults, errors),
         },
     };
-    rules
-        .with_detected(detected(root, path), confirmed)
-        .with_templates(templates(root))
+    let commands = if rules.has_gates() {
+        Vec::new()
+    } else {
+        detected(root, path)
+    };
+    rules.with_detected(commands, confirmed).with_templates(templates(root))
 }
 
 /// The command that runs every test of `tool` in the gate sandbox, whose output names how many ran.

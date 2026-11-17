@@ -197,7 +197,7 @@ pub(crate) fn set_diagnostics_from(view: &dyn Editor, source: u64, diagnostics: 
             })
             .collect()
     };
-    let old = view.lsp().borrow().marks.clone();
+    let old = std::mem::take(&mut view.lsp().borrow_mut().marks);
     marks = replaced(old, source, marks);
     marks.sort_by_key(|m| (m.range.start, std::cmp::Reverse(m.severity)));
     {

@@ -218,8 +218,9 @@ impl Vim {
     pub(crate) fn key(&mut self, key: TerminalKey) -> Outcome {
         let mut effects = Vec::new();
         if self.search.is_open() || (self.mode() == Mode::Normal && search::opens(&key)) {
-            let (cursor, text) = (self.cursor(), self.text());
-            match self.search.key(&key, &text, cursor) {
+            let cursor = self.cursor();
+            let buffer = &self.buffer;
+            match self.search.key(&key, || buffer.get_text(), cursor) {
                 search::Step::Typing => {}
                 search::Step::Jump(line, column, pattern) => {
                     self.set_cursor(line, column);

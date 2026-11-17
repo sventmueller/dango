@@ -114,6 +114,26 @@ fn shown(line: &Line) -> String {
     out
 }
 
+/// How many characters [`shown`] makes of `line`, without building the text.
+fn shown_chars(line: &Line) -> usize {
+    let text = line.text();
+    let text = text.trim_end_matches('\r');
+    let (mut bytes, mut chars) = (0, 0);
+    for c in text.chars() {
+        if c == '\t' {
+            bytes += TAB_WIDTH;
+            chars += TAB_WIDTH;
+        } else {
+            bytes += c.len_utf8();
+            chars += 1;
+        }
+        if bytes >= MAX_SHOWN_CHARS {
+            return chars + 1;
+        }
+    }
+    chars
+}
+
 pub(crate) struct Ui {
     pub(crate) table: Retained<NSTableView>,
     text_column: Retained<NSTableColumn>,
@@ -195,7 +215,7 @@ impl Ui {
             .into_iter()
             .flat_map(|d| d.hunks.iter())
             .flat_map(|h| h.lines.iter())
-            .map(|l| shown(l).chars().count())
+            .map(shown_chars)
             .max()
             .unwrap_or(0);
         let chars = u32::try_from(longest).unwrap_or(u32::MAX);
@@ -442,6 +462,26 @@ mod tests {
             shown(&line(LineKind::Added, &long)).chars().count(),
             MAX_SHOWN_CHARS + 1
         );
+    }
+
+    #[test]
+    fn the_width_of_a_line_is_that_of_its_shown_text() {
+        let long_tabs = "\t".repeat(MAX_SHOWN_CHARS);
+        let long_wide = "ü".repeat(MAX_SHOWN_CHARS);
+        for text in [
+            "",
+            "x",
+            "\tx\r",
+            "a\tb\tc",
+            "grüße\r\r",
+            long_tabs.as_str(),
+            long_wide.as_str(),
+        ] {
+            let context = line(LineKind::Context, text);
+            assert_eq!(shown_chars(&context), shown(&context).chars().count(), "{text:?}");
+        }
+        let long = line(LineKind::Added, &"a".repeat(MAX_SHOWN_CHARS * 2));
+        assert_eq!(shown_chars(&long), shown(&long).chars().count());
     }
 
     #[test]

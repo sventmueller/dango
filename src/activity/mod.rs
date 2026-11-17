@@ -4,6 +4,7 @@
 
 use std::cell::{Cell, RefCell};
 use std::sync::Once;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, SystemTime};
 
 use ide_process::{Kind, ProcessId, Supervisor};
@@ -157,10 +158,16 @@ pub(crate) fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarI
 /// Hears from the supervisor when processes start or end, once for the app.
 fn watch_supervisor() {
     static WATCH: Once = Once::new();
+    static PENDING: AtomicBool = AtomicBool::new(false);
     WATCH.call_once(|| {
         Supervisor::global()
             .subscribe(|_| {
+                // Every git call starts and ends a process, so events come in bursts that one hop serves.
+                if PENDING.swap(true, Ordering::AcqRel) {
+                    return;
+                }
                 main_soon(|| {
+                    PENDING.store(false, Ordering::Release);
                     let all: Vec<Retained<Activity>> = with_activities(|a| a.borrow().clone());
                     for activity in all {
                         activity.changed();

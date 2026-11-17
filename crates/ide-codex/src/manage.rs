@@ -254,7 +254,7 @@ pub(crate) fn account(result: Value) -> Result<AccountState, SessionError> {
 }
 
 /// How to sign in.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Login {
     /// With ChatGPT in the browser, which Codex opens a local callback for.
     ChatGpt,
@@ -262,6 +262,16 @@ pub enum Login {
     DeviceCode,
     /// With an OpenAI API key.
     ApiKey(String),
+}
+
+impl std::fmt::Debug for Login {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Login::ChatGpt => f.write_str("ChatGpt"),
+            Login::DeviceCode => f.write_str("DeviceCode"),
+            Login::ApiKey(_) => f.write_str("ApiKey(..)"),
+        }
+    }
 }
 
 impl Login {
@@ -359,6 +369,9 @@ mod tests {
         .unwrap();
         assert!(matches!(started, LoginStarted::DeviceCode { user_code, .. } if user_code == "AB-12"));
         assert!(login_started(json!({"type": "chatgpt"})).is_err());
+        let key = Login::ApiKey("sk-secret".into());
+        assert_eq!(key.params()["apiKey"], "sk-secret");
+        assert_eq!(format!("{key:?}"), "ApiKey(..)");
         let page: ThreadPage = crate::session::typed(json!({"data": [{"id": "thr_1", "preview": "Fix it",
             "cwd": "/w", "createdAt": 1, "updatedAt": 2, "modelProvider": "openai"}], "nextCursor": null}))
         .unwrap();

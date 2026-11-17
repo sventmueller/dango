@@ -79,8 +79,8 @@ define_class!(
         fn view_for(&self, _table: &NSTableView, column: Option<&NSTableColumn>, row: isize) -> Option<Retained<NSView>> {
             guarded(None, || {
                 let column = column_of(&column?.identifier().to_string())?;
-                let rows = self.ivars().view.borrow().rows();
-                let row = rows.get(usize::try_from(row).ok()?)?;
+                let view = self.ivars().view.borrow();
+                let row = view.rows().get(usize::try_from(row).ok()?)?;
                 Some(crate::table::cell(self.mtm(), row, column))
             })
         }

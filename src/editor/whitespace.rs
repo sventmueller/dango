@@ -15,7 +15,7 @@ use objc2_app_kit::{
     NSTextLayoutFragmentEnumerationOptions, NSTextLineFragment, NSView, NSViewBoundsDidChangeNotification,
     NSWindowOrderingMode,
 };
-use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize};
+use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize, NSString};
 
 use super::view::EditorTextView;
 use crate::util::{constant, guarded};
@@ -151,8 +151,8 @@ struct Line<'a> {
     /// The fragment's top left corner in the editor.
     origin: NSPoint,
     height: f64,
-    /// The UTF-16 units of the paragraph the fragment belongs to.
-    units: &'a [u16],
+    /// The text of the paragraph the fragment belongs to.
+    paragraph: &'a NSString,
 }
 
 impl Line<'_> {
@@ -188,6 +188,7 @@ impl Overlay {
                 draw_fragment(
                     fragment,
                     NSPoint::new(frame.origin.x + origin.x, frame.origin.y + origin.y),
+                    top..bottom,
                 );
                 Bool::YES
             })
@@ -200,28 +201,37 @@ impl Overlay {
     }
 }
 
-/// Draws the whitespace of one paragraph, whose layout fragment's top left corner is at `corner` in the editor.
-fn draw_fragment(fragment: &NSTextLayoutFragment, corner: NSPoint) {
+/// Draws the whitespace of one paragraph, whose layout fragment's top left corner is at `corner` in the editor, on
+/// those of its lines that reach into the heights `shown`.
+fn draw_fragment(fragment: &NSTextLayoutFragment, corner: NSPoint, shown: std::ops::Range<f64>) {
     let Some(lines) = super::insets::line_fragments(fragment) else {
         return;
     };
     let Some(first) = lines.firstObject() else { return };
-    let units: Vec<u16> = first.attributedString().string().to_string().encode_utf16().collect();
-    let end = units
-        .iter()
-        .rposition(|&u| u != u16::from(b'\n') && u != u16::from(b'\r'))
+    let paragraph = first.attributedString().string();
+    let unit = |index: usize| paragraph.characterAtIndex(index);
+    let end = (0..paragraph.length())
+        .rev()
+        .find(|&i| unit(i) != u16::from(b'\n') && unit(i) != u16::from(b'\r'))
         .map_or(0, |i| i + 1);
-    let trailing = units[..end]
-        .iter()
-        .rposition(|&u| u != u16::from(b' ') && u != u16::from(b'\t'))
+    let trailing = (0..end)
+        .rev()
+        .find(|&i| unit(i) != u16::from(b' ') && unit(i) != u16::from(b'\t'))
         .map_or(0, |i| i + 1);
     for fragment in &lines {
         let bounds = fragment.typographicBounds();
+        let origin = NSPoint::new(corner.x + bounds.origin.x, corner.y + bounds.origin.y);
+        if origin.y > shown.end {
+            break;
+        }
+        if origin.y + bounds.size.height < shown.start {
+            continue;
+        }
         let line = Line {
             fragment: &fragment,
-            origin: NSPoint::new(corner.x + bounds.origin.x, corner.y + bounds.origin.y),
+            origin,
             height: bounds.size.height,
-            units: &units,
+            paragraph: &paragraph,
         };
         let range = fragment.characterRange();
         let span = range.location..(range.location + range.length).min(end);
@@ -244,7 +254,7 @@ fn draw_line(line: &Line<'_>, span: std::ops::Range<usize>, trailing: usize) {
     let middle = line.origin.y + line.height / 2.0;
     let mut next_x = None;
     for index in span {
-        let unit = line.units[index];
+        let unit = line.paragraph.characterAtIndex(index);
         let is_space = unit == u16::from(b' ');
         let is_tab = unit == u16::from(b'\t');
         if !is_space && !is_tab {

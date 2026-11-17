@@ -4,7 +4,7 @@ use std::borrow::Cow;
 use std::fmt;
 use std::ops::Range;
 
-use ropey::Rope;
+use ropey::{Rope, RopeSlice};
 
 /// The unit a column or an offset counts in. A language server negotiates one of these; `Utf32` counts characters.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -131,16 +131,42 @@ impl Text {
     }
 
     /// The bytes `range` of the text, if it lies on character boundaries within it.
+    #[cfg(test)]
     pub(crate) fn slice(&self, range: Range<usize>) -> Option<Cow<'_, str>> {
+        self.rope_slice(range).map(Cow::from)
+    }
+
+    /// Whether the bytes `range` of the text are those of `other`, if the range lies on character boundaries within
+    /// both; compared piece by piece, without a copy of either.
+    pub(crate) fn same_bytes(&self, other: &Text, range: Range<usize>) -> Option<bool> {
+        let ours = self.rope_slice(range.clone())?;
+        let theirs = other.rope_slice(range)?;
+        Some(ours == theirs)
+    }
+
+    /// Whether the bytes `range` of the text are `piece`; never when the range does not lie on character boundaries
+    /// within it.
+    pub fn has_at(&self, range: Range<usize>, piece: &str) -> bool {
+        self.rope_slice(range).is_some_and(|slice| slice == piece)
+    }
+
+    fn rope_slice(&self, range: Range<usize>) -> Option<RopeSlice<'_>> {
         if range.start > range.end || !self.is_boundary(range.start) || !self.is_boundary(range.end) {
             return None;
         }
-        Some(self.rope.byte_slice(range).into())
+        Some(self.rope.byte_slice(range))
     }
 
     /// Line `line` with its line break, if the text has it.
     pub fn line(&self, line: usize) -> Option<Cow<'_, str>> {
         self.rope.get_line(line).map(Cow::from)
+    }
+
+    /// The first `chars` characters of line `line`, its line break among them when the line is that short, if the
+    /// text has the line.
+    pub fn line_head(&self, line: usize, chars: usize) -> Option<Cow<'_, str>> {
+        let whole = self.rope.get_line(line)?;
+        Some(whole.slice(..chars.min(whole.len_chars())).into())
     }
 
     /// The bytes of line `line` with its line break.
@@ -374,5 +400,35 @@ mod tests {
         assert_eq!(text.slice(1..2), None);
         assert_eq!(text.slice(Range { start: 2, end: 1 }), None);
         assert_eq!(text.slice(0..9), None);
+    }
+
+    #[test]
+    fn the_head_of_a_line_is_its_first_characters_or_all_of_a_shorter_one() {
+        let text = Text::new(&format!("äb😀c\nxy\r\n{}", "z".repeat(100_000)));
+        assert_eq!(text.line_head(0, 3).as_deref(), Some("äb😀"));
+        assert_eq!(text.line_head(0, 99).as_deref(), Some("äb😀c\n"));
+        assert_eq!(text.line_head(1, 3).as_deref(), Some("xy\r"));
+        assert_eq!(text.line_head(2, 5).as_deref(), Some("zzzzz"));
+        assert_eq!(text.line_head(2, 0).as_deref(), Some(""));
+        assert_eq!(text.line_head(3, 5), None);
+    }
+
+    #[test]
+    fn bytes_are_compared_across_pieces_and_only_on_character_boundaries() {
+        let long = "ä".repeat(10_000);
+        let ours = Text::new(&format!("a{long}z"));
+        assert!(ours.chunks().count() > 1, "the text lies in several pieces");
+        let end = ours.len_bytes() - 1;
+        assert_eq!(ours.same_bytes(&Text::new(&format!("b{long}y")), 1..end), Some(true));
+        assert_eq!(
+            ours.same_bytes(&Text::new(&format!("a{long}y")), 0..end + 1),
+            Some(false)
+        );
+        assert_eq!(ours.same_bytes(&ours, 2..3), None, "inside an ä");
+        assert_eq!(ours.same_bytes(&Text::new("a"), 0..end), None, "beyond the other text");
+        assert!(ours.has_at(1..end, &long));
+        assert!(!ours.has_at(0..end, &long));
+        assert!(!ours.has_at(2..3, ""), "inside an ä");
+        assert!(!ours.has_at(end..end + 9, "z"), "beyond the text");
     }
 }

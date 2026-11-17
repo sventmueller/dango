@@ -9,14 +9,25 @@ use ide_project::FileChange;
 use lsp_types::{FileChangeType, FileEvent};
 use serde_json::Value;
 
-/// Whether `path` matches the glob `pattern`: `**` any run of folders, `*` and `?` within a name, `{a,b}`
-/// alternatives and `[…]` classes, as the protocol's `GlobPattern` has them.
-fn matches(pattern: &str, path: &str) -> bool {
-    alternatives(pattern).iter().any(|p| {
-        let pattern: Vec<char> = p.chars().collect();
+/// A glob as the protocol's `GlobPattern` has it, its `{a,b}` alternatives expanded: `**` any run of folders, `*` and
+/// `?` within a name, and `[…]` classes.
+struct Glob(Vec<Vec<char>>);
+
+impl Glob {
+    fn new(pattern: &str) -> Glob {
+        Glob(alternatives(pattern).iter().map(|p| p.chars().collect()).collect())
+    }
+
+    fn matches(&self, path: &str) -> bool {
         let path: Vec<char> = path.chars().collect();
-        glob(&pattern, &path)
-    })
+        self.0.iter().any(|pattern| glob(pattern, &path))
+    }
+}
+
+/// Whether `path` matches the glob `pattern`.
+#[cfg(test)]
+fn matches(pattern: &str, path: &str) -> bool {
+    Glob::new(pattern).matches(path)
 }
 
 /// The patterns `{a,b}` stands for, braces expanded from the first.
@@ -99,47 +110,76 @@ fn class(set: &[char], c: char) -> bool {
     found != negated
 }
 
-/// The kinds a watcher asks for as the protocol's bits: 1 created, 2 changed, 4 deleted; all when it says none.
-fn wants(watcher: &Value, change: FileChange) -> bool {
-    let kinds = watcher.get("kind").and_then(Value::as_u64).unwrap_or(7);
-    let bit = match change {
-        FileChange::Created => 1,
-        FileChange::Changed => 2,
-        FileChange::Deleted => 4,
-    };
-    kinds & bit != 0
+/// Where a watcher looks: every path, the paths below a folder, or none, as one whose base is no file URI.
+enum Scope {
+    Anywhere,
+    Below(PathBuf),
+    Nowhere,
 }
 
-/// Whether the watcher `watcher`, as the server registered it, covers `path`.
-fn covers(watcher: &Value, path: &Path) -> bool {
-    let full = path.to_string_lossy();
-    match watcher.get("globPattern") {
-        Some(Value::String(pattern)) => matches(pattern, &full),
-        Some(Value::Object(relative)) => {
-            let base = relative
-                .get("baseUri")
-                .and_then(|b| b.as_str().or_else(|| b.get("uri").and_then(Value::as_str)))
-                .and_then(|b| b.parse().ok())
-                .and_then(|b| uri::to_path(&b));
-            let pattern = relative.get("pattern").and_then(Value::as_str).unwrap_or("");
-            base.and_then(|base| path.strip_prefix(base).ok().map(Path::to_path_buf))
-                .is_some_and(|rest| matches(pattern, &rest.to_string_lossy()))
+/// One watcher as the server registered it, read once for all the files of a change.
+struct Watcher {
+    /// The kinds it asks for as the protocol's bits: 1 created, 2 changed, 4 deleted.
+    kinds: u64,
+    scope: Scope,
+    glob: Glob,
+}
+
+impl Watcher {
+    /// The watcher `watcher` describes; one that names no kinds asks for all.
+    fn read(watcher: &Value) -> Watcher {
+        let (scope, pattern) = match watcher.get("globPattern") {
+            Some(Value::String(pattern)) => (Scope::Anywhere, pattern.as_str()),
+            Some(Value::Object(relative)) => {
+                let base = relative
+                    .get("baseUri")
+                    .and_then(|b| b.as_str().or_else(|| b.get("uri").and_then(Value::as_str)))
+                    .and_then(|b| b.parse().ok())
+                    .and_then(|b| uri::to_path(&b));
+                let pattern = relative.get("pattern").and_then(Value::as_str).unwrap_or("");
+                (base.map_or(Scope::Nowhere, Scope::Below), pattern)
+            }
+            _ => (Scope::Nowhere, ""),
+        };
+        Watcher {
+            kinds: watcher.get("kind").and_then(Value::as_u64).unwrap_or(7),
+            scope,
+            glob: Glob::new(pattern),
         }
-        _ => false,
+    }
+
+    fn wants(&self, change: FileChange) -> bool {
+        let bit = match change {
+            FileChange::Created => 1,
+            FileChange::Changed => 2,
+            FileChange::Deleted => 4,
+        };
+        self.kinds & bit != 0
+    }
+
+    fn covers(&self, path: &Path) -> bool {
+        match &self.scope {
+            Scope::Anywhere => self.glob.matches(&path.to_string_lossy()),
+            Scope::Below(base) => path
+                .strip_prefix(base)
+                .is_ok_and(|rest| self.glob.matches(&rest.to_string_lossy())),
+            Scope::Nowhere => false,
+        }
     }
 }
 
 /// The events of `files` that the registrations `registered` (each `DidChangeWatchedFilesRegistrationOptions`)
 /// ask for.
 pub fn events(registered: &[Value], files: &BTreeMap<PathBuf, FileChange>) -> Vec<FileEvent> {
-    let watchers: Vec<&Value> = registered
+    let watchers: Vec<Watcher> = registered
         .iter()
         .filter_map(|options| options.get("watchers").and_then(Value::as_array))
         .flatten()
+        .map(Watcher::read)
         .collect();
     files
         .iter()
-        .filter(|(path, change)| watchers.iter().any(|w| wants(w, **change) && covers(w, path)))
+        .filter(|(path, change)| watchers.iter().any(|w| w.wants(**change) && w.covers(path)))
         .map(|(path, change)| FileEvent {
             uri: uri::from_path(path),
             typ: match change {
@@ -168,6 +208,25 @@ mod tests {
         assert!(matches("[a-c]x[!y]", "bxz"));
         assert!(!matches("[a-c]x[!y]", "bxy"));
         assert!(matches("**/{go.mod,go.work,*.go}", "/p/go.work"));
+    }
+
+    #[test]
+    fn a_watcher_below_no_folder_covers_nothing_and_each_watcher_serves_every_file() {
+        let registered = vec![json!({"watchers": [
+            {"globPattern": {"baseUri": "https://example.com/p", "pattern": "**/*"}},
+            {"globPattern": "**/*.{toml,lock}", "kind": 1},
+        ]})];
+        let files = BTreeMap::from([
+            (PathBuf::from("/p/a/Cargo.toml"), FileChange::Created),
+            (PathBuf::from("/p/b/Cargo.lock"), FileChange::Created),
+            (PathBuf::from("/p/c/Cargo.toml"), FileChange::Changed),
+            (PathBuf::from("/p/main.rs"), FileChange::Created),
+        ]);
+        let seen: Vec<String> = events(&registered, &files)
+            .into_iter()
+            .map(|e| e.uri.as_str().to_string())
+            .collect();
+        assert_eq!(seen, ["file:///p/a/Cargo.toml", "file:///p/b/Cargo.lock"]);
     }
 
     #[test]

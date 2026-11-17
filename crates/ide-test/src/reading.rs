@@ -78,9 +78,14 @@ impl Reading {
 
     /// Takes `text`, which follows what came before.
     pub fn feed(&mut self, text: &str) {
-        self.rest.push_str(text);
-        let Some(end) = self.rest.rfind('\n') else { return };
-        let complete: String = self.rest.drain(..=end).collect();
+        // The start held back has no line break, so only the new text needs looking at, however long a line grows.
+        let Some(end) = text.rfind('\n') else {
+            self.rest.push_str(text);
+            return;
+        };
+        let mut complete = std::mem::take(&mut self.rest);
+        complete.push_str(&text[..=end]);
+        self.rest.push_str(&text[end + 1..]);
         for line in complete.lines() {
             self.line(line);
         }
@@ -125,5 +130,25 @@ impl Reading {
     /// Every report so far, in the order the tests first appeared.
     pub(crate) fn reports(&self) -> Vec<Report> {
         self.out.iter().map(|r| self.shown(r)).collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_the_start_of_an_unfinished_line_waits() {
+        let mut reading = Reading::new(Tool::Cargo, Path::new("/tmp/project"));
+        reading.feed("running ");
+        reading.feed("2 tests");
+        assert_eq!(reading.rest, "running 2 tests");
+        reading.feed("\ntest a ... ok\ntest b");
+        assert_eq!(reading.rest, "test b");
+        reading.feed(" ... ok\n");
+        assert_eq!(reading.rest, "");
+        reading.feed("x");
+        reading.end();
+        assert_eq!(reading.rest, "");
     }
 }

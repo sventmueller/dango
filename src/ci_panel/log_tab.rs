@@ -193,12 +193,12 @@ impl LogTab {
         let job = self.ivars().job.borrow().clone();
         let id = self.ivars().id;
         let queued = work::run(
-            move || client.log(&job).map(|raw| ide_ci::log::lines(&raw)),
+            move || client.log(&job).map(|raw| Prepared::of(ide_ci::log::lines(&raw))),
             move |result| {
                 with_tab(id, |tab| {
                     tab.ivars().loading.set(false);
                     match result {
-                        Some(Ok(lines)) => tab.show_lines(lines),
+                        Some(Ok(prepared)) => tab.show_lines(prepared),
                         Some(Err(error)) => tab.show_message(&text::problem(&error)),
                         None => {}
                     }
@@ -214,18 +214,16 @@ impl LogTab {
         self.ui().text.setString(&ns(message));
     }
 
-    fn show_lines(&self, lines: Vec<LogLine>) {
+    fn show_lines(&self, prepared: Prepared) {
         let ui = self.ui();
         let at_end = is_at_end(&ui.scroll);
-        ui.text.setString(&ns(&ide_ci::log::text(&lines)));
+        ui.text.setString(&ns(&prepared.text));
         // SAFETY: The text view keeps its text storage for as long as it lives.
         if let Some(storage) = unsafe { ui.text.textStorage() } {
             let foreground = constant!(NSForegroundColorAttributeName);
             with_editing(&storage, || {
-                let mut offset = 0usize;
-                for line in &lines {
-                    let length = line.text.encode_utf16().count();
-                    let color = match line.kind {
+                for &(offset, length, kind) in &prepared.marked {
+                    let color = match kind {
                         LineKind::Error => Some(NSColor::systemRedColor()),
                         LineKind::Warning => Some(NSColor::systemOrangeColor()),
                         LineKind::Section => Some(NSColor::systemBlueColor()),
@@ -238,14 +236,40 @@ impl LogTab {
                             storage.addAttribute_value_range(foreground, &color, NSRange::new(offset, length));
                         }
                     }
-                    offset += length + 1;
                 }
             });
         }
-        *self.ivars().lines.borrow_mut() = lines;
+        *self.ivars().lines.borrow_mut() = prepared.lines;
         if at_end || self.ivars().job.borrow().state == State::Failed {
             // SAFETY: A nil sender is what AppKit's own key bindings pass.
             unsafe { ui.text.scrollToEndOfDocument(None) };
+        }
+    }
+}
+
+/// A log made ready on the CI lane, so the main thread only hands it to the view: its text, where each marked line
+/// starts and how long it is in UTF-16 code units with its kind, and its lines.
+struct Prepared {
+    text: String,
+    marked: Vec<(usize, usize, LineKind)>,
+    lines: Vec<LogLine>,
+}
+
+impl Prepared {
+    fn of(lines: Vec<LogLine>) -> Prepared {
+        let mut marked = Vec::new();
+        let mut offset = 0usize;
+        for line in &lines {
+            let length = line.text.encode_utf16().count();
+            if line.kind != LineKind::Plain {
+                marked.push((offset, length, line.kind));
+            }
+            offset += length + 1;
+        }
+        Prepared {
+            text: ide_ci::log::text(&lines),
+            marked,
+            lines,
         }
     }
 }
@@ -349,6 +373,27 @@ fn text_view(mtm: MainThreadMarker, job: &str) -> (Retained<NSScrollView>, Retai
     text.setAccessibilityLabel(Some(&ns(&tf("Log von {}", &[job]))));
     scroll.setDocumentView(Some(&text));
     (scroll, text)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_prepared_log_marks_its_lines_where_the_text_has_them() {
+        let line = |text: &str, kind| LogLine {
+            text: text.into(),
+            kind,
+        };
+        let prepared = Prepared::of(vec![
+            line("plain", LineKind::Plain),
+            line("Error: ä😀", LineKind::Error),
+            line("Run", LineKind::Section),
+        ]);
+        assert_eq!(prepared.text, "plain\nError: ä😀\nRun");
+        assert_eq!(prepared.marked, [(6, 10, LineKind::Error), (17, 3, LineKind::Section)]);
+        assert_eq!(prepared.lines.len(), 3);
+    }
 }
 
 #[cfg(feature = "selftest")]

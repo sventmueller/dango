@@ -1,6 +1,7 @@
 //! A user message as the `input` of `turn/start`: the text, images as data URLs where the model takes them, and
 //! files and selections as text, since the protocol's `mention` input is for apps and plugins, not files.
 
+use std::io::Read;
 use std::path::Path;
 
 use base64::Engine;
@@ -29,9 +30,25 @@ fn fenced(name: &str, content: &str) -> String {
     format!("{name}\n{fence}\n{content}\n{fence}")
 }
 
+/// The text of the regular file at `path` if it is no larger than `MAX_EMBEDDED`; a pipe or device is never opened,
+/// as reading one may not end.
+fn small_text(path: &Path) -> Option<String> {
+    if !std::fs::metadata(path).is_ok_and(|m| m.is_file() && m.len() <= MAX_EMBEDDED) {
+        return None;
+    }
+    let mut text = String::new();
+    std::fs::File::open(path)
+        .ok()?
+        .take(MAX_EMBEDDED + 1)
+        .read_to_string(&mut text)
+        .ok()?;
+    u64::try_from(text.len())
+        .is_ok_and(|n| n <= MAX_EMBEDDED)
+        .then_some(text)
+}
+
 fn file(shown: &Path, full: &Path, lines: Option<(u32, u32)>) -> String {
-    let small = std::fs::metadata(full).is_ok_and(|m| m.len() <= MAX_EMBEDDED);
-    let content = small.then(|| std::fs::read_to_string(full).ok()).flatten();
+    let content = small_text(full);
     match (content, lines) {
         (Some(content), Some(range)) => fenced(
             &format!("{}:{}-{}", shown.display(), range.0, range.1),
@@ -114,5 +131,17 @@ mod tests {
         assert_eq!(items[3]["text"], format!("See {}.", dir.join("missing.rs").display()));
         assert_eq!(items[4]["text"], "b.rs:4-4\n```\nlet x = 1;\n```");
         assert_eq!(input(&message, false, &dir).len(), 4);
+    }
+
+    #[test]
+    fn only_a_regular_file_is_embedded() {
+        assert_eq!(file(Path::new("null"), Path::new("/dev/null"), None), "See /dev/null.");
+        let dir = std::env::temp_dir().join(format!("ide-codex-prompt-dir-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        assert_eq!(small_text(&dir), None);
+        let big = dir.join("big.txt");
+        std::fs::write(&big, "x".repeat(usize::try_from(MAX_EMBEDDED).unwrap() + 1)).unwrap();
+        assert_eq!(small_text(&big), None);
+        let _ = std::fs::remove_dir_all(dir);
     }
 }

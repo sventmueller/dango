@@ -3,6 +3,7 @@
 //! and says so (Review C18).
 
 use std::cell::{Cell, RefCell};
+use std::collections::VecDeque;
 use std::rc::Rc;
 
 use ide_dap::kept::{ConsoleKind, ConsoleLine};
@@ -10,8 +11,8 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSColor, NSScrollView, NSStackView, NSTextField, NSTextView, NSUserInterfaceLayoutOrientation,
-    NSView,
+    NSAccessibility, NSColor, NSScrollView, NSStackView, NSTextField, NSTextStorage, NSTextView,
+    NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::{NSAttributedString, NSDictionary, NSPoint, NSRange, NSRect, NSSize, NSString};
 use splat_i18n::{t, tf};
@@ -32,6 +33,7 @@ pub(crate) struct ConsoleTab {
     pub(crate) session: Cell<Option<u64>>,
     pub(crate) title: RefCell<String>,
     model: RefCell<Console>,
+    shown: RefCell<Shown>,
     text: Retained<NSTextView>,
     input: Retained<NSTextField>,
     finished: Retained<NSTextField>,
@@ -67,6 +69,7 @@ impl ConsoleTab {
             session: Cell::new(None),
             title: RefCell::new(title.to_string()),
             model: RefCell::new(model),
+            shown: RefCell::default(),
             text,
             input,
             finished,
@@ -144,19 +147,7 @@ impl ConsoleTab {
         let Some(storage) = (unsafe { self.text.textStorage() }) else {
             return;
         };
-        with_editing(&storage, || {
-            storage.setAttributedString(&NSAttributedString::new());
-            for line in model.lines() {
-                let mut text = match line.kind {
-                    ConsoleKind::Input => format!("› {}", line.text),
-                    _ => line.text.clone(),
-                };
-                if !text.ends_with('\n') {
-                    text.push('\n');
-                }
-                storage.appendAttributedString(&styled(&text, line.kind));
-            }
-        });
+        with_editing(&storage, || self.shown.borrow_mut().update(&storage, &model));
         let end = storage.length();
         self.text.scrollRangeToVisible(NSRange::new(end, 0));
         self.input.setHidden(model.finished);
@@ -166,6 +157,56 @@ impl ConsoleTab {
         } else {
             tf("Debug-Konsole: {}", &[&self.title.borrow()])
         })));
+    }
+}
+
+/// What the history view holds of a console: the length of each line as drawn, in UTF-16 code units, and how many
+/// of the console's oldest lines had gone when it was drawn.
+#[derive(Default)]
+struct Shown {
+    lengths: VecDeque<usize>,
+    dropped: usize,
+}
+
+impl Shown {
+    /// Brings `storage` in line with `console`, drawing again only the lines that went and the last one drawn: a
+    /// console loses lines only at the front, and output continues only its last line.
+    fn update(&mut self, storage: &NSTextStorage, console: &Console) {
+        let lines = console.lines();
+        let kept = console
+            .dropped()
+            .checked_sub(self.dropped)
+            .and_then(|gone| self.lengths.len().checked_sub(gone))
+            .filter(|kept| (1..=lines.len()).contains(kept));
+        self.dropped = console.dropped();
+        let Some(kept) = kept else {
+            storage.setAttributedString(&NSAttributedString::new());
+            self.lengths.clear();
+            return self.append(storage, lines);
+        };
+        let empty = NSAttributedString::new();
+        let last = self.lengths.pop_back().unwrap_or(0);
+        let at = storage.length().saturating_sub(last);
+        storage.replaceCharactersInRange_withAttributedString(NSRange::new(at, storage.length() - at), &empty);
+        let gone = self.lengths.len() + 1 - kept;
+        let front: usize = self.lengths.drain(..gone).sum();
+        storage.replaceCharactersInRange_withAttributedString(NSRange::new(0, front.min(storage.length())), &empty);
+        self.append(storage, &lines[kept - 1..]);
+    }
+
+    fn append(&mut self, storage: &NSTextStorage, lines: &[ConsoleLine]) {
+        for line in lines {
+            let mut text = match line.kind {
+                ConsoleKind::Input => format!("› {}", line.text),
+                _ => line.text.clone(),
+            };
+            if !text.ends_with('\n') {
+                text.push('\n');
+            }
+            let drawn = styled(&text, line.kind);
+            self.lengths.push_back(drawn.length());
+            storage.appendAttributedString(&drawn);
+        }
     }
 }
 

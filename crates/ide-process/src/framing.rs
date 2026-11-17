@@ -2,10 +2,13 @@
 //! message is a header block with its byte length, a blank line, then the JSON. Also the capped line reading that
 //! line-based protocols use.
 
-use std::io::{self, BufRead};
+use std::io::{self, BufRead, Read};
 
 /// The largest message accepted; a header claiming more means the stream is broken.
 const MAX_MESSAGE: usize = 256 * 1024 * 1024;
+
+/// The space set aside for a message body before its bytes arrive.
+const FIRST_SPACE: usize = 1024 * 1024;
 
 /// The longest header line kept; a longer line is no header but output the server printed by mistake.
 const MAX_HEADER_LINE: usize = 64 * 1024;
@@ -101,8 +104,15 @@ pub fn read(reader: &mut impl BufRead) -> io::Result<Option<Vec<u8>>> {
             length = Some(n);
         }
     };
-    let mut body = vec![0; length];
-    reader.read_exact(&mut body)?;
+    // The header alone is no reason to set aside up to MAX_MESSAGE; the body grows with what really arrives.
+    let mut body = Vec::with_capacity(length.min(FIRST_SPACE));
+    Read::take(&mut *reader, u64::try_from(length).unwrap_or(u64::MAX)).read_to_end(&mut body)?;
+    if body.len() < length {
+        return Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "the stream ended inside a message",
+        ));
+    }
     Ok(Some(body))
 }
 

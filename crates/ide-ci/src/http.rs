@@ -24,7 +24,7 @@ pub enum Method {
 }
 
 /// A call to an API.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 #[expect(missing_docs, reason = "the names say it")]
 pub struct Request {
     pub method: Method,
@@ -36,13 +36,46 @@ pub struct Request {
     pub body: Vec<u8>,
 }
 
+impl std::fmt::Debug for Request {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let headers: Vec<(&str, &str)> = self
+            .headers
+            .iter()
+            .map(|(name, value)| {
+                let shown = if name.eq_ignore_ascii_case("authorization") {
+                    "…"
+                } else {
+                    value.as_str()
+                };
+                (name.as_str(), shown)
+            })
+            .collect();
+        f.debug_struct("Request")
+            .field("method", &self.method)
+            .field("url", &self.url)
+            .field("headers", &headers)
+            .field("body", &self.body.len())
+            .finish()
+    }
+}
+
 /// What came back.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Clone, PartialEq, Eq, Default)]
 pub struct Response {
     pub(crate) status: u16,
     /// The headers, names in lower case.
     pub(crate) headers: Vec<(String, String)>,
     pub(crate) body: Vec<u8>,
+}
+
+impl std::fmt::Debug for Response {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Response")
+            .field("status", &self.status)
+            .field("headers", &self.headers)
+            .field("body", &self.body.len())
+            .finish()
+    }
 }
 
 impl Response {
@@ -367,6 +400,27 @@ mod tests {
                 message: "boom".into()
             })
         );
+    }
+
+    #[test]
+    fn a_request_or_answer_shown_for_debugging_keeps_its_secrets() {
+        let request = Request {
+            method: Method::Post,
+            url: "https://gitlab.com/oauth/token".into(),
+            headers: vec![
+                ("Authorization".into(), "Bearer glpat-secret".into()),
+                ("Accept".into(), "application/json".into()),
+            ],
+            body: b"refresh_token=also-secret".to_vec(),
+        };
+        let shown = format!("{request:?}");
+        assert!(
+            !shown.contains("glpat-secret") && !shown.contains("also-secret"),
+            "{shown}"
+        );
+        assert!(shown.contains("application/json") && shown.contains("https://gitlab.com/oauth/token"));
+        let answer = response(200, &[], r#"{"access_token":"gho_secret"}"#);
+        assert!(!format!("{answer:?}").contains("gho_secret"));
     }
 
     #[test]

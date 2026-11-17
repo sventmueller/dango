@@ -126,7 +126,6 @@ impl Mapper {
         } else {
             cards::output(name, &input, state.get("content"), state.get("metadata"))
         };
-        call.input = input.clone();
         let key = tool_key(message, call_id);
         if name == "todowrite" {
             return cards::todos(&input)
@@ -138,6 +137,7 @@ impl Mapper {
                 })
                 .unwrap_or_default();
         }
+        call.input = input;
         vec![put(key, call.started.unwrap_or(created), EntryKind::ToolCall(call))]
     }
 

@@ -469,7 +469,7 @@ impl ProjectSheet {
             let written = path
                 .parent()
                 .map_or(Ok(()), std::fs::create_dir_all)
-                .and_then(|()| std::fs::write(&path, ide_factory::prompt::default_template(kind)));
+                .and_then(|()| write_new(&path, ide_factory::prompt::default_template(kind)));
             if let Err(error) = written {
                 self.problem(&tf("Die Vorlage ließ sich nicht anlegen: {}", &[&error.to_string()]));
                 return;
@@ -527,6 +527,13 @@ fn path_sections() -> Vec<(&'static str, Option<&'static str>, Vec<ProjectValue>
     ]
 }
 
+/// Writes `text` as a new file at `path`; a file or a link already there, even one that leads nowhere, is left alone,
+/// so a link the project put in place of a template never makes the app write where it leads.
+fn write_new(path: &std::path::Path, text: &str) -> std::io::Result<()> {
+    let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(path)?;
+    std::io::Write::write_all(&mut file, text.as_bytes())
+}
+
 /// Room of `vertical` above and below and `horizontal` at the sides.
 fn insets(vertical: f64, horizontal: f64) -> NSEdgeInsets {
     NSEdgeInsets {
@@ -559,3 +566,26 @@ mod form;
 pub(crate) mod roles;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
+
+#[cfg(test)]
+mod tests {
+    use super::write_new;
+
+    #[test]
+    fn a_template_is_written_only_where_nothing_stands() {
+        let dir = std::env::temp_dir().join(format!("factory-template-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("build.md");
+        write_new(&file, "Build {{title}}").unwrap();
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), "Build {{title}}");
+        assert!(write_new(&file, "other").is_err());
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), "Build {{title}}");
+        let elsewhere = dir.join("elsewhere.md");
+        let link = dir.join("review.md");
+        std::os::unix::fs::symlink(&elsewhere, &link).unwrap();
+        assert!(write_new(&link, "Review").is_err());
+        assert!(!elsewhere.exists(), "nothing is written where a dangling link leads");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}

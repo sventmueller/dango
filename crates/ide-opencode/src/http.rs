@@ -134,16 +134,25 @@ pub(crate) fn loopback(url: &str) -> Result<SocketAddr, HttpError> {
 }
 
 fn read_line(reader: &mut impl BufRead) -> Result<String, HttpError> {
+    read_line_within(reader, LINE_LIMIT)
+}
+
+/// [`read_line`] for a line of up to `limit` bytes.
+fn read_line_within(reader: &mut impl BufRead, limit: usize) -> Result<String, HttpError> {
     let mut line = Vec::new();
-    let read = reader.take(LINE_LIMIT as u64).read_until(b'\n', &mut line)?;
+    let read = reader
+        .take(u64::try_from(limit).unwrap_or(u64::MAX))
+        .read_until(b'\n', &mut line)?;
     if read == 0 {
         return Err(HttpError::Protocol("the connection closed".into()));
     }
     if !line.ends_with(b"\n") {
         return Err(HttpError::Protocol("a line too long".into()));
     }
-    let text = String::from_utf8(line).map_err(|_| HttpError::Protocol("a line not in UTF-8".into()))?;
-    Ok(text.trim_end_matches(['\r', '\n']).to_string())
+    let mut text = String::from_utf8(line).map_err(|_| HttpError::Protocol("a line not in UTF-8".into()))?;
+    let end = text.trim_end_matches(['\r', '\n']).len();
+    text.truncate(end);
+    Ok(text)
 }
 
 /// The status and the headers, names in lower case.
@@ -268,12 +277,19 @@ impl Events {
     }
 }
 
-/// The next event of an event stream, per the HTML standard's parsing rules for the fields this API uses.
+/// The next event of an event stream, per the HTML standard's parsing rules for the fields this API uses; an event
+/// whose data outgrows the largest answer ends the stream as a broken one does.
 pub(crate) fn read_event(reader: &mut impl BufRead) -> Option<ServerEvent> {
+    read_event_within(reader, BODY_LIMIT)
+}
+
+/// [`read_event`] with `limit` bytes of data at most.
+fn read_event_within(reader: &mut impl BufRead, limit: usize) -> Option<ServerEvent> {
     let mut event = ServerEvent::default();
     let mut has_data = false;
     loop {
-        let line = read_line(reader).ok()?;
+        // An event's data comes on one line, so the line may be as long as the data with its field name.
+        let line = read_line_within(reader, limit.saturating_add(LINE_LIMIT)).ok()?;
         if line.is_empty() {
             if has_data {
                 return Some(event);
@@ -288,6 +304,9 @@ pub(crate) fn read_event(reader: &mut impl BufRead) -> Option<ServerEvent> {
         let value = value.strip_prefix(' ').unwrap_or(value);
         match field {
             "data" => {
+                if event.data.len() + usize::from(has_data) + value.len() > limit {
+                    return None;
+                }
                 if has_data {
                     event.data.push('\n');
                 }
@@ -436,6 +455,30 @@ mod tests {
         let second = read_event(&mut reader).unwrap();
         assert_eq!((second.event, second.data.as_str()), (None, "x"));
         assert_eq!(read_event(&mut reader), None);
+    }
+
+    #[test]
+    fn an_event_is_held_to_the_limit_across_its_data_lines() {
+        let wire = "data: 1234\ndata: 5\n\ndata: 1234\ndata: 56\n\ndata: next\n\n";
+        let mut reader = Cursor::new(wire.as_bytes());
+        assert_eq!(read_event_within(&mut reader, 6).unwrap().data, "1234\n5");
+        assert_eq!(read_event_within(&mut reader, 6), None);
+    }
+
+    #[test]
+    fn an_event_longer_than_a_header_line_is_read_whole() {
+        let data = "x".repeat(LINE_LIMIT * 2);
+        let wire = format!("data: {data}\n\ndata: next\n\n");
+        let mut reader = Cursor::new(wire.as_bytes());
+        assert_eq!(read_event(&mut reader).unwrap().data, data);
+        assert_eq!(read_event(&mut reader).unwrap().data, "next");
+    }
+
+    #[test]
+    fn a_line_loses_only_its_line_ending() {
+        let mut reader = Cursor::new(&b"data: a \r\n\n"[..]);
+        assert_eq!(read_line(&mut reader).unwrap(), "data: a ");
+        assert_eq!(read_line(&mut reader).unwrap(), "");
     }
 
     #[test]

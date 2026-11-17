@@ -148,6 +148,8 @@ impl TableRow {
 #[derive(Debug, Clone, PartialEq)]
 pub struct BoardView {
     board: Option<Board>,
+    /// The table's rows of `board` as filtered and sorted, which the table asks for once per cell.
+    rows: Vec<TableRow>,
     filter: Option<Station>,
     sort: Column,
     ascending: bool,
@@ -158,6 +160,7 @@ impl Default for BoardView {
     fn default() -> Self {
         BoardView {
             board: None,
+            rows: Vec::new(),
             filter: None,
             sort: Column::WaitingSince,
             ascending: true,
@@ -175,7 +178,10 @@ impl BoardView {
     }
 
     fn apply(&mut self) {
-        let Some(board) = self.board.as_mut() else { return };
+        let Some(board) = self.board.as_mut() else {
+            self.rows.clear();
+            return;
+        };
         // `Board::filter` turns a filter off when it is given the active one again, so it hears only a change.
         if board.active_filter() != self.filter {
             board.filter(self.filter.or(board.active_filter()));
@@ -185,6 +191,8 @@ impl BoardView {
                 board.sort_by(self.sort);
             }
         }
+        let now = self.now;
+        self.rows = board.rows().into_iter().map(|row| TableRow::of(row, now)).collect();
     }
 
     /// A click on `station` in the strip: it filters the table, or clears the filter if it was the one shown.
@@ -232,17 +240,8 @@ impl BoardView {
     }
 
     /// The rows the filter lets through, in the order sorted.
-    pub fn rows(&self) -> Vec<TableRow> {
-        self.board
-            .as_ref()
-            .map(|board| {
-                board
-                    .rows()
-                    .into_iter()
-                    .map(|row| TableRow::of(row, self.now))
-                    .collect()
-            })
-            .unwrap_or_default()
+    pub fn rows(&self) -> &[TableRow] {
+        &self.rows
     }
 
     /// Whether any order of the folder waits for the user, whatever the filter shows: the tab's red dot (E71).
@@ -396,6 +395,23 @@ mod tests {
         view.click(Station::Done);
         assert!(view.rows().is_empty());
         assert!(view.waits(), "the filter hides the order, not its wait");
+    }
+
+    #[test]
+    fn the_rows_follow_the_filter_the_sort_and_the_board() {
+        let factory = waiting();
+        let mut view = BoardView::default();
+        view.set(Some(Board::new(&factory, factory.now())), factory.now().wall);
+        let shown = view.rows().to_vec();
+        assert_eq!(shown.len(), 1);
+        view.click(Station::Done);
+        assert!(view.rows().is_empty());
+        view.click(Station::Done);
+        assert_eq!(view.rows(), shown.as_slice());
+        view.sort(Column::Title, false);
+        assert_eq!(view.rows(), shown.as_slice());
+        view.set(None, factory.now().wall);
+        assert!(view.rows().is_empty(), "without a board the table has no rows");
     }
 
     #[test]

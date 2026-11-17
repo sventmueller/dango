@@ -185,7 +185,7 @@ impl GitPanel {
         let remotes: Vec<String> = state
             .branches
             .iter()
-            .filter(|b| b.remote)
+            .filter(|b| b.remote && commit.refs.contains(&b.name))
             .map(|b| b.name.clone())
             .collect();
         let changes = state.commit_changes.get(hash).cloned();

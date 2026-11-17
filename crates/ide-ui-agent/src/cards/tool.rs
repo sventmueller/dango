@@ -285,7 +285,7 @@ fn clip(text: &str, lines: usize) -> String {
         .lines()
         .take(lines)
         .map(|l| {
-            if l.chars().count() > MAX_LINE {
+            if l.chars().nth(MAX_LINE).is_some() {
                 let mut cut: String = l.chars().take(MAX_LINE).collect();
                 cut.push('…');
                 cut
@@ -294,11 +294,11 @@ fn clip(text: &str, lines: usize) -> String {
             }
         })
         .collect();
-    if text.lines().count() > lines && lines >= MAX_LINES {
-        out.push(tf(
-            "… {} weitere Zeilen",
-            &[&(text.lines().count() - lines).to_string()],
-        ));
+    if lines >= MAX_LINES {
+        let total = text.lines().count();
+        if total > lines {
+            out.push(tf("… {} weitere Zeilen", &[&(total - lines).to_string()]));
+        }
     }
     out.join("\n")
 }
@@ -543,6 +543,15 @@ mod tests {
         assert_eq!(clipped.lines().count(), MAX_LINES + 1);
         assert!(clipped.ends_with("100 weitere Zeilen"));
         assert_eq!(clip("a\nb\nc", PREVIEW_LINES), "a\nb\nc");
+        assert_eq!(
+            clip("a\nb\nc\nd\ne\nf", PREVIEW_LINES),
+            "a\nb\nc\nd",
+            "a preview names no rest"
+        );
+        let long = "x".repeat(MAX_LINE + 1);
+        assert_eq!(clip(&long, 1).chars().count(), MAX_LINE + 1);
+        assert!(clip(&long, 1).ends_with('…'));
+        assert_eq!(clip(&long[..MAX_LINE], 1), &long[..MAX_LINE]);
     }
 
     #[test]
