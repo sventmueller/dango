@@ -584,6 +584,16 @@ mod tests {
             .success()
     }
 
+    /// Whether every one of `paths` fits a Unix socket's address, which macOS caps at 103 bytes; a gate's own
+    /// temporary folder, where the tests then run, lies deeper than that.
+    fn fit_sockets(paths: &[&Path]) -> bool {
+        let fit = paths.iter().all(|path| path.as_os_str().len() < 104);
+        if !fit {
+            eprintln!("the socket checks are skipped: {paths:?} is too long for a socket's address");
+        }
+        fit
+    }
+
     /// A shell command that connects to the Unix socket at `socket`.
     fn connect(socket: &Path) -> String {
         format!(
@@ -637,6 +647,9 @@ mod tests {
         ));
 
         let socket = scratch.join("outside/agent.sock");
+        if !fit_sockets(&[&socket]) {
+            return;
+        }
         let _listener = UnixListener::bind(&socket).unwrap();
         assert!(
             !sandboxed(&profile, &connect(&socket)),
@@ -657,6 +670,9 @@ mod tests {
         }
         let profile = Profile::gate(std::slice::from_ref(&work), &temp, &home);
         let server = work.join("s.sock");
+        if !fit_sockets(&[&server, &temp.join("o.sock")]) {
+            return;
+        }
         let _listener = UnixListener::bind(&server).unwrap();
         assert!(
             !sandboxed(&profile, &connect(&server)),
