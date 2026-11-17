@@ -370,3 +370,23 @@ fn a_relaxed_or_no_gate_sandbox_needs_a_new_confirmation_and_the_strict_one_keep
     let wrong = FULL.replace("[gates]\n", "[gates]\nsandbox = \"loose\"\n");
     assert!(!parse(&wrong).unwrap_err().is_empty());
 }
+
+#[test]
+fn the_users_gate_sandbox_applies_without_confirmation_and_the_file_overrides_it() {
+    let strict = UserDefaults::default();
+    let first = Rules::new(&strict, Some(&parsed(FULL)), &Confirmations::default());
+    let confirmed = Confirmations::new([first.gate_hash().to_string()]);
+    let mut off = UserDefaults::default();
+    off.set_gate_sandbox(GateSandbox::Off);
+    let by_default = Rules::new(&off, Some(&parsed(FULL)), &confirmed);
+    assert_eq!(by_default.sandbox(), GateSandbox::Off);
+    assert!(
+        by_default.gates_confirmed(),
+        "the user's own default needs no confirmation"
+    );
+    let tightened = FULL.replace("[gates]\n", "[gates]\nsandbox = \"strict\"\n");
+    assert_eq!(
+        Rules::new(&off, Some(&parsed(&tightened)), &confirmed).sandbox(),
+        GateSandbox::Strict
+    );
+}

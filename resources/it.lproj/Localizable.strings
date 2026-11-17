@@ -2362,3 +2362,8 @@
 "Ohne Kommentare freigeben" = "Approva senza commenti";
 "{},{} $" = "{},{} $";
 "Tests von {} lassen sich nicht debuggen" = "Non è possibile eseguire il debug dei test di {}";
+"Sandbox der Gates:" = "Sandbox dei gate:";
+"Streng" = "Rigoroso";
+"Gelockert" = "Allentato";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "I gate eseguono codice scritto dall’agente. “Allentato” consente in più porte locali e terminali, “Disattivato” avvia i gate con i tuoi permessi. Un progetto può impostare un altro valore in .dango/factory.toml.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Allentato” consente porte locali e terminali, “Disattivato” avvia i gate con i tuoi permessi. Se il progetto allenta la sandbox, lo confermi al prossimo ordine di lavoro con “Continua”.";

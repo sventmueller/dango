@@ -2362,3 +2362,8 @@
 "Ohne Kommentare freigeben" = "不带评论批准";
 "{},{} $" = "${}.{}";
 "Tests von {} lassen sich nicht debuggen" = "无法调试 {} 的测试";
+"Sandbox der Gates:" = "门禁沙盒：";
+"Streng" = "严格";
+"Gelockert" = "放宽";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "门禁会运行智能体编写的代码。“放宽”还允许本地端口和终端，“关”以你的权限启动门禁。项目可以在 .dango/factory.toml 中设置其他值。";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“放宽”允许本地端口和终端，“关”以你的权限启动门禁。如果项目放宽了沙盒，你需要在下一个工单上用“继续”确认。";

@@ -2362,3 +2362,8 @@
 "Ohne Kommentare freigeben" = "Odobri bez komentara";
 "{},{} $" = "{},{} $";
 "Tests von {} lassen sich nicht debuggen" = "Pogreške u testovima alata {} ne mogu se otklanjati";
+"Sandbox der Gates:" = "Sandbox provjera:";
+"Streng" = "Strogo";
+"Gelockert" = "Ublaženo";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Provjere pokreću kôd koji je napisao agent. “Ublaženo” dodatno dopušta lokalne portove i terminale, “Isključeno” pokreće provjere s vašim pravima. Projekt u .dango/factory.toml može postaviti drugu vrijednost.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Ublaženo” dopušta lokalne portove i terminale, “Isključeno” pokreće provjere s vašim pravima. Ako projekt ublaži sandbox, to potvrđujete na sljedećem radnom nalogu s “Nastavi”.";

@@ -126,8 +126,8 @@ struct GateSet<'a> {
     sockets: &'a [String],
     #[serde(skip_serializing_if = "Option::is_none")]
     images: Option<&'a str>,
-    #[serde(skip_serializing_if = "GateSandbox::is_strict")]
-    sandbox: GateSandbox,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sandbox: Option<GateSandbox>,
 }
 
 /// The effective rule set of a project.
@@ -146,6 +146,10 @@ pub struct Rules {
     network: Vec<String>,
     sockets: Vec<String>,
     sandbox: GateSandbox,
+    /// What the workflow file sets of it, which the user confirms with the gates; their own default needs no
+    /// confirmation.
+    #[serde(skip)]
+    file_sandbox: Option<GateSandbox>,
     location: WorktreeLocation,
     copy: Vec<String>,
     setup: Option<String>,
@@ -254,7 +258,8 @@ impl Rules {
             images: file.images().map(str::to_string),
             network: file.network().to_vec(),
             sockets: file.sockets().to_vec(),
-            sandbox: file.sandbox(),
+            sandbox: file.sandbox().unwrap_or(defaults.gate_sandbox()),
+            file_sandbox: file.sandbox(),
             location: file.location().unwrap_or(defaults.location()),
             copy,
             setup: file.setup().map(str::to_string),
@@ -317,7 +322,7 @@ impl Rules {
             network: &self.network,
             sockets: &self.sockets,
             images: self.images.as_deref(),
-            sandbox: self.sandbox,
+            sandbox: self.file_sandbox.filter(|level| !level.is_strict()),
         })
     }
 

@@ -2399,3 +2399,8 @@
 "Ohne Kommentare freigeben" = "Approve Without Comments";
 "{},{} $" = "${}.{}";
 "Tests von {} lassen sich nicht debuggen" = "Tests of {} cannot be debugged";
+"Sandbox der Gates:" = "Gate Sandbox:";
+"Streng" = "Strict";
+"Gelockert" = "Relaxed";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Gates run code the agent wrote. “Relaxed” also allows local ports and terminals, “Off” starts gates with your rights. A project can set another value in .dango/factory.toml.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Relaxed” allows local ports and terminals, “Off” starts gates with your rights. If the project relaxes the sandbox, you confirm it on the next work order with “Continue”.";

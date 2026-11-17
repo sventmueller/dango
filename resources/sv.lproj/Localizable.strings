@@ -2362,3 +2362,8 @@
 "Ohne Kommentare freigeben" = "Godkänn utan kommentarer";
 "{},{} $" = "{},{} $";
 "Tests von {} lassen sich nicht debuggen" = "Tester från {} kan inte felsökas";
+"Sandbox der Gates:" = "Sandlåda för grindar:";
+"Streng" = "Strikt";
+"Gelockert" = "Mildrad";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Grindar kör kod som agenten har skrivit. ”Mildrad” tillåter dessutom lokala portar och terminaler, ”Av” startar grindar med dina rättigheter. Ett projekt kan ange ett annat värde i .dango/factory.toml.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "”Mildrad” tillåter lokala portar och terminaler, ”Av” startar grindar med dina rättigheter. Mildrar projektet sandlådan, bekräftar du det vid nästa arbetsorder med ”Fortsätt”.";

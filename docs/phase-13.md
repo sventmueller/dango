@@ -349,7 +349,10 @@ beschrieben, gilt so, wie es hier steht:
       `"strict"` als Vorgabe. `"relaxed"` erlaubt zusätzlich lokale Ports und Pseudoterminals. `"off"` startet Gates
       ohne Sandbox mit den Rechten des Nutzers, für Testsuiten mit eigenem `sandbox-exec`: macOS lässt eine Sandbox in
       einer Sandbox nur zu, wenn die äußere nichts verbietet. Beide Werte gehören zum bestätigten Gate-Satz (E190);
-      `"strict"` ändert dessen Hash nicht.
+      `"strict"` ändert dessen Hash nicht. Die Stufe steht als Vorgabe unter „Einstellungen ▸ Software Factory ▸
+      Sandbox der Gates“ und je Projekt im Dialog „Software Factory für <Ordner>“ unter „Prüfbefehle“, der
+      `[gates] sandbox` schreibt. Die Vorgabe gilt ohne Bestätigung, weil der Nutzer sie selbst setzt; nur ein
+      lockernder Wert der Workflow-Datei braucht sie.
     - Die Ausgabe eines Gates läuft durch gitleaks mit den eingefrorenen Regeln des Auftrags, bevor sie an den Builder
       oder in den Nachweis geht; Funde werden zu `[secret removed]`, scheitert gitleaks, geht keine Ausgabe weiter.
     - git innerhalb eines Gates liest einen eigenen Git-Ordner des Laufs (Entscheidung des Owners 2026-11-16,

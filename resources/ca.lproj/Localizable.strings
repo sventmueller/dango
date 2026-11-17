@@ -2362,3 +2362,8 @@
 "Ohne Kommentare freigeben" = "Aprova sense els comentaris";
 "{},{} $" = "{},{} $";
 "Tests von {} lassen sich nicht debuggen" = "Les proves de {} no es poden depurar";
+"Sandbox der Gates:" = "Sandbox dels controls:";
+"Streng" = "Estricte";
+"Gelockert" = "Relaxat";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Els controls executen codi que ha escrit l’agent. “Relaxat” permet a més ports locals i terminals, “Desactivat” inicia els controls amb els teus permisos. Un projecte pot fixar un altre valor a .dango/factory.toml.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Relaxat” permet ports locals i terminals, “Desactivat” inicia els controls amb els teus permisos. Si el projecte relaxa el sandbox, ho confirmes a la següent ordre de treball amb “Continua”.";

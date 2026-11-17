@@ -1,9 +1,9 @@
 //! The dialog "Software Factory für <Ordner>" (E183), a sheet on the window: what the project sets in `.dango/factory.toml`
 //! beside the user's defaults. A field left empty takes the default, which it shows grey; a value the project sets
 //! has a bold title, and emptying the field takes its key out of the file with its comments and the rest kept. The
-//! roles' ranked lists with model and effort, the reviewer rule, limits, budgets, copying and setup, risk patterns
-//! and the files that count for the review are editable; the gate commands and the prompt templates open in the
-//! editor, and the file's errors show in the user's words in the fixed head (E141, E190).
+//! roles' ranked lists with model and effort, the reviewer rule, limits, budgets, copying and setup, risk patterns,
+//! the files that count for the review and the gate sandbox are editable; the gate commands and the prompt templates
+//! open in the editor, and the file's errors show in the user's words in the fixed head (E141, E190).
 
 use std::cell::{OnceCell, Ref, RefCell};
 
@@ -24,7 +24,7 @@ use splat_i18n::{t, tf};
 
 use crate::actions::Target;
 use crate::host::host;
-use crate::model::settings::{Origin, ProjectFile, ProjectValue, reviewer_rules};
+use crate::model::settings::{Origin, ProjectFile, ProjectValue, choices};
 use crate::ui;
 use form::{CONTENT, Form};
 use ide_factory::station::Role;
@@ -176,7 +176,7 @@ impl ProjectSheet {
             }
             rows.extend(values.into_iter().map(|value| self.value_row(mtm, &form, value)));
         }
-        let template = self.files_part(mtm, &form);
+        let template = self.files_part(mtm, &form, &mut rows);
         let body = ui::column(mtm, space::M);
         body.setEdgeInsets(insets(space::M, space::GROUP));
         body.addArrangedSubview(&form.grid);
@@ -251,10 +251,15 @@ impl ProjectSheet {
         Retained::into_super(content)
     }
 
-    /// The gate commands, read only, and the prompt templates to open; the templates' menu.
-    fn files_part(&self, mtm: MainThreadMarker, form: &Form) -> Retained<NSPopUpButton> {
+    /// The gate commands, read only, with the row of their sandbox into `rows`, and the prompt templates to open; the
+    /// templates' menu.
+    fn files_part(&self, mtm: MainThreadMarker, form: &Form, rows: &mut Vec<ValueRow>) -> Retained<NSPopUpButton> {
         let me: &AnyObject = self.as_ref();
         form.heading(t("Prüfbefehle"), false);
+        rows.push(self.value_row(mtm, form, ProjectValue::GateSandbox));
+        form.note(t(
+            "„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“.",
+        ));
         let gates = self.ivars().file.borrow().gates();
         if gates.is_empty() {
             form.note(&tf(
@@ -283,13 +288,13 @@ impl ProjectSheet {
     /// whose first item is.
     fn value_row(&self, mtm: MainThreadMarker, form: &Form, value: ProjectValue) -> ValueRow {
         let me: &AnyObject = self.as_ref();
-        let control = if value == ProjectValue::ReviewerRule {
+        let control = if !choices(value).is_empty() {
             let choice = NSPopUpButton::new(mtm);
             choice.addItemWithTitle(&ns(t("Vorgabe")));
             if let Some(menu) = choice.menu() {
                 menu.addItem(&NSMenuItem::separatorItem(mtm));
             }
-            for words in reviewer_rules() {
+            for words in choices(value) {
                 choice.addItemWithTitle(&ns(words));
             }
             set_action(&choice, me, sel!(ideFactoryProjectField:));
@@ -343,13 +348,15 @@ impl ProjectSheet {
                     text
                 }
                 Control::Choice(choice) => {
-                    let default = reviewer_rules()[usize::from(file.default_reviewer_preferred())];
+                    let all = choices(row.value);
+                    let default = all.get(file.default_choice(row.value)).copied().unwrap_or_default();
                     if let Some(first) = choice.itemAtIndex(0) {
                         first.setTitle(&ns(&tf("Vorgabe ({})", &[default])));
                     }
-                    let index = match file.reviewer_preferred() {
+                    // The menu's default and its line come before the choices.
+                    let index = match file.choice(row.value) {
                         (_, Origin::Default) => 0,
-                        (preferred, Origin::File) => 2 + isize::from(preferred),
+                        (index, Origin::File) => 2 + isize::try_from(index).unwrap_or(0),
                     };
                     choice.selectItemAtIndex(index);
                     index.to_string()
@@ -418,9 +425,9 @@ impl ProjectSheet {
                 Control::Choice(choice) => {
                     let index = choice.indexOfSelectedItem();
                     if index.to_string() != *shown {
-                        match index {
-                            2 | 3 => file.set_reviewer_preferred(index == 3)?,
-                            _ => file.reset(row.value)?,
+                        match usize::try_from(index - 2) {
+                            Ok(choice) => file.set_choice(row.value, choice)?,
+                            Err(_) => file.reset(row.value)?,
                         }
                     }
                 }

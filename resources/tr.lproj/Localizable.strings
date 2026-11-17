@@ -2362,3 +2362,8 @@
 "Ohne Kommentare freigeben" = "Yorumlar Olmadan Onayla";
 "{},{} $" = "${},{}";
 "Tests von {} lassen sich nicht debuggen" = "{} testlerinde hata ayıklanamaz";
+"Sandbox der Gates:" = "Geçit korumalı alanı:";
+"Streng" = "Katı";
+"Gelockert" = "Gevşetilmiş";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Geçitler, ajanın yazdığı kodu çalıştırır. “Gevşetilmiş” ek olarak yerel portlara ve terminallere izin verir, “Kapalı” geçitleri sizin haklarınızla başlatır. Bir proje, .dango/factory.toml içinde başka bir değer belirleyebilir.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Gevşetilmiş” yerel portlara ve terminallere izin verir, “Kapalı” geçitleri sizin haklarınızla başlatır. Proje korumalı alanı gevşetirse bunu sonraki iş emrinde “Devam” ile onaylarsınız.";

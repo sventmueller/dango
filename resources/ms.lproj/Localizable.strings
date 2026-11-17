@@ -2362,3 +2362,8 @@
 "Ohne Kommentare freigeben" = "Luluskan Tanpa Ulasan";
 "{},{} $" = "${}.{}";
 "Tests von {} lassen sich nicht debuggen" = "Ujian {} tidak boleh dinyahpepijat";
+"Sandbox der Gates:" = "Sandbox gerbang:";
+"Streng" = "Ketat";
+"Gelockert" = "Longgar";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Gerbang menjalankan kod yang ditulis oleh ejen. “Longgar” turut membenarkan port setempat dan terminal, “Mati” memulakan gerbang dengan hak anda. Projek boleh menetapkan nilai lain dalam .dango/factory.toml.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Longgar” membenarkan port setempat dan terminal, “Mati” memulakan gerbang dengan hak anda. Jika projek melonggarkan sandbox, anda mengesahkannya pada pesanan kerja seterusnya dengan “Teruskan”.";

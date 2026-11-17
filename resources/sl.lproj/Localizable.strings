@@ -2362,3 +2362,8 @@
 "Ohne Kommentare freigeben" = "Odobri brez komentarjev";
 "{},{} $" = "{},{} $";
 "Tests von {} lassen sich nicht debuggen" = "Napak v testih orodja {} ni mogoče odpravljati";
+"Sandbox der Gates:" = "Peskovnik kontrol:";
+"Streng" = "Strogo";
+"Gelockert" = "Sproščeno";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Kontrole izvajajo kodo, ki jo je napisal agent. »Sproščeno« dodatno dovoli lokalna vrata in terminale, »Izklopljeno« zažene kontrole z vašimi pravicami. Projekt lahko v .dango/factory.toml nastavi drugo vrednost.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "»Sproščeno« dovoli lokalna vrata in terminale, »Izklopljeno« zažene kontrole z vašimi pravicami. Če projekt sprosti peskovnik, to potrdite pri naslednjem delovnem nalogu z »Nadaljuj«.";
