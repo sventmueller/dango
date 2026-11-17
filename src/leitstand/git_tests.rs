@@ -20,9 +20,12 @@ fn data_home() {
 }
 
 fn raw(root: &Path, args: &[&str]) {
+    // A gate runs the tests with `GIT_DIR` set to its private copy of the repository, which must not reach this git.
     let status = Command::new("/usr/bin/git")
         .args(args)
         .current_dir(root)
+        .env_clear()
+        .env("PATH", "/usr/bin:/bin")
         .env("GIT_CONFIG_GLOBAL", "/dev/null")
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .status()
