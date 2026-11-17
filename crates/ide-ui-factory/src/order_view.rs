@@ -1,5 +1,6 @@
-//! The body of an order's tab: how far its merge request got (E177), goal and criteria, the timeline, the evidence
-//! package with its deviations first (R70), and the sections of the diff with a checkbox each for G2 (C55). Logs and the diff's places stay left to right (E3).
+//! The body of an order's tab: what waits for the user as cards, how far its merge request got (E177), goal and
+//! criteria, the timeline, the evidence package with its deviations first (R70), and the sections of the diff with a
+//! checkbox each for G2 (C55). Logs and the diff's places stay left to right (E3).
 
 use std::collections::BTreeSet;
 
@@ -8,31 +9,41 @@ use ide_ui_common::style::space;
 use ide_ui_common::util::{ns, symbol};
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly, sel};
-use objc2_app_kit::{NSAccessibility, NSButton, NSColor, NSImageView, NSStackView};
-use splat_i18n::t;
+use objc2_app_kit::{
+    NSAccessibility, NSBox, NSButton, NSColor, NSImageView, NSLayoutAttribute, NSLayoutConstraintOrientation,
+    NSStackView, NSView,
+};
+use splat_i18n::{t, tf};
 
 use crate::model::detail::{Detail, Passage};
 use crate::order::OrderTab;
 use crate::ui;
 
+/// How wide text wraps until the tab wraps it at its own width.
 const WIDTH: f64 = 640.0;
 
 /// Fills `body` with what `detail` shows; `rejected` are the sections turned down so far.
 pub(crate) fn fill(tab: &OrderTab, body: &NSStackView, detail: &Detail, rejected: &BTreeSet<HunkId>) {
     let mtm = tab.mtm();
     if let Some(objection) = detail.objection() {
-        section(mtm, body, t("Einwand des Builders"));
         let reasons = if objection.is_empty() {
             t("Der Builder hat keinen Grund genannt.")
         } else {
             objection
         };
-        body.addArrangedSubview(&ui::text(mtm, reasons, WIDTH));
-        body.addArrangedSubview(&ui::note(
+        let explained = ui::note(
             mtm,
-            t("„Kriterien ändern …“ passt die Kriterien an, „Weiter“ lässt sie gelten, wie sie sind, und „Auftrag abbrechen …“ beendet den Auftrag."),
+            t(
+                "„Kriterien ändern …“ passt die Kriterien an, „Weiter“ lässt sie gelten, wie sie sind, und „Auftrag abbrechen …“ beendet den Auftrag.",
+            ),
             WIDTH,
-        ));
+        );
+        card(
+            mtm,
+            body,
+            t("Einwand des Builders"),
+            &[&ui::text(mtm, reasons, WIDTH), &explained],
+        );
     }
     if let Some(change) = detail.issue_change() {
         issue_change(tab, body, detail, change);
@@ -40,45 +51,105 @@ pub(crate) fn fill(tab: &OrderTab, body: &NSStackView, detail: &Detail, rejected
     if !detail.publication().is_empty() {
         section(mtm, body, t("Merge Request"));
         lines(mtm, body, detail.publication(), false);
+        divide(mtm, body);
     }
     section(mtm, body, t("Ziel"));
     body.addArrangedSubview(&ui::text(mtm, detail.goal(), WIDTH));
     section(mtm, body, t("Kriterien"));
     lines(mtm, body, detail.criteria(), false);
+    divide(mtm, body);
+    timeline(mtm, body, detail);
+    divide(mtm, body);
+    evidence(mtm, body, detail);
+    if !detail.sections().is_empty() {
+        divide(mtm, body);
+        sections(tab, body, detail, rejected);
+    }
+}
+
+/// The stations the order passed, stands at or skipped, a row each, and those still ahead on one line.
+fn timeline(mtm: MainThreadMarker, body: &NSStackView, detail: &Detail) {
     section(mtm, body, t("Zeitleiste"));
+    let mut ahead = Vec::new();
     for stage in detail.timeline() {
-        let row = ui::row(mtm, space::S);
-        let image = NSImageView::new(mtm);
+        if stage.passage() == Passage::Ahead {
+            ahead.push(stage.words());
+            continue;
+        }
         let passage = passage_words(stage.passage());
-        image.setImage(symbol(stage.symbol(), passage).as_deref());
         let tint = if stage.passage() == Passage::Current {
             NSColor::controlAccentColor()
         } else {
             NSColor::secondaryLabelColor()
         };
-        image.setContentTintColor(Some(&tint));
-        image.setAccessibilityLabel(Some(&ns(passage)));
-        row.addArrangedSubview(&image);
-        row.addArrangedSubview(&ui::text(mtm, stage.words(), WIDTH));
-        body.addArrangedSubview(&row);
+        body.addArrangedSubview(&marked(mtm, stage.symbol(), passage, &tint, stage.words()));
     }
-    evidence(mtm, body, detail);
-    sections(tab, body, detail, rejected);
+    if !ahead.is_empty() {
+        body.addArrangedSubview(&ui::note(mtm, &tf("Noch offen: {}", &[&ahead.join(" · ")]), WIDTH));
+    }
+}
+
+/// A row of the symbol `name`, named `meaning` for VoiceOver and tinted `tint`, before `words`.
+fn marked(mtm: MainThreadMarker, name: &str, meaning: &str, tint: &NSColor, words: &str) -> Retained<NSStackView> {
+    let row = ui::row(mtm, space::S);
+    row.setAlignment(NSLayoutAttribute::Top);
+    let image = NSImageView::new(mtm);
+    image.setImage(symbol(name, meaning).as_deref());
+    image.setContentTintColor(Some(tint));
+    image.setAccessibilityLabel(Some(&ns(meaning)));
+    image.setContentHuggingPriority_forOrientation(751.0, NSLayoutConstraintOrientation::Horizontal);
+    row.addArrangedSubview(&image);
+    row.addArrangedSubview(&ui::text(mtm, words, WIDTH));
+    row
+}
+
+/// A box of `views` under `title` across the whole width, for what waits for the user.
+fn card(mtm: MainThreadMarker, body: &NSStackView, title: &str, views: &[&NSView]) {
+    let card = NSBox::new(mtm);
+    card.setTitle(&ns(title));
+    let column = ui::column(mtm, space::S);
+    for view in views {
+        column.addArrangedSubview(view);
+    }
+    card.setContentView(Some(&column));
+    body.addArrangedSubview(&card);
+    card.widthAnchor()
+        .constraintEqualToAnchor(&body.widthAnchor())
+        .setActive(true);
+    body.setCustomSpacing_afterView(space::SECTION, &card);
+}
+
+/// A line across `body` between two sections.
+fn divide(mtm: MainThreadMarker, body: &NSStackView) {
+    if let Some(last) = body.arrangedSubviews().lastObject() {
+        body.setCustomSpacing_afterView(space::SECTION, &last);
+    }
+    let line = ui::rule(mtm);
+    body.addArrangedSubview(&line);
+    line.widthAnchor()
+        .constraintEqualToAnchor(&body.widthAnchor())
+        .setActive(true);
+    body.setCustomSpacing_afterView(space::SECTION, &line);
 }
 
 /// The issue's change since the order came in, with "Änderung übernehmen" (E176).
 fn issue_change(tab: &OrderTab, body: &NSStackView, detail: &Detail, change: &[String]) {
     let mtm = tab.mtm();
-    section(mtm, body, t("Issue geändert"));
-    body.addArrangedSubview(&ui::note(
+    let explained = ui::note(
         mtm,
-        t("Das Issue liest sich anders als beim Eingang des Auftrags. Erst „Änderung übernehmen“ ändert Ziel und Kriterien; ein gültiger Nachweis wird dabei ungültig."),
+        t(
+            "Das Issue liest sich anders als beim Eingang des Auftrags. Erst „Änderung übernehmen“ ändert Ziel und Kriterien; ein gültiger Nachweis wird dabei ungültig.",
+        ),
         WIDTH,
-    ));
-    body.addArrangedSubview(&ui::code(mtm, &change.join("\n"), WIDTH));
+    );
     let take = ui::button(mtm, t("Änderung übernehmen"), tab.me(), sel!(ideFactoryTakeIssue:), 0);
     take.setEnabled(detail.take_issue_change().is_some());
-    body.addArrangedSubview(&take);
+    card(
+        mtm,
+        body,
+        t("Issue geändert"),
+        &[&explained, &ui::code(mtm, &change.join("\n"), WIDTH), &take],
+    );
 }
 
 fn passage_words(passage: Passage) -> &'static str {
@@ -113,19 +184,19 @@ fn lines(mtm: MainThreadMarker, body: &NSStackView, items: &[String], code: bool
 
 fn evidence(mtm: MainThreadMarker, body: &NSStackView, detail: &Detail) {
     section(mtm, body, t("Nachweis"));
-    let deviations = ui::heading(mtm, t("Abweichungen"));
-    body.addArrangedSubview(&deviations);
+    body.addArrangedSubview(&ui::subheading(mtm, t("Abweichungen")));
     if detail.deviations().is_empty() {
         body.addArrangedSubview(&ui::note(mtm, t("keine"), WIDTH));
     }
+    let warning = NSColor::systemOrangeColor();
     for deviation in detail.deviations() {
-        let row = ui::row(mtm, space::S);
-        let image = NSImageView::new(mtm);
-        image.setImage(symbol("exclamationmark.triangle.fill", t("Abweichung")).as_deref());
-        image.setContentTintColor(Some(&NSColor::systemOrangeColor()));
-        image.setAccessibilityLabel(Some(&ns(t("Abweichung"))));
-        row.addArrangedSubview(&image);
-        row.addArrangedSubview(&ui::text(mtm, deviation, WIDTH));
+        let row = marked(
+            mtm,
+            "exclamationmark.triangle.fill",
+            t("Abweichung"),
+            &warning,
+            deviation,
+        );
         body.addArrangedSubview(&row);
     }
     if detail.evidence().is_empty() {
@@ -137,24 +208,31 @@ fn evidence(mtm: MainThreadMarker, body: &NSStackView, detail: &Detail) {
     } else {
         lines(mtm, body, detail.evidence(), false);
     }
+    let mut nothing = Vec::new();
     for (title, items, code) in [
         (t("Gates"), detail.gates(), true),
         (t("Prüfrunden"), detail.rounds(), false),
         (t("Kosten und Laufzeit"), detail.costs(), false),
         (t("Herkunft"), detail.provenance(), true),
     ] {
-        body.addArrangedSubview(&ui::heading(mtm, title));
+        if items.is_empty() {
+            nothing.push(title);
+            continue;
+        }
+        body.addArrangedSubview(&ui::subheading(mtm, title));
         lines(mtm, body, items, code);
+    }
+    if detail.sections().is_empty() {
+        nothing.push(t("Abschnitte des Diffs"));
+    }
+    if !nothing.is_empty() {
+        body.addArrangedSubview(&ui::note(mtm, &tf("Noch nichts: {}", &[&nothing.join(", ")]), WIDTH));
     }
 }
 
 fn sections(tab: &OrderTab, body: &NSStackView, detail: &Detail, rejected: &BTreeSet<HunkId>) {
     let mtm = tab.mtm();
     section(mtm, body, t("Abschnitte des Diffs"));
-    if detail.sections().is_empty() {
-        body.addArrangedSubview(&ui::note(mtm, t("Der Diff hat noch keine Abschnitte."), WIDTH));
-        return;
-    }
     body.addArrangedSubview(&ui::note(
         mtm,
         t("Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen."),
@@ -174,6 +252,12 @@ fn checkbox(mtm: MainThreadMarker, tab: &OrderTab, title: &str, index: usize) ->
         NSButton::checkboxWithTitle_target_action(&ns(title), Some(tab.me()), Some(sel!(ideFactorySection:)), mtm)
     };
     button.setTag(isize::try_from(index).unwrap_or(0));
+    button.setToolTip(Some(&ns(title)));
+    button.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingMiddle);
+    button.setContentCompressionResistancePriority_forOrientation(
+        ui::GIVES_WAY,
+        NSLayoutConstraintOrientation::Horizontal,
+    );
     button.setFont(Some(&ide_ui_common::style::mono(ide_ui_common::style::CODE)));
     button.setUserInterfaceLayoutDirection(objc2_app_kit::NSUserInterfaceLayoutDirection::LeftToRight);
     button

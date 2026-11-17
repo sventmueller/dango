@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "लागत और रनटाइम";
 "Herkunft" = "उद्गम";
 "Abschnitte des Diffs" = "अंतर के हंक";
-"Der Diff hat noch keine Abschnitte." = "अंतर में अभी कोई हंक नहीं है।";
+"Weitere Befehle" = "और कमांड";
+"Noch offen: {}" = "अभी बाकी: {}";
+"Noch nichts: {}" = "अभी कुछ नहीं: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "अचयनित हंक स्वीकृति पर त्याग दिया जाता है; बाकी से एक नई स्थिति बनती है, जिसे गेट और समीक्षक फिर से जाँचते हैं।";
 "Neuer Auftrag" = "नया वर्क ऑर्डर";
 "Kriterien, eines je Zeile" = "मानदंड, हर पंक्ति में एक";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "स्वीकार करें";
 "Diff öffnen" = "अंतर खोलें";
 "Sitzung öffnen" = "सेशन खोलें";
+"Bericht öffnen" = "रिपोर्ट खोलें";
+"Der Auftrag hat {} nicht geschrieben." = "वर्क ऑर्डर ने {} नहीं लिखा।";
 "Zurück an den Builder …" = "बिल्डर को वापस भेजें…";
 "Kriterien ändern …" = "मानदंड बदलें…";
 "Von Hand weiter" = "हाथ से जारी रखें";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "टिप्पणियों के बिना मंज़ूर करें";
 "{},{} $" = "${}.{}";
 "Tests von {} lassen sich nicht debuggen" = "{} के टेस्ट डीबग नहीं किए जा सकते";
+"Sandbox der Gates:" = "गेट का सैंडबॉक्स :";
+"Streng" = "सख़्त";
+"Gelockert" = "शिथिल";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "गेट वह कोड चलाते हैं जो एजेंट ने लिखा है। “शिथिल” इसके अलावा स्थानीय पोर्ट और टर्मिनल की अनुमति देता है, “बंद” गेट को आपके अधिकारों के साथ शुरू करता है। प्रोजेक्ट .dango/factory.toml में कोई दूसरा मान सेट कर सकता है।";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“शिथिल” स्थानीय पोर्ट और टर्मिनल की अनुमति देता है, “बंद” गेट को आपके अधिकारों के साथ शुरू करता है। यदि प्रोजेक्ट सैंडबॉक्स को शिथिल करता है, तो आप अगले वर्क ऑर्डर पर “जारी रखें” से इसकी पुष्टि करते हैं।";

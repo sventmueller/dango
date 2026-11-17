@@ -184,8 +184,11 @@ beschrieben, gilt so, wie es hier steht:
   - **Menüs:** „Ablage ▸ Neuer Auftrag …“, „Ablage ▸ Auftrag“ (mit „Auftrag abbrechen …“ und „Auftrag fortsetzen“,
     weil „Abbrechen“ und „Fortsetzen“ als Schlüssel schon feste Bedeutungen haben), „Darstellung ▸ Leitstand“.
   - **Mitteilungen** schickt nur die Laufzeit, aus der Wirkung der Fabrik; die Ansichten schicken keine.
-  - **Ref-Wache:** Als von Dango gemacht gelten bisher nur Checkpoints und die Branches anderer Aufträge. Ein Commit
-    des Nutzers im Git-Panel während eines Zugs lässt den Auftrag warten.
+  - **Ref-Wache** (Entscheidung des Owners 2026-11-17): Sie prüft nur noch den Branch des Auftrags. Steht er nach einem
+    Zug woanders als auf dem Commit der Factory, wartet der Auftrag. Andere Branches, Tags, Siegel und Remotes bewegen
+    sich mit der Arbeit des Nutzers und anderer Aufträge, etwa `main` bei einer Übernahme; sie halten keinen Auftrag
+    mehr an. Den Hauptstand schützt allein die Sandbox, die keinem Weg Schreiben im Git-Ordner des Haupt-Repos
+    erlaubt.
   - **Testzahlen der Gates** kommen aus den Zusammenfassungen von libtest, nextest, pytest, Jest und Vitest; andere
     Ausgaben zählen als „unbekannt“.
   - **Der Worktree** beginnt an der Spitze des Basis-Branches, nicht genau am gemerkten Commit.
@@ -340,6 +343,29 @@ beschrieben, gilt so, wie es hier steht:
       Werkzeugordnern sind die Dateien mit Zugangsdaten gesperrt (cargo `credentials`, maven `settings*.xml`,
       `gradle.properties`, `.npmrc`, `.netrc`), im gemeinsamen Git-Ordner `config`, `FETCH_HEAD` und `logs`.
     - Unix-Sockets nur im eigenen temporären Ordner des Gates und aus der Liste der Workflow-Datei.
+    - Lesbar ist außerdem `~/.config/git/ignore`: Cargo listet damit die Dateien einer Pfad-Abhängigkeit in einem
+      Repository und bricht ab, wenn es die Datei nicht lesen darf. Die Umgebung nach E186 setzt
+      `CARGO_BUILD_BUILD_DIR={workspace-root}/target`, weil eine Cargo-Konfiguration des Nutzers den Build-Ordner sonst
+      außerhalb des Worktrees anlegt, wo die Sandbox nicht schreiben lässt. Claude-Builder lesen dieselben
+      Werkzeugordner wie Gates; die Dateien mit Zugangsdaten darin bleiben gesperrt.
+    - **Lockerung je Projekt** (Entscheidung des Owners 2026-11-17): `[gates] sandbox` in der Workflow-Datei,
+      `"strict"` als Vorgabe. `"relaxed"` erlaubt zusätzlich lokale Ports und Pseudoterminals. `"off"` startet Gates
+      ohne Sandbox mit den Rechten des Nutzers, für Testsuiten mit eigenem `sandbox-exec`: macOS lässt eine Sandbox in
+      einer Sandbox nur zu, wenn die äußere nichts verbietet. Beide Werte gehören zum bestätigten Gate-Satz (E190);
+      `"strict"` ändert dessen Hash nicht.
+    - Den eigenen Git-Ordner mit `GIT_DIR` bekommt ein Gate nur noch, wenn die Konfiguration des Repositorys Zugangsdaten
+      enthalten kann: eine Adresse mit Passwort oder über HTTP mit Benutzer, `extraheader`, Passwort, Token oder
+      Secret, ein Abschnitt `credential`, `include` oder `includeIf`, oder wenn sie sich nicht lesen lässt. Sonst
+      liest git im Gate das Repository selbst, nur `FETCH_HEAD` und die Reflogs bleiben gesperrt, und
+      `GIT_CONFIG_GLOBAL` zeigt auf eine neutrale Identität. Grund: `GIT_DIR` lenkt auch die Repositories, die eine
+      Testsuite selbst anlegt, in die Kopie. Ohne Kopie scheitern schreibende git-Befehle im Worktree, statt in der
+      Kopie zu landen. Mit `"off"` gibt es weder Kopie noch neutrale Konfiguration.
+    - Der temporäre Ordner eines Laufs liegt unter `/private/tmp` (eigener Name, Rechte 0700), nicht im Ordner des
+      Laufs unter Application Support: Dort überschreitet der Pfad eines Unix-Sockets, den ein Test anlegt, die 104
+      Zeichen von macOS. Die Stufe steht als Vorgabe unter „Einstellungen ▸ Software Factory ▸
+      Sandbox der Gates“ und je Projekt im Dialog „Software Factory für <Ordner>“ unter „Prüfbefehle“, der
+      `[gates] sandbox` schreibt. Die Vorgabe gilt ohne Bestätigung, weil der Nutzer sie selbst setzt; nur ein
+      lockernder Wert der Workflow-Datei braucht sie.
     - Die Ausgabe eines Gates läuft durch gitleaks mit den eingefrorenen Regeln des Auftrags, bevor sie an den Builder
       oder in den Nachweis geht; Funde werden zu `[secret removed]`, scheitert gitleaks, geht keine Ausgabe weiter.
     - git innerhalb eines Gates liest einen eigenen Git-Ordner des Laufs (Entscheidung des Owners 2026-11-16,
@@ -765,7 +791,8 @@ und wird ein roter Punkt *(C72)*.
     - Nach jedem Zug vergleicht der Orchestrator die Refs des Haupt-Repos: Branches, `refs/ide-checkpoints/*`, im
       eigenen Repo `refs/ci-seals/*`.
     - Änderungen, die Dango selbst in der Zeit vorgenommen hat (Commits des Nutzers, andere Aufträge), ordnet er zu.
-    - Jede andere Änderung, auch eine aus dem Terminal, lässt den Auftrag auf den Nutzer warten.
+    - Jede andere Änderung, auch eine aus dem Terminal, lässt den Auftrag auf den Nutzer warten. Eingeschränkt durch
+      die Korrektur oben: Es zählt nur der Branch des Auftrags.
   - **E191 Werkzeuge je Rolle** *(C51)*.
     - MCP-Server, Apps und Connectoren, Browser- und Web-Werkzeuge sind in Auftrags-Sitzungen aus. Sie haben eigene
       Anmeldungen und gehen an der Netz-Sperre der Shell vorbei.

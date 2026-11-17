@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Maliyet ve Süre";
 "Herkunft" = "Köken";
 "Abschnitte des Diffs" = "Farkın Parçaları";
-"Der Diff hat noch keine Abschnitte." = "Farkta henüz parça yok.";
+"Weitere Befehle" = "Diğer Komutlar";
+"Noch offen: {}" = "Henüz sırada: {}";
+"Noch nichts: {}" = "Henüz yok: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Seçimi kaldırılan parça kabulde atılır; kalanından, geçitlerin ve inceleyicinin yeniden denetlediği yeni bir durum oluşur.";
 "Neuer Auftrag" = "Yeni İş Emri";
 "Kriterien, eines je Zeile" = "Ölçütler, her satıra bir tane";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "Kabul Et";
 "Diff öffnen" = "Farkı Aç";
 "Sitzung öffnen" = "Oturumu Aç";
+"Bericht öffnen" = "Raporu Aç";
+"Der Auftrag hat {} nicht geschrieben." = "İş emri {} dosyasını yazmadı.";
 "Zurück an den Builder …" = "Builder’a Geri Gönder…";
 "Kriterien ändern …" = "Ölçütleri Değiştir…";
 "Von Hand weiter" = "Elle Devam Et";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "Yorumlar Olmadan Onayla";
 "{},{} $" = "${},{}";
 "Tests von {} lassen sich nicht debuggen" = "{} testlerinde hata ayıklanamaz";
+"Sandbox der Gates:" = "Geçit korumalı alanı:";
+"Streng" = "Katı";
+"Gelockert" = "Gevşetilmiş";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Geçitler, ajanın yazdığı kodu çalıştırır. “Gevşetilmiş” ek olarak yerel portlara ve terminallere izin verir, “Kapalı” geçitleri sizin haklarınızla başlatır. Bir proje, .dango/factory.toml içinde başka bir değer belirleyebilir.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Gevşetilmiş” yerel portlara ve terminallere izin verir, “Kapalı” geçitleri sizin haklarınızla başlatır. Proje korumalı alanı gevşetirse bunu sonraki iş emrinde “Devam” ile onaylarsınız.";

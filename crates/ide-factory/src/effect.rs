@@ -11,7 +11,7 @@ use crate::event::{Action, TargetState};
 use crate::ids::{HunkId, OperationId, OrderId, PromptId, RequestId, RunId, SessionKey};
 use crate::routing::RankEntry;
 use crate::station::Role;
-use crate::workflow::WorktreeLocation;
+use crate::workflow::{GateSandbox, WorktreeLocation};
 
 /// A command run in the gate sandbox (E187) under its deadline and output limit (C67).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -24,6 +24,9 @@ pub struct SandboxRun {
     pub network: Vec<String>,
     /// Unix sockets it may reach.
     pub sockets: Vec<String>,
+    /// How tightly the gate sandbox holds it.
+    #[serde(default)]
+    pub sandbox: GateSandbox,
     /// When the whole process group is ended.
     pub deadline_ms: u64,
     /// How much output it may print before it is ended.

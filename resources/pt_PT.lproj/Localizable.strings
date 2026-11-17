@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Custo e duração";
 "Herkunft" = "Proveniência";
 "Abschnitte des Diffs" = "Blocos do diff";
-"Der Diff hat noch keine Abschnitte." = "O diff ainda não tem blocos.";
+"Weitere Befehle" = "Mais comandos";
+"Noch offen: {}" = "Ainda por fazer: {}";
+"Noch nichts: {}" = "Ainda nada: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Um bloco desmarcado é descartado na aceitação; o resto forma um novo estado, que os gates e o revisor voltam a verificar.";
 "Neuer Auftrag" = "Nova ordem de trabalho";
 "Kriterien, eines je Zeile" = "Critérios, um por linha";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "Aceitar";
 "Diff öffnen" = "Abrir diff";
 "Sitzung öffnen" = "Abrir sessão";
+"Bericht öffnen" = "Abrir relatório";
+"Der Auftrag hat {} nicht geschrieben." = "A ordem de trabalho não gravou {}.";
 "Zurück an den Builder …" = "Devolver ao construtor…";
 "Kriterien ändern …" = "Alterar critérios…";
 "Von Hand weiter" = "Continuar manualmente";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "Aprovar sem comentários";
 "{},{} $" = "{},{} US$";
 "Tests von {} lassen sich nicht debuggen" = "Os testes do {} não podem ser depurados";
+"Sandbox der Gates:" = "Sandbox dos gates:";
+"Streng" = "Estrito";
+"Gelockert" = "Flexível";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Os gates executam código escrito pelo agente. “Flexível” permite ainda portas locais e terminais, “Desativado” inicia os gates com as suas permissões. Um projeto pode definir outro valor em .dango/factory.toml.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Flexível” permite portas locais e terminais, “Desativado” inicia os gates com as suas permissões. Se o projeto flexibilizar a sandbox, confirma-o na próxima ordem de trabalho com “Continuar”.";

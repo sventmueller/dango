@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Cost și durată";
 "Herkunft" = "Proveniență";
 "Abschnitte des Diffs" = "Fragmentele diff-ului";
-"Der Diff hat noch keine Abschnitte." = "Diff-ul nu are încă fragmente.";
+"Weitere Befehle" = "Mai multe comenzi";
+"Noch offen: {}" = "Încă înainte: {}";
+"Noch nichts: {}" = "Încă nimic: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Un fragment debifat este eliminat la acceptare; din rest rezultă o stare nouă, pe care controalele și evaluatorul o verifică din nou.";
 "Neuer Auftrag" = "Ordin de lucru nou";
 "Kriterien, eines je Zeile" = "Criterii, câte unul pe linie";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "Acceptați";
 "Diff öffnen" = "Deschideți diferențele";
 "Sitzung öffnen" = "Deschideți sesiunea";
+"Bericht öffnen" = "Deschide raportul";
+"Der Auftrag hat {} nicht geschrieben." = "Ordinul de lucru nu a scris {}.";
 "Zurück an den Builder …" = "Înapoi la constructor…";
 "Kriterien ändern …" = "Modificați criteriile…";
 "Von Hand weiter" = "Continuați manual";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "Aprobați fără comentarii";
 "{},{} $" = "{},{} $";
 "Tests von {} lassen sich nicht debuggen" = "Testele {} nu pot fi depanate";
+"Sandbox der Gates:" = "Sandboxul controalelor:";
+"Streng" = "Strict";
+"Gelockert" = "Relaxat";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Controalele rulează cod scris de agent. „Relaxat” permite în plus porturi locale și terminale, „Dezactivat” pornește controalele cu drepturile dvs. Un proiect poate seta altă valoare în .dango/factory.toml.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "„Relaxat” permite porturi locale și terminale, „Dezactivat” pornește controalele cu drepturile dvs. Dacă proiectul relaxează sandboxul, confirmați acest lucru la următorul ordin de lucru cu „Continuați”.";

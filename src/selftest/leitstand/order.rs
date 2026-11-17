@@ -2,8 +2,9 @@
 //! its own with the scripted session in place of an agent and a gate command that passes (`true`). Only Claude counts
 //! as ready, so the order runs in stage 1: the specification is skipped, the builder writes a file in the order's
 //! worktree, the factory commits it, the path scope, the secrets scan and the gate pass, the reviewer agent is skipped,
-//! and the evidence waits for acceptance; G2 takes it over into the base branch of the working copy and the worktree
-//! goes. The order holds the wake lock while it runs and lets it go while it waits; no notification reaches the user
+//! and the evidence waits for acceptance. At acceptance the order's tab offers the report the path scope names and a
+//! terminal in the worktree beside its next step, and both open; G2 takes it over into the base branch of the working
+//! copy and the worktree goes. The order holds the wake lock while it runs and lets it go while it waits; no notification reaches the user
 //! and no activity keeps the Mac awake.
 
 use std::cell::Cell;
@@ -17,10 +18,11 @@ use ide_factory::routing::{Agent, AgentStatus};
 use ide_factory::{Condition, OrderId, Station, WaitReason};
 use ide_git::CommitOptions;
 use ide_session::{End, Script, ScriptTurn, Step};
+use ide_ui_factory::model::detail::Command as OrderCommand;
 
 use super::super::git::{append, fixture_git};
 use super::super::helpers::{self, wait_within};
-use super::super::{check, finish, give_up, give_up_saying};
+use super::super::{check, finish, give_up, give_up_saying, snapshot};
 use crate::leitstand::Command;
 use crate::util::main_soon;
 
@@ -29,6 +31,8 @@ const PROJECT: &str = "leitstand-order-project";
 /// The file the scripted builder writes.
 const WRITTEN: &str = "hello.txt";
 const CONTENT: &str = "hello\n";
+/// The Markdown file the scripted builder writes, which the path scope names.
+const REPORT: &str = "REPORT.md";
 const WORKFLOW: &str = "[[gates.command]]\nname = \"check\"\nrun = \"true\"\n";
 /// How long a run of stations may take: git, the gate's sandbox and the disk lane, under the load of parallel runs.
 const STATIONS: Duration = Duration::from_secs(120);
@@ -63,6 +67,10 @@ fn script() -> Script {
             Step::Write {
                 path: WRITTEN.into(),
                 contents: CONTENT.into(),
+            },
+            Step::Write {
+                path: REPORT.into(),
+                contents: "# Report\n".into(),
             },
             Step::Say("Done.".into()),
         ],
@@ -149,6 +157,7 @@ fn start(root: PathBuf) {
         title: "Gruß schreiben".into(),
         goal: "Write a greeting into hello.txt.".into(),
         criteria: "- hello.txt says hello\n".into(),
+        scope: vec![WRITTEN.into(), REPORT.into()],
         ..NewOrder::default()
     };
     let Some(id) = cx.leitstand().command(&cx, &root, Command::New(order)) else {
@@ -246,7 +255,73 @@ fn at_acceptance(root: &Path, id: &OrderId, notices: usize) {
     let Some((fingerprint, _)) = seen.evidence else {
         return give_up(SCENARIO, "the order has evidence to accept");
     };
-    accept(root.to_path_buf(), id.clone(), fingerprint);
+    acceptance_tab(root.to_path_buf(), id.clone(), fingerprint);
+}
+
+/// The order's tab at acceptance offers "Bericht öffnen" and "Im Terminal öffnen" in its bar; the report opens in an
+/// editor and the terminal in the worktree.
+fn acceptance_tab(root: PathBuf, id: OrderId, fingerprint: String) {
+    let Some(controller) = helpers::window_of(&root) else {
+        return give_up(SCENARIO, "the folder has a window");
+    };
+    if !ide_ui_factory::open_order(controller.handle(), controller.context().factory_ui(), &id) {
+        return give_up(SCENARIO, "the order's tab opens");
+    }
+    let bar = |controller: &crate::window::WindowController, id: &OrderId| {
+        ide_ui_factory::selftest::order(controller.handle(), controller.context().factory_ui(), id)
+            .map(|seen| seen.bar)
+            .unwrap_or_default()
+    };
+    let probe = (controller.clone(), id.clone());
+    let offers = |bar: &[String]| {
+        [OrderCommand::OpenReport, OrderCommand::OpenTerminal]
+            .iter()
+            .all(|command| bar.iter().any(|title| title == command.title()))
+    };
+    wait_within(
+        SHORT,
+        move || offers(&bar(&probe.0, &probe.1)),
+        move |offered| {
+            check(
+                "the order's tab offers the report and a terminal in the worktree beside its next step at acceptance",
+                offered,
+                format!("{:?}", bar(&controller, &id)),
+            );
+            if let Some(window) = controller.window() {
+                window.displayIfNeeded();
+                snapshot(&window, "leitstand-order-acceptance");
+            }
+            open_both(&root, &id, &controller);
+            accept(root, id, fingerprint);
+        },
+    );
+}
+
+fn open_both(root: &Path, id: &OrderId, controller: &crate::window::WindowController) {
+    let cx = crate::context::app();
+    let Some(tree) = cx.leitstand().worktree(root, id) else {
+        return give_up(SCENARIO, "the order has a worktree at acceptance");
+    };
+    let (window, ui) = (controller.handle(), controller.context().factory_ui());
+    let report = tree.join(REPORT);
+    let pressed = ide_ui_factory::selftest::press_order(window, ui, id, OrderCommand::OpenReport);
+    check(
+        "\"Bericht öffnen\" opens the report the order wrote in an editor",
+        pressed && controller.tab_with_key(&report.to_string_lossy()).is_some(),
+        format!("pressed: {pressed}, {}", report.display()),
+    );
+    let pressed = ide_ui_factory::selftest::press_order(window, ui, id, OrderCommand::OpenTerminal);
+    let opened = crate::terminal::inspect::latest().map(|(_, view)| view.cwd());
+    let same = |path: &Path| path.canonicalize().ok();
+    check(
+        "\"Im Terminal öffnen\" opens a terminal in the order's worktree",
+        pressed
+            && opened
+                .as_deref()
+                .and_then(same)
+                .is_some_and(|cwd| Some(cwd) == same(&tree)),
+        format!("pressed: {pressed}, {opened:?} for {}", tree.display()),
+    );
 }
 
 /// Neither a notification nor the activity that keeps the Mac awake reaches past the self-test (R12).

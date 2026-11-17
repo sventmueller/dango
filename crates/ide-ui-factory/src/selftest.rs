@@ -43,6 +43,26 @@ pub fn order(window: Window, state: &Rc<State>, order: &ide_factory::OrderId) ->
         .map(|order_tab| order_tab.seen())
 }
 
+/// Runs `command` in the tab of the order `order` in `window` as its button does; whether the window has the tab.
+pub fn press_order(
+    window: Window,
+    state: &Rc<State>,
+    order: &ide_factory::OrderId,
+    command: crate::model::detail::Command,
+) -> bool {
+    let key = crate::order::tab_key(order);
+    let Some(tab) = window.tab_with_key(&key) else {
+        return false;
+    };
+    state
+        .orders
+        .live()
+        .into_iter()
+        .find(|order_tab| order_tab.tab() == Some(tab))
+        .inspect(|order_tab| order_tab.press(command))
+        .is_some()
+}
+
 /// The dialog "Software Factory für <Ordner>" open on `window`.
 fn project_sheet(window: Window, state: &Rc<State>) -> Option<objc2::rc::Retained<crate::project::ProjectSheet>> {
     state
@@ -74,8 +94,10 @@ pub fn save_project(window: Window, state: &Rc<State>) -> bool {
 pub struct OrderSeen {
     /// The texts of its condition line and its body, in their order.
     pub texts: Vec<String>,
-    /// Every button in it with whether it can be pressed.
+    /// Every button in its body and every command of its pull-down, with whether it can be pressed.
     pub buttons: Vec<(String, bool)>,
+    /// The titles of the buttons in its command bar, the next step first.
+    pub bar: Vec<String>,
 }
 
 /// What a row of the dialog "Software Factory für <Ordner>" shows, as the self-test reads it.

@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Coût et durée d’exécution";
 "Herkunft" = "Provenance";
 "Abschnitte des Diffs" = "Blocs du diff";
-"Der Diff hat noch keine Abschnitte." = "Le diff n’a pas encore de blocs.";
+"Weitere Befehle" = "Autres commandes";
+"Noch offen: {}" = "Encore à venir : {}";
+"Noch nichts: {}" = "Rien pour l’instant : {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Un bloc désélectionné est abandonné lors de l’acceptation ; le reste forme un nouvel état, que les contrôles et le relecteur vérifient à nouveau.";
 "Neuer Auftrag" = "Nouvel ordre de travail";
 "Kriterien, eines je Zeile" = "Critères, un par ligne";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "Accepter";
 "Diff öffnen" = "Ouvrir le diff";
 "Sitzung öffnen" = "Ouvrir la session";
+"Bericht öffnen" = "Ouvrir le rapport";
+"Der Auftrag hat {} nicht geschrieben." = "L’ordre de travail n’a pas écrit {}.";
 "Zurück an den Builder …" = "Renvoyer au builder…";
 "Kriterien ändern …" = "Modifier les critères…";
 "Von Hand weiter" = "Continuer à la main";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "Approuver sans les commentaires";
 "{},{} $" = "{},{} $";
 "Tests von {} lassen sich nicht debuggen" = "Les tests de {} ne peuvent pas être débogués";
+"Sandbox der Gates:" = "Sandbox des contrôles :";
+"Streng" = "Strict";
+"Gelockert" = "Assoupli";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Les contrôles exécutent du code écrit par l’agent. « Assoupli » autorise en plus les ports locaux et les terminaux, « Désactivé » lance les contrôles avec vos droits. Un projet peut définir une autre valeur dans .dango/factory.toml.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "« Assoupli » autorise les ports locaux et les terminaux, « Désactivé » lance les contrôles avec vos droits. Si le projet assouplit la sandbox, vous le confirmez sur l’ordre de travail suivant avec « Continuer ».";

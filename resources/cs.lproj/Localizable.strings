@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Náklady a doba běhu";
 "Herkunft" = "Původ";
 "Abschnitte des Diffs" = "Bloky rozdílů";
-"Der Diff hat noch keine Abschnitte." = "Rozdíly zatím nemají žádné bloky.";
+"Weitere Befehle" = "Další příkazy";
+"Noch offen: {}" = "Ještě čeká: {}";
+"Noch nichts: {}" = "Zatím nic: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Odznačený blok se při přijetí zahodí; ze zbytku vznikne nový stav, který brány a recenzent znovu zkontrolují.";
 "Neuer Auftrag" = "Nová zakázka";
 "Kriterien, eines je Zeile" = "Kritéria, jedno na řádek";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "Přijmout";
 "Diff öffnen" = "Otevřít rozdíly";
 "Sitzung öffnen" = "Otevřít relaci";
+"Bericht öffnen" = "Otevřít zprávu";
+"Der Auftrag hat {} nicht geschrieben." = "Zakázka nezapsala {}.";
 "Zurück an den Builder …" = "Vrátit staviteli…";
 "Kriterien ändern …" = "Změnit kritéria…";
 "Von Hand weiter" = "Pokračovat ručně";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "Schválit bez komentářů";
 "{},{} $" = "{},{} $";
 "Tests von {} lassen sich nicht debuggen" = "Testy nástroje {} nelze ladit";
+"Sandbox der Gates:" = "Sandbox bran:";
+"Streng" = "Přísný";
+"Gelockert" = "Uvolněný";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Brány spouštějí kód, který napsal agent. „Uvolněný“ navíc povoluje místní porty a terminály, „Vypnuto“ spouští brány s vašimi oprávněními. Projekt může v .dango/factory.toml nastavit jinou hodnotu.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "„Uvolněný“ povoluje místní porty a terminály, „Vypnuto“ spouští brány s vašimi oprávněními. Pokud projekt sandbox uvolní, potvrdíte to u příští zakázky tlačítkem „Pokračovat“.";

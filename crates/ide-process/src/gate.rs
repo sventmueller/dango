@@ -395,4 +395,36 @@ mod tests {
         assert!(!outcome.passed(), "{outcome:?}");
         assert!(work.join("made").exists() && !scratch.join("escaped").exists());
     }
+
+    #[test]
+    fn a_gate_reads_a_readable_folder_through_a_link_only_when_the_link_is_followable() {
+        let scratch = ide_core::testing::scratch("gate-sandbox-link");
+        let (work, temp, home) = (scratch.join("work"), scratch.join("temp"), scratch.join("home"));
+        let (real, holder) = (home.join("repos/dep"), home.join("data"));
+        for folder in [&work, &temp, &real, &holder] {
+            std::fs::create_dir_all(folder).unwrap();
+        }
+        std::fs::write(real.join("file"), "content").unwrap();
+        let link = holder.join("dep");
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+        let supervisor = Supervisor::new();
+        let env = env();
+        let read = |profile: &Profile| {
+            let gate = Gate {
+                supervisor: &supervisor,
+                env: &env,
+                sandbox: Some(profile),
+                limits: Limits::default(),
+                cancel: None,
+            };
+            let script = format!("cat '{}/file'", link.display());
+            gate.run(Path::new("/bin/sh"), &["-c", script.as_str()], &work, "gate")
+                .unwrap()
+        };
+        let profile = Profile::gate(std::slice::from_ref(&work), &temp, &home).readable(std::slice::from_ref(&real));
+        let refused = read(&profile);
+        assert!(!refused.passed(), "{refused:?}");
+        let followed = read(&profile.links(std::slice::from_ref(&link)));
+        assert!(followed.passed() && followed.stdout == "content", "{followed:?}");
+    }
 }

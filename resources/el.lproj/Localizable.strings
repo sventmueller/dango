@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Κόστος και διάρκεια";
 "Herkunft" = "Προέλευση";
 "Abschnitte des Diffs" = "Τμήματα των διαφορών";
-"Der Diff hat noch keine Abschnitte." = "Οι διαφορές δεν έχουν ακόμα τμήματα.";
+"Weitere Befehle" = "Περισσότερες εντολές";
+"Noch offen: {}" = "Εκκρεμούν ακόμα: {}";
+"Noch nichts: {}" = "Τίποτα ακόμα: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Ένα τμήμα που δεν είναι επιλεγμένο απορρίπτεται κατά την αποδοχή· από τα υπόλοιπα προκύπτει νέα κατάσταση, την οποία οι πύλες ελέγχου και ο αξιολογητής ελέγχουν ξανά.";
 "Neuer Auftrag" = "Νέο δελτίο εργασίας";
 "Kriterien, eines je Zeile" = "Κριτήρια, ένα ανά γραμμή";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "Αποδοχή";
 "Diff öffnen" = "Άνοιγμα διαφορών";
 "Sitzung öffnen" = "Άνοιγμα συνεδρίας";
+"Bericht öffnen" = "Άνοιγμα αναφοράς";
+"Der Auftrag hat {} nicht geschrieben." = "Το δελτίο εργασίας δεν έγραψε το {}.";
 "Zurück an den Builder …" = "Επιστροφή στον υλοποιητή…";
 "Kriterien ändern …" = "Αλλαγή κριτηρίων…";
 "Von Hand weiter" = "Χειροκίνητη συνέχεια";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "Έγκριση χωρίς τα σχόλια";
 "{},{} $" = "{},{} $";
 "Tests von {} lassen sich nicht debuggen" = "Οι δοκιμές του {} δεν μπορούν να αποσφαλματωθούν";
+"Sandbox der Gates:" = "Sandbox πυλών ελέγχου:";
+"Streng" = "Αυστηρό";
+"Gelockert" = "Χαλαρωμένο";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Οι πύλες ελέγχου εκτελούν κώδικα που έγραψε ο πράκτορας. Το «Χαλαρωμένο» επιτρέπει επιπλέον τοπικές θύρες και τερματικά, το «Ανενεργό» εκκινεί τις πύλες ελέγχου με τα δικαιώματά σας. Ένα έργο μπορεί να ορίσει άλλη τιμή στο .dango/factory.toml.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "Το «Χαλαρωμένο» επιτρέπει τοπικές θύρες και τερματικά, το «Ανενεργό» εκκινεί τις πύλες ελέγχου με τα δικαιώματά σας. Αν το έργο χαλαρώσει το sandbox, το επιβεβαιώνετε στο επόμενο δελτίο εργασίας με «Συνέχεια».";

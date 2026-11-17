@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "コストと実行時間";
 "Herkunft" = "来歴";
 "Abschnitte des Diffs" = "差分のハンク";
-"Der Diff hat noch keine Abschnitte." = "差分にはまだハンクがありません。";
+"Weitere Befehle" = "その他のコマンド";
+"Noch offen: {}" = "未到達: {}";
+"Noch nichts: {}" = "まだなし: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "選択を外したハンクは検収時に破棄されます。残りから新しい状態が作られ、ゲートとレビュアーが再度検証します。";
 "Neuer Auftrag" = "新規作業指示";
 "Kriterien, eines je Zeile" = "基準（1行に1つ）";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "検収";
 "Diff öffnen" = "差分を開く";
 "Sitzung öffnen" = "セッションを開く";
+"Bericht öffnen" = "レポートを開く";
+"Der Auftrag hat {} nicht geschrieben." = "作業指示は {} を書き込みませんでした。";
 "Zurück an den Builder …" = "ビルダーに差し戻す…";
 "Kriterien ändern …" = "基準を変更…";
 "Von Hand weiter" = "手動で続行";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "コメントなしで承認";
 "{},{} $" = "${}.{}";
 "Tests von {} lassen sich nicht debuggen" = "{} のテストはデバッグできません";
+"Sandbox der Gates:" = "ゲートのサンドボックス:";
+"Streng" = "厳格";
+"Gelockert" = "緩和";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "ゲートはエージェントが書いたコードを実行します。“緩和”ではさらにローカルポートとターミナルも許可し、“オフ”ではゲートをあなたの権限で起動します。プロジェクトは.dango/factory.tomlで別の値を設定できます。";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“緩和”ではローカルポートとターミナルを許可し、“オフ”ではゲートをあなたの権限で起動します。プロジェクトがサンドボックスを緩和した場合は、次の作業指示で“続ける”を選んで確認します。";

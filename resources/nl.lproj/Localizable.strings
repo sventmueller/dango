@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Kosten en looptijd";
 "Herkunft" = "Herkomst";
 "Abschnitte des Diffs" = "Hunks van de diff";
-"Der Diff hat noch keine Abschnitte." = "De diff heeft nog geen hunks.";
+"Weitere Befehle" = "Meer commando's";
+"Noch offen: {}" = "Nog te gaan: {}";
+"Noch nichts: {}" = "Nog niets: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Een niet-aangevinkte hunk wordt bij de acceptatie weggegooid; de rest vormt een nieuwe toestand die de gates en de reviewer opnieuw controleren.";
 "Neuer Auftrag" = "Nieuwe werkorder";
 "Kriterien, eines je Zeile" = "Criteria, één per regel";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "Accepteer";
 "Diff öffnen" = "Open diff";
 "Sitzung öffnen" = "Open sessie";
+"Bericht öffnen" = "Rapport openen";
+"Der Auftrag hat {} nicht geschrieben." = "De werkorder heeft {} niet geschreven.";
 "Zurück an den Builder …" = "Terug naar de builder…";
 "Kriterien ändern …" = "Wijzig criteria…";
 "Von Hand weiter" = "Ga handmatig verder";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "Keur goed zonder opmerkingen";
 "{},{} $" = "$ {},{}";
 "Tests von {} lassen sich nicht debuggen" = "Tests van {} kunnen niet worden gedebugd";
+"Sandbox der Gates:" = "Sandbox van gates:";
+"Streng" = "Strikt";
+"Gelockert" = "Versoepeld";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Gates voeren code uit die de agent heeft geschreven. 'Versoepeld' staat daarnaast lokale poorten en terminals toe, 'Uit' start gates met jouw rechten. Een project kan in .dango/factory.toml een andere waarde instellen.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "'Versoepeld' staat lokale poorten en terminals toe, 'Uit' start gates met jouw rechten. Versoepelt het project de sandbox, dan bevestig je dat bij de volgende werkorder met 'Ga door'.";

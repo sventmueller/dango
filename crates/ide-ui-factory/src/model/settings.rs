@@ -1,7 +1,7 @@
 //! The Leitstand's settings (E183): the user's defaults for all projects in "Einstellungen ▸ Software Factory", and the
 //! project's workflow file in "Software Factory für <Ordner>", each value with where it comes from and a way back to the
-//! default: every role with model and effort, the reviewer rule, limits, budgets per order, day and provider, gates,
-//! copying and setup, risk patterns and the files that count for the review.
+//! default: every role with model and effort, the reviewer rule, limits, budgets per order, day and provider, gates and
+//! their sandbox, copying and setup, risk patterns and the files that count for the review.
 
 use std::collections::BTreeMap;
 
@@ -12,7 +12,7 @@ use ide_factory::models::Catalog;
 use ide_factory::routing::{Agent, Capabilities, RankEntry, ReviewerRule};
 use ide_factory::station::Role;
 use ide_factory::workflow::edit::{self, EditError, EditValue};
-use ide_factory::workflow::{UserDefaults, Workflow, WorkflowError, parse};
+use ide_factory::workflow::{GateSandbox, UserDefaults, Workflow, WorkflowError, parse};
 use splat_i18n::{t, tf};
 use toml_edit::{DocumentMut, Item};
 
@@ -231,6 +231,16 @@ impl DefaultsForm {
     pub fn set_rule_proposals(&mut self, on: bool) {
         self.defaults.set_rule_proposals(on);
     }
+
+    /// How tightly the gate sandbox holds gates in projects that do not say (E187).
+    pub fn gate_sandbox(&self) -> GateSandbox {
+        self.defaults.gate_sandbox()
+    }
+
+    /// Sets how tightly the gate sandbox holds gates in projects that do not say.
+    pub fn set_gate_sandbox(&mut self, level: GateSandbox) {
+        self.defaults.set_gate_sandbox(level);
+    }
 }
 
 /// `budgets` with only its services' budgets, so tightening with it keeps them and changes nothing else.
@@ -296,6 +306,8 @@ pub enum ProjectValue {
     Tests,
     /// More lint, CI and build configuration whose change counts as relevant.
     Config,
+    /// How tightly the gate sandbox holds gates (E187).
+    GateSandbox,
 }
 
 impl ProjectValue {
@@ -313,6 +325,7 @@ impl ProjectValue {
             ProjectValue::RiskMedium,
             ProjectValue::Tests,
             ProjectValue::Config,
+            ProjectValue::GateSandbox,
         ]);
         all
     }
@@ -342,6 +355,7 @@ impl ProjectValue {
             ProjectValue::RiskMedium => vec!["risk", "medium"],
             ProjectValue::Tests => vec!["relevant", "tests"],
             ProjectValue::Config => vec!["relevant", "config"],
+            ProjectValue::GateSandbox => vec!["gates", "sandbox"],
         }
     }
 
@@ -359,6 +373,7 @@ impl ProjectValue {
             ProjectValue::RiskMedium => t("Risikoklasse mittel:").into(),
             ProjectValue::Tests => t("Tests:").into(),
             ProjectValue::Config => t("Konfiguration:").into(),
+            ProjectValue::GateSandbox => t("Sandbox der Gates:").into(),
         }
     }
 
@@ -388,6 +403,24 @@ pub fn role_title(role: Role) -> &'static str {
 /// The reviewer rule's choices, in their order: another vendor required, or preferred.
 pub fn reviewer_rules() -> [&'static str; 2] {
     [t("Anderer Hersteller Pflicht"), t("Anderer Hersteller bevorzugt")]
+}
+
+/// The word of the gate sandbox's `level`.
+pub fn gate_sandbox_words(level: GateSandbox) -> &'static str {
+    match level {
+        GateSandbox::Strict => t("Streng"),
+        GateSandbox::Relaxed => t("Gelockert"),
+        GateSandbox::Off => t("Aus"),
+    }
+}
+
+/// The choices of the menu of `value`, in their order; none for a value edited in a field.
+pub fn choices(value: ProjectValue) -> Vec<&'static str> {
+    match value {
+        ProjectValue::ReviewerRule => reviewer_rules().to_vec(),
+        ProjectValue::GateSandbox => GateSandbox::ALL.into_iter().map(gate_sandbox_words).collect(),
+        _ => Vec::new(),
+    }
 }
 
 /// The project's workflow file as the dialog "Software Factory für <Ordner>" edits it (E183).
@@ -601,7 +634,11 @@ impl ProjectFile {
     pub fn field_text(&self, value: ProjectValue) -> String {
         match value {
             ProjectValue::Role(role) => self.role(role).0.join(", "),
-            ProjectValue::ReviewerRule => reviewer_rules()[usize::from(self.reviewer_preferred().0)].to_string(),
+            ProjectValue::ReviewerRule | ProjectValue::GateSandbox => choices(value)
+                .get(self.choice(value).0)
+                .copied()
+                .unwrap_or_default()
+                .to_string(),
             ProjectValue::Limit(limit) => match self.limit(limit) {
                 (value, Origin::File) => value.to_string(),
                 (_, Origin::Default) => String::new(),
@@ -725,6 +762,64 @@ impl ProjectFile {
     /// Whether the user's default lets a reviewer of the builders' vendor review when no other is ready.
     pub fn default_reviewer_preferred(&self) -> bool {
         self.defaults.reviewer_rule() == ReviewerRule::Preferred
+    }
+
+    /// How tightly the gate sandbox holds gates and where it comes from; a level the file loosens applies once the
+    /// user confirmed the gates (E190).
+    pub fn gate_sandbox(&self) -> (GateSandbox, Origin) {
+        let own = self.own(&ProjectValue::GateSandbox.key(), Workflow::sandbox, |item| {
+            GateSandbox::of_key(item.as_str()?)
+        });
+        match own {
+            Some(level) => (level, Origin::File),
+            None => (self.defaults.gate_sandbox(), Origin::Default),
+        }
+    }
+
+    /// Writes the gate sandbox's `level`.
+    pub fn set_gate_sandbox(&mut self, level: GateSandbox) -> Result<(), Explained> {
+        let result = edit::set(
+            &self.text,
+            &ProjectValue::GateSandbox.key(),
+            EditValue::Text(level.key().into()),
+        );
+        self.edit(result)
+    }
+
+    /// The place of the menu `value`'s choice in [`choices`] and where it comes from.
+    pub fn choice(&self, value: ProjectValue) -> (usize, Origin) {
+        match value {
+            ProjectValue::GateSandbox => {
+                let (level, origin) = self.gate_sandbox();
+                (GateSandbox::ALL.iter().position(|l| *l == level).unwrap_or(0), origin)
+            }
+            _ => {
+                let (preferred, origin) = self.reviewer_preferred();
+                (usize::from(preferred), origin)
+            }
+        }
+    }
+
+    /// The place of the user's default among the choices of the menu `value`.
+    pub fn default_choice(&self, value: ProjectValue) -> usize {
+        match value {
+            ProjectValue::GateSandbox => GateSandbox::ALL
+                .iter()
+                .position(|l| *l == self.defaults.gate_sandbox())
+                .unwrap_or(0),
+            _ => usize::from(self.default_reviewer_preferred()),
+        }
+    }
+
+    /// Writes the choice at `index` of the menu `value` into the file.
+    pub fn set_choice(&mut self, value: ProjectValue, index: usize) -> Result<(), Explained> {
+        match value {
+            ProjectValue::GateSandbox => match GateSandbox::ALL.get(index) {
+                Some(level) => self.set_gate_sandbox(*level),
+                None => Ok(()),
+            },
+            _ => self.set_reviewer_preferred(index == 1),
+        }
     }
 
     fn edit(&mut self, result: Result<String, EditError>) -> Result<(), Explained> {

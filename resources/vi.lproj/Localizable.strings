@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Chi phí và thời gian chạy";
 "Herkunft" = "Nguồn gốc";
 "Abschnitte des Diffs" = "Khối thay đổi của khác biệt";
-"Der Diff hat noch keine Abschnitte." = "Khác biệt chưa có khối thay đổi nào.";
+"Weitere Befehle" = "Lệnh khác";
+"Noch offen: {}" = "Còn phía trước: {}";
+"Noch nichts: {}" = "Chưa có gì: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Khối thay đổi bị bỏ chọn sẽ bị loại bỏ khi nghiệm thu; phần còn lại tạo thành một trạng thái mới để cổng kiểm tra và người xem xét kiểm tra lại.";
 "Neuer Auftrag" = "Phiếu công việc mới";
 "Kriterien, eines je Zeile" = "Tiêu chí, mỗi dòng một tiêu chí";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "Nghiệm thu";
 "Diff öffnen" = "Mở khác biệt";
 "Sitzung öffnen" = "Mở phiên";
+"Bericht öffnen" = "Mở báo cáo";
+"Der Auftrag hat {} nicht geschrieben." = "Phiếu công việc chưa ghi {}.";
 "Zurück an den Builder …" = "Gửi lại cho người xây dựng…";
 "Kriterien ändern …" = "Thay đổi tiêu chí…";
 "Von Hand weiter" = "Tiếp tục thủ công";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "Phê duyệt không kèm nhận xét";
 "{},{} $" = "{},{} $";
 "Tests von {} lassen sich nicht debuggen" = "Không thể gỡ lỗi kiểm thử của {}";
+"Sandbox der Gates:" = "Sandbox của cổng kiểm tra:";
+"Streng" = "Nghiêm ngặt";
+"Gelockert" = "Nới lỏng";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Cổng kiểm tra chạy mã do tác nhân viết. “Nới lỏng” cho phép thêm cổng cục bộ và terminal, “Tắt” khởi động cổng kiểm tra với quyền của bạn. Dự án có thể đặt giá trị khác trong .dango/factory.toml.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Nới lỏng” cho phép cổng cục bộ và terminal, “Tắt” khởi động cổng kiểm tra với quyền của bạn. Nếu dự án nới lỏng sandbox, bạn xác nhận điều đó ở phiếu công việc tiếp theo bằng “Tiếp tục”.";

@@ -46,6 +46,19 @@ pub(super) fn targets(root: &Path) -> Vec<PathBuf> {
         .collect()
 }
 
+/// The links beside `worktree` to the folders beside `root` that exist; a sandbox that hides their folder refuses a
+/// path through them unless the link itself is readable, even with the folder it leads to readable.
+pub(super) fn links(root: &Path, worktree: &Path) -> Vec<PathBuf> {
+    let Some(holder) = worktree.parent() else {
+        return Vec::new();
+    };
+    beside(root)
+        .into_iter()
+        .filter(|(_, folder)| folder.is_dir())
+        .map(|(name, _)| holder.join(name))
+        .collect()
+}
+
 /// Links each folder beside `root` its path dependencies need into the folder that holds `worktree`; one there
 /// already counts when it leads to the same folder. What could not be linked, by name.
 pub(super) fn link(root: &Path, worktree: &Path) -> Vec<String> {
@@ -116,6 +129,8 @@ mod tests {
         std::fs::create_dir_all(base.join("data/worktrees/key/thread-x")).unwrap();
         let real = |p: &str| base.join(p).canonicalize().unwrap();
         assert_eq!(targets(&root), [real("repos/lowspeak"), real("repos/splat")]);
+        let holder = base.join("data/worktrees/key");
+        assert_eq!(links(&root, &worktree), [holder.join("lowspeak"), holder.join("splat")]);
         assert!(link(&root, &worktree).is_empty());
         assert!(link(&root, &worktree).is_empty(), "linking again finds its own links");
         assert!(worktree.join("../splat/crates/x").is_dir());

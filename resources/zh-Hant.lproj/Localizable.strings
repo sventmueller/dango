@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "費用和執行時間";
 "Herkunft" = "來源";
 "Abschnitte des Diffs" = "差異的變更區塊";
-"Der Diff hat noch keine Abschnitte." = "差異中尚無變更區塊。";
+"Weitere Befehle" = "更多指令";
+"Noch offen: {}" = "尚未進行：{}";
+"Noch nichts: {}" = "尚無：{}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "取消勾選的變更區塊會在驗收時被捨棄；其餘部分會形成新的狀態，由關卡和審查者重新檢查。";
 "Neuer Auftrag" = "新增工單";
 "Kriterien, eines je Zeile" = "標準，每行一條";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "驗收";
 "Diff öffnen" = "打開差異";
 "Sitzung öffnen" = "打開工作階段";
+"Bericht öffnen" = "打開報告";
+"Der Auftrag hat {} nicht geschrieben." = "工單沒有寫入 {}。";
 "Zurück an den Builder …" = "退回給建構者⋯";
 "Kriterien ändern …" = "更改標準⋯";
 "Von Hand weiter" = "手動繼續";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "不含註解直接核准";
 "{},{} $" = "${}.{}";
 "Tests von {} lassen sich nicht debuggen" = "無法除錯 {} 的測試";
+"Sandbox der Gates:" = "關卡沙盒：";
+"Streng" = "嚴格";
+"Gelockert" = "放寬";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "關卡會執行代理程式撰寫的程式碼。「放寬」另外允許本機連接埠和終端機，「關閉」以你的權限啟動關卡。專案可以在 .dango/factory.toml 中設定其他值。";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "「放寬」允許本機連接埠和終端機，「關閉」以你的權限啟動關卡。如果專案放寬了沙盒，你要在下一個工單上以「繼續」確認。";

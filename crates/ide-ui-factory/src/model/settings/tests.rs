@@ -177,3 +177,33 @@ fn dollars_read_with_a_comma_or_a_point() {
     assert_eq!(read_dollars(" "), Ok(None));
     assert_eq!(read_dollars("x"), Err(NotAnAmount));
 }
+
+#[test]
+fn the_gate_sandbox_comes_from_the_users_default_until_the_file_sets_it() {
+    let mut defaults = UserDefaults::default();
+    defaults.set_gate_sandbox(GateSandbox::Relaxed);
+    let mut file = ProjectFile::new(Some("[gates]\nnetwork = []\n".into()), false, defaults);
+    assert_eq!(file.gate_sandbox(), (GateSandbox::Relaxed, Origin::Default));
+    assert_eq!(file.default_choice(ProjectValue::GateSandbox), 1);
+    assert_eq!(file.field_text(ProjectValue::GateSandbox), t("Gelockert"));
+    file.set_choice(ProjectValue::GateSandbox, 2).unwrap();
+    assert_eq!(file.gate_sandbox(), (GateSandbox::Off, Origin::File));
+    assert!(file.text().contains("sandbox = \"off\""), "{}", file.text());
+    assert!(file.text().contains("network = []"), "{}", file.text());
+    file.reset(ProjectValue::GateSandbox).unwrap();
+    assert_eq!(file.gate_sandbox(), (GateSandbox::Relaxed, Origin::Default));
+    let broken = ProjectFile::new(
+        Some("[gates]\nsandbox = \"off\"\n[limits]\nturn_minutes = \"x\"\n".into()),
+        false,
+        UserDefaults::default(),
+    );
+    assert_eq!(broken.gate_sandbox(), (GateSandbox::Off, Origin::File));
+}
+
+#[test]
+fn the_defaults_carry_the_gate_sandbox() {
+    let mut form = DefaultsForm::default();
+    assert_eq!(form.gate_sandbox(), GateSandbox::Strict);
+    form.set_gate_sandbox(GateSandbox::Off);
+    assert_eq!(form.defaults().gate_sandbox(), GateSandbox::Off);
+}

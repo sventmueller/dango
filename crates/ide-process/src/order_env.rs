@@ -57,7 +57,8 @@ pub fn is_secret(name: &str) -> bool {
 
 /// The environment of an order's sessions and gates, from the login shell's `login`: the variables of [`KEPT`], every
 /// `LC_*` and those named in `extra`, such as a project's build cache, without the ones [`is_secret`] names; then
-/// `GIT_CONFIG_*` entries that give git an empty `credential.helper`, which drops every helper configured before.
+/// `GIT_CONFIG_*` entries that give git an empty `credential.helper`, which drops every helper configured before, and
+/// cargo's build folder in the workspace.
 ///
 /// ```
 /// use ide_process::order_env::for_orders;
@@ -78,14 +79,16 @@ pub fn for_orders(login: &[(String, String)], extra: &[&str]) -> Vec<(String, St
         .filter(|(name, _)| !is_secret(name))
         .cloned()
         .collect();
-    for (name, value) in [
+    let own = [
         ("GIT_CONFIG_COUNT", "1"),
         ("GIT_CONFIG_KEY_0", "credential.helper"),
         ("GIT_CONFIG_VALUE_0", ""),
         ("GIT_TERMINAL_PROMPT", "0"),
-    ] {
-        env.push((name.to_string(), value.to_string()));
-    }
+        // The user's cargo configuration may put it outside the worktree, where a gate's sandbox refuses to write.
+        ("CARGO_BUILD_BUILD_DIR", "{workspace-root}/target"),
+    ];
+    env.retain(|(name, _)| !own.iter().any(|(set, _)| set == name));
+    env.extend(own.map(|(name, value)| (name.to_string(), value.to_string())));
     env
 }
 
@@ -156,6 +159,22 @@ mod tests {
         );
         assert_eq!(get("GIT_CONFIG_KEY_0"), ["credential.helper"]);
         assert_eq!(get("GIT_CONFIG_VALUE_0"), [""]);
+    }
+
+    #[test]
+    fn cargo_builds_in_the_workspace_whatever_the_user_configured() {
+        let mut login = login();
+        login.push((
+            "CARGO_BUILD_BUILD_DIR".into(),
+            "/Volumes/Scratch/{workspace-path-hash}".into(),
+        ));
+        let env = for_orders(&login, &["CARGO_BUILD_BUILD_DIR"]);
+        let dirs: Vec<&str> = env
+            .iter()
+            .filter(|(k, _)| k == "CARGO_BUILD_BUILD_DIR")
+            .map(|(_, v)| v.as_str())
+            .collect();
+        assert_eq!(dirs, ["{workspace-root}/target"]);
     }
 
     #[test]

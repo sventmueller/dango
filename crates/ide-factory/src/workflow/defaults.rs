@@ -1,11 +1,11 @@
 //! The user's defaults for all projects (E183, Einstellungen ▸ Software Factory): ranked lists per role, the reviewer rule,
-//! limits and budgets, and how orders behave after a restart and on battery. The app stores them per Mac (E113).
+//! limits and budgets, how orders behave after a restart and on battery, and the gate sandbox's level. The app stores them per Mac (E113).
 
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::WorktreeLocation;
+use super::{GateSandbox, WorktreeLocation};
 use crate::budget::Budgets;
 use crate::limits::Limits;
 use crate::routing::{Agent, RankEntry, ReviewerRule};
@@ -23,6 +23,7 @@ pub struct UserDefaults {
     awake_on_battery: bool,
     location: WorktreeLocation,
     rule_proposals: bool,
+    gate_sandbox: GateSandbox,
 }
 
 impl Default for UserDefaults {
@@ -42,6 +43,7 @@ impl Default for UserDefaults {
             awake_on_battery: false,
             location: WorktreeLocation::DataFolder,
             rule_proposals: true,
+            gate_sandbox: GateSandbox::Strict,
         }
     }
 }
@@ -126,5 +128,15 @@ impl UserDefaults {
     /// Sets whether a scout proposes rule changes.
     pub fn set_rule_proposals(&mut self, on: bool) {
         self.rule_proposals = on;
+    }
+
+    /// How tightly the gate sandbox holds gates unless the project says otherwise (E187).
+    pub fn gate_sandbox(&self) -> GateSandbox {
+        self.gate_sandbox
+    }
+
+    /// Sets how tightly the gate sandbox holds gates.
+    pub fn set_gate_sandbox(&mut self, level: GateSandbox) {
+        self.gate_sandbox = level;
     }
 }

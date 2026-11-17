@@ -2042,7 +2042,9 @@
 "Kosten und Laufzeit" = "Cost and Runtime";
 "Herkunft" = "Provenance";
 "Abschnitte des Diffs" = "Hunks of the Diff";
-"Der Diff hat noch keine Abschnitte." = "The diff has no hunks yet.";
+"Weitere Befehle" = "More Commands";
+"Noch offen: {}" = "Still ahead: {}";
+"Noch nichts: {}" = "Nothing yet: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "An unchecked hunk is discarded on acceptance; the rest becomes a new state that gates and the reviewer check again.";
 "Neuer Auftrag" = "New Work Order";
 "Kriterien, eines je Zeile" = "Criteria, one per line";
@@ -2079,6 +2081,8 @@
 "Abnehmen" = "Accept";
 "Diff öffnen" = "Open Diff";
 "Sitzung öffnen" = "Open Session";
+"Bericht öffnen" = "Open Report";
+"Der Auftrag hat {} nicht geschrieben." = "The work order did not write {}.";
 "Zurück an den Builder …" = "Back to the Builder…";
 "Kriterien ändern …" = "Change Criteria…";
 "Von Hand weiter" = "Continue by Hand";
@@ -2397,3 +2401,8 @@
 "Ohne Kommentare freigeben" = "Approve Without Comments";
 "{},{} $" = "${}.{}";
 "Tests von {} lassen sich nicht debuggen" = "Tests of {} cannot be debugged";
+"Sandbox der Gates:" = "Gate Sandbox:";
+"Streng" = "Strict";
+"Gelockert" = "Relaxed";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Gates run code the agent wrote. “Relaxed” also allows local ports and terminals, “Off” starts gates with your rights. A project can set another value in .dango/factory.toml.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Relaxed” allows local ports and terminals, “Off” starts gates with your rights. If the project relaxes the sandbox, you confirm it on the next work order with “Continue”.";

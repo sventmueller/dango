@@ -350,3 +350,43 @@ fn the_pictures_folder_is_part_of_the_confirmed_gate_set() {
     assert_ne!(changed.gate_hash(), first.gate_hash());
     assert!(!changed.gates_confirmed());
 }
+
+#[test]
+fn a_relaxed_or_no_gate_sandbox_needs_a_new_confirmation_and_the_strict_one_keeps_the_hash() {
+    let defaults = UserDefaults::default();
+    let first = Rules::new(&defaults, Some(&parsed(FULL)), &Confirmations::default());
+    assert_eq!(first.sandbox(), GateSandbox::Strict);
+    let confirmed = Confirmations::new([first.gate_hash().to_string()]);
+    let strict = FULL.replace("[gates]\n", "[gates]\nsandbox = \"strict\"\n");
+    assert!(Rules::new(&defaults, Some(&parsed(&strict)), &confirmed).gates_confirmed());
+    let relaxed = FULL.replace("[gates]\n", "[gates]\nsandbox = \"relaxed\"\n");
+    let changed = Rules::new(&defaults, Some(&parsed(&relaxed)), &confirmed);
+    assert_eq!(changed.sandbox(), GateSandbox::Relaxed);
+    assert!(!changed.gates_confirmed());
+    let off = FULL.replace("[gates]\n", "[gates]\nsandbox = \"off\"\n");
+    let without = Rules::new(&defaults, Some(&parsed(&off)), &confirmed);
+    assert_eq!(without.sandbox(), GateSandbox::Off);
+    assert!(!without.gates_confirmed() && without.gate_hash() != changed.gate_hash());
+    let wrong = FULL.replace("[gates]\n", "[gates]\nsandbox = \"loose\"\n");
+    assert!(!parse(&wrong).unwrap_err().is_empty());
+}
+
+#[test]
+fn the_users_gate_sandbox_applies_without_confirmation_and_the_file_overrides_it() {
+    let strict = UserDefaults::default();
+    let first = Rules::new(&strict, Some(&parsed(FULL)), &Confirmations::default());
+    let confirmed = Confirmations::new([first.gate_hash().to_string()]);
+    let mut off = UserDefaults::default();
+    off.set_gate_sandbox(GateSandbox::Off);
+    let by_default = Rules::new(&off, Some(&parsed(FULL)), &confirmed);
+    assert_eq!(by_default.sandbox(), GateSandbox::Off);
+    assert!(
+        by_default.gates_confirmed(),
+        "the user's own default needs no confirmation"
+    );
+    let tightened = FULL.replace("[gates]\n", "[gates]\nsandbox = \"strict\"\n");
+    assert_eq!(
+        Rules::new(&off, Some(&parsed(&tightened)), &confirmed).sandbox(),
+        GateSandbox::Strict
+    );
+}

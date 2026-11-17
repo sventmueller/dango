@@ -42,6 +42,10 @@ pub const TOOL_FOLDERS: &[&str] = &[
     "Library/Developer/CommandLineTools",
 ];
 
+/// The files below the home folder a gate may read: git's default global ignore list, which cargo reads when it lists
+/// the files of a path dependency in a repository, and fails on when it cannot.
+pub const TOOL_FILES: &[&str] = &[".config/git/ignore"];
+
 /// The files below the home folder that hold credentials, which a gate never reads, also inside [`TOOL_FOLDERS`].
 pub const CREDENTIAL_FILES: &[&str] = &[
     ".cargo/credentials",
@@ -144,6 +148,7 @@ pub struct Profile {
     /// The Unix sockets that may be reached; `None` for all of them.
     sockets: Option<Vec<PathBuf>>,
     loopback: bool,
+    terminals: bool,
 }
 
 /// The rules a gate's profile adds to the writing and network rules.
@@ -155,6 +160,8 @@ struct Confined {
     readable: Vec<PathBuf>,
     /// Files and folders that stay unreadable even inside readable folders.
     unreadable: Vec<PathBuf>,
+    /// Links below them that a path to a readable folder passes through.
+    links: Vec<PathBuf>,
     /// The `.git` of each folder the gate writes in, which stays unwritable.
     pointers: Vec<PathBuf>,
     /// The run's own temporary folder, the one folder where the gate makes and reaches Unix sockets.
@@ -171,6 +178,7 @@ impl Profile {
             confined: None,
             sockets: None,
             loopback: false,
+            terminals: false,
         }
     }
 
@@ -185,7 +193,14 @@ impl Profile {
         let temp = resolved(temp);
         let mut hidden = vec![home.clone(), PathBuf::from("/Users"), PathBuf::from("/Volumes")];
         hidden.extend(user_folder());
-        let mut readable: Vec<PathBuf> = TOOL_FOLDERS.iter().map(|folder| home.join(folder)).collect();
+        let mut readable: Vec<PathBuf> = TOOL_FOLDERS
+            .iter()
+            .chain(TOOL_FILES)
+            .map(|path| home.join(path))
+            .collect();
+        // Without the user's cache of where the developer tools lie, every call of Apple's git, cc or ld through xcrun
+        // asks xcodebuild, a few seconds each; read-only, so no gate can point a tool elsewhere for the user.
+        readable.extend(user_temp().map(|temp| temp.join("xcrun_db")));
         let mut unreadable: Vec<PathBuf> = CREDENTIAL_FILES.iter().map(|file| home.join(file)).collect();
         for prefix in HOMEBREW_PREFIXES {
             let etc = resolved(&Path::new(prefix).join("etc"));
@@ -205,11 +220,13 @@ impl Profile {
                 hidden,
                 readable,
                 unreadable,
+                links: Vec::new(),
                 pointers,
                 temp,
             }),
             sockets: Some(Vec::new()),
             loopback: false,
+            terminals: false,
         }
     }
 
@@ -227,11 +244,33 @@ impl Profile {
         self
     }
 
+    /// The same with new pseudo-terminals, for tests that run a program in a terminal of their own.
+    #[must_use]
+    pub fn terminals(mut self) -> Profile {
+        self.terminals = true;
+        self
+    }
+
     /// The same with `paths` below a hidden folder readable too, such as path dependencies beside the project.
     #[must_use]
     pub fn readable(mut self, paths: &[PathBuf]) -> Profile {
         if let Some(confined) = self.confined.as_mut() {
             confined.readable.extend(paths.iter().map(|path| resolved(path)));
+        }
+        self
+    }
+
+    /// The same with the links at `paths` below a hidden folder followable, such as those beside a worktree to its
+    /// path dependencies: the sandbox refuses a path through a link it may not read, whatever the link leads to.
+    #[must_use]
+    pub fn links(mut self, paths: &[PathBuf]) -> Profile {
+        if let Some(confined) = self.confined.as_mut() {
+            confined
+                .links
+                .extend(paths.iter().map(|path| match (path.parent(), path.file_name()) {
+                    (Some(parent), Some(name)) => resolved(parent).join(name),
+                    _ => path.clone(),
+                }));
         }
         self
     }
@@ -276,6 +315,9 @@ impl Profile {
              (allow file-write* {} (literal \"/dev/null\") (regex #\"^/dev/tty\") (regex #\"^/dev/fd/\"))\n",
             folders.join(" ")
         ));
+        if self.terminals {
+            text.push_str("(allow file-read* file-write* (literal \"/dev/ptmx\"))\n");
+        }
         if let Some(confined) = &self.confined {
             text.push_str(&confined.closed_rules(self.network));
         }
@@ -333,7 +375,8 @@ impl Confined {
             .filter(|path| below_hidden(path))
             .collect();
         let mut ancestors: Vec<PathBuf> = self.hidden.clone();
-        for path in &open {
+        ancestors.extend(self.links.iter().filter(|link| below_hidden(link)).cloned());
+        for path in open.iter().copied().chain(&self.links) {
             let mut at = path.parent();
             while let Some(folder) = at.filter(|folder| below_hidden(folder)) {
                 ancestors.push(folder.to_path_buf());
@@ -397,6 +440,11 @@ fn subpath(path: &Path) -> String {
 
 /// The user's own folder below `/var/folders`, which holds their temporary files and caches, resolved.
 fn user_folder() -> Option<PathBuf> {
+    user_temp()?.parent().map(Path::to_path_buf)
+}
+
+/// The user's temporary folder below `/var/folders`, resolved.
+fn user_temp() -> Option<PathBuf> {
     let mut buffer = [0u8; 1024];
     // SAFETY: confstr writes at most `buffer.len()` bytes, the terminating NUL included, into the buffer it is handed,
     // which lives until the call returned.
@@ -404,9 +452,8 @@ fn user_folder() -> Option<PathBuf> {
     if length == 0 || length > buffer.len() {
         return None;
     }
-    let temp = Path::new(OsStr::from_bytes(&buffer[..length - 1]));
-    let folder = resolved(temp.parent()?);
-    folder.starts_with("/private/var/folders/").then_some(folder)
+    let temp = resolved(Path::new(OsStr::from_bytes(&buffer[..length - 1])));
+    temp.starts_with("/private/var/folders/").then_some(temp)
 }
 
 /// `path` inside a profile's string.
@@ -484,10 +531,15 @@ mod tests {
             );
         }
         assert!(profile.contains("(subpath \"/Users/a/.cargo\")"), "{profile}");
+        assert!(
+            profile.contains("(subpath \"/Users/a/.config/git/ignore\")"),
+            "{profile}"
+        );
         assert!(profile.contains("(subpath \"/Users/a/Repos/splat\")"), "{profile}");
         assert!(
             profile.contains(
-                "(allow file-read-metadata (literal \"/Users\") (literal \"/Users/a\") (literal \"/Users/a/.local\")"
+                "(allow file-read-metadata (literal \"/Users\") (literal \"/Users/a\") (literal \"/Users/a/.config\") \
+                 (literal \"/Users/a/.config/git\") (literal \"/Users/a/.local\")"
             ),
             "{profile}"
         );
@@ -687,6 +739,23 @@ mod tests {
             sandboxed(&profile, &own),
             "a socket the gate made in its temporary folder"
         );
+    }
+
+    #[test]
+    fn a_relaxed_gate_opens_a_terminal_and_a_local_port_and_a_strict_one_neither() {
+        let scratch = ide_core::testing::scratch("gate-relaxed");
+        let (work, temp, home) = (scratch.join("work"), scratch.join("temp"), scratch.join("home"));
+        for folder in [&work, &temp, &home] {
+            std::fs::create_dir_all(folder).unwrap();
+        }
+        let strict = Profile::gate(std::slice::from_ref(&work), &temp, &home);
+        let relaxed = strict.clone().loopback().terminals();
+        let terminal = "/usr/bin/script -q /dev/null /usr/bin/true < /dev/null";
+        let port = "/usr/bin/perl -MIO::Socket::INET -e '$l = IO::Socket::INET->new(Listen => 1, \
+                    LocalAddr => \"127.0.0.1\", LocalPort => 0) or exit 3; \
+                    IO::Socket::INET->new(PeerAddr => \"127.0.0.1\", PeerPort => $l->sockport) or exit 4'";
+        assert!(!sandboxed(&strict, terminal) && !sandboxed(&strict, port));
+        assert!(sandboxed(&relaxed, terminal) && sandboxed(&relaxed, port));
     }
 
     #[test]

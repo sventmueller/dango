@@ -10,10 +10,11 @@ use std::time::Duration;
 
 use ide_factory::options::NewOrder;
 use ide_factory::routing::{Agent, AgentStatus};
+use ide_factory::workflow::GateSandbox;
 use ide_factory::{Condition, OrderId, Role, WaitReason};
 use ide_session::{End, Script, ScriptTurn, Step};
 use ide_ui_factory::model::detail::Command as OrderCommand;
-use ide_ui_factory::model::settings::{Origin, ProjectValue, role_title};
+use ide_ui_factory::model::settings::{Origin, ProjectValue, gate_sandbox_words, role_title};
 use ide_ui_factory::selftest::ProjectRowSeen;
 use objc2::rc::Retained;
 
@@ -158,6 +159,13 @@ fn origins(root: PathBuf, controller: &Retained<WindowController>) {
             .all(|r| r.is_some_and(|r| r.origin == default && !r.resettable)),
         format!("{planner:?}, {rounds:?}"),
     );
+    let sandbox = row(&rows, ProjectValue::GateSandbox);
+    let strict = splat_i18n::tf("Vorgabe ({})", &[gate_sandbox_words(GateSandbox::Strict)]);
+    check(
+        "the gate sandbox's menu shows the user's default level while the file sets none",
+        sandbox.is_some_and(|r| r.origin == default && !r.resettable && r.value == strict),
+        format!("{sandbox:?}"),
+    );
     let high = row(&rows, ProjectValue::RiskHigh).cloned();
     check(
         "the risk pattern shows in an editable row with its origin",
@@ -284,9 +292,22 @@ fn objection_tab(root: PathBuf, id: OrderId, controller: &Retained<WindowControl
                 window.displayIfNeeded();
                 snapshot(&window, "leitstand-gaps-objection");
             }
+            narrow_sidebar(&controller);
             overrule(root, id);
         },
     );
+}
+
+/// An order's tab lets the sidebar beside it be dragged to its narrowest and back.
+fn narrow_sidebar(controller: &WindowController) {
+    let before = controller.inspect().sidebar_width;
+    let dragged = controller.drag_sidebar(0.0);
+    check(
+        "with an order's tab open the sidebar still drags to its narrowest",
+        dragged.is_some_and(|(width, min)| (width - min).abs() < 1.0),
+        format!("{dragged:?}"),
+    );
+    controller.drag_sidebar(before);
 }
 
 /// "Weiter" overrules the objection; the builder's next turn carries the order on to acceptance.

@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "التكلفة ومدة التشغيل";
 "Herkunft" = "المنشأ";
 "Abschnitte des Diffs" = "مقاطع الفروقات";
-"Der Diff hat noch keine Abschnitte." = "لا تحتوي الفروقات على مقاطع بعد.";
+"Weitere Befehle" = "أوامر إضافية";
+"Noch offen: {}" = "لم يُنجز بعد: {}";
+"Noch nichts: {}" = "لا شيء بعد: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "يُتجاهَل المقطع غير المحدد عند القبول؛ وتنشأ من الباقي حالة جديدة تفحصها البوابات والمراجِع مجددًا.";
 "Neuer Auftrag" = "أمر عمل جديد";
 "Kriterien, eines je Zeile" = "المعايير، معيار في كل سطر";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "قبول";
 "Diff öffnen" = "فتح الفروقات";
 "Sitzung öffnen" = "فتح الجلسة";
+"Bericht öffnen" = "فتح التقرير";
+"Der Auftrag hat {} nicht geschrieben." = "لم يكتب أمر العمل {}.";
 "Zurück an den Builder …" = "إعادة إلى المنفّذ…";
 "Kriterien ändern …" = "تغيير المعايير…";
 "Von Hand weiter" = "متابعة يدويًا";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "اعتماد دون التعليقات";
 "{},{} $" = "{}.{} $";
 "Tests von {} lassen sich nicht debuggen" = "لا يمكن تصحيح اختبارات {}";
+"Sandbox der Gates:" = "البيئة المعزولة للبوابات:";
+"Streng" = "صارم";
+"Gelockert" = "مخفف";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "تشغّل البوابات شيفرة كتبها الوكيل. يسمح “مخفف” إضافةً إلى ذلك بالمنافذ المحلية والوحدات الطرفية، ويشغّل “متوقف” البوابات بصلاحياتك. يمكن للمشروع تعيين قيمة أخرى في ‎.dango/factory.toml.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "يسمح “مخفف” بالمنافذ المحلية والوحدات الطرفية، ويشغّل “متوقف” البوابات بصلاحياتك. إذا خفّف المشروع البيئة المعزولة، فإنك تؤكد ذلك في أمر العمل التالي عبر “متابعة”.";

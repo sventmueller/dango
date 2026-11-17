@@ -1,7 +1,7 @@
 //! The Software Factory tab (Einstellungen ▸ Software Factory, E183): the user's defaults for the Leitstand in every project. It offers
 //! the ranked list of every role (planner, builder, reviewer, scout) with model and effort per entry, the reviewer
-//! rule, the limits, the budgets per order, per day and per provider, and how orders behave after a restart and on
-//! battery; a project's `.dango/factory.toml` can only tighten them (E190). The values are stored per Mac (E113)
+//! rule, the limits, the budgets per order, per day and per provider, how orders behave after a restart and on
+//! battery, and the gate sandbox's level; a project's `.dango/factory.toml` can only tighten them (E190). The values are stored per Mac (E113)
 //! through the Leitstand's host.
 
 use std::cell::{Cell, OnceCell, RefCell};
@@ -9,10 +9,11 @@ use std::cell::{Cell, OnceCell, RefCell};
 use ide_factory::models::Catalog;
 use ide_factory::routing::Agent;
 use ide_factory::station::Role;
+use ide_factory::workflow::GateSandbox;
 use ide_ui_factory::model::ranks;
 use ide_ui_factory::model::settings::{
-    AGENTS, DefaultsForm, LIMITS, PROVIDERS, agent_name, api_service, limit_title, provider_title, read_dollars,
-    reviewer_rules, takes,
+    AGENTS, DefaultsForm, LIMITS, PROVIDERS, agent_name, api_service, gate_sandbox_words, limit_title, provider_title,
+    read_dollars, reviewer_rules, takes,
 };
 use ide_ui_factory::model::words;
 use objc2::rc::Retained;
@@ -59,6 +60,7 @@ struct OrdersUi {
     resume: Retained<NSButton>,
     battery: Retained<NSButton>,
     proposals: Retained<NSButton>,
+    sandbox: Retained<NSPopUpButton>,
     problem: Retained<NSTextField>,
 }
 
@@ -198,6 +200,15 @@ define_class!(
                 if let Some(field) = sender.and_then(|s| s.downcast_ref::<NSTextField>()) {
                     self.value_typed(field);
                 }
+            });
+        }
+
+        #[unsafe(method(ideOrdersSandbox:))]
+        fn sandbox(&self, _sender: Option<&AnyObject>) {
+            guarded((), || {
+                let index = usize::try_from(self.ui().sandbox.indexOfSelectedItem()).unwrap_or(0);
+                let level = GateSandbox::ALL.get(index).copied().unwrap_or(GateSandbox::Strict);
+                self.change(|form| form.set_gate_sandbox(level));
             });
         }
 
@@ -354,6 +365,11 @@ impl OrdersSettings {
             me,
             t("Nach gescheiterten Aufträgen Regeln für AGENTS.md oder CLAUDE.md vorschlagen"),
         );
+        let sandbox = NSPopUpButton::new(mtm);
+        for level in GateSandbox::ALL {
+            sandbox.addItemWithTitle(&ns(gate_sandbox_words(level)));
+        }
+        set_action(&sandbox, me, sel!(ideOrdersSandbox:));
         let problem = form::problem(mtm);
         let mut views = roles.views;
         views.extend([
@@ -373,6 +389,11 @@ impl OrdersSettings {
                 mtm,
                 t("Ein Späher fasst wiederkehrende Befunde zusammen; sein Vorschlag ist ein eigener Auftrag, der auf deine Freigabe und Abnahme wartet."),
             ),
+            Retained::into_super(form::grid(mtm, &[Row::new(mtm, t("Sandbox der Gates:"), &sandbox)])),
+            form::note(
+                mtm,
+                t("Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen."),
+            ),
             Retained::into_super(Retained::into_super(problem.clone())),
         ]);
         let content = form::stack(mtm, &views);
@@ -389,6 +410,7 @@ impl OrdersSettings {
             resume,
             battery,
             proposals,
+            sandbox,
             problem,
         }
     }
@@ -422,6 +444,11 @@ impl OrdersSettings {
         ui.resume.setState(state(form.resume_after_restart()));
         ui.battery.setState(state(form.awake_on_battery()));
         ui.proposals.setState(state(form.rule_proposals()));
+        let level = GateSandbox::ALL
+            .iter()
+            .position(|l| *l == form.gate_sandbox())
+            .unwrap_or(0);
+        ui.sandbox.selectItemAtIndex(isize::try_from(level).unwrap_or(0));
         drop(form);
         self.show_entry();
     }

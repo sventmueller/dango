@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "비용 및 실행 시간";
 "Herkunft" = "출처";
 "Abschnitte des Diffs" = "차이점의 헝크";
-"Der Diff hat noch keine Abschnitte." = "차이점에 아직 헝크가 없습니다.";
+"Weitere Befehle" = "추가 명령";
+"Noch offen: {}" = "남은 단계: {}";
+"Noch nichts: {}" = "아직 없음: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "선택 해제한 헝크는 검수 시 폐기되며, 나머지로 새로운 상태가 만들어져 게이트와 검토자가 다시 검사합니다.";
 "Neuer Auftrag" = "새로운 작업 주문";
 "Kriterien, eines je Zeile" = "기준(한 줄에 하나씩)";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "검수 완료";
 "Diff öffnen" = "차이점 열기";
 "Sitzung öffnen" = "세션 열기";
+"Bericht öffnen" = "보고서 열기";
+"Der Auftrag hat {} nicht geschrieben." = "작업 주문이 {}을(를) 작성하지 않았습니다.";
 "Zurück an den Builder …" = "빌더에게 돌려보내기…";
 "Kriterien ändern …" = "기준 변경…";
 "Von Hand weiter" = "수동으로 계속";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "댓글 없이 승인";
 "{},{} $" = "${}.{}";
 "Tests von {} lassen sich nicht debuggen" = "{} 테스트는 디버그할 수 없습니다";
+"Sandbox der Gates:" = "게이트 샌드박스:";
+"Streng" = "엄격";
+"Gelockert" = "완화";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "게이트는 에이전트가 작성한 코드를 실행합니다. ‘완화’는 로컬 포트와 터미널도 허용하고, ‘끔’은 사용자 권한으로 게이트를 시작합니다. 프로젝트는 .dango/factory.toml에서 다른 값을 설정할 수 있습니다.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "‘완화’는 로컬 포트와 터미널을 허용하고, ‘끔’은 사용자 권한으로 게이트를 시작합니다. 프로젝트가 샌드박스를 완화하면 다음 작업 주문에서 ‘계속’으로 확인합니다.";

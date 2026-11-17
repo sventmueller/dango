@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Costi e durata";
 "Herkunft" = "Provenienza";
 "Abschnitte des Diffs" = "Blocchi del diff";
-"Der Diff hat noch keine Abschnitte." = "Il diff non ha ancora blocchi.";
+"Weitere Befehle" = "Altri comandi";
+"Noch offen: {}" = "Ancora da fare: {}";
+"Noch nichts: {}" = "Ancora niente: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Un blocco deselezionato viene scartato all’accettazione; il resto diventa un nuovo stato che gate e revisore verificano di nuovo.";
 "Neuer Auftrag" = "Nuovo ordine di lavoro";
 "Kriterien, eines je Zeile" = "Criteri, uno per riga";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "Accetta";
 "Diff öffnen" = "Apri diff";
 "Sitzung öffnen" = "Apri sessione";
+"Bericht öffnen" = "Apri report";
+"Der Auftrag hat {} nicht geschrieben." = "L’ordine di lavoro non ha scritto {}.";
 "Zurück an den Builder …" = "Restituisci al builder…";
 "Kriterien ändern …" = "Modifica criteri…";
 "Von Hand weiter" = "Continua a mano";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "Approva senza commenti";
 "{},{} $" = "{},{} $";
 "Tests von {} lassen sich nicht debuggen" = "Non è possibile eseguire il debug dei test di {}";
+"Sandbox der Gates:" = "Sandbox dei gate:";
+"Streng" = "Rigoroso";
+"Gelockert" = "Allentato";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "I gate eseguono codice scritto dall’agente. “Allentato” consente in più porte locali e terminali, “Disattivato” avvia i gate con i tuoi permessi. Un progetto può impostare un altro valore in .dango/factory.toml.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Allentato” consente porte locali e terminali, “Disattivato” avvia i gate con i tuoi permessi. Se il progetto allenta la sandbox, lo confermi al prossimo ordine di lavoro con “Continua”.";

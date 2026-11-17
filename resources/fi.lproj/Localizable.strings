@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Kustannukset ja kesto";
 "Herkunft" = "Alkuperä";
 "Abschnitte des Diffs" = "Erojen lohkot";
-"Der Diff hat noch keine Abschnitte." = "Eroissa ei ole vielä lohkoja.";
+"Weitere Befehle" = "Lisää komentoja";
+"Noch offen: {}" = "Vielä edessä: {}";
+"Noch nichts: {}" = "Ei vielä mitään: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Valitsematta jätetty lohko hylätään vastaanotossa; lopuista syntyy uusi tila, jonka laatuportit ja katselmoija tarkistavat uudelleen.";
 "Neuer Auftrag" = "Uusi työtilaus";
 "Kriterien, eines je Zeile" = "Kriteerit, yksi riviä kohti";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "Ota vastaan";
 "Diff öffnen" = "Avaa erot";
 "Sitzung öffnen" = "Avaa istunto";
+"Bericht öffnen" = "Avaa raportti";
+"Der Auftrag hat {} nicht geschrieben." = "Työtilaus ei kirjoittanut tiedostoa {}.";
 "Zurück an den Builder …" = "Takaisin rakentajalle…";
 "Kriterien ändern …" = "Muuta kriteerejä…";
 "Von Hand weiter" = "Jatka käsin";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "Hyväksy ilman kommentteja";
 "{},{} $" = "{},{} $";
 "Tests von {} lassen sich nicht debuggen" = "Työkalun {} testien virheenjäljitys ei ole mahdollista";
+"Sandbox der Gates:" = "Laatuporttien hiekkalaatikko:";
+"Streng" = "Tiukka";
+"Gelockert" = "Väljä";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Laatuportit ajavat koodia, jonka agentti on kirjoittanut. ”Väljä” sallii lisäksi paikalliset portit ja päätteet, ”Pois” käynnistää laatuportit sinun oikeuksillasi. Projekti voi asettaa toisen arvon tiedostossa .dango/factory.toml.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "”Väljä” sallii paikalliset portit ja päätteet, ”Pois” käynnistää laatuportit sinun oikeuksillasi. Jos projekti väljentää hiekkalaatikkoa, vahvistat sen seuraavassa työtilauksessa valinnalla ”Jatka”.";

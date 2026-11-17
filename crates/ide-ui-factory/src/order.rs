@@ -1,5 +1,5 @@
-//! The tab of one order (E175): its condition and buttons G1, G2, back to the builder, change criteria, by hand,
-//! abort; the specification with inline comments while it waits for G1 (E178); the request that waits for the user as
+//! The tab of one order (E175): its condition, the next step with the commands beside it and every command in a
+//! pull-down; the specification with inline comments while it waits for G1 (E178); the request that waits for the user as
 //! a card it answers without the AI tab (F72); its goal and criteria;
 //! the timeline from the log; the evidence with the deviations first; and the diff's sections, each of which G2 can
 //! reject (C55).
@@ -14,9 +14,11 @@ use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSBox, NSButton, NSColor, NSControlStateValueOff, NSControlStateValueOn, NSStackView, NSTextField, NSView,
+    NSBox, NSButton, NSColor, NSControlStateValueOff, NSControlStateValueOn, NSLayoutConstraintOrientation, NSMenuItem,
+    NSPopUpButton, NSStackView, NSStackViewVisibilityPriorityDetachOnlyIfNecessary,
+    NSStackViewVisibilityPriorityMustHold, NSTextField, NSView,
 };
-use objc2_foundation::NSObjectProtocol;
+use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
 use crate::actions::Target;
@@ -25,7 +27,7 @@ use crate::model::detail::{AcceptBlock, Command, Detail};
 use crate::ui;
 use ide_ui_common::style::space;
 
-/// How wide the tab's text wraps.
+/// How wide the tab's text wraps before the tab knows its width.
 const WIDTH: f64 = 640.0;
 
 /// How tall the specification's view is at G1: its text and comments scroll inside it.
@@ -52,13 +54,21 @@ pub(crate) struct OrderIvars {
     rejected: RefCell<BTreeSet<HunkId>>,
     /// The specification the G1 view shows, which a new one replaces.
     spec: RefCell<Option<String>>,
+    /// The width the labels wrap at, from the tab's width.
+    wrap: Cell<f64>,
     ui: OnceCell<OrderUi>,
 }
 
 struct OrderUi {
     title: Retained<NSTextField>,
     condition: Retained<NSStackView>,
+    /// The next step and the commands beside it, from `buttons`, then `more`.
+    bar: Retained<NSStackView>,
+    /// A button per command, in the order of `Command::ALL`.
     buttons: Vec<Retained<NSButton>>,
+    more: Retained<NSPopUpButton>,
+    /// The pull-down's item per command, in the order of `Command::ALL`.
+    items: Vec<Retained<NSMenuItem>>,
     accept_note: Retained<NSTextField>,
     /// Holds the specification's view at G1.
     spec: Retained<NSView>,
@@ -81,13 +91,17 @@ define_class!(
         #[unsafe(method(ideFactoryOrderCommand:))]
         fn command_action(&self, sender: Option<&AnyObject>) {
             guarded((), || {
-                let command = sender
-                    .and_then(|s| s.downcast_ref::<NSButton>())
-                    .and_then(|b| Command::of_tag(b.tag()));
-                if let Some(command) = command {
+                if let Some(command) = sender.and_then(command_of) {
                     self.run(command);
                 }
             });
+        }
+
+        #[unsafe(method(setFrameSize:))]
+        fn set_frame_size(&self, size: NSSize) {
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
+            let _: () = unsafe { msg_send![super(self), setFrameSize: size] };
+            guarded((), || self.width_changed(size.width));
         }
 
         #[unsafe(method(ideFactoryAnswer:))]
@@ -154,6 +168,7 @@ impl OrderTab {
             shown: Cell::new(false),
             rejected: RefCell::new(BTreeSet::new()),
             spec: RefCell::new(None),
+            wrap: Cell::new(WIDTH),
             ui: OnceCell::new(),
         };
         // SAFETY: NSView's initializer, called once on the newly allocated object.
@@ -165,31 +180,23 @@ impl OrderTab {
     fn build(&self, mtm: MainThreadMarker) -> OrderUi {
         let me: &AnyObject = self.as_ref();
         let title = ui::title(mtm, "");
+        title.setContentCompressionResistancePriority_forOrientation(
+            ui::GIVES_WAY,
+            NSLayoutConstraintOrientation::Horizontal,
+        );
         let condition = ui::row(mtm, space::S);
-        let primary = ui::row(mtm, space::M);
-        let secondary = ui::row(mtm, space::M);
-        let mut buttons = Vec::new();
-        for command in Command::ALL {
-            let button = ui::button(mtm, command.title(), me, sel!(ideFactoryOrderCommand:), command.tag());
-            if let Some(tip) = tooltip(command) {
-                button.setToolTip(Some(&ns(tip)));
-            }
-            let into = match command {
-                Command::Approve
-                | Command::Accept
-                | Command::AcceptAsChange
-                | Command::OpenDiff
-                | Command::OpenSession
-                | Command::Publish
-                | Command::ShowChange
-                | Command::MergeRequest
-                | Command::Continue
-                | Command::Resume => &primary,
-                _ => &secondary,
-            };
-            into.addArrangedSubview(&button);
-            buttons.push(button);
-        }
+        let buttons: Vec<Retained<NSButton>> = Command::ALL
+            .iter()
+            .map(|command| {
+                let button = ui::button(mtm, command.title(), me, sel!(ideFactoryOrderCommand:), command.tag());
+                if let Some(tip) = tooltip(*command) {
+                    button.setToolTip(Some(&ns(tip)));
+                }
+                button
+            })
+            .collect();
+        let (more, items) = more_menu(mtm, me);
+        let bar = ui::row(mtm, space::M);
         let accept_note = ui::note(mtm, "", WIDTH);
         let spec = NSView::new(mtm);
         spec.setHidden(true);
@@ -197,7 +204,7 @@ impl OrderTab {
         let body = ui::column(mtm, space::M);
         let column = ui::column(mtm, space::M);
         column.setEdgeInsets(objc2_foundation::NSEdgeInsets {
-            top: space::GROUP,
+            top: space::M,
             left: space::GROUP,
             bottom: space::GROUP,
             right: space::GROUP,
@@ -205,19 +212,26 @@ impl OrderTab {
         for view in [
             &*title as &NSView,
             &condition,
-            &primary,
-            &spec,
-            &secondary,
+            &bar,
             &accept_note,
+            &spec,
             &request,
             &body,
         ] {
             column.addArrangedSubview(view);
         }
+        column.setCustomSpacing_afterView(space::XS, &title);
+        column.setCustomSpacing_afterView(space::XL, &condition);
+        let inner = -2.0 * space::GROUP;
         ide_ui_common::util::activate([
             spec.heightAnchor().constraintEqualToConstant(SPEC_HEIGHT),
             spec.widthAnchor()
-                .constraintEqualToAnchor_constant(&column.widthAnchor(), -2.0 * space::GROUP),
+                .constraintEqualToAnchor_constant(&column.widthAnchor(), inner),
+            request
+                .widthAnchor()
+                .constraintEqualToAnchor_constant(&column.widthAnchor(), inner),
+            body.widthAnchor()
+                .constraintEqualToAnchor_constant(&column.widthAnchor(), inner),
         ]);
         let scroll = ui::scrolling(mtm, &column);
         self.addSubview(&scroll);
@@ -226,7 +240,10 @@ impl OrderTab {
         OrderUi {
             title,
             condition,
+            bar,
             buttons,
+            more,
+            items,
             accept_note,
             spec,
             request,
@@ -283,9 +300,7 @@ impl OrderTab {
             ui.title.setStringValue(&ns(&self.order().to_string()));
             ui.body
                 .addArrangedSubview(&ui::note(mtm, t("Diesen Auftrag gibt es nicht mehr."), WIDTH));
-            for button in &ui.buttons {
-                button.setEnabled(false);
-            }
+            self.show_commands(None);
             ui.request.setHidden(true);
             ui.accept_note.setHidden(true);
             self.show_spec(None);
@@ -302,10 +317,7 @@ impl OrderTab {
             WIDTH,
         ));
         ui.condition.addArrangedSubview(&ui::note(mtm, detail.risk(), WIDTH));
-        for button in &ui.buttons {
-            let enabled = Command::of_tag(button.tag()).is_some_and(|c| detail.can(c));
-            button.setEnabled(enabled);
-        }
+        self.show_commands(Some(detail));
         let accept = match detail.accept_block() {
             Some(AcceptBlock::OpenDiffFirst) => Some(t(
                 "Bei hoher Risikoklasse geht „Abnehmen“ erst, wenn der Diff geöffnet wurde.",
@@ -323,11 +335,67 @@ impl OrderTab {
         ui.request.setHidden(detail.request().is_none());
         self.show_spec(Some(detail));
         crate::order_view::fill(self, &ui.body, detail, &self.ivars().rejected.borrow());
+        self.rewrap();
         if let Some(tab) = self.tab() {
             window.set_tab_title(tab, detail.title());
             let red = NSColor::systemRedColor();
             let waits = detail.tone() == crate::model::words::Tone::Waiting;
             window.set_tab_status(tab, waits.then_some(&*red));
+        }
+    }
+
+    /// Puts the next step and the commands beside it into the bar and greys out the pull-down's commands that do not
+    /// fit (E101).
+    fn show_commands(&self, detail: Option<&Detail>) {
+        let ui = self.ui();
+        ui::clear(&ui.bar);
+        let primary = detail.and_then(Detail::primary);
+        let shown: Vec<Command> = primary
+            .into_iter()
+            .chain(detail.map(Detail::companions).unwrap_or_default())
+            .collect();
+        for (index, command) in shown.iter().enumerate() {
+            let Some(button) = ui.buttons.get(usize::try_from(command.tag()).unwrap_or(usize::MAX)) else {
+                continue;
+            };
+            button.setEnabled(true);
+            let accent = (Some(*command) == primary).then(NSColor::controlAccentColor);
+            button.setBezelColor(accent.as_deref());
+            ui.bar.addArrangedSubview(button);
+            let keep = if index == 0 {
+                NSStackViewVisibilityPriorityMustHold
+            } else {
+                NSStackViewVisibilityPriorityDetachOnlyIfNecessary - f32::from(u8::try_from(index).unwrap_or(0))
+            };
+            ui.bar.setVisibilityPriority_forView(keep, button);
+        }
+        ui.bar.addArrangedSubview(&ui.more);
+        for item in &ui.items {
+            let enabled = Command::of_tag(item.tag()).is_some_and(|c| detail.is_some_and(|d| d.can(c)));
+            item.setEnabled(enabled);
+        }
+        ui.more.setEnabled(detail.is_some());
+    }
+
+    /// Wraps the tab's labels at the width its column has now.
+    fn width_changed(&self, width: f64) {
+        if width < 1.0 {
+            return;
+        }
+        let wrap = width - 2.0 * space::GROUP;
+        if (wrap - self.ivars().wrap.replace(wrap)).abs() < 0.5 {
+            return;
+        }
+        if self.ivars().ui.get().is_some() {
+            self.rewrap();
+        }
+    }
+
+    fn rewrap(&self) {
+        let ui = self.ui();
+        let width = self.ivars().wrap.get();
+        for view in [&*ui.condition as &NSView, &ui.accept_note, &ui.request, &ui.body] {
+            ui::wrap(view, width);
         }
     }
 
@@ -466,20 +534,13 @@ fn request_card(mtm: MainThreadMarker, me: &AnyObject) -> (Retained<NSBox>, Reta
     let answer = crate::actions::line_field(mtm, "", t("Antwort"));
     answer
         .widthAnchor()
-        .constraintGreaterThanOrEqualToConstant(320.0)
+        .constraintGreaterThanOrEqualToConstant(160.0)
         .setActive(true);
+    answer.setContentHuggingPriority_forOrientation(1.0, NSLayoutConstraintOrientation::Horizontal);
     let send = ui::button(mtm, t("Antwort senden"), me, sel!(ideFactoryAnswer:), 0);
-    let open = ui::button(
-        mtm,
-        Command::OpenSession.title(),
-        me,
-        sel!(ideFactoryOrderCommand:),
-        Command::OpenSession.tag(),
-    );
     let line = ui::row(mtm, space::M);
     line.addArrangedSubview(&answer);
     line.addArrangedSubview(&send);
-    line.addArrangedSubview(&open);
     column.addArrangedSubview(&line);
     let permission = ui::row(mtm, space::M);
     permission.addArrangedSubview(&ui::button(mtm, t("Erlauben"), me, sel!(ideFactoryAllow:), 0));
@@ -488,6 +549,53 @@ fn request_card(mtm: MainThreadMarker, me: &AnyObject) -> (Retained<NSBox>, Reta
     card.setContentView(Some(&column));
     card.setHidden(true);
     (card, answer)
+}
+
+/// "Weitere Befehle": a pull-down with every command in the order of [`Command::ALL`], the item per command beside.
+fn more_menu(mtm: MainThreadMarker, me: &AnyObject) -> (Retained<NSPopUpButton>, Vec<Retained<NSMenuItem>>) {
+    let more = NSPopUpButton::initWithFrame_pullsDown(
+        NSPopUpButton::alloc(mtm),
+        NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(44.0, 24.0)),
+        true,
+    );
+    more.setAutoenablesItems(false);
+    let heading = ide_ui_common::util::item(mtm, "", None, "");
+    heading.setTag(-1);
+    heading.setImage(ide_ui_common::util::symbol("ellipsis.circle", t("Weitere Befehle")).as_deref());
+    let menu = more.menu().expect("a pop-up button has a menu");
+    menu.addItem(&heading);
+    let mut items = Vec::new();
+    for command in Command::ALL {
+        if matches!(
+            command,
+            Command::OpenDiff | Command::Publish | Command::BackToBuilder | Command::Abort
+        ) {
+            menu.addItem(&ide_ui_common::util::separator(mtm));
+        }
+        let item = ide_ui_common::util::tagged(mtm, command.title(), sel!(ideFactoryOrderCommand:), "", command.tag());
+        // SAFETY: The tab answers the action and holds the menu, so it outlives every item.
+        unsafe { item.setTarget(Some(me)) };
+        if let Some(tip) = tooltip(command) {
+            item.setToolTip(Some(&ns(tip)));
+        }
+        menu.addItem(&item);
+        items.push(item);
+    }
+    more.setToolTip(Some(&ns(t("Weitere Befehle"))));
+    ide_ui_common::util::set_label(&more, Some(t("Weitere Befehle")));
+    (more, items)
+}
+
+/// The command a button, a menu item or the pull-down that sent an action stands for.
+fn command_of(sender: &AnyObject) -> Option<Command> {
+    let tag = if let Some(popup) = sender.downcast_ref::<NSPopUpButton>() {
+        popup.selectedItem()?.tag()
+    } else if let Some(item) = sender.downcast_ref::<NSMenuItem>() {
+        item.tag()
+    } else {
+        sender.downcast_ref::<NSButton>()?.tag()
+    };
+    Command::of_tag(tag)
 }
 
 /// The order tabs of the folder `root` in `state`.

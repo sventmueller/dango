@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Cost i durada";
 "Herkunft" = "Procedència";
 "Abschnitte des Diffs" = "Fragments del diff";
-"Der Diff hat noch keine Abschnitte." = "El diff encara no té fragments.";
+"Weitere Befehle" = "Més ordres";
+"Noch offen: {}" = "Encara pendent: {}";
+"Noch nichts: {}" = "Encara res: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Un fragment desmarcat es descarta en l’acceptació; la resta forma un estat nou que els controls i el revisor tornen a comprovar.";
 "Neuer Auftrag" = "Nova ordre de treball";
 "Kriterien, eines je Zeile" = "Criteris, un per línia";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "Accepta";
 "Diff öffnen" = "Obre el diff";
 "Sitzung öffnen" = "Obre la sessió";
+"Bericht öffnen" = "Obre l'informe";
+"Der Auftrag hat {} nicht geschrieben." = "L’ordre de treball no ha escrit {}.";
 "Zurück an den Builder …" = "Retorna al constructor…";
 "Kriterien ändern …" = "Canvia els criteris…";
 "Von Hand weiter" = "Continua a mà";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "Aprova sense els comentaris";
 "{},{} $" = "{},{} $";
 "Tests von {} lassen sich nicht debuggen" = "Les proves de {} no es poden depurar";
+"Sandbox der Gates:" = "Sandbox dels controls:";
+"Streng" = "Estricte";
+"Gelockert" = "Relaxat";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Els controls executen codi que ha escrit l’agent. “Relaxat” permet a més ports locals i terminals, “Desactivat” inicia els controls amb els teus permisos. Un projecte pot fixar un altre valor a .dango/factory.toml.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Relaxat” permet ports locals i terminals, “Desactivat” inicia els controls amb els teus permisos. Si el projecte relaxa el sandbox, ho confirmes a la següent ordre de treball amb “Continua”.";

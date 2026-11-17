@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Coste y duración";
 "Herkunft" = "Procedencia";
 "Abschnitte des Diffs" = "Fragmentos del diff";
-"Der Diff hat noch keine Abschnitte." = "El diff aún no tiene fragmentos.";
+"Weitere Befehle" = "Más comandos";
+"Noch offen: {}" = "Aún pendiente: {}";
+"Noch nichts: {}" = "Nada todavía: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Un fragmento desmarcado se descarta en la aceptación; el resto forma un nuevo estado que los controles y el revisor vuelven a comprobar.";
 "Neuer Auftrag" = "Nueva orden de trabajo";
 "Kriterien, eines je Zeile" = "Criterios, uno por línea";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "Aceptar";
 "Diff öffnen" = "Abrir diff";
 "Sitzung öffnen" = "Abrir sesión";
+"Bericht öffnen" = "Abrir informe";
+"Der Auftrag hat {} nicht geschrieben." = "La orden de trabajo no escribió {}.";
 "Zurück an den Builder …" = "Devolver al constructor…";
 "Kriterien ändern …" = "Cambiar criterios…";
 "Von Hand weiter" = "Continuar a mano";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "Aprobar sin los comentarios";
 "{},{} $" = "{},{} $";
 "Tests von {} lassen sich nicht debuggen" = "Las pruebas de {} no se pueden depurar";
+"Sandbox der Gates:" = "Sandbox de los controles:";
+"Streng" = "Estricto";
+"Gelockert" = "Relajado";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Los controles ejecutan código que ha escrito el agente. «Relajado» permite además puertos locales y terminales, «Desactivado» inicia los controles con tus permisos. Un proyecto puede fijar otro valor en .dango/factory.toml.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "«Relajado» permite puertos locales y terminales, «Desactivado» inicia los controles con tus permisos. Si el proyecto relaja el sandbox, lo confirmas en la siguiente orden de trabajo con «Continuar».";

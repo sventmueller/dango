@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Troškovi i trajanje";
 "Herkunft" = "Podrijetlo";
 "Abschnitte des Diffs" = "Blokovi razlika";
-"Der Diff hat noch keine Abschnitte." = "Razlike još nemaju blokova.";
+"Weitere Befehle" = "Dodatne naredbe";
+"Noch offen: {}" = "Još predstoji: {}";
+"Noch nichts: {}" = "Još ništa: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "Neoznačeni blok odbacuje se pri prihvaćanju; od ostatka nastaje novo stanje koje provjere i recenzent ponovno provjeravaju.";
 "Neuer Auftrag" = "Novi radni nalog";
 "Kriterien, eines je Zeile" = "Kriteriji, jedan po retku";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "Prihvati";
 "Diff öffnen" = "Otvori razlike";
 "Sitzung öffnen" = "Otvori sesiju";
+"Bericht öffnen" = "Otvori izvješće";
+"Der Auftrag hat {} nicht geschrieben." = "Radni nalog nije zapisao {}.";
 "Zurück an den Builder …" = "Vrati izvođaču…";
 "Kriterien ändern …" = "Promijeni kriterije…";
 "Von Hand weiter" = "Nastavi ručno";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "Odobri bez komentara";
 "{},{} $" = "{},{} $";
 "Tests von {} lassen sich nicht debuggen" = "Pogreške u testovima alata {} ne mogu se otklanjati";
+"Sandbox der Gates:" = "Sandbox provjera:";
+"Streng" = "Strogo";
+"Gelockert" = "Ublaženo";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Provjere pokreću kôd koji je napisao agent. “Ublaženo” dodatno dopušta lokalne portove i terminale, “Isključeno” pokreće provjere s vašim pravima. Projekt u .dango/factory.toml može postaviti drugu vrijednost.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Ublaženo” dopušta lokalne portove i terminale, “Isključeno” pokreće provjere s vašim pravima. Ako projekt ublaži sandbox, to potvrđujete na sljedećem radnom nalogu s “Nastavi”.";

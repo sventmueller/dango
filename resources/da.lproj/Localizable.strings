@@ -1997,7 +1997,9 @@
 "Kosten und Laufzeit" = "Omkostninger og køretid";
 "Herkunft" = "Oprindelse";
 "Abschnitte des Diffs" = "Diffens blokke";
-"Der Diff hat noch keine Abschnitte." = "Diffen har endnu ingen blokke.";
+"Weitere Befehle" = "Flere kommandoer";
+"Noch offen: {}" = "Endnu ikke nået: {}";
+"Noch nichts: {}" = "Intet endnu: {}";
 "Ein abgewählter Abschnitt wird bei der Abnahme verworfen; aus dem Rest entsteht ein neuer Stand, den Gates und Prüfer erneut prüfen." = "En fravalgt blok kasseres ved accepten; resten bliver til en ny tilstand, som gates og revieweren kontrollerer igen.";
 "Neuer Auftrag" = "Ny arbejdsordre";
 "Kriterien, eines je Zeile" = "Kriterier, ét pr. linje";
@@ -2034,6 +2036,8 @@
 "Abnehmen" = "Accepter";
 "Diff öffnen" = "Åbn diff";
 "Sitzung öffnen" = "Åbn session";
+"Bericht öffnen" = "Åbn rapport";
+"Der Auftrag hat {} nicht geschrieben." = "Arbejdsordren skrev ikke {}.";
 "Zurück an den Builder …" = "Tilbage til builderen…";
 "Kriterien ändern …" = "Ændr kriterier…";
 "Von Hand weiter" = "Fortsæt manuelt";
@@ -2360,3 +2364,8 @@
 "Ohne Kommentare freigeben" = "Godkend uden kommentarer";
 "{},{} $" = "{},{} $";
 "Tests von {} lassen sich nicht debuggen" = "Tests fra {} kan ikke fejlfindes";
+"Sandbox der Gates:" = "Gate-sandbox:";
+"Streng" = "Streng";
+"Gelockert" = "Lempet";
+"Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Gates kører kode, som agenten har skrevet. “Lempet” tillader desuden lokale porte og terminaler, “Fra” starter gates med dine rettigheder. Et projekt kan angive en anden værdi i .dango/factory.toml.";
+"„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Lempet” tillader lokale porte og terminaler, “Fra” starter gates med dine rettigheder. Lemper projektet sandboxen, bekræfter du det ved næste arbejdsordre med “Fortsæt”.";

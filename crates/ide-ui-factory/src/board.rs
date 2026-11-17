@@ -219,7 +219,7 @@ impl BoardTab {
         let empty = ui::note(mtm, "", 520.0);
         let column = ui::column(mtm, space::L);
         column.setEdgeInsets(objc2_foundation::NSEdgeInsets {
-            top: space::GROUP,
+            top: space::M,
             left: space::GROUP,
             bottom: space::GROUP,
             right: space::GROUP,
