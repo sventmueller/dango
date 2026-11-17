@@ -1,4 +1,4 @@
-<p><img src="../../readme-icon.png" alt="Icona di Dango" width="135" height="135"></p>
+<p><img src="../../readme-icon.png" alt="Icona di Dango" width="147" height="147"></p>
 
 # Dango
 
