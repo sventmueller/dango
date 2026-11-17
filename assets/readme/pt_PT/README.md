@@ -6,7 +6,9 @@
 
 O Dango reúne o código, os agentes que o alteram e tudo o que os rodeia numa janela por pasta: um editor com servidores de linguagem e previsões durante a escrita, terminais, um navegador, Git, CI, um depurador e threads de IA com Claude, Codex, Antigravity, OpenCode ou um agente integrado na aplicação. Cada agente trabalha na mesma cronologia, pergunta antes de alterar ficheiros ou executar comandos e deixa um ponto de restauro antes de cada prompt, para que possa rever e retroceder o que fez, mensagem a mensagem. Nada do que uma pasta configura é executado antes de confiar nela, e o texto vindo de fora chega a um agente marcado como não fidedigno. Dite no editor e no campo de mensagem; o reconhecimento de voz pode ficar no seu Mac. O Dango está escrito em Rust sobre controlos AppKit verdadeiros, sem Electron, fala 35 idiomas e não tem telemetria.
 
-**Ainda não publicado.** A primeira versão será uma imagem de disco assinada com um Developer ID e notarizada pela Apple, para macOS 14 ou posterior em Apple Silicon e Intel. Até lá, [compile o Dango a partir do código-fonte](#compilar-a-partir-do-código-fonte).
+[![Descarregar Dango.dmg](https://img.shields.io/badge/Descarregar_Dango-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Descarregar Dango.dmg](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: assinado e notarizado pela Apple, para macOS 14 ou posterior em Apple Silicon e Intel. A ligação ficará disponível a partir da primeira publicação.
 
 **Encontrou um erro?** [Abra uma issue](https://github.com/sventmueller/dango/issues/new) e indique com que agente e em que tipo de projeto aconteceu.
 
@@ -357,13 +359,14 @@ Precisa de:
 | Comando | O que faz |
 |---|---|
 | `make run` | compila a aplicação de depuração (`target/debug/Dango Debug.app`) e abre-a |
-| `make build` | compila a aplicação de versão (`target/release/Dango.app`), assinada com um certificado local que a primeira compilação cria no Porta-chaves de início de sessão; aumenta o número de compilação em `VERSION` |
+| `make build` | compila a aplicação de versão (`target/release/Dango.app`), assinada com um certificado local que a primeira compilação cria no Porta-chaves de início de sessão; mantém `VERSION` inalterado |
 | `make lint` | formatação e clippy; os avisos fazem-no falhar |
 | `make check` | `lint` e depois todos os testes; não precisa de Porta-chaves, janela nem rede |
 | `make test` | `check` e depois o autoteste `probe` e a auditoria de acessibilidade, da esquerda para a direita e da direita para a esquerda, na aplicação real |
 | `make perf` | os orçamentos de tempo, numa compilação de versão; só faz sentido num Mac que de resto esteja inativo |
 | `make release` | um ensaio da publicação em `target/release-dry-run/`, assinado com o certificado local; não envia nada para lado nenhum |
-| `make release-notarized` | `check` e depois a publicação propriamente dita em `dist/`: assinatura com Developer ID, notarização, o feed de atualizações assinado com a chave própria da aplicação; aumenta o número de compilação |
+| `make release-notarized` | `check` e depois a publicação propriamente dita em `dist/`: assinatura com Developer ID, notarização, o feed de atualizações assinado com a chave própria da aplicação; mantém `VERSION` inalterado |
+| `make deploy` | num `main` limpo e com selo verde de CI: notariza a próxima versão, atualiza e faz commit de `VERSION`, carrega os ficheiros da publicação e faz push do código, do selo de CI e da etiqueta de versão; o GitHub publica a versão automaticamente |
 
 Depuração e versão são aplicações separadas com definições e dados próprios. A compilação, os testes, os autotestes, a publicação e as regras que o código segue estão descritos em [docs/development.md](../../../docs/development.md), e as decisões por detrás em [docs/plan.md](../../../docs/plan.md). As notas da versão são o [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), traduzidas ao lado de cada README em `assets/readme/<language>/`.
 

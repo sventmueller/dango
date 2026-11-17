@@ -6,7 +6,9 @@
 
 Dango kokoaa koodin, sitä muuttavat agentit ja kaiken niiden ympärillä olevan yhteen ikkunaan kansiota kohden: editori kielipalvelimineen ja muokkausennusteineen, päätteet, selain, Git, CI, virheenjäljitin ja AI-ketjut, joissa toimii Claude, Codex, Antigravity, OpenCode tai sovellukseen sisäänrakennettu agentti. Jokainen agentti työskentelee samalla aikajanalla, kysyy ennen kuin muuttaa tiedostoja tai ajaa komentoja ja jättää tarkistuspisteen ennen jokaista kehotetta, joten voit tarkistaa ja kelata taaksepäin sen tekemiset viesti kerrallaan. Mitään kansion määrittämää ei ajeta, ennen kuin luotat kansioon, ja ulkopuolinen teksti saapuu agentille epäluotettavaksi merkittynä. Sanele editoriin ja viestikenttään; puheentunnistus voi pysyä Macissasi. Dango on kirjoitettu Rust-kielellä aitojen AppKit-säädinten päälle ilman Electronia, se puhuu 35 kieltä, eikä siinä ole telemetriaa.
 
-**Ei vielä julkaistu.** Ensimmäinen julkaisu on levykuva, joka on allekirjoitettu Developer ID:llä ja jonka Apple on notarisoinut, macOS 14:lle tai uudemmalle Apple Silicon- ja Intel-Maceissa. Siihen asti voit [kääntää Dangon lähdekoodista](#kääntäminen-lähdekoodista).
+[![Lataa Dango.dmg](https://img.shields.io/badge/Lataa_Dango-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Lataa Dango.dmg](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: allekirjoitettu ja Applen notarisoima, macOS 14:lle tai uudemmalle Apple Silicon- ja Intel-Maceissa. Linkki tulee käyttöön ensimmäisen julkaisun yhteydessä.
 
 **Löysitkö bugin?** [Avaa issue](https://github.com/sventmueller/dango/issues/new) ja kerro, minkä agentin kanssa ja millaisessa projektissa se tapahtui.
 
@@ -357,13 +359,14 @@ Tarvitset:
 | Komento | Mitä se tekee |
 |---|---|
 | `make run` | kääntää debug-sovelluksen (`target/debug/Dango Debug.app`) ja avaa sen |
-| `make build` | kääntää julkaisusovelluksen (`target/release/Dango.app`), allekirjoitettuna paikallisella varmenteella, jonka ensimmäinen käännös luo kirjautumisavainnippuun; kasvattaa käännösnumeroa tiedostossa `VERSION` |
+| `make build` | kääntää julkaisusovelluksen (`target/release/Dango.app`), allekirjoitettuna paikallisella varmenteella, jonka ensimmäinen käännös luo kirjautumisavainnippuun; jättää `VERSION`-tiedoston ennalleen |
 | `make lint` | muotoilu ja clippy; varoitukset kaatavat sen |
 | `make check` | `lint`, sitten kaikki testit; ei tarvitse avainnippua, ikkunaa eikä verkkoa |
 | `make test` | `check`, sitten itsetesti `probe` ja saavutettavuustarkastus, vasemmalta oikealle ja oikealta vasemmalle, oikeassa sovelluksessa |
 | `make perf` | ajoitusbudjetit julkaisukäännöksessä; mielekäs vain muuten joutilaassa Macissa |
 | `make release` | julkaisun kuivaharjoitus kansioon `target/release-dry-run/`, allekirjoitettuna paikallisella varmenteella; ei lähetä mitään minnekään |
-| `make release-notarized` | `check`, sitten itse julkaisu kansioon `dist/`: Developer ID -allekirjoitus, notarisointi, sovelluksen omalla avaimella allekirjoitettu päivityssyöte; kasvattaa käännösnumeroa |
+| `make release-notarized` | `check`, sitten itse julkaisu kansioon `dist/`: Developer ID -allekirjoitus, notarisointi, sovelluksen omalla avaimella allekirjoitettu päivityssyöte; jättää `VERSION`-tiedoston ennalleen |
+| `make deploy` | puhtaalla `main`-haaralla, jolla on vihreä CI-sinetti: notarisoi seuraavan version, päivittää ja commitoi `VERSION`-tiedoston, lataa julkaisun tiedostot ja pushaa koodin, CI-sinetin ja versiotunnisteen; GitHub julkaisee version automaattisesti |
 
 Debug- ja julkaisuversio ovat erillisiä sovelluksia omine asetuksineen ja tietoineen. Kääntäminen, testaus, itsetestit, julkaisu ja koodin noudattamat säännöt kuvataan tiedostossa [docs/development.md](../../../docs/development.md), niiden taustalla olevat päätökset tiedostossa [docs/plan.md](../../../docs/plan.md). Julkaisutiedot ovat tiedostossa [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), käännettyinä kunkin README-tiedoston viereen kansioon `assets/readme/<language>/`.
 

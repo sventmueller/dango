@@ -6,7 +6,9 @@
 
 Dango riunisce il codice, gli agenti che lo modificano e tutto ciò che li circonda in una finestra per cartella: un editor con server di linguaggio e previsioni durante la digitazione, terminali, un browser, Git, CI, un debugger e thread AI con Claude, Codex, Antigravity, OpenCode o un agente integrato nell’app. Ogni agente lavora nella stessa cronologia, chiede prima di modificare file o eseguire comandi e lascia un punto di ripristino prima di ogni prompt, così puoi rivedere e riavvolgere ciò che ha fatto, messaggio per messaggio. Nulla di ciò che una cartella configura viene eseguito prima che tu ti fidi di essa, e il testo esterno arriva a un agente contrassegnato come non attendibile. Detta nell’editor e nel campo del messaggio; il riconoscimento vocale può restare sul tuo Mac. Dango è scritto in Rust su veri controlli AppKit, senza Electron, parla 35 lingue e non ha telemetria.
 
-**Non ancora pubblicato.** La prima versione sarà un’immagine disco firmata con un Developer ID e autenticata da Apple, per macOS 14 o versioni successive su Apple Silicon e Intel. Fino ad allora, [compila Dango dal codice sorgente](#compilare-dal-codice-sorgente).
+[![Scarica Dango.dmg](https://img.shields.io/badge/Scarica_Dango-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Scarica Dango.dmg](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: firmato e autenticato da Apple, per macOS 14 o versioni successive su Apple Silicon e Intel. Il link sarà disponibile dalla prima pubblicazione.
 
 **Hai trovato un bug?** [Apri una issue](https://github.com/sventmueller/dango/issues/new) e indica con quale agente e in che tipo di progetto si è verificato.
 
@@ -357,13 +359,14 @@ Ti servono:
 | Comando | Cosa fa |
 |---|---|
 | `make run` | compila l’app di debug (`target/debug/Dango Debug.app`) e la apre |
-| `make build` | compila l’app di release (`target/release/Dango.app`), firmata con un certificato locale che la prima build crea nel portachiavi di login; incrementa il numero di build in `VERSION` |
+| `make build` | compila l’app di release (`target/release/Dango.app`), firmata con un certificato locale che la prima build crea nel portachiavi di login; lascia `VERSION` invariato |
 | `make lint` | formattazione e clippy; gli avvisi lo fanno fallire |
 | `make check` | `lint`, poi tutti i test; non richiede portachiavi, finestra né rete |
 | `make test` | `check`, poi l’autotest `probe` e la verifica dell’accessibilità, da sinistra a destra e da destra a sinistra, nell’app reale |
 | `make perf` | i budget di tempo, in una build di release; significativo solo su un Mac altrimenti inattivo |
 | `make release` | una prova della pubblicazione in `target/release-dry-run/`, firmata con il certificato locale; non invia nulla da nessuna parte |
-| `make release-notarized` | `check`, poi la pubblicazione vera e propria in `dist/`: firma con Developer ID, autenticazione, il feed degli aggiornamenti firmato con la chiave propria dell’app; incrementa il numero di build |
+| `make release-notarized` | `check`, poi la pubblicazione vera e propria in `dist/`: firma con Developer ID, autenticazione, il feed degli aggiornamenti firmato con la chiave propria dell’app; lascia `VERSION` invariato |
+| `make deploy` | su un `main` pulito e con sigillo verde di CI: autentica la versione successiva, aggiorna e crea il commit di `VERSION`, carica i file della pubblicazione e invia il codice, il sigillo di CI e il tag di versione; GitHub pubblica automaticamente la versione |
 
 Debug e release sono app separate con impostazioni e dati propri. La compilazione, i test, gli autotest, la pubblicazione e le regole che il codice segue sono descritti in [docs/development.md](../../../docs/development.md), le decisioni che ci stanno dietro in [docs/plan.md](../../../docs/plan.md). Le note di rilascio sono [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), tradotte accanto a ogni README in `assets/readme/<language>/`.
 

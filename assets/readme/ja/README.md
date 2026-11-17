@@ -6,7 +6,9 @@
 
 Dangoは、コードと、それを変更するエージェントと、その周りにあるすべてを、フォルダごとに1つのウインドウにまとめます。言語サーバと編集の予測を備えたエディタ、ターミナル、ブラウザ、Git、CI、デバッガ、そしてClaude、Codex、Antigravity、OpenCode、またはアプリに内蔵されたエージェントとのAIスレッドです。どのエージェントも同じタイムラインで作業し、ファイルを変更したりコマンドを実行したりする前に確認を求め、各プロンプトの前にチェックポイントを残します。そのため、エージェントが行ったことをメッセージごとに確認して巻き戻せます。フォルダで設定されたものは、そのフォルダを信頼するまで何も実行されず、外部からのテキストは、信頼されていないものとして印を付けてエージェントに渡されます。エディタとメッセージフィールドには音声入力ができ、音声認識をMac上だけで行うこともできます。DangoはElectronを使わず、本物のAppKitコントロール上にRustで書かれており、35の言語に対応し、テレメトリはありません。
 
-**まだリリースされていません。** 最初のリリースは、Developer IDで署名されAppleによって公証されたディスクイメージで、Apple SiliconとIntelのmacOS 14以降に対応します。それまでは、[ソースからDangoをビルド](#ソースからのビルド)してください。
+[![Dango.dmgをダウンロード](https://img.shields.io/badge/Dango%E3%82%92%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Dango.dmgをダウンロード](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: 署名され、Appleによって公証されたディスクイメージです。Apple SiliconとIntelのmacOS 14以降に対応します。リンクは最初のリリースから利用できます。
 
 **バグを見つけましたか?** [Issueを作成](https://github.com/sventmueller/dango/issues/new)して、どのエージェントで、どんな種類のプロジェクトで起きたかをお知らせください。
 
@@ -357,13 +359,14 @@ Claudeは自身のセッションを`~/.claude/projects`以下に保存します
 | コマンド | 内容 |
 |---|---|
 | `make run` | デバッグ版アプリ（`target/debug/Dango Debug.app`）をビルドして開きます |
-| `make build` | リリース版アプリ（`target/release/Dango.app`）をビルドします。最初のビルドで“ログイン”キーチェーンに作成されるローカル証明書で署名し、`VERSION`のビルド番号を上げます |
+| `make build` | リリース版アプリ（`target/release/Dango.app`）をビルドします。最初のビルドで“ログイン”キーチェーンに作成されるローカル証明書で署名し、`VERSION`は変更しません |
 | `make lint` | フォーマットとclippy。警告があると失敗します |
 | `make check` | `lint`のあと、すべてのテスト。キーチェーン、ウインドウ、ネットワークは不要です |
 | `make test` | `check`のあと、実際のアプリで、セルフテスト`probe`とアクセシビリティ監査を、左から右と右から左の両方で実行します |
 | `make perf` | リリースビルドでの時間予算の計測。ほかに何も動いていないMacでのみ意味があります |
 | `make release` | `target/release-dry-run/`へのリリースのドライラン。ローカル証明書で署名し、どこにも何も送信しません |
-| `make release-notarized` | `check`のあと、`dist/`への実際のリリース。Developer ID署名、公証、アプリ独自の鍵で署名したアップデートフィード。ビルド番号を上げます |
+| `make release-notarized` | `check`のあと、`dist/`への実際のリリース。Developer ID署名、公証、アプリ独自の鍵で署名したアップデートフィード。`VERSION`は変更しません |
+| `make deploy` | 変更が残っておらず、緑のCIシールがある`main`で、次のバージョンを公証し、`VERSION`を更新してコミットします。リリースファイルをアップロードし、コード、CIシール、バージョンタグをプッシュすると、GitHubがリリースを自動公開します |
 
 デバッグ版とリリース版は、それぞれ独自の設定とデータを持つ別々のアプリです。ビルド、テスト、セルフテスト、リリース、コードが従うルールは[docs/development.md](../../../docs/development.md)に、その背景にある決定事項は[docs/plan.md](../../../docs/plan.md)に記載されています。リリースノートは[RELEASE_NOTES.md](../../../RELEASE_NOTES.md)で、各READMEの隣の`assets/readme/<language>/`に翻訳があります。
 

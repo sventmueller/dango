@@ -6,7 +6,9 @@
 
 Dango 把程式碼、修改程式碼的代理程式，以及圍繞它們的一切，依檔案夾放進一個視窗：具備語言伺服器和編輯預測的編輯器、終端機、瀏覽器、Git、CI、除錯器，以及與 Claude、Codex、Antigravity、OpenCode 或 App 內建代理程式進行的 AI 對話。每個代理程式都在同一條時間軸中工作，在變更檔案或執行指令之前會先詢問你，並在每次送出提示詞之前留下一個檢查點，因此你可以逐則訊息檢視並回溯它所做的一切。在你信任檔案夾之前，它所設定的任何項目都不會執行；來自外部的文字在交給代理程式時會標示為不可信任。你可以在編輯器和訊息欄位中聽寫，語音辨識可以完全留在你的 Mac 上。Dango 以 Rust 寫成，建立在真正的 AppKit 控制項之上，不使用 Electron，支援 35 種語言，沒有遙測功能。
 
-**尚未發布。** 第一個版本將是以 Developer ID 簽署並經 Apple 公證的磁碟映像檔，適用於搭載 Apple 晶片或 Intel 處理器的 macOS 14 或以上版本。在那之前，請[從原始碼建置 Dango](#從原始碼建置)。
+[![下載 Dango.dmg](https://img.shields.io/badge/%E4%B8%8B%E8%BC%89_Dango-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[下載 Dango.dmg](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: 已簽署並經 Apple 公證的磁碟映像檔，適用於搭載 Apple 晶片或 Intel 處理器的 macOS 14 或以上版本。連結將在第一個版本發布後可用。
 
 **發現錯誤了嗎？** 請[提交 Issue](https://github.com/sventmueller/dango/issues/new)，並說明問題是在哪個代理程式和哪類專案中發生的。
 
@@ -357,13 +359,14 @@ Claude 會將自己的工作階段保存在 `~/.claude/projects` 下；Dango 會
 | 指令 | 作用 |
 |---|---|
 | `make run` | 建置除錯版 App（`target/debug/Dango Debug.app`）並打開它 |
-| `make build` | 建置正式版 App（`target/release/Dango.app`），以首次建置時在登入鑰匙圈中建立的本機憑證簽署；提高 `VERSION` 中的建置編號 |
+| `make build` | 建置正式版 App（`target/release/Dango.app`），以首次建置時在登入鑰匙圈中建立的本機憑證簽署；保持 `VERSION` 不變 |
 | `make lint` | 格式化和 clippy；有警告即失敗 |
 | `make check` | 先 `lint`，然後執行所有測試；不需要鑰匙圈、視窗或網路 |
 | `make test` | 先 `check`，然後在真正的 App 中執行自我測試 `probe` 和輔助使用稽核，分別以由左至右和由右至左進行 |
 | `make perf` | 在正式版建置中檢查時間預算；只有在 Mac 沒有其他負載時才有意義 |
 | `make release` | 將正式版演練到 `target/release-dry-run/`，以本機憑證簽署；不向任何地方傳送任何東西 |
-| `make release-notarized` | 先 `check`，然後將正式版本身發布到 `dist/`：Developer ID 簽名、公證、以 App 自己的金鑰簽署的更新來源；提高建置編號 |
+| `make release-notarized` | 先 `check`，然後將正式版本身發布到 `dist/`：Developer ID 簽名、公證、以 App 自己的金鑰簽署的更新來源；保持 `VERSION` 不變 |
+| `make deploy` | 在乾淨且具有綠色 CI 印章的 `main` 上公證下一個版本，更新並提交 `VERSION`，上傳發布檔案，然後推送程式碼、CI 印章和版本標籤；GitHub 自動發布該版本 |
 
 除錯版和正式版是兩個獨立的 App，各有自己的設定和資料。建置、測試、自我測試、發布以及程式碼依循的規則見 [docs/development.md](../../../docs/development.md)，其背後的決策見 [docs/plan.md](../../../docs/plan.md)。版本說明是 [RELEASE_NOTES.md](../../../RELEASE_NOTES.md)，其譯文與每份 README 一起放在 `assets/readme/<language>/` 中。
 

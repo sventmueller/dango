@@ -6,7 +6,9 @@
 
 Dango aduce codul, agenții care îl modifică și tot ce îi înconjoară într-o singură fereastră pentru fiecare dosar: un editor cu servere de limbaj și predicții în timp ce tastați, terminale, un browser, Git, CI, un depanator și conversații IA cu Claude, Codex, Antigravity, OpenCode sau un agent integrat în aplicație. Fiecare agent lucrează în aceeași cronologie, întreabă înainte să modifice fișiere sau să ruleze comenzi și lasă un punct de control înaintea fiecărui prompt, astfel încât să puteți examina și derula înapoi ce a făcut, mesaj cu mesaj. Nimic din ce configurează un dosar nu rulează înainte să aveți încredere în el, iar textul din afară ajunge la un agent marcat ca nesigur. Dictați în editor și în câmpul de mesaj; recunoașterea vocală poate rămâne pe Mac-ul dvs. Dango este scris în Rust pe controale AppKit reale, fără Electron, vorbește 35 de limbi și nu are telemetrie.
 
-**Încă nepublicat.** Prima versiune va fi o imagine de disc semnată cu un Developer ID și notarizată de Apple, pentru macOS 14 sau o versiune ulterioară pe Apple Silicon și Intel. Până atunci, [compilați Dango din codul sursă](#compilare-din-codul-sursă).
+[![Descărcați Dango.dmg](https://img.shields.io/badge/Desc%C4%83rca%C8%9Bi_Dango-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Descărcați Dango.dmg](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: semnat și notarizat de Apple, pentru macOS 14 sau o versiune ulterioară pe Apple Silicon și Intel. Linkul va fi disponibil de la prima publicare.
 
 **Ați găsit o eroare?** [Deschideți un issue](https://github.com/sventmueller/dango/issues/new) și spuneți cu ce agent și în ce tip de proiect a apărut.
 
@@ -357,13 +359,14 @@ Aveți nevoie de:
 | Comandă | Ce face |
 |---|---|
 | `make run` | compilează aplicația de depanare (`target/debug/Dango Debug.app`) și o deschide |
-| `make build` | compilează aplicația de versiune (`target/release/Dango.app`), semnată cu un certificat local pe care prima compilare îl creează în portcheiul de autentificare; mărește numărul compilării în `VERSION` |
+| `make build` | compilează aplicația de versiune (`target/release/Dango.app`), semnată cu un certificat local pe care prima compilare îl creează în portcheiul de autentificare; lasă `VERSION` neschimbat |
 | `make lint` | formatare și clippy; avertismentele îl fac să eșueze |
 | `make check` | `lint`, apoi toate testele; nu are nevoie de portchei, fereastră sau rețea |
 | `make test` | `check`, apoi autotestul `probe` și auditul de accesibilitate, de la stânga la dreapta și de la dreapta la stânga, în aplicația reală |
 | `make perf` | bugetele de timp, într-o compilare de versiune; relevant doar pe un Mac altfel inactiv |
 | `make release` | o repetiție a publicării în `target/release-dry-run/`, semnată cu certificatul local; nu trimite nimic nicăieri |
-| `make release-notarized` | `check`, apoi publicarea propriu-zisă în `dist/`: semnătură Developer ID, notarizare, fluxul de actualizări semnat cu cheia proprie a aplicației; mărește numărul compilării |
+| `make release-notarized` | `check`, apoi publicarea propriu-zisă în `dist/`: semnătură Developer ID, notarizare, fluxul de actualizări semnat cu cheia proprie a aplicației; lasă `VERSION` neschimbat |
+| `make deploy` | pe un `main` curat, cu sigiliu CI verde: notarizează versiunea următoare, actualizează și comite `VERSION`, încarcă fișierele versiunii și trimite codul, sigiliul CI și eticheta versiunii; GitHub publică automat versiunea |
 
 Depanarea și versiunea sunt aplicații separate, cu configurări și date proprii. Compilarea, testarea, autotestele, publicarea și regulile pe care le urmează codul sunt descrise în [docs/development.md](../../../docs/development.md), iar deciziile din spatele lor în [docs/plan.md](../../../docs/plan.md). Notele de versiune sunt [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), traduse lângă fiecare README în `assets/readme/<language>/`.
 

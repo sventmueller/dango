@@ -6,7 +6,9 @@
 
 A Dango a kódot, az azt módosító ügynököket és mindent, ami körülöttük van, mappánként egy ablakba gyűjti: szerkesztő nyelvi szerverekkel és szerkesztési előrejelzésekkel, terminálok, böngésző, Git, CI, hibakereső és AI-szálak a Claude, a Codex, az Antigravity, az OpenCode vagy egy az appba épített ügynök társaságában. Minden ügynök ugyanazon az idővonalon dolgozik, megkérdezi, mielőtt fájlokat módosít vagy parancsokat futtat, és minden prompt előtt visszaállítási pontot hagy, így üzenetenként átnézheti és visszatekerheti, amit tett. Semmi, amit egy mappa beállít, nem fut, amíg meg nem bízik benne, a kívülről érkező szöveg pedig nem megbízhatóként megjelölve jut el az ügynökhöz. Diktálhat a szerkesztőbe és az üzenetmezőbe, a beszédfelismerés pedig a Macen maradhat. A Dango Rust nyelven, valódi AppKit-vezérlőkre épül, Electron nélkül, 35 nyelven beszél, és nincs benne telemetria.
 
-**Még nem jelent meg.** Az első kiadás egy Developer ID-val aláírt és az Apple által hitelesített lemezkép lesz, macOS 14 vagy újabb rendszerhez, Apple chipes és Intel-alapú Macekre. Addig [fordítsa le a Dangót forráskódból](#fordítás-forráskódból).
+[![Dango.dmg letöltése](https://img.shields.io/badge/Dango_let%C3%B6lt%C3%A9se-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Dango.dmg letöltése](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: aláírva és az Apple által hitelesítve, macOS 14 vagy újabb rendszerhez, Apple chipes és Intel-alapú Macekre. A hivatkozás az első kiadással válik elérhetővé.
 
 **Hibát talált?** [Nyisson egy issue-t](https://github.com/sventmueller/dango/issues/new), és írja meg, melyik ügynökkel és milyen projektben fordult elő.
 
@@ -357,13 +359,14 @@ Amire szüksége van:
 | Parancs | Mit csinál |
 |---|---|
 | `make run` | lefordítja a hibakereső appot (`target/debug/Dango Debug.app`), és megnyitja |
-| `make build` | lefordítja a kiadási appot (`target/release/Dango.app`), egy helyi tanúsítvánnyal aláírva, amelyet az első build hoz létre a bejelentkezési kulcskarikában; megnöveli a buildszámot a `VERSION` fájlban |
+| `make build` | lefordítja a kiadási appot (`target/release/Dango.app`), egy helyi tanúsítvánnyal aláírva, amelyet az első build hoz létre a bejelentkezési kulcskarikában; változatlanul hagyja a `VERSION` fájlt |
 | `make lint` | formázás és clippy; a figyelmeztetések hibát okoznak |
 | `make check` | `lint`, majd az összes teszt; nem kell hozzá kulcskarika, ablak vagy hálózat |
 | `make test` | `check`, majd a `probe` öntesztje és a kisegítő lehetőségek auditja, balról jobbra és jobbról balra, a valódi appban |
 | `make perf` | az időkeretek, kiadási buildben; csak egy egyébként tétlen Macen van értelme |
 | `make release` | a kiadás próbafuttatása a `target/release-dry-run/` mappába, a helyi tanúsítvánnyal aláírva; semmit nem küld sehová |
-| `make release-notarized` | `check`, majd maga a kiadás a `dist/` mappába: Developer ID-aláírás, hitelesítés, az app saját kulcsával aláírt frissítési hírcsatorna; megnöveli a buildszámot |
+| `make release-notarized` | `check`, majd maga a kiadás a `dist/` mappába: Developer ID-aláírás, hitelesítés, az app saját kulcsával aláírt frissítési hírcsatorna; változatlanul hagyja a `VERSION` fájlt |
+| `make deploy` | tiszta, zöld CI-pecséttel rendelkező `main` ágon: hitelesíti a következő verziót, frissíti és commitolja a `VERSION` fájlt, feltölti a kiadás fájljait, majd pusholja a kódot, a CI-pecsétet és a verziócímkét; a GitHub automatikusan közzéteszi a kiadást |
 
 A hibakereső és a kiadási változat külön appok, saját beállításokkal és adatokkal. A fordítást, a tesztelést, az önteszteket, a kiadást és a kódra vonatkozó szabályokat a [docs/development.md](../../../docs/development.md) írja le, a mögöttük álló döntéseket a [docs/plan.md](../../../docs/plan.md). A kiadási megjegyzések a [RELEASE_NOTES.md](../../../RELEASE_NOTES.md) fájlban találhatók, lefordítva minden README mellett az `assets/readme/<language>/` mappában.
 

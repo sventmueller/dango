@@ -6,7 +6,9 @@
 
 Dango združi kodo, agente, ki jo spreminjajo, in vse okoli njih v eno okno na mapo: urejevalnik z jezikovnimi strežniki in napovedovanjem med tipkanjem, terminale, brskalnik, Git, CI, razhroščevalnik in niti AI s Claude, Codex, Antigravity, OpenCode ali agentom, vgrajenim v aplikacijo. Vsak agent dela v isti časovnici, vpraša, preden spremeni datoteke ali zažene ukaze, in pred vsakim pozivom pusti kontrolno točko, tako da lahko to, kar je naredil, pregledate in previjete nazaj sporočilo za sporočilom. Nič, kar nastavi mapa, se ne zažene, preden ji zaupate, besedilo od zunaj pa pride do agenta označeno kot nezaupanja vredno. Narekujte v urejevalnik in v polje za sporočilo; prepoznavanje govora lahko ostane v vašem Macu. Dango je napisan v jeziku Rust na pristnih kontrolnikih AppKit, brez Electrona, govori 35 jezikov in nima telemetrije.
 
-**Še ni izdan.** Prva izdaja bo slika diska, podpisana z Developer ID in notarizirana pri Applu, za macOS 14 ali novejši na Apple Silicon in Intel. Do takrat [zgradite Dango iz izvorne kode](#gradnja-iz-izvorne-kode).
+[![Prenesi Dango.dmg](https://img.shields.io/badge/Prenesi_Dango-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Prenesi Dango.dmg](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: podpisan in notariziran pri Applu, za macOS 14 ali novejši na Apple Silicon in Intel. Povezava bo na voljo s prvo izdajo.
 
 **Ste našli napako?** [Odprite issue](https://github.com/sventmueller/dango/issues/new) in navedite, pri katerem agentu in pri kakšnem projektu se je pojavila.
 
@@ -357,13 +359,14 @@ Potrebujete:
 | Ukaz | Kaj naredi |
 |---|---|
 | `make run` | zgradi razvojno aplikacijo (`target/debug/Dango Debug.app`) in jo odpre |
-| `make build` | zgradi aplikacijo za izdajo (`target/release/Dango.app`), podpisano z lokalnim potrdilom, ki ga prva gradnja ustvari v prijavni verigi ključev; poveča številko gradnje v `VERSION` |
+| `make build` | zgradi aplikacijo za izdajo (`target/release/Dango.app`), podpisano z lokalnim potrdilom, ki ga prva gradnja ustvari v prijavni verigi ključev; pusti `VERSION` nespremenjen |
 | `make lint` | oblikovanje in clippy; opozorila povzročijo neuspeh |
 | `make check` | `lint`, nato vsi preizkusi; ne potrebuje verige ključev, okna ali omrežja |
 | `make test` | `check`, nato samopreizkus `probe` in revizija dostopnosti, od leve proti desni in od desne proti levi, v pravi aplikaciji |
 | `make perf` | časovni proračuni, v gradnji za izdajo; smiselno le na sicer nedejavnem Macu |
 | `make release` | poskusni zagon izdaje v `target/release-dry-run/`, podpisan z lokalnim potrdilom; nikamor ničesar ne pošlje |
-| `make release-notarized` | `check`, nato sama izdaja v `dist/`: podpis Developer ID, notarizacija, vir posodobitev, podpisan z lastnim ključem aplikacije; poveča številko gradnje |
+| `make release-notarized` | `check`, nato sama izdaja v `dist/`: podpis Developer ID, notarizacija, vir posodobitev, podpisan z lastnim ključem aplikacije; pusti `VERSION` nespremenjen |
+| `make deploy` | na čisti veji `main` z zelenim pečatom CI: notarizira naslednjo različico, posodobi in commita `VERSION`, naloži datoteke izdaje ter potisne kodo, pečat CI in oznako različice; GitHub samodejno objavi izdajo |
 
 Razvojna različica in različica za izdajo sta ločeni aplikaciji z lastnimi nastavitvami in podatki. Gradnja, preizkušanje, samopreizkusi, izdaja in pravila, ki jim sledi koda, so opisani v [docs/development.md](../../../docs/development.md), odločitve za tem pa v [docs/plan.md](../../../docs/plan.md). Opombe ob izdaji so [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), prevedene poleg vsakega README v `assets/readme/<language>/`.
 

@@ -6,7 +6,9 @@
 
 Dango kodu, onu değiştiren ajanları ve çevrelerindeki her şeyi her klasör için tek bir pencerede toplar: dil sunucuları ve düzenleme tahminleri olan bir düzenleyici, terminaller, bir tarayıcı, Git, CI, bir hata ayıklayıcı ve Claude, Codex, Antigravity, OpenCode ya da uygulamaya yerleşik bir ajanla AI sohbetleri. Her ajan aynı zaman çizelgesinde çalışır, dosyaları değiştirmeden ya da komut çalıştırmadan önce sorar ve her istemden önce bir kontrol noktası bırakır; böylece yaptıklarını ileti ileti gözden geçirip geri sarabilirsiniz. Bir klasörün yapılandırdığı hiçbir şey, siz o klasöre güvenmeden çalışmaz ve dışarıdan gelen metin ajana güvenilmeyen olarak işaretlenmiş şekilde ulaşır. Düzenleyiciye ve ileti alanına dikte edin; konuşma tanıma Mac’inizde kalabilir. Dango, Electron olmadan gerçek AppKit denetimleri üzerinde Rust ile yazılmıştır, 35 dil konuşur ve telemetri içermez.
 
-**Henüz yayımlanmadı.** İlk sürüm, Developer ID ile imzalanmış ve Apple tarafından onaylanmış (notarized) bir disk görüntüsü olacak; Apple Silicon ve Intel üzerinde macOS 14 veya üstü için. O zamana kadar [Dango’yu kaynaktan derleyin](#kaynaktan-derleme).
+[![Dango.dmg indir](https://img.shields.io/badge/Dango_indir-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Dango.dmg indir](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: imzalanmış ve Apple tarafından onaylanmış (notarized) disk görüntüsü; Apple Silicon ve Intel üzerinde macOS 14 veya üstü için. Bağlantı ilk sürümle birlikte kullanılabilir olacak.
 
 **Bir hata mı buldunuz?** [Bir issue açın](https://github.com/sventmueller/dango/issues/new) ve hatanın hangi ajanla ve ne tür bir projede ortaya çıktığını belirtin.
 
@@ -357,13 +359,14 @@ Gerekenler:
 | Komut | Ne yapar |
 |---|---|
 | `make run` | hata ayıklama uygulamasını (`target/debug/Dango Debug.app`) derler ve açar |
-| `make build` | sürüm uygulamasını (`target/release/Dango.app`) derler; ilk derlemenin giriş anahtar zincirinde oluşturduğu yerel bir sertifikayla imzalanır; `VERSION` içindeki derleme numarasını artırır |
+| `make build` | sürüm uygulamasını (`target/release/Dango.app`) derler; ilk derlemenin giriş anahtar zincirinde oluşturduğu yerel bir sertifikayla imzalanır; `VERSION` değerini değiştirmez |
 | `make lint` | biçimlendirme ve clippy; uyarılar başarısızlığa yol açar |
 | `make check` | `lint`, ardından tüm testler; anahtar zinciri, pencere ya da ağ gerektirmez |
 | `make test` | `check`, ardından gerçek uygulamada soldan sağa ve sağdan sola `probe` öz testi ve erişilebilirlik denetimi |
 | `make perf` | bir sürüm derlemesinde zamanlama bütçeleri; yalnızca başka bir iş yapmayan bir Mac’te anlamlıdır |
 | `make release` | yerel sertifikayla imzalanmış, `target/release-dry-run/` içine sürümün bir deneme çalıştırması; hiçbir yere bir şey göndermez |
-| `make release-notarized` | `check`, ardından `dist/` içine sürümün kendisi: Developer ID imzası, onaylama (notarization), uygulamanın kendi anahtarıyla imzalanmış güncelleme akışı; derleme numarasını artırır |
+| `make release-notarized` | `check`, ardından `dist/` içine sürümün kendisi: Developer ID imzası, onaylama (notarization), uygulamanın kendi anahtarıyla imzalanmış güncelleme akışı; `VERSION` değerini değiştirmez |
+| `make deploy` | temiz ve yeşil CI mührüne sahip `main` üzerinde sonraki sürümü onaylatır, `VERSION` değerini güncelleyip commit eder, sürüm dosyalarını yükler ve kodu, CI mührünü ve sürüm etiketini push eder; GitHub sürümü otomatik olarak yayımlar |
 
 Hata ayıklama ve sürüm derlemeleri kendi ayarları ve verileri olan ayrı uygulamalardır. Derleme, test etme, öz testler, sürüm yayımlama ve kodun izlediği kurallar [docs/development.md](../../../docs/development.md) dosyasında, arkasındaki kararlar [docs/plan.md](../../../docs/plan.md) dosyasında anlatılır. Sürüm notları [RELEASE_NOTES.md](../../../RELEASE_NOTES.md) dosyasındadır ve her README’nin yanında `assets/readme/<language>/` içinde çevrilmiştir.
 

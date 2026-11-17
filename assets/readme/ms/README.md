@@ -6,7 +6,9 @@
 
 Dango meletakkan kod, ejen yang mengubahnya dan segala-galanya di sekelilingnya dalam satu tetingkap bagi setiap folder: editor dengan pelayan bahasa dan ramalan semasa menaip, terminal, pelayar, Git, CI, penyahpepijat dan thread AI dengan Claude, Codex, Antigravity, OpenCode atau ejen yang terbina dalam apl. Setiap ejen bekerja dalam garis masa yang sama, bertanya sebelum mengubah fail atau menjalankan perintah, dan meninggalkan titik semak sebelum setiap prompt, supaya anda boleh menyemak dan memutar balik apa yang dilakukannya, mesej demi mesej. Tiada apa-apa yang dikonfigurasikan oleh folder akan dijalankan sebelum anda mempercayainya, dan teks dari luar sampai kepada ejen dengan tanda tidak dipercayai. Rencanakan ke dalam editor dan medan mesej, dan pengecaman pertuturan boleh kekal pada Mac anda. Dango ditulis dalam Rust di atas kawalan AppKit yang tulen, tanpa Electron, menggunakan 35 bahasa dan tiada telemetri.
 
-**Belum dikeluarkan.** Keluaran pertama akan menjadi imej cakera yang ditandatangani dengan Developer ID dan dinotari oleh Apple, untuk macOS 14 atau lebih baharu pada Apple Silicon dan Intel. Sehingga itu, [bina Dango daripada sumber](#membina-daripada-sumber).
+[![Muat turun Dango.dmg](https://img.shields.io/badge/Muat_turun_Dango-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Muat turun Dango.dmg](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: ditandatangani dan dinotari oleh Apple, untuk macOS 14 atau lebih baharu pada Apple Silicon dan Intel. Pautan tersedia mulai keluaran pertama.
 
 **Menemui pepijat?** [Buka issue](https://github.com/sventmueller/dango/issues/new) dan nyatakan dengan ejen mana dan dalam jenis projek apa ia berlaku.
 
@@ -357,13 +359,14 @@ Anda memerlukan:
 | Perintah | Fungsinya |
 |---|---|
 | `make run` | membina apl nyahpepijat (`target/debug/Dango Debug.app`) dan membukanya |
-| `make build` | membina apl keluaran (`target/release/Dango.app`), ditandatangani dengan sijil setempat yang dicipta oleh binaan pertama dalam rantai kunci log masuk; menaikkan nombor binaan dalam `VERSION` |
+| `make build` | membina apl keluaran (`target/release/Dango.app`), ditandatangani dengan sijil setempat yang dicipta oleh binaan pertama dalam rantai kunci log masuk; membiarkan `VERSION` tidak berubah |
 | `make lint` | pemformatan dan clippy; amaran menyebabkan kegagalan |
 | `make check` | `lint`, kemudian semua ujian; tidak memerlukan rantai kunci, tetingkap atau rangkaian |
 | `make test` | `check`, kemudian ujian kendiri `probe` dan audit kebolehcapaian, kiri ke kanan dan kanan ke kiri, dalam apl sebenar |
 | `make perf` | bajet masa, dalam binaan keluaran; hanya bermakna pada Mac yang tidak melakukan apa-apa lagi |
 | `make release` | larian percubaan keluaran ke dalam `target/release-dry-run/`, ditandatangani dengan sijil setempat; tidak menghantar apa-apa ke mana-mana |
-| `make release-notarized` | `check`, kemudian keluaran itu sendiri ke dalam `dist/`: tandatangan Developer ID, notarisasi, suapan kemas kini yang ditandatangani dengan kunci apl itu sendiri; menaikkan nombor binaan |
+| `make release-notarized` | `check`, kemudian keluaran itu sendiri ke dalam `dist/`: tandatangan Developer ID, notarisasi, suapan kemas kini yang ditandatangani dengan kunci apl itu sendiri; membiarkan `VERSION` tidak berubah |
+| `make deploy` | pada `main` yang bersih dengan meterai CI hijau: menotari versi seterusnya, mengemas kini dan melakukan commit `VERSION`, memuat naik fail keluaran dan melakukan push kod, meterai CI serta tag versi; GitHub menerbitkan keluaran secara automatik |
 
 Nyahpepijat dan keluaran ialah apl berasingan dengan seting dan data masing-masing. Pembinaan, pengujian, ujian kendiri, keluaran dan peraturan yang diikuti oleh kod diterangkan dalam [docs/development.md](../../../docs/development.md), keputusan di sebaliknya dalam [docs/plan.md](../../../docs/plan.md). Nota keluaran ialah [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), diterjemahkan di sebelah setiap README dalam `assets/readme/<language>/`.
 

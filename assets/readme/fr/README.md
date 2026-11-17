@@ -6,7 +6,9 @@
 
 Dango réunit le code, les agents qui le modifient et tout ce qui les entoure dans une fenêtre par dossier : un éditeur avec serveurs de langage et prédictions pendant la saisie, des terminaux, un navigateur, Git, la CI, un débogueur et des fils IA avec Claude, Codex, Antigravity, OpenCode ou un agent intégré à l’app. Chaque agent travaille dans la même chronologie, demande avant de modifier des fichiers ou d’exécuter des commandes, et laisse un point de contrôle avant chaque prompt, pour que vous puissiez examiner et annuler ce qu’il a fait, message par message. Rien de ce qu’un dossier configure ne s’exécute avant que vous lui fassiez confiance, et le texte venu de l’extérieur parvient à un agent marqué comme non fiable. Dictez dans l’éditeur et dans le champ de message ; la reconnaissance vocale peut rester sur votre Mac. Dango est écrit en Rust sur de vrais contrôles AppKit, sans Electron, parle 35 langues et n’a aucune télémétrie.
 
-**Pas encore publié.** La première version sera une image disque signée avec un Developer ID et notarisée par Apple, pour macOS 14 ou ultérieur sur Apple Silicon et Intel. D’ici là, [compilez Dango depuis les sources](#compiler-depuis-les-sources).
+[![Télécharger Dango.dmg](https://img.shields.io/badge/T%C3%A9l%C3%A9charger_Dango-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Télécharger Dango.dmg](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: signé et notarisé par Apple, pour macOS 14 ou ultérieur sur Apple Silicon et Intel. Le lien sera disponible dès la première publication.
 
 **Vous avez trouvé un bug ?** [Ouvrez une issue](https://github.com/sventmueller/dango/issues/new) et indiquez avec quel agent et dans quel type de projet il s’est produit.
 
@@ -357,13 +359,14 @@ Il vous faut :
 | Commande | Ce qu’elle fait |
 |---|---|
 | `make run` | compile l’app de débogage (`target/debug/Dango Debug.app`) et l’ouvre |
-| `make build` | compile l’app de version (`target/release/Dango.app`), signée avec un certificat local que la première compilation crée dans le trousseau de session ; incrémente le numéro de build dans `VERSION` |
+| `make build` | compile l’app de version (`target/release/Dango.app`), signée avec un certificat local que la première compilation crée dans le trousseau de session ; laisse `VERSION` inchangé |
 | `make lint` | mise en forme et clippy ; les avertissements le font échouer |
 | `make check` | `lint`, puis tous les tests ; ne nécessite ni trousseau, ni fenêtre, ni réseau |
 | `make test` | `check`, puis l’autotest `probe` et l’audit d’accessibilité, de gauche à droite et de droite à gauche, dans la vraie app |
 | `make perf` | les budgets de temps, dans une compilation de version ; n’a de sens que sur un Mac par ailleurs inactif |
 | `make release` | une répétition de la publication dans `target/release-dry-run/`, signée avec le certificat local ; n’envoie rien nulle part |
-| `make release-notarized` | `check`, puis la publication elle-même dans `dist/` : signature Developer ID, notarisation, flux de mises à jour signé avec la clé propre de l’app ; incrémente le numéro de build |
+| `make release-notarized` | `check`, puis la publication elle-même dans `dist/` : signature Developer ID, notarisation, flux de mises à jour signé avec la clé propre de l’app ; laisse `VERSION` inchangé |
+| `make deploy` | sur un `main` propre et muni d’un sceau vert de CI : notarise la prochaine version, met à jour et commite `VERSION`, téléverse les fichiers de publication et pousse le code, le sceau de CI et le tag de version ; GitHub publie automatiquement la version |
 
 Débogage et version sont des apps distinctes avec leurs propres réglages et données. La compilation, les tests, les autotests, la publication et les règles que suit le code sont décrits dans [docs/development.md](../../../docs/development.md), les décisions qui les sous-tendent dans [docs/plan.md](../../../docs/plan.md). Les notes de version sont [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), traduites à côté de chaque README dans `assets/readme/<language>/`.
 
