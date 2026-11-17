@@ -28,10 +28,9 @@ pub const BUNDLE_ID: &str = "local.agentide";
 pub const CASK: &str = "dango";
 
 /// The public half of the product's own EdDSA key, which every update Sparkle installs must be signed with (E51); its
-/// private half stays in the owner's login keychain under the account `BUNDLE_ID`. Empty until the owner creates it
-/// with Sparkle's `generate_keys --account <BUNDLE_ID>` and copies the key it prints here; a notarized release stops
-/// until then.
-pub const UPDATE_PUBLIC_KEY: &str = "";
+/// private half stays in the owner's login keychain under the account `BUNDLE_ID`, created with Sparkle's
+/// `generate_keys --account <BUNDLE_ID>`. A notarized release requires that key to match this public half.
+pub const UPDATE_PUBLIC_KEY: &str = "7e5k+u8650uRidvnUWbtJTItzpDfrOVAubE+74OCEM8=";
 
 /// The folder in a project that holds its settings for this app.
 pub const PROJECT_DIR: &str = ".dango";

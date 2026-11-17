@@ -1,4 +1,6 @@
 /target/
+/dist/
+/.github/scripts/__pycache__/
 .DS_Store
 .dango/*
 

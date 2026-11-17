@@ -12,8 +12,10 @@ message. Nothing a folder configures runs before you trust it, and text from out
 untrusted. Dictate into the editor and the message field, and the speech recognition can stay on your Mac. Dango is
 written in Rust on genuine AppKit controls, without Electron, speaks 35 languages, and has no telemetry.
 
-**Not released yet.** The first release will be a disk image signed with a Developer ID and notarized by Apple, for
-macOS 14 or later on Apple Silicon and Intel. Until then, [build Dango from source](#building-from-source).
+[![Download Dango for macOS](https://img.shields.io/badge/Download-Dango_for_macOS-0A84FF?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)
+
+**[Download Dango.dmg](https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg)**: signed and notarized
+by Apple, for macOS 14 or later on Apple Silicon and Intel. The link becomes available with the first release.
 
 **Found a bug?** [Open an issue](https://github.com/sventmueller/dango/issues/new) and say which agent and which kind
 of project it happened with.
@@ -506,13 +508,14 @@ You need:
 | Command | What it does |
 |---|---|
 | `make run` | builds the debug app (`target/debug/Dango Debug.app`) and opens it |
-| `make build` | builds the release app (`target/release/Dango.app`), signed with a local certificate the first build creates in the login keychain; raises the build number in `VERSION` |
+| `make build` | builds the release app (`target/release/Dango.app`), signed with a local certificate the first build creates in the login keychain; leaves `VERSION` unchanged |
 | `make lint` | formatting and clippy; warnings fail |
 | `make check` | `lint`, then all tests; needs no keychain, window or network |
 | `make test` | `check`, then the self-test `probe` and the accessibility audit, left to right and right to left, in the real app |
 | `make perf` | the timing budgets, in a release build; meaningful only on an otherwise idle Mac |
 | `make release` | a dry run of the release into `target/release-dry-run/`, signed with the local certificate; sends nothing anywhere |
-| `make release-notarized` | `check`, then the release itself into `dist/`: Developer ID signature, notarization, the update feed signed with the app's own key; raises the build number |
+| `make release-notarized` | `check`, then the current version into `dist/`: Developer ID signature, notarization, the update feed signed with the app's own key; leaves `VERSION` unchanged |
+| `make deploy` | on clean, sealed `main`: notarizes the next version, commits `VERSION`, uploads the release assets and pushes the code, CI seal and version tag; GitHub publishes the release automatically |
 
 Debug and release are separate apps with their own settings and data. Building, testing, the self-tests, the release
 and the rules the code follows are described in [docs/development.md](docs/development.md), the decisions behind it in

@@ -5,7 +5,7 @@
 help: ## List the targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-z-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-build: ## Build the app into target/release with dictation, signed with the local certificate; raises the build number
+build: ## Build the app into target/release with dictation, signed with the local certificate; VERSION unchanged
 	cargo xtask bundle --release
 
 run: ## Build the debug app into target/debug and open it
@@ -24,6 +24,7 @@ lint: ## Formatting, clippy, also with the selftest feature, the allowed thread-
 	cargo clippy --package ide-terminal --package ide-lsp --package ide-git --package ide-agent --package ide-predict --package ide-dap --package ide-thread --all-targets --features ide-terminal/fuzzing,ide-lsp/fuzzing,ide-git/fuzzing,ide-agent/fuzzing,ide-predict/fuzzing,ide-dap/fuzzing,ide-thread/fuzzing -- -D warnings
 
 check: lint ## lint, then all cargo tests; needs no keychain, no window and no network
+	python3 .github/scripts/test_publish_release.py
 	cargo test --workspace
 
 check-dictation: ## Clippy and the tests of the app and ide-ui-dictation with dictation, which builds whisper.cpp with cmake; for changes to it
@@ -49,7 +50,7 @@ ci: ## The whole pipeline: cargo fmt, check, coverage with every test and offlin
 seal-explain: ## The seal of HEAD's content here and on GitHub, and what separates it from the nearest green seal
 	cargo xtask seal explain
 
-deploy: ## Push main and its green seal to GitHub; refuses on another branch, with uncommitted changes or without a green seal
+deploy: ## Notarize the next version, commit VERSION, upload the draft and push main, its green seal and tag; GitHub publishes
 	cargo xtask deploy
 
 test: check ## check, then the selftest probe and the accessibility audit, left to right and right to left
@@ -64,5 +65,5 @@ test-claude-latest: ## The newest Claude CLI against the contract the app relies
 release: ## Dry run of the release with dictation: universal app, disk image, update feed and Cask in target/release-dry-run; sends nothing anywhere
 	cargo xtask release
 
-release-notarized: check ## The release: Developer ID, notarized by Apple, into dist/; raises the build number
+release-notarized: check ## The current version: Developer ID, notarized by Apple, into dist/; VERSION unchanged
 	cargo xtask release --notarize

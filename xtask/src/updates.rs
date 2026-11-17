@@ -28,9 +28,8 @@ pub(crate) struct Feed<'a> {
 }
 
 /// The releases page in GitHub's layout: each release's files under `/download/v<version>/`, the newest one's under
-/// `/latest/download/`. Empty until the owner chooses where releases live; a dry run uses `DRY_RUN_RELEASES` instead,
-/// and a notarized release refuses to start.
-pub(crate) const RELEASES: &str = "";
+/// `/latest/download/`.
+pub(crate) const RELEASES: &str = "https://github.com/sventmueller/dango/releases";
 
 const DRY_RUN_RELEASES: &str = "https://example.invalid/releases";
 

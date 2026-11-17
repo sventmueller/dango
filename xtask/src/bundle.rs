@@ -374,16 +374,12 @@ pub(crate) fn copy_dir(from: &Path, to: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// Builds and signs a bundle for this Mac. A release build then raises the build number; debug and selftest builds
-/// leave it.
+/// Builds and signs a bundle for this Mac without changing VERSION.
 pub(crate) fn bundle(build: Build) -> Result<PathBuf, String> {
     let version = version()?;
     let app = assemble(build, &version, None)?;
     sign(&mut System, &app, &signing_identity()?, build, false)?;
     register(&app)?;
-    if build == Build::Release {
-        next_build(&version)?;
-    }
     Ok(app)
 }
 

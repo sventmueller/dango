@@ -7,6 +7,7 @@ mod cask;
 mod ci;
 mod claude_latest;
 mod coverage;
+mod deploy;
 mod focus;
 mod fuzz;
 mod icon;
@@ -40,7 +41,7 @@ pub(crate) const PACKAGE: &str = "ide-app";
 pub(crate) const PROGRAM: &str = "ide";
 
 pub(crate) const USAGE: &str = "usage: cargo xtask <task>
-  bundle [--release] [--selftest]  build and sign target/<profile>/<name>.app; a release build raises the build number
+  bundle [--release] [--selftest]  build and sign target/<profile>/<name>.app without changing VERSION
   run [--release]                  bundle, then open the app
   selftest [<scenario>…|--offline] bundle the release with the selftest built in (and dictation for its scenario), then run each scenario (probe if none,
                                    every one without network, account or person with --offline); compares the pictures
@@ -56,7 +57,7 @@ pub(crate) const USAGE: &str = "usage: cargo xtask <task>
                                    --notarize a dry run into target/release-dry-run: signed with the local certificate,
                                    nothing sent to Apple or anywhere, VERSION unchanged; --layout has Finder lay out the
                                    image window, which opens it on screen. With --notarize: Developer ID, notarized and
-                                   stapled, into dist/, then the build number goes up
+                                   stapled, into dist/; VERSION unchanged
   universal                        target/universal/ide with dictation for Apple Silicon and Intel; needs rustup
   acknowledgements                 target/Acknowledgements.txt, the license texts the distribution carries
   claude-latest [--signed-in]      install the newest Claude CLI into target/claude-latest and check the contract the
@@ -78,8 +79,8 @@ pub(crate) const USAGE: &str = "usage: cargo xtask <task>
                                    $GITHUB_OUTPUT; fails for a red seal
   seal explain                     the seals of HEAD's content here and on origin, and the paths that separate it from
                                    the nearest green seal
-  deploy                           on main with everything committed and HEAD's content sealed green: push main and the
-                                   seal to origin
+  deploy                           on clean, sealed main: notarize the next version, commit VERSION, upload the draft,
+                                   then push main, its seal and the version tag; GitHub publishes the release
   thread-locals                    fail for a thread-local that docs/thread-locals.md does not allow to stay
   structure                        fail for a Rust file over 1000 lines or a model.rs that uses objc2 (E98)
   rules                            fail for unlisted stateful statics, mem::forget, unguarded blocks, literal sizes,
@@ -128,7 +129,7 @@ fn task(args: &[String]) -> Result<(), String> {
         "coverage" => coverage::coverage(rest),
         "ci" => ci::ci(rest),
         "seal" => seal::seal(rest),
-        "deploy" => seal::deploy(rest),
+        "deploy" => deploy::deploy(rest),
         "release" => {
             let [notarize, layout] = flags(rest, ["--notarize", "--layout"])?;
             let out = release::release(release::Options {
@@ -222,8 +223,7 @@ pub(crate) fn is_version(v: &str) -> bool {
             .all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()))
 }
 
-/// The version the next build gets, from VERSION: major and minor are raised by hand, the build number by every
-/// release build.
+/// The current version from VERSION. Only deploy changes it.
 pub(crate) fn version() -> Result<String, String> {
     let path = root().join("VERSION");
     let text = files::read_to_string(&path)?;
@@ -244,14 +244,6 @@ pub(crate) fn following(version: &str) -> Result<String, String> {
     let build: u64 = build.parse().map_err(|e| format!("build number {build}: {e}"))?;
     let next = build.checked_add(1).ok_or("the build number is at its maximum")?;
     Ok(format!("{head}.{next}"))
-}
-
-/// Raises the build number in VERSION past `built`, the version just built.
-pub(crate) fn next_build(built: &str) -> Result<(), String> {
-    let next = following(built)?;
-    files::write(root().join("VERSION"), format!("{next}\n"))?;
-    println!("built {built}, next build {next}");
-    Ok(())
 }
 
 /// `std::fs` with the path in every error.
@@ -319,7 +311,7 @@ mod tests {
     }
 
     #[test]
-    fn a_release_build_raises_only_the_build_number() {
+    fn a_deploy_raises_only_the_build_number() {
         assert_eq!(following("0.1.0").unwrap(), "0.1.1");
         assert_eq!(following("2.3.99").unwrap(), "2.3.100");
         assert!(following("1.0").is_err() && following("1.0.x").is_err());

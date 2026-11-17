@@ -21,7 +21,7 @@ in Dark Mode). Only Xcode's `actool` compiles it, so its output `assets/Assets.c
 
 | Command | What it does |
 |---|---|
-| `make build` | `cargo xtask bundle --release`: the release app with dictation, signed; raises the build number |
+| `make build` | `cargo xtask bundle --release`: the release app with dictation, signed; VERSION unchanged |
 | `make run` | `cargo xtask run`: the debug app, opened |
 | `make icon` | `cargo xtask icon`: compiles the app icon, see [App icon](#app-icon); needs Xcode |
 | `make lint` | `cargo fmt --check`, clippy on the workspace and on the app with `--features selftest`; warnings fail |
@@ -33,7 +33,7 @@ in Dark Mode). Only Xcode's `actool` compiles it, so its output `assets/Assets.c
 | `make coverage` | `cargo xtask coverage`: line coverage of the tests and the offline self-tests, see [Coverage](#coverage) |
 | `make ci` | `cargo xtask ci`: formatter, `check`, coverage with every test and self-test, `perf`; seals the content, see [CI and deploy](#ci-and-deploy) |
 | `make seal-explain` | `cargo xtask seal explain`: the seal of HEAD's content here and on GitHub |
-| `make deploy` | `cargo xtask deploy`: pushes `main` with its green seal to GitHub |
+| `make deploy` | notarizes the next version, commits VERSION, stages the assets and pushes `main`, its seal and tag; GitHub publishes the release |
 | `make release` | `cargo xtask release`: a dry run of the release, see [Release](#release); sends nothing anywhere |
 | `make release-notarized` | `check`, then `cargo xtask release --notarize`: the release for real into `dist/` |
 | `make test-integration` | `cargo xtask integration`: real servers, CLIs and services with the sign-ins, no paid account unless asked; see below |
@@ -141,7 +141,7 @@ that fails while the screen is locked seals nothing. A complete run seals the co
 passed, `refs/ci-seals/red/<fingerprint>` when one failed. A red seal outweighs a green one for the same fingerprint.
 Content that changed during the run seals nothing.
 
-The fingerprint (`xtask/src/seal.rs`) is the git tree of the content without `VERSION`, which `make build` raises: for
+The fingerprint (`xtask/src/seal.rs`) is the git tree of the content without `VERSION`, which only `make deploy` raises: for
 the working tree through a temporary index (`read-tree HEAD`, `add --all`), so untracked files count unless they are
 ignored; for a CI checkout `HEAD`'s tree. Committing the whole sealed working tree with `git add -A` therefore gives
 `HEAD` the sealed fingerprint. `cargo xtask seal fingerprint [--head]` prints it, `make seal-explain` says which seals
@@ -150,15 +150,20 @@ check` gives origin's verdict for HEAD as `fingerprint=` and `verdict=` lines (a
 for red. A seal ref points at a commit of the sealed tree without parents.
 
 `make deploy` (`cargo xtask deploy`) refuses unless `main` is checked out, everything is committed, HEAD's content
-has a green seal here and no red one here or on origin; then it pushes `main` and the seal ref in one atomic push, so
-the workflow the push starts finds the seal. `.github/workflows/ci.yml` runs on every push to `main` and by hand: its
+has a green seal here and no red one here or on origin. It notarizes the next version, commits only VERSION, creates
+its tag and uploads all assets and their SHA-256 manifest to a draft release. Only after the complete upload does it
+push `main`, the seal ref and the version tag atomically, so the workflows find both the seal and the complete draft.
+An upload or push failure leaves the draft unpublished; `dist/deployment.json` lets the same source resume without
+another version bump. `.github/workflows/release.yml` runs when VERSION changes, checks the commit, tag, seal,
+manifest, every checksum and the update feed, then publishes the draft as latest. A manual workflow run can retry
+publication; a push without a version change creates no release. `.github/workflows/ci.yml` runs on every push to `main` and by hand: its
 `seal` job (Linux) runs `cargo xtask seal check`; for content sealed green the `check` job is skipped, for content
 sealed red the workflow fails, and unsealed content gets `make check` on a macOS runner, with `splat` and `lowspeak`
 checked out beside it as in [Newest Claude CLI](#newest-claude-cli). The window self-tests, the coverage gate that
 includes them and the timing budgets run only in the local `make ci`: they need a logged-in GUI session with screen
 recording and accessibility permissions, which GitHub's runners lack. The skills `/ci` and `/deploy` in
 `.claude/skills/` drive these targets: `/ci` runs `make ci` until it is green and commits the sealed tree, `/deploy`
-pushes with `make deploy` and watches the GitHub run.
+releases with `make deploy` and watches both GitHub runs. Release notes in every language are prepared before `/ci`.
 
 ## Builds
 The display name and the identifiers come from the crate `ide-product` (E18); the table shows their current values.
@@ -176,8 +181,10 @@ or a selftest never touches the settings of the app in use. Launch Services hand
 claim its scheme, so only the release claims the product's scheme; the debug build answers its own, and the selftest,
 which lives only as long as a scenario, none. The executable is `Contents/MacOS/Dango` in every build.
 
-`VERSION` holds major.minor.build. Major and minor are raised by hand; every release build raises the build number
-after it has been built and signed, so the bundle carries the number it was built with.
+`VERSION` holds major.minor.build and names the most recently deployed version. Only `make deploy` raises the build
+number: it builds the next version in memory, then commits that exact number after successful notarization. Normal
+builds, self-tests, dry runs and standalone `make release-notarized` keep VERSION unchanged. The bundle, tag, release,
+update feed and committed VERSION therefore all carry the same number.
 
 Every bundle also carries what the previews draw with (docs/splat-render.md): splat's renderer page `render.html`
 and `js/` from `../splat/resources`, without the files of splat's formula field, whose licenses the acknowledgements
@@ -234,7 +241,7 @@ keychain with memory, so it needs no microphone, model, key or network.
 
 Without `--notarize` it is a dry run into `target/release-dry-run/`: signed with the local certificate and without the
 secure timestamp, no notarization, no stapling, the feed's EdDSA signature a placeholder with the image's real length,
-`https://example.invalid/` for the addresses still missing, VERSION unchanged. It asks Apple for nothing and the
+VERSION unchanged. It asks Apple for nothing and the
 keychain only for items' attributes, and prints what a notarized release still lacks.
 
 Both runs check the translations before the long build: `cargo test -p ide-app --test translations` with
@@ -243,7 +250,7 @@ in any `Localizable.strings` stops the release; the test's output names each one
 
 `--notarize` stops before the long build unless everything is there, then signs with the first valid Developer ID
 Application certificate, has Apple notarize the app (as a zip) and then the image, staples both tickets, has Gatekeeper
-assess the image, signs it for Sparkle with the keychain's key, writes into `dist/` and raises the build number. It
+assess the image, signs it for Sparkle with the keychain's key and writes into `dist/` without changing VERSION. It
 needs:
 - `RELEASES` in `xtask/src/updates.rs`: the releases page in GitHub's layout; the image is downloaded from
   `<RELEASES>/download/v<version>/`, the feed from `<RELEASES>/latest/download/appcast.xml`.
@@ -259,7 +266,9 @@ needs:
   for the release and reviewed: notes that still begin with the comment `<!-- DRAFT` are refused, and the run names every language
   whose notes are missing. A dry run leaves the draft comment out of the feed and lists what is missing.
 
-Uploading the image and the feed to the release and adding the Cask to a tap stay manual.
+`make deploy` adds an identical `Dango.dmg` alias for the stable README download link and uploads the image, alias,
+notes, feed, Cask and deployment manifest. Only adding the Cask to a tap stays manual. `dist/` is ignored by git;
+the disk images are GitHub release assets, not source commits.
 
 ## Selftest
 The app built with `--features selftest` runs scenarios without a person at the Mac. Every scenario is a row of

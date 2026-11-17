@@ -1,6 +1,6 @@
 //! The CI seal (docs/development.md, "CI and deploy"): a git ref `refs/ci-seals/<green|red>/<fingerprint>` saying that
 //! a complete `cargo xtask ci` run of one content state passed or failed, and `deploy`, which pushes main only with
-//! its green seal. The fingerprint is the git tree of the content without `VERSION`, which every release build raises,
+//! its green seal. The fingerprint is the git tree of the content without `VERSION`, which only deploy raises,
 //! so a commit of the sealed working tree inherits the seal. Red beats green for the same fingerprint.
 
 use std::io::Write as _;
@@ -40,7 +40,7 @@ impl Git {
         &self.dir
     }
 
-    fn command(&self, args: &[&str]) -> Command {
+    pub(crate) fn command(&self, args: &[&str]) -> Command {
         let mut cmd = Command::new("git");
         cmd.arg("-C")
             .arg(&self.dir)
@@ -49,7 +49,7 @@ impl Git {
         cmd
     }
 
-    fn output(&self, sh: &mut dyn Shell, args: &[&str]) -> Result<String, String> {
+    pub(crate) fn output(&self, sh: &mut dyn Shell, args: &[&str]) -> Result<String, String> {
         sh.stdout(&mut self.command(args))
     }
 }
@@ -284,15 +284,8 @@ fn nearest_green(sh: &mut dyn Shell, git: &Git, local: &[String], fingerprint: &
     Ok(text)
 }
 
-/// `cargo xtask deploy`.
-pub(crate) fn deploy(args: &[String]) -> Result<(), String> {
-    flags(args, [])?;
-    deploy_in(&mut System, &Git::at(&root()))
-}
-
-/// Pushes main and its green seal to origin in one atomic push, so the workflow the push starts finds the seal;
-/// refuses on another branch, with changes not committed, or without a green seal here for HEAD's content.
-pub(crate) fn deploy_in(sh: &mut dyn Shell, git: &Git) -> Result<(), String> {
+/// Refuses on another branch, with changes not committed, or without a green seal here for HEAD's content.
+pub(crate) fn ready(sh: &mut dyn Shell, git: &Git) -> Result<String, String> {
     let branch = git.output(sh, &["branch", "--show-current"])?;
     if branch.trim() != BRANCH {
         return Err(format!(
@@ -327,12 +320,17 @@ pub(crate) fn deploy_in(sh: &mut dyn Shell, git: &Git) -> Result<(), String> {
             "origin has a red seal for HEAD's content {fp}, so its CI would fail"
         ));
     }
-    let seal = Seal::Green.reference(&fp);
-    sh.run(&mut git.command(&["push", "--atomic", "origin", BRANCH, &seal]))?;
-    println!("pushed {BRANCH} with {seal}");
+    Ok(fp)
+}
+
+/// Pushes the release commit, green seal and version tag atomically, after all draft assets have been uploaded.
+pub(crate) fn push(sh: &mut dyn Shell, git: &Git, tag: &str) -> Result<(), String> {
+    let seal = Seal::Green.reference(&ready(sh, git)?);
+    sh.run(&mut git.command(&["push", "--atomic", "origin", BRANCH, &seal, &format!("refs/tags/{tag}")]))?;
+    println!("pushed {BRANCH} with {seal} and {tag}");
     Ok(())
 }
 
 #[cfg(test)]
 #[path = "seal_tests.rs"]
-mod tests;
+pub(crate) mod tests;
