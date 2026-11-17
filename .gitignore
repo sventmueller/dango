@@ -2,7 +2,7 @@
 /dist/
 /.github/scripts/__pycache__/
 .DS_Store
-.dango/*
+.dango
 
 # Signing material: the Developer ID key lives in the keychain.
 *.p12
@@ -13,7 +13,7 @@
 
 # Local agent instructions and settings; the project's skills are shared.
 CLAUDE.md
-.claude/*
+.claude
 !.claude/skills/
 
 # Crash inputs that `cargo xtask fuzz` found; each becomes a regression test before it is deleted.

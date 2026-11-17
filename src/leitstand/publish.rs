@@ -25,6 +25,8 @@ const FORGE_EVERY: Duration = Duration::from_secs(60);
 #[derive(Default)]
 pub(super) struct Forge {
     access: ForgeAccess,
+    /// The branch the remote's HEAD points at.
+    default_branch: Option<String>,
     read: Option<Instant>,
     reading: bool,
 }
@@ -179,16 +181,16 @@ impl Leitstand {
         }
     }
 
-    /// What the app knows of `root`'s service for the order tab; read again on the CI lane once it is older than
-    /// [`FORGE_EVERY`].
-    pub(super) fn forge_access(&self, root: &Path) -> ForgeAccess {
+    /// What the app knows of `root`'s service for the order tab, with the branch its remote's HEAD points at; read
+    /// again on the CI lane once it is older than [`FORGE_EVERY`].
+    pub(super) fn forge_access(&self, root: &Path) -> (ForgeAccess, Option<String>) {
         let (access, stale) = {
             let folders = self.folders.borrow();
             let Some(forge) = folders.get(root).map(|f| &f.forge) else {
-                return ForgeAccess::Unknown;
+                return (ForgeAccess::Unknown, None);
             };
             let stale = !forge.reading && forge.read.is_none_or(|at| at.elapsed() > FORGE_EVERY);
-            (forge.access.clone(), stale)
+            ((forge.access.clone(), forge.default_branch.clone()), stale)
         };
         if stale && crate::project::is_trusted(root) {
             self.read_forge(root);
@@ -202,8 +204,16 @@ impl Leitstand {
         }
         let (folder, done_root, back) = (root.to_path_buf(), root.to_path_buf(), self.back());
         let queued = crate::ci_panel::on_lane(
-            move || crate::ci_panel::access(&folder),
-            move |access| back.deliver(Delivery::Forge(done_root, access.unwrap_or_default())),
+            move || {
+                (
+                    crate::ci_panel::access(&folder),
+                    crate::ci_panel::default_branch(&folder),
+                )
+            },
+            move |read| {
+                let (access, default) = read.unwrap_or_default();
+                back.deliver(Delivery::Forge(done_root, access, default));
+            },
         );
         if !queued && let Some(folder) = self.folders.borrow_mut().get_mut(root) {
             folder.forge.reading = false;
@@ -211,13 +221,14 @@ impl Leitstand {
     }
 
     /// What the CI lane found of `root`'s service; the views hear of it when it changed.
-    pub(super) fn forge_read(&self, root: &Path, access: ForgeAccess) {
+    pub(super) fn forge_read(&self, root: &Path, access: ForgeAccess, default_branch: Option<String>) {
         let changed = {
             let mut folders = self.folders.borrow_mut();
             let Some(folder) = folders.get_mut(root) else { return };
-            let changed = folder.forge.access != access;
+            let changed = folder.forge.access != access || folder.forge.default_branch != default_branch;
             folder.forge = Forge {
                 access,
+                default_branch,
                 read: Some(Instant::now()),
                 reading: false,
             };

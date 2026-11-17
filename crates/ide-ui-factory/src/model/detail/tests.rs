@@ -1,6 +1,20 @@
 use super::*;
 
 #[test]
+fn a_merge_request_is_offered_only_for_a_branch_the_service_does_not_merge_into_by_default() {
+    let ready = ForgeAccess::Ready;
+    assert!(merge_request_leads_somewhere(Some("feature/x"), Some("main"), &ready));
+    assert!(merge_request_leads_somewhere(Some("order/o-1"), None, &ready));
+    assert!(!merge_request_leads_somewhere(Some("main"), Some("main"), &ready));
+    assert!(!merge_request_leads_somewhere(
+        Some("feature/x"),
+        None,
+        &ForgeAccess::NoRemote
+    ));
+    assert!(!merge_request_leads_somewhere(None, Some("main"), &ready));
+}
+
+#[test]
 fn every_command_comes_back_from_its_tag() {
     for command in Command::ALL {
         assert_eq!(Command::of_tag(command.tag()), Some(command));

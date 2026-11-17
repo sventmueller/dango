@@ -97,7 +97,7 @@ enum Delivery {
     /// The preparation of an order's worktree with operation `op` ended, with what its factory hears of it (E188).
     SetupEnded(PathBuf, OrderId, ide_factory::OperationId, Box<InputKind>),
     /// Whether the folder can publish to its service (E177).
-    Forge(PathBuf, ide_ui_factory::model::detail::ForgeAccess),
+    Forge(PathBuf, ide_ui_factory::model::detail::ForgeAccess, Option<String>),
     /// Time passed.
     Tick,
     /// The user's defaults changed.
@@ -237,7 +237,7 @@ impl Leitstand {
             Delivery::Sections(root, order, key, sections) => self.sections_read(&root, &order, key, sections),
             Delivery::SetupEnded(root, order, op, input) => self.setup_ended(cx, &root, &order, &op, *input),
             Delivery::Shared(shared) => self.shared_read(cx, *shared),
-            Delivery::Forge(root, access) => self.forge_read(&root, access),
+            Delivery::Forge(root, access, default) => self.forge_read(&root, access, default),
             Delivery::Logged {
                 root,
                 effects,

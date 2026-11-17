@@ -22,7 +22,7 @@ mod work;
 
 use std::path::Path;
 
-pub(crate) use load::{access, client, remote_client};
+pub(crate) use load::{access, client, default_branch, remote_client};
 pub(crate) use log_tab::LogTabs;
 pub(crate) use login::CI_OAUTH_CLIENTS;
 pub(crate) use ops::open_url;

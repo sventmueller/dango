@@ -385,15 +385,19 @@ impl Detail {
         }
     }
 
-    /// The model with what the app found of the folder's service: publishing is offered only with a remote there and
-    /// a token for its host (E177).
-    pub fn with_forge(mut self, forge: ForgeAccess) -> Detail {
+    /// The model with what the app found of the folder's service and the branch its remote's HEAD points at:
+    /// publishing is offered only with a remote there and a token for its host (E177), "Merge Request anlegen" only
+    /// with a remote and for a branch other than that one.
+    pub fn with_forge(mut self, forge: ForgeAccess, default_branch: Option<&str>) -> Detail {
         for command in &self.publish_fits {
             if forge == ForgeAccess::Ready {
                 self.enabled.insert(command.tag());
             } else {
                 self.enabled.remove(&command.tag());
             }
+        }
+        if !merge_request_leads_somewhere(self.merge_branch.as_deref(), default_branch, &forge) {
+            self.enabled.remove(&Command::MergeRequest.tag());
         }
         self.forge = forge;
         self
@@ -732,6 +736,12 @@ fn publish_fits(order: &Order, accept_block: Option<AcceptBlock>) -> Vec<Command
     .filter(|(_, fits)| *fits)
     .map(|(command, _)| command)
     .collect()
+}
+
+/// Whether a merge request page for `branch` has something to compare: a page of the remote's service exists and the
+/// branch is not the one the service merges into by default, which a take-over into it already holds.
+fn merge_request_leads_somewhere(branch: Option<&str>, default_branch: Option<&str>, forge: &ForgeAccess) -> bool {
+    branch.is_some() && *forge != ForgeAccess::NoRemote && branch != default_branch
 }
 
 /// The branch a merge request of the done `order` brings in: the kept branch, or the base it was taken over into.
