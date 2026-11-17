@@ -107,6 +107,62 @@ impl GateGitDir {
     pub fn remove(self) -> io::Result<()> {
         fs::remove_dir_all(&self.folder)
     }
+
+    /// Whether a gate needs the private folder for `repo`: when its configuration may hold credentials, in a remote's
+    /// address, a header, a credential section or a file it includes, or when it cannot be read. Otherwise git in the
+    /// gate reads the repository itself, and no `GIT_DIR` leads a test suite's own repositories into a copy.
+    pub fn needed(repo: &Repository) -> bool {
+        fs::read_to_string(repo.common_dir().join("config")).map_or(true, |text| may_hold_credentials(&text))
+    }
+
+    /// The variables of a gate without the private folder: a global configuration in `folder` with only a neutral
+    /// identity, as the user's is out of reach in the sandbox, without the system's and without asking for
+    /// credentials.
+    pub fn neutral_environment(folder: &Path) -> io::Result<Vec<(String, String)>> {
+        fs::create_dir_all(folder)?;
+        let global = folder.join("global");
+        fs::write(&global, identity())?;
+        Ok(vec![
+            ("GIT_CONFIG_NOSYSTEM".into(), "1".into()),
+            ("GIT_CONFIG_GLOBAL".into(), global.to_string_lossy().into_owned()),
+            ("GIT_TERMINAL_PROMPT".into(), "0".into()),
+        ])
+    }
+}
+
+/// Whether the git configuration `text` may hold a credential: an address with a password or, over HTTP, a user, which
+/// is often a token; a header, password, token or secret; a credential section; or an include, whose file is not read
+/// here.
+fn may_hold_credentials(text: &str) -> bool {
+    text.lines().map(|line| without_comment(line.trim())).any(|line| {
+        let lower = line.to_ascii_lowercase();
+        let header = lower.strip_prefix('[').unwrap_or("");
+        let section = ["include", "credential"].iter().any(|name| {
+            header
+                .strip_prefix(name)
+                .is_some_and(|rest| rest.starts_with([']', ' ', '"', '.']) || rest.starts_with("if"))
+        });
+        let key = lower.split('=').next().unwrap_or("").trim();
+        let named = ["extraheader", "password", "token", "secret"]
+            .iter()
+            .any(|word| key.contains(word));
+        section || named || address_with_credential(&lower)
+    })
+}
+
+/// Whether `line` holds an address with a password, or a user over HTTP.
+fn address_with_credential(line: &str) -> bool {
+    line.match_indices("://").any(|(at, _)| {
+        let scheme = line[..at]
+            .rsplit(|c: char| !c.is_ascii_alphanumeric() && c != '+' && c != '-')
+            .next();
+        let rest = &line[at + 3..];
+        let authority = rest.split(['/', '"', ' ', '\t']).next().unwrap_or("");
+        let Some((user, _host)) = authority.rsplit_once('@') else {
+            return false;
+        };
+        user.contains(':') || scheme.is_some_and(|s| s.starts_with("http") || s.starts_with("ftp"))
+    })
 }
 
 /// The private folder's configuration: the repository format, no hooks and no file monitor, and of `settings` the
@@ -220,6 +276,27 @@ fn copy_tree(from: &Path, to: &Path) -> io::Result<()> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_configuration_with_a_credential_needs_the_private_folder() {
+        let plain = "[core]\n\tbare = false\n[remote \"origin\"]\n\turl = https://github.com/a/b.git\n\
+                     [remote \"ssh\"]\n\turl = git@github.com:a/b.git\n[remote \"s2\"]\n\turl = ssh://git@host/a.git\n\
+                     [branch \"main\"]\n\tremote = origin\n";
+        assert!(!super::may_hold_credentials(plain));
+        for secret in [
+            "[remote \"origin\"]\n\turl = https://ghp_abc@github.com/a/b.git\n",
+            "[remote \"origin\"]\n\turl = https://user:pw@example.com/a.git\n",
+            "[remote \"origin\"]\n\turl = ssh://git:pw@host/a.git\n",
+            "[http \"https://github.com/\"]\n\textraHeader = Authorization: Bearer x\n",
+            "[credential]\n\thelper = store\n",
+            "[credential \"https://github.com\"]\n\tusername = me\n",
+            "[include]\n\tpath = ~/.secrets\n",
+            "[includeIf \"gitdir:~/work/\"]\n\tpath = ~/.work\n",
+            "[lfs]\n\taccesstoken = x\n",
+        ] {
+            assert!(super::may_hold_credentials(secret), "{secret}");
+        }
+    }
+
     use super::*;
 
     #[test]

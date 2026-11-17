@@ -470,3 +470,53 @@ fn git_inside_a_gate_reads_a_private_copy_of_the_repository_and_none_of_its_conf
         "the gate's commit stayed in its own git folder"
     );
 }
+
+#[test]
+fn git_inside_a_gate_reads_a_repository_without_credentials_itself_and_a_tests_own_repository_stays_its_own() {
+    let (scratch, root, repos) = repository("gate-git-shared");
+    raw(&root, &["config", "remote.origin.url", "https://example.org/shop.git"]);
+    let order = OrderId("o-11".into());
+    let tree = make_worktree(&repos, &root, &order, "order/o-11", "main").unwrap();
+    std::fs::write(tree.path.join("a.txt"), "changed\n").unwrap();
+    let copy = open_in(&repos, &tree.path).unwrap();
+    let head = copy.head().unwrap().unwrap().to_string();
+    let script = "echo head=$(git rev-parse HEAD); echo status=$(git status --porcelain); \
+                  echo url=$(git config --get remote.origin.url); echo dir=${GIT_DIR:-none}; \
+                  cd \"$TMPDIR\" && git init --quiet own && cd own && echo x > f && git add f && \
+                  git commit --quiet -m own && echo own=$(git log -1 --format=%s)";
+    let job = crate::leitstand::gates::Job {
+        run: ide_factory::effect::SandboxRun {
+            command: script.into(),
+            env: std::collections::BTreeMap::new(),
+            network: Vec::new(),
+            sockets: Vec::new(),
+            sandbox: ide_factory::workflow::GateSandbox::Strict,
+            deadline_ms: 60_000,
+            output_limit: 1 << 20,
+        },
+        worktree: tree.path.clone(),
+        folder: scratch.join("run"),
+        images: None,
+        common_dir: Some(copy.common_dir().to_path_buf()),
+        dependencies: Vec::new(),
+        links: Vec::new(),
+        env: ide_process::order_env::for_orders(&login(&scratch), &[]),
+        rules: ide_git::FrozenRules::default(),
+        label: "gate".into(),
+        cancel: ide_core::Cancel::new(),
+    };
+    let outcome = crate::leitstand::gates::run(&job, Some(&copy));
+    let output = &outcome.excerpt;
+    assert_eq!(outcome.exit, Some(0), "{output}");
+    assert_eq!(printed(output, "head"), Some(head.as_str()), "{output}");
+    assert_eq!(printed(output, "status"), Some(" M a.txt"), "{output}");
+    assert_eq!(printed(output, "url"), Some("https://example.org/shop.git"), "{output}");
+    assert_eq!(
+        printed(output, "dir"),
+        Some("none"),
+        "no GIT_DIR leads other repositories astray: {output}"
+    );
+    assert_eq!(printed(output, "own"), Some("own"), "{output}");
+    assert!(!scratch.join("run/git").exists(), "no private git folder was made");
+    assert_eq!(outcome.left_behind, ["a.txt"]);
+}

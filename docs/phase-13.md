@@ -352,7 +352,17 @@ beschrieben, gilt so, wie es hier steht:
       `"strict"` als Vorgabe. `"relaxed"` erlaubt zusätzlich lokale Ports und Pseudoterminals. `"off"` startet Gates
       ohne Sandbox mit den Rechten des Nutzers, für Testsuiten mit eigenem `sandbox-exec`: macOS lässt eine Sandbox in
       einer Sandbox nur zu, wenn die äußere nichts verbietet. Beide Werte gehören zum bestätigten Gate-Satz (E190);
-      `"strict"` ändert dessen Hash nicht. Die Stufe steht als Vorgabe unter „Einstellungen ▸ Software Factory ▸
+      `"strict"` ändert dessen Hash nicht.
+    - Den eigenen Git-Ordner mit `GIT_DIR` bekommt ein Gate nur noch, wenn die Konfiguration des Repositorys Zugangsdaten
+      enthalten kann: eine Adresse mit Passwort oder über HTTP mit Benutzer, `extraheader`, Passwort, Token oder
+      Secret, ein Abschnitt `credential`, `include` oder `includeIf`, oder wenn sie sich nicht lesen lässt. Sonst
+      liest git im Gate das Repository selbst, nur `FETCH_HEAD` und die Reflogs bleiben gesperrt, und
+      `GIT_CONFIG_GLOBAL` zeigt auf eine neutrale Identität. Grund: `GIT_DIR` lenkt auch die Repositories, die eine
+      Testsuite selbst anlegt, in die Kopie. Ohne Kopie scheitern schreibende git-Befehle im Worktree, statt in der
+      Kopie zu landen. Mit `"off"` gibt es weder Kopie noch neutrale Konfiguration.
+    - Der temporäre Ordner eines Laufs liegt unter `/private/tmp` (eigener Name, Rechte 0700), nicht im Ordner des
+      Laufs unter Application Support: Dort überschreitet der Pfad eines Unix-Sockets, den ein Test anlegt, die 104
+      Zeichen von macOS. Die Stufe steht als Vorgabe unter „Einstellungen ▸ Software Factory ▸
       Sandbox der Gates“ und je Projekt im Dialog „Software Factory für <Ordner>“ unter „Prüfbefehle“, der
       `[gates] sandbox` schreibt. Die Vorgabe gilt ohne Bestätigung, weil der Nutzer sie selbst setzt; nur ein
       lockernder Wert der Workflow-Datei braucht sie.

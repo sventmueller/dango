@@ -52,18 +52,29 @@ pub(super) struct Job {
 
 /// Runs `job` until it ended and nothing of its process group is left, and says what it did.
 pub(super) fn run(job: &Job, git: Option<&ide_git::Repository>) -> CommandOutcome {
-    let temp = job.folder.join("tmp");
-    if let Err(error) = std::fs::create_dir_all(&temp) {
-        return failed(&error.to_string());
-    }
     if let Some(images) = &job.images
         && let Err(error) = std::fs::create_dir_all(images)
     {
         return failed(&error.to_string());
     }
-    let private = git.and_then(|repo| private_git(repo, &job.folder.join("git")));
-    let profile = profile(job, &temp, private.as_ref());
-    let env = environment(job, &temp, private.as_ref());
+    let temp = match short_temp() {
+        Ok(temp) => temp,
+        Err(error) => return failed(&error.to_string()),
+    };
+    // The private copy's `GIT_DIR` would lead a test suite's own repositories into it, so only a configuration that
+    // may hold credentials gets one; without a sandbox git reads everything itself.
+    let sandboxed = job.run.sandbox != GateSandbox::Off;
+    let hidden_config = sandboxed && git.is_none_or(ide_git::GateGitDir::needed);
+    let private = git
+        .filter(|_| hidden_config)
+        .and_then(|repo| private_git(repo, &job.folder.join("git")));
+    let neutral = if sandboxed && private.is_none() {
+        neutral_git(&temp)
+    } else {
+        Vec::new()
+    };
+    let profile = profile(job, &temp, private.as_ref(), hidden_config);
+    let env = environment(job, &temp, private.as_ref(), neutral);
     let gate = Gate {
         supervisor: Supervisor::global(),
         env: &env,
@@ -107,9 +118,9 @@ pub(super) fn run(job: &Job, git: Option<&ide_git::Repository>) -> CommandOutcom
 }
 
 /// The gate profile for `job` with its temporary folder `temp`: writing in the worktree, the pictures' folder and the
-/// private git folder; reading the path dependencies and the shared git folder except its records of remotes; local
-/// ports and pseudo-terminals when the project relaxed it.
-fn profile(job: &Job, temp: &Path, private: Option<&ide_git::GateGitDir>) -> Profile {
+/// private git folder; reading the path dependencies and the shared git folder except its records of remotes, and its
+/// configuration when `hidden_config`; local ports and pseudo-terminals when the project relaxed it.
+fn profile(job: &Job, temp: &Path, private: Option<&ide_git::GateGitDir>, hidden_config: bool) -> Profile {
     let mut writable = vec![job.worktree.clone()];
     writable.extend(job.images.iter().cloned());
     writable.extend(private.map(|private| private.folder().to_path_buf()));
@@ -118,7 +129,7 @@ fn profile(job: &Job, temp: &Path, private: Option<&ide_git::GateGitDir>) -> Pro
     let mut profile = Profile::gate(&writable, temp, &ide_core::paths::home())
         .readable(&readable)
         .links(&job.links)
-        .unreadable(&remote_records(job.common_dir.as_deref()));
+        .unreadable(&remote_records(job.common_dir.as_deref(), hidden_config));
     if !job.run.network.is_empty() {
         profile = profile.network(Network::On);
     }
@@ -130,9 +141,34 @@ fn profile(job: &Job, temp: &Path, private: Option<&ide_git::GateGitDir>) -> Pro
     profile
 }
 
+/// A new folder for a run's temporary files below `/private/tmp`, which no other user may enter. Below the run folder
+/// in Application Support, the path of a Unix socket a test makes there passes the 104 bytes macOS allows.
+fn short_temp() -> std::io::Result<PathBuf> {
+    use std::os::unix::fs::DirBuilderExt;
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |since| since.subsec_nanos());
+    let mut last = std::io::Error::other("no free name");
+    for attempt in 0..16u32 {
+        let path = Path::new("/private/tmp").join(format!("gate-{}-{nanos:x}-{attempt}", std::process::id()));
+        match std::fs::DirBuilder::new().mode(0o700).create(&path) {
+            Ok(()) => return Ok(path),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => last = error,
+            Err(error) => return Err(error),
+        }
+    }
+    Err(last)
+}
+
 /// E186's environment with the run's own variables, then the temporary folder `temp`, the pictures' folder and the
-/// variables that point git at the private git folder, which the run's variables cannot replace.
-fn environment(job: &Job, temp: &Path, private: Option<&ide_git::GateGitDir>) -> Vec<(String, String)> {
+/// variables that point git at the private git folder or, without one, the `neutral` ones, which the run's variables
+/// cannot replace.
+fn environment(
+    job: &Job,
+    temp: &Path,
+    private: Option<&ide_git::GateGitDir>,
+    neutral: Vec<(String, String)>,
+) -> Vec<(String, String)> {
     let mut env = job.env.clone();
     env.extend(job.run.env.iter().map(|(k, v)| (k.clone(), v.clone())));
     let mut own = vec![
@@ -152,10 +188,19 @@ fn environment(job: &Job, temp: &Path, private: Option<&ide_git::GateGitDir>) ->
     if let Some(images) = &job.images {
         own.push((IMAGES_VARIABLE.into(), images.to_string_lossy().into_owned()));
     }
-    own.extend(private.map(ide_git::GateGitDir::environment).unwrap_or_default());
+    own.extend(private.map_or(neutral, ide_git::GateGitDir::environment));
     env.retain(|(name, _)| !own.iter().any(|(set, _)| set == name));
     env.extend(own);
     env
+}
+
+/// The variables of git in a gate without the private folder, with its neutral global configuration in `temp`;
+/// without them git fails on the user's configuration, which the sandbox hides.
+fn neutral_git(temp: &Path) -> Vec<(String, String)> {
+    ide_git::GateGitDir::neutral_environment(&temp.join("git")).unwrap_or_else(|error| {
+        ide_core::diag::report("writing a gate's git configuration", error);
+        Vec::new()
+    })
 }
 
 /// The private git folder of a run in `folder`; without it git inside the gate fails, as the shared git folder's
@@ -185,11 +230,17 @@ pub(super) fn excerpt(output: &str) -> String {
     lines[lines.len().saturating_sub(EXCERPT_LINES)..].join("\n")
 }
 
-/// The files of the shared git folder `common_dir` that can hold a remote's address with its token: the
-/// configuration, the record of the last fetch and the reflogs, whose entry for the clone names where it came from.
-fn remote_records(common_dir: Option<&Path>) -> Vec<PathBuf> {
+/// The files of the shared git folder `common_dir` that can hold a remote's address with its token: the record of the
+/// last fetch and the reflogs, whose entry for the clone names where it came from, and with `config` the
+/// configuration.
+fn remote_records(common_dir: Option<&Path>, config: bool) -> Vec<PathBuf> {
+    let names: &[&str] = if config {
+        &["config", "FETCH_HEAD", "logs"]
+    } else {
+        &["FETCH_HEAD", "logs"]
+    };
     common_dir
-        .map(|dir| ["config", "FETCH_HEAD", "logs"].map(|name| dir.join(name)).to_vec())
+        .map(|dir| names.iter().map(|name| dir.join(name)).collect())
         .unwrap_or_default()
 }
 
@@ -318,6 +369,19 @@ pub(super) fn count_tests(output: &str) -> Option<TestCount> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_runs_temporary_folder_is_short_new_and_closed_to_other_users() {
+        use std::os::unix::fs::PermissionsExt;
+        let (first, second) = (super::short_temp().unwrap(), super::short_temp().unwrap());
+        assert_ne!(first, second);
+        assert!(first.as_os_str().len() < 48, "{first:?}");
+        let mode = std::fs::metadata(&first).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o700);
+        for folder in [first, second] {
+            std::fs::remove_dir(folder).unwrap();
+        }
+    }
+
     use super::*;
 
     #[test]
@@ -424,10 +488,14 @@ mod tests {
     #[test]
     fn the_shared_git_folders_records_of_remotes_stay_unreadable() {
         assert_eq!(
-            remote_records(Some(Path::new("/r/.git"))),
+            remote_records(Some(Path::new("/r/.git")), true),
             ["/r/.git/config", "/r/.git/FETCH_HEAD", "/r/.git/logs"].map(PathBuf::from)
         );
-        assert!(remote_records(None).is_empty());
+        assert_eq!(
+            remote_records(Some(Path::new("/r/.git")), false),
+            ["/r/.git/FETCH_HEAD", "/r/.git/logs"].map(PathBuf::from)
+        );
+        assert!(remote_records(None, true).is_empty());
     }
 
     #[test]
