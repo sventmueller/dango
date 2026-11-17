@@ -416,6 +416,32 @@ pub(crate) fn shift_lines(view: &EditorTextView, lines: std::ops::Range<usize>, 
     }
 }
 
+/// Indents `lines` of `view`, counted from 0, anew by the rule Return indents a new line with, as one undo step; for
+/// Vim's `=`.
+pub(crate) fn reindent_lines(view: &EditorTextView, lines: std::ops::Range<usize>) {
+    let unit = view.ivars().indent.borrow().clone();
+    let text = view.document().text().to_string();
+    let Some(start) = view.line_start(lines.start) else {
+        return;
+    };
+    let end = view
+        .line_start(lines.end)
+        .unwrap_or_else(|| view.document().text().len_utf16());
+    let ide_document::typing::Step::Replace { range, text: indented } =
+        ide_document::typing::reindent(&text, start..end, &unit)
+    else {
+        return;
+    };
+    let edit = ide_document::Edit {
+        range_utf16: range,
+        text: indented,
+    };
+    match view.document_mut().apply(edit) {
+        Ok(change) => view.apply_vim_change(&change),
+        Err(error) => crate::diag::report("indenting anew for Vim", error),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

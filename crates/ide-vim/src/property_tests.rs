@@ -5,7 +5,7 @@ use proptest::prelude::*;
 use proptest::test_runner::{Config, RngSeed};
 use ropey::Rope;
 
-use super::difference;
+use crate::diff::difference;
 
 fn config() -> Config {
     Config {

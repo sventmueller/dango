@@ -272,7 +272,7 @@ impl WindowController {
 
     /// Closes the document `id` without asking; its window tab goes with it when it was the tab's only one, and the
     /// window with its last tab.
-    pub(super) fn close_tab_now(&self, id: TabId) {
+    pub(crate) fn close_tab_now(&self, id: TabId) {
         let Some(tab) = self.tab_of_document(id) else { return };
         let split = tab.panes.is_split();
         self.forget_document(&tab, id);
