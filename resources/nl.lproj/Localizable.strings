@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Accepteer";
 "Diff öffnen" = "Open diff";
 "Sitzung öffnen" = "Open sessie";
+"Auftrag löschen …" = "Werkorder verwijderen…";
+"Auftrag löschen" = "Werkorder verwijderen";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "Log, bewijs en bewaarde rapporten van de werkorder worden verwijderd, en de werkorder verdwijnt uit de Software Factory. Overgenomen code blijft.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Opnieuw accepteren: de geaccepteerde toestand geldt niet meer ({}). Gates en de reviewer hebben de nieuwe toestand gecontroleerd.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Opnieuw accepteren: {} is gewijzigd sinds je acceptatie. De overname heeft de nieuwe toestand samengevoegd, en gates en de reviewer hebben die gecontroleerd.";
+"Von {} ist keine Kopie gesichert." = "Er is geen kopie van {} bewaard.";
 "Bericht öffnen" = "Rapport openen";
 "Der Auftrag hat {} nicht geschrieben." = "De werkorder heeft {} niet geschreven.";
 "Zurück an den Builder …" = "Terug naar de builder…";

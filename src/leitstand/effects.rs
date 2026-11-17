@@ -121,6 +121,7 @@ impl Leitstand {
                 }
             }
             Effect::WriteSpec { order, markdown } => self.write_spec(root, &order, markdown),
+            Effect::DeleteOrder { order } => self.delete_order(root, &order),
             other => self.repository_effect(root, other),
         }
     }
@@ -335,7 +336,11 @@ impl Leitstand {
                 path,
                 branch,
                 keep_branch,
+                reports,
             } => self.on_git(root, move |main, _| {
+                if let Err(error) = ide_factory::reports::keep(Path::new(&path), &folder, &order, &reports) {
+                    ide_core::diag::report("keeping an order's reports", error);
+                }
                 let result = match main {
                     Ok(main) => git::remove_worktree(&main, &folder, &order, &path, &branch, keep_branch),
                     Err(error) => git::failed(&error),
@@ -505,6 +510,26 @@ impl Leitstand {
         });
         if queued.is_err() {
             ide_core::diag::report("writing an order's specification", "the disk lane took no more work");
+        }
+    }
+
+    /// Removes what the app keeps of the deleted `order`, in the app's data folder and the project folder.
+    fn delete_order(&self, root: &Path, order: &OrderId) {
+        if let Some(folder) = self.folders.borrow_mut().get_mut(root) {
+            folder.sections.remove(order);
+        }
+        let Some(project) = self.project(root) else { return };
+        let (root, order) = (root.to_path_buf(), order.clone());
+        let queued = ide_core::lane::DISK.try_run(move || {
+            if let Err(error) = store::delete_order(&project, &order) {
+                ide_core::diag::report("deleting an order's log", error);
+            }
+            if let Err(error) = ide_factory::reports::remove(&root, &order) {
+                ide_core::diag::report("deleting an order's reports", error);
+            }
+        });
+        if queued.is_err() {
+            ide_core::diag::report("deleting an order", "the disk lane took no more work");
         }
     }
 

@@ -2036,6 +2036,12 @@
 "Abnehmen" = "驗收";
 "Diff öffnen" = "打開差異";
 "Sitzung öffnen" = "打開工作階段";
+"Auftrag löschen …" = "刪除工單⋯";
+"Auftrag löschen" = "刪除工單";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "工單的記錄、證據和保存的報告將被刪除，工單也會從 Software Factory 中消失。已整合的程式碼會保留。";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "需要重新驗收：已驗收的狀態不再有效（{}）。關卡和審查者已檢查新狀態。";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "需要重新驗收：自你驗收後 {} 已更改。整合時合併了新狀態，關卡和審查者已檢查它。";
+"Von {} ist keine Kopie gesichert." = "沒有保存 {} 的副本。";
 "Bericht öffnen" = "打開報告";
 "Der Auftrag hat {} nicht geschrieben." = "工單沒有寫入 {}。";
 "Zurück an den Builder …" = "退回給建構者⋯";

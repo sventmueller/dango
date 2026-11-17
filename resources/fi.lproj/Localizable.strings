@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Ota vastaan";
 "Diff öffnen" = "Avaa erot";
 "Sitzung öffnen" = "Avaa istunto";
+"Auftrag löschen …" = "Poista työtilaus…";
+"Auftrag löschen" = "Poista työtilaus";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "Työtilauksen loki, todiste ja tallennetut raportit poistetaan, ja se katoaa Software Factorysta. Käyttöön otettu koodi säilyy.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Vastaanota uudelleen: vastaanotettu tila ei ole enää voimassa ({}). Laatuportit ja katselmoija tarkistivat uuden tilan.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Vastaanota uudelleen: {} on muuttunut vastaanottosi jälkeen. Käyttöönotto yhdisti uuden tilan, ja laatuportit ja katselmoija tarkistivat sen.";
+"Von {} ist keine Kopie gesichert." = "Tiedostosta {} ei ole tallennettu kopiota.";
 "Bericht öffnen" = "Avaa raportti";
 "Der Auftrag hat {} nicht geschrieben." = "Työtilaus ei kirjoittanut tiedostoa {}.";
 "Zurück an den Builder …" = "Takaisin rakentajalle…";

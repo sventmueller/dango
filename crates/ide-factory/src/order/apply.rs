@@ -235,8 +235,8 @@ impl Order {
                 if *why != Invalidation::Base {
                     self.kept = false;
                 }
-                if !self.kept {
-                    self.accepted = None;
+                if !self.kept && self.accepted.take().is_some() {
+                    self.reaccept = Some(*why);
                 }
             }
             Event::Deviated { deviation } => {
@@ -261,6 +261,7 @@ impl Order {
             Event::DiffOpened => self.diff_opened = true,
             Event::Accepted { fingerprint, rejected } => {
                 self.accepted = Some(fingerprint.clone());
+                self.reaccept = None;
                 self.partial = !rejected.is_empty();
                 self.partial_tree = None;
                 self.rejected.clone_from(rejected);

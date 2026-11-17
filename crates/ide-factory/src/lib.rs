@@ -36,6 +36,8 @@
 //!   [`metrics`] the figures of E180, which routing's tie-break reads once the app hands them in
 //!   ([`InputKind::Metrics`]); [`learning`] the recurring findings a scout turns into a rule proposal (B47), and
 //!   [`workflow::recurring`] the cleanup orders the workflow file repeats.
+//! - [`reports`] keeps the Markdown files an order's path scope names in the project folder after its take-over, until
+//!   the user deletes the done order ([`InputKind::Delete`]).
 //!
 //! Errors and reasons are typed values with the data a sentence in the user's language needs (E141); the app words
 //! them.
@@ -76,6 +78,7 @@ pub mod prompt;
 pub mod publish;
 pub mod quota;
 pub mod relevance;
+pub mod reports;
 pub mod routing;
 pub mod spec;
 pub mod station;

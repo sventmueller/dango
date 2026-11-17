@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Prijať";
 "Diff öffnen" = "Otvoriť rozdiely";
 "Sitzung öffnen" = "Otvoriť reláciu";
+"Auftrag löschen …" = "Vymazať zákazku…";
+"Auftrag löschen" = "Vymazať zákazku";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "Log, doklad a uložené správy zákazky sa vymažú a zákazka zmizne zo Software Factory. Prevzatý kód zostane.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Prijať znova: prijatý stav už neplatí ({}). Brány a recenzent skontrolovali nový stav.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Prijať znova: {} sa od vášho prijatia zmenil. Prevzatie doň začlenilo nový stav a brány a recenzent ho skontrolovali.";
+"Von {} ist keine Kopie gesichert." = "Kópia {} nebola uložená.";
 "Bericht öffnen" = "Otvoriť správu";
 "Der Auftrag hat {} nicht geschrieben." = "Zákazka nezapísala {}.";
 "Zurück an den Builder …" = "Vrátiť staviteľovi…";

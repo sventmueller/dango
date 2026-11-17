@@ -235,6 +235,20 @@ pub fn invalidation(why: Invalidation) -> &'static str {
     }
 }
 
+/// Why G2 is asked again for an order taken over into `branch`, after `why` voided the state the user accepted.
+pub fn reacceptance(why: Invalidation, branch: &str) -> String {
+    match why {
+        Invalidation::Base => tf(
+            "Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft.",
+            &[branch],
+        ),
+        other => tf(
+            "Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft.",
+            &[invalidation(other)],
+        ),
+    }
+}
+
 /// The name of a step of the review row; a gate command's is its own.
 pub fn gate_step(step: GateStep, name: &str) -> String {
     match step {

@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Sprejmi";
 "Diff öffnen" = "Odpri razlike";
 "Sitzung öffnen" = "Odpri sejo";
+"Auftrag löschen …" = "Izbriši delovni nalog …";
+"Auftrag löschen" = "Izbriši delovni nalog";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "Dnevnik, dokazilo in shranjena poročila delovnega naloga bodo izbrisani, nalog pa izgine iz Software Factory. Prevzeta koda ostane.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Ponovno sprejmite: sprejeto stanje ne velja več ({}). Kontrole in pregledovalec so preverili novo stanje.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Ponovno sprejmite: {} se je od vašega sprejema spremenil. Prevzem je vključil novo stanje, kontrole in pregledovalec pa so ga preverili.";
+"Von {} ist keine Kopie gesichert." = "Kopija datoteke {} ni shranjena.";
 "Bericht öffnen" = "Odpri poročilo";
 "Der Auftrag hat {} nicht geschrieben." = "Delovni nalog ni zapisal {}.";
 "Zurück an den Builder …" = "Vrni graditelju …";

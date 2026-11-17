@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Terima";
 "Diff öffnen" = "Buka Diff";
 "Sitzung öffnen" = "Buka Sesi";
+"Auftrag löschen …" = "Padam Pesanan Kerja…";
+"Auftrag löschen" = "Padam Pesanan Kerja";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "Log, bukti dan laporan tersimpan pesanan kerja ini dipadam, dan ia hilang daripada Software Factory. Kod yang telah diambil alih kekal.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Terima semula: keadaan yang diterima tidak sah lagi ({}). Gerbang dan penyemak telah menyemak keadaan baharu.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Terima semula: {} telah berubah sejak anda menerima. Pengambilalihan menggabungkan keadaan baharu, dan gerbang serta penyemak telah menyemaknya.";
+"Von {} ist keine Kopie gesichert." = "Tiada salinan {} disimpan.";
 "Bericht öffnen" = "Buka Laporan";
 "Der Auftrag hat {} nicht geschrieben." = "Pesanan kerja tidak menulis {}.";
 "Zurück an den Builder …" = "Kembali kepada Pembina…";

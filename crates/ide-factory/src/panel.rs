@@ -82,7 +82,7 @@ impl Row {
             condition: order.condition().clone(),
             agent: current.map(|s| s.entry().agent.to_string()),
             model: current.and_then(|s| s.entry().model.clone()),
-            runtime_ms: now.wall.saturating_sub(order.created().wall),
+            runtime_ms: done_at(order).unwrap_or(now.wall).saturating_sub(order.created().wall),
             round: order.review_rounds() + u32::from(order.station() >= Station::Review),
             spend: *order.spend(),
             waiting_since: order.waiting_since().map(|s| s.wall),
@@ -150,6 +150,14 @@ impl Row {
     }
 }
 
+/// When `order` reached its end, by the wall clock; `None` while it is open.
+fn done_at(order: &Order) -> Option<u64> {
+    order
+        .finished()
+        .then(|| order.visits().last().map(|visit| visit.at.wall))
+        .flatten()
+}
+
 /// The panel's list: orders grouped by station (E175).
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct Panel {
@@ -157,13 +165,14 @@ pub struct Panel {
 }
 
 impl Panel {
-    /// The panel for `factory`'s orders at `now`; finished and aborted orders are left out.
+    /// The panel for `factory`'s orders at `now`; done orders stay in their group until the user deletes them, aborted
+    /// ones are left out.
     pub fn new(factory: &Factory, now: Stamp) -> Panel {
         let mut groups: Vec<(Station, Vec<Row>)> = Vec::new();
         for station in Station::ALL {
             let mut rows: Vec<Row> = factory
                 .orders()
-                .filter(|o| o.station() == station && !o.finished())
+                .filter(|o| o.station() == station && *o.condition() != Condition::Aborted)
                 .map(|o| Row::of(factory, o, now))
                 .collect();
             rows.sort_by_key(|r| std::cmp::Reverse(r.runtime_ms));

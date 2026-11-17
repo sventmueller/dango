@@ -107,7 +107,8 @@ pub enum Command {
     OpenDiff,
     /// Opens the session of the current role to read.
     OpenSession,
-    /// Opens the Markdown files the specification's path scope names, as the order wrote them, in the editor.
+    /// Opens the Markdown files the specification's path scope names in the editor, as the order wrote them in its
+    /// worktree or, once it is done, as the take-over kept them.
     OpenReport,
     /// Opens a terminal in the order's worktree.
     OpenTerminal,
@@ -133,11 +134,13 @@ pub enum Command {
     Continue,
     /// Removes the worktree and ends the order, after a sheet.
     Abort,
+    /// Deletes the finished order with its log and kept reports, after a sheet.
+    Delete,
 }
 
 impl Command {
     /// Every command, in the order the tab and the menus list them.
-    pub const ALL: [Command; 18] = [
+    pub const ALL: [Command; 19] = [
         Command::Approve,
         Command::Accept,
         Command::AcceptAsChange,
@@ -156,6 +159,7 @@ impl Command {
         Command::Resume,
         Command::Continue,
         Command::Abort,
+        Command::Delete,
     ];
 
     /// Its title on a button and in a menu; "…" where a dialog asks for more.
@@ -179,6 +183,7 @@ impl Command {
             Command::Resume => t("Auftrag fortsetzen"),
             Command::Continue => t("Weiter"),
             Command::Abort => t("Auftrag abbrechen …"),
+            Command::Delete => t("Auftrag löschen …"),
         }
     }
 
@@ -281,6 +286,8 @@ pub struct Detail {
     worktree: Option<String>,
     /// The Markdown files of the path scope, relative to the worktree.
     reports: Vec<String>,
+    /// Why G2 is asked again, while it is.
+    reacceptance: Option<String>,
 }
 
 /// [`Command`] as a set's key.
@@ -370,7 +377,11 @@ impl Detail {
             publish_fits: publish_fits(order, accept_block),
             forge: ForgeAccess::Unknown,
             worktree: order.worktree().map(str::to_string),
-            reports: reports(&order.options().scope),
+            reports: ide_factory::reports::named(&order.options().scope),
+            reacceptance: order
+                .reacceptance()
+                .filter(|_| *order.condition() == Condition::Waiting(WaitReason::Acceptance))
+                .map(|why| words::reacceptance(why, &order.base().branch)),
         }
     }
 
@@ -432,6 +443,11 @@ impl Detail {
     /// The Markdown files the specification's path scope names, relative to the worktree.
     pub fn reports(&self) -> &[String] {
         &self.reports
+    }
+
+    /// Why G2 is asked again after the take-over found another state than the one the user accepted, while it waits.
+    pub fn reacceptance(&self) -> Option<&str> {
+        self.reacceptance.as_deref()
     }
 
     /// The order.
@@ -614,7 +630,8 @@ impl Detail {
             | Command::MergeRequest
             | Command::BackToBuilder
             | Command::ChangeCriteria
-            | Command::Abort => None,
+            | Command::Abort
+            | Command::Delete => None,
         }
     }
 }
@@ -667,7 +684,8 @@ fn commands(order: &Order) -> (BTreeSet<CommandKey>, Option<AcceptBlock>) {
         (Command::OpenSession, order.current().is_some()),
         (
             Command::OpenReport,
-            order.worktree().is_some() && !reports(&order.options().scope).is_empty(),
+            (order.worktree().is_some() || order.station() == Station::Done)
+                && !ide_factory::reports::named(&order.options().scope).is_empty(),
         ),
         (Command::OpenTerminal, order.worktree().is_some()),
         (
@@ -687,6 +705,10 @@ fn commands(order: &Order) -> (BTreeSet<CommandKey>, Option<AcceptBlock>) {
             matches!(condition, Condition::Failed(_)) || waiting(&passes),
         ),
         (Command::Abort, open),
+        (
+            Command::Delete,
+            order.finished() && *order.phase() == ide_factory::event::Phase::Idle && order.worktree().is_none(),
+        ),
     ];
     let enabled = fits
         .into_iter()
@@ -746,13 +768,14 @@ fn primary(can: &dyn Fn(Command) -> bool, accept_block: Option<AcceptBlock>) -> 
 }
 
 /// The commands beside the next step: G2 with a merge request, the diff and the session, "Kriterien ändern …" while
-/// the builder objects to the criteria (E178), and the report and a terminal in the worktree while G2 waits.
+/// the builder objects to the criteria (E178), the report while G2 waits and once the order is done, and a terminal in
+/// the worktree while G2 waits.
 fn companions(can: &dyn Fn(Command) -> bool, accept_block: Option<AcceptBlock>, objection: bool) -> Vec<Command> {
     let first = primary(can, accept_block);
     let accepting = can(Command::Accept) || accept_block.is_some();
     [
         (Command::ChangeCriteria, objection),
-        (Command::OpenReport, accepting),
+        (Command::OpenReport, accepting || can(Command::Delete)),
         (Command::OpenTerminal, accepting),
         (Command::AcceptAsChange, true),
         (Command::OpenDiff, true),
@@ -762,20 +785,6 @@ fn companions(can: &dyn Fn(Command) -> bool, accept_block: Option<AcceptBlock>, 
     .filter(|(command, fits)| *fits && can(*command) && Some(*command) != first)
     .map(|(command, _)| command)
     .collect()
-}
-
-/// The Markdown files `scope` names one by one; a pattern or a path that leaves the worktree names none.
-fn reports(scope: &[String]) -> Vec<String> {
-    scope
-        .iter()
-        .filter(|path| {
-            let inside = std::path::Path::new(path.as_str())
-                .components()
-                .all(|c| matches!(c, std::path::Component::Normal(_) | std::path::Component::CurDir));
-            inside && !path.contains(['*', '?', '[', '{']) && path.to_ascii_lowercase().ends_with(".md")
-        })
-        .cloned()
-        .collect()
 }
 
 /// Whether "Weiter" lets the wait for `reason` pass, as the factory's `Continue` does.

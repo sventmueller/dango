@@ -2036,6 +2036,12 @@
 "Abnehmen" = "स्वीकार करें";
 "Diff öffnen" = "अंतर खोलें";
 "Sitzung öffnen" = "सेशन खोलें";
+"Auftrag löschen …" = "वर्क ऑर्डर डिलीट करें…";
+"Auftrag löschen" = "वर्क ऑर्डर डिलीट करें";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "वर्क ऑर्डर का लॉग, प्रमाण और सहेजी गई रिपोर्टें डिलीट हो जाती हैं, और वह Software Factory से हट जाता है। शामिल किया गया कोड बना रहता है।";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "फिर से स्वीकार करें: स्वीकार की गई स्थिति अब मान्य नहीं है ({})। गेट और समीक्षक ने नई स्थिति जाँची है।";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "फिर से स्वीकार करें: आपकी स्वीकृति के बाद {} बदल गया। शामिल करने के दौरान नई स्थिति मिलाई गई, और गेट और समीक्षक ने उसे जाँचा।";
+"Von {} ist keine Kopie gesichert." = "{} की कोई प्रति सहेजी नहीं गई।";
 "Bericht öffnen" = "रिपोर्ट खोलें";
 "Der Auftrag hat {} nicht geschrieben." = "वर्क ऑर्डर ने {} नहीं लिखा।";
 "Zurück an den Builder …" = "बिल्डर को वापस भेजें…";

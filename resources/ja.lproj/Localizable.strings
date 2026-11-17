@@ -2036,6 +2036,12 @@
 "Abnehmen" = "検収";
 "Diff öffnen" = "差分を開く";
 "Sitzung öffnen" = "セッションを開く";
+"Auftrag löschen …" = "作業指示を削除…";
+"Auftrag löschen" = "作業指示を削除";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "作業指示のログ、エビデンス、保存したレポートが削除され、Software Factory から消えます。取り込まれたコードは残ります。";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "再検収が必要です: 検収した状態はもう有効ではありません ({})。ゲートとレビュアーが新しい状態を確認しました。";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "再検収が必要です: 検収後に {} が変更されました。取り込み時に新しい状態をマージし、ゲートとレビュアーが確認しました。";
+"Von {} ist keine Kopie gesichert." = "{} のコピーは保存されていません。";
 "Bericht öffnen" = "レポートを開く";
 "Der Auftrag hat {} nicht geschrieben." = "作業指示は {} を書き込みませんでした。";
 "Zurück an den Builder …" = "ビルダーに差し戻す…";

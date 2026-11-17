@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Kabul Et";
 "Diff öffnen" = "Farkı Aç";
 "Sitzung öffnen" = "Oturumu Aç";
+"Auftrag löschen …" = "İş Emrini Sil…";
+"Auftrag löschen" = "İş Emrini Sil";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "İş emrinin günlüğü, kanıtı ve saklanan raporları silinir ve iş emri Software Factory’den kaybolur. Aktarılan kod kalır.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Yeniden kabul edin: kabul edilen durum artık geçerli değil ({}). Geçitler ve inceleyici yeni durumu denetledi.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Yeniden kabul edin: {} kabulünüzden sonra değişti. Aktarma yeni durumu birleştirdi; geçitler ve inceleyici onu denetledi.";
+"Von {} ist keine Kopie gesichert." = "{} için saklanmış bir kopya yok.";
 "Bericht öffnen" = "Raporu Aç";
 "Der Auftrag hat {} nicht geschrieben." = "İş emri {} dosyasını yazmadı.";
 "Zurück an den Builder …" = "Builder’a Geri Gönder…";

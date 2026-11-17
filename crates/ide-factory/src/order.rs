@@ -11,7 +11,7 @@ mod apply;
 use crate::budget::{Metering, Spend, UsageReport};
 use crate::criteria::Criterion;
 use crate::event::{Action, BaseRef, Event, OrderOptions, Phase, PromptKind, TurnOutcome};
-use crate::evidence::{Deviation, Evidence, GateRecord, ManifestEntry, Provenance, StationCost};
+use crate::evidence::{Deviation, Evidence, GateRecord, Invalidation, ManifestEntry, Provenance, StationCost};
 use crate::ids::{HunkId, OperationId, OrderId, PromptId, RequestId, SessionKey};
 use crate::limits::TurnWatch;
 use crate::log::{LOG_VERSION, LogEntry};
@@ -156,6 +156,7 @@ pub struct Order {
     acknowledged: bool,
     evidence: Option<Evidence>,
     accepted: Option<String>,
+    reaccept: Option<Invalidation>,
     rejected: Vec<HunkId>,
     partial: bool,
     partial_tree: Option<String>,
@@ -242,6 +243,7 @@ impl Order {
             acknowledged: false,
             evidence: None,
             accepted: None,
+            reaccept: None,
             rejected: Vec::new(),
             partial: false,
             partial_tree: None,
@@ -566,6 +568,11 @@ impl Order {
     /// The fingerprint G2 accepted.
     pub fn accepted(&self) -> Option<&str> {
         self.accepted.as_deref()
+    }
+
+    /// Why the state G2 accepted no longer holds, while the order goes through review and acceptance again.
+    pub fn reacceptance(&self) -> Option<Invalidation> {
+        self.reaccept
     }
 
     /// The hunks the last acceptance rejected.

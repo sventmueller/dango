@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Прийняти";
 "Diff öffnen" = "Відкрити відмінності";
 "Sitzung öffnen" = "Відкрити сеанс";
+"Auftrag löschen …" = "Видалити замовлення…";
+"Auftrag löschen" = "Видалити замовлення";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "Журнал, докази й збережені звіти замовлення буде видалено, і воно зникне з Software Factory. Перенесений код залишиться.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Потрібне повторне приймання: прийнятий стан більше не чинний ({}). Шлюзи й рецензент перевірили новий стан.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Потрібне повторне приймання: {} змінилася після вашого приймання. Під час перенесення новий стан було влито, а шлюзи й рецензент його перевірили.";
+"Von {} ist keine Kopie gesichert." = "Копію {} не збережено.";
 "Bericht öffnen" = "Відкрити звіт";
 "Der Auftrag hat {} nicht geschrieben." = "Замовлення не записало {}.";
 "Zurück an den Builder …" = "Повернути виконавцеві…";

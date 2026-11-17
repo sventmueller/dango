@@ -51,6 +51,19 @@ pub(super) fn run_folder(project: &Path, order: &OrderId, run: u64) -> PathBuf {
     project.join("runs").join(&order.0).join(run.to_string())
 }
 
+/// Removes the log, the specification, the frozen configuration and the runs of `order`; what is missing already is
+/// no error.
+pub(super) fn delete_order(project: &Path, order: &OrderId) -> io::Result<()> {
+    let gone = |result: io::Result<()>| match result {
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        other => other,
+    };
+    gone(std::fs::remove_file(log_file(project, order)))?;
+    gone(std::fs::remove_file(spec_file(project, order)))?;
+    gone(std::fs::remove_dir_all(frozen(project, order)))?;
+    gone(std::fs::remove_dir_all(project.join("runs").join(&order.0)))
+}
+
 fn confirmations_file(project: &Path) -> PathBuf {
     project.join("confirmations.json")
 }

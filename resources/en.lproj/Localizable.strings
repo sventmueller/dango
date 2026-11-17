@@ -2081,6 +2081,12 @@
 "Abnehmen" = "Accept";
 "Diff öffnen" = "Open Diff";
 "Sitzung öffnen" = "Open Session";
+"Auftrag löschen …" = "Delete Work Order…";
+"Auftrag löschen" = "Delete Work Order";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "The work order’s log, evidence and kept reports are deleted, and it leaves the Software Factory. Code taken over stays.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Accept again: the accepted state no longer holds ({}). Gates and the reviewer checked the new state.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Accept again: {} changed since you accepted. The take-over merged the new state in, and gates and the reviewer checked it.";
+"Von {} ist keine Kopie gesichert." = "No copy of {} was kept.";
 "Bericht öffnen" = "Open Report";
 "Der Auftrag hat {} nicht geschrieben." = "The work order did not write {}.";
 "Zurück an den Builder …" = "Back to the Builder…";

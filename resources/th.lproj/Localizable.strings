@@ -2036,6 +2036,12 @@
 "Abnehmen" = "ตรวจรับ";
 "Diff öffnen" = "เปิดความแตกต่าง";
 "Sitzung öffnen" = "เปิดเซสชัน";
+"Auftrag löschen …" = "ลบใบสั่งงาน…";
+"Auftrag löschen" = "ลบใบสั่งงาน";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "ล็อก หลักฐาน และรายงานที่เก็บไว้ของใบสั่งงานจะถูกลบ และใบสั่งงานจะหายไปจาก Software Factory โค้ดที่นำมาใช้แล้วยังคงอยู่";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "ต้องตรวจรับอีกครั้ง: สถานะที่ตรวจรับแล้วใช้ไม่ได้อีกต่อไป ({}) ด่านตรวจและผู้ตรวจทานได้ตรวจสถานะใหม่แล้ว";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "ต้องตรวจรับอีกครั้ง: {} เปลี่ยนไปหลังจากที่คุณตรวจรับ การนำมาใช้ได้รวมสถานะใหม่เข้าไป และด่านตรวจกับผู้ตรวจทานได้ตรวจแล้ว";
+"Von {} ist keine Kopie gesichert." = "ไม่ได้เก็บสำเนาของ {} ไว้";
 "Bericht öffnen" = "เปิดรายงาน";
 "Der Auftrag hat {} nicht geschrieben." = "ใบสั่งงานไม่ได้เขียน {}";
 "Zurück an den Builder …" = "ส่งกลับไปให้ผู้สร้าง…";

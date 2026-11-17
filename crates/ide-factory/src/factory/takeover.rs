@@ -152,6 +152,12 @@ impl Factory {
         }
         if let Some(path) = order.worktree().map(str::to_string) {
             let keep_branch = keep_branch || order.branch_kept();
+            let accepted = order.condition() != &Condition::Aborted && (order.taken_over() || order.branch_kept());
+            let reports = if accepted {
+                crate::reports::named(&order.options().scope)
+            } else {
+                Vec::new()
+            };
             let op = order.next_op();
             let action = Action::RemoveWorktree {
                 path: path.clone(),
@@ -164,6 +170,7 @@ impl Factory {
                 path,
                 branch: id.branch(),
                 keep_branch,
+                reports,
             });
             return;
         }

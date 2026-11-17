@@ -184,6 +184,8 @@ pub enum InputKind {
     BackToLeitstand(OrderId),
     /// Abort the order.
     Abort(OrderId),
+    /// Delete the finished order: it leaves the factory, and its log, specification and kept reports go.
+    Delete(OrderId),
     /// Resume one order, or all paused ones (E167).
     Resume(Option<OrderId>),
     /// Let a wait pass: a changed agent configuration, a ref change, a late G1, a cancelled turn, a failed station.

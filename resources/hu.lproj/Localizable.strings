@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Elfogadás";
 "Diff öffnen" = "Különbségek megnyitása";
 "Sitzung öffnen" = "Munkamenet megnyitása";
+"Auftrag löschen …" = "Munkarendelés törlése…";
+"Auftrag löschen" = "Munkarendelés törlése";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "A munkarendelés naplója, bizonyítéka és mentett jelentései törlődnek, és eltűnik a Software Factoryból. Az átvett kód megmarad.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Újra el kell fogadni: az elfogadott állapot már nem érvényes ({}). Az ellenőrzőpontok és az ellenőr ellenőrizték az új állapotot.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Újra el kell fogadni: {} megváltozott az elfogadás óta. Az átvétel beolvasztotta az új állapotot, az ellenőrzőpontok és az ellenőr pedig ellenőrizték.";
+"Von {} ist keine Kopie gesichert." = "A(z) {} fájlról nem készült mentett másolat.";
 "Bericht öffnen" = "Jelentés megnyitása";
 "Der Auftrag hat {} nicht geschrieben." = "A munkarendelés nem írta meg ezt: {}.";
 "Zurück an den Builder …" = "Vissza az építőnek…";

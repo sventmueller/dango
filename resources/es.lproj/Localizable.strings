@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Aceptar";
 "Diff öffnen" = "Abrir diff";
 "Sitzung öffnen" = "Abrir sesión";
+"Auftrag löschen …" = "Eliminar orden de trabajo…";
+"Auftrag löschen" = "Eliminar orden de trabajo";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "Se eliminan el log, la evidencia y los informes conservados de la orden de trabajo, y desaparece de la Software Factory. El código incorporado se conserva.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Hay que volver a aceptar: el estado aceptado ya no es válido ({}). Los controles y el revisor han comprobado el estado nuevo.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Hay que volver a aceptar: {} ha cambiado desde que aceptaste. La incorporación ha integrado el estado nuevo, y los controles y el revisor lo han comprobado.";
+"Von {} ist keine Kopie gesichert." = "No se ha conservado ninguna copia de {}.";
 "Bericht öffnen" = "Abrir informe";
 "Der Auftrag hat {} nicht geschrieben." = "La orden de trabajo no escribió {}.";
 "Zurück an den Builder …" = "Devolver al constructor…";

@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Akceptuj";
 "Diff öffnen" = "Otwórz różnice";
 "Sitzung öffnen" = "Otwórz sesję";
+"Auftrag löschen …" = "Usuń zlecenie…";
+"Auftrag löschen" = "Usuń zlecenie";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "Log, dowód i zachowane raporty zlecenia zostaną usunięte, a zlecenie zniknie z Software Factory. Przejęty kod pozostanie.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Zaakceptuj ponownie: zaakceptowany stan nie jest już aktualny ({}). Bramki i recenzent sprawdzili nowy stan.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Zaakceptuj ponownie: {} zmienił się od Twojej akceptacji. Przejęcie scaliło nowy stan, a bramki i recenzent go sprawdzili.";
+"Von {} ist keine Kopie gesichert." = "Nie zachowano kopii {}.";
 "Bericht öffnen" = "Otwórz raport";
 "Der Auftrag hat {} nicht geschrieben." = "Zlecenie nie zapisało {}.";
 "Zurück an den Builder …" = "Odeślij do wykonawcy…";

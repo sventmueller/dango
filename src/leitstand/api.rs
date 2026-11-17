@@ -64,6 +64,8 @@ pub(crate) enum Command {
     ByHand(OrderId),
     BackToLeitstand(OrderId),
     Abort(OrderId),
+    /// Delete the finished order with its log and kept reports.
+    Delete(OrderId),
     /// Resume one paused order, or all of them (E167).
     Resume(Option<OrderId>),
     /// Let a wait pass, such as a ref change or a changed agent configuration.
@@ -224,6 +226,7 @@ impl Leitstand {
             Command::ByHand(order) => InputKind::ByHand(order),
             Command::BackToLeitstand(order) => InputKind::BackToLeitstand(order),
             Command::Abort(order) => InputKind::Abort(order),
+            Command::Delete(order) => InputKind::Delete(order),
             Command::Resume(order) => InputKind::Resume(order),
             Command::Continue(order) => InputKind::Continue(order),
             Command::Answer { order, request, text } => InputKind::Answer { order, request, text },

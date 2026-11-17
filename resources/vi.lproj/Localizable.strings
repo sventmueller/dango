@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Nghiệm thu";
 "Diff öffnen" = "Mở khác biệt";
 "Sitzung öffnen" = "Mở phiên";
+"Auftrag löschen …" = "Xóa phiếu công việc…";
+"Auftrag löschen" = "Xóa phiếu công việc";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "Nhật ký, bằng chứng và các báo cáo đã lưu của phiếu công việc sẽ bị xóa, và phiếu biến mất khỏi Software Factory. Mã đã tiếp nhận vẫn được giữ.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Cần nghiệm thu lại: trạng thái đã nghiệm thu không còn hiệu lực ({}). Cổng kiểm tra và người xem xét đã kiểm tra trạng thái mới.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Cần nghiệm thu lại: {} đã thay đổi kể từ khi bạn nghiệm thu. Việc tiếp nhận đã gộp trạng thái mới vào, cổng kiểm tra và người xem xét đã kiểm tra nó.";
+"Von {} ist keine Kopie gesichert." = "Không có bản sao nào của {} được lưu.";
 "Bericht öffnen" = "Mở báo cáo";
 "Der Auftrag hat {} nicht geschrieben." = "Phiếu công việc chưa ghi {}.";
 "Zurück an den Builder …" = "Gửi lại cho người xây dựng…";

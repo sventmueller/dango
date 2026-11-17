@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Αποδοχή";
 "Diff öffnen" = "Άνοιγμα διαφορών";
 "Sitzung öffnen" = "Άνοιγμα συνεδρίας";
+"Auftrag löschen …" = "Διαγραφή δελτίου εργασίας…";
+"Auftrag löschen" = "Διαγραφή δελτίου εργασίας";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "Το αρχείο καταγραφής, η τεκμηρίωση και οι αποθηκευμένες αναφορές του δελτίου εργασίας διαγράφονται και αυτό εξαφανίζεται από το Software Factory. Ο κώδικας που ενσωματώθηκε παραμένει.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Νέα αποδοχή: η αποδεκτή κατάσταση δεν ισχύει πια ({}). Οι πύλες ελέγχου και ο αξιολογητής έλεγξαν τη νέα κατάσταση.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Νέα αποδοχή: το {} άλλαξε από την αποδοχή σας. Η ενσωμάτωση συγχώνευσε τη νέα κατάσταση και οι πύλες ελέγχου και ο αξιολογητής την έλεγξαν.";
+"Von {} ist keine Kopie gesichert." = "Δεν αποθηκεύτηκε αντίγραφο του {}.";
 "Bericht öffnen" = "Άνοιγμα αναφοράς";
 "Der Auftrag hat {} nicht geschrieben." = "Το δελτίο εργασίας δεν έγραψε το {}.";
 "Zurück an den Builder …" = "Επιστροφή στον υλοποιητή…";

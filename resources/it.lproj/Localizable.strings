@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Accetta";
 "Diff öffnen" = "Apri diff";
 "Sitzung öffnen" = "Apri sessione";
+"Auftrag löschen …" = "Elimina ordine di lavoro…";
+"Auftrag löschen" = "Elimina ordine di lavoro";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "Log, evidenza e report conservati dell’ordine di lavoro vengono eliminati, e l’ordine scompare dalla Software Factory. Il codice ripreso resta.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Da accettare di nuovo: lo stato accettato non vale più ({}). Gate e revisore hanno verificato il nuovo stato.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Da accettare di nuovo: {} è cambiato dalla tua accettazione. La ripresa ha integrato il nuovo stato, e gate e revisore lo hanno verificato.";
+"Von {} ist keine Kopie gesichert." = "Nessuna copia di {} è stata conservata.";
 "Bericht öffnen" = "Apri report";
 "Der Auftrag hat {} nicht geschrieben." = "L’ordine di lavoro non ha scritto {}.";
 "Zurück an den Builder …" = "Restituisci al builder…";

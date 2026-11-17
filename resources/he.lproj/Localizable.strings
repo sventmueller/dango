@@ -2036,6 +2036,12 @@
 "Abnehmen" = "קבלה";
 "Diff öffnen" = "פתיחת ההבדלים";
 "Sitzung öffnen" = "פתיחת הסשן";
+"Auftrag löschen …" = "מחיקת הזמנת העבודה…";
+"Auftrag löschen" = "מחיקת הזמנת העבודה";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "היומן, ההוכחה והדוחות השמורים של הזמנת העבודה יימחקו, והיא תיעלם מ-Software Factory. הקוד ששולב יישאר.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "נדרשת קבלה מחדש: המצב שהתקבל כבר אינו תקף ({}). השערים והסוקר בדקו את המצב החדש.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "נדרשת קבלה מחדש: {} השתנה מאז הקבלה שלך. השילוב מיזג את המצב החדש, והשערים והסוקר בדקו אותו.";
+"Von {} ist keine Kopie gesichert." = "לא נשמר עותק של {}.";
 "Bericht öffnen" = "פתיחת הדוח";
 "Der Auftrag hat {} nicht geschrieben." = "הזמנת העבודה לא כתבה את {}.";
 "Zurück an den Builder …" = "החזרה לבונה…";

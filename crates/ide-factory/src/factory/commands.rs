@@ -44,6 +44,7 @@ impl Factory {
             InputKind::ByHand(id) => self.by_hand(cx, &id),
             InputKind::BackToLeitstand(id) => self.back_to_leitstand(cx, &id),
             InputKind::Abort(id) => self.abort(cx, &id),
+            InputKind::Delete(id) => self.delete(cx, &id),
             InputKind::Resume(id) => self.resume_command(cx, id),
             InputKind::Continue(id) => self.continue_order(cx, &id),
             InputKind::Answer { order, request, text } => self.answer(cx, &order, request, text),
@@ -395,6 +396,26 @@ impl Factory {
         self.stop_work(cx, id);
         self.set_condition(cx, id, Condition::Aborted);
         self.cleanup_next(cx, id, false);
+    }
+
+    /// Takes the finished order out of the factory once its cleanup ended and its log is on disk, so a failed write
+    /// can no longer bring it back (E167).
+    fn delete(&mut self, cx: &mut Cx, id: &OrderId) {
+        if !self.known(cx, id) {
+            return;
+        }
+        let deletable = self
+            .orders
+            .get(id)
+            .is_some_and(|o| o.finished() && *o.phase() == Phase::Idle && o.worktree().is_none())
+            && !self.unlogged.contains_key(id);
+        if !deletable {
+            cx.refuse(Some(id), Refused::NotNow);
+            return;
+        }
+        self.orders.remove(id);
+        self.scratch.remove(id);
+        cx.effect(Effect::DeleteOrder { order: id.clone() });
     }
 
     fn resume_command(&mut self, cx: &mut Cx, id: Option<OrderId>) {

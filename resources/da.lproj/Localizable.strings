@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Accepter";
 "Diff öffnen" = "Åbn diff";
 "Sitzung öffnen" = "Åbn session";
+"Auftrag löschen …" = "Slet arbejdsordre…";
+"Auftrag löschen" = "Slet arbejdsordre";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "Arbejdsordrens log, dokumentation og gemte rapporter slettes, og den forsvinder fra Software Factory. Overført kode bevares.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Accepter igen: den accepterede tilstand gælder ikke længere ({}). Gates og revieweren har kontrolleret den nye tilstand.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Accepter igen: {} er ændret siden din accept. Overførslen har flettet den nye tilstand ind, og gates og revieweren har kontrolleret den.";
+"Von {} ist keine Kopie gesichert." = "Der er ikke gemt nogen kopi af {}.";
 "Bericht öffnen" = "Åbn rapport";
 "Der Auftrag hat {} nicht geschrieben." = "Arbejdsordren skrev ikke {}.";
 "Zurück an den Builder …" = "Tilbage til builderen…";

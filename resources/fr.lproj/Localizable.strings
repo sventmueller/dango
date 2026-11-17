@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Accepter";
 "Diff öffnen" = "Ouvrir le diff";
 "Sitzung öffnen" = "Ouvrir la session";
+"Auftrag löschen …" = "Supprimer l’ordre de travail…";
+"Auftrag löschen" = "Supprimer l’ordre de travail";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "Le journal, les preuves et les rapports conservés de l’ordre de travail sont supprimés, et il disparaît de la Software Factory. Le code intégré reste.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "À accepter de nouveau : l’état accepté n’est plus valable ({}). Les contrôles et le relecteur ont vérifié le nouvel état.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "À accepter de nouveau : {} a changé depuis votre acceptation. L’intégration y a fusionné le nouvel état, et les contrôles et le relecteur l’ont vérifié.";
+"Von {} ist keine Kopie gesichert." = "Aucune copie de {} n’a été conservée.";
 "Bericht öffnen" = "Ouvrir le rapport";
 "Der Auftrag hat {} nicht geschrieben." = "L’ordre de travail n’a pas écrit {}.";
 "Zurück an den Builder …" = "Renvoyer au builder…";

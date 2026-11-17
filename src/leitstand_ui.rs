@@ -106,6 +106,7 @@ fn command(kind: InputKind) -> Option<Command> {
         InputKind::ByHand(id) => Command::ByHand(id),
         InputKind::BackToLeitstand(id) => Command::BackToLeitstand(id),
         InputKind::Abort(id) => Command::Abort(id),
+        InputKind::Delete(id) => Command::Delete(id),
         InputKind::Resume(id) => Command::Resume(id),
         InputKind::Continue(id) => Command::Continue(id),
         InputKind::Answer { order, request, text } => Command::Answer { order, request, text },

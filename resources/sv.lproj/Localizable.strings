@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Acceptera";
 "Diff öffnen" = "Öppna diff";
 "Sitzung öffnen" = "Öppna session";
+"Auftrag löschen …" = "Radera arbetsorder…";
+"Auftrag löschen" = "Radera arbetsorder";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "Arbetsorderns logg, bevis och sparade rapporter raderas, och den försvinner från Software Factory. Övertagen kod finns kvar.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Godkänn igen: det accepterade tillståndet gäller inte längre ({}). Grindarna och granskaren har kontrollerat det nya tillståndet.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Godkänn igen: {} har ändrats sedan du accepterade. Övertagandet slog ihop det nya tillståndet, och grindarna och granskaren har kontrollerat det.";
+"Von {} ist keine Kopie gesichert." = "Ingen kopia av {} har sparats.";
 "Bericht öffnen" = "Öppna rapport";
 "Der Auftrag hat {} nicht geschrieben." = "Arbetsordern skrev inte {}.";
 "Zurück an den Builder …" = "Tillbaka till byggaren…";

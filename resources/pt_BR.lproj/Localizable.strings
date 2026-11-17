@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Aceitar";
 "Diff öffnen" = "Abrir Diff";
 "Sitzung öffnen" = "Abrir Sessão";
+"Auftrag löschen …" = "Apagar Ordem de Serviço…";
+"Auftrag löschen" = "Apagar Ordem de Serviço";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "O log, a evidência e os relatórios guardados da ordem de serviço são apagados, e ela some da Software Factory. O código incorporado permanece.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Aceitar de novo: o estado aceito não vale mais ({}). Os gates e o revisor verificaram o novo estado.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Aceitar de novo: {} mudou desde a sua aceitação. A incorporação mesclou o novo estado, e os gates e o revisor o verificaram.";
+"Von {} ist keine Kopie gesichert." = "Nenhuma cópia de {} foi guardada.";
 "Bericht öffnen" = "Abrir relatório";
 "Der Auftrag hat {} nicht geschrieben." = "A ordem de serviço não gravou {}.";
 "Zurück an den Builder …" = "Devolver ao Construtor…";

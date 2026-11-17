@@ -2036,6 +2036,12 @@
 "Abnehmen" = "验收";
 "Diff öffnen" = "打开差异";
 "Sitzung öffnen" = "打开会话";
+"Auftrag löschen …" = "删除工单…";
+"Auftrag löschen" = "删除工单";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "工单的日志、证据和保存的报告将被删除，工单也会从 Software Factory 中消失。已并入的代码保留。";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "需要重新验收：已验收的状态不再有效（{}）。门禁和审查者已检查新状态。";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "需要重新验收：自你验收后 {} 已更改。并入时合并了新状态，门禁和审查者已检查它。";
+"Von {} ist keine Kopie gesichert." = "没有保存 {} 的副本。";
 "Bericht öffnen" = "打开报告";
 "Der Auftrag hat {} nicht geschrieben." = "工单没有写入 {}。";
 "Zurück an den Builder …" = "退回给构建者…";

@@ -326,6 +326,14 @@ pub enum Effect {
         branch: String,
         /// Keep the branch, as after a take-over by hand.
         keep_branch: bool,
+        /// The reports to keep in the project folder before the worktree goes; none for an aborted order.
+        reports: Vec<String>,
+    },
+    /// Remove what the app keeps of the deleted `order`: its log, its specification, its frozen configuration, its runs
+    /// and its kept reports.
+    DeleteOrder {
+        /// The order.
+        order: OrderId,
     },
     /// Scan the text that is to go to GitHub or GitLab with the order's frozen gitleaks configuration (E177, I4).
     /// Answered by [`crate::InputKind::Scanned`].
@@ -458,6 +466,7 @@ impl Effect {
             | Effect::TakeOver { order, .. }
             | Effect::RemoveCheckpoints { order, .. }
             | Effect::RemoveWorktree { order, .. }
+            | Effect::DeleteOrder { order }
             | Effect::ScanOutgoing { order, .. }
             | Effect::Push { order, .. }
             | Effect::OpenChange { order, .. }

@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Принять";
 "Diff öffnen" = "Открыть различия";
 "Sitzung öffnen" = "Открыть сеанс";
+"Auftrag löschen …" = "Удалить заказ…";
+"Auftrag löschen" = "Удалить заказ";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "Журнал, доказательства и сохраненные отчеты заказа будут удалены, и он исчезнет из Software Factory. Перенесенный код останется.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Нужна повторная приемка: принятое состояние больше не действует ({}). Шлюзы и рецензент проверили новое состояние.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Нужна повторная приемка: {} изменилась после вашей приемки. При переносе новое состояние было влито, шлюзы и рецензент его проверили.";
+"Von {} ist keine Kopie gesichert." = "Копия {} не сохранена.";
 "Bericht öffnen" = "Открыть отчёт";
 "Der Auftrag hat {} nicht geschrieben." = "Заказ не записал {}.";
 "Zurück an den Builder …" = "Вернуть исполнителю…";

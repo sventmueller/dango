@@ -113,6 +113,7 @@ pub(crate) fn run(target: &Target, detail: &Detail, command: Command, rejected: 
             move |target, text| send(target, InputKind::ChangeCriteria(id, text)),
         ),
         Command::Abort => abort(target, detail),
+        Command::Delete => delete(target, detail),
         _ => {}
     }
 }
@@ -140,20 +141,28 @@ fn tell(target: &Target, words: &str) {
         .sheet(&window, |_| {});
 }
 
-/// Opens each Markdown file of the path scope the order wrote in its worktree, or says that it wrote none.
+/// Opens each Markdown file of the path scope the order wrote in its worktree or, once it is done, the copy the
+/// take-over kept; says so when there is none.
 fn open_reports(target: &Target, detail: &Detail) {
-    let Some(tree) = detail.worktree() else { return };
+    let named = detail.reports().join(", ");
+    let (folder, missing) = match detail.worktree() {
+        Some(tree) => (
+            PathBuf::from(tree),
+            tf("Der Auftrag hat {} nicht geschrieben.", &[&named]),
+        ),
+        None => (
+            ide_factory::reports::folder(target.root(), detail.id()),
+            tf("Von {} ist keine Kopie gesichert.", &[&named]),
+        ),
+    };
     let written: Vec<PathBuf> = detail
         .reports()
         .iter()
-        .map(|report| Path::new(tree).join(report))
+        .map(|report| folder.join(report))
         .filter(|path| path.is_file())
         .collect();
     if written.is_empty() {
-        tell(
-            target,
-            &tf("Der Auftrag hat {} nicht geschrieben.", &[&detail.reports().join(", ")]),
-        );
+        tell(target, &missing);
     }
     for path in written {
         target.window().open_file(&path);
@@ -207,6 +216,24 @@ fn abort(target: &Target, detail: &Detail) {
         .sheet(&window, move |response| {
             if first(response) {
                 send(&target, InputKind::Abort(id));
+            }
+        });
+}
+
+fn delete(target: &Target, detail: &Detail) {
+    let Some(window) = target.window().window() else { return };
+    let id = detail.id().clone();
+    let target = target.clone();
+    Alert::new(window.mtm(), &tf("„{}“ löschen?", &[detail.title()]))
+        .warning()
+        .informative(t(
+            "Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt.",
+        ))
+        .button(t("Auftrag löschen"), Role::Destructive)
+        .button(t("Abbrechen"), Role::CancelOnReturn)
+        .sheet(&window, move |response| {
+            if first(response) {
+                send(&target, InputKind::Delete(id));
             }
         });
 }

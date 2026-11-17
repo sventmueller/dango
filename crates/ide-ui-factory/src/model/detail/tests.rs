@@ -65,37 +65,3 @@ fn the_next_step_is_the_command_that_moves_the_order_on() {
     let built = only(&[Command::OpenReport, Command::OpenTerminal, Command::OpenDiff]);
     assert_eq!(companions(&built, None, false), [Command::OpenDiff]);
 }
-
-#[test]
-fn the_report_is_a_markdown_file_the_path_scope_names_inside_the_worktree() {
-    let scope: Vec<String> = [
-        "src/**",
-        "docs/review-2026-11-17.md",
-        "docs/*.md",
-        "../outside.md",
-        "/etc/notes.md",
-        "README.MD",
-        "Cargo.lock",
-    ]
-    .map(String::from)
-    .into();
-    assert_eq!(reports(&scope), ["docs/review-2026-11-17.md", "README.MD"]);
-}
-
-#[test]
-fn a_station_the_order_went_back_from_is_not_passed() {
-    use Station::{Acceptance, Build, Intake, Review, Spec, TakeOver};
-    let back = [Intake, Build, Review, Build];
-    assert_eq!(passage(Intake, Build, &back, true), Passage::Passed);
-    assert_eq!(passage(Spec, Build, &back, true), Passage::Skipped);
-    assert_eq!(passage(Build, Build, &back, true), Passage::Current);
-    assert_eq!(passage(Review, Build, &back, true), Passage::Ahead);
-    let partial = [Intake, Spec, Build, Review, Acceptance, Review];
-    assert_eq!(passage(Spec, Review, &partial, false), Passage::Passed);
-    assert_eq!(passage(Build, Review, &partial, false), Passage::Passed);
-    assert_eq!(passage(Review, Review, &partial, false), Passage::Current);
-    assert_eq!(passage(Acceptance, Review, &partial, false), Passage::Ahead);
-    assert_eq!(passage(TakeOver, Review, &partial, false), Passage::Ahead);
-    let again = [Intake, Build, Review, Build, Review, Acceptance];
-    assert_eq!(passage(Review, Acceptance, &again, false), Passage::Passed);
-}

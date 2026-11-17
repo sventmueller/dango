@@ -325,9 +325,11 @@ impl OrderTab {
             Some(AcceptBlock::NoValidEvidence) => Some(t("Abnehmen geht erst mit einem gültigen Nachweis.")),
             None => None,
         };
-        let notes: Vec<String> = accept
-            .map(str::to_string)
+        let notes: Vec<String> = detail
+            .reacceptance()
             .into_iter()
+            .chain(accept)
+            .map(str::to_string)
             .chain(detail.publish_block())
             .collect();
         ui.accept_note.setStringValue(&ns(&notes.join("\n")));

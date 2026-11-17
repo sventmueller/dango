@@ -4,7 +4,8 @@
 //! worktree, the factory commits it, the path scope, the secrets scan and the gate pass, the reviewer agent is skipped,
 //! and the evidence waits for acceptance. At acceptance the order's tab offers the report the path scope names and a
 //! terminal in the worktree beside its next step, and both open; G2 takes it over into the base branch of the working
-//! copy and the worktree goes. The order holds the wake lock while it runs and lets it go while it waits; no notification reaches the user
+//! copy, the worktree goes and the report is kept in the project folder. The done order stays in the panel until it
+//! is deleted, which removes its log and its kept report. The order holds the wake lock while it runs and lets it go while it waits; no notification reaches the user
 //! and no activity keeps the Mac awake.
 
 use std::cell::Cell;
@@ -392,7 +393,80 @@ fn taken_over(root: &Path, id: &OrderId) {
         !lock.requested && !lock.activity,
         format!("{lock:?}"),
     );
-    cx.leitstand().use_script(None);
-    cx.leitstand().use_agents(None);
-    finish(SCENARIO);
+    kept_and_listed(root, id);
+    delete(root.to_path_buf(), id.clone());
+}
+
+/// The done order keeps its report in the project folder, which git ignores, and stays in the panel's group "Erledigt".
+fn kept_and_listed(root: &Path, id: &OrderId) {
+    let cx = crate::context::app();
+    let folder = ide_factory::reports::folder(root, id);
+    let ignore = std::fs::read_to_string(ide_factory::reports::root_folder(root).join(".gitignore")).ok();
+    check(
+        "the take-over keeps the order's report in the project folder in a folder git ignores",
+        folder.join(REPORT).is_file() && ignore.as_deref() == Some("*\n"),
+        format!(
+            "{}: {}, .gitignore {ignore:?}",
+            folder.display(),
+            folder.join(REPORT).is_file()
+        ),
+    );
+    let done: Vec<OrderId> = cx
+        .leitstand()
+        .panel(root)
+        .map(|panel| {
+            panel
+                .groups()
+                .iter()
+                .filter(|(station, _)| *station == Station::Done)
+                .flat_map(|(_, rows)| rows.iter().map(|row| row.id().clone()))
+                .collect()
+        })
+        .unwrap_or_default();
+    check(
+        "the done order stays in the panel's group of done orders",
+        done == [id.clone()],
+        format!("{done:?}"),
+    );
+}
+
+/// Deleting the done order takes it out of the factory and removes its log and its kept report.
+fn delete(root: PathBuf, id: OrderId) {
+    let cx = crate::context::app();
+    cx.leitstand().command(&cx, &root, Command::Delete(id.clone()));
+    let log = ide_core::paths::data_dir()
+        .join("leitstand")
+        .join(ide_core::paths::project_key(&root))
+        .join("orders")
+        .join(format!("{}.jsonl", id.0));
+    let folder = ide_factory::reports::folder(&root, &id);
+    let probe = (root.clone(), id.clone(), log.clone(), folder.clone());
+    wait_within(
+        SHORT,
+        move || {
+            crate::context::app()
+                .leitstand()
+                .with_order(&probe.0, &probe.1, |_| ())
+                .is_none()
+                && !probe.2.exists()
+                && !probe.3.exists()
+        },
+        move |gone| {
+            check(
+                "deleting the done order removes it, its log and its kept report",
+                gone,
+                format!(
+                    "log {}: {}, report {}: {}",
+                    log.display(),
+                    log.exists(),
+                    folder.display(),
+                    folder.exists()
+                ),
+            );
+            let cx = crate::context::app();
+            cx.leitstand().use_script(None);
+            cx.leitstand().use_agents(None);
+            finish(SCENARIO);
+        },
+    );
 }

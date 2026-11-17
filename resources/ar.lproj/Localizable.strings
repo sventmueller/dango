@@ -2036,6 +2036,12 @@
 "Abnehmen" = "قبول";
 "Diff öffnen" = "فتح الفروقات";
 "Sitzung öffnen" = "فتح الجلسة";
+"Auftrag löschen …" = "حذف أمر العمل…";
+"Auftrag löschen" = "حذف أمر العمل";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "يُحذف سجل أمر العمل وإثباته والتقارير المحفوظة، ويختفي من Software Factory. تبقى الشيفرة التي ضُمّت.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "يلزم القبول مجددًا: الحالة المقبولة لم تعد سارية ({}). فحصت البوابات والمراجِع الحالة الجديدة.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "يلزم القبول مجددًا: تغيّر {} منذ قبولك. أدمج الضم الحالة الجديدة، وفحصتها البوابات والمراجِع.";
+"Von {} ist keine Kopie gesichert." = "لم تُحفظ نسخة من {}.";
 "Bericht öffnen" = "فتح التقرير";
 "Der Auftrag hat {} nicht geschrieben." = "لم يكتب أمر العمل {}.";
 "Zurück an den Builder …" = "إعادة إلى المنفّذ…";

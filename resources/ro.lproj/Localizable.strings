@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Acceptați";
 "Diff öffnen" = "Deschideți diferențele";
 "Sitzung öffnen" = "Deschideți sesiunea";
+"Auftrag löschen …" = "Ștergeți ordinul de lucru…";
+"Auftrag löschen" = "Ștergeți ordinul de lucru";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "Jurnalul, dovada și rapoartele păstrate ale ordinului de lucru sunt șterse, iar acesta dispare din Software Factory. Codul preluat rămâne.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "De acceptat din nou: starea acceptată nu mai este valabilă ({}). Controalele și evaluatorul au verificat starea nouă.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "De acceptat din nou: {} s-a modificat de la acceptarea dvs. Preluarea a integrat starea nouă, iar controalele și evaluatorul au verificat-o.";
+"Von {} ist keine Kopie gesichert." = "Nu s-a păstrat nicio copie a {}.";
 "Bericht öffnen" = "Deschide raportul";
 "Der Auftrag hat {} nicht geschrieben." = "Ordinul de lucru nu a scris {}.";
 "Zurück an den Builder …" = "Înapoi la constructor…";

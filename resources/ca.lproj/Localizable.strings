@@ -2036,6 +2036,12 @@
 "Abnehmen" = "Accepta";
 "Diff öffnen" = "Obre el diff";
 "Sitzung öffnen" = "Obre la sessió";
+"Auftrag löschen …" = "Elimina l’ordre de treball…";
+"Auftrag löschen" = "Elimina l’ordre de treball";
+"Protokoll, Nachweis und die gesicherten Berichte des Auftrags werden gelöscht, und er verschwindet aus der Software Factory. Übernommener Code bleibt." = "S’eliminen el log, l’evidència i els informes conservats de l’ordre de treball, i desapareix de la Software Factory. El codi incorporat es conserva.";
+"Erneut abzunehmen: Der abgenommene Stand gilt nicht mehr ({}). Gates und Prüfer haben den neuen Stand geprüft." = "Cal tornar a acceptar: l’estat acceptat ja no és vàlid ({}). Els controls i el revisor han comprovat l’estat nou.";
+"Erneut abzunehmen: Seit deiner Abnahme hat sich {} geändert. Die Übernahme hat den neuen Stand eingemischt, Gates und Prüfer haben ihn geprüft." = "Cal tornar a acceptar: {} ha canviat des que vas acceptar. La incorporació hi ha integrat l’estat nou, i els controls i el revisor l’han comprovat.";
+"Von {} ist keine Kopie gesichert." = "No s’ha conservat cap còpia de {}.";
 "Bericht öffnen" = "Obre l'informe";
 "Der Auftrag hat {} nicht geschrieben." = "L’ordre de treball no ha escrit {}.";
 "Zurück an den Builder …" = "Retorna al constructor…";
