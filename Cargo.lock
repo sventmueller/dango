@@ -1478,6 +1478,7 @@ dependencies = [
  "ide-process",
  "ide-product",
  "ide-thread",
+ "ide-workspace-hack",
  "serde",
  "serde_json",
  "sha2",
@@ -1498,6 +1499,7 @@ dependencies = [
  "ide-project",
  "ide-secrets",
  "ide-thread",
+ "ide-workspace-hack",
  "ignore",
  "serde",
  "serde_json",
@@ -1546,6 +1548,7 @@ dependencies = [
  "ide-ui-lsp",
  "ide-ui-terminal",
  "ide-vim",
+ "ide-workspace-hack",
  "image",
  "libc",
  "lowspeak",
@@ -1583,6 +1586,7 @@ dependencies = [
  "ide-process",
  "ide-product",
  "ide-secrets",
+ "ide-workspace-hack",
  "security-framework",
  "serde",
  "serde_json",
@@ -1598,6 +1602,7 @@ dependencies = [
  "ide-net",
  "ide-process",
  "ide-thread",
+ "ide-workspace-hack",
  "serde",
  "serde_json",
  "splat-i18n",
@@ -1611,6 +1616,7 @@ dependencies = [
  "ide-process",
  "ide-product",
  "ide-thread",
+ "ide-workspace-hack",
  "serde",
  "serde_json",
 ]
@@ -1620,6 +1626,7 @@ name = "ide-core"
 version = "0.0.0"
 dependencies = [
  "ide-product",
+ "ide-workspace-hack",
  "rustix",
  "serde",
  "serde_json",
@@ -1637,6 +1644,7 @@ dependencies = [
  "ide-process",
  "ide-product",
  "ide-rpc",
+ "ide-workspace-hack",
  "libc",
  "serde",
  "serde_json",
@@ -1649,6 +1657,7 @@ name = "ide-docker"
 version = "0.0.0"
 dependencies = [
  "ide-core",
+ "ide-workspace-hack",
  "serde",
  "serde_json",
 ]
@@ -1658,6 +1667,7 @@ name = "ide-document"
 version = "0.0.0"
 dependencies = [
  "ide-core",
+ "ide-workspace-hack",
  "proptest",
  "ropey",
  "serde",
@@ -1675,6 +1685,7 @@ dependencies = [
  "globset",
  "ide-product",
  "ide-thread",
+ "ide-workspace-hack",
  "proptest",
  "serde",
  "serde_json",
@@ -1689,6 +1700,7 @@ dependencies = [
  "ide-core",
  "ide-process",
  "ide-product",
+ "ide-workspace-hack",
  "proptest",
  "serde",
  "serde_json",
@@ -1707,6 +1719,7 @@ dependencies = [
  "ide-product",
  "ide-project",
  "ide-rpc",
+ "ide-workspace-hack",
  "lsp-types",
  "ropey",
  "serde",
@@ -1722,6 +1735,7 @@ dependencies = [
  "ide-core",
  "ide-process",
  "ide-product",
+ "ide-workspace-hack",
  "serde",
  "serde_json",
  "sha2",
@@ -1736,6 +1750,7 @@ dependencies = [
  "base64 0.23.1",
  "ide-process",
  "ide-thread",
+ "ide-workspace-hack",
  "serde",
  "serde_json",
 ]
@@ -1750,6 +1765,7 @@ dependencies = [
  "ide-predict",
  "ide-process",
  "ide-product",
+ "ide-workspace-hack",
  "serde_json",
  "splat-i18n",
 ]
@@ -1760,12 +1776,16 @@ version = "0.0.0"
 dependencies = [
  "ide-core",
  "ide-product",
+ "ide-workspace-hack",
  "libc",
 ]
 
 [[package]]
 name = "ide-product"
 version = "0.0.0"
+dependencies = [
+ "ide-workspace-hack",
+]
 
 [[package]]
 name = "ide-project"
@@ -1776,6 +1796,7 @@ dependencies = [
  "grep-searcher",
  "ide-core",
  "ide-process",
+ "ide-workspace-hack",
  "ignore",
  "notify",
  "proptest",
@@ -1791,6 +1812,7 @@ version = "0.0.0"
 dependencies = [
  "ide-core",
  "ide-process",
+ "ide-workspace-hack",
  "serde_json",
 ]
 
@@ -1799,6 +1821,7 @@ name = "ide-secrets"
 version = "0.0.0"
 dependencies = [
  "ide-core",
+ "ide-workspace-hack",
  "security-framework",
  "splat-i18n",
 ]
@@ -1817,6 +1840,7 @@ dependencies = [
  "ide-process",
  "ide-session",
  "ide-thread",
+ "ide-workspace-hack",
  "serde_json",
 ]
 
@@ -1828,6 +1852,7 @@ dependencies = [
  "ide-core",
  "ide-process",
  "ide-product",
+ "ide-workspace-hack",
  "libc",
  "memchr",
  "polling",
@@ -1839,6 +1864,7 @@ name = "ide-test"
 version = "0.0.0"
 dependencies = [
  "ide-core",
+ "ide-workspace-hack",
  "serde",
  "serde_json",
 ]
@@ -1848,6 +1874,7 @@ name = "ide-thread"
 version = "0.0.0"
 dependencies = [
  "ide-core",
+ "ide-workspace-hack",
  "serde",
  "serde_json",
 ]
@@ -1873,6 +1900,7 @@ dependencies = [
  "ide-thread",
  "ide-ui-common",
  "ide-ui-dictation",
+ "ide-workspace-hack",
  "objc2",
  "objc2-app-kit",
  "objc2-core-image",
@@ -1897,6 +1925,7 @@ dependencies = [
  "ide-core",
  "ide-product",
  "ide-ui-common",
+ "ide-workspace-hack",
  "objc2",
  "objc2-app-kit",
  "objc2-core-foundation",
@@ -1914,6 +1943,7 @@ dependencies = [
  "dispatch2",
  "ide-core",
  "ide-product",
+ "ide-workspace-hack",
  "objc2",
  "objc2-app-kit",
  "objc2-core-foundation",
@@ -1935,6 +1965,7 @@ dependencies = [
  "ide-net",
  "ide-process",
  "ide-ui-common",
+ "ide-workspace-hack",
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",
@@ -1950,6 +1981,7 @@ dependencies = [
  "ide-product",
  "ide-secrets",
  "ide-ui-common",
+ "ide-workspace-hack",
  "libc",
  "lowspeak",
  "objc2",
@@ -1969,6 +2001,7 @@ dependencies = [
  "block2",
  "ide-core",
  "ide-ui-common",
+ "ide-workspace-hack",
  "image",
  "objc2",
  "objc2-app-kit",
@@ -1992,6 +2025,7 @@ dependencies = [
  "ide-factory",
  "ide-product",
  "ide-ui-common",
+ "ide-workspace-hack",
  "libc",
  "objc2",
  "objc2-app-kit",
@@ -2013,6 +2047,7 @@ dependencies = [
  "ide-process",
  "ide-ui-common",
  "ide-ui-icons",
+ "ide-workspace-hack",
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",
@@ -2026,6 +2061,7 @@ version = "0.0.0"
 dependencies = [
  "block2",
  "ide-ui-common",
+ "ide-workspace-hack",
  "kurbo",
  "objc2",
  "objc2-app-kit",
@@ -2048,6 +2084,7 @@ dependencies = [
  "ide-process",
  "ide-project",
  "ide-ui-common",
+ "ide-workspace-hack",
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",
@@ -2066,6 +2103,7 @@ dependencies = [
  "ide-process",
  "ide-terminal",
  "ide-ui-common",
+ "ide-workspace-hack",
  "image",
  "objc2",
  "objc2-app-kit",
@@ -2082,10 +2120,70 @@ dependencies = [
 name = "ide-vim"
 version = "0.0.0"
 dependencies = [
+ "ide-workspace-hack",
  "modalkit",
  "proptest",
  "regex",
  "ropey",
+]
+
+[[package]]
+name = "ide-workspace-hack"
+version = "0.0.0"
+dependencies = [
+ "aho-corasick",
+ "base64 0.23.1",
+ "bitflags 2.13.2",
+ "block2",
+ "bstr",
+ "bytemuck",
+ "crc32fast",
+ "crossbeam-utils",
+ "derive_more",
+ "derive_more-impl",
+ "dispatch2",
+ "errno",
+ "fastrand",
+ "getrandom 0.4.3",
+ "image",
+ "indexmap 2.14.2",
+ "libc",
+ "log",
+ "memchr",
+ "miniz_oxide 0.9.1",
+ "num-traits",
+ "objc2",
+ "objc2-core-foundation",
+ "objc2-core-graphics",
+ "objc2-core-image",
+ "objc2-core-services",
+ "objc2-core-text",
+ "objc2-core-video",
+ "objc2-foundation",
+ "objc2-image-io",
+ "objc2-metal",
+ "objc2-quartz-core",
+ "objc2-security",
+ "objc2-user-notifications",
+ "once_cell",
+ "phf_shared 0.14.0",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "regex-automata",
+ "regex-syntax",
+ "rustix",
+ "security-framework-sys",
+ "serde",
+ "serde_core",
+ "serde_json",
+ "simd-adler32",
+ "similar",
+ "smallvec",
+ "syn 2.0.119",
+ "syn 3.0.10",
+ "ureq",
+ "yoke",
 ]
 
 [[package]]

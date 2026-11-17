@@ -9,6 +9,7 @@ How the app is built, run and tested. What it is made of, the decisions (E1–E2
 - Rust 1.99.1, as `rust-toolchain.toml` names it. Homebrew's `rust` builds everything here; rustup becomes necessary
   only for the universal release build, since Homebrew ships the standard library for this Mac's processor alone.
 - The sibling checkouts `../splat` and `../lowspeak`, which the workspace takes crates from by path (E14).
+- `cargo install --locked cargo-hakari`, which `make lint` uses to check the workspace-hack (below).
 
 ## App icon
 The icon is the Icon Composer document `assets/AppIcon.icon` (the layer `Assets/dango.svg` on a white background, dark
@@ -24,7 +25,7 @@ in Dark Mode). Only Xcode's `actool` compiles it, so its output `assets/Assets.c
 | `make build` | `cargo xtask bundle --release`: the release app with dictation, signed; VERSION unchanged |
 | `make run` | `cargo xtask run`: the debug app, opened |
 | `make icon` | `cargo xtask icon`: compiles the app icon, see [App icon](#app-icon); needs Xcode |
-| `make lint` | `cargo fmt --check`, clippy on the workspace and on the app with `--features selftest`; warnings fail |
+| `make lint` | `cargo fmt --check`, the workspace-hack, clippy on the workspace and on the app with `--features selftest`; warnings fail |
 | `make check` | `lint`, then `cargo test --workspace`; needs no keychain, no window and no network |
 | `make check-dictation` | clippy and the app's tests with the feature `dictation`, for changes that touch it |
 | `make test` | `check`, then `cargo xtask selftest probe` |
@@ -57,6 +58,16 @@ idle Mac. It also checks native view and selection reuse,
 background tabs catching up without building cards while hidden, and text, fonts and links against a complete
 Markdown render, including definitions that arrive after their references. Reports are in
 `target/selftest/agent-perf.json`; it uses replayed events and makes no model requests.
+
+## Workspace-hack
+Cargo turns on the features of a shared dependency that the crates of one build need, so `cargo test -p ide-ui-icons`
+and `cargo test -p ide-ui-terminal` used to build the AppKit bindings, and every crate above them, with different
+features each time. The crate `ide-workspace-hack` (E194) depends on every such dependency with the features all
+members together use, and every member depends on it, so each dependency is built once per profile. After adding,
+removing or changing a dependency or a crate, `cargo hakari generate` rewrites its list and
+`cargo hakari manage-deps` adds it to a new crate; `make lint` fails while either has something to do. Its settings
+are in `.config/hakari.toml`: xtask stays outside because it also builds on Linux, and Splat's crates stay outside
+because their `selftest` feature would otherwise reach the release.
 
 ## Fuzzing
 The parsers that read what other programs write have fuzz targets (E95), each in a `fuzz/` folder of its crate: the

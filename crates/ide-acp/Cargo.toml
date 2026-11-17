@@ -38,6 +38,7 @@ ide-thread = { path = "../ide-thread" }
 splat-i18n.workspace = true
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
+ide-workspace-hack.workspace = true
 
 [dev-dependencies]
 ide-core = { path = "../ide-core", features = ["testing"] }

@@ -21,3 +21,4 @@ objc2-app-kit.workspace = true
 objc2-core-foundation = { workspace = true, features = ["CFRunLoop", "block2"] }
 objc2-foundation.workspace = true
 objc2-user-notifications.workspace = true
+ide-workspace-hack.workspace = true

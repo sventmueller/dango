@@ -687,6 +687,15 @@ Code-Review 2026-11-14 *(nichtfunktional, vom Eigentümer beauftragt)*:
   - **Fremde Threads:** Am Dienst hört jede Verbindung auch die Threads der anderen Clients. Dango zeigt und beantwortet nur den eigenen Thread und dessen Unteragenten.
   - **Weicht ab von E10 und E23:** Der Dienst ist kein Kindprozess unter Dangos Supervisor. Startet Dango ihn, erbt er die Login-Shell-Umgebung; läuft er schon, weil die Codex-App oder ein Terminal ihn startete, bekommen die Befehle, die Codex ausführt, dessen Umgebung. Unter dem Supervisor laufen der Proxy und die Aufrufe der Codex-CLI.
   - **Experimentelle API:** Nur die Verbindung zum Dienst meldet sich dafür an, weil Codex das Abschalten nur dort anbietet. Details in [codex.md](codex.md).
+- **E194 Eine Feature-Auswahl je geteilter Abhängigkeit** *(Entscheidung des Eigentümers, 2026-11-17)*: Die Crate
+  `ide-workspace-hack`, geschrieben von `cargo hakari`, hängt an jeder Abhängigkeit, die die Mitglieder mit
+  unterschiedlichen Features bauen würden, und jedes Mitglied hängt an ihr. Ohne sie baute jeder `-p`-Lauf die
+  AppKit-Bindungen und alles darüber mit eigener Feature-Auswahl neu (63 zusätzliche Varianten fremder Crates, bis zu
+  acht Builds von `objc2-app-kit`). `make lint` schlägt fehl, solange `cargo hakari generate` oder `manage-deps` etwas
+  zu tun hätte. Außen vor bleiben xtask (baut auch auf Linux) und Splats Crates, deren `selftest` sonst ins Release
+  käme. Mildert R32: Ändert eine neue Abhängigkeit die Features einer geteilten Crate, steht das im Diff der
+  Hack-Crate. Cargos eigene Lösung (`resolver.feature-unification`) braucht noch Nightly; ist sie stabil, ersetzt sie
+  die Crate.
 
 Risiken aus Phase 12: **R23** `modalkit` 0.0.x mit einem Betreuer, **R24** Vim-Nutzer messen am Original, **R25**
 iCloud Drive langsam und nicht steuerbar, **R28** Emmet-Server kaum gepflegt, **R29** Testausgaben ohne festen

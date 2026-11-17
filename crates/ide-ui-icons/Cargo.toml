@@ -18,3 +18,4 @@ objc2-app-kit.workspace = true
 objc2-core-graphics.workspace = true
 objc2-foundation.workspace = true
 kurbo = "0.13"
+ide-workspace-hack.workspace = true

@@ -61,6 +61,9 @@ jobs:
       - name: Rust as rust-toolchain.toml names it
         working-directory: dango
         run: rustup toolchain install
+      - name: cargo-hakari for the workspace-hack check of make lint
+        working-directory: dango
+        run: cargo install --locked cargo-hakari --version 0.9.39
       - name: Lint and all cargo tests
         working-directory: dango
         run: make check

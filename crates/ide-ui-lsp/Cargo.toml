@@ -27,6 +27,7 @@ objc2-app-kit.workspace = true
 objc2-foundation.workspace = true
 objc2-quartz-core.workspace = true
 serde_json.workspace = true
+ide-workspace-hack.workspace = true
 
 [features]
 # What the self-test reads of the language servers and does with them.

@@ -23,6 +23,7 @@ serde.workspace = true
 serde_json.workspace = true
 libc.workspace = true
 toml_edit = "0.25.19"
+ide-workspace-hack.workspace = true
 
 [features]
 # What the self-test reads of the panel and the tabs.

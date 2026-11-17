@@ -13,6 +13,7 @@ workspace = true
 ide-core.workspace = true
 ide-product.workspace = true
 libc.workspace = true
+ide-workspace-hack.workspace = true
 
 [dev-dependencies]
 ide-core = { path = "../ide-core", features = ["testing"] }

@@ -13,6 +13,7 @@ workspace = true
 modalkit = { version = "=0.0.32", default-features = false }
 regex = "1"
 ropey = { version = "1.6.1", default-features = false, features = ["cr_lines", "simd"] }
+ide-workspace-hack.workspace = true
 
 [dev-dependencies]
 proptest = "1.12.0"

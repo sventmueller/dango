@@ -25,6 +25,7 @@ ide-lsp = { path = "crates/ide-lsp" }
 ide-docker = { path = "crates/ide-docker" }
 ide-test = { path = "crates/ide-test" }
 ide-vim = { path = "crates/ide-vim" }
+ide-workspace-hack = { path = "crates/ide-workspace-hack" }
 ide-net = { path = "crates/ide-net" }
 ide-predict = { path = "crates/ide-predict" }
 ide-process = { path = "crates/ide-process" }
@@ -93,6 +94,10 @@ allow_attributes_without_reason = "warn"
 cast_possible_truncation = "warn"
 cast_possible_wrap = "warn"
 cast_sign_loss = "warn"
+
+# The workspace-hack is a dependency no code uses by design (E194), and cargo cannot exempt a single dependency.
+[workspace.lints.cargo]
+unused_dependencies = "allow"
 
 [package]
 name = "ide-app"
@@ -177,6 +182,7 @@ serde_json.workspace = true
 regex = "1"
 sha2 = "0.11.1"
 globset = "0.4.21"
+ide-workspace-hack.workspace = true
 
 [dev-dependencies]
 # The scripted providers the app's own unit tests answer with.

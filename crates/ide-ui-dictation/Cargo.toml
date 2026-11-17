@@ -25,6 +25,7 @@ objc2-application-services = { workspace = true, optional = true }
 objc2-av-foundation = { workspace = true, optional = true }
 objc2-core-foundation.workspace = true
 objc2-foundation.workspace = true
+ide-workspace-hack.workspace = true
 
 [dev-dependencies]
 ide-core = { workspace = true, features = ["testing"] }

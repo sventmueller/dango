@@ -14,8 +14,10 @@ run: ## Build the debug app into target/debug and open it
 icon: ## Compile the app icon after a change in Icon Composer (assets/AppIcon.icon); the only target that needs Xcode
 	cargo xtask icon
 
-lint: ## Formatting, clippy, also with the selftest feature, the allowed thread-locals and statics, the files' shape (E98) and the AppKit rules; warnings fail
+lint: ## Formatting, the workspace-hack (E194), clippy, also with the selftest feature, the allowed thread-locals and statics, the files' shape (E98) and the AppKit rules; warnings fail
 	cargo fmt --all --check
+	cargo hakari generate --diff --quiet
+	cargo hakari manage-deps --dry-run --quiet
 	cargo xtask thread-locals
 	cargo xtask structure
 	cargo xtask rules

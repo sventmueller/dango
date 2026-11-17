@@ -13,3 +13,4 @@ workspace = true
 ide-core.workspace = true
 splat-i18n.workspace = true
 security-framework = "3.7.0"
+ide-workspace-hack.workspace = true
