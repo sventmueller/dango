@@ -340,6 +340,16 @@ beschrieben, gilt so, wie es hier steht:
       Werkzeugordnern sind die Dateien mit Zugangsdaten gesperrt (cargo `credentials`, maven `settings*.xml`,
       `gradle.properties`, `.npmrc`, `.netrc`), im gemeinsamen Git-Ordner `config`, `FETCH_HEAD` und `logs`.
     - Unix-Sockets nur im eigenen temporären Ordner des Gates und aus der Liste der Workflow-Datei.
+    - Lesbar ist außerdem `~/.config/git/ignore`: Cargo listet damit die Dateien einer Pfad-Abhängigkeit in einem
+      Repository und bricht ab, wenn es die Datei nicht lesen darf. Die Umgebung nach E186 setzt
+      `CARGO_BUILD_BUILD_DIR={workspace-root}/target`, weil eine Cargo-Konfiguration des Nutzers den Build-Ordner sonst
+      außerhalb des Worktrees anlegt, wo die Sandbox nicht schreiben lässt. Claude-Builder lesen dieselben
+      Werkzeugordner wie Gates; die Dateien mit Zugangsdaten darin bleiben gesperrt.
+    - **Lockerung je Projekt** (Entscheidung des Owners 2026-11-17): `[gates] sandbox` in der Workflow-Datei,
+      `"strict"` als Vorgabe. `"relaxed"` erlaubt zusätzlich lokale Ports und Pseudoterminals. `"off"` startet Gates
+      ohne Sandbox mit den Rechten des Nutzers, für Testsuiten mit eigenem `sandbox-exec`: macOS lässt eine Sandbox in
+      einer Sandbox nur zu, wenn die äußere nichts verbietet. Beide Werte gehören zum bestätigten Gate-Satz (E190);
+      `"strict"` ändert dessen Hash nicht.
     - Die Ausgabe eines Gates läuft durch gitleaks mit den eingefrorenen Regeln des Auftrags, bevor sie an den Builder
       oder in den Nachweis geht; Funde werden zu `[secret removed]`, scheitert gitleaks, geht keine Ausgabe weiter.
     - git innerhalb eines Gates liest einen eigenen Git-Ordner des Laufs (Entscheidung des Owners 2026-11-16,

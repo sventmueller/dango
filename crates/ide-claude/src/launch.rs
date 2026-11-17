@@ -466,7 +466,12 @@ mod tests {
         assert_eq!(sandbox["failIfUnavailable"], true);
         assert_eq!(sandbox["allowUnsandboxedCommands"], false);
         assert_eq!(sandbox["network"]["allowedDomains"], serde_json::json!(["crates.io"]));
-        assert_eq!(sandbox["filesystem"]["denyRead"], serde_json::json!(["~"]));
+        let unreadable = sandbox["filesystem"]["denyRead"].as_array().unwrap();
+        assert_eq!(unreadable[0], "~");
+        assert!(
+            unreadable.contains(&serde_json::json!("~/.cargo/credentials.toml")),
+            "{unreadable:?}"
+        );
         assert_eq!(
             sandbox["filesystem"]["allowRead"],
             serde_json::json!(["/data/orders/o1", "/data/builds/o1", "/Users/me/.rustup"])
@@ -483,6 +488,11 @@ mod tests {
             serde_json::json!(["/Users/me/.rustup"])
         );
         assert_eq!(permissions["disableBypassPermissionsMode"], "disable");
+        let deny = permissions["deny"].as_array().unwrap();
+        assert!(
+            deny.contains(&serde_json::json!("Read(~/.cargo/credentials.toml)")),
+            "{deny:?}"
+        );
     }
 
     #[test]
@@ -565,7 +575,7 @@ mod tests {
             settings["sandbox"]["filesystem"]["denyWrite"],
             serde_json::json!(["/data/frozen/o1"])
         );
-        assert_eq!(settings["permissions"]["deny"], serde_json::json!(["Read(./.env)"]));
+        assert_eq!(settings["permissions"]["deny"][0], "Read(./.env)");
         assert_eq!(
             settings["permissions"]["ask"],
             serde_json::json!(["Bash(npm publish:*)"])

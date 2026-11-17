@@ -10,6 +10,7 @@ use std::time::Duration;
 use ide_core::Cancel;
 use ide_factory::effect::SandboxRun;
 use ide_factory::gates::{CommandOutcome, TestCount};
+use ide_factory::workflow::GateSandbox;
 use ide_process::Supervisor;
 use ide_process::gate::{Gate, Limits, Stopped};
 use ide_process::sandbox::{Network, Profile};
@@ -66,7 +67,7 @@ pub(super) fn run(job: &Job, git: Option<&ide_git::Repository>) -> CommandOutcom
     let gate = Gate {
         supervisor: Supervisor::global(),
         env: &env,
-        sandbox: Some(&profile),
+        sandbox: (job.run.sandbox != GateSandbox::Off).then_some(&profile),
         limits: Limits {
             deadline: Duration::from_millis(job.run.deadline_ms),
             output: job.run.output_limit,
@@ -106,7 +107,8 @@ pub(super) fn run(job: &Job, git: Option<&ide_git::Repository>) -> CommandOutcom
 }
 
 /// The gate profile for `job` with its temporary folder `temp`: writing in the worktree, the pictures' folder and the
-/// private git folder; reading the path dependencies and the shared git folder except its records of remotes.
+/// private git folder; reading the path dependencies and the shared git folder except its records of remotes; local
+/// ports and pseudo-terminals when the project relaxed it.
 fn profile(job: &Job, temp: &Path, private: Option<&ide_git::GateGitDir>) -> Profile {
     let mut writable = vec![job.worktree.clone()];
     writable.extend(job.images.iter().cloned());
@@ -121,7 +123,11 @@ fn profile(job: &Job, temp: &Path, private: Option<&ide_git::GateGitDir>) -> Pro
         profile = profile.network(Network::On);
     }
     let sockets: Vec<PathBuf> = job.run.sockets.iter().map(PathBuf::from).collect();
-    profile.sockets(&sockets)
+    profile = profile.sockets(&sockets);
+    if job.run.sandbox == GateSandbox::Relaxed {
+        profile = profile.loopback().terminals();
+    }
+    profile
 }
 
 /// E186's environment with the run's own variables, then the temporary folder `temp`, the pictures' folder and the
@@ -136,6 +142,11 @@ fn environment(job: &Job, temp: &Path, private: Option<&ide_git::GateGitDir>) ->
         (
             "xcrun_db".to_string(),
             temp.join("xcrun_db").to_string_lossy().into_owned(),
+        ),
+        // Go fails without a build cache it can write, and its default lies in the home folder, which a gate only reads.
+        (
+            "GOCACHE".to_string(),
+            temp.join("go-build").to_string_lossy().into_owned(),
         ),
     ];
     if let Some(images) = &job.images {

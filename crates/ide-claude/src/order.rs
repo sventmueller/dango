@@ -152,7 +152,9 @@ impl OrderBounds {
     pub(crate) fn settings(&self) -> Value {
         let mut readable: Vec<String> = self.folders().map(|f| shown(f)).collect();
         readable.extend(self.read_roots.iter().chain(&self.frozen).map(|f| shown(f)));
-        let mut filesystem = json!({"denyRead": ["~"], "allowRead": readable});
+        let mut unreadable = vec!["~".to_string()];
+        unreadable.extend(credentials());
+        let mut filesystem = json!({"denyRead": unreadable, "allowRead": readable});
         let frozen = self.frozen.iter().map(|f| shown(f));
         if self.builds {
             filesystem["allowWrite"] = json!(self.build_dir.iter().map(|f| shown(f)).collect::<Vec<_>>());
@@ -162,7 +164,8 @@ impl OrderBounds {
         } else {
             filesystem["denyWrite"] = json!(self.folders().map(|f| shown(f)).chain(frozen).collect::<Vec<_>>());
         }
-        let (deny, mut ask) = carried(self.frozen_settings.as_ref());
+        let (mut deny, mut ask) = carried(self.frozen_settings.as_ref());
+        deny.extend(credentials().map(|file| format!("Read({file})")));
         ask.extend(self.ask_rules());
         json!({
             "permissions": {
@@ -183,6 +186,14 @@ impl OrderBounds {
             },
         })
     }
+}
+
+/// The credential files in the toolchains' folders, which stay unreadable when those folders are read roots; a deny
+/// holds inside a wider allow in both the sandbox and the permission rules.
+fn credentials() -> impl Iterator<Item = String> {
+    ide_process::sandbox::CREDENTIAL_FILES
+        .iter()
+        .map(|file| format!("~/{file}"))
 }
 
 /// The deny and ask rules of the frozen project settings, which only tighten.

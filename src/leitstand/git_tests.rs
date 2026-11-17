@@ -421,6 +421,7 @@ fn git_inside_a_gate_reads_a_private_copy_of_the_repository_and_none_of_its_conf
             env: std::collections::BTreeMap::new(),
             network: Vec::new(),
             sockets: Vec::new(),
+            sandbox: ide_factory::workflow::GateSandbox::Strict,
             deadline_ms: 60_000,
             output_limit: 1 << 20,
         },

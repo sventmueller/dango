@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::{Deserialize, Serialize};
 
 use super::recurring::RecurringOrder;
-use super::{GateCommand, IssueIntake, UserDefaults, Workflow, WorkflowError, WorktreeLocation};
+use super::{GateCommand, GateSandbox, IssueIntake, UserDefaults, Workflow, WorkflowError, WorktreeLocation};
 use crate::budget::Budgets;
 use crate::hash::hash_json;
 use crate::limits::Limits;
@@ -126,6 +126,8 @@ struct GateSet<'a> {
     sockets: &'a [String],
     #[serde(skip_serializing_if = "Option::is_none")]
     images: Option<&'a str>,
+    #[serde(skip_serializing_if = "GateSandbox::is_strict")]
+    sandbox: GateSandbox,
 }
 
 /// The effective rule set of a project.
@@ -143,6 +145,7 @@ pub struct Rules {
     images: Option<String>,
     network: Vec<String>,
     sockets: Vec<String>,
+    sandbox: GateSandbox,
     location: WorktreeLocation,
     copy: Vec<String>,
     setup: Option<String>,
@@ -251,6 +254,7 @@ impl Rules {
             images: file.images().map(str::to_string),
             network: file.network().to_vec(),
             sockets: file.sockets().to_vec(),
+            sandbox: file.sandbox(),
             location: file.location().unwrap_or(defaults.location()),
             copy,
             setup: file.setup().map(str::to_string),
@@ -313,6 +317,7 @@ impl Rules {
             network: &self.network,
             sockets: &self.sockets,
             images: self.images.as_deref(),
+            sandbox: self.sandbox,
         })
     }
 
@@ -419,6 +424,11 @@ impl Rules {
     /// Unix sockets gates may reach.
     pub fn sockets(&self) -> &[String] {
         &self.sockets
+    }
+
+    /// How tightly the gate sandbox holds gates.
+    pub fn sandbox(&self) -> GateSandbox {
+        self.sandbox
     }
 
     /// Where worktrees lie.

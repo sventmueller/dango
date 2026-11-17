@@ -1,6 +1,6 @@
 //! Getting a session of an order ready to launch (E165, E170, E172): off the main thread, the path's program, the
 //! login shell's environment and what E186 leaves of it, the folders the order's build reads beside the repository
-//! (E188), and the id that resumes the session after a restart (A15): a UUID Claude starts under, or the own agent's
+//! (E188) and its toolchains, and the id that resumes the session after a restart (A15): a UUID Claude starts under, or the own agent's
 //! thread, whose stored conversation it picks up. The launch itself happens on the main thread.
 
 use std::path::PathBuf;
@@ -58,6 +58,7 @@ impl Leitstand {
             };
             let mut read_roots = siblings::targets(&root);
             read_roots.extend(siblings::links(&root, &wanted.worktree));
+            read_roots.extend(toolchains(&ide_core::paths::home()));
             back.deliver(Delivery::Launch(Box::new(Ready {
                 order: wanted.order,
                 title,
@@ -80,6 +81,18 @@ impl Leitstand {
             ide_core::diag::report("starting an order's session", why);
         }
     }
+}
+
+/// The paths below `home` a build reads as a gate does, where toolchains keep their caches and package stores, as far
+/// as they exist.
+fn toolchains(home: &std::path::Path) -> Vec<PathBuf> {
+    use ide_process::sandbox::{TOOL_FILES, TOOL_FOLDERS};
+    TOOL_FOLDERS
+        .iter()
+        .chain(TOOL_FILES)
+        .map(|path| home.join(path))
+        .filter(|path| path.exists())
+        .collect()
 }
 
 /// The program of the path `wanted` names on the login shell's PATH, with the ids its session starts under.

@@ -272,6 +272,7 @@ impl Factory {
             env: self.rules.gate_env().clone(),
             network: self.rules.network().to_vec(),
             sockets: self.rules.sockets().to_vec(),
+            sandbox: self.rules.sandbox(),
             deadline_ms: self.rules.limits().gate_ms(),
             output_limit: self.rules.limits().gate_output_bytes(),
         };

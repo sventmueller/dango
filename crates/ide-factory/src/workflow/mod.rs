@@ -132,6 +132,27 @@ pub struct GateCommand {
     pub classes: Vec<RiskClass>,
 }
 
+/// How tightly the gate sandbox holds a gate's commands (E187).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GateSandbox {
+    /// The whole profile of E187.
+    #[default]
+    Strict,
+    /// The same with local ports and pseudo-terminals, which test suites of servers and terminals need.
+    Relaxed,
+    /// No sandbox: the commands run with the user's rights, for test suites that start a sandbox of their own, which
+    /// macOS refuses inside any sandbox that denies anything.
+    Off,
+}
+
+impl GateSandbox {
+    /// Whether it is the whole profile.
+    pub fn is_strict(&self) -> bool {
+        *self == GateSandbox::Strict
+    }
+}
+
 /// Where an order's worktree lies (E188).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -160,6 +181,7 @@ pub struct Workflow {
     images: Option<String>,
     network: Vec<String>,
     sockets: Vec<String>,
+    sandbox: GateSandbox,
     location: Option<WorktreeLocation>,
     copy: Vec<String>,
     setup: Option<String>,
@@ -207,6 +229,11 @@ impl Workflow {
     /// Unix sockets gates may reach (C50).
     pub fn sockets(&self) -> &[String] {
         &self.sockets
+    }
+
+    /// How tightly the gate sandbox holds gates.
+    pub fn sandbox(&self) -> GateSandbox {
+        self.sandbox
     }
 
     /// Where worktrees lie, when the file says.
@@ -426,7 +453,11 @@ fn read_workflow(r: &mut Reader<'_>, top: &dyn TableLike) -> Workflow {
 }
 
 fn read_gates(r: &mut Reader<'_>, gates: &dyn TableLike, workflow: &mut Workflow) {
-    r.known(gates, "gates", &["command", "env", "images", "network", "sockets"]);
+    r.known(
+        gates,
+        "gates",
+        &["command", "env", "images", "network", "sockets", "sandbox"],
+    );
     for item in r.tables(gates, "gates", "command") {
         let Some(table) = item.as_table_like() else { continue };
         let path = "gates.command";
@@ -494,6 +525,11 @@ fn read_gates(r: &mut Reader<'_>, gates: &dyn TableLike, workflow: &mut Workflow
     }
     workflow.network = r.texts(gates, "gates", "network");
     workflow.sockets = r.texts(gates, "gates", "sockets");
+    workflow.sandbox = match r.word(gates, "gates", "sandbox", &["strict", "relaxed", "off"]) {
+        Some("relaxed") => GateSandbox::Relaxed,
+        Some("off") => GateSandbox::Off,
+        _ => GateSandbox::Strict,
+    };
 }
 
 fn read_worktree(r: &mut Reader<'_>, worktree: &dyn TableLike, workflow: &mut Workflow) {
