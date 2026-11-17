@@ -1,4 +1,4 @@
-<p><img src="../../readme-icon.png" alt="Biểu tượng ứng dụng Dango" width="168" height="168"></p>
+<p><img src="../../readme-icon.png" alt="Biểu tượng ứng dụng Dango" width="135" height="135"></p>
 
 # Dango
 

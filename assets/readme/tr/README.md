@@ -1,4 +1,4 @@
-<p><img src="../../readme-icon.png" alt="Dango uygulama simgesi" width="168" height="168"></p>
+<p><img src="../../readme-icon.png" alt="Dango uygulama simgesi" width="135" height="135"></p>
 
 # Dango
 
