@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "Zaproponuj funkcję…";
 "Problem melden …" = "Zgłoś problem…";
 "{} auf GitHub" = "{} w serwisie GitHub";
+"„{}“ hat nichts ausgegeben." = "Brak danych wyjściowych z „{}”.";
+"„{}“ hat noch nichts ausgegeben." = "Na razie brak danych wyjściowych z „{}”.";

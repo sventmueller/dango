@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "Funkció javaslása…";
 "Problem melden …" = "Probléma jelentése…";
 "{} auf GitHub" = "A {} a GitHubon";
+"„{}“ hat nichts ausgegeben." = "A(z) „{}” nem írt ki semmit.";
+"„{}“ hat noch nichts ausgegeben." = "A(z) „{}” még nem írt ki semmit.";

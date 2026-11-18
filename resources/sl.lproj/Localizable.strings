@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "Predlagaj funkcijo …";
 "Problem melden …" = "Prijavi težavo …";
 "{} auf GitHub" = "{} na GitHubu";
+"„{}“ hat nichts ausgegeben." = "Iz »{}« ni bilo izpisa.";
+"„{}“ hat noch nichts ausgegeben." = "Iz »{}« še ni izpisa.";

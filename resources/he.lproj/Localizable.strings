@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "הצעת מאפיין…";
 "Problem melden …" = "דיווח על בעיה…";
 "{} auf GitHub" = "{} ב-GitHub";
+"„{}“ hat nichts ausgegeben." = "לא התקבל פלט מ־״{}״.";
+"„{}“ hat noch nichts ausgegeben." = "עדיין לא התקבל פלט מ־״{}״.";

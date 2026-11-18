@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "Đề xuất tính năng…";
 "Problem melden …" = "Báo cáo sự cố…";
 "{} auf GitHub" = "{} trên GitHub";
+"„{}“ hat nichts ausgegeben." = "“{}” không xuất ra gì.";
+"„{}“ hat noch nichts ausgegeben." = "“{}” chưa xuất ra gì.";

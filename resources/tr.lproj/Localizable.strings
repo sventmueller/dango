@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "Özellik Öner…";
 "Problem melden …" = "Sorun Bildir…";
 "{} auf GitHub" = "GitHub’da {}";
+"„{}“ hat nichts ausgegeben." = "“{}” hiçbir çıktı vermedi.";
+"„{}“ hat noch nichts ausgegeben." = "“{}” henüz çıktı vermedi.";

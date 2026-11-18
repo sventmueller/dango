@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "機能を提案…";
 "Problem melden …" = "問題を報告…";
 "{} auf GitHub" = "GitHubの{}";
+"„{}“ hat nichts ausgegeben." = "“{}”の出力はありませんでした。";
+"„{}“ hat noch nichts ausgegeben." = "“{}”の出力はまだありません。";

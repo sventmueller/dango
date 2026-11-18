@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "Предложить функцию…";
 "Problem melden …" = "Сообщить о проблеме…";
 "{} auf GitHub" = "{} на GitHub";
+"„{}“ hat nichts ausgegeben." = "Вывода от «{}» нет.";
+"„{}“ hat noch nichts ausgegeben." = "Вывода от «{}» пока нет.";

@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "เสนอแนะคุณสมบัติ…";
 "Problem melden …" = "รายงานปัญหา…";
 "{} auf GitHub" = "{} บน GitHub";
+"„{}“ hat nichts ausgegeben." = "“{}” ไม่มีเอาต์พุต";
+"„{}“ hat noch nichts ausgegeben." = "“{}” ยังไม่มีเอาต์พุต";

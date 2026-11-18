@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "Foreslå en funksjon…";
 "Problem melden …" = "Rapporter et problem…";
 "{} auf GitHub" = "{} på GitHub";
+"„{}“ hat nichts ausgegeben." = "«{}» skrev ikke ut noe.";
+"„{}“ hat noch nichts ausgegeben." = "«{}» har ikke skrevet ut noe ennå.";

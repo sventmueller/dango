@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "Stel een functie voor…";
 "Problem melden …" = "Meld een probleem…";
 "{} auf GitHub" = "{} op GitHub";
+"„{}“ hat nichts ausgegeben." = "'{}' heeft geen uitvoer gegeven.";
+"„{}“ hat noch nichts ausgegeben." = "'{}' heeft nog geen uitvoer gegeven.";

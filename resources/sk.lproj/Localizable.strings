@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "Navrhnúť funkciu…";
 "Problem melden …" = "Nahlásiť problém…";
 "{} auf GitHub" = "{} na GitHube";
+"„{}“ hat nichts ausgegeben." = "Z „{}“ neprišiel žiadny výstup.";
+"„{}“ hat noch nichts ausgegeben." = "Z „{}“ zatiaľ neprišiel žiadny výstup.";

@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "建議功能⋯";
 "Problem melden …" = "回報問題⋯";
 "{} auf GitHub" = "GitHub 上的 {}";
+"„{}“ hat nichts ausgegeben." = "「{}」沒有輸出任何內容。";
+"„{}“ hat noch nichts ausgegeben." = "「{}」尚未輸出任何內容。";

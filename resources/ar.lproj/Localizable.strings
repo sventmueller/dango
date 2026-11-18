@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "اقتراح ميزة…";
 "Problem melden …" = "الإبلاغ عن مشكلة…";
 "{} auf GitHub" = "{} على GitHub";
+"„{}“ hat nichts ausgegeben." = "لم يُخرج “{}” أي شيء.";
+"„{}“ hat noch nichts ausgegeben." = "لم يُخرج “{}” أي شيء بعد.";

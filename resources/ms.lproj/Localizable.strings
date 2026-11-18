@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "Cadangkan Ciri…";
 "Problem melden …" = "Laporkan Masalah…";
 "{} auf GitHub" = "{} di GitHub";
+"„{}“ hat nichts ausgegeben." = "“{}” tidak menghasilkan sebarang output.";
+"„{}“ hat noch nichts ausgegeben." = "“{}” belum menghasilkan sebarang output.";

@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "Πρόταση λειτουργίας…";
 "Problem melden …" = "Αναφορά προβλήματος…";
 "{} auf GitHub" = "Το {} στο GitHub";
+"„{}“ hat nichts ausgegeben." = "Δεν υπάρχει έξοδος από το «{}».";
+"„{}“ hat noch nichts ausgegeben." = "Δεν υπάρχει ακόμη έξοδος από το «{}».";

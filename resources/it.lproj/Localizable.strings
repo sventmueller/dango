@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "Suggerisci una funzionalità…";
 "Problem melden …" = "Segnala un problema…";
 "{} auf GitHub" = "{} su GitHub";
+"„{}“ hat nichts ausgegeben." = "“{}” non ha prodotto alcun output.";
+"„{}“ hat noch nichts ausgegeben." = "“{}” non ha ancora prodotto alcun output.";

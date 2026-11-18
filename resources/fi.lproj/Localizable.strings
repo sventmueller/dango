@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "Ehdota ominaisuutta…";
 "Problem melden …" = "Ilmoita ongelmasta…";
 "{} auf GitHub" = "{} GitHubissa";
+"„{}“ hat nichts ausgegeben." = "”{}” ei tulostanut mitään.";
+"„{}“ hat noch nichts ausgegeben." = "”{}” ei ole vielä tulostanut mitään.";

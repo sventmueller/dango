@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "सुविधा का सुझाव दें…";
 "Problem melden …" = "समस्या की रिपोर्ट करें…";
 "{} auf GitHub" = "GitHub पर {}";
+"„{}“ hat nichts ausgegeben." = "“{}” ने कोई आउटपुट नहीं दिया।";
+"„{}“ hat noch nichts ausgegeben." = "“{}” ने अभी तक कोई आउटपुट नहीं दिया।";

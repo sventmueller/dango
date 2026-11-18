@@ -2381,3 +2381,5 @@
 "Funktion vorschlagen …" = "기능 제안…";
 "Problem melden …" = "문제 신고…";
 "{} auf GitHub" = "GitHub의 {}";
+"„{}“ hat nichts ausgegeben." = "‘{}’에서 출력된 내용이 없습니다.";
+"„{}“ hat noch nichts ausgegeben." = "‘{}’에서 아직 출력된 내용이 없습니다.";
