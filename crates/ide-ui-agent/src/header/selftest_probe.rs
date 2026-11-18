@@ -18,6 +18,12 @@ impl Header {
         (!self.badge.isHidden()).then(|| self.badge.stringValue().to_string())
     }
 
+    /// The size of the title's text and the head's height.
+    pub(crate) fn size_seen(&self) -> (f64, f64) {
+        let font = self.title.font().map_or(0.0, |font| font.pointSize());
+        (font, self.height.constant())
+    }
+
     /// The width the title takes, the width its whole text would need, and the head's width, for the self-test.
     pub(crate) fn title_widths(&self) -> (f64, f64, f64) {
         self.view.layoutSubtreeIfNeeded();

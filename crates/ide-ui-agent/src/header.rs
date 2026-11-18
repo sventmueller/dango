@@ -3,7 +3,10 @@
 
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly, sel};
-use objc2_app_kit::{NSButton, NSClickGestureRecognizer, NSColor, NSStackView, NSTextField};
+use objc2_app_kit::{
+    NSButton, NSClickGestureRecognizer, NSColor, NSImageSymbolConfiguration, NSLayoutConstraint, NSStackView,
+    NSTextField,
+};
 use objc2_foundation::NSEdgeInsets;
 use splat_i18n::{t, tf};
 
@@ -39,6 +42,29 @@ fn work_button(mtm: MainThreadMarker, target: &AgentTarget, part: Part) -> Retai
     );
     button.setEnabled(false);
     button
+}
+
+/// The session's title, which a double click renames.
+fn title(mtm: MainThreadMarker, target: &AgentTarget) -> Retained<NSTextField> {
+    let title = ui::label(
+        mtm,
+        t("Neue Sitzung"),
+        &style::bold(style::BODY),
+        &NSColor::labelColor(),
+    );
+    title.setToolTip(Some(&ns(t("Doppelklick zum Umbenennen"))));
+    // SAFETY: The recognizer sends its action to the target, which answers it with a method that takes the sender;
+    // the view keeps the recognizer, AppKit holds the target weakly.
+    let rename = unsafe {
+        NSClickGestureRecognizer::initWithTarget_action(
+            NSClickGestureRecognizer::alloc(mtm),
+            Some(target),
+            Some(sel!(ideAgentRename:)),
+        )
+    };
+    rename.setNumberOfClicksRequired(2);
+    title.addGestureRecognizer(&rename);
+    title
 }
 
 /// What the Remote Control button shows.
@@ -82,9 +108,15 @@ pub(crate) enum Reach {
 
 /// Puts the title's text on the left edge of the window's tab bar, which AppKit insets 8 points from the content.
 const TITLE_INSET: f64 = 8.0;
+/// The head's height at the default text size.
+const HEIGHT: f64 = 36.0;
+/// The room between the title and the buttons at the default text size.
+const SPACING: f64 = 8.0;
 
 pub(crate) struct Header {
     pub(crate) view: Retained<NSStackView>,
+    /// Holds the head at its height, which follows the text size.
+    height: Retained<NSLayoutConstraint>,
     title: Retained<NSTextField>,
     /// Whom the session works for, when it is a work order's (E184).
     badge: Retained<NSTextField>,
@@ -95,28 +127,13 @@ pub(crate) struct Header {
     /// Opens the list of the session's background processes.
     pub(crate) background: Retained<NSButton>,
     remote: Retained<NSButton>,
+    history: Retained<NSButton>,
+    new: Retained<NSButton>,
 }
 
 impl Header {
     pub(crate) fn new(mtm: MainThreadMarker, target: &AgentTarget) -> Header {
-        let title = ui::label(
-            mtm,
-            t("Neue Sitzung"),
-            &style::bold(style::BODY),
-            &NSColor::labelColor(),
-        );
-        title.setToolTip(Some(&ns(t("Doppelklick zum Umbenennen"))));
-        // SAFETY: The recognizer sends its action to the target, which answers it with a method that takes the sender;
-        // the view keeps the recognizer, AppKit holds the target weakly.
-        let rename = unsafe {
-            NSClickGestureRecognizer::initWithTarget_action(
-                NSClickGestureRecognizer::alloc(mtm),
-                Some(target),
-                Some(sel!(ideAgentRename:)),
-            )
-        };
-        rename.setNumberOfClicksRequired(2);
-        title.addGestureRecognizer(&rename);
+        let title = title(mtm, target);
         let badge = ui::label(mtm, "", &style::small(), &NSColor::systemOrangeColor());
         badge.setHidden(true);
         let bookmark = ui::symbol_button(
@@ -170,15 +187,15 @@ impl Header {
         let spacer = ui::spacer(mtm);
         let view = ui::row(
             mtm,
-            8.0,
+            SPACING,
             &[
                 &title,
                 &badge,
                 &spacer,
                 &remote,
-                &focus,
                 &subagents,
                 &background,
+                &focus,
                 &bookmark,
                 &history,
                 &new,
@@ -190,9 +207,12 @@ impl Header {
             bottom: 0.0,
             right: 12.0,
         });
-        ui::fixed_height(&view, 36.0);
-        Header {
+        view.setTranslatesAutoresizingMaskIntoConstraints(false);
+        let height = view.heightAnchor().constraintEqualToConstant(HEIGHT);
+        height.setActive(true);
+        let header = Header {
             view,
+            height,
             title,
             badge,
             bookmark,
@@ -200,7 +220,35 @@ impl Header {
             subagents,
             background,
             remote,
+            history,
+            new,
+        };
+        header.text_size_changed();
+        header
+    }
+
+    /// Shows the title, the badge and every button at the text size the user chose for the AI tab, with the room and
+    /// height around them in proportion.
+    pub(crate) fn text_size_changed(&self) {
+        self.title.setFont(Some(&style::bold(style::chat(style::BODY))));
+        self.badge.setFont(Some(&style::chat_small()));
+        let symbols = NSImageSymbolConfiguration::configurationWithPointSize_weight(
+            style::chat(ide_ui_common::style::symbol::SMALL),
+            ide_ui_common::constant!(objc2_app_kit::NSFontWeightRegular),
+        );
+        for button in [
+            &self.remote,
+            &self.subagents,
+            &self.background,
+            &self.focus,
+            &self.bookmark,
+            &self.history,
+            &self.new,
+        ] {
+            button.setSymbolConfiguration(Some(&symbols));
         }
+        self.view.setSpacing(style::chat(SPACING));
+        self.height.setConstant(style::chat(HEIGHT));
     }
 
     /// Shows where the session stands with `reach`'s Remote Control; hidden where the agent does not offer it.

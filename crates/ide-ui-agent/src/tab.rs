@@ -470,8 +470,9 @@ impl AgentTab {
         self.start_ticking();
     }
 
-    /// Shows the timeline, the composer and the status line at the text size the user chose.
+    /// Shows the head, the timeline, the composer and the status line at the text size the user chose.
     pub(crate) fn text_size_changed(&self) {
+        self.header.text_size_changed();
         self.timeline.text_size_changed();
         self.composer.text_size_changed();
         self.status.text_size_changed();

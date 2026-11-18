@@ -56,6 +56,11 @@ impl AgentTab {
         (font, last.map_or(0.0, |row| self.timeline.row_height(row)))
     }
 
+    /// The size of the head's title and the head's height.
+    pub fn header_size_seen(&self) -> (f64, f64) {
+        self.header.size_seen()
+    }
+
     /// Whether a `claude` process runs for the tab.
     pub fn is_live(&self) -> bool {
         self.state.borrow().source().is_live()
