@@ -170,7 +170,8 @@ Befund: Die Daten gibt es schon. Das Thread-Modell führt je Sitzung Subagents u
   - Terminal: Hintergrund-Shells und Monitore der Sitzung, laufende oben, beendete mit Ende-Status darunter, bis
     die Sitzung neu beginnt (das Thread-Modell behält dafür die letzten 50 beendeten; was die CLI beim Beenden
     ihres Prozesses noch laufen hatte, steht als „Gestoppt“ da); je Zeile Befehl, Status, Laufzeit, letzte Ausgabezeile; „Ausgabe zeigen“ (ganze
-    Ausgabe im Tab), „Stopp“. Was der Agent als Nebensache meldet (`ambient`), steht gedämpft.
+    Ausgabe im Tab; leitet der Befehl sie selbst in eine Datei um, etwa `make > build.log 2>&1`, und hat die CLI
+    deshalb nichts, die Datei), „Stopp“. Was der Agent als Nebensache meldet (`ambient`), steht gedämpft.
   - Die Liste aktualisiert sich offen weiter; Anlass ist die vorhandene Meldung `refresh.overview`
     (`crates/ide-ui-agent/src/refresh.rs`), die auch die Knöpfe neu einfärbt.
 - **Menü und Tastatur** (E101): „Subagenten dieser Sitzung“ und „Hintergrundprozesse dieser Sitzung“ im Menü „Darstellung“,

@@ -1,5 +1,8 @@
 //! How a command line reads as far as approvals need it: its commands, their words, and the git commands among them
-//! that destroy work git cannot bring back (E27). Every agent kind asks before those through the same matcher.
+//! that destroy work git cannot bring back (E27). Every agent kind asks before those through the same matcher. Also
+//! the files a command sends its output to, where a background command's output is to be found.
+
+use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
@@ -196,6 +199,86 @@ pub fn words(command: &str) -> Vec<String> {
 /// `-f`, or dropping or clearing the stash; also inside `sh -c '…'`, `bash -lc "…"` and `eval`.
 pub fn destructive_git(command: &str) -> Option<Destructive> {
     nested(command, 0)
+}
+
+/// The files `command` sends its standard output to with `>`, `>>`, `1>` or `&>`, in the order its commands run, as
+/// paths from the folder `cwd` it starts in and from the folders its `cd`s go to. Left out are files under `/dev`,
+/// targets the shell would expand further, relative targets after a `cd` to a folder that cannot be told, and the file a
+/// command writes from a here-document.
+pub fn output_files(command: &str, cwd: &Path) -> Vec<PathBuf> {
+    let mut dir = Some(cwd.to_path_buf());
+    let mut files = Vec::new();
+    for part in segments(command) {
+        let words = words(&part);
+        if words.first().is_some_and(|w| w == "cd") {
+            dir = match words.get(1) {
+                None => Some(ide_core::paths::home()),
+                Some(to) if to.starts_with('-') => None,
+                Some(to) => place(dir.as_deref(), to),
+            };
+            continue;
+        }
+        if words.iter().any(|w| w.starts_with("<<") && !w.starts_with("<<<")) {
+            continue;
+        }
+        files.extend(
+            stdout_targets(&part)
+                .iter()
+                .filter_map(|target| place(dir.as_deref(), target))
+                .filter(|path| !path.starts_with("/dev")),
+        );
+    }
+    files
+}
+
+/// Where the shell word `word` leads from folder `dir`, unless it holds something the shell would expand first.
+fn place(dir: Option<&Path>, word: &str) -> Option<PathBuf> {
+    if word.is_empty() || word.contains(['$', '`', '*', '?', '[']) {
+        return None;
+    }
+    match word.strip_prefix('~') {
+        Some("") => Some(ide_core::paths::home()),
+        Some(rest) => rest.strip_prefix('/').map(|rest| ide_core::paths::home().join(rest)),
+        None if word.starts_with('/') => Some(PathBuf::from(word)),
+        None => Some(dir?.join(word)),
+    }
+}
+
+/// The words one command sends its standard output to, in order.
+fn stdout_targets(part: &str) -> Vec<String> {
+    let chars: Vec<char> = part.chars().collect();
+    let mut targets = Vec::new();
+    let mut quote: Option<Quote> = None;
+    let mut at = 0;
+    while let Some(&c) = chars.get(at) {
+        at += 1;
+        match (quote, c) {
+            (Some(Quote::Double | Quote::AnsiC) | None, '\\') => at += 1,
+            (Some(Quote::Single | Quote::AnsiC), '\'') | (Some(Quote::Double), '"') => quote = None,
+            (Some(_), _) => {}
+            (None, '\'') => {
+                let ansi_c = at >= 2 && chars[at - 2] == '$';
+                quote = Some(if ansi_c { Quote::AnsiC } else { Quote::Single });
+            }
+            (None, '"') => quote = Some(Quote::Double),
+            (None, '>') => {
+                // Digits before `>` name the descriptor only when they are a word of their own, as in `2>`.
+                let digits = chars[..at - 1].iter().rev().take_while(|d| d.is_ascii_digit()).count();
+                let start = at - 1 - digits;
+                let descriptor = digits > 0 && (start == 0 || chars[start - 1].is_whitespace());
+                let stdout = !descriptor || chars[start..at - 1] == ['1'];
+                if chars.get(at) == Some(&'>') {
+                    at += 1;
+                }
+                if stdout && chars.get(at) != Some(&'&') {
+                    let rest: String = chars[at..].iter().collect();
+                    targets.extend(words(&rest).into_iter().next());
+                }
+            }
+            (None, _) => {}
+        }
+    }
+    targets
 }
 
 /// The command line a tool call's input runs, whether one string or a list of words.
@@ -537,6 +620,65 @@ mod tests {
             destructive_input(&json!({"command": ["git", "commit", "-m", "it's fine"]})),
             None
         );
+    }
+
+    #[test]
+    fn the_files_a_command_writes_its_output_to_are_found_from_its_folder() {
+        let cwd = Path::new("/repo");
+        let home = ide_core::paths::home();
+        for (command, files) in [
+            (
+                "make check > /tmp/check.log 2>&1; echo \"exit $?\" >> /tmp/check.log; tail -5 /tmp/check.log",
+                vec![PathBuf::from("/tmp/check.log"), PathBuf::from("/tmp/check.log")],
+            ),
+            (
+                "make deploy >target/deploy.log 2>&1",
+                vec![PathBuf::from("/repo/target/deploy.log")],
+            ),
+            (
+                "cd /work/app && cargo test 1> out.txt",
+                vec![PathBuf::from("/work/app/out.txt")],
+            ),
+            (
+                "cd sub; cd .. ; ls &> list.txt",
+                vec![PathBuf::from("/repo/sub/../list.txt")],
+            ),
+            (
+                "(time make check) > ~/logs/check.log 2>&1",
+                vec![home.join("logs/check.log")],
+            ),
+            ("echo \"a > b\" > 'my log.txt'", vec![PathBuf::from("/repo/my log.txt")]),
+            ("run foo2>x.log", vec![PathBuf::from("/repo/x.log")]),
+            (
+                "cat > /tmp/b.sh <<'EOF'\n$M -json > /tmp/r/$name.json 2> /tmp/r/$name.err\nEOF\nchmod +x /tmp/b.sh; /tmp/b.sh > /tmp/b.log 2>&1",
+                vec![PathBuf::from("/tmp/b.log")],
+            ),
+            ("cd \"$DIR\" && make > /abs.log", vec![PathBuf::from("/abs.log")]),
+        ] {
+            assert_eq!(output_files(command, cwd), files, "{command}");
+        }
+    }
+
+    #[test]
+    fn errors_devices_pipes_and_unknown_places_are_no_output_files() {
+        for command in [
+            "cargo build 2> err.log",
+            "make > /dev/null 2>&1",
+            "make 2>&1 | tee build.log",
+            "echo 'x > y'",
+            "make > \"$LOG\"",
+            "cd \"$DIR\" && make > rel.log",
+            "cd - && make > rel.log",
+            "cat > script.sh <<EOF\necho hi\nEOF",
+            "make >&2",
+            "",
+        ] {
+            assert_eq!(
+                output_files(command, Path::new("/repo")),
+                Vec::<PathBuf>::new(),
+                "{command}"
+            );
+        }
     }
 
     #[test]

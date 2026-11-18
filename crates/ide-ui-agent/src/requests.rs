@@ -4,7 +4,7 @@ use ide_ui_common::window::{Files, Notices, Window};
 use std::path::{Path, PathBuf};
 
 use ide_claude::{PermissionAnswer, PlanAnswer};
-use ide_thread::{Answer, EntryKind, PermissionOption, RequestState, RuleScope};
+use ide_thread::{Answer, BackgroundItem, EntryKind, PermissionOption, RequestState, RuleScope, Thread, ToolView};
 use ide_ui_common::alert::Alert;
 use objc2::rc::Retained;
 use objc2::sel;
@@ -317,31 +317,37 @@ impl AgentTab {
     }
 
     /// Shows the whole output of background task `task`: the file the CLI writes it to, else what it hands over, else
-    /// what the session streamed of it; a notice where there is none yet.
+    /// what the session streamed of it. Where that is empty, the file the command sends its output to itself, as in
+    /// `make > build.log`; a notice where there is none yet.
     pub fn show_background_output(&self, task: &str) {
         let Some(controller) = self.controller() else { return };
         let (path, streamed, about) = {
             let state = self.state.borrow();
-            let item = state.thread().background().iter().find(|b| b.id == task);
+            let thread = state.thread();
+            let item = thread.background().iter().find(|b| b.id == task);
             (
                 item.and_then(|b| b.output.path.clone()).map(PathBuf::from),
                 item.and_then(|b| b.output.text.clone()).unwrap_or_default(),
                 Silent {
                     label: item.map_or_else(|| task.to_string(), |b| b.label.clone()),
                     ended: item.is_some_and(|b| b.status.is_final()),
+                    logs: item
+                        .and_then(|b| command_line(thread, b))
+                        .map(|command| ide_thread::shell::output_files(&command, self.cwd()))
+                        .unwrap_or_default(),
                 },
             )
         };
+        let key = self.key;
+        let task = task.to_string();
         if let Some(path) = path.filter(|p| p.is_file()) {
             if std::fs::metadata(&path).is_ok_and(|m| m.len() > 0) {
                 show_file(&controller, &path);
             } else {
-                controller.show_notice(&about.notice());
+                snapshot(key, task, String::new(), about);
             }
             return;
         }
-        let key = self.key;
-        let task = task.to_string();
         let Some(session) = self.state.borrow().source().session() else {
             return snapshot(key, task, streamed, about);
         };
@@ -353,13 +359,32 @@ impl AgentTab {
     }
 }
 
-/// A background task, for the notice that it has written nothing.
+/// The command line of background task `item`, from the tool call that started it.
+fn command_line(thread: &Thread, item: &BackgroundItem) -> Option<String> {
+    match &thread.entry_by_key(item.tool_call.as_deref()?)?.kind {
+        EntryKind::ToolCall(call) => match &call.view {
+            ToolView::Command { command, .. } => Some(command.clone()),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+/// A background task whose output came empty: for the notice that it has written nothing, or the file its command
+/// writes to instead.
 struct Silent {
     label: String,
     ended: bool,
+    /// The files the task's command sends its output to, in the order it does.
+    logs: Vec<PathBuf>,
 }
 
 impl Silent {
+    /// The last of the files the command sends its output to that is there; it reads the disk.
+    fn log(&self) -> Option<PathBuf> {
+        self.logs.iter().rev().find(|path| path.is_file()).cloned()
+    }
+
     fn notice(&self) -> String {
         if self.ended {
             tf("„{}“ hat nichts ausgegeben.", &[&self.label])
@@ -376,8 +401,9 @@ fn show_file(controller: &Window, path: &Path) {
     crate::host::host().reread_file(path);
 }
 
-/// Writes `output` of background task `task` to a file of the app's and shows it in the window of AI tab `key`, or
-/// tells that there is no output yet; any thread may call it.
+/// Writes `output` of background task `task` to a file of the app's and shows it in the window of AI tab `key`; when
+/// it is empty, shows the file the command writes to instead or tells that there is no output yet. Any thread may call
+/// it.
 fn snapshot(key: AgentKey, task: String, output: String, about: Silent) {
     let _ = ide_core::lane::DISK.try_run(move || {
         // The agent names the task, and a name with a folder in it must not lead out of the app's folder.
@@ -388,7 +414,7 @@ fn snapshot(key: AgentKey, task: String, output: String, about: Silent) {
             .join("task-output")
             .join(format!("{name}.txt"));
         let written = if output.is_empty() {
-            None
+            about.log()
         } else {
             let made = file.parent().map(std::fs::create_dir_all).transpose();
             match made.and_then(|_| std::fs::write(&file, output)) {
@@ -436,5 +462,62 @@ mod tests {
             ]
         );
         assert!(always_rules(&[PermissionOption::AllowOnce, PermissionOption::Deny]).is_empty());
+    }
+
+    #[test]
+    fn a_background_task_reads_its_command_from_the_call_that_started_it_also_in_a_subagent() {
+        let mut thread = Thread::new(ide_thread::ThreadId::from("t"), "test", "/tmp");
+        let mut call = ide_thread::ToolCall::new("toolu_bg", "Bash", ide_thread::ToolKind::Execute);
+        call.view = ToolView::Command {
+            command: "./batch.sh > batch.log 2>&1".into(),
+            description: None,
+            background: true,
+            timeout: None,
+        };
+        thread.apply(ide_thread::Update::Put {
+            lane: ide_thread::Lane::Subagent("toolu_agent".into()),
+            key: Some("toolu_bg".into()),
+            at: std::time::UNIX_EPOCH,
+            entry: EntryKind::ToolCall(call),
+        });
+        let item = |tool_call: Option<&str>| BackgroundItem {
+            id: "b1".into(),
+            kind: ide_thread::BackgroundKind::Shell,
+            label: "Batch".into(),
+            status: ide_thread::TaskStatus::Running,
+            started: None,
+            ended: None,
+            tool_call: tool_call.map(str::to_string),
+            parent: None,
+            output: ide_thread::OutputTail::default(),
+            is_backgrounded: true,
+            ambient: false,
+        };
+        assert_eq!(
+            command_line(&thread, &item(Some("toolu_bg"))).as_deref(),
+            Some("./batch.sh > batch.log 2>&1")
+        );
+        assert_eq!(command_line(&thread, &item(Some("toolu_other"))), None);
+        assert_eq!(command_line(&thread, &item(None)), None);
+    }
+
+    #[test]
+    fn an_empty_output_falls_back_to_the_last_file_the_command_wrote_that_is_there() {
+        let dir = std::env::temp_dir().join(format!("ide-silent-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let log = dir.join("batch.log");
+        std::fs::write(&log, "tick\n").unwrap();
+        let about = Silent {
+            label: "Batch".into(),
+            ended: false,
+            logs: vec![log.clone(), dir.join("missing.log")],
+        };
+        assert_eq!(about.log(), Some(log));
+        let none = Silent {
+            logs: vec![dir.join("missing.log")],
+            ..about
+        };
+        assert_eq!(none.log(), None);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
