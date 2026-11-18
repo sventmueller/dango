@@ -366,7 +366,7 @@ Du trenger:
 | `make perf` | tidsbudsjettene i et utgivelsesbygg; meningsfullt bare på en Mac som ellers er i ro |
 | `make release` | en prøvekjøring av utgivelsen til `target/release-dry-run/`, signert med det lokale sertifikatet; sender ingenting noe sted |
 | `make release-notarized` | `check`, deretter selve utgivelsen til `dist/`: Developer ID-signatur, notarisering, oppdateringsstrømmen signert med appens egen nøkkel; lar `VERSION` være uendret |
-| `make deploy` | på en ren `main` med grønt CI-segl: notariserer neste versjon, oppdaterer og committer `VERSION`, laster opp utgivelsesfilene og pusher koden, CI-seglet og versjonstaggen; GitHub publiserer utgivelsen automatisk |
+| `make deploy` | på en ren `main`, med eller uten CI-segl: notariserer neste versjon, committer `VERSION`, laster opp utgivelsesfilene, pusher koden og versjonstaggen, et grønt CI-segl med hvis det finnes, og publiserer deretter utgivelsen selv |
 
 Feilsøking og utgivelse er separate apper med egne innstillinger og data. Bygging, testing, selvtestene, utgivelsen og reglene koden følger, er beskrevet i [docs/development.md](../../../docs/development.md), beslutningene bak i [docs/plan.md](../../../docs/plan.md). Utgivelsesnotatene er [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), oversatt ved siden av hver README i `assets/readme/<language>/`.
 

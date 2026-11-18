@@ -26,8 +26,8 @@ CI runs `make check` again. This skill never pushes; that is `/deploy`'s job (`m
 - Only a complete run of content that did not change during the run mints: green → `refs/ci-seals/green/<fp>`, a failed
   stage → `refs/ci-seals/red/<fp>`. **Red beats green** for the same fingerprint, so a red run poisons that content
   until the code changes (or Phase 3b).
-- The ref points at a parentless commit of the sealed tree. It is local; `make deploy` pushes it with main, and
-  `.github/workflows/ci.yml` then skips its tests for that content.
+- The ref points at a parentless commit of the sealed tree. It is local; `make deploy` pushes it with main as the
+  record of what was tested. No GitHub workflow tests the push, so this run is the only full check.
 
 ## Phase 0: before the run
 

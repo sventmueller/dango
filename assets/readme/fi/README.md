@@ -366,7 +366,7 @@ Tarvitset:
 | `make perf` | ajoitusbudjetit julkaisukäännöksessä; mielekäs vain muuten joutilaassa Macissa |
 | `make release` | julkaisun kuivaharjoitus kansioon `target/release-dry-run/`, allekirjoitettuna paikallisella varmenteella; ei lähetä mitään minnekään |
 | `make release-notarized` | `check`, sitten itse julkaisu kansioon `dist/`: Developer ID -allekirjoitus, notarisointi, sovelluksen omalla avaimella allekirjoitettu päivityssyöte; jättää `VERSION`-tiedoston ennalleen |
-| `make deploy` | puhtaalla `main`-haaralla, jolla on vihreä CI-sinetti: notarisoi seuraavan version, päivittää ja commitoi `VERSION`-tiedoston, lataa julkaisun tiedostot ja pushaa koodin, CI-sinetin ja versiotunnisteen; GitHub julkaisee version automaattisesti |
+| `make deploy` | puhtaalla `main`-haaralla, CI-sinetin kanssa tai ilman: notarisoi seuraavan version, commitoi `VERSION`-tiedoston, lataa julkaisun tiedostot, pushaa koodin ja versiotunnisteen sekä vihreän CI-sinetin, jos sellainen on, ja julkaisee sitten version itse |
 
 Debug- ja julkaisuversio ovat erillisiä sovelluksia omine asetuksineen ja tietoineen. Kääntäminen, testaus, itsetestit, julkaisu ja koodin noudattamat säännöt kuvataan tiedostossa [docs/development.md](../../../docs/development.md), niiden taustalla olevat päätökset tiedostossa [docs/plan.md](../../../docs/plan.md). Julkaisutiedot ovat tiedostossa [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), käännettyinä kunkin README-tiedoston viereen kansioon `assets/readme/<language>/`.
 

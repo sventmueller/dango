@@ -366,7 +366,7 @@ Claudeは自身のセッションを`~/.claude/projects`以下に保存します
 | `make perf` | リリースビルドでの時間予算の計測。ほかに何も動いていないMacでのみ意味があります |
 | `make release` | `target/release-dry-run/`へのリリースのドライラン。ローカル証明書で署名し、どこにも何も送信しません |
 | `make release-notarized` | `check`のあと、`dist/`への実際のリリース。Developer ID署名、公証、アプリ独自の鍵で署名したアップデートフィード。`VERSION`は変更しません |
-| `make deploy` | 変更が残っておらず、緑のCIシールがある`main`で、次のバージョンを公証し、`VERSION`を更新してコミットします。リリースファイルをアップロードし、コード、CIシール、バージョンタグをプッシュすると、GitHubがリリースを自動公開します |
+| `make deploy` | 変更が残っていない`main`で、CIシールの有無を問わず、次のバージョンを公証し、`VERSION`をコミットします。リリースファイルをアップロードし、コードとバージョンタグを（緑のCIシールがあればそれも）プッシュしてから、リリースを自ら公開します |
 
 デバッグ版とリリース版は、それぞれ独自の設定とデータを持つ別々のアプリです。ビルド、テスト、セルフテスト、リリース、コードが従うルールは[docs/development.md](../../../docs/development.md)に、その背景にある決定事項は[docs/plan.md](../../../docs/plan.md)に記載されています。リリースノートは[RELEASE_NOTES.md](../../../RELEASE_NOTES.md)で、各READMEの隣の`assets/readme/<language>/`に翻訳があります。
 

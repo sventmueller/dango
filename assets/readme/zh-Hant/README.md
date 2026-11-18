@@ -366,7 +366,7 @@ Claude 會將自己的工作階段保存在 `~/.claude/projects` 下；Dango 會
 | `make perf` | 在正式版建置中檢查時間預算；只有在 Mac 沒有其他負載時才有意義 |
 | `make release` | 將正式版演練到 `target/release-dry-run/`，以本機憑證簽署；不向任何地方傳送任何東西 |
 | `make release-notarized` | 先 `check`，然後將正式版本身發布到 `dist/`：Developer ID 簽名、公證、以 App 自己的金鑰簽署的更新來源；保持 `VERSION` 不變 |
-| `make deploy` | 在乾淨且具有綠色 CI 印章的 `main` 上公證下一個版本，更新並提交 `VERSION`，上傳發布檔案，然後推送程式碼、CI 印章和版本標籤；GitHub 自動發布該版本 |
+| `make deploy` | 在乾淨的 `main` 上，無論有無 CI 印章：公證下一個版本，提交 `VERSION`，上傳發布檔案，推送程式碼和版本標籤（若有綠色 CI 印章則一併推送），然後自行發布該版本 |
 
 除錯版和正式版是兩個獨立的 App，各有自己的設定和資料。建置、測試、自我測試、發布以及程式碼依循的規則見 [docs/development.md](../../../docs/development.md)，其背後的決策見 [docs/plan.md](../../../docs/plan.md)。版本說明是 [RELEASE_NOTES.md](../../../RELEASE_NOTES.md)，其譯文與每份 README 一起放在 `assets/readme/<language>/` 中。
 

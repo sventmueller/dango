@@ -864,8 +864,8 @@ Ablauf:
     neutralen Kennung und der Version. Ist der Ordner `noexec`, sagt Dango das. Kein Download vom Server aus, kein
     eigener Download-Dienst.
   - Prüfung: `make check` bleibt bei macOS. `make ci` baut den Dienst für beide Linux-Ziele und lässt seine Tests in
-    einem Linux-Container laufen (aarch64 nativ, x86_64 emuliert). Das gehört zum Siegel; GitHub überspringt
-    versiegelten Inhalt und würde einen reinen Linux-Job sonst nie ausführen.
+    einem Linux-Container laufen (aarch64 nativ, x86_64 emuliert). Das gehört zum Siegel; einen GitHub-Runner,
+    der einen Linux-Job ausführen könnte, gibt es nicht.
   - Neue Voraussetzungen der Entwicklungsumgebung: zig, `cargo-zigbuild`, zwei rustup-Ziele, Docker. Sie kommen mit Stufe 7
     nach [development.md](development.md).
 - **E123 Vertrauen auf dem Host** *(C38)*.

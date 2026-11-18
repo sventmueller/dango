@@ -366,7 +366,7 @@ Aveți nevoie de:
 | `make perf` | bugetele de timp, într-o compilare de versiune; relevant doar pe un Mac altfel inactiv |
 | `make release` | o repetiție a publicării în `target/release-dry-run/`, semnată cu certificatul local; nu trimite nimic nicăieri |
 | `make release-notarized` | `check`, apoi publicarea propriu-zisă în `dist/`: semnătură Developer ID, notarizare, fluxul de actualizări semnat cu cheia proprie a aplicației; lasă `VERSION` neschimbat |
-| `make deploy` | pe un `main` curat, cu sigiliu CI verde: notarizează versiunea următoare, actualizează și comite `VERSION`, încarcă fișierele versiunii și trimite codul, sigiliul CI și eticheta versiunii; GitHub publică automat versiunea |
+| `make deploy` | pe un `main` curat, cu sau fără sigiliu CI: notarizează versiunea următoare, comite `VERSION`, încarcă fișierele versiunii, trimite codul și eticheta versiunii, împreună cu sigiliul CI verde dacă există, apoi publică singur versiunea |
 
 Depanarea și versiunea sunt aplicații separate, cu configurări și date proprii. Compilarea, testarea, autotestele, publicarea și regulile pe care le urmează codul sunt descrise în [docs/development.md](../../../docs/development.md), iar deciziile din spatele lor în [docs/plan.md](../../../docs/plan.md). Notele de versiune sunt [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), traduse lângă fiecare README în `assets/readme/<language>/`.
 

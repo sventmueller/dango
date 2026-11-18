@@ -26,7 +26,6 @@ lint: ## Formatting, the workspace-hack (E194), clippy, also with the selftest f
 	cargo clippy --package ide-terminal --package ide-lsp --package ide-git --package ide-agent --package ide-predict --package ide-dap --package ide-thread --all-targets --features ide-terminal/fuzzing,ide-lsp/fuzzing,ide-git/fuzzing,ide-agent/fuzzing,ide-predict/fuzzing,ide-dap/fuzzing,ide-thread/fuzzing -- -D warnings
 
 check: lint ## lint, then all cargo tests; needs no keychain, no window and no network
-	python3 .github/scripts/test_publish_release.py
 	cargo test --workspace
 
 check-dictation: ## Clippy and the tests of the app and ide-ui-dictation with dictation, which builds whisper.cpp with cmake; for changes to it
@@ -52,7 +51,7 @@ ci: ## The whole pipeline: cargo fmt, check, coverage with every test and offlin
 seal-explain: ## The seal of HEAD's content here and on GitHub, and what separates it from the nearest green seal
 	cargo xtask seal explain
 
-deploy: ## Notarize the next version, commit VERSION, upload the draft and push main, its green seal and tag; GitHub publishes
+deploy: ## Notarize the next version, commit VERSION, upload the draft, push main, its green seal and tag, then publish the release
 	cargo xtask deploy
 
 test: check ## check, then the selftest probe and the accessibility audit, left to right and right to left

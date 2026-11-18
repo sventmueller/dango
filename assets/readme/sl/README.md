@@ -366,7 +366,7 @@ Potrebujete:
 | `make perf` | časovni proračuni, v gradnji za izdajo; smiselno le na sicer nedejavnem Macu |
 | `make release` | poskusni zagon izdaje v `target/release-dry-run/`, podpisan z lokalnim potrdilom; nikamor ničesar ne pošlje |
 | `make release-notarized` | `check`, nato sama izdaja v `dist/`: podpis Developer ID, notarizacija, vir posodobitev, podpisan z lastnim ključem aplikacije; pusti `VERSION` nespremenjen |
-| `make deploy` | na čisti veji `main` z zelenim pečatom CI: notarizira naslednjo različico, posodobi in commita `VERSION`, naloži datoteke izdaje ter potisne kodo, pečat CI in oznako različice; GitHub samodejno objavi izdajo |
+| `make deploy` | na čisti veji `main`, s pečatom CI ali brez njega: notarizira naslednjo različico, commita `VERSION`, naloži datoteke izdaje, potisne kodo in oznako različice, skupaj z zelenim pečatom CI, če obstaja, nato pa sam objavi izdajo |
 
 Razvojna različica in različica za izdajo sta ločeni aplikaciji z lastnimi nastavitvami in podatki. Gradnja, preizkušanje, samopreizkusi, izdaja in pravila, ki jim sledi koda, so opisani v [docs/development.md](../../../docs/development.md), odločitve za tem pa v [docs/plan.md](../../../docs/plan.md). Opombe ob izdaji so [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), prevedene poleg vsakega README v `assets/readme/<language>/`.
 

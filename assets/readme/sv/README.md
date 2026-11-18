@@ -366,7 +366,7 @@ Du behöver:
 | `make perf` | tidsbudgetarna i ett versionsbygge; meningsfullt bara på en Mac som annars är i vila |
 | `make release` | en provkörning av versionen till `target/release-dry-run/`, signerad med det lokala certifikatet; skickar ingenting någonstans |
 | `make release-notarized` | `check`, sedan själva versionen till `dist/`: Developer ID-signatur, notarisering, uppdateringsflödet signerat med appens egen nyckel; lämnar `VERSION` oförändrad |
-| `make deploy` | på en ren `main` med grönt CI-sigill: notariserar nästa version, uppdaterar och committar `VERSION`, laddar upp utgivningsfilerna och pushar koden, CI-sigillet och versionstaggen; GitHub publicerar utgåvan automatiskt |
+| `make deploy` | på en ren `main`, med eller utan CI-sigill: notariserar nästa version, committar `VERSION`, laddar upp utgivningsfilerna, pushar koden och versionstaggen, ett grönt CI-sigill med om det finns, och publicerar sedan utgåvan själv |
 
 Felsökning och version är separata appar med egna inställningar och data. Bygge, tester, självtesterna, versionen och reglerna som koden följer beskrivs i [docs/development.md](../../../docs/development.md), besluten bakom i [docs/plan.md](../../../docs/plan.md). Versionsinformationen är [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), översatt bredvid varje README i `assets/readme/<language>/`.
 

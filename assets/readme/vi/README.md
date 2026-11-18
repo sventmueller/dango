@@ -366,7 +366,7 @@ Bạn cần:
 | `make perf` | ngân sách thời gian, trong bản build phát hành; chỉ có ý nghĩa trên một máy Mac không làm việc gì khác |
 | `make release` | chạy thử bản phát hành vào `target/release-dry-run/`, được ký bằng chứng chỉ cục bộ; không gửi gì đi đâu cả |
 | `make release-notarized` | `check`, sau đó là bản phát hành thật vào `dist/`: chữ ký Developer ID, công chứng, nguồn cập nhật được ký bằng khóa riêng của ứng dụng; giữ nguyên `VERSION` |
-| `make deploy` | trên `main` sạch có dấu CI xanh: công chứng phiên bản tiếp theo, cập nhật và commit `VERSION`, tải lên các tệp phát hành rồi đẩy mã nguồn, dấu CI và thẻ phiên bản; GitHub tự động công bố bản phát hành |
+| `make deploy` | trên `main` sạch, có hoặc không có dấu CI: công chứng phiên bản tiếp theo, commit `VERSION`, tải lên các tệp phát hành, đẩy mã nguồn và thẻ phiên bản, kèm dấu CI xanh nếu có, rồi tự công bố bản phát hành |
 
 Bản gỡ lỗi và bản phát hành là hai ứng dụng riêng biệt với cài đặt và dữ liệu riêng. Việc biên dịch, kiểm thử, tự kiểm thử, phát hành và các quy tắc mà mã tuân theo được mô tả trong [docs/development.md](../../../docs/development.md), còn các quyết định đằng sau chúng nằm trong [docs/plan.md](../../../docs/plan.md). Ghi chú phát hành là [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), được dịch bên cạnh mỗi README trong `assets/readme/<language>/`.
 

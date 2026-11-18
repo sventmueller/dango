@@ -75,12 +75,10 @@ pub(crate) const USAGE: &str = "usage: cargo xtask <task>
                                    seals the working tree's content in the local ref refs/ci-seals/<green|red>/<fp>;
                                    refuses while the screen is locked
   seal fingerprint [--head]        the fingerprint of the working tree's content (or HEAD's): its git tree without VERSION
-  seal check                       origin's seal for HEAD's content, as fingerprint= and verdict= lines, also into
-                                   $GITHUB_OUTPUT; fails for a red seal
   seal explain                     the seals of HEAD's content here and on origin, and the paths that separate it from
                                    the nearest green seal
-  deploy                           on clean, sealed main: notarize the next version, commit VERSION, upload the draft,
-                                   then push main, its seal and the version tag; GitHub publishes the release
+  deploy                           on clean main: notarize the next version, commit VERSION, upload the draft, push
+                                   main, its green seal if any and the version tag, then publish the release
   thread-locals                    fail for a thread-local that docs/thread-locals.md does not allow to stay
   structure                        fail for a Rust file over 1000 lines or a model.rs that uses objc2 (E98)
   rules                            fail for unlisted stateful statics, mem::forget, unguarded blocks, literal sizes,
@@ -349,7 +347,6 @@ mod tests {
             &["ci", "--fast"],
             &["deploy", "--force"],
             &["seal", "fingerprint", "--tree"],
-            &["seal", "check", "x"],
             &["seal", "explain", "x"],
             &["release", "--upload"],
             &["universal", "--release"],

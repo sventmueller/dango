@@ -366,7 +366,7 @@ Claude 将自己的会话保存在 `~/.claude/projects` 下；Dango 会读取它
 | `make perf` | 在正式版构建中检查时间预算；只有在 Mac 没有其他负载时才有意义 |
 | `make release` | 将正式版演练到 `target/release-dry-run/`，使用本地证书签名；不向任何地方发送任何内容 |
 | `make release-notarized` | 先 `check`，然后将正式版本身发布到 `dist/`：Developer ID 签名、公证、使用 App 自己的密钥签名的更新源；保持 `VERSION` 不变 |
-| `make deploy` | 在干净且带有绿色 CI 印章的 `main` 上公证下一个版本，更新并提交 `VERSION`，上传发布文件，然后推送代码、CI 印章和版本标签；GitHub 自动发布该版本 |
+| `make deploy` | 在干净的 `main` 上，无论有无 CI 印章：公证下一个版本，提交 `VERSION`，上传发布文件，推送代码和版本标签（若有绿色 CI 印章则一并推送），然后自行发布该版本 |
 
 调试版和正式版是两个独立的 App，各有自己的设置和数据。构建、测试、自检、发布以及代码遵循的规则见 [docs/development.md](../../../docs/development.md)，其背后的决策见 [docs/plan.md](../../../docs/plan.md)。发布说明是 [RELEASE_NOTES.md](../../../RELEASE_NOTES.md)，其译文与每份 README 一起放在 `assets/readme/<language>/` 中。
 

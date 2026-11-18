@@ -137,44 +137,16 @@ fn a_red_seal_outweighs_a_green_one_for_the_same_content() {
 }
 
 #[test]
-fn the_workflow_reads_origins_seal_for_heads_content() {
-    let (dir, git) = repository("seal-check");
+fn a_seal_is_a_local_ref_to_a_commit_of_the_sealed_tree() {
+    let (dir, git) = repository("seal-mint");
     let head = fp(&git, Content::Head);
-    let output = dir.join("github-output");
-    assert_eq!(check_in(&mut System, &git, Some(&output)), Ok(Verdict::Unsealed));
-    assert_eq!(
-        mint(&mut System, &git, Seal::Green, &head).unwrap(),
-        Seal::Green.reference(&head)
-    );
-    assert_eq!(
-        check_in(&mut System, &git, None),
-        Ok(Verdict::Unsealed),
-        "the seal is still local"
-    );
-
-    let sealed = Seal::Green.reference(&head);
-    git.output(&mut System, &["push", "--quiet", "origin", &sealed])
-        .unwrap();
-    assert_eq!(check_in(&mut System, &git, Some(&output)), Ok(Verdict::Green));
+    let sealed = mint(&mut System, &git, Seal::Green, &head).unwrap();
+    assert_eq!(sealed, Seal::Green.reference(&head));
     let tree = git
         .output(&mut System, &["rev-parse", &format!("{sealed}^{{tree}}")])
         .unwrap();
     assert_eq!(tree.trim(), head, "the seal commits the sealed tree");
-
-    let red = mint(&mut System, &git, Seal::Red, &head).unwrap();
-    git.output(&mut System, &["push", "--quiet", "origin", &red]).unwrap();
-    let refused = check_in(&mut System, &git, Some(&output)).unwrap_err();
-    assert!(refused.contains("is sealed red"), "{refused}");
-    assert_eq!(
-        std::fs::read_to_string(&output).unwrap(),
-        format!(
-            "fingerprint={head}\nverdict=none\nfingerprint={head}\nverdict=green\nfingerprint={head}\nverdict=red\n"
-        )
-    );
-    assert!(check_in(&mut System, &git, Some(&dir.join("missing/output"))).is_err());
-    git.output(&mut System, &["remote", "set-url", "origin", "/nonexistent/origin.git"])
-        .unwrap();
-    assert!(check_in(&mut System, &git, None).is_err(), "no origin, no verdict");
+    assert!(!origin_refs(&dir).contains("refs/ci-seals/"), "minting pushes nothing");
     std::fs::remove_dir_all(dir).unwrap();
 }
 
@@ -187,10 +159,7 @@ fn explain_says_what_separates_heads_content_from_the_nearest_green_seal() {
         text.starts_with(&format!("HEAD's content {first}\n  seal here: none\n")),
         "{text}"
     );
-    assert!(
-        text.contains("seal on origin: none, so GitHub's CI runs `make check`"),
-        "{text}"
-    );
+    assert!(text.contains("seal on origin: none\n"), "{text}");
     assert!(text.contains("the working tree has the same content\nno green seal here to compare with\n"));
 
     mint(&mut System, &git, Seal::Green, &first).unwrap();
@@ -265,10 +234,5 @@ fn deploy_needs_no_seal_and_pushes_a_green_one_along() {
     git.output(&mut System, &["tag", "v0.1.1"]).unwrap();
     assert_eq!(push(&mut System, &git, "v0.1.1"), Ok(()));
     assert!(origin_refs(&dir).contains(&Seal::Green.reference(&head)));
-    assert_eq!(
-        check_in(&mut System, &git, None),
-        Ok(Verdict::Green),
-        "the workflow finds the seal"
-    );
     std::fs::remove_dir_all(dir).unwrap();
 }

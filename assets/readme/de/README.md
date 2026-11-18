@@ -366,7 +366,7 @@ Du brauchst:
 | `make perf` | die Zeitbudgets in einem Release-Build; aussagekräftig nur auf einem sonst untätigen Mac |
 | `make release` | ein Probelauf der Ausgabe nach `target/release-dry-run/`, signiert mit dem lokalen Zertifikat; sendet nichts irgendwohin |
 | `make release-notarized` | `check`, dann die aktuelle Version nach `dist/`: Signatur mit Developer ID, Notarisierung, der Update-Feed mit dem eigenen Schlüssel der App signiert; lässt `VERSION` unverändert |
-| `make deploy` | notarisiert die nächste Version auf sauberem, grün versiegeltem `main`, committet `VERSION`, lädt die Ausgabedateien hoch und pusht Code, CI-Siegel und Versions-Tag; GitHub veröffentlicht die Ausgabe automatisch |
+| `make deploy` | auf sauberem `main`, mit oder ohne CI-Siegel: notarisiert die nächste Version, committet `VERSION`, lädt die Ausgabedateien hoch, pusht Code und Versions-Tag, ein grünes CI-Siegel mit, falls es eines gibt, und veröffentlicht die Ausgabe dann selbst |
 
 Debug und Release sind getrennte Apps mit eigenen Einstellungen und Daten. Bauen, Testen, die Selbsttests, die Ausgabe und die Regeln, denen der Code folgt, beschreibt [docs/development.md](../../../docs/development.md), die Entscheidungen dahinter [docs/plan.md](../../../docs/plan.md). Die Versionshinweise sind [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), übersetzt neben jeder README in `assets/readme/<language>/`.
 

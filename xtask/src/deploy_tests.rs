@@ -144,3 +144,78 @@ fn a_published_release_is_never_overwritten_and_a_failed_upload_stops() {
     assert!(stage(&mut failed, Path::new("/dist"), &deployment()).is_err());
     assert_eq!(failed.commands.len(), 2, "the existing draft is reused");
 }
+
+fn github(
+    main: &'static str,
+    draft: &'static str,
+    changed: Option<&'static str>,
+) -> impl FnMut(&Command, &str) -> (i32, String) {
+    move |_: &Command, line: &str| {
+        if line.contains("ls-remote origin refs/heads/main") {
+            (0, format!("{main}\trefs/heads/main\n"))
+        } else if line.starts_with("shasum") {
+            (0, "manifest  /dist/deployment.json\n".into())
+        } else if line.contains("release view") {
+            let files = assets("0.1.3").into_iter().map(|file| {
+                let digest = if Some(file.as_str()) == changed {
+                    "other"
+                } else {
+                    "digest"
+                };
+                format!("sha256:{digest} {file}\n")
+            });
+            (
+                0,
+                format!("{draft}\n{}sha256:manifest {MANIFEST}\n", files.collect::<String>()),
+            )
+        } else {
+            (0, String::new())
+        }
+    }
+}
+
+#[test]
+fn publishing_needs_the_release_commit_on_origin_and_every_notarized_file_in_the_draft() {
+    let git = Git::at(Path::new("/repo"));
+    let mut sh = Fake::new(github("release", "true", None));
+    publish(&mut sh, &git, Path::new("/dist"), &deployment()).unwrap();
+    let edit = sh.commands.last().unwrap();
+    assert!(
+        edit.contains("release edit v0.1.3") && edit.contains("--target release --draft=false --latest"),
+        "{edit}"
+    );
+    for (main, draft, changed, refusal) in [
+        ("newer", "true", None, "not the release commit"),
+        ("release", "true", Some("appcast.xml"), "differ from the notarized ones"),
+        ("release", "false", None, "no longer a draft"),
+    ] {
+        let mut sh = Fake::new(github(main, draft, changed));
+        let error = publish(&mut sh, &git, Path::new("/dist"), &deployment()).unwrap_err();
+        assert!(error.contains(refusal), "{error}");
+        assert!(!sh.commands.iter().any(|c| c.contains("release edit")));
+    }
+}
+
+#[test]
+fn only_a_feed_that_offers_the_signed_image_of_the_version_passes() {
+    let dir = scratch("deploy-feed");
+    files::write(dir.join("Dango.dmg"), [0u8; 42]).unwrap();
+    let url = updates::image_url(updates::RELEASES, "0.1.3");
+    let feed = |version: &str, signature: &str, length: u64| {
+        format!(
+            "<sparkle:version>{version}</sparkle:version>\n<enclosure url=\"{url}\" sparkle:edSignature=\"{signature}\" \
+             length=\"{length}\" type=\"application/octet-stream\"/>"
+        )
+    };
+    files::write(dir.join(updates::FEED), feed("0.1.3", "c2ln", 42)).unwrap();
+    deployment().check_feed(&dir).unwrap();
+    for wrong in [
+        feed("0.1.2", "c2ln", 42),
+        feed("0.1.3", "DRY-RUN-NOT-SIGNED", 42),
+        feed("0.1.3", "c2ln", 41),
+    ] {
+        files::write(dir.join(updates::FEED), wrong).unwrap();
+        assert!(deployment().check_feed(&dir).is_err());
+    }
+    files::remove_dir_all(&dir).unwrap();
+}

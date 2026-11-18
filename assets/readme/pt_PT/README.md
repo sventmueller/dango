@@ -366,7 +366,7 @@ Precisa de:
 | `make perf` | os orçamentos de tempo, numa compilação de versão; só faz sentido num Mac que de resto esteja inativo |
 | `make release` | um ensaio da publicação em `target/release-dry-run/`, assinado com o certificado local; não envia nada para lado nenhum |
 | `make release-notarized` | `check` e depois a publicação propriamente dita em `dist/`: assinatura com Developer ID, notarização, o feed de atualizações assinado com a chave própria da aplicação; mantém `VERSION` inalterado |
-| `make deploy` | num `main` limpo e com selo verde de CI: notariza a próxima versão, atualiza e faz commit de `VERSION`, carrega os ficheiros da publicação e faz push do código, do selo de CI e da etiqueta de versão; o GitHub publica a versão automaticamente |
+| `make deploy` | num `main` limpo, com ou sem selo de CI: notariza a próxima versão, faz commit de `VERSION`, carrega os ficheiros da publicação, faz push do código e da etiqueta de versão, com o selo verde de CI se existir, e depois publica a versão ele próprio |
 
 Depuração e versão são aplicações separadas com definições e dados próprios. A compilação, os testes, os autotestes, a publicação e as regras que o código segue estão descritos em [docs/development.md](../../../docs/development.md), e as decisões por detrás em [docs/plan.md](../../../docs/plan.md). As notas da versão são o [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), traduzidas ao lado de cada README em `assets/readme/<language>/`.
 

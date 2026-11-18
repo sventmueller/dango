@@ -366,7 +366,7 @@ Necessites:
 | `make perf` | els pressupostos de temps, en una compilació de versió; només té sentit en un Mac que altrament estigui inactiu |
 | `make release` | un assaig de la publicació a `target/release-dry-run/`, signat amb el certificat local; no envia res enlloc |
 | `make release-notarized` | `check` i després la publicació mateixa a `dist/`: signatura amb Developer ID, notarització, el canal d’actualitzacions signat amb la clau pròpia de l’app; deixa `VERSION` sense canvis |
-| `make deploy` | en un `main` net i amb segell verd de CI: notaritza la versió següent, actualitza i commet `VERSION`, puja els fitxers de publicació i envia el codi, el segell de CI i l’etiqueta de versió; GitHub publica la versió automàticament |
+| `make deploy` | en un `main` net, amb segell de CI o sense: notaritza la versió següent, commet `VERSION`, puja els fitxers de publicació, envia el codi i l’etiqueta de versió, amb el segell verd de CI si n’hi ha, i després publica la versió ell mateix |
 
 Depuració i versió són apps separades amb la seva pròpia configuració i dades. La compilació, les proves, les autoproves, la publicació i les regles que segueix el codi es descriuen a [docs/development.md](../../../docs/development.md), i les decisions que hi ha al darrere, a [docs/plan.md](../../../docs/plan.md). Les notes de la versió són [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), traduïdes al costat de cada README a `assets/readme/<language>/`.
 

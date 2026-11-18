@@ -366,7 +366,7 @@ Anda memerlukan:
 | `make perf` | anggaran waktu, dalam build rilis; hanya bermakna di Mac yang sedang tidak sibuk |
 | `make release` | uji coba rilis ke `target/release-dry-run/`, ditandatangani dengan sertifikat lokal; tidak mengirim apa pun ke mana pun |
 | `make release-notarized` | `check`, lalu rilis itu sendiri ke `dist/`: tanda tangan Developer ID, notarisasi, feed pembaruan yang ditandatangani dengan kunci milik app sendiri; membiarkan `VERSION` tetap sama |
-| `make deploy` | pada `main` yang bersih dengan segel CI hijau: menotarisasi versi berikutnya, memperbarui dan melakukan commit `VERSION`, mengunggah berkas rilis dan melakukan push kode, segel CI serta tag versi; GitHub menerbitkan rilis secara otomatis |
+| `make deploy` | pada `main` yang bersih, dengan atau tanpa segel CI: menotarisasi versi berikutnya, melakukan commit `VERSION`, mengunggah berkas rilis, melakukan push kode dan tag versi, beserta segel CI hijau jika ada, lalu menerbitkan rilis itu sendiri |
 
 Debug dan rilis adalah app terpisah dengan pengaturan dan data masing-masing. Pembangunan, pengujian, swauji, rilis, dan aturan yang diikuti kode dijelaskan di [docs/development.md](../../../docs/development.md), keputusan di baliknya di [docs/plan.md](../../../docs/plan.md). Catatan rilis adalah [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), diterjemahkan di samping setiap README di `assets/readme/<language>/`.
 

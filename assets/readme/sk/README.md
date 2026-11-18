@@ -366,7 +366,7 @@ Potrebujete:
 | `make perf` | časové rozpočty, v zostavení na vydanie; zmysluplné iba na inak nečinnom Macu |
 | `make release` | skúšobné vydanie do `target/release-dry-run/`, podpísané lokálnym certifikátom; nikam nič neodošle |
 | `make release-notarized` | `check`, potom samotné vydanie do `dist/`: podpis Developer ID, notarizácia, kanál aktualizácií podpísaný vlastným kľúčom aplikácie; ponechá `VERSION` bez zmeny |
-| `make deploy` | na čistej vetve `main` so zelenou pečaťou CI: notarizuje ďalšiu verziu, aktualizuje a commituje `VERSION`, nahrá súbory vydania a odošle kód, pečať CI a značku verzie; GitHub vydanie automaticky zverejní |
+| `make deploy` | na čistej vetve `main`, s pečaťou CI aj bez nej: notarizuje ďalšiu verziu, commituje `VERSION`, nahrá súbory vydania, odošle kód a značku verzie, a ak existuje, aj zelenú pečať CI, a potom vydanie sám zverejní |
 
 Ladiaca aplikácia a aplikácia na vydanie sú samostatné aplikácie s vlastnými nastaveniami a údajmi. Zostavovanie, testovanie, samotesty, vydanie a pravidlá, ktorými sa kód riadi, sú opísané v [docs/development.md](../../../docs/development.md), rozhodnutia za nimi v [docs/plan.md](../../../docs/plan.md). Poznámky k vydaniu sú v [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), preložené vedľa každého README v `assets/readme/<language>/`.
 

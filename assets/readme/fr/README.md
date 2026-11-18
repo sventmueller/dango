@@ -366,7 +366,7 @@ Il vous faut :
 | `make perf` | les budgets de temps, dans une compilation de version ; n’a de sens que sur un Mac par ailleurs inactif |
 | `make release` | une répétition de la publication dans `target/release-dry-run/`, signée avec le certificat local ; n’envoie rien nulle part |
 | `make release-notarized` | `check`, puis la publication elle-même dans `dist/` : signature Developer ID, notarisation, flux de mises à jour signé avec la clé propre de l’app ; laisse `VERSION` inchangé |
-| `make deploy` | sur un `main` propre et muni d’un sceau vert de CI : notarise la prochaine version, met à jour et commite `VERSION`, téléverse les fichiers de publication et pousse le code, le sceau de CI et le tag de version ; GitHub publie automatiquement la version |
+| `make deploy` | sur un `main` propre, avec ou sans sceau de CI : notarise la prochaine version, commite `VERSION`, téléverse les fichiers de publication, pousse le code et le tag de version, avec le sceau vert de CI s’il existe, puis publie lui-même la version |
 
 Débogage et version sont des apps distinctes avec leurs propres réglages et données. La compilation, les tests, les autotests, la publication et les règles que suit le code sont décrits dans [docs/development.md](../../../docs/development.md), les décisions qui les sous-tendent dans [docs/plan.md](../../../docs/plan.md). Les notes de version sont [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), traduites à côté de chaque README dans `assets/readme/<language>/`.
 

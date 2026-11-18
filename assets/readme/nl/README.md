@@ -366,7 +366,7 @@ Je hebt nodig:
 | `make perf` | de tijdsbudgetten, in een release-build; alleen zinvol op een verder ongebruikte Mac |
 | `make release` | een proefrun van de release naar `target/release-dry-run/`, ondertekend met het lokale certificaat; verstuurt niets |
 | `make release-notarized` | `check`, daarna de release zelf naar `dist/`: Developer ID-handtekening, notarisatie, de updatefeed ondertekend met de eigen sleutel van de app; laat `VERSION` ongewijzigd |
-| `make deploy` | op een schone `main` met een groen CI-zegel: notariseert de volgende versie, werkt `VERSION` bij en commit die, uploadt de releasebestanden en pusht de code, het CI-zegel en de versietag; GitHub publiceert de release automatisch |
+| `make deploy` | op een schone `main`, met of zonder CI-zegel: notariseert de volgende versie, commit `VERSION`, uploadt de releasebestanden, pusht de code en de versietag, met een groen CI-zegel als dat er is, en publiceert daarna zelf de release |
 
 Debug en release zijn aparte apps met hun eigen instellingen en gegevens. Bouwen, testen, de zelftests, de release en de regels die de code volgt, staan in [docs/development.md](../../../docs/development.md), de beslissingen erachter in [docs/plan.md](../../../docs/plan.md). De release-opmerkingen zijn [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), vertaald naast elke README in `assets/readme/<language>/`.
 

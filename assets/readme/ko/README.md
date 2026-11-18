@@ -366,7 +366,7 @@ Claude는 자체 세션을 `~/.claude/projects` 아래에 보관합니다. Dango
 | `make perf` | 릴리스 빌드에서의 시간 예산. 다른 작업이 없는 Mac에서만 의미가 있습니다 |
 | `make release` | `target/release-dry-run/`으로의 릴리스 시험 실행. 로컬 인증서로 서명하며, 아무 데도 아무것도 보내지 않습니다 |
 | `make release-notarized` | `check` 후 `dist/`로의 실제 릴리스. Developer ID 서명, 공증, 앱 고유의 키로 서명된 업데이트 피드. `VERSION`은 변경하지 않습니다 |
-| `make deploy` | 변경 사항이 없고 녹색 CI 봉인이 있는 `main`에서 다음 버전을 공증하고 `VERSION`을 업데이트하여 커밋합니다. 릴리스 파일을 업로드하고 코드, CI 봉인 및 버전 태그를 푸시하면 GitHub가 릴리스를 자동으로 게시합니다 |
+| `make deploy` | 변경 사항이 없는 `main`에서 CI 봉인 여부와 관계없이 다음 버전을 공증하고 `VERSION`을 커밋합니다. 릴리스 파일을 업로드하고 코드와 버전 태그를(녹색 CI 봉인이 있으면 함께) 푸시한 다음 릴리스를 직접 게시합니다 |
 
 디버그 앱과 릴리스 앱은 각자의 설정과 데이터를 가진 별개의 앱입니다. 빌드, 테스트, 자체 테스트, 릴리스, 코드가 따르는 규칙은 [docs/development.md](../../../docs/development.md)에, 그 바탕이 되는 결정은 [docs/plan.md](../../../docs/plan.md)에 설명되어 있습니다. 릴리스 노트는 [RELEASE_NOTES.md](../../../RELEASE_NOTES.md)이며, 각 README 옆의 `assets/readme/<language>/`에 번역되어 있습니다.
 

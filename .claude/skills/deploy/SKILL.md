@@ -1,9 +1,9 @@
 ---
 name: deploy
-description: Release Dango from this Mac. Prepare release notes and commit the release content without asking for a CI seal, then make deploy notarizes the next version, commits VERSION, uploads a draft and atomically pushes main and its tag, with a green seal when one exists. Watch CI and the automatic GitHub release. Use when the owner says "/deploy", "push it", "ship it".
+description: Release Dango from this Mac. Prepare release notes and commit the release content without asking for a CI seal, then make deploy notarizes the next version, commits VERSION, uploads a draft, atomically pushes main and its tag, with a green seal when one exists, and publishes the release itself; no GitHub runner takes part. Use when the owner says "/deploy", "push it", "ship it".
 ---
 
-# /deploy: notarize, push, publish
+# /deploy: notarize, push, publish from this Mac
 
 Invoking `/deploy` authorizes committing all intended project changes, signing, notarizing, uploading and pushing the
 release. Never force-push. Do not deploy when the owner only asks to prepare or change this workflow.
@@ -49,27 +49,19 @@ Run `make deploy` in the background with a log under `target/` and observe compl
 5. Atomically pushes main and its version tag, plus the green seal of its content if there is one locally. A rejected
    push leaves the draft unpublished; fix the cause without force-pushing, then retry. Never replace a published
    release or its assets.
+6. Publishes the draft as latest once origin's main is the release commit and GitHub's SHA-256 of every draft file
+   matches the manifest, then removes `dist/deployment.json`. A failed publication leaves the draft and the manifest;
+   rerun `make deploy`, which resumes the same version, re-uploads and publishes. Never publish the draft by hand
+   and never loosen these checks.
 
-## Phase 3: observe both GitHub workflows
+## Phase 3: verify the release
 
-Find runs for the exact pushed SHA with `gh run list --commit <sha> --json databaseId,workflowName,status,url`.
-Wait for both `ci.yml` and `release.yml` to appear and use `gh run watch <id> --exit-status` in the background. A push
-alone is not proof of publication.
-
-- CI: with a pushed green seal `check: skipped`, otherwise `check` runs `make check`; report its result. The release
-  does not wait for it.
-- Release: `.github/workflows/release.yml` runs when VERSION changes or on a manual retry. It verifies the VERSION-only
-  commit, tag, manifest, checksums and update feed before publishing the draft as latest. It never builds or
-  notarizes on a runner.
-- On a workflow failure, inspect `gh run view <id> --log-failed`. Retry a network/runner failure with
-  `gh run rerun <id>`; never bump VERSION just to retry publication. For a code problem fix it, prepare new notes,
-  then restart at Phase 1. Never loosen release checks.
-
-Finally verify `gh release view v<version> --json url,isDraft,tagName,assets`: the release must be public with all
-assets. Check `https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg`.
+Verify `gh release view v<version> --json url,isDraft,tagName,assets`: the release must be public with all assets.
+Check `https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg`. The push still starts `ci.yml`
+(`make check` on a macOS runner unless a green seal went along); the release does not depend on it, so do not wait for
+it.
 
 ## Report
 
-Report shipped version and commit, notarization result, whether a green seal went along, both workflow URLs and
-results, release and download links. On failure distinguish built, uploaded, pushed and published; a private draft is
-not a shipped release.
+Report shipped version and commit, notarization result, whether a green seal went along, release and download links.
+On failure distinguish built, uploaded, pushed and published; a private draft is not a shipped release.

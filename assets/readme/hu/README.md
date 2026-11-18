@@ -366,7 +366,7 @@ Amire szüksége van:
 | `make perf` | az időkeretek, kiadási buildben; csak egy egyébként tétlen Macen van értelme |
 | `make release` | a kiadás próbafuttatása a `target/release-dry-run/` mappába, a helyi tanúsítvánnyal aláírva; semmit nem küld sehová |
 | `make release-notarized` | `check`, majd maga a kiadás a `dist/` mappába: Developer ID-aláírás, hitelesítés, az app saját kulcsával aláírt frissítési hírcsatorna; változatlanul hagyja a `VERSION` fájlt |
-| `make deploy` | tiszta, zöld CI-pecséttel rendelkező `main` ágon: hitelesíti a következő verziót, frissíti és commitolja a `VERSION` fájlt, feltölti a kiadás fájljait, majd pusholja a kódot, a CI-pecsétet és a verziócímkét; a GitHub automatikusan közzéteszi a kiadást |
+| `make deploy` | tiszta `main` ágon, CI-pecséttel vagy anélkül: hitelesíti a következő verziót, commitolja a `VERSION` fájlt, feltölti a kiadás fájljait, pusholja a kódot és a verziócímkét, a zöld CI-pecsétet is, ha van, majd maga teszi közzé a kiadást |
 
 A hibakereső és a kiadási változat külön appok, saját beállításokkal és adatokkal. A fordítást, a tesztelést, az önteszteket, a kiadást és a kódra vonatkozó szabályokat a [docs/development.md](../../../docs/development.md) írja le, a mögöttük álló döntéseket a [docs/plan.md](../../../docs/plan.md). A kiadási megjegyzések a [RELEASE_NOTES.md](../../../RELEASE_NOTES.md) fájlban találhatók, lefordítva minden README mellett az `assets/readme/<language>/` mappában.
 

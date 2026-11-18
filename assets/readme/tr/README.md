@@ -366,7 +366,7 @@ Gerekenler:
 | `make perf` | bir sürüm derlemesinde zamanlama bütçeleri; yalnızca başka bir iş yapmayan bir Mac’te anlamlıdır |
 | `make release` | yerel sertifikayla imzalanmış, `target/release-dry-run/` içine sürümün bir deneme çalıştırması; hiçbir yere bir şey göndermez |
 | `make release-notarized` | `check`, ardından `dist/` içine sürümün kendisi: Developer ID imzası, onaylama (notarization), uygulamanın kendi anahtarıyla imzalanmış güncelleme akışı; `VERSION` değerini değiştirmez |
-| `make deploy` | temiz ve yeşil CI mührüne sahip `main` üzerinde sonraki sürümü onaylatır, `VERSION` değerini güncelleyip commit eder, sürüm dosyalarını yükler ve kodu, CI mührünü ve sürüm etiketini push eder; GitHub sürümü otomatik olarak yayımlar |
+| `make deploy` | temiz `main` üzerinde, CI mührü olsun ya da olmasın, sonraki sürümü onaylatır, `VERSION` değerini commit eder, sürüm dosyalarını yükler, kodu ve sürüm etiketini (varsa yeşil CI mührüyle birlikte) push eder ve ardından sürümü kendisi yayımlar |
 
 Hata ayıklama ve sürüm derlemeleri kendi ayarları ve verileri olan ayrı uygulamalardır. Derleme, test etme, öz testler, sürüm yayımlama ve kodun izlediği kurallar [docs/development.md](../../../docs/development.md) dosyasında, arkasındaki kararlar [docs/plan.md](../../../docs/plan.md) dosyasında anlatılır. Sürüm notları [RELEASE_NOTES.md](../../../RELEASE_NOTES.md) dosyasındadır ve her README’nin yanında `assets/readme/<language>/` içinde çevrilmiştir.
 

@@ -3,7 +3,6 @@
 //! one along when HEAD's content has it. The fingerprint is the git tree of the content without `VERSION`, which only
 //! deploy raises, so a commit of the sealed working tree inherits the seal. Red beats green for the same fingerprint.
 
-use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -186,43 +185,12 @@ pub(crate) fn seal(args: &[String]) -> Result<(), String> {
             println!("{}", fingerprint(&mut System, &git, content)?);
             Ok(())
         }
-        Some((what, rest)) if what == "check" => {
-            flags(rest, [])?;
-            let output = std::env::var_os("GITHUB_OUTPUT").map(PathBuf::from);
-            check_in(&mut System, &git, output.as_deref()).map(|_| ())
-        }
         Some((what, rest)) if what == "explain" => {
             flags(rest, [])?;
             print!("{}", explain_in(&mut System, &git)?);
             Ok(())
         }
         _ => Err(USAGE.into()),
-    }
-}
-
-/// The question the GitHub workflow asks: origin's verdict for HEAD's content, printed and appended to the step
-/// outputs file `output` as `fingerprint=` and `verdict=`; red is an error.
-pub(crate) fn check_in(sh: &mut dyn Shell, git: &Git, output: Option<&Path>) -> Result<Verdict, String> {
-    let fp = fingerprint(sh, git, Content::Head)?;
-    let refs = remote_seals(sh, git, &fp)?;
-    let found = verdict(refs.iter().map(String::as_str), &fp);
-    let lines = format!("fingerprint={fp}\nverdict={}\n", found.name());
-    print!("{lines}");
-    if let Some(path) = output {
-        let mut file = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(path)
-            .map_err(|e| format!("{}: {e}", path.display()))?;
-        file.write_all(lines.as_bytes())
-            .map_err(|e| format!("{}: {e}", path.display()))?;
-    }
-    if found == Verdict::Red {
-        Err(format!(
-            "content {fp} is sealed red: a complete local `make ci` run of it failed"
-        ))
-    } else {
-        Ok(found)
     }
 }
 
@@ -234,11 +202,7 @@ pub(crate) fn explain_in(sh: &mut dyn Shell, git: &Git) -> Result<String, String
     let local = local_seals(sh, git)?;
     let here = verdict(local.iter().map(String::as_str), &head);
     let origin = match remote_seals(sh, git, &head) {
-        Ok(refs) => match verdict(refs.iter().map(String::as_str), &head) {
-            Verdict::Green => "green, so GitHub's CI skips its tests".to_string(),
-            Verdict::Red => "red, so GitHub's CI fails".to_string(),
-            Verdict::Unsealed => "none, so GitHub's CI runs `make check`".to_string(),
-        },
+        Ok(refs) => verdict(refs.iter().map(String::as_str), &head).name().to_string(),
         Err(e) => format!("unreachable ({e})"),
     };
     let mut text = format!(
@@ -303,7 +267,7 @@ pub(crate) fn ready(sh: &mut dyn Shell, git: &Git) -> Result<String, String> {
 }
 
 /// Pushes the release commit and version tag atomically, after all draft assets have been uploaded, with the green
-/// seal of HEAD's content when it has one here, so GitHub's CI skips the tests a local `make ci` already ran.
+/// seal of HEAD's content when it has one here, so origin records which released content a complete `make ci` passed.
 pub(crate) fn push(sh: &mut dyn Shell, git: &Git, tag: &str) -> Result<(), String> {
     let fp = ready(sh, git)?;
     let local = local_seals(sh, git)?;

@@ -366,7 +366,7 @@ Anda memerlukan:
 | `make perf` | bajet masa, dalam binaan keluaran; hanya bermakna pada Mac yang tidak melakukan apa-apa lagi |
 | `make release` | larian percubaan keluaran ke dalam `target/release-dry-run/`, ditandatangani dengan sijil setempat; tidak menghantar apa-apa ke mana-mana |
 | `make release-notarized` | `check`, kemudian keluaran itu sendiri ke dalam `dist/`: tandatangan Developer ID, notarisasi, suapan kemas kini yang ditandatangani dengan kunci apl itu sendiri; membiarkan `VERSION` tidak berubah |
-| `make deploy` | pada `main` yang bersih dengan meterai CI hijau: menotari versi seterusnya, mengemas kini dan melakukan commit `VERSION`, memuat naik fail keluaran dan melakukan push kod, meterai CI serta tag versi; GitHub menerbitkan keluaran secara automatik |
+| `make deploy` | pada `main` yang bersih, dengan atau tanpa meterai CI: menotari versi seterusnya, melakukan commit `VERSION`, memuat naik fail keluaran, melakukan push kod dan tag versi, bersama meterai CI hijau jika ada, kemudian menerbitkan keluaran itu sendiri |
 
 Nyahpepijat dan keluaran ialah apl berasingan dengan seting dan data masing-masing. Pembinaan, pengujian, ujian kendiri, keluaran dan peraturan yang diikuti oleh kod diterangkan dalam [docs/development.md](../../../docs/development.md), keputusan di sebaliknya dalam [docs/plan.md](../../../docs/plan.md). Nota keluaran ialah [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), diterjemahkan di sebelah setiap README dalam `assets/readme/<language>/`.
 

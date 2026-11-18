@@ -366,7 +366,7 @@ Potrzebujesz:
 | `make perf` | budżety czasowe w kompilacji wydania; miarodajne tylko na Macu, który poza tym jest bezczynny |
 | `make release` | próba wydania do `target/release-dry-run/`, podpisana lokalnym certyfikatem; niczego nigdzie nie wysyła |
 | `make release-notarized` | `check`, a potem samo wydanie do `dist/`: podpis Developer ID, poświadczenie, kanał uaktualnień podpisany własnym kluczem aplikacji; pozostawia `VERSION` bez zmian |
-| `make deploy` | na czystej gałęzi `main` z zieloną pieczęcią CI: poświadcza następną wersję, aktualizuje i commituje `VERSION`, przesyła pliki wydania oraz wypycha kod, pieczęć CI i tag wersji; GitHub automatycznie publikuje wydanie |
+| `make deploy` | na czystej gałęzi `main`, z pieczęcią CI lub bez niej: poświadcza następną wersję, commituje `VERSION`, przesyła pliki wydania, wypycha kod i tag wersji, a także zieloną pieczęć CI, jeśli istnieje, po czym sam publikuje wydanie |
 
 Debugowanie i wydanie to oddzielne aplikacje z własnymi ustawieniami i danymi. Kompilację, testy, autotesty, wydanie i zasady, którymi kieruje się kod, opisuje [docs/development.md](../../../docs/development.md), a decyzje za nimi [docs/plan.md](../../../docs/plan.md). Informacje o wydaniu to [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), przetłumaczone obok każdego README w `assets/readme/<language>/`.
 

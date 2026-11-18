@@ -1,5 +1,5 @@
-//! Notarize locally, stage every asset in a draft, then atomically push the version and tag (with a green seal if any).
-//! The push starts GitHub's release workflow, which checks the uploaded manifest before publishing the draft.
+//! Notarize locally, stage every asset in a draft, atomically push the version and tag (with a green seal if any), then
+//! publish the draft once GitHub holds exactly the notarized files.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -37,6 +37,28 @@ impl Deployment {
             if updates::sha256(sh, &dist.join(file))? != *digest {
                 return Err(format!("{file} changed after notarization; refusing to upload or push"));
             }
+        }
+        Ok(())
+    }
+
+    /// The update feed offers exactly this release's image: its version, its download address, a real signature and
+    /// the image's length.
+    fn check_feed(&self, dist: &Path) -> Result<(), String> {
+        let feed = files::read_to_string(dist.join(updates::FEED))?;
+        let image = dist.join("Dango.dmg");
+        let length = std::fs::metadata(&image)
+            .map_err(|e| format!("{}: {e}", image.display()))?
+            .len();
+        let version = &self.version;
+        let offered = [
+            format!("<sparkle:version>{version}</sparkle:version>"),
+            format!("url=\"{}\"", updates::image_url(updates::RELEASES, version)),
+            format!("length=\"{length}\""),
+        ];
+        if feed.contains("DRY-RUN") || offered.iter().any(|part| !feed.contains(part.as_str())) {
+            return Err(format!(
+                "the update feed does not offer the notarized image of {version}"
+            ));
         }
         Ok(())
     }
@@ -123,6 +145,7 @@ pub(crate) fn deploy(args: &[String]) -> Result<(), String> {
     deployment.save(&dist)?;
     let tag = format!("v{}", deployment.version);
     ensure_tag(sh, &git, &tag, &deployment.commit)?;
+    deployment.check_feed(&dist)?;
     stage(sh, &dist, &deployment)?;
     // Do not push if files or source changed during the upload.
     deployment.verify(sh, &dist)?;
@@ -130,8 +153,9 @@ pub(crate) fn deploy(args: &[String]) -> Result<(), String> {
         return Err("HEAD changed during the upload; nothing was pushed".into());
     }
     seal::push(sh, &git, &tag)?;
+    publish(sh, &git, &dist, &deployment)?;
     files::remove_file(dist.join(MANIFEST))?;
-    println!("GitHub will verify and publish {tag}: https://github.com/{REPOSITORY}/actions/workflows/release.yml");
+    println!("published https://github.com/{REPOSITORY}/releases/tag/{tag}");
     Ok(())
 }
 
@@ -265,6 +289,58 @@ fn stage(sh: &mut dyn Shell, dist: &Path, deployment: &Deployment) -> Result<(),
     }
     upload.arg(dist.join(MANIFEST));
     sh.run(&mut upload)
+}
+
+/// Publishes the draft as latest, once origin's main is the release commit, so latest never moves backwards, and every
+/// file of the draft has the checksum of its notarized original.
+fn publish(sh: &mut dyn Shell, git: &Git, dist: &Path, deployment: &Deployment) -> Result<(), String> {
+    let tag = format!("v{}", deployment.version);
+    let main = git.output(sh, &["ls-remote", "origin", "refs/heads/main"])?;
+    if main.split_whitespace().next() != Some(deployment.commit.as_str()) {
+        return Err(format!("origin's main is not the release commit; {tag} stays a draft"));
+    }
+    let mut expected: BTreeMap<String, String> = deployment
+        .files
+        .iter()
+        .map(|(file, digest)| (file.clone(), format!("sha256:{digest}")))
+        .collect();
+    let manifest = updates::sha256(sh, &dist.join(MANIFEST))?;
+    expected.insert(MANIFEST.into(), format!("sha256:{manifest}"));
+    let listed = sh.stdout(&mut gh(&[
+        "release",
+        "view",
+        &tag,
+        "--repo",
+        REPOSITORY,
+        "--json",
+        "isDraft,assets",
+        "--jq",
+        r#"(.isDraft | tostring), (.assets[] | "\(.digest) \(.name)")"#,
+    ]))?;
+    let mut lines = listed.lines();
+    if lines.next() != Some("true") {
+        return Err(format!("{tag} is no longer a draft; refusing to publish it again"));
+    }
+    let uploaded: BTreeMap<String, String> = lines
+        .filter_map(|line| line.split_once(' '))
+        .map(|(digest, file)| (file.into(), digest.into()))
+        .collect();
+    if uploaded != expected {
+        return Err(format!(
+            "the draft's files differ from the notarized ones; {tag} stays a draft"
+        ));
+    }
+    sh.run(&mut gh(&[
+        "release",
+        "edit",
+        &tag,
+        "--repo",
+        REPOSITORY,
+        "--target",
+        &deployment.commit,
+        "--draft=false",
+        "--latest",
+    ]))
 }
 
 #[cfg(test)]

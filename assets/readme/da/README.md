@@ -366,7 +366,7 @@ Du skal bruge:
 | `make perf` | tidsbudgetterne i et release-build; giver kun mening på en Mac, der ellers er i ro |
 | `make release` | en prøvekørsel af udgivelsen til `target/release-dry-run/`, signeret med det lokale certifikat; sender intet nogen steder hen |
 | `make release-notarized` | `check`, derefter selve udgivelsen til `dist/`: Developer ID-signatur, notarisering, opdateringsfeedet signeret med appens egen nøgle; lader `VERSION` være uændret |
-| `make deploy` | på en ren `main` med grønt CI-segl: notariserer den næste version, opdaterer og committer `VERSION`, uploader udgivelsesfilerne og pusher koden, CI-seglet og versionstagget; GitHub udgiver automatisk versionen |
+| `make deploy` | på en ren `main`, med eller uden CI-segl: notariserer den næste version, committer `VERSION`, uploader udgivelsesfilerne, pusher koden og versionstagget, et grønt CI-segl med, hvis der er et, og udgiver derefter selv versionen |
 
 Debug og release er separate apps med deres egne indstillinger og data. Bygning, test, selvtestene, udgivelsen og de regler, koden følger, er beskrevet i [docs/development.md](../../../docs/development.md), beslutningerne bag i [docs/plan.md](../../../docs/plan.md). Udgivelsesnoterne er [RELEASE_NOTES.md](../../../RELEASE_NOTES.md), oversat ved siden af hver README i `assets/readme/<language>/`.
 
