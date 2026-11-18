@@ -1,6 +1,6 @@
 ---
 name: ci
-description: Drive Dango's whole pipeline to a green CI seal and commit the sealed tree. Runs `make ci` (cargo fmt, make check, coverage with every test and offline window self-test, make perf), fixes every failure itself, verifies the seal ref exists, then commits everything without invalidating it. Use when the owner says "/ci", "make it green", "seal it", "Versiegelung", or as the seal step of /deploy.
+description: Drive Dango's whole pipeline to a green CI seal and commit the sealed tree. Runs `make ci` (cargo fmt, make check, coverage with every test and offline window self-test, make perf), fixes every failure itself, verifies the seal ref exists, then commits everything without invalidating it. Use when the owner says "/ci", "make it green", "seal it", "Versiegelung".
 ---
 
 # /ci: a green seal on a committed tree

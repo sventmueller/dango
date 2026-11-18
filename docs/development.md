@@ -34,7 +34,7 @@ in Dark Mode). Only Xcode's `actool` compiles it, so its output `assets/Assets.c
 | `make coverage` | `cargo xtask coverage`: line coverage of the tests and the offline self-tests, see [Coverage](#coverage) |
 | `make ci` | `cargo xtask ci`: formatter, `check`, coverage with every test and self-test, `perf`; seals the content, see [CI and deploy](#ci-and-deploy) |
 | `make seal-explain` | `cargo xtask seal explain`: the seal of HEAD's content here and on GitHub |
-| `make deploy` | notarizes the next version, commits VERSION, stages the assets and pushes `main`, its seal and tag; GitHub publishes the release |
+| `make deploy` | notarizes the next version, commits VERSION, stages the assets and pushes `main` and its tag, a green seal along; GitHub publishes the release |
 | `make release` | `cargo xtask release`: a dry run of the release, see [Release](#release); sends nothing anywhere |
 | `make release-notarized` | `check`, then `cargo xtask release --notarize`: the release for real into `dist/` |
 | `make test-integration` | `cargo xtask integration`: real servers, CLIs and services with the sign-ins, no paid account unless asked; see below |
@@ -160,12 +160,12 @@ HEAD's content has here and on origin and which paths separate it from the neare
 check` gives origin's verdict for HEAD as `fingerprint=` and `verdict=` lines (also into `$GITHUB_OUTPUT`), failing
 for red. A seal ref points at a commit of the sealed tree without parents.
 
-`make deploy` (`cargo xtask deploy`) refuses unless `main` is checked out, everything is committed, HEAD's content
-has a green seal here and no red one here or on origin. It notarizes the next version, commits only VERSION, creates
-its tag and uploads all assets and their SHA-256 manifest to a draft release. Only after the complete upload does it
-push `main`, the seal ref and the version tag atomically, so the workflows find both the seal and the complete draft.
+`make deploy` (`cargo xtask deploy`) refuses unless `main` is checked out and everything is committed; it does not
+ask for a seal. It notarizes the next version, commits only VERSION, creates its tag and uploads all assets and their
+SHA-256 manifest to a draft release. Only after the complete upload does it push `main` and the version tag
+atomically, with the green seal ref when HEAD's content has one here, so the workflows find the complete draft.
 An upload or push failure leaves the draft unpublished; `dist/deployment.json` lets the same source resume without
-another version bump. `.github/workflows/release.yml` runs when VERSION changes, checks the commit, tag, seal,
+another version bump. `.github/workflows/release.yml` runs when VERSION changes, checks the commit, tag,
 manifest, every checksum and the update feed, then publishes the draft as latest. A manual workflow run can retry
 publication; a push without a version change creates no release. `.github/workflows/ci.yml` runs on every push to `main` and by hand: its
 `seal` job (Linux) runs `cargo xtask seal check`; for content sealed green the `check` job is skipped, for content
@@ -174,7 +174,7 @@ checked out beside it as in [Newest Claude CLI](#newest-claude-cli). The window 
 includes them and the timing budgets run only in the local `make ci`: they need a logged-in GUI session with screen
 recording and accessibility permissions, which GitHub's runners lack. The skills `/ci` and `/deploy` in
 `.claude/skills/` drive these targets: `/ci` runs `make ci` until it is green and commits the sealed tree, `/deploy`
-releases with `make deploy` and watches both GitHub runs. Release notes in every language are prepared before `/ci`.
+commits the release content, releases with `make deploy` and watches both GitHub runs; it runs no `/ci` itself.
 
 ## Builds
 The display name and the identifiers come from the crate `ide-product` (E18); the table shows their current values.

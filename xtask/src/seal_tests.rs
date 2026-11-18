@@ -232,7 +232,7 @@ fn explain_says_what_separates_heads_content_from_the_nearest_green_seal() {
 }
 
 #[test]
-fn deploy_pushes_main_with_its_green_seal_and_refuses_everything_else() {
+fn deploy_needs_no_seal_and_pushes_a_green_one_along() {
     let (dir, git) = repository("seal-deploy");
     let head = fp(&git, Content::Head);
     let refused = |git: &Git| ready(&mut System, git).unwrap_err();
@@ -248,30 +248,23 @@ fn deploy_pushes_main_with_its_green_seal_and_refuses_everything_else() {
     assert!(refused(&git).contains("not committed"), "with an untracked file");
     std::fs::remove_file(git.dir().join("new.txt")).unwrap();
 
-    assert!(refused(&git).contains("has no green seal"));
+    assert_eq!(ready(&mut System, &git), Ok(head.clone()), "unsealed content may ship");
     mint(&mut System, &git, Seal::Red, &head).unwrap();
-    mint(&mut System, &git, Seal::Green, &head).unwrap();
-    assert!(refused(&git).contains("is sealed red"), "red outweighs green");
-    git.output(&mut System, &["push", "--quiet", "origin", &Seal::Red.reference(&head)])
-        .unwrap();
-    git.output(&mut System, &["update-ref", "-d", &Seal::Red.reference(&head)])
-        .unwrap();
-    assert!(refused(&git).contains("origin has a red seal"));
-    assert!(!origin_refs(&dir).contains("refs/heads/main"), "nothing was pushed");
-
-    Git {
-        dir: dir.join("origin.git"),
-        env: git.env.clone(),
-    }
-    .output(&mut System, &["update-ref", "-d", &Seal::Red.reference(&head)])
-    .unwrap();
+    assert_eq!(ready(&mut System, &git), Ok(head.clone()), "so may content sealed red");
     git.output(&mut System, &["tag", "v0.1.0"]).unwrap();
     assert_eq!(push(&mut System, &git, "v0.1.0"), Ok(()));
     let pushed = origin_refs(&dir);
     let main = git.output(&mut System, &["rev-parse", BRANCH]).unwrap();
     assert!(pushed.contains(&format!("refs/heads/main {}", main.trim())), "{pushed}");
-    assert!(pushed.contains(&Seal::Green.reference(&head)), "{pushed}");
     assert!(pushed.contains("refs/tags/v0.1.0"), "{pushed}");
+    assert!(!pushed.contains("refs/ci-seals/"), "a red seal stays here: {pushed}");
+
+    git.output(&mut System, &["update-ref", "-d", &Seal::Red.reference(&head)])
+        .unwrap();
+    mint(&mut System, &git, Seal::Green, &head).unwrap();
+    git.output(&mut System, &["tag", "v0.1.1"]).unwrap();
+    assert_eq!(push(&mut System, &git, "v0.1.1"), Ok(()));
+    assert!(origin_refs(&dir).contains(&Seal::Green.reference(&head)));
     assert_eq!(
         check_in(&mut System, &git, None),
         Ok(Verdict::Green),

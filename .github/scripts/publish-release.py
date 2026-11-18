@@ -84,10 +84,6 @@ def main():
         for args in (("read-tree", "HEAD"), ("rm", "--cached", "--quiet", "--", "VERSION")):
             subprocess.run(["git", *args], check=True, env=env)
         fingerprint = subprocess.check_output(["git", "write-tree"], env=env, text=True).strip()
-    seals = run("git", "ls-remote", "origin", f"refs/ci-seals/*/{fingerprint}")
-    references = {line.split()[1] for line in seals.splitlines()}
-    require(f"refs/ci-seals/green/{fingerprint}" in references, "the pushed source has no green CI seal")
-    require(f"refs/ci-seals/red/{fingerprint}" not in references, "the pushed source has a red CI seal")
     release = json.loads(run("gh", "release", "view", tag, "--repo", REPOSITORY, "--json", "isDraft,assets"))
     expected = assets(version) | {"deployment.json"}
     require({asset["name"] for asset in release["assets"]} == expected, "the draft has missing or unexpected assets")

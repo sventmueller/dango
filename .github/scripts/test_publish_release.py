@@ -37,7 +37,7 @@ class PublicationTests(unittest.TestCase):
         self.git("config", "user.email", "test@example.invalid")
         self.git("config", "commit.gpgsign", "false")
         Path("VERSION").write_text("0.1.2\n")
-        Path("source.txt").write_text("sealed source\n")
+        Path("source.txt").write_text("source\n")
         self.git("add", ".")
         self.git("commit", "--quiet", "-m", "Source")
         self.source = self.git("rev-parse", "HEAD")
@@ -106,7 +106,7 @@ sparkle:edSignature="signed" length="{size}"/></item></channel></rss>''')
             self.execute()
         self.assertFalse(any(call[2] == "edit" for call in self.github_calls), "a failed gate must never publish")
 
-    def test_complete_sealed_deployment_publishes_the_exact_version(self):
+    def test_complete_deployment_publishes_the_exact_version(self):
         self.execute()
         self.assertEqual(self.github_calls[-1], ("gh", "release", "edit", "v0.1.3", "--repo", publish.REPOSITORY, "--target", self.commit, "--draft=false", "--latest"))
 
@@ -139,13 +139,11 @@ sparkle:edSignature="signed" length="{size}"/></item></channel></rss>''')
         self.git("update-ref", "refs/tags/v0.1.3", self.source)
         self.assert_refused("version tag differs")
 
-    def test_missing_green_seal_is_refused(self):
+    def test_seals_do_not_gate_publication(self):
         self.git("--git-dir", str(self.origin), "update-ref", "-d", self.green)
-        self.assert_refused("no green CI seal")
-
-    def test_red_seal_outweighs_green(self):
         self.git("--git-dir", str(self.origin), "update-ref", f"refs/ci-seals/red/{self.fp}", self.commit)
-        self.assert_refused("red CI seal")
+        self.execute()
+        self.assertEqual(self.github_calls[-1][2], "edit")
 
     def test_manual_retry_verifies_an_already_published_release(self):
         self.event_file.write_text("{}")

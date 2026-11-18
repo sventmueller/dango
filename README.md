@@ -515,7 +515,7 @@ You need:
 | `make perf` | the timing budgets, in a release build; meaningful only on an otherwise idle Mac |
 | `make release` | a dry run of the release into `target/release-dry-run/`, signed with the local certificate; sends nothing anywhere |
 | `make release-notarized` | `check`, then the current version into `dist/`: Developer ID signature, notarization, the update feed signed with the app's own key; leaves `VERSION` unchanged |
-| `make deploy` | on clean, sealed `main`: notarizes the next version, commits `VERSION`, uploads the release assets and pushes the code, CI seal and version tag; GitHub publishes the release automatically |
+| `make deploy` | on clean `main`, with or without a CI seal: notarizes the next version, commits `VERSION`, uploads the release assets and pushes the code and version tag, a green CI seal along when there is one; GitHub publishes the release automatically |
 
 Debug and release are separate apps with their own settings and data. Building, testing, the self-tests, the release
 and the rules the code follows are described in [docs/development.md](docs/development.md), the decisions behind it in

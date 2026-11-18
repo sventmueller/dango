@@ -25,7 +25,7 @@ jobs:
           ref: ${{ github.sha }}
       - name: Check the release publication gates offline
         run: python3 .github/scripts/test_publish_release.py
-      - name: Verify the version, seal, tag and every notarized asset, then publish
+      - name: Verify the version, tag and every notarized asset, then publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 .github/scripts/publish-release.py

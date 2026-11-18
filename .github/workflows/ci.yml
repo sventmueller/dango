@@ -1,6 +1,7 @@
 # The CI of main, see docs/development.md, "CI and deploy". A complete local `make ci` seals the content it tested in
-# refs/ci-seals/<green|red>/<fingerprint>, and `make deploy` pushes the green seal together with main. Content that
-# origin has sealed green skips the tests here, content sealed red fails, and unsealed content runs `make check`.
+# refs/ci-seals/<green|red>/<fingerprint>, and `make deploy` pushes a green seal along with main when it has one.
+# Content that origin has sealed green skips the tests here, content sealed red fails, and unsealed content runs
+# `make check`.
 # The window self-tests, the coverage gate that includes them and the timing budgets run only in the local `make ci`:
 # they need a logged-in GUI session with screen recording and accessibility permissions, which GitHub's runners lack.
 name: CI

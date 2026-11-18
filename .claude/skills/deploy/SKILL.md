@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: Release Dango from this Mac. Prepare release notes, obtain a clean green CI seal with /ci, then make deploy notarizes the next version, commits VERSION, uploads a draft and atomically pushes main, its seal and its tag. Watch CI and the automatic GitHub release. Use when the owner says "/deploy", "push it", "ship it".
+description: Release Dango from this Mac. Prepare release notes and commit the release content without asking for a CI seal, then make deploy notarizes the next version, commits VERSION, uploads a draft and atomically pushes main and its tag, with a green seal when one exists. Watch CI and the automatic GitHub release. Use when the owner says "/deploy", "push it", "ship it".
 ---
 
 # /deploy: notarize, push, publish
@@ -18,8 +18,8 @@ Do not bump VERSION yourself or run `make release-notarized` before `make deploy
 2. Read the status, recent commits and previous release notes. Write `RELEASE_NOTES.md` in English and
    `assets/readme/<language>/RELEASE_NOTES.md` for every other language in `resources/`. Describe actual changes;
    update all translations, remove draft markers and leave no empty or copied previous-release notes. Finish all
-   source and documentation edits before `/ci`.
-3. Check prerequisites before the long CI run: a valid Developer ID Application certificate, the keychain profile
+   source and documentation edits before the commit of Phase 1.
+3. Check prerequisites before committing: a valid Developer ID Application certificate, the keychain profile
    `notary` (`xcrun notarytool history --keychain-profile notary`, discard the history output), Dango's own Sparkle
    key under account `local.agentide` matching UPDATE_PUBLIC_KEY in `crates/ide-product/src/lib.rs`, and `gh` with
    contents write access and permission to push workflow changes. Report missing credentials without printing private
@@ -28,27 +28,27 @@ Do not bump VERSION yourself or run `make release-notarized` before `make deploy
    `make deploy` resumes that version and verifies every checksum. Do not delete the manifest or bump VERSION just to
    retry an upload or push.
 
-## Phase 1: seal and commit
+## Phase 1: commit
 
-Run `git status --porcelain` and `make seal-explain`. A clean tree and `seal here: green` may proceed. Otherwise use
-`.claude/skills/ci/SKILL.md`: it runs the complete `make ci`, fixes failures, verifies the green seal and commits the
-sealed tree. Proceed only with a verified green seal and a clean working tree; if either is missing, stop and report.
-Check the status and seal again. The deploy's VERSION-only commit inherits the seal because VERSION is excluded.
+A deploy does not ask for a CI seal: run neither `/ci` nor `make seal-explain`, and do not stop because a seal is
+missing or red. Run `git status --porcelain`; commit all intended project changes with a message that describes them
+and leave nothing uncommitted, since `make deploy` refuses a dirty tree. A green seal that `/ci` minted earlier for
+exactly this content is pushed along, so GitHub's CI skips its tests; without one GitHub runs `make check`.
 
 ## Phase 2: deploy
 
 Run `make deploy` in the background with a log under `target/` and observe completion. It:
 
-1. Requires clean main with a local green seal and no red seal here or on origin; checks GitHub access and refuses
-   if main has diverged from origin.
+1. Requires clean main, no seal; checks GitHub access and refuses if main has diverged from origin.
 2. Builds the next version, signs with Developer ID, notarizes and staples both app and image, verifies the image and
    signs the update feed. A failed build or notarization changes no version and pushes nothing.
 3. Commits only VERSION as `Release Dango <version>` and creates its local `v<version>` tag.
 4. Uploads the versioned image, identical `Dango.dmg` alias, notes, appcast, Cask and `deployment.json` with commit,
    source fingerprint and SHA-256 checksums to a draft release. A failed upload leaves the draft unpublished and
    pushes nothing; retry `make deploy` with the same source and artifacts to resume.
-5. Atomically pushes main, its green seal and its version tag. A rejected push leaves the draft unpublished; fix the
-   cause without force-pushing, then retry. Never replace a published release or its assets.
+5. Atomically pushes main and its version tag, plus the green seal of its content if there is one locally. A rejected
+   push leaves the draft unpublished; fix the cause without force-pushing, then retry. Never replace a published
+   release or its assets.
 
 ## Phase 3: observe both GitHub workflows
 
@@ -56,10 +56,11 @@ Find runs for the exact pushed SHA with `gh run list --commit <sha> --json datab
 Wait for both `ci.yml` and `release.yml` to appear and use `gh run watch <id> --exit-status` in the background. A push
 alone is not proof of publication.
 
-- CI: `seal: success`, `check: skipped` is expected. Investigate a missing or red seal.
+- CI: with a pushed green seal `check: skipped`, otherwise `check` runs `make check`; report its result. The release
+  does not wait for it.
 - Release: `.github/workflows/release.yml` runs when VERSION changes or on a manual retry. It verifies the VERSION-only
-  commit, tag, green seal, manifest, checksums and update feed before publishing the draft as latest. It never builds
-  or notarizes on a runner.
+  commit, tag, manifest, checksums and update feed before publishing the draft as latest. It never builds or
+  notarizes on a runner.
 - On a workflow failure, inspect `gh run view <id> --log-failed`. Retry a network/runner failure with
   `gh run rerun <id>`; never bump VERSION just to retry publication. For a code problem fix it, prepare new notes,
   then restart at Phase 1. Never loosen release checks.
@@ -69,5 +70,6 @@ assets. Check `https://github.com/sventmueller/dango/releases/latest/download/Da
 
 ## Report
 
-Report shipped version and commit, notarization result, green seal, both workflow URLs and results, release and download
-links. On failure distinguish built, uploaded, pushed and published; a private draft is not a shipped release.
+Report shipped version and commit, notarization result, whether a green seal went along, both workflow URLs and
+results, release and download links. On failure distinguish built, uploaded, pushed and published; a private draft is
+not a shipped release.

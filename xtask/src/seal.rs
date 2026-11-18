@@ -1,7 +1,7 @@
 //! The CI seal (docs/development.md, "CI and deploy"): a git ref `refs/ci-seals/<green|red>/<fingerprint>` saying that
-//! a complete `cargo xtask ci` run of one content state passed or failed, and `deploy`, which pushes main only with
-//! its green seal. The fingerprint is the git tree of the content without `VERSION`, which only deploy raises,
-//! so a commit of the sealed working tree inherits the seal. Red beats green for the same fingerprint.
+//! a complete `cargo xtask ci` run of one content state passed or failed. `deploy` requires none and pushes a green
+//! one along when HEAD's content has it. The fingerprint is the git tree of the content without `VERSION`, which only
+//! deploy raises, so a commit of the sealed working tree inherits the seal. Red beats green for the same fingerprint.
 
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
@@ -284,7 +284,7 @@ fn nearest_green(sh: &mut dyn Shell, git: &Git, local: &[String], fingerprint: &
     Ok(text)
 }
 
-/// Refuses on another branch, with changes not committed, or without a green seal here for HEAD's content.
+/// Refuses on another branch or with changes not committed, and returns HEAD's fingerprint; seals do not matter.
 pub(crate) fn ready(sh: &mut dyn Shell, git: &Git) -> Result<String, String> {
     let branch = git.output(sh, &["branch", "--show-current"])?;
     if branch.trim() != BRANCH {
@@ -299,35 +299,23 @@ pub(crate) fn ready(sh: &mut dyn Shell, git: &Git) -> Result<String, String> {
             "the working tree has changes that are not committed, which a push would leave out:\n{status}"
         ));
     }
-    let fp = fingerprint(sh, git, Content::Head)?;
-    let local = local_seals(sh, git)?;
-    match verdict(local.iter().map(String::as_str), &fp) {
-        Verdict::Green => {}
-        Verdict::Red => {
-            return Err(format!(
-                "HEAD's content {fp} is sealed red: its last complete `make ci` run failed"
-            ));
-        }
-        Verdict::Unsealed => {
-            return Err(format!(
-                "HEAD's content {fp} has no green seal; `make ci` (or /ci) seals it"
-            ));
-        }
-    }
-    let remote = remote_seals(sh, git, &fp)?;
-    if verdict(remote.iter().map(String::as_str), &fp) == Verdict::Red {
-        return Err(format!(
-            "origin has a red seal for HEAD's content {fp}, so its CI would fail"
-        ));
-    }
-    Ok(fp)
+    fingerprint(sh, git, Content::Head)
 }
 
-/// Pushes the release commit, green seal and version tag atomically, after all draft assets have been uploaded.
+/// Pushes the release commit and version tag atomically, after all draft assets have been uploaded, with the green
+/// seal of HEAD's content when it has one here, so GitHub's CI skips the tests a local `make ci` already ran.
 pub(crate) fn push(sh: &mut dyn Shell, git: &Git, tag: &str) -> Result<(), String> {
-    let seal = Seal::Green.reference(&ready(sh, git)?);
-    sh.run(&mut git.command(&["push", "--atomic", "origin", BRANCH, &seal, &format!("refs/tags/{tag}")]))?;
-    println!("pushed {BRANCH} with {seal} and {tag}");
+    let fp = ready(sh, git)?;
+    let local = local_seals(sh, git)?;
+    let tag = format!("refs/tags/{tag}");
+    let mut refs = vec![BRANCH.to_string(), tag];
+    if verdict(local.iter().map(String::as_str), &fp) == Verdict::Green {
+        refs.push(Seal::Green.reference(&fp));
+    }
+    let mut args = vec!["push", "--atomic", "origin"];
+    args.extend(refs.iter().map(String::as_str));
+    sh.run(&mut git.command(&args))?;
+    println!("pushed {}", refs.join(" "));
     Ok(())
 }
 

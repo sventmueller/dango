@@ -1,4 +1,4 @@
-//! Notarize locally, stage every asset in a draft, then atomically push the version, seal and tag.
+//! Notarize locally, stage every asset in a draft, then atomically push the version and tag (with a green seal if any).
 //! The push starts GitHub's release workflow, which checks the uploaded manifest before publishing the draft.
 
 use std::collections::BTreeMap;
@@ -99,7 +99,7 @@ pub(crate) fn deploy(args: &[String]) -> Result<(), String> {
             },
             &next,
         )?;
-        // A build must not sneak edits into the sealed content, nor may another process move HEAD or VERSION.
+        // A build must not sneak edits into the notarized content, nor may another process move HEAD or VERSION.
         if seal::ready(sh, &git)? != fp || git.output(sh, &["rev-parse", "HEAD"])? != head || version()? != current {
             return Err("the source changed while notarizing; nothing was pushed".into());
         }
@@ -196,7 +196,7 @@ fn commit_version(sh: &mut dyn Shell, git: &Git, deployment: &mut Deployment) ->
     }
     deployment.commit = git.output(sh, &["rev-parse", "HEAD"])?.trim().into();
     if seal::ready(sh, git)? != deployment.fingerprint {
-        return Err("the release commit changed the sealed content; nothing was pushed".into());
+        return Err("the release commit changed the notarized content; nothing was pushed".into());
     }
     Ok(())
 }

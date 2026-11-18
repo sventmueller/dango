@@ -3,10 +3,9 @@
 use super::*;
 use crate::shell::fake::{Fake, scratch};
 
-fn sealed_repository(name: &str) -> (std::path::PathBuf, Git, Deployment) {
+fn prepared_repository(name: &str) -> (std::path::PathBuf, Git, Deployment) {
     let (dir, git) = seal::tests::repository(name);
     let fp = seal::fingerprint(&mut System, &git, seal::Content::Head).unwrap();
-    seal::mint(&mut System, &git, seal::Seal::Green, &fp).unwrap();
     let prepared = Deployment {
         version: "0.1.1".into(),
         source_commit: git.output(&mut System, &["rev-parse", "HEAD"]).unwrap().trim().into(),
@@ -18,8 +17,8 @@ fn sealed_repository(name: &str) -> (std::path::PathBuf, Git, Deployment) {
 }
 
 #[test]
-fn the_version_commit_inherits_the_seal_and_a_retry_never_bumps_it_again() {
-    let (dir, git, mut prepared) = sealed_repository("deploy-version-commit");
+fn the_version_commit_keeps_the_fingerprint_and_a_retry_never_bumps_it_again() {
+    let (dir, git, mut prepared) = prepared_repository("deploy-version-commit");
     commit_version(&mut System, &git, &mut prepared).unwrap();
     let committed = prepared.commit.clone();
     assert_ne!(committed, prepared.source_commit);
@@ -41,9 +40,9 @@ fn the_version_commit_inherits_the_seal_and_a_retry_never_bumps_it_again() {
 }
 
 #[test]
-fn a_failed_version_commit_restores_the_clean_sealed_source_for_a_retry() {
+fn a_failed_version_commit_restores_the_clean_source_for_a_retry() {
     use std::os::unix::fs::PermissionsExt;
-    let (dir, git, mut prepared) = sealed_repository("deploy-failed-commit");
+    let (dir, git, mut prepared) = prepared_repository("deploy-failed-commit");
     let hook = git.dir().join(".git/hooks/pre-commit");
     files::write(&hook, "#!/bin/sh\nexit 1\n").unwrap();
     std::fs::set_permissions(&hook, std::fs::Permissions::from_mode(0o755)).unwrap();
@@ -61,7 +60,7 @@ fn a_failed_version_commit_restores_the_clean_sealed_source_for_a_retry() {
 
 #[test]
 fn a_version_tag_is_reused_only_for_the_same_commit() {
-    let (dir, git, mut prepared) = sealed_repository("deploy-tags");
+    let (dir, git, mut prepared) = prepared_repository("deploy-tags");
     commit_version(&mut System, &git, &mut prepared).unwrap();
     ensure_tag(&mut System, &git, "v0.1.1", &prepared.commit).unwrap();
     ensure_tag(&mut System, &git, "v0.1.1", &prepared.commit).unwrap();
