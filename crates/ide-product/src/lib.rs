@@ -24,6 +24,9 @@ pub const COMMAND: &str = "dango";
 /// ```
 pub const BUNDLE_ID: &str = "local.agentide";
 
+/// The product's repository on GitHub, where users report problems, suggest features and read the source.
+pub const REPOSITORY: &str = "https://github.com/sventmueller/dango";
+
 /// The token of the Homebrew Cask, which users install with; the disk image is named after `NAME`.
 pub const CASK: &str = "dango";
 

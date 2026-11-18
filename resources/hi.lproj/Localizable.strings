@@ -2378,3 +2378,6 @@
 "Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "गेट वह कोड चलाते हैं जो एजेंट ने लिखा है। “शिथिल” इसके अलावा स्थानीय पोर्ट और टर्मिनल की अनुमति देता है, “बंद” गेट को आपके अधिकारों के साथ शुरू करता है। प्रोजेक्ट .dango/factory.toml में कोई दूसरा मान सेट कर सकता है।";
 "„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“शिथिल” स्थानीय पोर्ट और टर्मिनल की अनुमति देता है, “बंद” गेट को आपके अधिकारों के साथ शुरू करता है। यदि प्रोजेक्ट सैंडबॉक्स को शिथिल करता है, तो आप अगले वर्क ऑर्डर पर “जारी रखें” से इसकी पुष्टि करते हैं।";
 "Lizenz: MIT oder Apache 2.0" = "लाइसेंस: MIT या Apache 2.0";
+"Funktion vorschlagen …" = "सुविधा का सुझाव दें…";
+"Problem melden …" = "समस्या की रिपोर्ट करें…";
+"{} auf GitHub" = "GitHub पर {}";

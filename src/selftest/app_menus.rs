@@ -2,7 +2,7 @@
 //! and the toolbar skip a place whose file is gone and say which way there is to go; Open Recent lists the recent
 //! folders, opens one and clears them; folders handed to the app open, a file does not; a click on the Dock icon
 //! without a window opens one; installing the terminal command writes it, never over a file of the user's, and says
-//! how it went.
+//! how it went; the Help menu leads to the project's forms and repository on GitHub.
 
 use std::path::{Path, PathBuf};
 
@@ -245,5 +245,48 @@ fn install() {
         crate::settings::window().is_some_and(|w| w.isVisible()),
         "",
     );
+    help(mtm, &delegate);
     finish(NAME);
+}
+
+/// The Help menu's commands, which the self-test records instead of opening the browser.
+fn help(mtm: MainThreadMarker, delegate: &AnyObject) {
+    let actions = [
+        sel!(ideReportProblem:),
+        sel!(ideSuggestFeature:),
+        sel!(ideOpenRepository:),
+    ];
+    let menu = NSApplication::sharedApplication(mtm).helpMenu();
+    if let Some(menu) = &menu {
+        menu.update();
+    }
+    let enabled = |action: Sel| {
+        menu.as_ref().is_some_and(|menu| {
+            menu.itemArray()
+                .iter()
+                .any(|i| i.action() == Some(action) && i.isEnabled())
+        })
+    };
+    check(
+        "the Help menu leads to the problem form, the feature form and the repository",
+        actions.iter().all(|action| enabled(*action)),
+        format!("{:?}", menu.as_ref().map(|menu| titles(menu))),
+    );
+    let Some(cx) = delegate.downcast_ref::<crate::app::AppDelegate>().map(|d| d.context()) else {
+        return give_up(NAME, "the delegate is the app's");
+    };
+    for action in actions {
+        send(delegate, action, None);
+    }
+    let opened = crate::feedback::opened(&cx);
+    check(
+        "the Help menu's commands lead where they say, and the problem form names the versions of the app and of macOS",
+        opened.len() == 3
+            && opened[0].starts_with(&format!("{}/issues/new?template=bug.yml", ide_product::REPOSITORY))
+            && !opened[0].contains("version=&")
+            && !opened[0].contains("macos=0.")
+            && opened[1].ends_with("/discussions/new?category=ideas")
+            && opened[2] == ide_product::REPOSITORY,
+        format!("{opened:?}"),
+    );
 }

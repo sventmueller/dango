@@ -2378,3 +2378,6 @@
 "Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Gerbang menjalankan kod yang ditulis oleh ejen. “Longgar” turut membenarkan port setempat dan terminal, “Mati” memulakan gerbang dengan hak anda. Projek boleh menetapkan nilai lain dalam .dango/factory.toml.";
 "„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Longgar” membenarkan port setempat dan terminal, “Mati” memulakan gerbang dengan hak anda. Jika projek melonggarkan sandbox, anda mengesahkannya pada pesanan kerja seterusnya dengan “Teruskan”.";
 "Lizenz: MIT oder Apache 2.0" = "Lesen: MIT atau Apache 2.0";
+"Funktion vorschlagen …" = "Cadangkan Ciri…";
+"Problem melden …" = "Laporkan Masalah…";
+"{} auf GitHub" = "{} di GitHub";

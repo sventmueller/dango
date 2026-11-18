@@ -2378,3 +2378,6 @@
 "Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Οι πύλες ελέγχου εκτελούν κώδικα που έγραψε ο πράκτορας. Το «Χαλαρωμένο» επιτρέπει επιπλέον τοπικές θύρες και τερματικά, το «Ανενεργό» εκκινεί τις πύλες ελέγχου με τα δικαιώματά σας. Ένα έργο μπορεί να ορίσει άλλη τιμή στο .dango/factory.toml.";
 "„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "Το «Χαλαρωμένο» επιτρέπει τοπικές θύρες και τερματικά, το «Ανενεργό» εκκινεί τις πύλες ελέγχου με τα δικαιώματά σας. Αν το έργο χαλαρώσει το sandbox, το επιβεβαιώνετε στο επόμενο δελτίο εργασίας με «Συνέχεια».";
 "Lizenz: MIT oder Apache 2.0" = "Άδεια χρήσης: MIT ή Apache 2.0";
+"Funktion vorschlagen …" = "Πρόταση λειτουργίας…";
+"Problem melden …" = "Αναφορά προβλήματος…";
+"{} auf GitHub" = "Το {} στο GitHub";

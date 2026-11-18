@@ -14,6 +14,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSArray, NSBundle, NSNotification, NSObjectProtocol, NSString, NSURL};
 
 use crate::context::AppContext;
+use crate::feedback::Page;
 use crate::util::{guarded, item, main_soon, ns, separator, set_target};
 use crate::window::{self, WindowController};
 use splat_i18n::t;
@@ -158,6 +159,21 @@ define_class!(
         #[unsafe(method(ideShowAbout:))]
         fn show_about(&self, _sender: Option<&AnyObject>) {
             guarded((), || crate::about::show(self.mtm()));
+        }
+
+        #[unsafe(method(ideReportProblem:))]
+        fn report_problem(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::feedback::open(&self.context(), Page::Problem));
+        }
+
+        #[unsafe(method(ideSuggestFeature:))]
+        fn suggest_feature(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::feedback::open(&self.context(), Page::Idea));
+        }
+
+        #[unsafe(method(ideOpenRepository:))]
+        fn open_repository(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::feedback::open(&self.context(), Page::Repository));
         }
 
         #[unsafe(method(ideOpenFolder:))]

@@ -27,7 +27,7 @@ pub(crate) fn install(app: &NSApplication, delegate: &AppDelegate, mtm: MainThre
     let keys = Keys(keymap);
     let main = NSMenu::initWithTitle(NSMenu::alloc(mtm), &ns(""));
     let (window_item, window_menu) = window_menu(mtm, &keys);
-    let (help_item, help_menu) = submenu(mtm, t("Hilfe"), vec![]);
+    let (help_item, help_menu) = help_menu(mtm);
     for entry in [
         app_menu(app, mtm, &keys),
         file_menu(delegate, mtm, &keys),
@@ -458,6 +458,23 @@ fn window_menu(mtm: MainThreadMarker, keys: &Keys) -> (Retained<NSMenuItem>, Ret
         .into_iter()
         .chain(tab_stand_ins(mtm))
         .collect(),
+    )
+}
+
+fn help_menu(mtm: MainThreadMarker) -> (Retained<NSMenuItem>, Retained<NSMenu>) {
+    submenu(
+        mtm,
+        t("Hilfe"),
+        vec![
+            item(mtm, t("Problem melden …"), Some(sel!(ideReportProblem:)), ""),
+            item(mtm, t("Funktion vorschlagen …"), Some(sel!(ideSuggestFeature:)), ""),
+            item(
+                mtm,
+                &tf("{} auf GitHub", &[ide_product::NAME]),
+                Some(sel!(ideOpenRepository:)),
+                "",
+            ),
+        ],
     )
 }
 

@@ -10,9 +10,9 @@ use objc2_app_kit::{
 use objc2_foundation::{NSDictionary, NSMutableAttributedString, NSRange, NSURL};
 use splat_i18n::t;
 
-use crate::util::{constant, ns};
+use ide_product::REPOSITORY;
 
-const REPOSITORY: &str = "https://github.com/sventmueller/dango";
+use crate::util::{constant, ns};
 
 pub(crate) fn show(mtm: MainThreadMarker) {
     let keys = [

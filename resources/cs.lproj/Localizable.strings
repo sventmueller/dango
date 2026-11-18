@@ -2378,3 +2378,6 @@
 "Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Brány spouštějí kód, který napsal agent. „Uvolněný“ navíc povoluje místní porty a terminály, „Vypnuto“ spouští brány s vašimi oprávněními. Projekt může v .dango/factory.toml nastavit jinou hodnotu.";
 "„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "„Uvolněný“ povoluje místní porty a terminály, „Vypnuto“ spouští brány s vašimi oprávněními. Pokud projekt sandbox uvolní, potvrdíte to u příští zakázky tlačítkem „Pokračovat“.";
 "Lizenz: MIT oder Apache 2.0" = "Licence: MIT nebo Apache 2.0";
+"Funktion vorschlagen …" = "Navrhnout funkci…";
+"Problem melden …" = "Nahlásit problém…";
+"{} auf GitHub" = "{} na GitHubu";

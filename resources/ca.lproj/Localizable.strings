@@ -2378,3 +2378,6 @@
 "Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Els controls executen codi que ha escrit l’agent. “Relaxat” permet a més ports locals i terminals, “Desactivat” inicia els controls amb els teus permisos. Un projecte pot fixar un altre valor a .dango/factory.toml.";
 "„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Relaxat” permet ports locals i terminals, “Desactivat” inicia els controls amb els teus permisos. Si el projecte relaxa el sandbox, ho confirmes a la següent ordre de treball amb “Continua”.";
 "Lizenz: MIT oder Apache 2.0" = "Llicència: MIT o Apache 2.0";
+"Funktion vorschlagen …" = "Suggereix una funció…";
+"Problem melden …" = "Informa d’un problema…";
+"{} auf GitHub" = "{} a GitHub";

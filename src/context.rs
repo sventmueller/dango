@@ -52,6 +52,7 @@ pub(crate) struct AppContext {
     browser: Rc<ide_ui_browser::State>,
     secrets: Secrets,
     leitstand: crate::leitstand::Leitstand,
+    feedback: crate::feedback::Opened,
     #[cfg(feature = "dictation")]
     dictation: Rc<ide_ui_dictation::State>,
 }
@@ -190,6 +191,10 @@ impl AppContext {
 
     pub(crate) fn leitstand(&self) -> &crate::leitstand::Leitstand {
         &self.leitstand
+    }
+
+    pub(crate) fn feedback(&self) -> &crate::feedback::Opened {
+        &self.feedback
     }
 
     #[cfg(feature = "dictation")]

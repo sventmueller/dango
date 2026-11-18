@@ -2378,3 +2378,6 @@
 "Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Cổng kiểm tra chạy mã do tác nhân viết. “Nới lỏng” cho phép thêm cổng cục bộ và terminal, “Tắt” khởi động cổng kiểm tra với quyền của bạn. Dự án có thể đặt giá trị khác trong .dango/factory.toml.";
 "„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Nới lỏng” cho phép cổng cục bộ và terminal, “Tắt” khởi động cổng kiểm tra với quyền của bạn. Nếu dự án nới lỏng sandbox, bạn xác nhận điều đó ở phiếu công việc tiếp theo bằng “Tiếp tục”.";
 "Lizenz: MIT oder Apache 2.0" = "Giấy phép: MIT hoặc Apache 2.0";
+"Funktion vorschlagen …" = "Đề xuất tính năng…";
+"Problem melden …" = "Báo cáo sự cố…";
+"{} auf GitHub" = "{} trên GitHub";

@@ -10,6 +10,7 @@ mod debug;
 mod diag;
 mod editor;
 mod environment;
+mod feedback;
 mod host;
 mod leitstand;
 mod leitstand_ui;

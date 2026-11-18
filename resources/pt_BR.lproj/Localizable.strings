@@ -2378,3 +2378,6 @@
 "Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Os gates executam código escrito pelo agente. “Flexível” também permite portas locais e terminais, “Desativado” inicia os gates com as suas permissões. Um projeto pode definir outro valor em .dango/factory.toml.";
 "„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "“Flexível” permite portas locais e terminais, “Desativado” inicia os gates com as suas permissões. Se o projeto flexibilizar o sandbox, você confirma isso na próxima ordem de serviço com “Continuar”.";
 "Lizenz: MIT oder Apache 2.0" = "Licença: MIT ou Apache 2.0";
+"Funktion vorschlagen …" = "Sugerir um Recurso…";
+"Problem melden …" = "Relatar um Problema…";
+"{} auf GitHub" = "{} no GitHub";

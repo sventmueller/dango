@@ -2378,3 +2378,6 @@
 "Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "Laatuportit ajavat koodia, jonka agentti on kirjoittanut. ”Väljä” sallii lisäksi paikalliset portit ja päätteet, ”Pois” käynnistää laatuportit sinun oikeuksillasi. Projekti voi asettaa toisen arvon tiedostossa .dango/factory.toml.";
 "„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "”Väljä” sallii paikalliset portit ja päätteet, ”Pois” käynnistää laatuportit sinun oikeuksillasi. Jos projekti väljentää hiekkalaatikkoa, vahvistat sen seuraavassa työtilauksessa valinnalla ”Jatka”.";
 "Lizenz: MIT oder Apache 2.0" = "Lisenssi: MIT tai Apache 2.0";
+"Funktion vorschlagen …" = "Ehdota ominaisuutta…";
+"Problem melden …" = "Ilmoita ongelmasta…";
+"{} auf GitHub" = "{} GitHubissa";

@@ -1,0 +1,44 @@
+name: Report a problem
+description: Something in Dango does not work as it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: input
+    id: agent
+    attributes:
+      label: Agent
+      placeholder: Claude, Codex, Antigravity, OpenCode, the built-in agent or none
+  - type: input
+    id: project
+    attributes:
+      label: Kind of project
+      description: Issues are public. Name the languages and tools, not private code.
+      placeholder: e.g. a Rust workspace or a Next.js app
+  - type: input
+    id: version
+    attributes:
+      label: Dango version
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+    validations:
+      required: true
+  - type: input
+    id: mac
+    attributes:
+      label: Mac
+      placeholder: Apple Silicon or Intel

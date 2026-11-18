@@ -2378,3 +2378,6 @@
 "Gates führen Code aus, den der Agent geschrieben hat. „Gelockert“ erlaubt zusätzlich lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Ein Projekt kann in .dango/factory.toml einen anderen Wert setzen." = "關卡會執行代理程式撰寫的程式碼。「放寬」另外允許本機連接埠和終端機，「關閉」以你的權限啟動關卡。專案可以在 .dango/factory.toml 中設定其他值。";
 "„Gelockert“ erlaubt lokale Ports und Terminals, „Aus“ startet Gates mit deinen Rechten. Lockert das Projekt die Sandbox, bestätigst du das am nächsten Auftrag mit „Weiter“." = "「放寬」允許本機連接埠和終端機，「關閉」以你的權限啟動關卡。如果專案放寬了沙盒，你要在下一個工單上以「繼續」確認。";
 "Lizenz: MIT oder Apache 2.0" = "授權條款：MIT 或 Apache 2.0";
+"Funktion vorschlagen …" = "建議功能⋯";
+"Problem melden …" = "回報問題⋯";
+"{} auf GitHub" = "GitHub 上的 {}";
