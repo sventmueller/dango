@@ -1,10 +1,7 @@
-<!-- DRAFT for the owner's review. Check each point against the release build, adjust what differs, then delete this
-comment; `cargo xtask release --notarize` refuses notes that still carry it. Keep this file in step with
-RELEASE_NOTES.md. -->
 Voici la première version de Dango, un éditeur natif pour macOS conçu pour travailler avec des agents de code.
-L’éditeur, les terminaux, un navigateur, Git, CI, un débogueur et les fils IA partagent une fenêtre par dossier. L’app
-est écrite en Rust sur AppKit ; WebKit n’apparaît que dans l’onglet du navigateur. L’interface est disponible en
-35 langues.
+L’éditeur, les terminaux, un navigateur, Git, CI, un débogueur, les fils IA et une Software Factory pour les ordres de
+travail partagent une fenêtre par dossier. L’app est écrite en Rust sur AppKit ; WebKit n’apparaît que dans l’onglet du
+navigateur. L’interface est disponible en 35 langues.
 
 ## Configuration requise
 - macOS 14 ou ultérieur, sur Mac avec puce Apple ou processeur Intel.
@@ -13,7 +10,7 @@ est écrite en Rust sur AppKit ; WebKit n’apparaît que dans l’onglet du na
   votre propre `agy` ou `opencode`, ou un téléchargement en version figée ; l’agent intégré a besoin d’une clé d’API, ou
   d’Ollama ou de LM Studio sur ce Mac.
 - Les serveurs de langage et les adaptateurs de débogage s’installent à votre demande. gopls et `dlv` nécessitent Go ;
-  les serveurs TypeScript, Python, JSON, YAML, CSS, HTML et shell ainsi que le débogueur JavaScript nécessitent
+  les serveurs TypeScript, Python, JSON, YAML, CSS, HTML, ESLint et shell ainsi que le débogueur JavaScript nécessitent
   Node.js ; clangd, sourcekit-lsp et `lldb-dap` sont fournis avec les Xcode Command Line Tools.
 - Les prédictions de saisie nécessitent un abonnement GitHub Copilot (la formule gratuite suffit) ou un modèle
   fill-in-the-middle dans Ollama ou LM Studio.
@@ -22,20 +19,30 @@ est écrite en Rust sur AppKit ; WebKit n’apparaît que dans l’onglet du na
 - Chaque fichier, terminal, page web, fil IA, diff et aperçu est un onglet macOS dans la fenêtre du dossier. Le « + » au
   bout de la barre d’onglets et ⌘T proposent un nouveau fichier, un terminal, le navigateur et chaque agent installé, y
   compris dans son propre worktree Git.
-- La barre latérale bascule entre Fichiers, Recherche, Agents, Git, Déboguer et CI (⌘1–⌘6) ; un clic droit masque ceux
-  dont vous ne vous servez pas. La barre d’outils contient Précédent et Suivant à travers les endroits que vous avez
-  modifiés (⌃- et ⌃⇧-), la branche, Ouverture rapide et la vue d’ensemble Activité.
-- « Ouvrir à côté » affiche un second document à côté du premier. Après un redémarrage, ou un plantage, chaque fenêtre
-  revient avec ses onglets, et les éditeurs contenant du texte non enregistré reviennent avec ce texte.
+- La barre latérale bascule entre Fichiers, Recherche, Agents, Git, Déboguer, CI, Tests, Conteneurs et la Software
+  Factory ; un clic droit masque ceux dont vous ne vous servez pas. La barre d’outils contient Précédent et Suivant à
+  travers les endroits que vous avez modifiés (⌃- et ⌃⇧-), la branche, Ouverture rapide et la vue d’ensemble Activité.
+- Une fenêtre se divise en zones côte à côte ou l’une au-dessus de l’autre, imbriquées aussi profondément que vous le
+  souhaitez, comme dans Xcode ; chaque zone garde ses documents les uns derrière les autres, avec sa propre barre
+  d’onglets. « Ouvrir à côté » affiche un second document à côté du premier.
+- Après un redémarrage, ou un plantage, chaque fenêtre revient avec ses onglets et ses zones, et les éditeurs contenant
+  du texte non enregistré reviennent avec ce texte.
 - Les images, l’audio, la vidéo, les polices et les documents Office s’ouvrent dans un onglet via Quick Look, les PDF
   via PDFKit.
 
 ## Éditeur
 - Coloration syntaxique, numéros de ligne, marques de modification par rapport au dernier commit, rechercher et
-  remplacer, Ouverture rapide (⌘P) et recherche dans le projet (⇧⌘F).
+  remplacer, Ouverture rapide (⌘P) et recherche dans le projet (⇧⌘F). Les couleurs et les styles Markdown suivent même
+  dans des fichiers de plusieurs milliers de lignes, sans ralentir la saisie.
 - Indentation automatique, tabulations ou espaces selon `.editorconfig`, paires de parenthèses, activation et
-  désactivation des commentaires, repli, aller à la ligne, espaces visibles et retour à la ligne automatique.
+  désactivation des commentaires, repli, aller à la ligne, espaces visibles, retour à la ligne automatique, une
+  minicarte et des en-têtes épinglés des portées englobantes.
 - Plusieurs curseurs : ⌥-clic, ⌥-glisser pour une colonne, ⌘D pour l’occurrence suivante.
+- **Mode Vim :** à activer dans le menu Éditeur, avec les modes normal, insertion et visuel, les mouvements et les
+  opérateurs, les registres, les marques, les macros, la recherche et les commandes Ex ; ses messages s’affichent dans
+  la langue de l’interface.
+- Abréviations Emmet dans la complétion HTML, CSS et JSX, et correction des problèmes ESLint à l’enregistrement si vous
+  le souhaitez.
 - Les fichiers conservent leur encodage, leur indicateur d’ordre des octets et leurs fins de ligne. Un fichier modifié
   sur le disque est rechargé si l’éditeur ne contient aucun texte non enregistré ; sinon, une barre propose les
   différences et une fusion.
@@ -45,11 +52,12 @@ est écrite en Rust sur AppKit ; WebKit n’apparaît que dans l’onglet du na
 
 ## Serveurs de langage
 Go, Rust, TypeScript et JavaScript, Python, C, C++ et Objective-C, Swift, scripts shell, JSON, YAML, CSS, HTML, TOML,
-Markdown et Lua, ainsi que vos propres serveurs depuis les réglages. Diagnostics, infobulles au survol, complétion, aide
-à la signature, accès à la définition, à la définition de type et à l’implémentation, références, hiérarchies d’appels
-et de types, renommage, mise en forme, couleurs sémantiques, repli et structure ; types et noms de paramètres dans la
-ligne ; corrections rapides et refactorisations derrière une ampoule (⌥⌘A) ; les symboles du projet avec ⌥⌘O ou `#` dans
-Ouverture rapide. Le `tsc` propre à un projet TypeScript est utilisé lorsqu’il peut servir de serveur de langage.
+Markdown et Lua, ESLint à côté du serveur TypeScript, ainsi que vos propres serveurs depuis les réglages. Diagnostics,
+y compris en fin de ligne, infobulles au survol, complétion, aide à la signature, accès à la définition, à la définition
+de type et à l’implémentation, références, hiérarchies d’appels et de types, renommage, mise en forme, couleurs
+sémantiques, repli et structure ; types et noms de paramètres dans la ligne ; corrections rapides et refactorisations
+derrière une ampoule (⌥⌘A) ; les symboles du projet avec ⌥⌘O ou `#` dans Ouverture rapide. Le `tsc` propre à un projet
+TypeScript est utilisé lorsqu’il peut servir de serveur de langage.
 
 ## Débogueur
 Points d’arrêt, y compris conditionnels, exécution pas à pas, threads avec leurs piles d’appels, variables et
@@ -57,6 +65,12 @@ expressions espionnées dans l’Inspecteur (⌥⌘I), valeurs à côté du code
 console de débogage qui évalue dans le frame en pause. Rust, C, C++ et Swift via `lldb-dap`, Go via `dlv`, JavaScript et
 TypeScript via le débogueur JavaScript, Python via debugpy. Le fichier `.vscode/launch.json` du projet est lu. Le menu
 Déboguer reprend les raccourcis de Xcode.
+
+## Tests et conteneurs
+- Le panneau Tests liste les tests des projets Rust, Go, Python, Jest, Vitest et Bun avant la première exécution, en
+  exécute un, un fichier ou tous, affiche chaque résultat en direct et le marque dans la marge de l’éditeur.
+- Le panneau Conteneurs liste les conteneurs, les images, les volumes et les projets Compose de Docker ; il les démarre,
+  les arrête et les supprime, suit leurs journaux et ouvre un shell dans un onglet de terminal.
 
 ## Terminal
 Des terminaux en onglets avec l’environnement du shell de connexion, dessinés avec Metal. Coller ou déposer une image la
@@ -100,18 +114,47 @@ cours. Avant chaque prompt, l’app crée un point de contrôle ; les modificat
 retour en arrière, message par message. Les nouveaux fils démarrent dans le mode « Manuel », et les commandes Git
 destructrices ne sont jamais autorisées définitivement. La vue d’ensemble Activité liste tout ce qui tourne. Un point
 vert sur l’onglet signale une session au travail, un point rouge une session qui vous attend, et une notification vous
-prévient lorsqu’elle se termine ou attend pendant que vous regardez ailleurs.
+prévient lorsqu’elle se termine ou attend pendant que vous regardez ailleurs. La chronologie, le champ de message et la
+ligne d’état ont leur propre taille de police dans les réglages.
 - **Claude** via la commande `claude`, telle quelle, avec les sessions, les sous-agents, les tâches en arrière-plan, le
-  contexte et l’utilisation.
-- **Agents ACP :** Codex, Antigravity et OpenCode, et d’autres depuis le registre ACP à votre demande ; les agents
-  installés sont figés sur des versions testées et vérifiés par rapport à leurs sommes de contrôle.
+  contexte, l’utilisation et Remote Control depuis le téléphone.
+- **Codex** via son serveur d’app et **OpenCode** via son serveur, chacun dans son propre protocole, avec leurs fils,
+  le retour en arrière dans l’agent lui-même, et Remote Control pour Codex.
+- **Agents ACP :** Antigravity, et d’autres depuis le registre ACP à votre demande ; les agents installés sont figés sur
+  des versions testées et vérifiés par rapport à leurs sommes de contrôle.
 - **Agent intégré :** Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama, LM Studio et les serveurs qui parlent l’API
   d’OpenAI ou d’Anthropic, avec des outils pour les fichiers, la recherche, les commandes, les diagnostics et les
   requêtes web ; les clés restent dans le trousseau.
+- Les commandes propres à un agent s’ouvrent en superposition dans l’onglet, de la même manière pour chaque agent :
+  état, export, serveurs MCP, autorisations, hooks, mémoire, configuration, skills, plug-ins, modèle, compte et
+  commentaires.
 - Un interrupteur de sandbox par fil limite ce que les commandes d’un agent peuvent faire, dans la mesure où l’agent le
   prend en charge.
 - Le texte externe, comme la sortie d’un terminal, une page web ou un journal CI, parvient à l’agent marqué comme non
   approuvé.
+
+## Software Factory
+Des ordres de travail au lieu de prompts isolés : un objectif avec des critères d’acceptation, rédigé à la main ou
+repris d’une issue. Chaque ordre est planifié, construit et contrôlé dans son propre worktree Git, par des agents de
+fabricants différents dans des rôles fixes : un planificateur rédige la spécification, un builder fait le travail, et
+un relecteur d’un autre fabricant vérifie chaque critère. Les commandes de contrôle du projet, comme le build et les
+tests, s’exécutent dans une sandbox, et le builder corrige ce qu’elles trouvent.
+- Vous décidez à deux moments : vous approuvez la spécification, et vous acceptez le résultat avec ses preuves, en
+  entier ou section par section. Rien n’est intégré sans votre acceptation.
+- Le panneau et l’onglet Software Factory montrent chaque ordre avec son étape, son coût et ce qu’il attend ; l’onglet
+  d’un ordre montre sa chronologie, ses preuves et la prochaine action, et ouvre sa session en cours dans un onglet IA.
+- Des budgets par ordre et par jour, des limites de tours, une pause à la fermeture de l’app, à la mise en veille et
+  en cas de batterie faible, et un journal écrit avant chaque effet, pour que les ordres reprennent après un
+  redémarrage.
+- Les issues portant une étiquette choisie peuvent arriver comme ordres ; un ordre accepté peut partir comme merge
+  request avec un commentaire sur son issue, d’un clic de votre part. Les ordres aux périmètres des chemins distincts
+  s’exécutent côte à côte et sont intégrés l’un après l’autre.
+- Des indicateurs par agent et par fabricant, un routage selon le taux de premier passage, des propositions de règles
+  pour `AGENTS.md` et `CLAUDE.md` à partir de constats récurrents, et des ordres récurrents issus du fichier de workflow
+  du projet.
+- Le fichier de workflow `.dango/factory.toml` d’un dossier contient ses contrôles, ses classes de risque et ses
+  périmètres des chemins ; les commandes de contrôle modifiées et tout ce qui assouplit les limites attendent votre
+  confirmation.
 
 ## Dictée
 Dictée dans le champ de message IA et dans l’éditeur grâce à la reconnaissance vocale de Lowspeak : le bouton du micro,
@@ -124,25 +167,27 @@ d’elle-même ; tant que vous n’avez pas accepté, elle n’envoie aucune re
 lance la recherche immédiatement.
 
 ## Accessibilité
-Des noms VoiceOver pour la barre latérale, les onglets, les cartes de la chronologie IA, les lignes Git et CI, le
-débogueur et le texte du terminal ; un contrôle complet au clavier avec des raccourcis modifiables dans
-`keybindings.json` ; Augmenter le contraste et Réduire les animations ; les vues de code restent de gauche à droite dans
-les interfaces de droite à gauche. Les détails figurent dans ACCESSIBILITY.md.
+Des noms VoiceOver pour la barre latérale, les onglets, les cartes de la chronologie IA, les lignes Git et CI, la
+Software Factory, le débogueur et le texte du terminal ; un contrôle complet au clavier avec des raccourcis modifiables
+dans `keybindings.json` ; Augmenter le contraste et Réduire les animations ; les vues de code restent de gauche à droite
+dans les interfaces de droite à gauche. Les détails figurent dans ACCESSIBILITY.md.
 
 ## Confidentialité
 Ni télémétrie, ni statistiques d’utilisation, ni rapports de plantage. L’app ne se connecte que pour ce que vous
 lancez : les agents que vous utilisez, les téléchargements que vous demandez, les hôtes CI auxquels vous vous connectez,
 les prédictions de Copilot si vous les avez choisies, la transcription en ligne si vous l’avez choisie, les pages que
 vous ouvrez, et la recherche de mises à jour une fois que vous l’avez autorisée. Les clés et les jetons restent dans le
-trousseau macOS.
+trousseau macOS, et les agents de la Software Factory ne les voient jamais.
 
 ## Limites connues
 - La connexion à CI via le navigateur est désactivée ; utilisez `gh`, `glab`, un jeton ou l’environnement.
 - L’app s’exécute sans l’App Sandbox, car les terminaux, Git, les serveurs de langage et les agents en hériteraient ;
   vous devez faire confiance à un dossier avant que quoi que ce soit qu’il configure ne s’exécute. Antigravity et
   OpenCode n’ont pas de sandbox que l’app puisse activer.
+- Dans la Software Factory, un builder ou un relecteur Codex peut lire en dehors de son worktree, car le protocole de
+  Codex ne connaît aucune limite de lecture ; ses écritures restent à l’intérieur.
 - Les chiffres d’utilisation de Claude et la répartition de son contexte reposent sur des parties de son protocole
-  marquées comme expérimentales, et sont masqués lorsqu’ils manquent. Le retour en arrière dans la conversation ne
-  fonctionne qu’avec Claude ; pour les autres agents, seul le code revient en arrière.
+  marquées comme expérimentales, et sont masqués lorsqu’ils manquent. Le retour en arrière dans la conversation
+  fonctionne avec Claude, Codex et OpenCode ; pour les autres agents, seul le code revient en arrière.
 - Gemini CLI n’est pas proposé : Google a mis fin à sa connexion avec un compte personnel et renvoie vers Antigravity.
   Les anciens fils Gemini restent lisibles.

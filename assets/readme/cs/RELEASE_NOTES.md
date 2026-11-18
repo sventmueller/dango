@@ -1,9 +1,7 @@
-<!-- DRAFT for the owner's review. Check each point against the release build, adjust what differs, then delete this
-comment; `cargo xtask release --notarize` refuses notes that still carry it. Keep this file in step with
-RELEASE_NOTES.md. -->
 Toto je první vydání aplikace Dango, nativního editoru pro macOS určeného k práci s agenty pro programování. Editor,
-terminály, prohlížeč, Git, CI, ladicí nástroj a vlákna AI sdílejí jedno okno pro každou složku. Aplikace je napsaná v
-jazyce Rust nad AppKit; WebKit se objevuje jen v panelu prohlížeče. Rozhraní je k dispozici ve 35 jazycích.
+terminály, prohlížeč, Git, CI, ladicí nástroj, vlákna AI a Software Factory pro zakázky sdílejí jedno okno pro každou
+složku. Aplikace je napsaná v jazyce Rust nad AppKit; WebKit se objevuje jen v panelu prohlížeče. Rozhraní je k
+dispozici ve 35 jazycích.
 
 ## Požadavky
 - macOS 14 nebo novější, na Apple silicon nebo Intel.
@@ -12,8 +10,8 @@ jazyce Rust nad AppKit; WebKit se objevuje jen v panelu prohlížeče. Rozhraní
   nebo `opencode`, případně stažení v pevně dané verzi; vlastní agent potřebuje klíč API, nebo aplikaci Ollama či LM
   Studio na tomto Macu.
 - Jazykové servery a ladicí adaptéry se instalují na požádání. gopls a `dlv` potřebují Go; servery pro TypeScript,
-  Python, JSON, YAML, CSS, HTML a shell a ladicí nástroj pro JavaScript potřebují Node.js; clangd, sourcekit-lsp a
-  `lldb-dap` jsou součástí Xcode Command Line Tools.
+  Python, JSON, YAML, CSS, HTML, ESLint a shell a ladicí nástroj pro JavaScript potřebují Node.js; clangd,
+  sourcekit-lsp a `lldb-dap` jsou součástí Xcode Command Line Tools.
 - Předpovědi úprav potřebují předplatné GitHub Copilot (stačí bezplatné), nebo model typu fill-in-the-middle v aplikaci
   Ollama nebo LM Studio.
 
@@ -21,19 +19,25 @@ jazyce Rust nad AppKit; WebKit se objevuje jen v panelu prohlížeče. Rozhraní
 - Každý soubor, terminál, stránka prohlížeče, vlákno AI, zobrazení rozdílů a náhled je panelem macOS v okně složky.
   Tlačítko „+“ na konci pruhu panelů a ⌘T nabízejí nový soubor, terminál, prohlížeč a každého nainstalovaného agenta,
   také ve vlastním worktree Gitu.
-- Boční panel přepíná mezi podokny Soubory, Hledání, Agenti, Git, Ladit a CI (⌘1–⌘6); ta, která nepoužíváte, skryjete
-  kliknutím pravým tlačítkem. Na nástrojovém panelu jsou zpět a vpřed po místech, která jste upravovali (⌃- a ⌃⇧-),
-  větev, Rychle otevřít a přehled Aktivita.
-- „Otevřít vedle“ zobrazí druhý dokument vedle prvního. Po restartu nebo pádu se každé okno vrátí se svými panely a
-  editory s neuloženým textem se vrátí i s tímto textem.
+- Boční panel přepíná mezi podokny Soubory, Hledání, Agenti, Git, Ladit, CI, Testy, Kontejnery a Software Factory; ta,
+  která nepoužíváte, skryjete kliknutím pravým tlačítkem. Na nástrojovém panelu jsou zpět a vpřed po místech, která
+  jste upravovali (⌃- a ⌃⇧-), větev, Rychle otevřít a přehled Aktivita.
+- Okno se dělí na oblasti vedle sebe nebo nad sebou, vnořené libovolně hluboko, jako v Xcode; každá oblast drží své
+  dokumenty za sebou s vlastním pruhem panelů. „Otevřít vedle“ zobrazí druhý dokument vedle prvního.
+- Po restartu nebo pádu se každé okno vrátí se svými panely a oblastmi a editory s neuloženým textem se vrátí i s tímto
+  textem.
 - Obrázky, zvuk, video, písma a dokumenty Office se otevírají v panelu přes Quick Look, PDF přes PDFKit.
 
 ## Editor
 - Barvy syntaxe, čísla řádků, značky změn oproti poslednímu commitu, hledání a nahrazování, Rychle otevřít (⌘P) a
-  hledání v projektu (⇧⌘F).
+  hledání v projektu (⇧⌘F). Barvy a styly Markdownu drží krok i v souborech o mnoha tisících řádků, aniž by brzdily
+  psaní.
 - Automatické odsazování, tabulátory nebo mezery podle `.editorconfig`, párové závorky, přepínání komentářů, sbalování,
-  přechod na řádek, viditelné mezery a zalamování řádků.
+  přechod na řádek, viditelné mezery, zalamování řádků, minimapa a připnutá záhlaví nadřazených bloků.
 - Více kurzorů: ⌥-kliknutí, ⌥-tažení pro sloupec, ⌘D pro další výskyt.
+- **Režim Vim:** zapíná se v nabídce Editor, s normálním, vkládacím a vizuálním režimem, pohyby a operátory, registry,
+  značkami, makry, hledáním a příkazy Ex; jeho hlášení se zobrazují v jazyce rozhraní.
+- Zkratky Emmet v doplňování HTML, CSS a JSX a, pokud chcete, oprava problémů ESLint při uložení.
 - Soubory si zachovávají kódování, značku pořadí bajtů a konce řádků. Soubor změněný na disku se znovu načte, pokud v
   editoru není neuložený text; jinak lišta nabídne rozdíly a sloučení.
 - **Předpovědi úprav:** během psaní se šedě zobrazí návrh; klávesa Tab ho přijme. Návrhy přicházejí z GitHub Copilot
@@ -42,17 +46,23 @@ jazyce Rust nad AppKit; WebKit se objevuje jen v panelu prohlížeče. Rozhraní
 
 ## Jazykové servery
 Go, Rust, TypeScript a JavaScript, Python, C, C++ a Objective-C, Swift, skripty shellu, JSON, YAML, CSS, HTML, TOML,
-Markdown a Lua a také vlastní servery z nastavení. Diagnostika, informace při najetí myší, doplňování, nápověda k
-signatuře, přechod na definici, definici typu a implementaci, odkazy, hierarchie volání a typů, přejmenování,
-formátování, sémantické barvy, sbalování a osnova; typy a názvy parametrů přímo v řádku; rychlé opravy a refaktorování
-za žárovkou (⌥⌘A); symboly projektu přes ⌥⌘O nebo `#` v Rychle otevřít. Vlastní `tsc` projektu TypeScript se použije,
-pokud může sloužit jako jazykový server.
+Markdown a Lua, ESLint vedle serveru TypeScript a také vlastní servery z nastavení. Diagnostika, i na konci řádku,
+informace při najetí myší, doplňování, nápověda k signatuře, přechod na definici, definici typu a implementaci, odkazy,
+hierarchie volání a typů, přejmenování, formátování, sémantické barvy, sbalování a osnova; typy a názvy parametrů přímo
+v řádku; rychlé opravy a refaktorování za žárovkou (⌥⌘A); symboly projektu přes ⌥⌘O nebo `#` v Rychle otevřít.
+Vlastní `tsc` projektu TypeScript se použije, pokud může sloužit jako jazykový server.
 
 ## Ladicí nástroj
 Zarážky, i s podmínkami, krokování, vlákna s jejich zásobníky volání, proměnné a sledované výrazy v Inspektoru (⌥⌘I),
 hodnoty vedle kódu, dokud je program pozastaven, a konzole ladění, která vyhodnocuje v pozastaveném rámci. Rust, C, C++
 a Swift přes `lldb-dap`, Go přes `dlv`, JavaScript a TypeScript přes ladicí nástroj pro JavaScript, Python přes debugpy.
 Načítá se soubor `.vscode/launch.json` projektu. Nabídka Ladit používá klávesové zkratky Xcode.
+
+## Testy a kontejnery
+- Podokno Testy vypíše testy projektů Rust, Go, Python, Jest, Vitest a Bun už před prvním spuštěním, spustí jeden,
+  soubor nebo všechny, ukazuje každý výsledek živě a označí ho v okraji editoru.
+- Podokno Kontejnery vypíše kontejnery, obrazy, svazky a projekty Compose Dockeru; spouští, zastavuje a odstraňuje je,
+  sleduje jejich logy a otevře shell v panelu terminálu.
 
 ## Terminál
 Terminály v panelech s prostředím přihlašovacího shellu, vykreslované přes Metal. Vložení nebo přetažení obrázku ho
@@ -89,15 +99,39 @@ povolení, dotazy, plány ke schválení a komentování, úkoly, subagenti a ú
 vypíšou běžící subagenty a procesy na pozadí. Před každým promptem aplikace uloží kontrolní bod; změny lze zkontrolovat
 a přetočit zpět po jednotlivých zprávách. Nová vlákna začínají v režimu „Ručně“ a destruktivní příkazy Gitu nejsou nikdy
 povoleny natrvalo. Přehled Aktivita ukazuje vše, co běží. Zelená tečka na panelu značí pracující relaci, červená relaci,
-která čeká na vás, a oznámení vám dá vědět, když relace skončí nebo čeká, zatímco se díváte jinam.
-- **Claude** přes nezměněný příkaz `claude`, s relacemi, subagenty, úlohami na pozadí, kontextem a využitím.
-- **Agenti ACP:** Codex, Antigravity a OpenCode a na požádání další z registru ACP; nainstalovaní agenti jsou pevně
-  nastavení na otestované verze a ověření podle kontrolních součtů.
+která čeká na vás, a oznámení vám dá vědět, když relace skončí nebo čeká, zatímco se díváte jinam. Časová osa, pole
+zprávy a stavový řádek mají v nastavení vlastní velikost písma.
+- **Claude** přes nezměněný příkaz `claude`, s relacemi, subagenty, úlohami na pozadí, kontextem, využitím a
+  Remote Control z telefonu.
+- **Codex** přes svůj aplikační server a **OpenCode** přes svůj server, každý ve vlastním protokolu, s jejich vlákny,
+  přetáčením zpět přímo v agentovi a Remote Control pro Codex.
+- **Agenti ACP:** Antigravity a na požádání další z registru ACP; nainstalovaní agenti jsou pevně nastavení na
+  otestované verze a ověření podle kontrolních součtů.
 - **Vlastní agent:** Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama, LM Studio a servery s API kompatibilním s
   OpenAI nebo Anthropic, s nástroji pro soubory, hledání, příkazy, diagnostiku a webové požadavky; klíče zůstávají v
   Klíčence.
+- Vlastní příkazy agenta se otevírají jako překryvy panelu, stejně pro každého agenta: stav, export, servery MCP,
+  povolení, hooky, paměť, konfigurace, dovednosti, pluginy, model, účet a zpětná vazba.
 - Přepínač sandboxu pro každé vlákno omezuje, co smějí příkazy agenta dělat, pokud to agent podporuje.
 - Cizí text, například výstup terminálu, webová stránka nebo log CI, jde k agentovi označený jako nedůvěryhodný.
+
+## Software Factory
+Zakázky místo jednotlivých promptů: cíl s kritérii přijetí, napsaný ručně nebo převzatý z issue. Každá zakázka se
+plánuje, staví a kontroluje ve vlastním worktree Gitu, a to agenty různých výrobců v pevných rolích: plánovač napíše
+specifikaci, stavitel odvede práci a recenzent od jiného výrobce zkontroluje každé kritérium. Kontrolní příkazy
+projektu, například sestavení a testy, běží v sandboxu a stavitel opraví, co najdou.
+- Rozhodujete ve dvou bodech: schválíte specifikaci a přijmete výsledek s jeho doklady, celý nebo po jednotlivých
+  částech. Bez vašeho přijetí se nic nepřevezme.
+- Podokno a panel Software Factory ukazují každou zakázku s její stanicí, náklady a tím, na co čeká; panel zakázky
+  ukazuje její časovou osu, doklady a další krok a otevře její běžící relaci jako panel AI.
+- Rozpočty na zakázku a na den, limity kol, pozastavení při ukončení, uspání a slabé baterii a protokol zapisovaný před
+  každou akcí, takže zakázky po restartu pokračují.
+- Issues se zvoleným štítkem mohou přicházet jako zakázky; přijatá zakázka může odejít jako merge request s komentářem u
+  svého issue, až kliknete. Zakázky s oddělenými rozsahy cest běží vedle sebe a převezmou se jedna po druhé.
+- Metriky podle agenta a výrobce, směrování podle podílu úspěchu napoprvé, návrhy pravidel pro `AGENTS.md` a
+  `CLAUDE.md` z opakujících se zjištění a opakované zakázky ze souboru pracovního postupu projektu.
+- Soubor pracovního postupu složky `.dango/factory.toml` obsahuje její brány, třídy rizika a rozsahy cest; změněné
+  kontrolní příkazy a vše, co uvolňuje hranice, čekají na vaše potvrzení.
 
 ## Diktování
 Diktování do pole zprávy AI a do editoru přes rozpoznávání řeči aplikace Lowspeak: tlačítko mikrofonu, ⌃⌥D nebo klávesa
@@ -109,22 +143,26 @@ Aplikace se aktualizuje sama přes Sparkle. Při druhém spuštění se zeptá, 
 nesouhlasíte, neodešle žádný požadavek. **Dango › Vyhledat aktualizace…** je vyhledá okamžitě.
 
 ## Zpřístupnění
-Názvy pro VoiceOver u bočního panelu, panelů, karet časové osy AI, řádků Gitu a CI, ladicího nástroje a textu terminálu;
-úplné ovládání klávesnicí se zkratkami, které můžete změnit v `keybindings.json`; Zvýšit kontrast a Omezit pohyb;
-zobrazení kódu zůstávají zleva doprava i v rozhraních psaných zprava doleva. Podrobnosti jsou v ACCESSIBILITY.md.
+Názvy pro VoiceOver u bočního panelu, panelů, karet časové osy AI, řádků Gitu a CI, Software Factory, ladicího
+nástroje a textu terminálu; úplné ovládání klávesnicí se zkratkami, které můžete změnit v `keybindings.json`; Zvýšit
+kontrast a Omezit pohyb; zobrazení kódu zůstávají zleva doprava i v rozhraních psaných zprava doleva. Podrobnosti jsou
+v ACCESSIBILITY.md.
 
 ## Soukromí
 Žádná telemetrie, žádná analytika a žádná hlášení o pádech. Aplikace se připojuje jen kvůli tomu, co sami spustíte: k
 agentům, které používáte, ke stahování, o které požádáte, k hostitelům CI, ke kterým se přihlásíte, k předpovědím úprav
 od GitHub Copilot, pokud jste je zvolili, k online přepisu, pokud jste ho zvolili, ke stránkám, které otevřete, a ke
-kontrole aktualizací, jakmile jste ji povolili. Klíče a tokeny zůstávají v Klíčence macOS.
+kontrole aktualizací, jakmile jste ji povolili. Klíče a tokeny zůstávají v Klíčence macOS a agenti Software Factory je
+nikdy nevidí.
 
 ## Známá omezení
 - Přihlášení k CI přes prohlížeč je vypnuté; použijte `gh`, `glab`, token nebo prostředí.
 - Aplikace běží bez App Sandbox, protože by ho zdědily terminály, Git, jazykové servery i agenti; než se spustí cokoli,
   co složka nastavuje, musíte složce důvěřovat. Antigravity a OpenCode nemají sandbox, který by aplikace mohla zapnout.
+- V Software Factory může stavitel nebo recenzent Codex číst mimo svůj worktree, protože protokol Codexu nemá omezení
+  čtení; jeho zápisy zůstávají uvnitř.
 - Údaje o využití a rozpis kontextu u agenta Claude závisí na částech jeho protokolu označených jako experimentální a
-  jsou skryté, když chybí. Přetočení konverzace zpět funguje jen u agenta Claude; u ostatních agentů se přetočí zpět jen
-  kód.
+  jsou skryté, když chybí. Přetočení konverzace zpět funguje u agentů Claude, Codex a OpenCode; u ostatních agentů se
+  přetočí zpět jen kód.
 - Gemini CLI se nenabízí: Google ukončil přihlašování osobním účtem a odkazuje na Antigravity. Dřívější vlákna Gemini
   zůstávají čitelná.

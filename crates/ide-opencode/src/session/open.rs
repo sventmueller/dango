@@ -32,6 +32,8 @@ pub(super) fn open(shared: &Arc<Shared>, url: &Receiver<String>) {
             shared.stopping.store(true, Ordering::SeqCst);
             shared.close();
             shared.supervisor.stop(shared.process, Duration::from_millis(500));
+            // The end of the server's output can come late: a process started meanwhile may hold its pipe open.
+            shared.finish();
         }
         Err(_) if shared.is_ended() => {}
         Err(error) => shared.fail(error),

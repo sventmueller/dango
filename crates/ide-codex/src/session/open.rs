@@ -19,6 +19,8 @@ pub(super) fn open(shared: &Arc<Shared>) {
             shared.fail(error);
             shared.stopping.store(true, std::sync::atomic::Ordering::SeqCst);
             shared.supervisor.stop(shared.process, Duration::from_millis(500));
+            // The end of the server's output can come late: a process started meanwhile may hold its pipe open.
+            shared.finish();
         }
         Err(SessionError::Closed) if shared.ended.load(std::sync::atomic::Ordering::SeqCst) => {}
         Err(error) => shared.fail(error),

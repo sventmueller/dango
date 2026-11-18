@@ -1,9 +1,6 @@
-<!-- DRAFT for the owner's review. Check each point against the release build, adjust what differs, then delete this
-comment; `cargo xtask release --notarize` refuses notes that still carry it. Keep this file in step with
-RELEASE_NOTES.md. -->
 Ini adalah rilis pertama Dango, editor macOS native untuk bekerja dengan agen coding. Editor, terminal, browser, Git,
-CI, debugger, dan thread AI berbagi satu jendela per folder. App ini ditulis dengan Rust di atas AppKit; WebKit hanya
-muncul di tab browser. Antarmukanya tersedia dalam 35 bahasa.
+CI, debugger, thread AI, dan Software Factory untuk order kerja berbagi satu jendela per folder. App ini ditulis dengan
+Rust di atas AppKit; WebKit hanya muncul di tab browser. Antarmukanya tersedia dalam 35 bahasa.
 
 ## Persyaratan
 - macOS 14 atau lebih baru, di Apple silicon atau Intel.
@@ -12,8 +9,8 @@ muncul di tab browser. Antarmukanya tersedia dalam 35 bahasa.
   `opencode` milik Anda sendiri, atau unduhan dengan versi tetap; agen bawaan memerlukan kunci API, atau Ollama maupun
   LM Studio di Mac ini.
 - Server bahasa dan adaptor debug diinstal saat Anda memintanya. gopls dan `dlv` memerlukan Go; server TypeScript,
-  Python, JSON, YAML, CSS, HTML, dan shell serta debugger JavaScript memerlukan Node.js; clangd, sourcekit-lsp, dan
-  `lldb-dap` tersedia bersama Xcode Command Line Tools.
+  Python, JSON, YAML, CSS, HTML, ESLint, dan shell serta debugger JavaScript memerlukan Node.js; clangd, sourcekit-lsp,
+  dan `lldb-dap` tersedia bersama Xcode Command Line Tools.
 - Prediksi edit memerlukan langganan GitHub Copilot (yang gratis pun cukup), atau model fill-in-the-middle di Ollama
   atau LM Studio.
 
@@ -21,19 +18,27 @@ muncul di tab browser. Antarmukanya tersedia dalam 35 bahasa.
 - Setiap file, terminal, halaman browser, thread AI, tampilan perbedaan, dan pratinjau adalah tab macOS di jendela
   folder tersebut. Tombol “+” di ujung bar tab dan ⌘T menawarkan file baru, terminal, browser, dan setiap agen yang
   terinstal, juga di worktree Git tersendiri.
-- Bar samping beralih antara File, Pencarian, Agen, Git, Debug, dan CI (⌘1–⌘6); klik kanan menyembunyikan yang tidak
-  Anda gunakan. Bar alat berisi kembali dan maju melalui tempat yang Anda edit (⌃- dan ⌃⇧-), branch, Buka Cepat, dan
-  ikhtisar Aktivitas.
-- “Buka di Samping” menampilkan dokumen kedua di samping yang pertama. Setelah mulai ulang atau crash, setiap jendela
-  kembali dengan tab-tabnya, dan editor dengan teks yang belum disimpan kembali dengan teks tersebut.
+- Bar samping beralih antara File, Pencarian, Agen, Git, Debug, CI, Tes, Container, dan Software Factory; klik kanan
+  menyembunyikan yang tidak Anda gunakan. Bar alat berisi kembali dan maju melalui tempat yang Anda edit (⌃- dan ⌃⇧-),
+  branch, Buka Cepat, dan ikhtisar Aktivitas.
+- Jendela terbagi menjadi area yang berdampingan atau bertumpuk atas-bawah, bersarang sedalam yang Anda mau, seperti di
+  Xcode; setiap area menyimpan dokumennya di belakang satu sama lain dengan bar tab sendiri. “Buka di Samping”
+  menampilkan dokumen kedua di samping yang pertama.
+- Setelah mulai ulang atau crash, setiap jendela kembali dengan tab dan areanya, dan editor dengan teks yang belum
+  disimpan kembali dengan teks tersebut.
 - Gambar, audio, video, font, dan dokumen Office dibuka di tab melalui Quick Look, PDF melalui PDFKit.
 
 ## Editor
 - Warna sintaks, nomor baris, tanda perubahan terhadap commit terakhir, temukan dan ganti, Buka Cepat (⌘P), dan
-  pencarian proyek (⇧⌘F).
+  pencarian proyek (⇧⌘F). Warna dan gaya Markdown tetap mengikuti bahkan di file berisi ribuan baris tanpa menahan
+  ketikan.
 - Indentasi otomatis, tab atau spasi sesuai `.editorconfig`, pasangan kurung, mengaktifkan dan menonaktifkan komentar,
-  pelipatan, buka baris, spasi kosong yang terlihat, dan pembungkusan baris.
+  pelipatan, buka baris, spasi kosong yang terlihat, pembungkusan baris, minimap, dan header sticky dari blok yang
+  melingkupinya.
 - Beberapa kursor: ⌥-klik, ⌥-seret untuk kolom, ⌘D untuk kemunculan berikutnya.
+- **Mode Vim:** diaktifkan di menu Editor, dengan mode normal, insert, dan visual, gerakan dan operator, register, mark,
+  makro, pencarian, dan perintah Ex; pesannya muncul dalam bahasa antarmuka.
+- Singkatan Emmet di pelengkapan HTML, CSS, dan JSX, serta masalah ESLint diperbaiki saat menyimpan jika Anda mau.
 - File mempertahankan enkode, tanda urutan byte, dan akhir barisnya. File yang berubah di disk dimuat ulang jika editor
   tidak memiliki teks yang belum disimpan; jika ada, sebuah bar menawarkan perbedaan dan penggabungan.
 - **Prediksi edit:** saat Anda mengetik, saran muncul dalam warna abu-abu; Tab menerimanya. Saran berasal dari GitHub
@@ -42,11 +47,12 @@ muncul di tab browser. Antarmukanya tersedia dalam 35 bahasa.
 
 ## Server bahasa
 Go, Rust, TypeScript dan JavaScript, Python, C, C++ dan Objective-C, Swift, skrip shell, JSON, YAML, CSS, HTML, TOML,
-Markdown, dan Lua, serta server Anda sendiri dari pengaturan. Diagnostik, info saat penunjuk diarahkan, pelengkapan,
-bantuan tanda tangan, buka definisi, definisi tipe, dan implementasi, referensi, hierarki panggilan dan hierarki tipe,
-ganti nama, pemformatan, warna semantik, pelipatan, dan kerangka; tipe dan nama parameter di dalam baris; perbaikan
-cepat dan refaktor di balik bola lampu (⌥⌘A); simbol proyek dengan ⌥⌘O atau `#` di Buka Cepat. `tsc` milik proyek
-TypeScript sendiri digunakan jika dapat berfungsi sebagai server bahasa.
+Markdown, dan Lua, ESLint di samping server TypeScript, serta server Anda sendiri dari pengaturan. Diagnostik, juga di
+akhir baris, info saat penunjuk diarahkan, pelengkapan, bantuan tanda tangan, buka definisi, definisi tipe, dan
+implementasi, referensi, hierarki panggilan dan hierarki tipe, ganti nama, pemformatan, warna semantik, pelipatan, dan
+kerangka; tipe dan nama parameter di dalam baris; perbaikan cepat dan refaktor di balik bola lampu (⌥⌘A); simbol proyek
+dengan ⌥⌘O atau `#` di Buka Cepat. `tsc` milik proyek TypeScript sendiri digunakan jika dapat berfungsi sebagai server
+bahasa.
 
 ## Debugger
 Breakpoint, juga dengan kondisi, eksekusi langkah demi langkah, thread dengan tumpukan panggilannya, variabel dan
@@ -54,6 +60,12 @@ ekspresi pantauan di Inspektur (⌥⌘I), nilai di samping kode selama program d
 ekspresi di frame yang dijeda. Rust, C, C++, dan Swift melalui `lldb-dap`, Go melalui `dlv`, JavaScript dan TypeScript
 melalui debugger JavaScript, Python melalui debugpy. `.vscode/launch.json` milik proyek dibaca. Menu Debug menggunakan
 pintasan Xcode.
+
+## Tes dan container
+- Panel Tes mencantumkan tes proyek Rust, Go, Python, Jest, Vitest, dan Bun sebelum run pertama, menjalankan satu tes,
+  satu file, atau semuanya, menampilkan setiap hasil secara langsung, dan menandainya di gutter editor.
+- Panel Container mencantumkan container, image, volume, dan proyek Compose milik Docker; panel ini memulai,
+  menghentikan, dan menghapusnya, mengikuti log-nya, dan membuka shell di tab terminal.
 
 ## Terminal
 Terminal dalam tab dengan lingkungan shell login, digambar dengan Metal. Menempel atau melepas gambar akan
@@ -93,16 +105,42 @@ kepala tab mencantumkan subagen dan proses latar belakang yang sedang berjalan. 
 titik pemulihan; perubahan dapat ditinjau dan diputar balik per pesan. Thread baru dimulai dalam mode “Manual”, dan
 perintah Git yang merusak tidak pernah diizinkan secara permanen. Ikhtisar Aktivitas mencantumkan semua yang berjalan.
 Titik hijau di tab menunjukkan sesi yang sedang bekerja, titik merah menunjukkan sesi yang menunggu Anda, dan notifikasi
-memberi tahu saat sesi selesai atau menunggu ketika Anda sedang melihat di tempat lain.
-- **Claude** melalui perintah `claude` tanpa diubah, dengan sesi, subagen, tugas latar belakang, konteks, dan
-  penggunaan.
-- **Agen ACP:** Codex, Antigravity, dan OpenCode, serta lainnya dari registri ACP saat Anda memintanya; agen yang
-  diinstal dikunci ke versi yang telah diuji dan diperiksa terhadap checksum-nya.
+memberi tahu saat sesi selesai atau menunggu ketika Anda sedang melihat di tempat lain. Linimasa, bidang pesan, dan
+baris status memiliki ukuran teks sendiri di pengaturan.
+- **Claude** melalui perintah `claude` tanpa diubah, dengan sesi, subagen, tugas latar belakang, konteks, penggunaan,
+  dan Remote Control dari ponsel.
+- **Codex** melalui app server-nya dan **OpenCode** melalui server-nya, masing-masing dengan protokolnya sendiri, dengan
+  thread-nya, pemutaran balik di dalam agen itu sendiri, dan Remote Control untuk Codex.
+- **Agen ACP:** Antigravity, serta lainnya dari registri ACP saat Anda memintanya; agen yang diinstal dikunci ke versi
+  yang telah diuji dan diperiksa terhadap checksum-nya.
 - **Agen bawaan:** Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama, LM Studio, dan server yang menggunakan API
   OpenAI atau Anthropic, dengan alat untuk file, pencarian, perintah, diagnostik, dan permintaan web; kunci tetap di
   Rantai Kunci.
+- Perintah milik agen terbuka sebagai overlay di atas tab, sama untuk setiap agen: status, ekspor, server MCP, izin,
+  hook, memori, konfigurasi, skill, plugin, model, akun, dan masukan.
 - Sakelar sandbox per thread membatasi apa yang boleh dilakukan perintah agen, sejauh agen mendukungnya.
 - Teks dari luar, seperti output terminal, halaman web, atau log CI, dikirim ke agen dengan tanda tidak tepercaya.
+
+## Software Factory
+Order kerja sebagai ganti prompt tunggal: sebuah tujuan dengan kriteria penerimaan, ditulis sendiri atau diambil dari
+issue. Setiap order direncanakan, dibangun, dan diperiksa di worktree Git tersendiri, oleh agen dari vendor yang berbeda
+dalam peran tetap: perencana menulis spesifikasi, builder mengerjakan pekerjaannya, dan peninjau dari vendor lain
+memeriksa setiap kriteria. Perintah gerbang proyek, seperti build dan tes, berjalan di sandbox, dan builder memperbaiki
+apa yang ditemukannya.
+- Anda memutuskan di dua titik: Anda menyetujui spesifikasi, dan Anda menerima hasilnya beserta buktinya, seluruhnya
+  atau per hunk. Tidak ada yang diambil tanpa penerimaan Anda.
+- Panel dan tab Software Factory menampilkan setiap order dengan tahapnya, biayanya, dan apa yang ditunggunya; tab
+  sebuah order menampilkan linimasa, bukti, dan langkah berikutnya, serta membuka sesinya yang sedang berjalan sebagai
+  tab AI.
+- Anggaran per order dan per hari, batas giliran, jeda saat keluar, tidur, dan baterai lemah, serta log yang ditulis
+  sebelum setiap tindakan, sehingga order berlanjut setelah mulai ulang.
+- Issue dengan label pilihan dapat masuk sebagai order; order yang diterima dapat dikirim sebagai merge request dengan
+  komentar di issue-nya, dengan satu klik dari Anda. Order dengan cakupan path yang terpisah berjalan berdampingan dan
+  diambil satu per satu.
+- Metrik per agen dan vendor, perutean berdasarkan tingkat lolos pertama, usulan aturan untuk `AGENTS.md` dan
+  `CLAUDE.md` dari temuan yang berulang, dan order kerja berulang dari file workflow proyek.
+- File workflow folder, `.dango/factory.toml`, memuat gerbang, kelas risiko, dan cakupan path-nya; perintah gerbang yang
+  berubah dan apa pun yang melonggarkan batas menunggu konfirmasi Anda.
 
 ## Dikte
 Dikte ke bidang pesan AI dan ke editor melalui pengenalan ucapan Lowspeak: tombol mikrofon, ⌃⌥D, atau tombol fn selama
@@ -114,23 +152,26 @@ App memperbarui dirinya melalui Sparkle. Pada peluncuran kedua, app bertanya apa
 sampai Anda setuju, app tidak mengirim permintaan apa pun. **Dango › Periksa Pembaruan…** langsung memeriksa.
 
 ## Aksesibilitas
-Nama VoiceOver untuk bar samping, tab, kartu di linimasa AI, baris Git dan CI, debugger, serta teks terminal; kontrol
-penuh dengan papan ketik menggunakan pintasan yang dapat Anda ubah di `keybindings.json`; Tingkatkan Kontras dan Kurangi
-Gerakan; tampilan kode tetap dari kiri ke kanan di antarmuka kanan ke kiri. Detailnya ada di ACCESSIBILITY.md.
+Nama VoiceOver untuk bar samping, tab, kartu di linimasa AI, baris Git dan CI, Software Factory, debugger, serta teks
+terminal; kontrol penuh dengan papan ketik menggunakan pintasan yang dapat Anda ubah di `keybindings.json`; Tingkatkan
+Kontras dan Kurangi Gerakan; tampilan kode tetap dari kiri ke kanan di antarmuka kanan ke kiri. Detailnya ada di
+ACCESSIBILITY.md.
 
 ## Privasi
 Tanpa telemetri, tanpa analitik, dan tanpa laporan crash. App hanya terhubung untuk hal yang Anda mulai: agen yang Anda
 gunakan, unduhan yang Anda minta, host CI tempat Anda masuk, prediksi dari Copilot jika Anda memilihnya, transkripsi
 online jika Anda memilihnya, halaman yang Anda buka, dan pemeriksaan pembaruan setelah Anda mengizinkannya. Kunci dan
-token tetap di Rantai Kunci macOS.
+token tetap di Rantai Kunci macOS, dan agen Software Factory tidak pernah melihatnya.
 
 ## Batasan yang diketahui
 - Masuk ke CI melalui browser dinonaktifkan; gunakan `gh`, `glab`, token, atau lingkungan.
 - App berjalan tanpa App Sandbox, karena terminal, Git, server bahasa, dan agen akan mewarisinya; folder harus
   dipercayai sebelum apa pun yang dikonfigurasinya dijalankan. Antigravity dan OpenCode tidak memiliki sandbox yang
   dapat dinyalakan oleh app.
+- Di Software Factory, builder atau peninjau Codex dapat membaca di luar worktree-nya, karena protokol Codex tidak
+  memiliki batas baca; penulisannya tetap di dalam.
 - Angka penggunaan dan rincian konteks Claude bergantung pada bagian protokolnya yang ditandai eksperimental, dan
-  disembunyikan jika bagian tersebut tidak ada. Memutar balik percakapan hanya berfungsi untuk Claude; untuk agen lain,
-  hanya kode yang diputar balik.
+  disembunyikan jika bagian tersebut tidak ada. Memutar balik percakapan berfungsi untuk Claude, Codex, dan OpenCode;
+  untuk agen lain, hanya kode yang diputar balik.
 - Gemini CLI tidak ditawarkan: Google mengakhiri proses masuknya dengan akun pribadi dan mengarahkan ke Antigravity.
   Thread Gemini sebelumnya tetap dapat dibaca.

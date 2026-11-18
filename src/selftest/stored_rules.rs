@@ -80,7 +80,11 @@ fn listed(root: PathBuf) {
     };
     rules.remove_row(row);
     let sent = stand_in().dir.join("sub-1.stdin");
-    helpers::wait_until(move || sent.exists(), move |_| through_writer(root, row));
+    // The stand-in creates the file before it copied all of its input into it.
+    let complete = move || {
+        std::fs::read_to_string(&sent).is_ok_and(|text| serde_json::from_str::<serde_json::Value>(&text).is_ok())
+    };
+    helpers::wait_until(complete, move |_| through_writer(root, row));
 }
 
 fn stand_in() -> StandIn {

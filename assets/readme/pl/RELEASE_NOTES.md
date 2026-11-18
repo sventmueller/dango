@@ -1,9 +1,6 @@
-<!-- DRAFT for the owner's review. Check each point against the release build, adjust what differs, then delete this
-comment; `cargo xtask release --notarize` refuses notes that still carry it. Keep this file in step with
-RELEASE_NOTES.md. -->
 To pierwsze wydanie Dango, natywnego edytora dla macOS do pracy z agentami programistycznymi. Edytor, terminale,
-przeglądarka, Git, CI, debuger i wątki AI dzielą jedno okno na każdy folder. Aplikacja jest napisana w Rust na AppKit;
-WebKit pojawia się tylko w karcie przeglądarki. Interfejs jest dostępny w 35 językach.
+przeglądarka, Git, CI, debuger, wątki AI i Software Factory dla zleceń dzielą jedno okno na każdy folder. Aplikacja
+jest napisana w Rust na AppKit; WebKit pojawia się tylko w karcie przeglądarki. Interfejs jest dostępny w 35 językach.
 
 ## Wymagania
 - macOS 14 lub nowszy, na Macu z procesorem Apple lub Intel.
@@ -12,8 +9,8 @@ WebKit pojawia się tylko w karcie przeglądarki. Interfejs jest dostępny w 35 
   `opencode` albo pobrania w przypiętej wersji; wbudowany agent wymaga klucza API albo aplikacji Ollama lub LM Studio na
   tym Macu.
 - Serwery języka i adaptery debugowania są instalowane na żądanie. gopls i `dlv` wymagają Go; serwery dla TypeScript,
-  Python, JSON, YAML, CSS, HTML i powłoki oraz debuger JavaScript wymagają Node.js; clangd, sourcekit-lsp i `lldb-dap`
-  są dostarczane z Xcode Command Line Tools.
+  Python, JSON, YAML, CSS, HTML, ESLint i powłoki oraz debuger JavaScript wymagają Node.js; clangd, sourcekit-lsp i
+  `lldb-dap` są dostarczane z Xcode Command Line Tools.
 - Przewidywanie podczas pisania wymaga subskrypcji GitHub Copilot (wystarczy darmowa) albo modelu fill-in-the-middle w
   Ollama lub LM Studio.
 
@@ -21,19 +18,26 @@ WebKit pojawia się tylko w karcie przeglądarki. Interfejs jest dostępny w 35 
 - Każdy plik, terminal, strona przeglądarki, wątek AI, widok różnic i podgląd to karta macOS w oknie folderu. „+” na
   końcu paska kart i ⌘T oferują nowy plik, terminal, przeglądarkę i każdego zainstalowanego agenta, również we własnym
   worktree Git.
-- Pasek boczny przełącza między widokami Pliki, Wyszukiwanie, Agenty, Git, Debuguj i CI (⌘1–⌘6); kliknięcie prawym
-  przyciskiem ukrywa te, których nie używasz. Na pasku narzędzi są Wstecz i Dalej przez edytowane miejsca (⌃- i ⌃⇧-),
-  gałąź, Szybko otwórz i przegląd Aktywność.
-- „Otwórz obok” pokazuje drugi dokument obok pierwszego. Po ponownym uruchomieniu lub awarii każde okno wraca ze swoimi
-  kartami, a edytory z niezachowanym tekstem wracają razem z nim.
+- Pasek boczny przełącza między widokami Pliki, Wyszukiwanie, Agenty, Git, Debugowanie, CI, Testy, Kontenery i
+  Software Factory; kliknięcie prawym przyciskiem ukrywa te, których nie używasz. Na pasku narzędzi są Wstecz i Dalej
+  przez edytowane miejsca (⌃- i ⌃⇧-), gałąź, Szybko otwórz i przegląd Aktywność.
+- Okno dzieli się na okienka obok siebie lub jedno nad drugim, zagnieżdżone dowolnie głęboko, jak w Xcode; każde
+  okienko trzyma swoje dokumenty jeden za drugim z własnym paskiem kart. „Otwórz obok” pokazuje drugi dokument obok
+  pierwszego.
+- Po ponownym uruchomieniu lub awarii każde okno wraca ze swoimi kartami i okienkami, a edytory z niezachowanym tekstem
+  wracają razem z nim.
 - Obrazy, dźwięk, wideo, czcionki i dokumenty Office otwierają się w karcie przez Quick Look, pliki PDF przez PDFKit.
 
 ## Edytor
 - Kolorowanie składni, numery wierszy, znaczniki zmian względem ostatniego commitu, znajdowanie i zastępowanie, Szybko
-  otwórz (⌘P) i wyszukiwanie w projekcie (⇧⌘F).
+  otwórz (⌘P) i wyszukiwanie w projekcie (⇧⌘F). Kolory i style Markdown nadążają nawet w plikach o wielu tysiącach
+  wierszy, nie spowalniając pisania.
 - Automatyczne wcięcia, tabulatory lub spacje według `.editorconfig`, pary nawiasów, przełączanie komentarzy, zwijanie,
-  przejście do wiersza, widoczne białe znaki i zawijanie wierszy.
+  przejście do wiersza, widoczne białe znaki, zawijanie wierszy, minimapa i przyklejone nagłówki otaczających bloków.
 - Wiele kursorów: ⌥-kliknięcie, ⌥-przeciągnięcie dla kolumny, ⌘D dla następnego wystąpienia.
+- **Tryb Vim:** włączany w menu Edytor, z trybami normalnym, wstawiania i wizualnym, ruchami i operatorami,
+  rejestrami, znacznikami, makrami, wyszukiwaniem i poleceniami Ex; jego komunikaty pojawiają się w języku interfejsu.
+- Skróty Emmet w uzupełnianiu HTML, CSS i JSX oraz, jeśli chcesz, naprawianie problemów ESLint przy zachowywaniu.
 - Pliki zachowują kodowanie, znacznik kolejności bajtów i znaki końca wiersza. Plik zmieniony na dysku jest wczytywany
   ponownie, gdy edytor nie ma niezachowanego tekstu; w przeciwnym razie pasek oferuje różnice i scalanie.
 - **Przewidywanie podczas pisania:** gdy piszesz, propozycja pojawia się w kolorze szarym; Tab ją przyjmuje. Propozycje
@@ -42,18 +46,25 @@ WebKit pojawia się tylko w karcie przeglądarki. Interfejs jest dostępny w 35 
 
 ## Serwery języka
 Go, Rust, TypeScript i JavaScript, Python, C, C++ i Objective-C, Swift, skrypty powłoki, JSON, YAML, CSS, HTML, TOML,
-Markdown i Lua, a także własne serwery z ustawień. Diagnostyka, podpowiedzi po najechaniu, uzupełnianie, pomoc dotycząca
-sygnatur, przejście do definicji, definicji typu i implementacji, odwołania, hierarchia wywołań i hierarchia typów,
-zmiana nazwy, formatowanie, kolory semantyczne, zwijanie i konspekt; typy i nazwy parametrów wewnątrz wiersza; szybkie
-poprawki i refaktoryzacje pod żarówką (⌥⌘A); symbole projektu przez ⌥⌘O lub `#` w Szybko otwórz. Własny `tsc` projektu
-TypeScript jest używany, gdy może służyć jako serwer języka.
+Markdown i Lua, ESLint obok serwera TypeScript, a także własne serwery z ustawień. Diagnostyka, także na końcu wiersza,
+podpowiedzi po najechaniu, uzupełnianie, pomoc dotycząca sygnatur, przejście do definicji, definicji typu i
+implementacji, odwołania, hierarchia wywołań i hierarchia typów, zmiana nazwy, formatowanie, kolory semantyczne,
+zwijanie i konspekt; typy i nazwy parametrów wewnątrz wiersza; szybkie poprawki i refaktoryzacje pod żarówką (⌥⌘A);
+symbole projektu przez ⌥⌘O lub `#` w Szybko otwórz. Własny `tsc` projektu TypeScript jest używany, gdy może służyć
+jako serwer języka.
 
 ## Debuger
 Punkty przerwania, także z warunkami, praca krokowa, wątki z ich stosami wywołań, zmienne i obserwowane wyrażenia w
 Inspektorze (⌥⌘I), wartości obok kodu, gdy program jest wstrzymany, oraz konsola debugowania, która oblicza wyrażenia we
 wstrzymanej ramce. Rust, C, C++ i Swift przez `lldb-dap`, Go przez `dlv`, JavaScript i TypeScript przez debuger
-JavaScript, Python przez debugpy. Plik `.vscode/launch.json` projektu jest odczytywany. Menu Debuguj używa skrótów z
-Xcode.
+JavaScript, Python przez debugpy. Plik `.vscode/launch.json` projektu jest odczytywany. Menu Debugowanie używa skrótów
+z Xcode.
+
+## Testy i kontenery
+- Panel Testy wyświetla testy projektów Rust, Go, Python, Jest, Vitest i Bun jeszcze przed pierwszym uruchomieniem,
+  uruchamia jeden, plik lub wszystkie, pokazuje każdy wynik na bieżąco i zaznacza go na marginesie edytora.
+- Panel Kontenery wyświetla kontenery, obrazy, woluminy i projekty Compose Dockera; uruchamia je, zatrzymuje i usuwa,
+  śledzi ich logi i otwiera powłokę w karcie terminala.
 
 ## Terminal
 Terminale w kartach ze środowiskiem powłoki logowania, rysowane przez Metal. Wklejony lub upuszczony obraz trafia do
@@ -83,7 +94,7 @@ scalenie lub cherry-pick.
 GitHub Actions i GitLab CI, także GitHub Enterprise Server i samodzielnie zarządzany GitLab: uruchomienia, joby i logi
 bieżącej gałęzi; ponowne uruchamianie nieudanych jobów, pojedynczego joba lub (w GitHub) całego uruchomienia,
 uruchamianie ręcznych jobów lub zatwierdzanie oczekujących wdrożeń, uruchamianie nowego pipeline'u lub workflow, który
-można uruchomić ręcznie, oraz anulowanie. Otwarte merge requesty lub pull requesty i zgłoszenia są wyświetlane w tym
+można uruchomić ręcznie, oraz anulowanie. Otwarte merge requesty lub pull requesty i issues są wyświetlane w tym
 samym panelu i otwierają się w karcie przeglądarki. Log nieudanego joba można przekazać agentowi, oznaczony jako treść
 zewnętrzna. Token pochodzi z pęku kluczy, z `gh` lub `glab`, ze środowiska powłoki logowania albo jest wpisywany
 ręcznie.
@@ -95,15 +106,40 @@ przyciski w nagłówku karty wyświetlają działające subagenty i procesy w tl
 punkt kontrolny; zmiany można przejrzeć i przewinąć do tyłu dla każdej wiadomości. Nowe wątki zaczynają w trybie
 „Ręcznie”, a destrukcyjne polecenia Git nigdy nie są dozwolone na stałe. Przegląd Aktywność pokazuje wszystko, co
 działa. Zielona kropka na karcie oznacza pracującą sesję, czerwona – sesję, która czeka na ciebie, a powiadomienie
-informuje, gdy sesja się zakończy lub zacznie czekać, podczas gdy zajmujesz się czymś innym.
-- **Claude** przez niezmienione polecenie `claude`, z sesjami, subagentami, zadaniami w tle, kontekstem i użyciem.
-- **Agenty ACP:** Codex, Antigravity i OpenCode, a na żądanie kolejne z rejestru ACP; zainstalowane agenty są przypięte
-  do przetestowanych wersji i sprawdzane względem ich sum kontrolnych.
+informuje, gdy sesja się zakończy lub zacznie czekać, podczas gdy zajmujesz się czymś innym. Oś czasu, pole wiadomości
+i wiersz stanu mają własny rozmiar czcionki w ustawieniach.
+- **Claude** przez niezmienione polecenie `claude`, z sesjami, subagentami, zadaniami w tle, kontekstem, użyciem i
+  Remote Control z telefonu.
+- **Codex** przez swój serwer aplikacji i **OpenCode** przez swój serwer, każdy we własnym protokole, z ich wątkami,
+  przewijaniem do tyłu w samym agencie i Remote Control dla Codex.
+- **Agenty ACP:** Antigravity, a na żądanie kolejne z rejestru ACP; zainstalowane agenty są przypięte do
+  przetestowanych wersji i sprawdzane względem ich sum kontrolnych.
 - **Wbudowany agent:** Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama, LM Studio i serwery obsługujące API OpenAI
   lub Anthropic, z narzędziami do plików, wyszukiwania, poleceń, diagnostyki i żądań sieciowych; klucze pozostają w pęku
   kluczy.
+- Własne polecenia agenta otwierają się jako nakładki na karcie, jednakowo dla każdego agenta: stan, eksport, serwery
+  MCP, uprawnienia, hooki, pamięć, konfiguracja, umiejętności, wtyczki, model, konto i opinie.
 - Przełącznik piaskownicy w każdym wątku ogranicza, co mogą robić polecenia agenta, o ile agent to obsługuje.
 - Treść zewnętrzna, taka jak wynik terminala, strona internetowa czy log CI, trafia do agenta oznaczona jako niezaufana.
+
+## Software Factory
+Zlecenia zamiast pojedynczych promptów: cel z kryteriami akceptacji, napisany ręcznie lub wzięty z issue. Każde zlecenie
+jest planowane, budowane i sprawdzane we własnym worktree Git przez agenty różnych producentów w stałych rolach:
+planista pisze specyfikację, wykonawca realizuje pracę, a recenzent innego producenta sprawdza każde kryterium.
+Polecenia kontrolne projektu, takie jak budowanie i testy, działają w piaskownicy, a wykonawca poprawia to, co znajdą.
+- Decydujesz w dwóch miejscach: zatwierdzasz specyfikację i akceptujesz wynik wraz z dowodami, w całości lub sekcja po
+  sekcji. Nic nie zostaje przejęte bez twojej akceptacji.
+- Panel i karta Software Factory pokazują każde zlecenie z jego stacją, kosztem i tym, na co czeka; karta zlecenia
+  pokazuje jego oś czasu, dowody i następny krok oraz otwiera jego działającą sesję jako kartę AI.
+- Budżety na zlecenie i na dzień, limity tur, wstrzymanie przy zamykaniu, uśpieniu i niskim poziomie baterii oraz
+  dziennik zapisywany przed każdym działaniem, dzięki czemu zlecenia są wznawiane po ponownym uruchomieniu.
+- Issues z wybraną etykietą mogą trafiać jako zlecenia; zaakceptowane zlecenie może wyjść jako merge request z
+  komentarzem w jego issue, po twoim kliknięciu. Zlecenia o rozłącznych zakresach ścieżek działają obok siebie i są
+  przejmowane jedno po drugim.
+- Metryki na agenta i producenta, kierowanie według odsetka pierwszego podejścia, propozycje reguł dla `AGENTS.md` i
+  `CLAUDE.md` z powtarzających się ustaleń oraz cykliczne zlecenia z pliku przepływu pracy projektu.
+- Plik przepływu pracy folderu `.dango/factory.toml` zawiera jego bramki, klasy ryzyka i zakresy ścieżek; zmienione
+  polecenia kontrolne i wszystko, co luzuje granice, czeka na twoje potwierdzenie.
 
 ## Dyktowanie
 Dyktowanie do pola wiadomości w karcie AI i do edytora przez rozpoznawanie mowy Lowspeak: przycisk mikrofonu, ⌃⌥D lub
@@ -115,23 +151,26 @@ Aplikacja uaktualnia się sama przez Sparkle. Przy drugim uruchomieniu pyta, czy
 dopóki się nie zgodzisz, nie wysyła żadnych żądań. **Dango › Sprawdź uaktualnienia…** sprawdza od razu.
 
 ## Dostępność
-Nazwy VoiceOver dla paska bocznego, kart, elementów osi czasu AI, wierszy Git i CI, debugera i tekstu terminala; pełna
-obsługa z klawiatury ze skrótami, które można zmienić w `keybindings.json`; Zwiększ kontrast i Ogranicz ruch; widoki
-kodu pozostają od lewej do prawej w interfejsach pisanych od prawej do lewej. Szczegóły w ACCESSIBILITY.md.
+Nazwy VoiceOver dla paska bocznego, kart, elementów osi czasu AI, wierszy Git i CI, Software Factory, debugera i
+tekstu terminala; pełna obsługa z klawiatury ze skrótami, które można zmienić w `keybindings.json`; Zwiększ kontrast i
+Ogranicz ruch; widoki kodu pozostają od lewej do prawej w interfejsach pisanych od prawej do lewej. Szczegóły w
+ACCESSIBILITY.md.
 
 ## Prywatność
 Bez telemetrii, bez analityki i bez raportów o awariach. Aplikacja łączy się z siecią tylko na potrzeby tego, co
 uruchamiasz: agentów, których używasz, pobrań, o które prosisz, hostów CI, do których się logujesz, przewidywania z
 Copilot, jeśli je wybierzesz, transkrypcji online, jeśli ją wybierzesz, otwieranych stron oraz sprawdzania uaktualnień,
-gdy na nie pozwolisz. Klucze i tokeny pozostają w pęku kluczy macOS.
+gdy na nie pozwolisz. Klucze i tokeny pozostają w pęku kluczy macOS, a agenty Software Factory nigdy ich nie widzą.
 
 ## Znane ograniczenia
 - Logowanie do CI przez przeglądarkę jest wyłączone; użyj `gh`, `glab`, tokenu lub środowiska.
 - Aplikacja działa bez App Sandbox, ponieważ terminale, Git, serwery języka i agenty by ją dziedziczyły; folder musi być
   zaufany, zanim uruchomi się cokolwiek, co on konfiguruje. Antigravity i OpenCode nie mają piaskownicy, którą aplikacja
   mogłaby włączyć.
+- W Software Factory wykonawca lub recenzent Codex może czytać poza swoim worktree, ponieważ protokół Codex nie ma
+  ograniczeń odczytu; jego zapisy pozostają wewnątrz.
 - Statystyki użycia i rozbicie kontekstu Claude opierają się na częściach jego protokołu oznaczonych jako
-  eksperymentalne i są ukrywane, gdy ich brakuje. Przewijanie rozmowy do tyłu działa tylko dla Claude; w pozostałych
-  agentach do tyłu przewijany jest tylko kod.
+  eksperymentalne i są ukrywane, gdy ich brakuje. Przewijanie rozmowy do tyłu działa dla Claude, Codex i OpenCode; w
+  pozostałych agentach do tyłu przewijany jest tylko kod.
 - Gemini CLI nie jest oferowany: Google zakończył logowanie kontem osobistym i odsyła do Antigravity. Wcześniejsze wątki
   Gemini pozostają czytelne.
