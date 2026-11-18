@@ -3,6 +3,7 @@
 
 use serde::Deserialize;
 use serde_json::Value;
+use std::collections::BTreeMap;
 
 /// The method names this crate sends or handles, for the schema test to check against the server's.
 pub mod method {
@@ -26,6 +27,10 @@ pub mod method {
     pub const TURN_STEER: &str = "turn/steer";
     /// Stops the running turn.
     pub const TURN_INTERRUPT: &str = "turn/interrupt";
+    /// Lists the PTY processes still running beside a thread (experimental).
+    pub const BACKGROUND_LIST: &str = "thread/backgroundTerminals/list";
+    /// Stops one of a thread's background PTY processes (experimental).
+    pub const BACKGROUND_TERMINATE: &str = "thread/backgroundTerminals/terminate";
     /// Lists the models.
     pub const MODEL_LIST: &str = "model/list";
     /// Reads the effective configuration.
@@ -73,9 +78,11 @@ pub mod method {
     pub const ELICITATION: &str = "mcpServer/elicitation/request";
 
     /// The notifications the mapper reads.
-    pub const NOTIFICATIONS: [&str; 26] = [
+    pub const NOTIFICATIONS: [&str; 28] = [
         "error",
         "thread/started",
+        "thread/status/changed",
+        "thread/closed",
         "thread/name/updated",
         "thread/tokenUsage/updated",
         "turn/started",
@@ -181,6 +188,7 @@ pub(crate) enum Item {
         aggregated_output: Option<String>,
         exit_code: Option<i64>,
         duration_ms: Option<u64>,
+        process_id: Option<String>,
     },
     FileChange {
         id: String,
@@ -213,12 +221,17 @@ pub(crate) enum Item {
         content_items: Option<Vec<Value>>,
         duration_ms: Option<u64>,
     },
+    #[serde(rename_all = "camelCase")]
     CollabAgentToolCall {
         id: String,
         tool: String,
         prompt: Option<String>,
         #[serde(default)]
         status: String,
+        #[serde(default)]
+        receiver_thread_ids: Vec<String>,
+        #[serde(default)]
+        agents_states: BTreeMap<String, AgentState>,
     },
     WebSearch {
         id: String,
@@ -245,6 +258,13 @@ pub(crate) enum Item {
     },
     #[serde(other)]
     Other,
+}
+
+/// The state reported by a collaboration tool for one of its receivers.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub(crate) struct AgentState {
+    pub(crate) status: String,
+    pub(crate) message: Option<String>,
 }
 
 impl Item {

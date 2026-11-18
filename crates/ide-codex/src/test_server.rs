@@ -18,6 +18,8 @@ use std::io::{BufRead, Read, Write};
 
 use serde_json::{Value, json};
 
+mod tasks;
+
 /// The id of the thread the server opens.
 pub const THREAD: &str = "thr_test";
 
@@ -72,6 +74,7 @@ struct Server<W: Write> {
     experimental: bool,
     /// Where Remote Control's saved choice lives.
     home: Option<std::path::PathBuf>,
+    work: tasks::Work,
 }
 
 fn thread(turns: Value, name: Option<&str>) -> Value {
@@ -163,6 +166,10 @@ impl<W: Write> Server<W> {
                           "clientId": params.get("clientUserMessageId")});
         self.note("item/started", json!({"item": user, "startedAtMs": 1000}));
         self.note("item/completed", json!({"item": user, "completedAtMs": 1000}));
+        if text.contains("tasks") {
+            self.task_turn(text.contains("early"), text.contains("late"));
+            return;
+        }
         if text.contains("crash") {
             self.note("item/agentMessage/delta", json!({"itemId": "m1", "delta": "Working"}));
             eprintln!("{CRASH}");
@@ -407,6 +414,9 @@ impl<W: Write> Server<W> {
         }
         if !self.ready {
             return self.error(id, -32600, "initialized was not sent");
+        }
+        if self.task_request(id, method, params) {
+            return;
         }
         match method {
             "thread/start" => self.opened(id, params, false),
@@ -768,6 +778,7 @@ impl<W: Write> Server<W> {
             shared,
             experimental: false,
             home,
+            work: tasks::Work::default(),
         }
     }
 }

@@ -246,6 +246,7 @@ impl Backend {
                 s.stop_task(task).then(drop);
                 true
             }
+            Backend::Codex(s) => s.stop_task(task),
             #[cfg(any(test, feature = "selftest"))]
             Backend::Script(s) => s.stop_task(task),
             _ => false,

@@ -715,15 +715,17 @@ impl AgentTab {
 
     /// Whether the list of `part` has anything to show, as its button in the head says.
     pub fn has_work(&self, part: Part) -> bool {
-        matches!(self.agent, Agent::Claude) && crate::work::tally(&self.view_snapshot(), part).listed > 0
+        crate::work::tally(&self.view_snapshot(), part).listed > 0
     }
 
     /// Brings the head's buttons for the session's subagents and background processes up to date.
     pub(super) fn refresh_work(&self) {
         let thread = self.view_snapshot();
-        let silent = (!matches!(self.agent, Agent::Claude)).then(|| self.agent.name());
+        let reports = matches!(self.agent, Agent::Claude) || self.state.borrow().source().codex().is_some();
         for part in [Part::Subagents, Part::Background] {
-            self.header.set_work(part, crate::work::tally(&thread, part), silent);
+            let tally = crate::work::tally(&thread, part);
+            let silent = (!reports && tally.listed == 0).then(|| self.agent.name());
+            self.header.set_work(part, tally, silent);
         }
     }
 

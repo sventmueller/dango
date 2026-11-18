@@ -18,8 +18,9 @@ Dango runs Codex through `codex app-server`, the protocol the Codex SDK builds o
 
 - One JSON-RPC 2.0 message per line on stdio, **without** the `"jsonrpc"` member (`wire.rs`). Not `ide-rpc`, which
   frames with `Content-Length`.
-- `initialize` with `clientInfo` and `capabilities.experimentalApi: false` (`true` on the shared server, see Remote
-  Control), then the notification `initialized`. Requests before that are refused by the server.
+- `initialize` with `clientInfo` and `capabilities.experimentalApi: true` for user sessions (background terminals
+  and shared Remote Control), `false` for confined work orders, then the notification `initialized`. Requests
+  before that are refused by the server.
 - Then `account/read`, `thread/start` or `thread/resume` (cwd, model, effort, approval policy, sandbox) and
   `model/list`.
 
@@ -40,6 +41,27 @@ Dango runs Codex through `codex app-server`, the protocol the Codex SDK builds o
 The items `agentMessage`, `reasoning`, `plan`, `commandExecution`, `fileChange`, `mcpToolCall`, `webSearch` and
 `contextCompaction` become the thread model's entries (`mapping.rs`, `mapping/cards.rs`). Tool cards carry the names
 Claude Code uses (`Bash`, `Edit`, `Write`, `WebSearch`), so every agent's cards read alike.
+
+## Subagents and background terminals
+
+`thread/started` with `parentThreadId` and the receiver ids of `collabAgentToolCall` identify descendants of the
+session. Each has one native subagent card, a nested timeline, status, token and tool counts, and its report. A
+`wait` or `sendInput` updates the existing agent instead of creating a second one. Child entries have their own
+keys; their status, usage, model and todo list cannot replace the main thread's. Their approval cards stay in their
+timeline and use the same answer controls. Unrelated threads of the shared server stay with their own client.
+Early child events are buffered within fixed size and count limits until ancestry is known; approval requests
+are deferred until then, so a fast child does not lose its opening output or have its first request rejected.
+
+A worker reads all pages of `thread/backgroundTerminals/list` once a second, for the session and its descendants.
+Only listed PTY processes enter the head's background list; a command's `processId` alone does not mark it as
+background work. Output deltas feed the command card and the bounded output tail of the background task. A failed
+or incomplete list leaves the known tasks in place. They survive the end of the main turn; a command's end, a
+complete list without it, or the connection's end settles them. Servers without the optional API keep command
+cards and subagents, and stop polling.
+
+The existing head buttons, work popovers and subagent cards show this state. Stop names the child's own turn in
+`turn/interrupt`, or one `processId` in `thread/backgroundTerminals/terminate`; it never interrupts the parent
+turn. Confined work orders keep subagents disabled and neither poll nor stop background terminals.
 
 ## Overlays (E146)
 

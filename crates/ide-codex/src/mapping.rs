@@ -3,6 +3,7 @@
 //! overwrites its entries; what the thread model has no place for is ignored, never guessed at.
 
 mod cards;
+mod tasks;
 mod usage;
 
 use std::collections::HashMap;
@@ -18,6 +19,7 @@ use serde_json::Value;
 use crate::capabilities::{Account, Capabilities};
 use crate::protocol::{FileChange, Item, number, text};
 
+pub(crate) use tasks::Stop;
 pub(crate) use usage::{rate_limits, subscription as usage_subscription};
 
 /// The most command output a card keeps while it streams; older output is dropped from the front.
@@ -53,6 +55,7 @@ pub struct Mapper {
     chained: Option<String>,
     usage: usage::Tally,
     diff: Option<String>,
+    tasks: tasks::Tasks,
 }
 
 pub(crate) fn put(key: String, at: SystemTime, entry: EntryKind) -> Update {
@@ -137,7 +140,7 @@ impl Mapper {
         }
     }
 
-    /// Takes notifications only for `thread`; those of other threads, such as a subagent's, are left out.
+    /// Takes notifications for `thread` and its subagents; unrelated threads are left out.
     pub fn set_thread(&mut self, thread: &str) {
         self.thread = Some(thread.to_string());
     }
@@ -223,6 +226,7 @@ impl Mapper {
 
     /// The conversation of a resumed thread, as `thread/resume` answered it: what the thread showed goes first.
     pub(crate) fn history(&mut self, thread: &Value, at: SystemTime) -> Vec<Update> {
+        self.tasks = tasks::Tasks::default();
         let mut out = vec![Update::Clear];
         for turn in thread.get("turns").and_then(Value::as_array).into_iter().flatten() {
             let Some(id) = text(turn, "id") else {
@@ -235,6 +239,7 @@ impl Mapper {
                 if let Some(parsed) = Item::read(item) {
                     out.extend(self.item_started(&parsed, id, item_at));
                     out.extend(self.item_completed(&parsed, id, ended));
+                    out.extend(self.tasks.item(&parsed, self.thread.as_deref(), ended));
                 }
             }
             if text(turn, "status") == Some("failed")
@@ -258,11 +263,31 @@ impl Mapper {
         caps: &mut Capabilities,
         at: SystemTime,
     ) -> (Vec<Update>, bool) {
+        if method == "thread/started" {
+            return (self.tasks.started(params, self.thread.as_deref(), at), false);
+        }
         if let (Some(ours), Some(theirs)) = (&self.thread, text(params, "threadId"))
             && ours != theirs
         {
-            return (Vec::new(), false);
+            return (self.tasks.notification(method, params, at), false);
         }
+        let (mut updates, learned) = self.own_notification(method, params, caps, at);
+        if matches!(method, "item/started" | "item/completed")
+            && let Some(item) = params.get("item").and_then(Item::read)
+        {
+            updates.extend(self.tasks.item(&item, self.thread.as_deref(), at));
+        }
+        updates.extend(self.tasks.observe(method, params, at));
+        (updates, learned)
+    }
+
+    fn own_notification(
+        &mut self,
+        method: &str,
+        params: &Value,
+        caps: &mut Capabilities,
+        at: SystemTime,
+    ) -> (Vec<Update>, bool) {
         let updates = match method {
             "turn/started" => self.turn_started(params),
             "turn/completed" => self.turn_completed(params, at),
@@ -381,6 +406,7 @@ impl Mapper {
             return Vec::new();
         };
         match item {
+            Item::CollabAgentToolCall { tool, .. } if tool == "spawnAgent" => Vec::new(),
             Item::UserMessage { content, client_id, .. } => {
                 self.user_item(key, turn, content, client_id.as_deref(), at)
             }
@@ -429,6 +455,7 @@ impl Mapper {
         };
         let known = self.open.remove(&key);
         match item {
+            Item::CollabAgentToolCall { tool, .. } if tool == "spawnAgent" => Vec::new(),
             Item::UserMessage { content, client_id, .. } => {
                 self.user_item(key, turn, content, client_id.as_deref(), at)
             }

@@ -307,18 +307,12 @@ fn tool_card(item: &Item) -> Option<Card> {
             tool, prompt, status, ..
         } => {
             let prompt = prompt.clone().unwrap_or_default();
-            let view = ToolView::Agent {
-                description: ide_thread::title_from(&prompt),
-                agent_type: None,
-                prompt: prompt.clone(),
-                background: false,
-            };
             Card::new(
                 tool,
                 ToolKind::Think,
                 tool.clone(),
                 json!({"prompt": prompt}),
-                view,
+                ToolView::Other,
                 status,
             )
         }

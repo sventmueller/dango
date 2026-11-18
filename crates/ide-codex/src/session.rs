@@ -8,6 +8,7 @@ mod answer;
 mod manage;
 mod open;
 mod reply;
+mod tasks;
 
 use std::collections::HashMap;
 use std::io::{BufReader, Write};
@@ -164,6 +165,7 @@ struct Pending {
 struct Ask {
     id: Id,
     offer: Offer,
+    thread: Option<String>,
 }
 
 /// Settings changed since the last turn, which the next `turn/start` carries and Codex keeps from then on.
@@ -216,6 +218,7 @@ struct State {
     remote: RemoteControl,
     /// The threads whose start the shared server announced, with the thread each descends from.
     started: HashMap<String, Option<String>>,
+    early_requests: Vec<tasks::EarlyRequest>,
 }
 
 impl State {
@@ -458,7 +461,7 @@ impl Shared {
                 }
                 return;
             }
-            "thread/started" if self.launch.shared => {
+            "thread/started" => {
                 let thread = params.get("thread").unwrap_or(&Value::Null);
                 if let Some(id) = text(thread, "id") {
                     let parent = text(thread, "parentThreadId").map(str::to_string);
@@ -466,19 +469,28 @@ impl Shared {
                 }
             }
             _ if self.foreign(params) => return,
-            "turn/started" => self.state().starting = false,
+            "turn/started" if text(params, "threadId") == self.state().thread_id.as_deref() => {
+                self.state().starting = false;
+            }
             _ => {}
         }
-        let (updates, learned) = {
+        let (mut updates, learned) = {
             let mut state = self.state();
             let State { mapper, caps, .. } = &mut *state;
             mapper.notification(method, params, caps, now())
         };
+        if method == "turn/completed" && !self.state().asks.is_empty() {
+            updates.push(Update::Status(Status::RequiresAction));
+        }
         self.apply(updates);
         if learned {
             self.emit(Event::Capabilities);
         }
-        if method == "turn/started" && std::mem::take(&mut self.state().interrupt) {
+        self.replay_task_requests();
+        if method == "turn/started"
+            && text(params, "threadId") == self.state().thread_id.as_deref()
+            && std::mem::take(&mut self.state().interrupt)
+        {
             self.interrupt();
         }
     }
@@ -488,14 +500,24 @@ impl Shared {
         if self.foreign(params) {
             return;
         }
+        if self.defer_task_request(&id, method, params) {
+            return;
+        }
         let ask = format!("p{}", self.next_ask.fetch_add(1, Ordering::SeqCst) + 1);
-        let taken = self.state().mapper.request(&ask, method, params, now());
+        let taken = self.state().mapper.task_request(&ask, method, params, now());
         let Some((offer, updates)) = taken else {
             let error = RpcError::new(RpcError::METHOD_NOT_FOUND, format!("{method} is not supported"));
             let _ = self.write(&Message::Error { id: Some(id), error });
             return;
         };
-        self.state().asks.insert(ask, Ask { id, offer });
+        self.state().asks.insert(
+            ask,
+            Ask {
+                id,
+                offer,
+                thread: text(params, "threadId").map(str::to_string),
+            },
+        );
         self.apply(updates);
     }
 
@@ -508,6 +530,7 @@ impl Shared {
     fn resolved(&self, id: &Id) {
         let updates = {
             let mut state = self.state();
+            state.early_requests.retain(|request| &request.id != id);
             let Some(ask) = state.asks.iter().find(|(_, a)| a.id == *id).map(|(k, _)| k.clone()) else {
                 return;
             };
@@ -519,16 +542,27 @@ impl Shared {
                 state: RequestState::Withdrawn,
             }];
             if state.asks.is_empty() && state.thread.status() == Status::RequiresAction {
-                updates.push(Update::Status(Status::Running));
+                updates.push(Update::Status(if state.mapper.turn().is_some() || state.starting {
+                    Status::Running
+                } else {
+                    Status::Idle
+                }));
             }
             updates
         };
         self.apply(updates);
     }
 
-    /// Answers every open request as dismissed and withdraws its entry.
+    /// Dismisses the main turn's requests; a child's pending approval belongs to that child, not to Stop Turn.
     fn withdraw_asks(&self) {
-        let asks: Vec<Ask> = self.state().asks.drain().map(|(_, a)| a).collect();
+        let asks = {
+            let mut state = self.state();
+            let (ours, children): (HashMap<_, _>, HashMap<_, _>) = std::mem::take(&mut state.asks)
+                .into_iter()
+                .partition(|(_, ask)| ask.thread.is_none() || ask.thread == state.thread_id);
+            state.asks = children;
+            ours.into_values().collect::<Vec<_>>()
+        };
         let mut updates = Vec::new();
         for ask in asks {
             let _ = self.respond(ask.id, crate::requests::response(&ask.offer.kind, None));
@@ -595,6 +629,8 @@ impl Shared {
             };
             self.apply(updates);
         }
+        let updates = self.state().mapper.end_tasks(now());
+        self.apply(updates);
         self.supervisor.stop(self.process, Duration::from_millis(500));
         self.emit(Event::Ended { stderr });
     }
@@ -681,6 +717,7 @@ impl Session {
                 interrupt: false,
                 remote: RemoteControl::Off,
                 started: HashMap::new(),
+                early_requests: Vec::new(),
             }),
             pending: Mutex::new(HashMap::new()),
             sink: Box::new(sink),

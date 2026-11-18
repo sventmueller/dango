@@ -221,5 +221,5 @@ fn the_initialize_parameters_name_only_what_the_schema_defines() {
     for key in keys(&params["capabilities"]) {
         assert!(known(capabilities, &key), "capabilities: {key}");
     }
-    assert_eq!(params["capabilities"]["experimentalApi"], false);
+    assert_eq!(params["capabilities"]["experimentalApi"], true);
 }

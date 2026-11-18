@@ -1,6 +1,6 @@
 //! The user's answers to the server's requests, and the settings the next turn carries.
 
-use ide_thread::{Answer, Decision, Update};
+use ide_thread::{Answer, Decision, Status, Update};
 use serde_json::{Value, json};
 
 use super::{Ask, Choice, Event, Session, SessionError};
@@ -19,8 +19,15 @@ impl Session {
 
     fn reply_to(&self, ask: Ask, result: Value, decision: Decision) -> Result<(), SessionError> {
         self.shared.respond(ask.id, result)?;
-        let still_asking = !self.shared.state().asks.is_empty();
-        self.shared.apply(requests::decided(&ask.offer, decision, still_asking));
+        let (still_asking, running) = {
+            let state = self.shared.state();
+            (!state.asks.is_empty(), state.mapper.turn().is_some() || state.starting)
+        };
+        let mut updates = requests::decided(&ask.offer, decision, still_asking);
+        if !still_asking && !running {
+            updates.push(Update::Status(Status::Idle));
+        }
+        self.shared.apply(updates);
         Ok(())
     }
 

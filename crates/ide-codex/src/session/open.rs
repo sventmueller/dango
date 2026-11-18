@@ -14,7 +14,11 @@ use crate::protocol::{method, text};
 /// Runs the handshake; what goes wrong is reported, and an unsupported release also ends the process.
 pub(super) fn open(shared: &Arc<Shared>) {
     match handshake(shared) {
-        Ok(()) => {}
+        Ok(()) => {
+            if shared.launch.confinement.is_none() {
+                super::tasks::watch(shared);
+            }
+        }
         Err(error @ SessionError::Unsupported { .. }) => {
             shared.fail(error);
             shared.stopping.store(true, std::sync::atomic::Ordering::SeqCst);
@@ -27,14 +31,12 @@ pub(super) fn open(shared: &Arc<Shared>) {
     }
 }
 
-/// The parameters of `initialize` for a server of its own: the client's name, without the experimental API, whose
-/// methods and fields this crate does not use there.
+/// The parameters of `initialize` for a user's session: background terminals need the experimental API.
 pub(crate) fn initialize_params() -> Value {
-    initialize_with(false)
+    initialize_with(true)
 }
 
-/// The parameters of `initialize`, with the experimental API when `experimental`: the shared server's Remote Control
-/// switch is only there.
+/// The parameters of `initialize`; confined work orders do not use the experimental API.
 fn initialize_with(experimental: bool) -> Value {
     json!({
         "clientInfo": {"name": ide_product::NAME, "title": ide_product::NAME, "version": env!("CARGO_PKG_VERSION")},
@@ -50,7 +52,12 @@ fn handshake(shared: &Arc<Shared>) -> Result<(), SessionError> {
     };
     shared.state().caps.version = Some(version);
     let result = shared
-        .call(method::INITIALIZE, initialize_with(launch.shared), None, reply::raw)
+        .call(
+            method::INITIALIZE,
+            initialize_with(launch.confinement.is_none()),
+            None,
+            reply::raw,
+        )
         .wait()?;
     shared.state().caps.learn_initialize(&result);
     shared.emit(Event::Capabilities);

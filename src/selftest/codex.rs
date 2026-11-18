@@ -15,6 +15,8 @@ use super::agent_actions::{index_of, titles};
 use super::{check, finish, give_up, give_up_saying, helpers};
 use ide_ui_agent::{AgentKey, TabMenu};
 
+mod tasks;
+
 const NAME: &str = "codex";
 const PROJECT: &str = "codex-project";
 const REGISTRY: &str = include_str!("../../crates/ide-acp/tests/fixtures/registry.json");
@@ -372,7 +374,7 @@ fn remote_on(key: AgentKey) {
                         shared && shown.len() == 3,
                         format!("{shared} {shown:?}"),
                     );
-                    finish(NAME);
+                    tasks::run(key);
                 },
             );
         },

@@ -620,8 +620,140 @@ fn a_shared_session_shows_remote_control_leaves_other_threads_alone_and_turns_it
 #[test]
 fn a_session_of_its_own_has_no_remote_control() {
     let run = ready("basic", "remote-own");
-    assert_eq!(run.sent()[0]["params"]["capabilities"]["experimentalApi"], false);
+    assert_eq!(run.sent()[0]["params"]["capabilities"]["experimentalApi"], true);
     assert_eq!(run.session.remote_control(), RemoteControl::Off);
     assert!(run.session.disable_remote_control().is_err());
     assert!(!run.events.has(|e| matches!(e, Event::RemoteControl)));
+}
+
+#[test]
+fn subagents_and_paginated_terminals_can_be_stopped_individually() {
+    let run = ready("basic", "tasks");
+    run.session.send(message("tasks")).unwrap();
+    wait("a child and all pages of background terminals", || {
+        run.session.with_thread(|t| {
+            t.subagents().len() == 1 && t.background().iter().filter(|b| !b.status.is_final()).count() == 3
+        })
+    });
+    let thread = run.session.snapshot();
+    let child = thread.subagents()[0].clone();
+    assert_eq!(child.description, "Review the files");
+    assert!(
+        thread
+            .entries(&Lane::Subagent(child.key.clone()))
+            .iter()
+            .any(|e| { matches!(&e.kind, EntryKind::AgentMessage(m) if m.markdown == "Reviewing") })
+    );
+    assert!(
+        thread
+            .background()
+            .iter()
+            .all(|b| b.output.text.as_deref() == Some("started\n"))
+    );
+    let process = thread
+        .background()
+        .iter()
+        .find(|b| b.id.ends_with(":p1"))
+        .unwrap()
+        .id
+        .clone();
+    assert!(run.session.stop_task(&process));
+    wait("the one terminal stopped", || {
+        run.session.with_thread(|t| {
+            t.background()
+                .iter()
+                .any(|b| b.id == process && b.status == ide_thread::TaskStatus::Stopped)
+        })
+    });
+    assert!(
+        !idle(&run.session),
+        "stopping a terminal leaves the parent turn running"
+    );
+    assert!(run.session.stop_task(child.task_id.as_deref().unwrap()));
+    wait("the one subagent stopped", || {
+        run.session
+            .with_thread(|t| t.subagents()[0].status == ide_thread::TaskStatus::Stopped)
+    });
+    assert!(
+        !idle(&run.session),
+        "stopping a subagent leaves the parent turn running"
+    );
+    assert_eq!(run.last("turn/interrupt")["params"]["threadId"], "thr_child");
+    run.session.cancel();
+    wait("the parent turn stopped", || idle(&run.session));
+    assert_eq!(
+        run.session
+            .snapshot()
+            .background()
+            .iter()
+            .filter(|b| !b.status.is_final())
+            .count(),
+        2
+    );
+    assert!(!run.session.stop_task("unknown"));
+    run.session.stop(Duration::from_millis(100));
+    wait("all tasks settled on disconnect", || {
+        run.events.has(|e| matches!(e, Event::Ended { .. }))
+    });
+    assert!(run.session.snapshot().background().iter().all(|b| b.status.is_final()));
+    assert!(!run.events.has(|e| matches!(e, Event::Failed(_))));
+}
+
+#[test]
+fn a_child_approval_that_precedes_the_spawn_result_waits_for_its_identity() {
+    let run = ready("basic", "early-child-approval");
+    run.session.send(message("tasks early")).unwrap();
+    wait("the deferred child approval", || {
+        run.session.with_thread(|t| t.pending_requests().len() == 1)
+    });
+    let request = run.session.with_thread(|t| {
+        assert!(t.entries(&Lane::Main).iter().all(|e| !e.kind.waits_for_answer()));
+        t.pending_requests()
+            .iter()
+            .find_map(|e| match &e.kind {
+                EntryKind::PermissionRequest(p) => Some(p.request_id.clone()),
+                _ => None,
+            })
+            .unwrap()
+    });
+    assert!(
+        run.sent().iter().all(|m| m["id"] != 910),
+        "the request was neither rejected nor approved early"
+    );
+    run.session.cancel();
+    assert_eq!(
+        run.session.snapshot().pending_requests().len(),
+        1,
+        "stopping the parent leaves child approvals alone"
+    );
+    run.session.answer(&request, Choice::Option(0)).unwrap();
+    wait("the approval answer", || {
+        run.sent()
+            .iter()
+            .any(|m| m["id"] == 910 && m["result"]["decision"] == "accept")
+    });
+    run.session.stop(Duration::from_millis(100));
+}
+
+#[test]
+fn a_child_approval_after_the_parent_turn_restores_the_idle_parent() {
+    let run = ready("basic", "late-child-approval");
+    run.session.send(message("tasks late")).unwrap();
+    wait("the child approval after the parent's completed turn", || {
+        run.session.with_thread(|t| t.pending_requests().len() == 1)
+    });
+    let request = run.session.with_thread(|t| {
+        t.pending_requests()
+            .iter()
+            .find_map(|e| match &e.kind {
+                EntryKind::PermissionRequest(p) => Some(p.request_id.clone()),
+                _ => None,
+            })
+            .unwrap()
+    });
+    assert_eq!(run.session.snapshot().status(), Status::RequiresAction);
+    run.session.answer(&request, Choice::Option(0)).unwrap();
+    assert_eq!(run.session.snapshot().status(), Status::Idle);
+    assert!(!run.session.snapshot().subagents()[0].status.is_final());
+    run.session.stop(Duration::from_millis(100));
 }
