@@ -1,25 +1,26 @@
 //! Sweeps over made-up build folders whose files carry the times a build would have left on them.
 
 use std::fs::{self, File, FileTimes};
+use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
 use super::*;
 use crate::shell::fake::scratch;
 
-const UNCAPPED: Policy = Policy {
+pub(crate) const UNCAPPED: Policy = Policy {
     max_age: Duration::from_secs(7 * DAY),
     abandoned: Duration::from_secs(30 * DAY),
     keep: Duration::from_secs(2 * DAY),
     cap: u64::MAX,
 };
 
-fn days_ago(now: SystemTime, days: u64) -> SystemTime {
+pub(crate) fn days_ago(now: SystemTime, days: u64) -> SystemTime {
     now - Duration::from_secs(days * DAY)
 }
 
 /// A file a build last read at `read` and wrote at `written`, with its folders.
-fn file(path: &Path, read: SystemTime, written: SystemTime) {
+pub(crate) fn file(path: &Path, read: SystemTime, written: SystemTime) {
     fs::create_dir_all(path.parent().unwrap()).unwrap();
     fs::write(path, b"x").unwrap();
     let times = FileTimes::new().set_accessed(read).set_modified(written);
@@ -32,7 +33,7 @@ fn file(path: &Path, read: SystemTime, written: SystemTime) {
 }
 
 /// Gives `dir` and every folder in it the time `time`, as if nothing had changed them since.
-fn settle(dir: &Path, time: SystemTime) {
+pub(crate) fn settle(dir: &Path, time: SystemTime) {
     for sub in subdirs(dir) {
         settle(&sub, time);
     }
@@ -41,7 +42,7 @@ fn settle(dir: &Path, time: SystemTime) {
 }
 
 /// The build folder of the workspace whose path hash is `hash`, with cargo's tag.
-fn folder(root: &Path, hash: &str) -> PathBuf {
+pub(crate) fn folder(root: &Path, hash: &str) -> PathBuf {
     let folder = root.join(&hash[..2]).join(&hash[2..]);
     fs::create_dir_all(&folder).unwrap();
     fs::write(
@@ -53,7 +54,7 @@ fn folder(root: &Path, hash: &str) -> PathBuf {
 }
 
 /// A unit in cargo 1.100's layout whose fingerprint a build last read at `read`.
-fn unit(dest: &Path, package: &str, hash: &str, read: SystemTime, written: SystemTime) -> PathBuf {
+pub(crate) fn unit(dest: &Path, package: &str, hash: &str, read: SystemTime, written: SystemTime) -> PathBuf {
     let unit = dest.join("build").join(package).join(hash);
     file(&unit.join("fingerprint/lib-x"), read, written);
     file(&unit.join("out/libx.rlib"), written, written);
@@ -125,6 +126,7 @@ fn beyond_the_cap_the_least_recently_read_go_first_but_none_read_in_the_last_two
         read: days_ago(now, days),
         bytes,
         removable,
+        orphaned: false,
     };
     let units = [
         unit(0, 0, 50, true),
@@ -206,6 +208,30 @@ fn an_abandoned_build_folder_goes_whole_and_a_dry_run_removes_nothing() {
         "the build folder goes, and its shard with it"
     );
     assert!(root.exists());
+}
+
+#[test]
+fn the_build_folder_of_a_worktree_that_is_gone_goes_whole_however_recently_read() {
+    let now = SystemTime::now();
+    let root = scratch("sweep-orphaned");
+    let worktree = root.join("worktree");
+    file(&worktree.join("Cargo.toml"), now, now);
+    let live = folder(&root, "d5df618857e9c689");
+    fs::write(live.join(crate::seed::WORKTREE), worktree.as_os_str().as_bytes()).unwrap();
+    let used = unit(&live.join("debug"), "serde", "faba822365272399", now, now);
+    let orphan = folder(&root, "9b0c3d64e1f2a7b8");
+    fs::write(
+        orphan.join(crate::seed::WORKTREE),
+        root.join("removed").as_os_str().as_bytes(),
+    )
+    .unwrap();
+    unit(&orphan.join("debug"), "serde", "faba822365272399", now, now);
+
+    let report = sweep_under(&root, UNCAPPED, now, false);
+
+    assert!(report.failures.is_empty(), "{:?}", report.failures);
+    assert!(used.exists(), "its worktree is still there");
+    assert!(!root.join("9b").exists(), "the folder goes, and its shard with it");
 }
 
 #[test]

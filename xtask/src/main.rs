@@ -16,6 +16,7 @@ mod licenses;
 mod release;
 mod rules;
 mod seal;
+mod seed;
 mod selftest;
 mod shell;
 mod source;
@@ -83,9 +84,14 @@ pub(crate) const USAGE: &str = "usage: cargo xtask <task>
   thread-locals                    fail for a thread-local that docs/thread-locals.md does not allow to stay
   structure                        fail for a Rust file over 1000 lines or a model.rs that uses objc2 (E98)
   sweep [--dry-run]                remove from the build folders cargo's build-dir shares between all workspaces what no
-                                   build read lately: a unit its workspace's builds have not read for 7 days, every unit
-                                   of a workspace unread for 30 days, then the least recently read beyond 80 GB, but
-                                   none read in the last 2 days; skips a folder a build holds. make check runs it first
+                                   build read lately: every unit of a worktree that is gone, a unit its workspace's
+                                   builds have not read for 7 days, every unit of a workspace unread for 30 days, then
+                                   the least recently read beyond 80 GB, but none read in the last 2 days; skips a folder
+                                   a build holds. make check runs it first
+  seed <worktree>|--hook           clone the dependencies this checkout built into the build folder of one of its
+                                   worktrees, which then builds only its own crates; the post-checkout hook in
+                                   xtask/hooks runs it for git worktree add, Claude Code's PreToolUse hook with --hook
+                                   once per worktree, which it reads from the hook's input
   rules                            fail for unlisted stateful statics, mem::forget, unguarded blocks, literal sizes,
                                    unseen thread failures, errors as String, and lookups of global state past their
                                    ratchets in the app's AppKit code, for a discarded spawn anywhere, and for a
@@ -173,6 +179,7 @@ fn task(args: &[String]) -> Result<(), String> {
             rules::check()
         }
         "sweep" => sweep::sweep(rest),
+        "seed" => seed::seed(rest),
         _ => Err(USAGE.into()),
     }
 }

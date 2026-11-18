@@ -75,11 +75,29 @@ With `build-dir = "<folder>/{workspace-path-hash}"` in `~/.cargo/config.toml`, e
 worktree and every temporary project included, builds into its own folder below one shared one. Cargo never removes a
 unit from there: a new compiler (Homebrew's Rust also changes with each update of Homebrew's LLVM), a dependency
 update or a changed hack leaves a complete set of old units behind, and a deleted worktree its whole folder.
-`make sweep` (`cargo xtask sweep`, `xtask/src/sweep.rs`), which `make check` runs first, removes per unit what no build
-read lately: what its workspace's builds have not read for 7 days, everything of a workspace unread for 30 days, then
-the least recently read while all of it takes more than 80 GB, but nothing read in the last 2 days. When a build last
-read a unit shows in the access time of its fingerprint, which cargo reads on every build that passes over it and
-macOS refreshes once a day. A profile's folder that a build holds stays untouched.
+`make sweep` (`cargo xtask sweep`, `xtask/src/sweep.rs`), which `make check` runs first, removes the folder of a worktree
+that is gone at once, and per unit what no build read lately: what its workspace's builds have not read for 7 days,
+everything of a workspace unread for 30 days, then the least recently read while all of it takes more than 80 GB, but
+nothing read in the last 2 days. When a build last read a unit shows in the access time of its fingerprint, which cargo
+reads on every build that passes over it and macOS refreshes once a day. A profile's folder that a build holds stays
+untouched.
+
+A new worktree starts with the dependencies the main checkout has built: `cargo xtask seed` (`xtask/src/seed.rs`)
+clones the debug units of registry packages that the main checkout's builds read within the last 7 days into the
+worktree's build folder. APFS shares a clone's blocks with the original until either side writes, so the worktree takes
+space and build time only for its own crates; in a seeded worktree `cargo clippy -p ide-git --all-targets` found 128
+dependencies fresh, rebuilt the 6 own crates and took 2.4 s. While a build holds the main checkout's folder, the step is
+skipped and the worktree builds its dependencies itself. The folder records the worktree's path, which is how the sweep
+knows it is gone. Two hooks run it with the main checkout's `target/debug/xtask`, so a worktree is only seeded once
+that binary exists:
+- git's post-checkout hook in `xtask/hooks`, for every `git worktree add`, which Dango's worktrees use too; it needs
+  `git config core.hooksPath "$PWD/xtask/hooks"` once per clone.
+- Claude Code's PreToolUse hook for Bash in `.claude/settings.json` (`seed --hook`), because Claude Code creates its
+  worktrees without git's hooks. It seeds a worktree before its first command and afterwards checks one file in the
+  worktree's git folder.
+
+The sweep counts a clone at its full size although it shares its blocks, so the folders of live worktrees reach the
+80 GB earlier than the disk does.
 
 ## Fuzzing
 The parsers that read what other programs write have fuzz targets (E95), each in a `fuzz/` folder of its crate: the

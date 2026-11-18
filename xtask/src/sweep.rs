@@ -3,8 +3,10 @@
 //! worktree, so the folders grow with every such change until something removes them.
 
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::fmt::Write as _;
 use std::fs::{self, File, OpenOptions};
+use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -58,6 +60,7 @@ struct Unit {
     read: SystemTime,
     bytes: u64,
     removable: bool,
+    orphaned: bool,
 }
 
 impl Unit {
@@ -69,6 +72,7 @@ impl Unit {
             read: read?,
             bytes,
             removable: false,
+            orphaned: false,
         })
     }
 }
@@ -76,7 +80,7 @@ impl Unit {
 /// `cargo xtask sweep [--dry-run]`.
 pub(crate) fn sweep(args: &[String]) -> Result<(), String> {
     let [dry_run] = flags(args, ["--dry-run"])?;
-    let Some(root) = shared_root(&build_dir()?) else {
+    let Some(root) = shared_root(&build_dir(&crate::root())?) else {
         println!("sweep: cargo's build-dir is not shared between workspaces; nothing to do");
         return Ok(());
     };
@@ -85,16 +89,13 @@ pub(crate) fn sweep(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
-/// This workspace's build folder, as cargo reports it.
-fn build_dir() -> Result<PathBuf, String> {
-    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
-    let shown = stdout(Command::new(cargo).current_dir(crate::root()).args([
-        "metadata",
-        "--format-version",
-        "1",
-        "--no-deps",
-        "--offline",
-    ]))?;
+/// The build folder of the workspace in `dir`, as cargo reports it.
+pub(crate) fn build_dir(dir: &Path) -> Result<PathBuf, String> {
+    let shown = stdout(
+        cargo()
+            .current_dir(dir)
+            .args(["metadata", "--format-version", "1", "--no-deps", "--offline"]),
+    )?;
     let metadata: serde_json::Value = serde_json::from_str(&shown).map_err(|e| format!("cargo metadata: {e}"))?;
     metadata["build_directory"]
         .as_str()
@@ -102,9 +103,14 @@ fn build_dir() -> Result<PathBuf, String> {
         .ok_or_else(|| "cargo metadata names no build_directory".into())
 }
 
+/// The cargo that runs this task, or the one on the PATH.
+pub(crate) fn cargo() -> Command {
+    Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()))
+}
+
 /// The folder that holds every workspace's build folder when `build-dir` names them by `{workspace-path-hash}`, which
 /// cargo writes as two hex digits, a slash and fourteen more.
-fn shared_root(build_dir: &Path) -> Option<PathBuf> {
+pub(crate) fn shared_root(build_dir: &Path) -> Option<PathBuf> {
     let shard = build_dir.parent()?;
     if is_hex(name(build_dir), 14) && is_hex(name(shard), 2) {
         shard.parent().map(Path::to_path_buf)
@@ -116,6 +122,7 @@ fn shared_root(build_dir: &Path) -> Option<PathBuf> {
 /// Sweeps every build folder under `root` with `policy` at `now`; a dry run only reports.
 pub(crate) fn sweep_under(root: &Path, policy: Policy, now: SystemTime, dry_run: bool) -> Report {
     let folders = build_folders(root);
+    let orphaned: Vec<bool> = folders.iter().map(|folder| worktree_gone(folder)).collect();
     let mut busy = vec![false; folders.len()];
     let mut locks = Vec::new();
     let mut units = Vec::new();
@@ -127,6 +134,7 @@ pub(crate) fn sweep_under(root: &Path, policy: Policy, now: SystemTime, dry_run:
             units.extend(units_of(&dest).into_iter().map(|unit| Unit {
                 folder,
                 removable,
+                orphaned: orphaned[folder],
                 ..unit
             }));
             locks.extend(lock);
@@ -161,7 +169,7 @@ pub(crate) fn sweep_under(root: &Path, policy: Policy, now: SystemTime, dry_run:
             ));
         }
         let idle = last_read(path).is_some_and(|read| age(now, read) > policy.keep);
-        if !dry_run && kept[folder] == 0 && !busy[folder] && idle {
+        if !dry_run && kept[folder] == 0 && !busy[folder] && (idle || orphaned[folder]) {
             report.failures.extend(files::remove_dir_all(path).err());
         }
     }
@@ -175,8 +183,9 @@ pub(crate) fn sweep_under(root: &Path, policy: Policy, now: SystemTime, dry_run:
     report
 }
 
-/// Which of `units` go: those the builds of their workspace have not read for `max_age`, all of a workspace no build
-/// has read for `abandoned`, then the least recently read while the rest is larger than `cap`; none read within `keep`.
+/// Which of `units` go: those of a worktree that is gone, then, unless read within `keep`, those the builds of their
+/// workspace have not read for `max_age`, all of a workspace no build has read for `abandoned`, and the least recently
+/// read while the rest is larger than `cap`.
 fn choose(units: &[Unit], policy: Policy, now: SystemTime) -> Vec<bool> {
     let mut newest: HashMap<usize, SystemTime> = HashMap::new();
     for unit in units {
@@ -189,7 +198,7 @@ fn choose(units: &[Unit], policy: Policy, now: SystemTime) -> Vec<bool> {
     };
     let mut gone: Vec<bool> = units
         .iter()
-        .map(|unit| unit.removable && age(now, unit.read) > policy.keep && stale(unit))
+        .map(|unit| unit.removable && (unit.orphaned || (age(now, unit.read) > policy.keep && stale(unit))))
         .collect();
     let mut size: u64 = units
         .iter()
@@ -211,8 +220,14 @@ fn choose(units: &[Unit], policy: Policy, now: SystemTime) -> Vec<bool> {
     gone
 }
 
-fn age(now: SystemTime, then: SystemTime) -> Duration {
+pub(crate) fn age(now: SystemTime, then: SystemTime) -> Duration {
     now.duration_since(then).unwrap_or_default()
+}
+
+/// Whether `folder` was filled for a worktree (`cargo xtask seed`) that no longer exists.
+fn worktree_gone(folder: &Path) -> bool {
+    fs::read(folder.join(crate::seed::WORKTREE))
+        .is_ok_and(|path| !Path::new(OsStr::from_bytes(&path)).join("Cargo.toml").exists())
 }
 
 /// The build folders under `root`: `<2 hex digits>/<the rest of the hash>`, some with a suffix such as the coverage
@@ -246,7 +261,7 @@ fn dest_dirs(folder: &Path) -> Vec<PathBuf> {
 }
 
 /// The lock cargo holds on a profile's folder while it builds there, unless a build holds it now.
-fn lock(dest: &Path) -> Option<File> {
+pub(crate) fn lock(dest: &Path) -> Option<File> {
     let file = OpenOptions::new()
         .read(true)
         .write(true)
@@ -319,7 +334,7 @@ fn remove(unit: &Unit) -> Result<(), String> {
 /// When a build last read `path`, or a file in the folder `path`, to within a day: macOS refreshes a file's access
 /// time once it is a day old, and cargo reads the fingerprint of every unit a build passes over. A folder counts by
 /// its modification only, since listing it, as the sweep does, refreshes its access time.
-fn last_read(path: &Path) -> Option<SystemTime> {
+pub(crate) fn last_read(path: &Path) -> Option<SystemTime> {
     let meta = fs::symlink_metadata(path).ok()?;
     let own = touched(&meta)?;
     if !meta.is_dir() {
@@ -375,11 +390,11 @@ fn hash_in(name: &str) -> Option<&str> {
     })
 }
 
-fn is_hex(text: &str, len: usize) -> bool {
+pub(crate) fn is_hex(text: &str, len: usize) -> bool {
     text.len() == len && text.bytes().all(|b| b.is_ascii_hexdigit())
 }
 
-fn name(path: &Path) -> &str {
+pub(crate) fn name(path: &Path) -> &str {
     path.file_name().and_then(|n| n.to_str()).unwrap_or("")
 }
 
@@ -393,7 +408,7 @@ fn entries(dir: &Path) -> Vec<PathBuf> {
     found
 }
 
-fn subdirs(dir: &Path) -> Vec<PathBuf> {
+pub(crate) fn subdirs(dir: &Path) -> Vec<PathBuf> {
     let mut found: Vec<PathBuf> = fs::read_dir(dir)
         .into_iter()
         .flatten()
@@ -439,4 +454,4 @@ impl Report {
 
 #[cfg(test)]
 #[path = "sweep_tests.rs"]
-mod tests;
+pub(crate) mod tests;
