@@ -1,6 +1,6 @@
 # Entry points only; the build logic lives in xtask/src.
 .DEFAULT_GOAL := help
-.PHONY: help build run icon lint check check-dictation perf fuzz coverage ci seal-explain deploy test test-integration test-claude-latest release release-notarized
+.PHONY: help build run icon sweep lint check check-dictation perf fuzz coverage ci seal-explain deploy test test-integration test-claude-latest release release-notarized
 
 help: ## List the targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-z-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -14,6 +14,9 @@ run: ## Build the debug app into target/debug and open it
 icon: ## Compile the app icon after a change in Icon Composer (assets/AppIcon.icon); the only target that needs Xcode
 	cargo xtask icon
 
+sweep: ## Remove what no build read lately from the build folders shared by all workspaces; DRY=1 only reports
+	cargo xtask sweep $(if $(DRY),--dry-run)
+
 lint: ## Formatting, the workspace-hack (E194), clippy, also with the selftest feature, the allowed thread-locals and statics, the files' shape (E98) and the AppKit rules; warnings fail
 	cargo fmt --all --check
 	cargo hakari generate --diff --quiet
@@ -25,7 +28,7 @@ lint: ## Formatting, the workspace-hack (E194), clippy, also with the selftest f
 	cargo clippy --package ide-app --package ide-ui-agent --package ide-ui-browser --package ide-ui-debug --package ide-ui-export --package ide-ui-factory --package ide-ui-git --package ide-ui-lsp --package ide-ui-terminal --package ide-git --package ide-session --all-targets --features ide-app/selftest,ide-ui-agent/selftest,ide-ui-browser/selftest,ide-ui-debug/selftest,ide-ui-export/selftest,ide-ui-factory/selftest,ide-ui-git/selftest,ide-git/selftest,ide-ui-lsp/selftest,ide-ui-terminal/selftest,ide-session/selftest -- -D warnings
 	cargo clippy --package ide-terminal --package ide-lsp --package ide-git --package ide-agent --package ide-predict --package ide-dap --package ide-thread --all-targets --features ide-terminal/fuzzing,ide-lsp/fuzzing,ide-git/fuzzing,ide-agent/fuzzing,ide-predict/fuzzing,ide-dap/fuzzing,ide-thread/fuzzing -- -D warnings
 
-check: lint ## lint, then all cargo tests; needs no keychain, no window and no network
+check: sweep lint ## sweep and lint, then all cargo tests; needs no keychain, no window and no network
 	cargo test --workspace
 
 check-dictation: ## Clippy and the tests of the app and ide-ui-dictation with dictation, which builds whisper.cpp with cmake; for changes to it

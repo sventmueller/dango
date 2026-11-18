@@ -25,8 +25,9 @@ in Dark Mode). Only Xcode's `actool` compiles it, so its output `assets/Assets.c
 | `make build` | `cargo xtask bundle --release`: the release app with dictation, signed; VERSION unchanged |
 | `make run` | `cargo xtask run`: the debug app, opened |
 | `make icon` | `cargo xtask icon`: compiles the app icon, see [App icon](#app-icon); needs Xcode |
+| `make sweep` | `cargo xtask sweep`: removes what no build read lately from the shared build folders, see [Build folders](#build-folders); `DRY=1` only reports |
 | `make lint` | `cargo fmt --check`, the workspace-hack, clippy on the workspace and on the app with `--features selftest`; warnings fail |
-| `make check` | `lint`, then `cargo test --workspace`; needs no keychain, no window and no network |
+| `make check` | `sweep` and `lint`, then `cargo test --workspace`; needs no keychain, no window and no network |
 | `make check-dictation` | clippy and the app's tests with the feature `dictation`, for changes that touch it |
 | `make test` | `check`, then `cargo xtask selftest probe` |
 | `make perf` | the timing budgets of E25 in a release build; wall-clock bounds, so only on an otherwise idle Mac |
@@ -68,6 +69,17 @@ removing or changing a dependency or a crate, `cargo hakari generate` rewrites i
 `cargo hakari manage-deps` adds it to a new crate; `make lint` fails while either has something to do. Its settings
 are in `.config/hakari.toml`: xtask stays outside because it also builds on Linux, and Splat's crates stay outside
 because their `selftest` feature would otherwise reach the release.
+
+## Build folders
+With `build-dir = "<folder>/{workspace-path-hash}"` in `~/.cargo/config.toml`, every workspace on the Mac, each agent
+worktree and every temporary project included, builds into its own folder below one shared one. Cargo never removes a
+unit from there: a new compiler (Homebrew's Rust also changes with each update of Homebrew's LLVM), a dependency
+update or a changed hack leaves a complete set of old units behind, and a deleted worktree its whole folder.
+`make sweep` (`cargo xtask sweep`, `xtask/src/sweep.rs`), which `make check` runs first, removes per unit what no build
+read lately: what its workspace's builds have not read for 7 days, everything of a workspace unread for 30 days, then
+the least recently read while all of it takes more than 80 GB, but nothing read in the last 2 days. When a build last
+read a unit shows in the access time of its fingerprint, which cargo reads on every build that passes over it and
+macOS refreshes once a day. A profile's folder that a build holds stays untouched.
 
 ## Fuzzing
 The parsers that read what other programs write have fuzz targets (E95), each in a `fuzz/` folder of its crate: the

@@ -20,6 +20,7 @@ mod selftest;
 mod shell;
 mod source;
 mod structure;
+mod sweep;
 mod thread_locals;
 mod universal;
 mod updates;
@@ -81,6 +82,10 @@ pub(crate) const USAGE: &str = "usage: cargo xtask <task>
                                    main, its green seal if any and the version tag, then publish the release
   thread-locals                    fail for a thread-local that docs/thread-locals.md does not allow to stay
   structure                        fail for a Rust file over 1000 lines or a model.rs that uses objc2 (E98)
+  sweep [--dry-run]                remove from the build folders cargo's build-dir shares between all workspaces what no
+                                   build read lately: a unit its workspace's builds have not read for 7 days, every unit
+                                   of a workspace unread for 30 days, then the least recently read beyond 80 GB, but
+                                   none read in the last 2 days; skips a folder a build holds. make check runs it first
   rules                            fail for unlisted stateful statics, mem::forget, unguarded blocks, literal sizes,
                                    unseen thread failures, errors as String, and lookups of global state past their
                                    ratchets in the app's AppKit code, for a discarded spawn anywhere, and for a
@@ -167,6 +172,7 @@ fn task(args: &[String]) -> Result<(), String> {
             flags(rest, [])?;
             rules::check()
         }
+        "sweep" => sweep::sweep(rest),
         _ => Err(USAGE.into()),
     }
 }
@@ -355,6 +361,7 @@ mod tests {
             &["thread-locals", "x"],
             &["structure", "x"],
             &["rules", "x"],
+            &["sweep", "--force"],
         ] {
             let refused = task(&strings(args)).unwrap_err();
             assert!(refused.starts_with("unknown argument "), "{args:?}: {refused}");
