@@ -20,6 +20,14 @@ pub(crate) use super::super::vim::{
     types_ascii as vim_types_ascii,
 };
 
+/// The numbers the line number column of `view` shows, each with its top and height in the editor, for the self-test.
+pub(crate) fn gutter_rows(view: &EditorTextView) -> Vec<(usize, f64, f64)> {
+    super::super::ruler::rows(view)
+        .into_iter()
+        .map(|row| (row.line, row.y, row.height))
+        .collect()
+}
+
 /// The logical lines `view` shows, the first to the last on screen, for the self-test.
 pub(crate) fn visible_line_range(view: &EditorTextView) -> std::ops::Range<usize> {
     let rect = view.visibleRect();

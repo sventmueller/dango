@@ -492,7 +492,47 @@ fn gutter() {
         entered && left,
         format!("{entered} {left}"),
     );
+    last_line_number(&main);
+    editor::new_untitled(&controller, 13.0);
+    wait_until(
+        || self::controller().is_some_and(|c| helpers::editor(&c, t("Ohne Titel")).is_some()),
+        |_| empty_line_number(),
+    );
+}
+
+/// An empty document's only line has its number beside the caret.
+fn empty_line_number() {
+    let Some(empty) = controller().and_then(|c| helpers::editor(&c, t("Ohne Titel"))) else {
+        return give_up(SCENARIO, "a new empty document opens in an editor");
+    };
+    let rows = editor::gutter_rows(&empty);
+    let caret = ide_ui_lsp::rect_of(&*empty, 0..0).map(|rect| rect.origin.y);
+    check(
+        "the line number column numbers an empty document's only line beside the caret",
+        matches!(rows.as_slice(), [(1, y, _)] if caret.is_some_and(|c| (c - y).abs() < 1.0)),
+        format!("{rows:?}, caret at {caret:?}"),
+    );
     next(indentation_menu);
+}
+
+/// The empty line after the final line break has its number, beside the caret placed there and below the line before.
+fn last_line_number(main: &EditorTextView) {
+    use crate::editor::selftest::set_carets;
+    let end = utf16_len(MAIN);
+    set_carets(main, std::iter::once(end..end).collect());
+    let rows = editor::gutter_rows(main);
+    let lines: Vec<usize> = rows.iter().map(|row| row.0).collect();
+    let caret = ide_ui_lsp::rect_of(main, end..end).map(|rect| rect.origin.y);
+    let placed = match rows.as_slice() {
+        [.., before, last] => before.1 + before.2 <= last.1 + 0.5 && caret.is_some_and(|y| (y - last.1).abs() < 1.0),
+        _ => false,
+    };
+    check(
+        "the line number column numbers the empty line after the final line break beside the caret there",
+        lines == (1..=MAIN.lines().count() + 1).collect::<Vec<_>>() && placed,
+        format!("{rows:?}, caret at {caret:?}"),
+    );
+    set_carets(main, std::iter::once(0..0).collect());
 }
 
 /// The status bar's indentation menu ticks what the file uses, and its entries switch to tabs and another width.

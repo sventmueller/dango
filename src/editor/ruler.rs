@@ -362,17 +362,8 @@ impl LineNumbers {
         let Some(editor) = self.ivars().editor.load() else {
             return;
         };
-        let (Some(layout), Some(content)) = (editor.textLayoutManager(), editor.textContentStorage()) else {
-            return;
-        };
         let attributes = number_attributes(editor.ivars().font_size.get());
         let light_attributes = light_number_attributes(editor.ivars().font_size.get());
-        let origin = editor.textContainerOrigin();
-        let visible = editor.visibleRect();
-        let start = layout
-            .textLayoutFragmentForPosition(NSPoint::new(0.0, visible.origin.y - origin.y))
-            .map(|fragment| fragment.rangeInElement().location());
-        let document_start = content.documentRange().location();
         let width = self.bounds().size.width;
         self.removeAllToolTips();
         self.ivars().tips.borrow_mut().clear();
@@ -380,80 +371,153 @@ impl LineNumbers {
         let folds = super::fold::gutter(&editor);
         let breakpoints = crate::debug::gutter_marks(&editor);
         let bulb = ide_ui_lsp::bulb_line(&*editor);
-        let bulb_row = std::cell::Cell::new(None);
-        let bottom = visible.origin.y + visible.size.height;
-        let block = RcBlock::new(|fragment: NonNull<NSTextLayoutFragment>| -> Bool {
-            crate::util::guarded(Bool::NO, || {
-                // SAFETY: TextKit keeps the fragment alive for the call.
-                let fragment = unsafe { fragment.as_ref() };
-                let y = fragment.layoutFragmentFrame().origin.y + origin.y;
-                if y > bottom {
-                    return Bool::NO;
+        let mut bulb_row = None;
+        for Row { line, y, height } in rows(&editor) {
+            let label = ns(&line.to_string());
+            // SAFETY: The attributes hold a font and a colour, as the method expects.
+            let label_width = unsafe { label.sizeWithAttributes(Some(&attributes)) }.width;
+            let point = self.convertPoint_fromView(NSPoint::new(0.0, y), Some(&editor));
+            let at = NSPoint::new(self.fold_left() - NUMBERS_GAP - label_width, point.y + 1.0);
+            let (look, paused) = breakpoints.at(line - 1);
+            let fold_strip = NSRect::new(NSPoint::new(self.fold_left(), point.y), NSSize::new(FOLD_WIDTH, height));
+            let mut tagged = false;
+            if bulb == Some(line - 1) && bulb_row.is_none() {
+                let numbers = self.fold_left() - NUMBERS_GAP - NUMBERS_LEFT;
+                bulb_row = Some(NSRect::new(
+                    NSPoint::new(NUMBERS_LEFT, point.y),
+                    NSSize::new(numbers, height),
+                ));
+            } else {
+                let gutter = NSRect::new(
+                    NSPoint::new(2.0, point.y),
+                    NSSize::new(self.fold_left() + FOLD_WIDTH - 2.0, height),
+                );
+                tagged = crate::debug::draw_gutter_mark(look, gutter);
+                if paused {
+                    crate::debug::draw_paused_arrow(gutter);
+                    tagged = true;
                 }
-                let offset =
-                    content.offsetFromLocation_toLocation(&document_start, &fragment.rangeInElement().location());
-                let document = editor.document();
-                let line = usize::try_from(offset)
-                    .ok()
-                    .and_then(|o| document.text().utf16_to_byte(o).ok())
-                    .map(|byte| document.text().line_of(byte) + 1);
-                if let Some(line) = line {
-                    let label = ns(&line.to_string());
-                    // SAFETY: The attributes hold a font and a colour, as the method expects.
-                    let label_width = unsafe { label.sizeWithAttributes(Some(&attributes)) }.width;
-                    let point = self.convertPoint_fromView(NSPoint::new(0.0, y), Some(&editor));
-                    let at = NSPoint::new(self.fold_left() - NUMBERS_GAP - label_width, point.y + 1.0);
-                    let height = fragment.layoutFragmentFrame().size.height;
-                    let (look, paused) = breakpoints.at(line - 1);
-                    let fold_strip =
-                        NSRect::new(NSPoint::new(self.fold_left(), point.y), NSSize::new(FOLD_WIDTH, height));
-                    let mut tagged = false;
-                    if bulb == Some(line - 1) && bulb_row.get().is_none() {
-                        let numbers = self.fold_left() - NUMBERS_GAP - NUMBERS_LEFT;
-                        bulb_row.set(Some(NSRect::new(
-                            NSPoint::new(NUMBERS_LEFT, point.y),
-                            NSSize::new(numbers, height),
-                        )));
-                    } else {
-                        let gutter = NSRect::new(
-                            NSPoint::new(2.0, point.y),
-                            NSSize::new(self.fold_left() + FOLD_WIDTH - 2.0, height),
-                        );
-                        tagged = crate::debug::draw_gutter_mark(look, gutter);
-                        if paused {
-                            crate::debug::draw_paused_arrow(gutter);
-                            tagged = true;
-                        }
-                        let shown = if tagged { &light_attributes } else { &attributes };
-                        // SAFETY: Both attribute dictionaries hold only a font and a colour under AppKit's keys.
-                        unsafe { label.drawAtPoint_withAttributes(at, Some(shown)) };
-                    }
-                    if paused && !tagged {
-                        crate::debug::draw_paused_arrow(fold_strip);
-                    } else if let Some(folded) = folds.get(line - 1) {
-                        self.fold_mark(fold_strip, folded, tagged);
-                    }
-                    let margin = NSRect::new(NSPoint::new(0.0, point.y), NSSize::new(NUMBERS_LEFT, height));
-                    if let Some((severity, message)) = marks.get(&(line - 1)) {
-                        self.mark(margin, *severity, message);
-                    } else if let Some(state) = crate::tests_panel::gutter_mark(&editor, line - 1) {
-                        draw_test_mark(margin, state);
-                    }
-                    self.change_mark(
-                        &editor,
-                        line - 1,
-                        NSRect::new(NSPoint::new(0.0, point.y), NSSize::new(width, height)),
-                    );
-                }
-                Bool::YES
-            })
+                let shown = if tagged { &light_attributes } else { &attributes };
+                // SAFETY: Both attribute dictionaries hold only a font and a colour under AppKit's keys.
+                unsafe { label.drawAtPoint_withAttributes(at, Some(shown)) };
+            }
+            if paused && !tagged {
+                crate::debug::draw_paused_arrow(fold_strip);
+            } else if let Some(folded) = folds.get(line - 1) {
+                self.fold_mark(fold_strip, folded, tagged);
+            }
+            let margin = NSRect::new(NSPoint::new(0.0, point.y), NSSize::new(NUMBERS_LEFT, height));
+            if let Some((severity, message)) = marks.get(&(line - 1)) {
+                self.mark(margin, *severity, message);
+            } else if let Some(state) = crate::tests_panel::gutter_mark(&editor, line - 1) {
+                draw_test_mark(margin, state);
+            }
+            self.change_mark(
+                &editor,
+                line - 1,
+                NSRect::new(NSPoint::new(0.0, point.y), NSSize::new(width, height)),
+            );
+        }
+        ide_ui_lsp::place_bulb(&*editor, self, bulb_row);
+    }
+}
+
+/// A line's place beside the text: its number from 1, and its top and height in the editor's coordinates.
+#[derive(Clone, Copy, Debug)]
+pub(in crate::editor) struct Row {
+    pub(in crate::editor) line: usize,
+    pub(in crate::editor) y: f64,
+    pub(in crate::editor) height: f64,
+}
+
+/// The rows of the lines on screen in `editor`, top to bottom; TextKit lays out no paragraph for an empty text, whose
+/// only line takes its height from the font.
+pub(in crate::editor) fn rows(editor: &EditorTextView) -> Vec<Row> {
+    let (Some(layout), Some(content)) = (editor.textLayoutManager(), editor.textContentStorage()) else {
+        return Vec::new();
+    };
+    let origin = editor.textContainerOrigin();
+    let visible = editor.visibleRect();
+    let bottom = visible.origin.y + visible.size.height;
+    let start = layout
+        .textLayoutFragmentForPosition(NSPoint::new(0.0, visible.origin.y - origin.y))
+        .map(|fragment| fragment.rangeInElement().location());
+    let whole = content.documentRange();
+    let last_line = editor.document().text().line_count();
+    let rows = std::cell::RefCell::new(Vec::new());
+    let block = RcBlock::new(|fragment: NonNull<NSTextLayoutFragment>| -> Bool {
+        crate::util::guarded(Bool::NO, || {
+            // SAFETY: TextKit keeps the fragment alive for the call.
+            let fragment = unsafe { fragment.as_ref() };
+            let frame = fragment.layoutFragmentFrame();
+            let y = frame.origin.y + origin.y;
+            if y > bottom {
+                return Bool::NO;
+            }
+            let range = fragment.rangeInElement();
+            let offset = content.offsetFromLocation_toLocation(&whole.location(), &range.location());
+            let document = editor.document();
+            let Some(line) = usize::try_from(offset)
+                .ok()
+                .and_then(|o| document.text().utf16_to_byte(o).ok())
+                .map(|byte| document.text().line_of(byte) + 1)
+            else {
+                return Bool::YES;
+            };
+            let mut row = Row {
+                line,
+                y,
+                height: frame.size.height,
+            };
+            let ends_text = content.offsetFromLocation_toLocation(&range.endLocation(), &whole.endLocation()) == 0;
+            let after = (ends_text && line < last_line).then(|| row_after(fragment, &mut row, last_line));
+            rows.borrow_mut().extend(std::iter::once(row).chain(after));
+            Bool::YES
+        })
+    });
+    let _ = layout.enumerateTextLayoutFragmentsFromLocation_options_usingBlock(
+        start.as_deref(),
+        NSTextLayoutFragmentEnumerationOptions::EnsuresLayout,
+        &block,
+    );
+    drop(block);
+    let mut rows = rows.into_inner();
+    if rows.is_empty() && editor.document().text().len_utf16() == 0 {
+        let height = editor
+            .font()
+            .map_or(0.0, |font| (font.ascender() - font.descender() + font.leading()).ceil());
+        rows.push(Row {
+            line: 1,
+            y: origin.y,
+            height,
         });
-        let _ = layout.enumerateTextLayoutFragmentsFromLocation_options_usingBlock(
-            start.as_deref(),
-            NSTextLayoutFragmentEnumerationOptions::EnsuresLayout,
-            &block,
-        );
-        ide_ui_lsp::place_bulb(&*editor, self, bulb_row.get());
+    }
+    rows
+}
+
+/// The row of the empty line after a final line break, which TextKit lays out as the last line of `fragment`, the
+/// text's last paragraph, not as a paragraph of its own; `row`, the paragraph's, is cut to end where it begins.
+fn row_after(fragment: &NSTextLayoutFragment, row: &mut Row, line: usize) -> Row {
+    let lines = super::insets::line_fragments(fragment);
+    let last = lines.as_ref().and_then(|lines| lines.lastObject());
+    match last {
+        Some(last) if last.characterRange().length == 0 && lines.as_ref().is_some_and(|lines| lines.count() > 1) => {
+            let bounds = last.typographicBounds();
+            row.height = bounds.origin.y;
+            Row {
+                line,
+                y: row.y + bounds.origin.y,
+                height: bounds.size.height,
+            }
+        }
+        _ => {
+            let height = last.map_or(row.height, |last| last.typographicBounds().size.height);
+            Row {
+                line,
+                y: row.y + row.height,
+                height,
+            }
+        }
     }
 }
 
