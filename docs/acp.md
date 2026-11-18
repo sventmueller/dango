@@ -7,11 +7,13 @@ line without the SDK, so the tests also check what the client puts on the wire.
 
 ## Crate version (E4, R2)
 
-`agent-client-protocol = "=5.2.0"` (schema 1.17.0), chosen on 2026-11-11, replacing 2.2.0 (chosen 2026-11-09):
+`agent-client-protocol = "=5.4.0"` (schema 1.19.0), chosen on 2026-11-18, replacing 5.2.0 (chosen 2026-11-11) and
+2.2.0 (chosen 2026-11-09):
 
 | Release | Date | Why not / why |
 |---|---|---|
-| **5.2.0** | 2026-11-10 | Since 5.0 the stable v1 API follows semver, so breaks wait for a major release; only `unstable_*` features may change in a minor, which is why the pin is exact. Zed, the protocol's authors, builds on 5.x. ACP v1 on the wire is the same as in 2.2. |
+| **5.4.0** | 2026-11-18 | Taken with the update of all dependencies: 5.3 and 5.4 only adopt schema 1.18 and 1.19, whose additions to `session/fork` (`configOptions`, `cursorId`) also need `unstable_session_options` or `unstable_session_cursors`, both off here, and an agent's line that is not UTF-8 is now read with U+FFFD instead of ending the connection. |
+| 5.2.0 | 2026-11-10 | Since 5.0 the stable v1 API follows semver, so breaks wait for a major release; only `unstable_*` features may change in a minor, which is why the pin is exact. Zed, the protocol's authors, builds on 5.x. ACP v1 on the wire is the same as in 2.2. |
 | 3.0–3.6 | 2026-10-06 – 10-28 | Seven minors in three weeks; skipped. |
 | 2.2.0 | 2026-09-18 | The first choice: the most used release then. Held a request from the agent that names a session and has no handler unanswered, which a handler of our own had to answer. |
 

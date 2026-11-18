@@ -17,7 +17,7 @@ serde.workspace = true
 serde_json.workspace = true
 splat-i18n.workspace = true
 sha2 = "0.11.1"
-ureq = { version = "3.5.1", default-features = false, features = ["rustls", "platform-verifier"] }
+ureq = { version = "3.5.2", default-features = false, features = ["rustls", "platform-verifier"] }
 ide-workspace-hack.workspace = true
 
 [dev-dependencies]

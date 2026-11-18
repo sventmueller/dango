@@ -258,8 +258,8 @@ impl<'ast> Visit<'ast> for Ends<'_> {
             Expr::Match(matched) => {
                 self.visit_expr(&matched.expr);
                 for arm in &matched.arms {
-                    if let Some((_, guard)) = &arm.guard {
-                        self.visit_expr(guard);
+                    if let syn::Pat::Guard(guarded) = &arm.pat {
+                        self.visit_expr(&guarded.guard);
                     }
                     self.position = Position::Arm;
                     self.visit_expr(&arm.body);

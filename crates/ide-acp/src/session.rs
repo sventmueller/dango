@@ -821,7 +821,7 @@ fn connect(shared: Arc<Shared>, stdin: ChildStdin, stdout: ChildStdout, closed: 
                         },
                         Err(error) => main.fail(error),
                     }
-                    // A clean end of the agent's output does not end this future by itself (agent-client-protocol 5.2).
+                    // A clean end of the agent's output does not end this future by itself (agent-client-protocol 5.4).
                     connection.incoming_closed().await;
                 };
                 futures::future::select(std::pin::pin!(serve), closed).await;
