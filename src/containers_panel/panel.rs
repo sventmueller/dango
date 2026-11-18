@@ -13,6 +13,7 @@ use ide_docker::board::{Board, Look, Node, Row, Section};
 use ide_docker::{Action, Compose};
 use ide_ui_common::panel::{Nesting, PanelOutline, RowItem, RowItems};
 use ide_ui_common::registry::WindowPart;
+use ide_ui_common::ui_size;
 use ide_ui_common::window::{Window, WindowId};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
@@ -221,7 +222,10 @@ impl ContainersPanel {
         let me: &AnyObject = self.as_ref();
         let header = ide_ui_common::panel::header_row(mtm);
         let picker = NSPopUpButton::new(mtm);
-        picker.setControlSize(objc2_app_kit::NSControlSize::Small);
+        ide_ui_common::ui_size::follow_control_size(&picker, objc2_app_kit::NSControlSize::Small);
+        if let Some(font) = picker.font() {
+            ui_size::set_font(&picker, &font);
+        }
         set_action(&picker, me, sel!(ideContainersContext:));
         picker.setToolTip(Some(&ns(t("Docker-Kontext dieses Fensters"))));
         ide_ui_common::util::set_label(&picker, Some(t("Docker-Kontext dieses Fensters")));
@@ -246,6 +250,7 @@ impl ContainersPanel {
         // SAFETY: The table keeps the menu; its delegate, the panel, outlives the table through the registry.
         unsafe { table.setMenu(Some(&menu)) };
         let note = NSTextField::wrappingLabelWithString(&ns(""), mtm);
+        ui_size::set_system_font(&note, ide_ui_common::style::BODY);
         note.setTextColor(Some(&NSColor::secondaryLabelColor()));
         note.setContentCompressionResistancePriority_forOrientation(
             objc2_app_kit::NSLayoutPriorityDefaultLow,
@@ -749,9 +754,7 @@ fn row_view(mtm: MainThreadMarker, row: &Row) -> Retained<NSView> {
         objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
     );
     detail.setTextColor(Some(&NSColor::secondaryLabelColor()));
-    detail.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(
-        ide_ui_common::style::SMALL,
-    )));
+    ui_size::set_system_font(&detail, ide_ui_common::style::SMALL);
     stack.addView_inGravity(&detail, NSStackViewGravity::Trailing);
     stack.into_super()
 }

@@ -9,6 +9,7 @@ use objc2_app_kit::{
 };
 
 use ide_ui_common::constant;
+use ide_ui_common::ui_size::{scaled, system};
 use ide_ui_common::util::{activate, ns, symbol};
 
 define_class!(
@@ -58,7 +59,7 @@ fn icon(mtm: MainThreadMarker, name: &str, points: f64, color: &NSColor) -> Reta
     let view = NSImageView::new(mtm);
     view.setImage(symbol(name, "").as_deref());
     view.setSymbolConfiguration(Some(&NSImageSymbolConfiguration::configurationWithPointSize_weight(
-        points,
+        scaled(points),
         constant!(objc2_app_kit::NSFontWeightRegular),
     )));
     view.setContentTintColor(Some(color));
@@ -82,10 +83,11 @@ pub(super) struct Look<'a> {
 /// The size of the circle in front of a session.
 const DOT_POINTS: f64 = 7.0;
 
-/// A row of the panel's list.
+/// A row of the panel's list, at the interface size; the list builds its rows anew when that changes.
 pub(super) fn cell(mtm: MainThreadMarker, look: &Look<'_>) -> Retained<NSView> {
     let cell = NSTableCellView::new(mtm);
     let title = NSTextField::labelWithString(&ns(look.title), mtm);
+    title.setFont(Some(&system(crate::style::BODY)));
     title.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
     let color = if look.dim {
         NSColor::secondaryLabelColor()
@@ -95,6 +97,7 @@ pub(super) fn cell(mtm: MainThreadMarker, look: &Look<'_>) -> Retained<NSView> {
     title.setTextColor(Some(&color));
     title.setContentCompressionResistancePriority_forOrientation(250.0, NSLayoutConstraintOrientation::Horizontal);
     let detail = small_label(mtm, look.detail);
+    detail.setFont(Some(&system(crate::style::SMALL)));
     detail.setTextColor(Some(&NSColor::tertiaryLabelColor()));
     detail.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
     detail.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Horizontal);
@@ -113,7 +116,7 @@ pub(super) fn cell(mtm: MainThreadMarker, look: &Look<'_>) -> Retained<NSView> {
     let stack = objc2_app_kit::NSStackView::new(mtm);
     stack.setOrientation(objc2_app_kit::NSUserInterfaceLayoutOrientation::Horizontal);
     stack.setAlignment(objc2_app_kit::NSLayoutAttribute::CenterY);
-    stack.setSpacing(ide_ui_common::style::space::S);
+    stack.setSpacing(scaled(ide_ui_common::style::space::S));
     for view in &views {
         stack.addArrangedSubview(view);
     }

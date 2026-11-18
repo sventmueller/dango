@@ -234,8 +234,9 @@
 "Sandbox aus; eingeschaltet gilt: {}" = "البيئة المعزولة متوقفة؛ عند تفعيلها: {}";
 "Schließen" = "إغلاق";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "الكتابة داخل المشروع فقط؛ وتبقى القراءة في أي مكان والشبكة متاحتين";
-"Schriftgröße:" = "حجم الخط:";
+"Schriftgröße in Editor und Terminal:" = "حجم الخط في المحرر والوحدة الطرفية:";
 "Schriftgröße im AI-Tab:" = "حجم الخط في علامة تبويب AI:";
+"Schriftgröße in Seitenleiste und Tabs:" = "حجم الخط في الشريط الجانبي وعلامات التبويب:";
 "Seite des Browser-Tabs" = "صفحة علامة تبويب المتصفح";
 "Seitenleiste ein-/ausblenden" = "إظهار الشريط الجانبي أو إخفاؤه";
 "Seitenleisten-Auswahl" = "محدد الشريط الجانبي";

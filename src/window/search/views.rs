@@ -1,19 +1,21 @@
 //! The views of the search panel: the option toggles for the panel's title row, the field, the replace field behind a
 //! disclosure, the file filters, the status line and the list of matches.
 
+use ide_ui_common::style::space;
+use ide_ui_common::ui_size;
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{MainThreadMarker, sel};
 use objc2_app_kit::{
     NSAccessibility, NSAutoresizingMaskOptions, NSButton, NSButtonType, NSCellImagePosition, NSColor, NSControlSize,
-    NSControlStateValueOff, NSControlStateValueOn, NSFont, NSLayoutAttribute, NSLayoutConstraintOrientation,
-    NSScrollView, NSStackView, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
+    NSControlStateValueOff, NSControlStateValueOn, NSImageSymbolConfiguration, NSLayoutAttribute,
+    NSLayoutConstraintOrientation, NSScrollView, NSStackView, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::NSEdgeInsets;
 use splat_i18n::t;
 
 use super::{SearchOutlineView, SearchPanel, Toggle};
-use crate::util::{activate, ns, pin_edges, pin_sides, set_action, symbol, symbol_button};
+use crate::util::{activate, ns, pin_edges, pin_sides, set_action, symbol};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
@@ -24,10 +26,9 @@ const CHEVRON_WIDTH: f64 = 12.0;
 /// The size of both chevrons, the same as the folder tree's.
 const CHEVRON_POINTS: f64 = 10.0;
 /// Where every field begins: after a chevron and the stack's spacing.
-const FIELD_INDENT: f64 = CHEVRON_WIDTH + 2.0;
+const FIELD_INDENT: f64 = CHEVRON_WIDTH + space::XXS;
 /// The width of "Alle ersetzen"; the fields without it end where the replace field does.
 const ALL_WIDTH: f64 = 18.0;
-
 pub(super) struct Views {
     pub(super) page: Retained<NSView>,
     /// The option toggles for the panel's title row.
@@ -62,7 +63,7 @@ impl Views {
         let replace_toggle = replace_toggle(mtm, panel);
         let field_row = NSStackView::new(mtm);
         field_row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        field_row.setSpacing(ide_ui_common::style::space::XXS);
+        ui_size::follow_spacing(&field_row, space::XXS);
         field_row.addArrangedSubview(&replace_toggle);
         field_row.addArrangedSubview(&field);
         field.setContentHuggingPriority_forOrientation(1.0, NSLayoutConstraintOrientation::Horizontal);
@@ -82,31 +83,24 @@ impl Views {
         );
         let globs = glob_fields(mtm, &include, &exclude);
         let status = NSTextField::wrappingLabelWithString(&ns(""), mtm);
-        status.setFont(Some(&NSFont::systemFontOfSize(SMALL_FONT)));
+        ui_size::set_system_font(&status, SMALL_FONT);
         status.setTextColor(Some(&NSColor::secondaryLabelColor()));
         status.setHidden(true);
-        let bar = NSStackView::new(mtm);
-        bar.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
-        bar.setAlignment(NSLayoutAttribute::Leading);
-        bar.setSpacing(ide_ui_common::style::space::S);
-        bar.setEdgeInsets(NSEdgeInsets {
-            top: 0.0,
-            left: MARGIN,
-            bottom: 4.0,
-            right: MARGIN,
-        });
+        let bar = top_bar(mtm);
         for view in [&*field_row as &NSView, &replace_row, &disclosure_row, &globs, &status] {
             bar.addArrangedSubview(view);
         }
         for (view, inset) in [
-            (&*field_row as &NSView, MARGIN + 2.0 + ALL_WIDTH),
-            (&replace_row, MARGIN),
-            (&globs, MARGIN + 2.0 + ALL_WIDTH),
-            (&status, MARGIN),
+            (&*field_row as &NSView, space::XXS + ALL_WIDTH),
+            (&replace_row, 0.0),
+            (&globs, space::XXS + ALL_WIDTH),
+            (&status, 0.0),
         ] {
-            view.trailingAnchor()
-                .constraintEqualToAnchor_constant(&bar.trailingAnchor(), -inset)
-                .setActive(true);
+            let trailing = view.trailingAnchor().constraintEqualToAnchor(&bar.trailingAnchor());
+            ui_size::keep(&*trailing, ui_size::Aspect::Length, move |trailing| {
+                trailing.setConstant(-(MARGIN + ui_size::scaled(inset)));
+            });
+            trailing.setActive(true);
         }
         let (results, outline) = results(mtm, panel);
         let body = NSView::new(mtm);
@@ -205,16 +199,48 @@ impl Views {
     }
 }
 
-fn layout(page: &NSView, bar: &NSStackView, body: &NSView) {
-    for view in [bar as &NSView, body] {
+/// A vertical stack for the fields or the switches above a list, `MARGIN` from the sidebar's edges.
+pub(super) fn top_bar(mtm: MainThreadMarker) -> Retained<NSStackView> {
+    let bar = NSStackView::new(mtm);
+    bar.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
+    bar.setAlignment(NSLayoutAttribute::Leading);
+    ui_size::follow_spacing(&bar, space::S);
+    ui_size::keep(&*bar, ui_size::Aspect::Insets, |bar| {
+        bar.setEdgeInsets(NSEdgeInsets {
+            top: 0.0,
+            left: MARGIN,
+            bottom: ui_size::scaled(space::XS),
+            right: MARGIN,
+        });
+    });
+    bar
+}
+
+/// Puts `bar` at the top of `page` and `body` below it, both across the page's width.
+pub(super) fn layout(page: &NSView, bar: &NSView, body: &NSView) {
+    for view in [bar, body] {
         pin_sides(view, page, 0.0);
     }
+    let gap = body.topAnchor().constraintEqualToAnchor(&bar.bottomAnchor());
+    ui_size::follow_length(&gap, space::XXS);
     activate([
         bar.topAnchor().constraintEqualToAnchor(&page.topAnchor()),
-        body.topAnchor()
-            .constraintEqualToAnchor_constant(&bar.bottomAnchor(), 2.0),
+        gap,
         body.bottomAnchor().constraintEqualToAnchor(&page.bottomAnchor()),
     ]);
+}
+
+/// Draws `field` in the small size at the interface size.
+fn small_field(field: &NSTextField) {
+    ui_size::follow_control_size(field, NSControlSize::Small);
+    ui_size::set_system_font(field, SMALL_FONT);
+}
+
+/// Keeps `view` `base` wide at the interface size.
+fn follow_width(view: &NSView, base: f64) {
+    let width = view.widthAnchor().constraintEqualToConstant(base);
+    ui_size::follow_length(&width, base);
+    width.setActive(true);
 }
 
 /// A plain field like the replace field below it; typing, Return and Esc reach the panel through the delegate.
@@ -223,8 +249,7 @@ fn search_field(mtm: MainThreadMarker, panel: &SearchPanel) -> Retained<NSTextFi
     let title = t("Im Projekt suchen");
     field.setPlaceholderString(Some(&ns(title)));
     crate::util::set_label(&field, Some(title));
-    field.setControlSize(NSControlSize::Small);
-    field.setFont(Some(&NSFont::systemFontOfSize(SMALL_FONT)));
+    small_field(&field);
     // SAFETY: The field holds its delegate weakly; the window controller keeps the panel alive while the field shows.
     unsafe { field.setDelegate(Some(ProtocolObject::from_ref(panel))) };
     field
@@ -272,10 +297,7 @@ fn replace_toggle(mtm: MainThreadMarker, panel: &SearchPanel) -> Retained<NSButt
     crate::util::set_label(&button, Some(name));
     button.setAccessibilityExpanded(false);
     button.setTranslatesAutoresizingMaskIntoConstraints(false);
-    button
-        .widthAnchor()
-        .constraintEqualToConstant(CHEVRON_WIDTH)
-        .setActive(true);
+    follow_width(&button, CHEVRON_WIDTH);
     button
 }
 
@@ -288,12 +310,11 @@ fn replace_row(
     let title = t("Ersetzen durch");
     field.setPlaceholderString(Some(&ns(title)));
     crate::util::set_label(&field, Some(title));
-    field.setControlSize(NSControlSize::Small);
-    field.setFont(Some(&NSFont::systemFontOfSize(SMALL_FONT)));
+    small_field(&field);
     // SAFETY: The field holds its delegate weakly; the window controller keeps the panel alive while the field shows.
     unsafe { field.setDelegate(Some(ProtocolObject::from_ref(panel))) };
     field.setContentHuggingPriority_forOrientation(1.0, NSLayoutConstraintOrientation::Horizontal);
-    let all = symbol_button(
+    let all = ui_size::symbol_button(
         mtm,
         "arrow.2.squarepath",
         t("Alle ersetzen"),
@@ -302,16 +323,13 @@ fn replace_row(
         sel!(ideSearchReplaceAll:),
     );
     all.setEnabled(false);
-    all.widthAnchor().constraintEqualToConstant(ALL_WIDTH).setActive(true);
+    follow_width(&all, ALL_WIDTH);
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(ide_ui_common::style::space::XXS);
+    ui_size::follow_spacing(&row, space::XXS);
     // As wide as the chevron above, so the two fields line up.
     let indent = NSView::new(mtm);
-    indent
-        .widthAnchor()
-        .constraintEqualToConstant(CHEVRON_WIDTH)
-        .setActive(true);
+    follow_width(&indent, CHEVRON_WIDTH);
     row.addArrangedSubview(&indent);
     row.addArrangedSubview(&field);
     row.addArrangedSubview(&all);
@@ -335,21 +353,18 @@ fn disclosure(mtm: MainThreadMarker, panel: &SearchPanel) -> (Retained<NSStackVi
     crate::util::set_label(&chevron, Some(title));
     chevron.setAccessibilityExpanded(false);
     chevron.setTranslatesAutoresizingMaskIntoConstraints(false);
-    chevron
-        .widthAnchor()
-        .constraintEqualToConstant(CHEVRON_WIDTH)
-        .setActive(true);
+    follow_width(&chevron, CHEVRON_WIDTH);
     // SAFETY: A nil target sends the action along the responder chain until `set_action` names the panel.
     let label =
         unsafe { NSButton::buttonWithTitle_target_action(&ns(title), None, Some(sel!(ideSearchDisclose:)), mtm) };
     set_action(&label, panel, sel!(ideSearchDisclose:));
     label.setBordered(false);
-    label.setFont(Some(&NSFont::systemFontOfSize(SMALL_FONT)));
+    ui_size::set_system_font(&label, SMALL_FONT);
     label.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
     label.setAccessibilityElement(false);
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(ide_ui_common::style::space::XXS);
+    ui_size::follow_spacing(&row, space::XXS);
     row.addArrangedSubview(&chevron);
     row.addArrangedSubview(&label);
     (row, chevron)
@@ -357,12 +372,12 @@ fn disclosure(mtm: MainThreadMarker, panel: &SearchPanel) -> (Retained<NSStackVi
 
 /// Draws the chevron of `button` at the size of every chevron of the sidebar, whatever its font.
 fn size_chevron(button: &NSButton) {
-    button.setSymbolConfiguration(Some(
-        &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
-            CHEVRON_POINTS,
+    ui_size::keep(button, ui_size::Aspect::Symbol, |button| {
+        button.setSymbolConfiguration(Some(&NSImageSymbolConfiguration::configurationWithPointSize_weight(
+            ui_size::scaled(CHEVRON_POINTS),
             crate::util::constant!(objc2_app_kit::NSFontWeightSemibold),
-        ),
-    ));
+        )));
+    });
 }
 
 /// The include and exclude fields, beginning where the fields above do; hidden until the disclosure opens them.
@@ -371,18 +386,18 @@ fn glob_fields(mtm: MainThreadMarker, include: &NSTextField, exclude: &NSTextFie
     for field in [include, exclude] {
         globs.addSubview(field);
         field.setTranslatesAutoresizingMaskIntoConstraints(false);
+        let leading = field.leadingAnchor().constraintEqualToAnchor(&globs.leadingAnchor());
+        ui_size::follow_length(&leading, FIELD_INDENT);
         activate([
-            field
-                .leadingAnchor()
-                .constraintEqualToAnchor_constant(&globs.leadingAnchor(), FIELD_INDENT),
+            leading,
             field.trailingAnchor().constraintEqualToAnchor(&globs.trailingAnchor()),
         ]);
     }
+    let gap = exclude.topAnchor().constraintEqualToAnchor(&include.bottomAnchor());
+    ui_size::follow_length(&gap, space::XS);
     activate([
         include.topAnchor().constraintEqualToAnchor(&globs.topAnchor()),
-        exclude
-            .topAnchor()
-            .constraintEqualToAnchor_constant(&include.bottomAnchor(), 4.0),
+        gap,
         exclude.bottomAnchor().constraintEqualToAnchor(&globs.bottomAnchor()),
     ]);
     globs.setHidden(true);
@@ -393,8 +408,7 @@ fn glob_field(mtm: MainThreadMarker, panel: &SearchPanel, placeholder: &str, nam
     let field = NSTextField::textFieldWithString(&ns(""), mtm);
     field.setPlaceholderString(Some(&ns(placeholder)));
     crate::util::set_label(&field, Some(name));
-    field.setControlSize(NSControlSize::Small);
-    field.setFont(Some(&NSFont::systemFontOfSize(SMALL_FONT)));
+    small_field(&field);
     // SAFETY: The field holds its delegate weakly; the window controller keeps the panel alive while the field shows.
     unsafe { field.setDelegate(Some(ProtocolObject::from_ref(panel))) };
     field
@@ -403,7 +417,7 @@ fn glob_field(mtm: MainThreadMarker, panel: &SearchPanel, placeholder: &str, nam
 fn results(mtm: MainThreadMarker, panel: &SearchPanel) -> (Retained<NSScrollView>, Retained<SearchOutlineView>) {
     let outline = SearchOutlineView::new(mtm, ide_ui_common::panel::LIST_FRAME);
     let scroll = ide_ui_common::panel::source_list_outline(mtm, &outline, "match", t("Suchergebnisse"));
-    outline.setRowHeight(22.0);
+    ui_size::follow_rows(&outline, ide_ui_common::style::ROW_HEIGHT);
     // SAFETY: The outline view holds its data source and delegate weakly; the window controller keeps the panel alive.
     unsafe {
         outline.setDataSource(Some(ProtocolObject::from_ref(panel)));

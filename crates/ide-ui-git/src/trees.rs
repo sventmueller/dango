@@ -26,7 +26,8 @@ use super::text::Problem;
 use super::{sheets, work};
 use crate::worktrees::{TakeOver, ThreadTree, TreeState};
 use ide_ui_common::alert::{Alert, Role, first};
-use ide_ui_common::util::{activate, label, ns, symbol};
+use ide_ui_common::ui_size::{self, font_like, scaled, system};
+use ide_ui_common::util::{activate, label, ns, symbol_at};
 
 /// The menu of a worktree row; `ordered` when a work order owns the worktree.
 pub(crate) fn menu(keys: &[RowKey], ordered: bool) -> Vec<(&'static str, Option<Sel>)> {
@@ -82,25 +83,24 @@ impl GitPanel {
     pub(crate) fn tree_cell(&self, mtm: MainThreadMarker, state: &TreeState) -> Retained<NSView> {
         let cell = NSTableCellView::new(mtm);
         let icon = objc2_app_kit::NSImageView::new(mtm);
-        if let Some(image) = symbol("arrow.triangle.branch", t("Worktree")) {
-            icon.setImage(Some(&image));
-        }
+        icon.setImage(symbol_at("arrow.triangle.branch", t("Worktree"), scaled(ui_size::DEFAULT)).as_deref());
         icon.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
         let title = label(mtm, &state.tree.title);
+        title.setFont(Some(&system(ide_ui_common::style::BODY)));
         title.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
         let detail = label(mtm, &summary(state));
-        detail.setFont(Some(&ide_ui_common::style::small_system()));
+        detail.setFont(Some(&font_like(&ide_ui_common::style::small_system())));
         detail.setTextColor(Some(&NSColor::secondaryLabelColor()));
         detail.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
         let lines = NSStackView::new(mtm);
         lines.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         lines.setAlignment(objc2_app_kit::NSLayoutAttribute::Leading);
-        lines.setSpacing(ide_ui_common::style::space::HAIR);
+        lines.setSpacing(scaled(ide_ui_common::style::space::HAIR));
         lines.addArrangedSubview(&title);
         lines.addArrangedSubview(&detail);
         let row = NSStackView::new(mtm);
         row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        row.setSpacing(ide_ui_common::style::space::SNUG);
+        row.setSpacing(scaled(ide_ui_common::style::space::SNUG));
         row.addArrangedSubview(&icon);
         row.addArrangedSubview(&lines);
         cell.addSubview(&row);
@@ -134,7 +134,7 @@ impl GitPanel {
         let mark = mark(change);
         let letter = label(mtm, mark.letter());
         letter.setFont(Some(&NSFont::monospacedSystemFontOfSize_weight(
-            ide_ui_common::style::SMALL,
+            scaled(ide_ui_common::style::SMALL),
             ide_ui_common::constant!(objc2_app_kit::NSFontWeightBold),
         )));
         letter.setTextColor(Some(&super::rows::mark_color(mark)));
@@ -144,21 +144,25 @@ impl GitPanel {
                 .file_name()
                 .map_or_else(String::new, |n| n.to_string_lossy().into_owned()),
         );
+        name.setFont(Some(&system(ide_ui_common::style::BODY)));
         name.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
         let folder = label(
             mtm,
             &file.parent().map_or_else(String::new, |p| p.display().to_string()),
         );
-        folder.setFont(Some(&ide_ui_common::style::small_system()));
+        folder.setFont(Some(&font_like(&ide_ui_common::style::small_system())));
         folder.setTextColor(Some(&NSColor::secondaryLabelColor()));
         folder.setLineBreakMode(NSLineBreakMode::ByTruncatingHead);
         let row = NSStackView::new(mtm);
         row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        row.setSpacing(ide_ui_common::style::space::SNUG);
+        row.setSpacing(scaled(ide_ui_common::style::space::SNUG));
         for view in [&*letter as &NSView, &name, &folder] {
             row.addArrangedSubview(view);
         }
-        letter.widthAnchor().constraintEqualToConstant(12.0).setActive(true);
+        letter
+            .widthAnchor()
+            .constraintEqualToConstant(scaled(12.0))
+            .setActive(true);
         cell.addSubview(&row);
         row.setTranslatesAutoresizingMaskIntoConstraints(false);
         activate([

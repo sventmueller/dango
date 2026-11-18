@@ -23,7 +23,7 @@ pub(crate) const SIDEBAR_RAISE: f64 = 11.0;
 /// How far the panel reaches under the activity bar, so that its content keeps the same distance from the symbols as
 /// the symbols keep from the window's edge.
 const PANEL_UNDER_ACTIVITY: f64 = 8.5;
-/// The width of the activity bar, which stays when the panel beside it is closed.
+/// The width of the activity bar at the default interface size, which stays when the panel beside it is closed.
 pub(crate) const ACTIVITY_WIDTH: f64 = 44.0;
 pub(super) const PANEL_MIN_WIDTH: f64 = 200.0;
 pub(super) const PANEL_MAX_WIDTH: f64 = 560.0;
@@ -32,6 +32,11 @@ pub(crate) const PANEL_DEFAULT_WIDTH: f64 = 260.0;
 /// How long a panel's page stays in the sidebar after another panel showed, so switching back and forth is cheap and
 /// a move of the sidebar into another window tab later moves only the page that shows.
 const LEAVE_OUT: std::time::Duration = std::time::Duration::from_secs(2);
+
+/// The width of the activity bar at the interface size the user chose.
+pub(crate) fn activity_width() -> f64 {
+    ide_ui_common::ui_size::scaled(ACTIVITY_WIDTH)
+}
 
 /// The folder's sidebar: its views, which panel shows, whether the panel beside the activity bar is open and how wide.
 pub(super) struct State {
@@ -78,6 +83,7 @@ impl WindowController {
         sidebar_view.addSubview(panels.view());
         sidebar_view.addSubview(activity.view());
         let guide = sidebar_view.safeAreaLayoutGuide();
+        let activity_width = activity.view().widthAnchor().constraintEqualToConstant(ACTIVITY_WIDTH);
         auto_layout(&[activity.view(), panels.view()]);
         let under_title_bar = activity
             .view()
@@ -95,7 +101,7 @@ impl WindowController {
                 .view()
                 .bottomAnchor()
                 .constraintEqualToAnchor(&sidebar_view.bottomAnchor()),
-            activity.view().widthAnchor().constraintEqualToConstant(ACTIVITY_WIDTH),
+            activity_width.clone(),
             panels
                 .view()
                 .leadingAnchor()
@@ -118,11 +124,28 @@ impl WindowController {
             .topAnchor()
             .constraintGreaterThanOrEqualToAnchor_constant(&sidebar_view.topAnchor(), -SIDEBAR_RAISE);
         below_toolbar.setActive(true);
+        self.follow_interface_size(&activity_width);
         let state = &self.ivars().sidebar;
         *state.below_toolbar.borrow_mut() = Some(below_toolbar);
         *state.activity.borrow_mut() = Some(activity);
         *state.panels.borrow_mut() = Some(panels);
         *state.view.borrow_mut() = Some(sidebar_view);
+    }
+
+    /// Keeps the activity bar, held at its width by `width`, at the interface size, and the sidebar in front as wide as
+    /// the activity bar and the panel beside it then are.
+    fn follow_interface_size(&self, width: &NSLayoutConstraint) {
+        let controller = objc2::rc::Weak::from(self);
+        let first = Cell::new(true);
+        ide_ui_common::ui_size::keep(width, ide_ui_common::ui_size::Aspect::Length, move |width| {
+            width.setConstant(activity_width());
+            if !first.replace(false)
+                && let Some(controller) = controller.load()
+                && let Some(tab) = controller.current_tab()
+            {
+                controller.fit_sidebar(&tab, tab.sidebar_collapsed());
+            }
+        });
     }
 
     /// Moves the sidebar's first symbol and title below the toolbar of the window tab in front, as far as it reaches now.
@@ -199,7 +222,7 @@ impl WindowController {
         self.ivars()
             .sidebar
             .panel_width
-            .set((width - ACTIVITY_WIDTH).clamp(PANEL_MIN_WIDTH, PANEL_MAX_WIDTH));
+            .set((width - activity_width()).clamp(PANEL_MIN_WIDTH, PANEL_MAX_WIDTH));
     }
 
     /// The panel picked last, whether or not the sidebar shows it.
@@ -221,10 +244,10 @@ impl WindowController {
     pub(super) fn remember_sidebar_width(&self, tab: &TabWindow) {
         let ivars = &self.ivars().sidebar;
         let width = tab.sidebar_width();
-        if ivars.panel_open.get() && tab.window.isVisible() && width > ACTIVITY_WIDTH + PANEL_MIN_WIDTH - 1.0 {
+        if ivars.panel_open.get() && tab.window.isVisible() && width > activity_width() + PANEL_MIN_WIDTH - 1.0 {
             ivars
                 .panel_width
-                .set((width - ACTIVITY_WIDTH).clamp(PANEL_MIN_WIDTH, PANEL_MAX_WIDTH));
+                .set((width - activity_width()).clamp(PANEL_MIN_WIDTH, PANEL_MAX_WIDTH));
         }
     }
 
@@ -234,15 +257,15 @@ impl WindowController {
         let ivars = &self.ivars().sidebar;
         let open = ivars.panel_open.get();
         let width = if open {
-            ACTIVITY_WIDTH + ivars.panel_width.get()
+            activity_width() + ivars.panel_width.get()
         } else {
-            ACTIVITY_WIDTH
+            activity_width()
         };
         // A tab laid out at that width already keeps it, and pinning it again would lay out its window anew; one that
         // came laid out so, as a new window tab does, still needs the range the user may drag it in.
         if tab.sidebar_collapsed() == collapsed && (tab.sidebar_width() - width).abs() < 0.5 {
             if open {
-                tab.release_sidebar(ACTIVITY_WIDTH + PANEL_MIN_WIDTH, ACTIVITY_WIDTH + PANEL_MAX_WIDTH);
+                tab.release_sidebar(activity_width() + PANEL_MIN_WIDTH, activity_width() + PANEL_MAX_WIDTH);
             } else {
                 tab.release_sidebar(width, width);
             }
@@ -257,7 +280,7 @@ impl WindowController {
                 if controller.panel_open()
                     && let Some(tab) = controller.tab_at(window)
                 {
-                    tab.release_sidebar(ACTIVITY_WIDTH + PANEL_MIN_WIDTH, ACTIVITY_WIDTH + PANEL_MAX_WIDTH);
+                    tab.release_sidebar(activity_width() + PANEL_MIN_WIDTH, activity_width() + PANEL_MAX_WIDTH);
                 }
             });
         }

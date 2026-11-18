@@ -68,6 +68,7 @@ mod tests {
         "hiddenSidebarPanels",
         "inlayHints",
         "inlayHintsOffFor",
+        "interfaceFontSize",
         "markdownPreviewBeside",
         "minimap",
         "optionAsMeta",

@@ -317,7 +317,7 @@ pub(super) fn outline(mtm: MainThreadMarker) -> (Retained<NSOutlineView>, Retain
     unsafe { view.setOutlineTableColumn(Some(&column)) };
     view.setHeaderView(None);
     view.setStyle(NSTableViewStyle::SourceList);
-    view.setRowHeight(22.0);
+    ide_ui_common::ui_size::follow_rows(&view, 22.0);
     view.setColumnAutoresizingStyle(
         objc2_app_kit::NSTableViewColumnAutoresizingStyle::FirstColumnOnlyAutoresizingStyle,
     );

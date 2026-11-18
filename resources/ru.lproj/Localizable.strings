@@ -234,8 +234,9 @@
 "Sandbox aus; eingeschaltet gilt: {}" = "Песочница выключена; при включении: {}";
 "Schließen" = "Закрыть";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "запись только в проекте; чтение везде и сеть остаются доступны";
-"Schriftgröße:" = "Размер шрифта:";
+"Schriftgröße in Editor und Terminal:" = "Размер шрифта в редакторе и терминале:";
 "Schriftgröße im AI-Tab:" = "Размер шрифта во вкладке ИИ:";
+"Schriftgröße in Seitenleiste und Tabs:" = "Размер шрифта в боковом меню и вкладках:";
 "Seite des Browser-Tabs" = "Страница вкладки браузера";
 "Seitenleiste ein-/ausblenden" = "Показать/скрыть боковое меню";
 "Seitenleisten-Auswahl" = "Переключатель бокового меню";

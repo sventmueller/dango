@@ -3,28 +3,32 @@
 
 use std::cell::Cell;
 
-use objc2::rc::Retained;
+use ide_ui_common::style::{BODY, small_system, space};
+use ide_ui_common::ui_size::{self, Aspect};
+use objc2::rc::{Retained, Weak};
 use objc2::runtime::{ProtocolObject, Sel};
 use objc2::{MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSButton, NSColor, NSImageView, NSLayoutAttribute, NSLayoutConstraintOrientation, NSMenu,
-    NSScrollView, NSSegmentStyle, NSSegmentSwitchTracking, NSSegmentedControl, NSStackView, NSStackViewDistribution,
-    NSStackViewGravity, NSTextAlignment, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
+    NSAccessibility, NSButton, NSColor, NSControlSize, NSImageView, NSLayoutAttribute, NSLayoutConstraintOrientation,
+    NSMenu, NSScrollView, NSSegmentStyle, NSSegmentSwitchTracking, NSSegmentedControl, NSStackView,
+    NSStackViewDistribution, NSStackViewGravity, NSTextAlignment, NSTextField, NSUserInterfaceLayoutOrientation,
+    NSView,
 };
 use splat_i18n::{t, tf};
 
 use super::model::{Phase, Tab};
 use super::panel::CiPanel;
 use super::text;
-use crate::util::{
-    activate, borderless_button, item, ns, pin_edges, pin_sides, set_action, set_target, symbol, symbol_button,
-};
+use crate::util::{activate, borderless_button, item, ns, pin_edges, pin_sides, set_action, set_target};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
 /// How far the panel's content keeps from the sidebar's edges: as far as the panel's title.
 const MARGIN: f64 = 8.0;
-
+/// The room the symbol and the close button take beside a problem's text, at the default interface size.
+const PROBLEM_ROOM: f64 = 40.0;
+/// How far above the page's middle an empty state sits, at the default interface size.
+const EMPTY_LIFT: f64 = 40.0;
 pub(crate) struct Ui {
     pub(crate) page: Retained<NSView>,
     empty: Retained<NSView>,
@@ -57,7 +61,7 @@ impl Ui {
         content.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         content.setAlignment(NSLayoutAttribute::Leading);
         content.setDistribution(NSStackViewDistribution::Fill);
-        content.setSpacing(ide_ui_common::style::space::S);
+        ui_size::follow_spacing(&content, space::S);
         for view in [&*empty, &content as &NSView] {
             page.addSubview(view);
             pin_edges(view, &page);
@@ -65,10 +69,11 @@ impl Ui {
         let (header, buttons) = header(mtm, panel);
         let tabs = tabs(mtm, panel);
         let (problem_row, problem_label) = problem_row(mtm, panel);
+        follow_problem_width(&problem_label, &page);
         let (list, outline) = outline(mtm, panel);
         let no_runs = NSTextField::wrappingLabelWithString(&ns(t("Für diesen Commit gibt es keine Läufe.")), mtm);
         no_runs.setTextColor(Some(&NSColor::secondaryLabelColor()));
-        no_runs.setFont(Some(&ide_ui_common::style::small_system()));
+        ui_size::set_font(&no_runs, &small_system());
         for (view, inset) in [
             (&*tabs as &NSView, MARGIN),
             (&problem_row, MARGIN),
@@ -227,6 +232,7 @@ impl Ui {
             Some(first),
         );
         let other = borderless_button(mtm, second.0, Some(panel), second.1);
+        ui_size::set_system_font(&other, BODY);
         other.setContentTintColor(Some(&NSColor::controlAccentColor()));
         other.setEnabled(available.is_ok() || second.1 != sel!(ideCiBrowserLogin:));
         state.addArrangedSubview(&other);
@@ -244,14 +250,12 @@ impl Ui {
         let row = NSStackView::new(mtm);
         row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
         row.setAlignment(NSLayoutAttribute::Top);
-        row.setSpacing(ide_ui_common::style::space::XS);
+        ui_size::follow_spacing(&row, space::XS);
         let icon = NSImageView::new(mtm);
-        if let Some(image) = symbol("exclamationmark.triangle.fill", t("Fehler")) {
-            icon.setImage(Some(&image));
-        }
+        ui_size::follow_symbol_image(&icon, "exclamationmark.triangle.fill", t("Fehler"));
         icon.setContentTintColor(Some(&NSColor::systemOrangeColor()));
         let text = NSTextField::wrappingLabelWithString(&ns(problem), mtm);
-        text.setFont(Some(&ide_ui_common::style::small_system()));
+        ui_size::set_font(&text, &small_system());
         text.setSelectable(true);
         text.setPreferredMaxLayoutWidth(200.0);
         row.addArrangedSubview(&icon);
@@ -262,13 +266,15 @@ impl Ui {
     fn place_empty(&self, state: &NSStackView) {
         self.empty.addSubview(state);
         state.setTranslatesAutoresizingMaskIntoConstraints(false);
+        let lift = state
+            .centerYAnchor()
+            .constraintEqualToAnchor(&self.empty.centerYAnchor());
+        ui_size::follow_length(&lift, -EMPTY_LIFT);
         activate([
             state
                 .centerXAnchor()
                 .constraintEqualToAnchor(&self.empty.centerXAnchor()),
-            state
-                .centerYAnchor()
-                .constraintEqualToAnchor_constant(&self.empty.centerYAnchor(), -40.0),
+            lift,
             state
                 .leadingAnchor()
                 .constraintGreaterThanOrEqualToAnchor_constant(&self.empty.leadingAnchor(), 16.0),
@@ -394,8 +400,7 @@ impl Ui {
             self.problem_row.setHidden(true);
             return;
         };
-        let width = (self.page.frame().size.width - 2.0 * MARGIN - 40.0).max(120.0);
-        self.problem_label.setPreferredMaxLayoutWidth(width);
+        self.problem_label.setPreferredMaxLayoutWidth(problem_width(&self.page));
         self.problem_label.setStringValue(&ns(problem));
         self.problem_row.setHidden(false);
     }
@@ -404,7 +409,7 @@ impl Ui {
 /// A small centred note in tertiary colour.
 fn small_note(mtm: MainThreadMarker, text: &str) -> Retained<NSTextField> {
     let note = NSTextField::wrappingLabelWithString(&ns(text), mtm);
-    note.setFont(Some(&ide_ui_common::style::small_system()));
+    ui_size::set_font(&note, &small_system());
     note.setTextColor(Some(&NSColor::tertiaryLabelColor()));
     note.setAlignment(NSTextAlignment::Center);
     note.setPreferredMaxLayoutWidth(200.0);
@@ -449,8 +454,8 @@ fn tabs(mtm: MainThreadMarker, panel: &CiPanel) -> Retained<NSSegmentedControl> 
     control.setSegmentStyle(NSSegmentStyle::Automatic);
     control.setTrackingMode(NSSegmentSwitchTracking::SelectOne);
     control.setSegmentDistribution(objc2_app_kit::NSSegmentDistribution::FillEqually);
-    control.setControlSize(objc2_app_kit::NSControlSize::Small);
-    control.setFont(Some(&ide_ui_common::style::small_system()));
+    ui_size::follow_control_size(&control, NSControlSize::Small);
+    ui_size::set_font(&control, &small_system());
     control.setSelectedSegment(0);
     // Equal segments make the control three times its longest label wide, which would hold the sidebar wider.
     control.setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
@@ -461,15 +466,13 @@ fn tabs(mtm: MainThreadMarker, panel: &CiPanel) -> Retained<NSSegmentedControl> 
 
 fn problem_row(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSStackView>, Retained<NSTextField>) {
     let icon = NSImageView::new(mtm);
-    if let Some(image) = symbol("exclamationmark.triangle.fill", t("Fehler")) {
-        icon.setImage(Some(&image));
-    }
+    ui_size::follow_symbol_image(&icon, "exclamationmark.triangle.fill", t("Fehler"));
     icon.setContentTintColor(Some(&NSColor::systemOrangeColor()));
     let text = NSTextField::wrappingLabelWithString(&ns(""), mtm);
-    text.setFont(Some(&ide_ui_common::style::small_system()));
+    ui_size::set_font(&text, &small_system());
     text.setSelectable(true);
     text.setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
-    let dismiss = symbol_button(
+    let dismiss = ui_size::symbol_button(
         mtm,
         "xmark",
         t("Meldung schließen"),
@@ -481,7 +484,7 @@ fn problem_row(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSStackView>
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
     row.setAlignment(NSLayoutAttribute::Top);
-    row.setSpacing(ide_ui_common::style::space::S);
+    ui_size::follow_spacing(&row, space::S);
     row.addView_inGravity(&icon, NSStackViewGravity::Leading);
     row.addView_inGravity(&text, NSStackViewGravity::Leading);
     row.addView_inGravity(&dismiss, NSStackViewGravity::Trailing);
@@ -491,6 +494,8 @@ fn problem_row(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSStackView>
 fn outline(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSScrollView>, Retained<objc2_app_kit::NSOutlineView>) {
     let view = super::rows::CiOutlineView::new(mtm, ide_ui_common::panel::LIST_FRAME);
     let scroll = ide_ui_common::panel::source_list_outline(mtm, &view, "ci", t("CI-Läufe"));
+    // In place of the source list's own row height: the delegate gives each row its height.
+    ui_size::follow_row_heights(&view);
     // SAFETY: The outline view holds its data source and delegate weakly; the panel registry keeps the panel alive.
     unsafe {
         view.setDataSource(Some(ProtocolObject::from_ref(panel)));
@@ -506,4 +511,21 @@ fn outline(mtm: MainThreadMarker, panel: &CiPanel) -> (Retained<NSScrollView>, R
     // SAFETY: The view keeps the menu; its delegate, the panel, outlives the view through the registry.
     unsafe { view.setMenu(Some(&menu)) };
     (scroll, view.into_super())
+}
+
+/// The width a problem's text wraps at in the list's problem row, inside the margins and beside its symbol and button.
+fn problem_width(page: &NSView) -> f64 {
+    (page.frame().size.width - 2.0 * MARGIN - ui_size::scaled(PROBLEM_ROOM)).max(120.0)
+}
+
+/// Keeps the width `label` wraps at, once it was given one, fitting `page` at the interface size.
+fn follow_problem_width(label: &NSTextField, page: &NSView) {
+    let page = Weak::from(page);
+    ui_size::keep(label, Aspect::Layout, move |label| {
+        if let Some(page) = page.load()
+            && label.preferredMaxLayoutWidth() > 0.0
+        {
+            label.setPreferredMaxLayoutWidth(problem_width(&page));
+        }
+    });
 }

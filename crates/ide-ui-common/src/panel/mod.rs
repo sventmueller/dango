@@ -15,7 +15,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSDictionary, NSNumber, NSPoint, NSRect, NSSize};
 
 use crate::constant;
-use crate::util::{ns, set_label, symbol_button};
+use crate::util::{ns, set_label};
 pub use items::{RowItem, RowItems};
 pub use list::*;
 pub use outline::{Nesting, PanelOutline};
@@ -33,7 +33,7 @@ const HIGH_PRIORITY: i64 = 90;
 pub fn header_row(mtm: MainThreadMarker) -> Retained<NSStackView> {
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(HEADER_SPACING);
+    crate::ui_size::follow_spacing(&row, HEADER_SPACING);
     row
 }
 
@@ -46,7 +46,7 @@ pub fn header_button(
     target: Option<&AnyObject>,
     action: Sel,
 ) -> Retained<NSButton> {
-    let button = symbol_button(mtm, name, title, HEADER_POINTS, target, action);
+    let button = crate::ui_size::symbol_button(mtm, name, title, HEADER_POINTS, target, action);
     button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
     set_label(&button, Some(title));
     button

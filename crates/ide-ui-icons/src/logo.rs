@@ -89,9 +89,11 @@ pub(crate) fn image(name: &'static str) -> Option<Retained<NSImage>> {
                 return Bool::NO;
             };
             let ctx = context.CGContext();
-            let scale = DRAWN / VIEW_BOX;
-            let left = rect.origin.x + (rect.size.width - DRAWN) / 2.0;
-            let top = rect.origin.y + (rect.size.height + DRAWN) / 2.0;
+            // A copy resized for a larger interface draws the logo in proportion.
+            let drawn = DRAWN * rect.size.width / SIDE;
+            let scale = drawn / VIEW_BOX;
+            let left = rect.origin.x + (rect.size.width - drawn) / 2.0;
+            let top = rect.origin.y + (rect.size.height + drawn) / 2.0;
             // SVG counts down from the top, the image up from the bottom.
             let at = |p: kurbo::Point| (left + p.x * scale, top - p.y * scale);
             CGContext::set_rgb_fill_color(Some(&ctx), 0.0, 0.0, 0.0, 1.0);

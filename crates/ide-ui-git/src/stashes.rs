@@ -22,7 +22,8 @@ use super::panel::{GitPanel, with_panel};
 use super::rows::{HoverCell, file_text, letter_label};
 use super::text::Problem;
 use super::{sheets, work};
-use ide_ui_common::util::{activate, center_y, label, ns, symbol, symbol_button};
+use ide_ui_common::ui_size::{self, font_like, scaled, system};
+use ide_ui_common::util::{activate, center_y, label, ns, symbol_at, symbol_button};
 
 const ACTION_POINTS: f64 = 12.0;
 
@@ -75,28 +76,28 @@ impl GitPanel {
         let age = super::text::ago(now() - stash.time);
         let cell = HoverCell::new(mtm);
         let icon = objc2_app_kit::NSImageView::new(mtm);
-        if let Some(image) = symbol("archivebox", "") {
-            icon.setImage(Some(&image));
-        }
+        icon.setImage(symbol_at("archivebox", "", scaled(ui_size::DEFAULT)).as_deref());
         icon.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
         ide_ui_common::util::hide_from_voiceover(&icon);
         let title = label(mtm, &words);
+        title.setFont(Some(&system(ide_ui_common::style::BODY)));
         title.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
         title.setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
         let when = label(mtm, &age);
-        when.setFont(Some(&ide_ui_common::style::small_system()));
+        when.setFont(Some(&font_like(&ide_ui_common::style::small_system())));
         when.setTextColor(Some(&NSColor::secondaryLabelColor()));
         when.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Horizontal);
         let text = NSStackView::new(mtm);
         text.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        text.setSpacing(ide_ui_common::style::space::SNUG);
+        text.setSpacing(scaled(ide_ui_common::style::space::SNUG));
         text.addArrangedSubview(&icon);
         text.addArrangedSubview(&title);
         let buttons = NSStackView::new(mtm);
         buttons.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        buttons.setSpacing(ide_ui_common::style::space::XXS);
+        buttons.setSpacing(scaled(ide_ui_common::style::space::XXS));
         for (name, description, action) in actions() {
-            let button: Retained<NSButton> = symbol_button(mtm, name, description, ACTION_POINTS, Some(self), action);
+            let points = scaled(ACTION_POINTS);
+            let button: Retained<NSButton> = symbol_button(mtm, name, description, points, Some(self), action);
             button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
             buttons.addArrangedSubview(&button);
         }
@@ -110,14 +111,14 @@ impl GitPanel {
             when.trailingAnchor().constraintEqualToAnchor(&cell.trailingAnchor()),
             buttons
                 .trailingAnchor()
-                .constraintEqualToAnchor_constant(&when.leadingAnchor(), -4.0),
+                .constraintEqualToAnchor_constant(&when.leadingAnchor(), -scaled(4.0)),
         ]);
         let to_edge = text
             .trailingAnchor()
-            .constraintLessThanOrEqualToAnchor_constant(&when.leadingAnchor(), -6.0);
+            .constraintLessThanOrEqualToAnchor_constant(&when.leadingAnchor(), -scaled(6.0));
         let beside = text
             .trailingAnchor()
-            .constraintLessThanOrEqualToAnchor_constant(&buttons.leadingAnchor(), -4.0);
+            .constraintLessThanOrEqualToAnchor_constant(&buttons.leadingAnchor(), -scaled(4.0));
         to_edge.setActive(true);
         cell.set_actions(buttons.into_super(), beside, to_edge);
         let described = tf("Stash {}: {}, {}", &[&name_of(&stash), &words, &age]);
@@ -159,7 +160,7 @@ impl GitPanel {
             text.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
             letter.trailingAnchor().constraintEqualToAnchor(&cell.trailingAnchor()),
             text.trailingAnchor()
-                .constraintLessThanOrEqualToAnchor_constant(&letter.leadingAnchor(), -4.0),
+                .constraintLessThanOrEqualToAnchor_constant(&letter.leadingAnchor(), -scaled(4.0)),
         ]);
         let described = tf("{}, {}", &[&path.display().to_string(), mark.word()]);
         cell.setToolTip(Some(&ns(&described)));

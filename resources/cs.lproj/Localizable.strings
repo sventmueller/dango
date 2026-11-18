@@ -234,8 +234,9 @@
 "Sandbox aus; eingeschaltet gilt: {}" = "Sandbox vypnutý; po zapnutí platí: {}";
 "Schließen" = "Zavřít";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "Zápis jen do projektu; čtení odkudkoli a síť zůstávají povolené";
-"Schriftgröße:" = "Velikost písma:";
+"Schriftgröße in Editor und Terminal:" = "Velikost písma v editoru a terminálu:";
 "Schriftgröße im AI-Tab:" = "Velikost písma v panelu AI:";
+"Schriftgröße in Seitenleiste und Tabs:" = "Velikost písma v bočním panelu a na panelech:";
 "Seite des Browser-Tabs" = "Stránka z panelu prohlížeče";
 "Seitenleiste ein-/ausblenden" = "Zobrazit/skrýt boční panel";
 "Seitenleisten-Auswahl" = "Výběr bočního panelu";

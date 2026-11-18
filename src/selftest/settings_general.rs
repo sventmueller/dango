@@ -179,6 +179,17 @@ fn font_and_engine(view: &NSView) {
         (size - 17.0).abs() < f64::EPSILON && labels.iter().any(|l| *l == splat_i18n::tf("{} pt", &["17"])),
         format!("{size}, {labels:?}"),
     );
+    let interface = control_for(view, sel!(ideInterfaceFontSizeChanged:)).and_then(|c| c.downcast::<NSStepper>().ok());
+    let stored = interface.as_ref().map_or(0.0, |stepper| {
+        stepper.setDoubleValue(15.6);
+        act(stepper);
+        Settings::load_user().get(&keys::INTERFACE_FONT_SIZE)
+    });
+    check(
+        "the stepper of the sidebar's and tabs' size stores a whole size",
+        (stored - 16.0).abs() < f64::EPSILON,
+        format!("{stored}"),
+    );
     let popup = control_for(view, sel!(ideSearchEngineChanged:)).and_then(|c| c.downcast::<NSPopUpButton>().ok());
     let chosen = popup.as_ref().map(|popup| {
         popup.selectItemAtIndex(1);

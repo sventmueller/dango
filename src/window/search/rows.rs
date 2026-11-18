@@ -1,11 +1,13 @@
 //! The rows of the search results: a file with its folder and match count, and a matching line with its number and
 //! the matches marked. While the replace field shows, a row offers its replace button when the pointer is on it, and a
-//! line shows each match struck through with its replacement after it.
+//! line shows each match struck through with its replacement after it. A row takes its sizes at the interface size as
+//! it is made, and the lists make their rows anew when that size changes.
 
 use std::cell::RefCell;
 use std::path::Path;
 
 use ide_project::{LineResult, SearchOptions};
+use ide_ui_common::ui_size::scaled;
 use objc2::rc::Retained;
 use objc2::runtime::Sel;
 use objc2::{AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
@@ -22,6 +24,8 @@ use super::SearchPanel;
 use crate::util::{activate, constant, fixed_size, guarded, label, ns};
 
 const FONT_SIZE: f64 = 11.0;
+/// The side of a file's icon.
+const ICON_SIDE: f64 = 16.0;
 
 /// What the rows need while the replace field shows: the panel their buttons talk to, the replacement and, for a
 /// regular expression, the options that fill in its groups.
@@ -113,7 +117,7 @@ impl ResultCell {
             mtm,
             "arrow.2.squarepath",
             name,
-            ide_ui_common::style::symbol::INLINE,
+            scaled(ide_ui_common::style::symbol::INLINE),
             Some(replacing.panel),
             action,
         );
@@ -141,7 +145,8 @@ pub(super) fn file_row(
     replacing: Option<&Replacing>,
 ) -> Retained<NSView> {
     let cell = ResultCell::new(mtm);
-    let image = crate::file_icon::image_view(mtm, path, false);
+    let image = crate::file_icon::image_view(mtm, Path::new(""), true);
+    crate::file_icon::show_scaled(&image, path, false, scaled(1.0));
     let name = path
         .file_name()
         .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
@@ -150,17 +155,17 @@ pub(super) fn file_row(
         .map_or_else(String::new, |p| p.to_string_lossy().into_owned());
     let title = label(mtm, &name);
     title.setFont(Some(&NSFont::systemFontOfSize_weight(
-        ide_ui_common::style::LABEL,
+        scaled(ide_ui_common::style::LABEL),
         constant!(objc2_app_kit::NSFontWeightSemibold),
     )));
     title.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
     let place = label(mtm, &folder);
-    place.setFont(Some(&NSFont::systemFontOfSize(FONT_SIZE)));
+    place.setFont(Some(&NSFont::systemFontOfSize(scaled(FONT_SIZE))));
     place.setTextColor(Some(&NSColor::secondaryLabelColor()));
     place.setLineBreakMode(NSLineBreakMode::ByTruncatingHead);
     let number = label(mtm, &matches.to_string());
     number.setFont(Some(&NSFont::monospacedDigitSystemFontOfSize_weight(
-        FONT_SIZE,
+        scaled(FONT_SIZE),
         constant!(objc2_app_kit::NSFontWeightRegular),
     )));
     number.setTextColor(Some(&NSColor::secondaryLabelColor()));
@@ -184,23 +189,23 @@ pub(super) fn file_row(
     }
     place.setContentCompressionResistancePriority_forOrientation(200.0, NSLayoutConstraintOrientation::Horizontal);
     title.setContentCompressionResistancePriority_forOrientation(700.0, NSLayoutConstraintOrientation::Horizontal);
-    fixed_size(&image, 16.0, 16.0);
+    fixed_size(&image, scaled(ICON_SIDE), scaled(ICON_SIDE));
     activate([
         image.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
         image.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
         title
             .leadingAnchor()
-            .constraintEqualToAnchor_constant(&image.trailingAnchor(), 5.0),
+            .constraintEqualToAnchor_constant(&image.trailingAnchor(), scaled(5.0)),
         title.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
         place
             .leadingAnchor()
-            .constraintEqualToAnchor_constant(&title.trailingAnchor(), 6.0),
+            .constraintEqualToAnchor_constant(&title.trailingAnchor(), scaled(6.0)),
         place
             .firstBaselineAnchor()
             .constraintEqualToAnchor(&title.firstBaselineAnchor()),
         number
             .leadingAnchor()
-            .constraintGreaterThanOrEqualToAnchor_constant(&place.trailingAnchor(), 6.0),
+            .constraintGreaterThanOrEqualToAnchor_constant(&place.trailingAnchor(), scaled(6.0)),
         number
             .trailingAnchor()
             .constraintEqualToAnchor_constant(&cell.trailingAnchor(), -6.0),
@@ -226,7 +231,10 @@ pub(super) fn line_row(
 ) -> Retained<NSView> {
     let cell = ResultCell::new(mtm);
     cell.setUserInterfaceLayoutDirection(NSUserInterfaceLayoutDirection::LeftToRight);
-    let font = NSFont::monospacedDigitSystemFontOfSize_weight(FONT_SIZE, constant!(objc2_app_kit::NSFontWeightRegular));
+    let font = NSFont::monospacedDigitSystemFontOfSize_weight(
+        scaled(FONT_SIZE),
+        constant!(objc2_app_kit::NSFontWeightRegular),
+    );
     let sample = label(mtm, &"0".repeat(widest.max(line.line).to_string().len()));
     sample.setFont(Some(&font));
     let number_width = sample.intrinsicContentSize().width;
@@ -254,7 +262,7 @@ pub(super) fn line_row(
         number.widthAnchor().constraintEqualToConstant(number_width),
         number.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
         text.leadingAnchor()
-            .constraintEqualToAnchor_constant(&number.trailingAnchor(), 6.0),
+            .constraintEqualToAnchor_constant(&number.trailingAnchor(), scaled(6.0)),
         text.trailingAnchor()
             .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
         text.firstBaselineAnchor()
@@ -291,7 +299,8 @@ fn marked(line: &LineResult, replacing: Option<&Replacing>) -> Retained<NSMutabl
     let style = NSMutableParagraphStyle::new();
     style.setBaseWritingDirection(NSWritingDirection::LeftToRight);
     style.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
-    let font = NSFont::monospacedSystemFontOfSize_weight(FONT_SIZE, constant!(objc2_app_kit::NSFontWeightRegular));
+    let font =
+        NSFont::monospacedSystemFontOfSize_weight(scaled(FONT_SIZE), constant!(objc2_app_kit::NSFontWeightRegular));
     let (font_key, style_key) = (constant!(NSFontAttributeName), constant!(NSParagraphStyleAttributeName));
     let (color_key, marker_key) = (
         constant!(NSForegroundColorAttributeName),

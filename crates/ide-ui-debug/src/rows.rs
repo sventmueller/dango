@@ -334,7 +334,8 @@ fn switch(panel: &DebugPanel, title: &str, on: bool, index: usize, action: objc2
     } else {
         NSControlStateValueOff
     });
-    button.setFont(Some(&ide_ui_common::style::small_system()));
+    ide_ui_common::ui_size::follow_control_size(&button, objc2_app_kit::NSControlSize::Regular);
+    ide_ui_common::ui_size::set_font(&button, &ide_ui_common::style::small_system());
     button.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingMiddle);
     button.into_super().into_super()
 }

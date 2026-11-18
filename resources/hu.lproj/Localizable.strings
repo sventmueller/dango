@@ -234,8 +234,9 @@
 "Sandbox aus; eingeschaltet gilt: {}" = "Homokozó kikapcsolva; bekapcsolva: {}";
 "Schließen" = "Bezárás";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "Írás csak a projektben; az olvasás bárhol és a hálózat nyitva marad";
-"Schriftgröße:" = "Betűméret:";
+"Schriftgröße in Editor und Terminal:" = "Betűméret a szerkesztőben és a terminálban:";
 "Schriftgröße im AI-Tab:" = "Betűméret az AI-lapon:";
+"Schriftgröße in Seitenleiste und Tabs:" = "Betűméret az oldalsávban és a lapokon:";
 "Seite des Browser-Tabs" = "A böngészőlap oldala";
 "Seitenleiste ein-/ausblenden" = "Oldalsáv megjelenítése/elrejtése";
 "Seitenleisten-Auswahl" = "Oldalsáv-választó";

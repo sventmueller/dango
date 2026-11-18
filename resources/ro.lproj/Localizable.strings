@@ -234,8 +234,9 @@
 "Sandbox aus; eingeschaltet gilt: {}" = "Sandbox dezactivat; când este activat: {}";
 "Schließen" = "Închideți";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "Scriere doar în proiect; citirea oriunde și rețeaua rămân deschise";
-"Schriftgröße:" = "Dimensiune font:";
+"Schriftgröße in Editor und Terminal:" = "Dimensiune font în editor și terminal:";
 "Schriftgröße im AI-Tab:" = "Dimensiune font în fila IA:";
+"Schriftgröße in Seitenleiste und Tabs:" = "Dimensiune font în bara laterală și file:";
 "Seite des Browser-Tabs" = "Pagina filei de browser";
 "Seitenleiste ein-/ausblenden" = "Afișați/ascundeți bara laterală";
 "Seitenleisten-Auswahl" = "Selector bară laterală";

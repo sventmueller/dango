@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use ide_project::Entry;
 use ide_ui_common::panel::{RowItem, RowItems};
+use ide_ui_common::ui_size;
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, NSObject, Sel};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
@@ -456,7 +457,7 @@ fn fill_row(cell: &NSTableCellView, path: &Path, ignored: bool, open: Option<boo
     let (Some(image), Some(label)) = (unsafe { cell.imageView() }, unsafe { cell.textField() }) else {
         return;
     };
-    crate::file_icon::show(&image, path, open.is_some());
+    crate::file_icon::show_scaled(&image, path, open.is_some(), ui_size::scaled(1.0));
     if let Some(open) = open {
         image.setImage(crate::window::file_outline::chevron(open).as_deref());
         // At the start of the icon's place, where the search panel's chevrons sit under the panel's title.
@@ -482,12 +483,18 @@ fn fill_row(cell: &NSTableCellView, path: &Path, ignored: bool, open: Option<boo
     cell.setToolTip(Some(&ns(&path.to_string_lossy())));
 }
 
+/// The side of a row's icon at the default interface size.
+const ICON_SIDE: f64 = 16.0;
+/// The room between a row's icon and its name at the default interface size.
+const ICON_GAP: f64 = 5.0;
+
 /// An empty row for `fill_row`, which the outline view keeps for reuse.
 fn row_view(mtm: MainThreadMarker) -> Retained<NSTableCellView> {
     let cell = NSTableCellView::new(mtm);
     cell.setIdentifier(Some(&ns(ROW)));
     let image: Retained<NSImageView> = crate::file_icon::image_view(mtm, Path::new(""), true);
     let label = NSTextField::labelWithString(&ns(""), mtm);
+    ui_size::set_system_font(&label, ide_ui_common::style::BODY);
     label.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
     cell.addSubview(&image);
     cell.addSubview(&label);
@@ -497,14 +504,22 @@ fn row_view(mtm: MainThreadMarker) -> Retained<NSTableCellView> {
         cell.setTextField(Some(&label));
     }
     auto_layout(&[&image, &label]);
+    let (width, height) = (
+        image.widthAnchor().constraintEqualToConstant(ICON_SIDE),
+        image.heightAnchor().constraintEqualToConstant(ICON_SIDE),
+    );
+    let gap = label
+        .leadingAnchor()
+        .constraintEqualToAnchor_constant(&image.trailingAnchor(), ICON_GAP);
+    ui_size::follow_length(&width, ICON_SIDE);
+    ui_size::follow_length(&height, ICON_SIDE);
+    ui_size::follow_length(&gap, ICON_GAP);
     activate([
         image.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
         image.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-        image.widthAnchor().constraintEqualToConstant(16.0),
-        image.heightAnchor().constraintEqualToConstant(16.0),
-        label
-            .leadingAnchor()
-            .constraintEqualToAnchor_constant(&image.trailingAnchor(), 5.0),
+        width,
+        height,
+        gap,
         label
             .trailingAnchor()
             .constraintLessThanOrEqualToAnchor(&cell.trailingAnchor()),

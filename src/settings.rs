@@ -47,6 +47,7 @@ const DICTATION_TAB: isize = 6;
 pub(crate) struct Ivars {
     settings: RefCell<Settings>,
     font_label: RefCell<Option<Retained<NSTextField>>>,
+    interface_font_label: RefCell<Option<Retained<NSTextField>>>,
     chat_font_label: RefCell<Option<Retained<NSTextField>>>,
     ci: Retained<ci::CiSettings>,
     agents: Retained<agents::AgentsSettings>,
@@ -164,6 +165,18 @@ define_class!(
             });
         }
 
+        #[unsafe(method(ideInterfaceFontSizeChanged:))]
+        fn interface_font_size_changed(&self, sender: Option<&AnyObject>) {
+            guarded((), || {
+                let Some(stepper) = sender.and_then(|s| s.downcast_ref::<NSStepper>()) else { return };
+                let size = stepper.doubleValue().round();
+                self.store(|settings| settings.set(&keys::INTERFACE_FONT_SIZE, &size));
+                if let Some(field) = self.ivars().interface_font_label.borrow().as_ref() {
+                    field.setStringValue(&ns(&font_size_text(size)));
+                }
+            });
+        }
+
         #[unsafe(method(ideChatFontSizeChanged:))]
         fn chat_font_size_changed(&self, sender: Option<&AnyObject>) {
             guarded((), || {
@@ -216,6 +229,7 @@ impl SettingsController {
         let this = Self::alloc(mtm).set_ivars(Ivars {
             settings: RefCell::new(Settings::load_user()),
             font_label: RefCell::new(None),
+            interface_font_label: RefCell::new(None),
             chat_font_label: RefCell::new(None),
             ci: ci::CiSettings::new(mtm),
             agents: agents::AgentsSettings::new(mtm),
@@ -595,6 +609,7 @@ fn general_view(mtm: MainThreadMarker, controller: &SettingsController) -> Retai
         Row::new(mtm, t("Tabs:"), &previews),
         Row::new(mtm, t("Dateien:"), &files),
         font_size_row(mtm, controller, settings.get(&keys::FONT_SIZE)),
+        interface_font_size_row(mtm, controller, settings.get(&keys::INTERFACE_FONT_SIZE)),
         chat_font_size_row(mtm, controller, settings.get(&ide_ui_agent::CHAT_FONT_SIZE)),
         Row::new(mtm, t("Code:"), &format_on_save),
         Row::under(&eslint),
@@ -626,11 +641,24 @@ fn font_size_row(mtm: MainThreadMarker, controller: &SettingsController, size: f
     let (row, size_label) = size_row(
         mtm,
         controller,
-        t("Schriftgröße:"),
+        t("Schriftgröße in Editor und Terminal:"),
         (size, 9.0, 32.0),
         sel!(ideFontSizeChanged:),
     );
     *controller.ivars().font_label.borrow_mut() = Some(size_label);
+    row
+}
+
+/// The text size of the sidebar and the tab bars and the stepper that changes it.
+fn interface_font_size_row(mtm: MainThreadMarker, controller: &SettingsController, size: f64) -> Row {
+    let (row, size_label) = size_row(
+        mtm,
+        controller,
+        t("Schriftgröße in Seitenleiste und Tabs:"),
+        (size, ide_ui_common::ui_size::MIN, ide_ui_common::ui_size::MAX),
+        sel!(ideInterfaceFontSizeChanged:),
+    );
+    *controller.ivars().interface_font_label.borrow_mut() = Some(size_label);
     row
 }
 

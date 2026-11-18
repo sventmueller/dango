@@ -6,7 +6,7 @@ use objc2::rc::Retained;
 use objc2_app_kit::{NSScreen, NSWindow};
 use objc2_foundation::{NSPoint, NSRect, NSString, NSUserDefaults};
 
-use super::{ACTIVITY_WIDTH, Panel, WindowController, tabs};
+use super::{Panel, WindowController, tabs};
 use crate::util::ns;
 
 /// The name the window saved last is also kept under, for a folder without a name of its own.
@@ -99,7 +99,10 @@ impl WindowController {
             defaults.setBool_forKey(inspector_shown, &key("Inspector open", name));
             defaults.setDouble_forKey(inspector_width, &key("Inspector", name));
             tab.window.saveFrameUsingName(&ns(name));
-            defaults.setDouble_forKey(ACTIVITY_WIDTH + self.panel_width(), &key("Sidebar", name));
+            defaults.setDouble_forKey(
+                super::sidebar::activity_width() + self.panel_width(),
+                &key("Sidebar", name),
+            );
             if let Some(panel) = self.picked_panel() {
                 defaults.setInteger_forKey(panel.tag(), &key("Panel", name));
             }

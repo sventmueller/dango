@@ -52,6 +52,7 @@ struct Look {
     macros: Arc<str>,
     width: f64,
     web: bool,
+    zoom: f64,
 }
 
 impl PartialEq for Look {
@@ -61,6 +62,7 @@ impl PartialEq for Look {
             && self.macros == other.macros
             && (self.width - other.width).abs() < super::page::WIDTH_STEP
             && self.web == other.web
+            && self.zoom.to_bits() == other.zoom.to_bits()
     }
 }
 
@@ -87,6 +89,8 @@ pub(crate) struct Preview {
     render_due: Cell<bool>,
     /// The user asked for the pictures from the web of this document although its folder is not trusted.
     web_allowed: Cell<bool>,
+    /// How much larger than splat's own size the text shows: as much as its editor's text is than the default.
+    zoom: Cell<f64>,
     closed: Cell<bool>,
     /// It opened with its document and closes with its editor.
     automatic: bool,
@@ -124,6 +128,7 @@ impl Preview {
             requested: RefCell::new(None),
             render_due: Cell::new(false),
             web_allowed: Cell::new(false),
+            zoom: Cell::new(zoom_for(editor.font_size())),
             closed: Cell::new(false),
             automatic,
             sync: super::sync::State::default(),
@@ -346,6 +351,15 @@ impl Preview {
             macros: shown.macros.clone(),
             width: self.views.picture_width(),
             web: self.loads_web_pictures(),
+            zoom: self.zoom.get(),
+        }
+    }
+
+    /// Shows the text as large as an editor's of `font_size` points, rendering it anew when that changes its size.
+    pub(crate) fn set_font_size(self: &Rc<Self>, font_size: f64) {
+        let zoom = zoom_for(font_size);
+        if self.zoom.replace(zoom).to_bits() != zoom.to_bits() {
+            self.render();
         }
     }
 
@@ -365,7 +379,7 @@ impl Preview {
             };
             let ctx = RenderCtx {
                 mtm: self.mtm,
-                zoom: 1.0,
+                zoom: look.zoom,
                 doc_dir: self.path.parent(),
                 images: &self.images,
                 max_image_width: look.width,
@@ -440,6 +454,11 @@ impl Preview {
 }
 
 /// The length of the text `blocks` are set as.
+/// The zoom of a preview whose editor shows its text at `font_size` points.
+fn zoom_for(font_size: f64) -> f64 {
+    font_size / ide_core::settings::keys::FONT_SIZE.default_value()
+}
+
 fn text_len(blocks: &[Arc<TopBlock>]) -> usize {
     blocks.iter().map(|block| block.len_u16).sum()
 }

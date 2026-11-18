@@ -78,7 +78,7 @@ define_class!(
 
         #[unsafe(method(outlineView:heightOfRowByItem:))]
         fn row_height(&self, _view: &NSOutlineView, item: &AnyObject) -> f64 {
-            guarded(24.0, || super::rows::height(super::rows::key_of(item).as_ref()))
+            guarded(super::rows::height(None), || super::rows::height(super::rows::key_of(item).as_ref()))
         }
 
         #[unsafe(method(outlineViewItemDidCollapse:))]

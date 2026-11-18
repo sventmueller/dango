@@ -18,6 +18,7 @@ use splat_i18n::{t, tf};
 
 use super::model::{FileRow, Mark, RowKey, Section};
 use super::panel::{GitPanel, with_panel};
+use ide_ui_common::ui_size::{font_like, scaled, system};
 use ide_ui_common::util::{activate, center_y, label, ns, symbol_button};
 
 const SECTION_HEIGHT: f64 = 26.0;
@@ -32,11 +33,11 @@ const DELETE_KEY: u16 = 51;
 
 /// The height of the row for `key`.
 pub(crate) fn height(key: Option<&RowKey>) -> f64 {
-    match key {
+    scaled(match key {
         Some(RowKey::Section(_)) => SECTION_HEIGHT,
         Some(RowKey::Worktree(_)) => TREE_HEIGHT,
         _ => ide_ui_common::style::ROW_HEIGHT,
-    }
+    })
 }
 
 /// How far AppKit's source list sets its disclosure triangles in past the panel's title.
@@ -196,9 +197,9 @@ impl GitOutlineView {
         let middle = chevron.origin.x + chevron.size.width / 2.0;
         let rtl = self.userInterfaceLayoutDirection() == objc2_app_kit::NSUserInterfaceLayoutDirection::RightToLeft;
         let (left, right) = if rtl {
-            (frame.origin.x, middle + super::graph::LANE / 2.0)
+            (frame.origin.x, middle + super::graph::lane() / 2.0)
         } else {
-            (middle - super::graph::LANE / 2.0, frame.origin.x + frame.size.width)
+            (middle - super::graph::lane() / 2.0, frame.origin.x + frame.size.width)
         };
         NSRect::new(
             NSPoint::new(left, frame.origin.y),
@@ -368,19 +369,20 @@ impl GitPanel {
         }
         // SAFETY: The label is a subview of the cell, which keeps it.
         unsafe { cell.setTextField(Some(&name)) };
+        let gap = scaled(4.0);
         activate([
             text.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
             letter.trailingAnchor().constraintEqualToAnchor(&cell.trailingAnchor()),
             actions
                 .trailingAnchor()
-                .constraintEqualToAnchor_constant(&letter.leadingAnchor(), -4.0),
+                .constraintEqualToAnchor_constant(&letter.leadingAnchor(), -gap),
         ]);
         let to_edge = text
             .trailingAnchor()
-            .constraintLessThanOrEqualToAnchor_constant(&letter.leadingAnchor(), -4.0);
+            .constraintLessThanOrEqualToAnchor_constant(&letter.leadingAnchor(), -gap);
         let beside = text
             .trailingAnchor()
-            .constraintLessThanOrEqualToAnchor_constant(&actions.leadingAnchor(), -4.0);
+            .constraintLessThanOrEqualToAnchor_constant(&actions.leadingAnchor(), -gap);
         to_edge.setActive(true);
         cell.set_actions(actions.into_super(), beside, to_edge);
         let described = describe(section, row);
@@ -395,9 +397,9 @@ impl GitPanel {
     fn row_actions(&self, mtm: MainThreadMarker, section: Section) -> Retained<NSStackView> {
         let stack = NSStackView::new(mtm);
         stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        stack.setSpacing(ide_ui_common::style::space::XXS);
+        stack.setSpacing(scaled(ide_ui_common::style::space::XXS));
         for (name, title, action) in file_actions(section) {
-            let button: Retained<NSButton> = symbol_button(mtm, name, title, ACTION_POINTS, Some(self), action);
+            let button: Retained<NSButton> = symbol_button(mtm, name, title, scaled(ACTION_POINTS), Some(self), action);
             button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
             stack.addArrangedSubview(&button);
         }
@@ -541,7 +543,7 @@ fn section_cell(mtm: MainThreadMarker, panel: &GitPanel, section: Section, count
         number.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
         title
             .trailingAnchor()
-            .constraintLessThanOrEqualToAnchor_constant(&number.leadingAnchor(), -30.0),
+            .constraintLessThanOrEqualToAnchor_constant(&number.leadingAnchor(), -scaled(30.0)),
     ]);
     let all = match section {
         Section::Staged => Some(("minus", t("Alle zurücknehmen"), sel!(ideGitUnstageAll:))),
@@ -549,14 +551,14 @@ fn section_cell(mtm: MainThreadMarker, panel: &GitPanel, section: Section, count
         _ => None,
     };
     if let Some((name, description, action)) = all {
-        let button = symbol_button(mtm, name, description, ACTION_POINTS, Some(panel), action);
+        let button = symbol_button(mtm, name, description, scaled(ACTION_POINTS), Some(panel), action);
         button.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
         cell.addSubview(&button);
         button.setTranslatesAutoresizingMaskIntoConstraints(false);
         activate([
             button
                 .trailingAnchor()
-                .constraintEqualToAnchor_constant(&number.leadingAnchor(), -4.0),
+                .constraintEqualToAnchor_constant(&number.leadingAnchor(), -scaled(4.0)),
             button.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
         ]);
     }
@@ -820,13 +822,17 @@ pub(super) fn file_text(
     deleted: bool,
 ) -> (Retained<NSStackView>, Retained<objc2_app_kit::NSTextField>) {
     let icon = ide_ui_icons::image_view(mtm, path, false);
-    icon.widthAnchor().constraintEqualToConstant(16.0).setActive(true);
+    ide_ui_icons::show_scaled(&icon, path, false, scaled(1.0));
+    icon.widthAnchor()
+        .constraintEqualToConstant(scaled(16.0))
+        .setActive(true);
     let name = label(
         mtm,
         &path
             .file_name()
             .map_or_else(String::new, |n| n.to_string_lossy().into_owned()),
     );
+    name.setFont(Some(&system(ide_ui_common::style::BODY)));
     name.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
     if deleted {
         name.setTextColor(Some(&NSColor::secondaryLabelColor()));
@@ -835,7 +841,7 @@ pub(super) fn file_text(
         mtm,
         &path.parent().map_or_else(String::new, |p| p.display().to_string()),
     );
-    folder.setFont(Some(&ide_ui_common::style::small_system()));
+    folder.setFont(Some(&font_like(&ide_ui_common::style::small_system())));
     folder.setTextColor(Some(&NSColor::secondaryLabelColor()));
     folder.setLineBreakMode(NSLineBreakMode::ByTruncatingHead);
     folder.setContentCompressionResistancePriority_forOrientation(
@@ -844,7 +850,7 @@ pub(super) fn file_text(
     );
     let text = NSStackView::new(mtm);
     text.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    text.setSpacing(ide_ui_common::style::space::SNUG);
+    text.setSpacing(scaled(ide_ui_common::style::space::SNUG));
     for view in [&*icon as &NSView, &name, &folder] {
         text.addArrangedSubview(view);
     }
@@ -855,12 +861,15 @@ pub(super) fn file_text(
 pub(super) fn letter_label(mtm: MainThreadMarker, mark: Mark) -> Retained<objc2_app_kit::NSTextField> {
     let letter = label(mtm, mark.letter());
     letter.setFont(Some(&NSFont::monospacedSystemFontOfSize_weight(
-        ide_ui_common::style::SMALL,
+        scaled(ide_ui_common::style::SMALL),
         ide_ui_common::constant!(objc2_app_kit::NSFontWeightBold),
     )));
     letter.setTextColor(Some(&mark_color(mark)));
     letter.setAlignment(objc2_app_kit::NSTextAlignment::Center);
-    letter.widthAnchor().constraintEqualToConstant(12.0).setActive(true);
+    letter
+        .widthAnchor()
+        .constraintEqualToConstant(scaled(12.0))
+        .setActive(true);
     letter.setContentHuggingPriority_forOrientation(750.0, objc2_app_kit::NSLayoutConstraintOrientation::Horizontal);
     letter
 }
@@ -880,19 +889,19 @@ pub(super) fn pill_with(
 ) -> Retained<NSView> {
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(ide_ui_common::style::space::XXS);
-    let side = if symbol_name.is_some() { 4.0 } else { 6.0 };
+    row.setSpacing(scaled(ide_ui_common::style::space::XXS));
+    let side = scaled(if symbol_name.is_some() { 4.0 } else { 6.0 });
     row.setEdgeInsets(objc2_foundation::NSEdgeInsets {
-        top: 1.0,
+        top: scaled(1.0),
         left: side,
-        bottom: 1.0,
+        bottom: scaled(1.0),
         right: side,
     });
     if let Some(image) = symbol_name.and_then(|name| ide_ui_common::util::symbol(name, "")) {
         let icon = objc2_app_kit::NSImageView::imageViewWithImage(&image, mtm);
         icon.setSymbolConfiguration(Some(
             &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
-                8.0,
+                scaled(8.0),
                 ide_ui_common::constant!(objc2_app_kit::NSFontWeightSemibold),
             ),
         ));
@@ -903,7 +912,7 @@ pub(super) fn pill_with(
     if !text.is_empty() {
         let words = label(mtm, text);
         words.setFont(Some(&NSFont::monospacedDigitSystemFontOfSize_weight(
-            NSFont::smallSystemFontSize(),
+            scaled(NSFont::smallSystemFontSize()),
             ide_ui_common::constant!(objc2_app_kit::NSFontWeightMedium),
         )));
         words.setTextColor(Some(color));
@@ -914,7 +923,7 @@ pub(super) fn pill_with(
     pill.setBoxType(objc2_app_kit::NSBoxType::Custom);
     pill.setTitlePosition(objc2_app_kit::NSTitlePosition::NoTitle);
     pill.setBorderWidth(0.0);
-    pill.setCornerRadius(7.0);
+    pill.setCornerRadius(scaled(7.0));
     pill.setFillColor(fill);
     pill.setContentViewMargins(NSSize::new(0.0, 0.0));
     if let Some(content) = pill.contentView() {

@@ -234,8 +234,9 @@
 "Sandbox aus; eingeschaltet gilt: {}" = "Sandbox désactivée ; une fois activée : {}";
 "Schließen" = "Fermer";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "Écriture dans le projet uniquement ; la lecture partout et le réseau restent ouverts";
-"Schriftgröße:" = "Taille de police :";
+"Schriftgröße in Editor und Terminal:" = "Taille de police de l’éditeur et du terminal :";
 "Schriftgröße im AI-Tab:" = "Taille de police de l’onglet IA :";
+"Schriftgröße in Seitenleiste und Tabs:" = "Taille de police de la barre latérale et des onglets :";
 "Seite des Browser-Tabs" = "Page de l’onglet navigateur";
 "Seitenleiste ein-/ausblenden" = "Afficher/masquer la barre latérale";
 "Seitenleisten-Auswahl" = "Sélecteur de la barre latérale";

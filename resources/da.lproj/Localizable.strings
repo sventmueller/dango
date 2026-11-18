@@ -234,8 +234,9 @@
 "Sandbox aus; eingeschaltet gilt: {}" = "Sandbox fra; når den er slået til: {}";
 "Schließen" = "Luk";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "skrivning kun i projektet; læsning overalt og netværk forbliver åbne";
-"Schriftgröße:" = "Skriftstørrelse:";
+"Schriftgröße in Editor und Terminal:" = "Skriftstørrelse i editor og terminal:";
 "Schriftgröße im AI-Tab:" = "Skriftstørrelse i AI-fanen:";
+"Schriftgröße in Seitenleiste und Tabs:" = "Skriftstørrelse i indholdsoversigt og faner:";
 "Seite des Browser-Tabs" = "Browserfanens side";
 "Seitenleiste ein-/ausblenden" = "Vis/skjul indholdsoversigt";
 "Seitenleisten-Auswahl" = "Vælger til indholdsoversigt";

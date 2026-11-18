@@ -211,6 +211,21 @@ impl WindowController {
         self.file_tree_view()
     }
 
+    /// The size of the text of the title of the native tab in front.
+    pub(crate) fn tab_title_points(&self) -> f64 {
+        let Some(title) = self.current_tab().and_then(|tab| tab.window.tab().attributedTitle()) else {
+            return 0.0;
+        };
+        let last = title.length().saturating_sub(1);
+        // SAFETY: NSFontAttributeName is a constant AppKit sets when it loads, the index lies inside the title, and a
+        // null range asks for none.
+        let font = unsafe {
+            title.attribute_atIndex_effectiveRange(objc2_app_kit::NSFontAttributeName, last, std::ptr::null_mut())
+        };
+        font.and_then(|font| font.downcast::<objc2_app_kit::NSFont>().ok())
+            .map_or(0.0, |font| font.pointSize())
+    }
+
     /// The narrowest and widest the user may drag the sidebar of the window tab of document `id` to now.
     pub(crate) fn sidebar_range_of(&self, id: TabId) -> Option<(f64, f64)> {
         self.tab_of_document(id).map(|tab| tab.sidebar_range())

@@ -11,10 +11,11 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize};
 
+use ide_ui_common::ui_size::scaled;
 use ide_ui_common::util::guarded;
 
 /// The width of one lane.
-pub(crate) const LANE: f64 = 12.0;
+const LANE: f64 = 12.0;
 const DOT_RADIUS: f64 = 3.5;
 const LINE_WIDTH: f64 = 1.5;
 
@@ -70,7 +71,7 @@ impl GraphView {
 
     /// The width the row's lanes take.
     pub(crate) fn width(row: &GraphRow) -> f64 {
-        row.width.max(1) as f64 * LANE
+        row.width.max(1) as f64 * lane()
     }
 
     fn draw(&self) {
@@ -78,17 +79,19 @@ impl GraphView {
         let bounds = self.bounds();
         let height = bounds.size.height;
         let middle = height / 2.0;
+        let (lane_width, radius, stroke) = (lane(), scaled(DOT_RADIUS), scaled(LINE_WIDTH));
         let rtl = self.userInterfaceLayoutDirection() == NSUserInterfaceLayoutDirection::RightToLeft;
         let x = |lane: usize| {
-            let along = lane as f64 * LANE + LANE / 2.0;
+            let along = lane as f64 * lane_width + lane_width / 2.0;
             if rtl { bounds.size.width - along } else { along }
         };
-        let gap = |lane: usize| if lane == row.lane { DOT_RADIUS + 1.0 } else { 0.0 };
+        let gap = |lane: usize| if lane == row.lane { radius + scaled(1.0) } else { 0.0 };
         for segment in &row.top {
             line(
                 NSPoint::new(x(segment.from), 0.0),
                 NSPoint::new(x(segment.to), middle - gap(segment.to)),
                 segment.color,
+                stroke,
             );
         }
         for segment in &row.bottom {
@@ -96,6 +99,7 @@ impl GraphView {
                 NSPoint::new(x(segment.from), middle + gap(segment.from)),
                 NSPoint::new(x(segment.to), height),
                 segment.color,
+                stroke,
             );
         }
         if row.lane == usize::MAX {
@@ -110,22 +114,27 @@ impl GraphView {
             ))
         };
         if row.head {
-            let ring = dot(DOT_RADIUS);
-            ring.setLineWidth(LINE_WIDTH + 0.5);
+            let ring = dot(radius);
+            ring.setLineWidth(stroke + scaled(0.5));
             color.setStroke();
             ring.stroke();
         } else if row.merge {
-            let ring = dot(DOT_RADIUS);
-            ring.setLineWidth(LINE_WIDTH);
+            let ring = dot(radius);
+            ring.setLineWidth(stroke);
             color.setStroke();
             ring.stroke();
             color.setFill();
-            dot(DOT_RADIUS - 2.0).fill();
+            dot(radius - scaled(2.0)).fill();
         } else {
             color.setFill();
-            dot(DOT_RADIUS).fill();
+            dot(radius).fill();
         }
     }
+}
+
+/// The width of one lane at the interface size.
+pub(crate) fn lane() -> f64 {
+    scaled(LANE)
 }
 
 /// How far a selection keeps from the list's edges, and how round its corners are, as the source list draws it.
@@ -257,10 +266,10 @@ fn graph_in(view: &NSView) -> Option<Retained<GraphView>> {
         })
 }
 
-/// A line from `start` to `end`, straight down within a lane or bending over to another one.
-fn line(start: NSPoint, end: NSPoint, color: usize) {
+/// A line `width` wide from `start` to `end`, straight down within a lane or bending over to another one.
+fn line(start: NSPoint, end: NSPoint, color: usize, width: f64) {
     let path = NSBezierPath::bezierPath();
-    path.setLineWidth(LINE_WIDTH);
+    path.setLineWidth(width);
     path.moveToPoint(start);
     if (start.x - end.x).abs() < f64::EPSILON {
         path.lineToPoint(end);

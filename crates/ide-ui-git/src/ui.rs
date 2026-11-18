@@ -1,6 +1,6 @@
 //! The views of the Git panel: branch and remote controls, progress, problems, the commit message and the list.
 
-use objc2::rc::Retained;
+use objc2::rc::{Retained, Weak};
 use objc2::runtime::{ProtocolObject, Sel};
 use objc2::{MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
@@ -18,16 +18,18 @@ use super::panel::GitPanel;
 use super::rows::GitOutlineView;
 use super::text::Problem;
 use ide_ui_common::panel::{header_button, header_row};
-use ide_ui_common::util::{
-    activate, borderless_button, label, ns, pin_edges, pin_sides, set_action, symbol, symbol_button,
-};
+use ide_ui_common::ui_size::{self, Aspect};
+use ide_ui_common::util::{activate, borderless_button, label, ns, pin_edges, pin_sides, set_action, symbol};
 
 /// How far the panel's content keeps from the sidebar's edges: as far as the panel's title.
 pub(super) const MARGIN: f64 = 8.0;
 const MESSAGE_HEIGHT: f64 = 62.0;
 /// How far the button that asks a model for the message keeps from the message box's corner.
 const AI_INSET: f64 = 4.0;
-
+/// The room beside the text of a problem: its symbol, the button that closes it and the spacing around them.
+const PROBLEM_INSET: f64 = 52.0;
+/// The room the conflict banner keeps around its text.
+pub(crate) const BANNER_INSET: f64 = 16.0;
 pub(crate) struct Ui {
     pub(crate) page: Retained<NSView>,
     /// Ahead and behind with the remote buttons, which the panel's title row shows.
@@ -65,7 +67,7 @@ impl Ui {
         content.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         content.setAlignment(NSLayoutAttribute::Leading);
         content.setDistribution(NSStackViewDistribution::Fill);
-        content.setSpacing(ide_ui_common::style::space::M);
+        ui_size::follow_spacing(&content, ide_ui_common::style::space::M);
         for view in [&*empty, &content as &NSView] {
             page.addSubview(view);
             pin_edges(view, &page);
@@ -94,6 +96,8 @@ impl Ui {
             view.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Vertical);
         }
         list.setContentHuggingPriority_forOrientation(1.0, NSLayoutConstraintOrientation::Vertical);
+        follow_wrap_width(&problem_label, &page, PROBLEM_INSET);
+        follow_wrap_width(&banner.detail, &page, BANNER_INSET);
         progress_row.setHidden(true);
         banner.view.setHidden(true);
         problem_row.setHidden(true);
@@ -169,13 +173,15 @@ impl Ui {
         let state = empty_state(mtm, panel, symbol_name, title, detail, button);
         self.empty.addSubview(&state);
         state.setTranslatesAutoresizingMaskIntoConstraints(false);
+        let raised = state
+            .centerYAnchor()
+            .constraintEqualToAnchor_constant(&self.empty.centerYAnchor(), -40.0);
+        ui_size::follow_length(&raised, -40.0);
         activate([
             state
                 .centerXAnchor()
                 .constraintEqualToAnchor(&self.empty.centerXAnchor()),
-            state
-                .centerYAnchor()
-                .constraintEqualToAnchor_constant(&self.empty.centerYAnchor(), -40.0),
+            raised,
             state
                 .leadingAnchor()
                 .constraintGreaterThanOrEqualToAnchor_constant(&self.empty.leadingAnchor(), 16.0),
@@ -187,7 +193,7 @@ impl Ui {
 
     /// The width a wrapping text in a row of the panel has, inside the margins and the space of `inset`.
     pub(crate) fn text_width(&self, inset: f64) -> f64 {
-        (self.page.frame().size.width - 2.0 * MARGIN - inset).max(120.0)
+        text_width(&self.page, inset)
     }
 
     /// Shows `problem` above the commit message, or hides the row.
@@ -196,7 +202,8 @@ impl Ui {
             self.problem_row.setHidden(true);
             return;
         };
-        self.problem_label.setPreferredMaxLayoutWidth(self.text_width(52.0));
+        self.problem_label
+            .setPreferredMaxLayoutWidth(self.text_width(PROBLEM_INSET));
         self.problem_label.setStringValue(&ns(&problem.message));
         self.problem_output.setHidden(problem.output.is_none());
         self.problem_output.setTitle(&ns(if problem.hook {
@@ -206,6 +213,24 @@ impl Ui {
         }));
         self.problem_row.setHidden(false);
     }
+}
+
+/// The width a wrapping text in a row of `page` has, inside the margins and the space `inset` takes at the interface
+/// size.
+fn text_width(page: &NSView, inset: f64) -> f64 {
+    (page.frame().size.width - 2.0 * MARGIN - ui_size::scaled(inset)).max(120.0)
+}
+
+/// Keeps the width `label` wraps at, once it was given one, fitting `page` at the interface size.
+fn follow_wrap_width(label: &NSTextField, page: &NSView, inset: f64) {
+    let page = Weak::from(page);
+    ui_size::keep(label, Aspect::Layout, move |label| {
+        if let Some(page) = page.load()
+            && label.preferredMaxLayoutWidth() > 0.0
+        {
+            label.setPreferredMaxLayoutWidth(text_width(&page, inset));
+        }
+    });
 }
 
 /// What follows a message a model wrote (E101): the note that it needs checking, writing it again, taking it back, and
@@ -220,23 +245,21 @@ pub(crate) struct AiBox {
 impl AiBox {
     fn new(mtm: MainThreadMarker, panel: &GitPanel) -> AiBox {
         let icon = NSImageView::new(mtm);
-        if let Some(image) = symbol("sparkles", "") {
-            icon.setImage(Some(&image));
-        }
+        ui_size::follow_symbol_image(&icon, "sparkles", "");
         icon.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
         ide_ui_common::util::hide_from_voiceover(&icon);
         let note = NSTextField::wrappingLabelWithString(&ns(t("Von AI erstellt, bitte prüfen")), mtm);
-        note.setFont(Some(&ide_ui_common::style::small_system()));
+        ui_size::set_font(&note, &ide_ui_common::style::small_system());
         note.setTextColor(Some(&NSColor::secondaryLabelColor()));
         note.setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
         let line = NSStackView::new(mtm);
         line.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        line.setSpacing(ide_ui_common::style::space::XS);
+        ui_size::follow_spacing(&line, ide_ui_common::style::space::XS);
         line.addArrangedSubview(&icon);
         line.addArrangedSubview(&note);
         let link = |title: &str, action: Sel| {
             let button = borderless_button(mtm, title, Some(panel), action);
-            button.setFont(Some(&ide_ui_common::style::small_system()));
+            ui_size::set_font(&button, &ide_ui_common::style::small_system());
             button.setContentTintColor(Some(&NSColor::controlAccentColor()));
             button.setContentCompressionResistancePriority_forOrientation(
                 100.0,
@@ -249,19 +272,19 @@ impl AiBox {
         let sent = link(t("Gesendeten Inhalt zeigen"), sel!(ideGitShowSent:));
         let buttons = NSStackView::new(mtm);
         buttons.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        buttons.setSpacing(ide_ui_common::style::space::L);
+        ui_size::follow_spacing(&buttons, ide_ui_common::style::space::L);
         buttons.addArrangedSubview(&again);
         buttons.addArrangedSubview(&undo);
         let written = NSStackView::new(mtm);
         written.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         written.setAlignment(NSLayoutAttribute::Leading);
-        written.setSpacing(ide_ui_common::style::space::XXS);
+        ui_size::follow_spacing(&written, ide_ui_common::style::space::XXS);
         written.addArrangedSubview(&line);
         written.addArrangedSubview(&buttons);
         let view = NSStackView::new(mtm);
         view.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         view.setAlignment(NSLayoutAttribute::Leading);
-        view.setSpacing(ide_ui_common::style::space::XXS);
+        ui_size::follow_spacing(&view, ide_ui_common::style::space::XXS);
         view.addArrangedSubview(&written);
         view.addArrangedSubview(&sent);
         view.setAccessibilityLabel(Some(&ns(t("Commit-Nachricht von AI"))));
@@ -284,14 +307,16 @@ impl Banner {
         view.setBoxType(NSBoxType::Custom);
         view.setTitlePosition(NSTitlePosition::NoTitle);
         view.setBorderWidth(0.0);
-        view.setCornerRadius(6.0);
         view.setFillColor(&NSColor::systemOrangeColor().colorWithAlphaComponent(0.16));
-        view.setContentViewMargins(NSSize::new(8.0, 6.0));
+        ui_size::keep(&*view, Aspect::Layout, |view| {
+            view.setCornerRadius(ui_size::scaled(6.0));
+            view.setContentViewMargins(NSSize::new(ui_size::scaled(BANNER_INSET / 2.0), ui_size::scaled(6.0)));
+        });
         let title = label(mtm, "");
-        title.setFont(Some(&NSFont::boldSystemFontOfSize(NSFont::smallSystemFontSize())));
+        ui_size::set_font(&title, &NSFont::boldSystemFontOfSize(NSFont::smallSystemFontSize()));
         title.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
         let detail = NSTextField::wrappingLabelWithString(&ns(""), mtm);
-        detail.setFont(Some(&ide_ui_common::style::small_system()));
+        ui_size::set_font(&detail, &ide_ui_common::style::small_system());
         detail.setTextColor(Some(&NSColor::secondaryLabelColor()));
         // Text in the sidebar never makes it wider; it wraps or is cut instead.
         for text in [&title, &detail] {
@@ -305,8 +330,8 @@ impl Banner {
             let button = unsafe { NSButton::buttonWithTitle_target_action(&ns(title), None, None, mtm) };
             set_action(&button, panel, action);
             button.setBezelStyle(NSBezelStyle::Push);
-            button.setControlSize(NSControlSize::Small);
-            button.setFont(Some(&ide_ui_common::style::small_system()));
+            ui_size::follow_control_size(&button, NSControlSize::Small);
+            ui_size::set_font(&button, &ide_ui_common::style::small_system());
             button.setContentCompressionResistancePriority_forOrientation(
                 100.0,
                 NSLayoutConstraintOrientation::Horizontal,
@@ -317,13 +342,13 @@ impl Banner {
         let abort = button(t("Vorgang abbrechen …"), sel!(ideGitAbort:));
         let buttons = NSStackView::new(mtm);
         buttons.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        buttons.setSpacing(ide_ui_common::style::space::S);
+        ui_size::follow_spacing(&buttons, ide_ui_common::style::space::S);
         buttons.addArrangedSubview(&resume);
         buttons.addArrangedSubview(&abort);
         let stack = NSStackView::new(mtm);
         stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         stack.setAlignment(NSLayoutAttribute::Leading);
-        stack.setSpacing(ide_ui_common::style::space::XS);
+        ui_size::follow_spacing(&stack, ide_ui_common::style::space::XS);
         for row in [&*title as &NSView, &detail, &buttons] {
             stack.addArrangedSubview(row);
         }
@@ -349,8 +374,8 @@ fn branch_row(mtm: MainThreadMarker) -> (Retained<NSStackView>, Retained<NSPopUp
         NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(120.0, 24.0)),
         false,
     );
-    popup.setControlSize(NSControlSize::Small);
-    popup.setFont(Some(&ide_ui_common::style::small_system()));
+    ui_size::follow_control_size(&popup, NSControlSize::Small);
+    ui_size::set_font(&popup, &ide_ui_common::style::small_system());
     ide_ui_common::util::set_label(&popup, Some(t("Branch")));
     popup.setToolTip(Some(&ns(t("Branch wechseln oder anlegen"))));
     popup.setContentCompressionResistancePriority_forOrientation(200.0, NSLayoutConstraintOrientation::Horizontal);
@@ -363,10 +388,13 @@ fn branch_row(mtm: MainThreadMarker) -> (Retained<NSStackView>, Retained<NSPopUp
 
 fn header(mtm: MainThreadMarker, panel: &GitPanel) -> Header {
     let distance = label(mtm, "");
-    distance.setFont(Some(&NSFont::monospacedDigitSystemFontOfSize_weight(
-        NSFont::smallSystemFontSize(),
-        ide_ui_common::constant!(objc2_app_kit::NSFontWeightRegular),
-    )));
+    ui_size::set_font(
+        &distance,
+        &NSFont::monospacedDigitSystemFontOfSize_weight(
+            NSFont::smallSystemFontSize(),
+            ide_ui_common::constant!(objc2_app_kit::NSFontWeightRegular),
+        ),
+    );
     distance.setTextColor(Some(&NSColor::secondaryLabelColor()));
     let button = |name: &str, title: &str, action: Sel| header_button(mtm, name, title, Some(panel), action);
     let fetch = button("arrow.triangle.2.circlepath", t("Fetch"), sel!(ideGitFetch:));
@@ -376,7 +404,10 @@ fn header(mtm: MainThreadMarker, panel: &GitPanel) -> Header {
     for view in [&*distance as &NSView, &fetch, &pull, &push] {
         row.addArrangedSubview(view);
     }
-    row.setCustomSpacing_afterView(ide_ui_common::style::space::S, &distance);
+    let before = distance.clone();
+    ui_size::keep(&*row, Aspect::Layout, move |row| {
+        row.setCustomSpacing_afterView(ui_size::scaled(ide_ui_common::style::space::S), &before);
+    });
     (row, distance, [fetch, pull, push])
 }
 
@@ -396,13 +427,15 @@ fn progress_row(
     progress.setMinValue(0.0);
     progress.setMaxValue(100.0);
     progress.setTranslatesAutoresizingMaskIntoConstraints(false);
-    progress.widthAnchor().constraintEqualToConstant(56.0).setActive(true);
+    let width = progress.widthAnchor().constraintEqualToConstant(56.0);
+    ui_size::follow_length(&width, 56.0);
+    width.setActive(true);
     let text = label(mtm, "");
-    text.setFont(Some(&ide_ui_common::style::small_system()));
+    ui_size::set_font(&text, &ide_ui_common::style::small_system());
     text.setTextColor(Some(&NSColor::secondaryLabelColor()));
     text.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
     text.setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
-    let cancel = symbol_button(
+    let cancel = ui_size::symbol_button(
         mtm,
         "xmark.circle.fill",
         t("Abbrechen"),
@@ -413,7 +446,7 @@ fn progress_row(
     cancel.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(ide_ui_common::style::space::S);
+    ui_size::follow_spacing(&row, ide_ui_common::style::space::S);
     row.addView_inGravity(&progress, NSStackViewGravity::Leading);
     row.addView_inGravity(&text, NSStackViewGravity::Leading);
     row.addView_inGravity(&cancel, NSStackViewGravity::Trailing);
@@ -425,18 +458,16 @@ fn problem_row(
     panel: &GitPanel,
 ) -> (Retained<NSStackView>, Retained<NSTextField>, Retained<NSButton>) {
     let icon = NSImageView::new(mtm);
-    if let Some(image) = symbol("exclamationmark.triangle.fill", t("Fehler")) {
-        icon.setImage(Some(&image));
-    }
+    ui_size::follow_symbol_image(&icon, "exclamationmark.triangle.fill", t("Fehler"));
     icon.setContentTintColor(Some(&NSColor::systemOrangeColor()));
     icon.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Horizontal);
     let text = NSTextField::wrappingLabelWithString(&ns(""), mtm);
-    text.setFont(Some(&ide_ui_common::style::small_system()));
+    ui_size::set_font(&text, &ide_ui_common::style::small_system());
     text.setSelectable(true);
     let output = borderless_button(mtm, t("Details …"), Some(panel), sel!(ideGitShowOutput:));
-    output.setFont(Some(&ide_ui_common::style::small_system()));
+    ui_size::set_font(&output, &ide_ui_common::style::small_system());
     output.setContentTintColor(Some(&NSColor::controlAccentColor()));
-    let dismiss = symbol_button(
+    let dismiss = ui_size::symbol_button(
         mtm,
         "xmark",
         t("Meldung schließen"),
@@ -448,13 +479,13 @@ fn problem_row(
     let texts = NSStackView::new(mtm);
     texts.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     texts.setAlignment(NSLayoutAttribute::Leading);
-    texts.setSpacing(ide_ui_common::style::space::XXS);
+    ui_size::follow_spacing(&texts, ide_ui_common::style::space::XXS);
     texts.addArrangedSubview(&text);
     texts.addArrangedSubview(&output);
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
     row.setAlignment(NSLayoutAttribute::Top);
-    row.setSpacing(ide_ui_common::style::space::S);
+    ui_size::follow_spacing(&row, ide_ui_common::style::space::S);
     row.addView_inGravity(&icon, NSStackViewGravity::Leading);
     row.addView_inGravity(&texts, NSStackViewGravity::Leading);
     row.addView_inGravity(&dismiss, NSStackViewGravity::Trailing);
@@ -479,7 +510,10 @@ fn message_box(
     scroll.setHasVerticalScroller(true);
     scroll.setAutohidesScrollers(true);
     let text = CommitTextView::new(mtm, frame);
-    text.setFont(Some(&NSFont::systemFontOfSize(NSFont::systemFontSize())));
+    ui_size::keep(&*text, Aspect::Font, |text| {
+        text.setFont(Some(&ui_size::system(NSFont::systemFontSize())));
+        text.keep_corner_free();
+    });
     text.setTextContainerInset(NSSize::new(2.0, 4.0));
     text.setDelegate(Some(ProtocolObject::from_ref(panel)));
     text.setAccessibilityLabel(Some(&ns(t("Commit-Nachricht"))));
@@ -487,13 +521,12 @@ fn message_box(
     let container = NSView::new(mtm);
     container.addSubview(&scroll);
     pin_edges(&scroll, &container);
-    container
-        .heightAnchor()
-        .constraintEqualToConstant(MESSAGE_HEIGHT)
-        .setActive(true);
+    let height = container.heightAnchor().constraintEqualToConstant(MESSAGE_HEIGHT);
+    ui_size::follow_length(&height, MESSAGE_HEIGHT);
+    height.setActive(true);
     let placeholder = label(mtm, "");
     placeholder.setTextColor(Some(&NSColor::tertiaryLabelColor()));
-    placeholder.setFont(Some(&NSFont::systemFontOfSize(NSFont::systemFontSize())));
+    ui_size::set_system_font(&placeholder, NSFont::systemFontSize());
     placeholder.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
     placeholder
         .setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
@@ -511,7 +544,7 @@ fn message_box(
             .topAnchor()
             .constraintEqualToAnchor_constant(&container.topAnchor(), 5.0),
     ]);
-    let ai = symbol_button(
+    let ai = ui_size::symbol_button(
         mtm,
         "sparkles",
         t("Commit-Nachricht erzeugen"),
@@ -522,12 +555,22 @@ fn message_box(
     ai.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
     container.addSubview(&ai);
     ai.setTranslatesAutoresizingMaskIntoConstraints(false);
-    activate([
-        ai.trailingAnchor()
-            .constraintEqualToAnchor_constant(&container.trailingAnchor(), -AI_INSET),
-        ai.topAnchor()
-            .constraintEqualToAnchor_constant(&container.topAnchor(), AI_INSET),
-    ]);
+    let corner = [
+        (
+            ai.trailingAnchor()
+                .constraintEqualToAnchor_constant(&container.trailingAnchor(), -AI_INSET),
+            -AI_INSET,
+        ),
+        (
+            ai.topAnchor()
+                .constraintEqualToAnchor_constant(&container.topAnchor(), AI_INSET),
+            AI_INSET,
+        ),
+    ];
+    for (constraint, base) in corner {
+        ui_size::follow_length(&constraint, base);
+        constraint.setActive(true);
+    }
     (container, text, placeholder, ai)
 }
 
@@ -538,14 +581,16 @@ fn commit_row(
     // SAFETY: The panel answers the action with a method that takes the sender; `set_action` checks it again.
     let amend = unsafe { NSButton::checkboxWithTitle_target_action(&ns(t("Letzten Commit ändern")), None, None, mtm) };
     set_action(&amend, panel, sel!(ideGitAmend:));
-    amend.setControlSize(NSControlSize::Small);
-    amend.setFont(Some(&ide_ui_common::style::small_system()));
+    ui_size::follow_control_size(&amend, NSControlSize::Small);
+    ui_size::set_font(&amend, &ide_ui_common::style::small_system());
     amend.setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
     // SAFETY: Without a target and an action the button sends nothing until `set_action` gives it both.
     let commit = unsafe { NSButton::buttonWithTitle_target_action(&ns(t("Commit")), None, None, mtm) };
     set_action(&commit, panel, sel!(ideGitCommit:));
     commit.setBezelStyle(NSBezelStyle::Push);
-    commit.setControlSize(NSControlSize::Small);
+    ui_size::follow_control_size(&commit, NSControlSize::Small);
+    // AppKit leaves the regular font on a button whose control size shrinks.
+    ui_size::set_system_font(&commit, NSFont::systemFontSize());
     commit.setBezelColor(Some(&NSColor::controlAccentColor()));
     commit.setToolTip(Some(&ns(t("Committen (⌘↩)"))));
     let more = NSPopUpButton::initWithFrame_pullsDown(
@@ -553,9 +598,11 @@ fn commit_row(
         NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(28.0, 22.0)),
         true,
     );
-    more.setControlSize(NSControlSize::Small);
+    ui_size::follow_control_size(&more, NSControlSize::Small);
     more.setTranslatesAutoresizingMaskIntoConstraints(false);
-    more.widthAnchor().constraintEqualToConstant(34.0).setActive(true);
+    let width = more.widthAnchor().constraintEqualToConstant(34.0);
+    ui_size::follow_length(&width, 34.0);
+    width.setActive(true);
     ide_ui_common::util::set_label(&more, Some(t("Weitere Commit-Aktionen")));
     more.setToolTip(Some(&ns(t("Weitere Commit-Aktionen"))));
     if let Some(menu) = more.menu() {
@@ -581,7 +628,7 @@ fn commit_row(
     }
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(ide_ui_common::style::space::XXS);
+    ui_size::follow_spacing(&row, ide_ui_common::style::space::XXS);
     row.addView_inGravity(&amend, NSStackViewGravity::Leading);
     row.addView_inGravity(&commit, NSStackViewGravity::Trailing);
     row.addView_inGravity(&more, NSStackViewGravity::Trailing);
@@ -591,6 +638,7 @@ fn commit_row(
 fn outline(mtm: MainThreadMarker, panel: &GitPanel) -> (Retained<NSScrollView>, Retained<GitOutlineView>) {
     let view = GitOutlineView::new(mtm, ide_ui_common::panel::LIST_FRAME);
     let scroll = ide_ui_common::panel::source_list_outline(mtm, &view, "git", t("Git-Änderungen"));
+    ui_size::follow_row_heights(&view);
     // Without a gap between rows the graph's lines run on from one commit to the next.
     view.setIntercellSpacing(NSSize::new(3.0, 0.0));
     view.setAllowsMultipleSelection(true);
@@ -625,7 +673,7 @@ pub fn empty_state(
     let stack = NSStackView::new(mtm);
     stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     stack.setAlignment(NSLayoutAttribute::CenterX);
-    stack.setSpacing(ide_ui_common::style::space::M);
+    ui_size::follow_spacing(&stack, ide_ui_common::style::space::M);
     stack.setEdgeInsets(NSEdgeInsets {
         top: 0.0,
         left: 0.0,
@@ -634,20 +682,23 @@ pub fn empty_state(
     });
     if let Some(image) = symbol(symbol_name, title) {
         let view = NSImageView::imageViewWithImage(&image, mtm);
-        view.setSymbolConfiguration(Some(
-            &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
-                28.0,
-                ide_ui_common::constant!(objc2_app_kit::NSFontWeightLight),
-            ),
-        ));
+        ui_size::keep(&*view, Aspect::Symbol, |view| {
+            view.setSymbolConfiguration(Some(
+                &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
+                    ui_size::scaled(28.0),
+                    ide_ui_common::constant!(objc2_app_kit::NSFontWeightLight),
+                ),
+            ));
+        });
         view.setContentTintColor(Some(&NSColor::tertiaryLabelColor()));
         stack.addArrangedSubview(&view);
     }
     let heading = label(mtm, title);
-    heading.setFont(Some(&NSFont::boldSystemFontOfSize(ide_ui_common::style::HEADING)));
+    ui_size::set_font(&heading, &NSFont::boldSystemFontOfSize(ide_ui_common::style::HEADING));
     heading.setAlignment(NSTextAlignment::Center);
     stack.addArrangedSubview(&heading);
     let explanation = NSTextField::wrappingLabelWithString(&ns(detail), mtm);
+    ui_size::set_system_font(&explanation, ide_ui_common::style::BODY);
     explanation.setTextColor(Some(&NSColor::secondaryLabelColor()));
     explanation.setAlignment(NSTextAlignment::Center);
     explanation.setPreferredMaxLayoutWidth(200.0);
@@ -657,6 +708,8 @@ pub fn empty_state(
         let button = unsafe { NSButton::buttonWithTitle_target_action(&ns(title), None, None, mtm) };
         set_action(&button, panel, action);
         button.setBezelStyle(NSBezelStyle::Push);
+        ui_size::follow_control_size(&button, NSControlSize::Regular);
+        ui_size::set_system_font(&button, NSFont::systemFontSize());
         stack.addArrangedSubview(&button);
     }
     stack

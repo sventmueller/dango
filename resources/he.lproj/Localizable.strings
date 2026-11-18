@@ -234,8 +234,9 @@
 "Sandbox aus; eingeschaltet gilt: {}" = "ארגז חול כבוי; כשהוא פעיל: {}";
 "Schließen" = "סגירה";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "כתיבה רק בפרויקט; קריאה מכל מקום וגישה לרשת נשארות פתוחות";
-"Schriftgröße:" = "גודל גופן:";
+"Schriftgröße in Editor und Terminal:" = "גודל גופן בעורך ובמסוף:";
 "Schriftgröße im AI-Tab:" = "גודל גופן בכרטיסיית AI:";
+"Schriftgröße in Seitenleiste und Tabs:" = "גודל גופן בסרגל הצד ובכרטיסיות:";
 "Seite des Browser-Tabs" = "העמוד בכרטיסיית הדפדפן";
 "Seitenleiste ein-/ausblenden" = "הצגה או הסתרה של סרגל הצד";
 "Seitenleisten-Auswahl" = "בורר סרגל הצד";

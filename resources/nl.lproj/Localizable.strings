@@ -234,8 +234,9 @@
 "Sandbox aus; eingeschaltet gilt: {}" = "Sandbox uit; ingeschakeld geldt: {}";
 "Schließen" = "Sluit";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "Schrijven alleen binnen het project; overal lezen en het netwerk blijven open";
-"Schriftgröße:" = "Lettergrootte:";
+"Schriftgröße in Editor und Terminal:" = "Lettergrootte in editor en terminal:";
 "Schriftgröße im AI-Tab:" = "Lettergrootte in AI-tabblad:";
+"Schriftgröße in Seitenleiste und Tabs:" = "Lettergrootte in navigatiekolom en tabbladen:";
 "Seite des Browser-Tabs" = "Pagina van het browsertabblad";
 "Seitenleiste ein-/ausblenden" = "Toon/verberg navigatiekolom";
 "Seitenleisten-Auswahl" = "Keuze voor navigatiekolom";

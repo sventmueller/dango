@@ -60,7 +60,7 @@ impl WindowController {
         self.ivars()
             .sidebar
             .panel_width
-            .set((width - ACTIVITY_WIDTH).clamp(PANEL_MIN_WIDTH, PANEL_MAX_WIDTH));
+            .set((width - activity_width()).clamp(PANEL_MIN_WIDTH, PANEL_MAX_WIDTH));
         if let Some(tab) = self.current_tab() {
             self.fit_sidebar(&tab, tab.sidebar_collapsed());
         }

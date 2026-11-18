@@ -3,7 +3,7 @@
 
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly};
-use objc2_app_kit::{NSColor, NSFont, NSLineBreakMode, NSStackViewGravity, NSView};
+use objc2_app_kit::{NSColor, NSLineBreakMode, NSStackViewGravity, NSView};
 use splat_i18n::tf;
 
 use crate::model::list::Line;
@@ -35,7 +35,7 @@ pub(crate) fn view(mtm: MainThreadMarker, line: &Line) -> Retained<NSView> {
             let detail = label(mtm, order.detail());
             detail.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
             detail.setTextColor(Some(&NSColor::secondaryLabelColor()));
-            detail.setFont(Some(&NSFont::systemFontOfSize(style::SMALL)));
+            ide_ui_common::ui_size::set_system_font(&detail, style::SMALL);
             detail.setContentCompressionResistancePriority_forOrientation(
                 objc2_app_kit::NSLayoutPriorityDefaultLow - 1.0,
                 objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,

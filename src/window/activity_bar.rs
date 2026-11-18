@@ -12,11 +12,14 @@ use objc2_foundation::NSEdgeInsets;
 use splat_i18n::{t, tf};
 
 use super::{Panel, WindowController};
-use crate::util::{activate, auto_layout, fixed_size, ns, set_target, symbol_button, tagged};
+use crate::util::{activate, auto_layout, fixed_size, ns, set_target, tagged};
+use ide_ui_common::ui_size;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 
 const BUTTON_SIZE: f64 = 32.0;
+/// How far the settings symbol keeps from the bar's bottom.
+const SETTINGS_INSET: f64 = 10.0;
 
 pub(crate) struct ActivityBar {
     view: Retained<NSView>,
@@ -28,16 +31,19 @@ impl ActivityBar {
         let stack = NSStackView::new(mtm);
         stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         stack.setAlignment(NSLayoutAttribute::CenterX);
-        stack.setSpacing(ide_ui_common::style::space::XS);
-        stack.setEdgeInsets(NSEdgeInsets {
-            top: 6.0,
-            left: 0.0,
-            bottom: 0.0,
-            right: 0.0,
-        });
+        ui_size::follow_spacing(&stack, ide_ui_common::style::space::XS);
+        ui_size::follow_insets(
+            &stack,
+            NSEdgeInsets {
+                top: 6.0,
+                left: 0.0,
+                bottom: 0.0,
+                right: 0.0,
+            },
+        );
         let mut buttons = vec![];
         for panel in Panel::ALL {
-            let button = symbol_button(
+            let button = ui_size::symbol_button(
                 mtm,
                 panel.symbol(),
                 panel.title(),
@@ -50,7 +56,7 @@ impl ActivityBar {
             stack.addArrangedSubview(&button);
             buttons.push((panel, button));
         }
-        let settings = symbol_button(
+        let settings = ui_size::symbol_button(
             mtm,
             "gearshape",
             t("Einstellungen"),
@@ -77,10 +83,14 @@ impl ActivityBar {
             stack.topAnchor().constraintEqualToAnchor(&view.topAnchor()),
             stack.centerXAnchor().constraintEqualToAnchor(&view.centerXAnchor()),
             settings.centerXAnchor().constraintEqualToAnchor(&view.centerXAnchor()),
-            settings
-                .bottomAnchor()
-                .constraintEqualToAnchor_constant(&view.bottomAnchor(), -10.0),
         ]);
+        let above_bottom = settings
+            .bottomAnchor()
+            .constraintEqualToAnchor_constant(&view.bottomAnchor(), -SETTINGS_INSET);
+        above_bottom.setActive(true);
+        ui_size::keep(&*above_bottom, ui_size::Aspect::Length, |constraint| {
+            constraint.setConstant(-ui_size::scaled(SETTINGS_INSET));
+        });
         let bar = ActivityBar { view, buttons };
         bar.leave_out(&hidden());
         bar
@@ -169,5 +179,7 @@ fn symbols_menu(mtm: MainThreadMarker, target: &WindowController) -> Retained<NS
 
 fn sized(button: &NSButton) {
     button.setTranslatesAutoresizingMaskIntoConstraints(false);
-    fixed_size(button, BUTTON_SIZE, BUTTON_SIZE);
+    for constraint in fixed_size(button, BUTTON_SIZE, BUTTON_SIZE) {
+        ui_size::follow_length(&constraint, BUTTON_SIZE);
+    }
 }

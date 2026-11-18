@@ -39,7 +39,7 @@ impl FileTree {
         ));
         let scroll = ide_ui_common::panel::source_list_outline(mtm, &view, "name", t("Dateien"));
         view.setUsesAutomaticRowHeights(false);
-        view.setRowHeight(ide_ui_common::style::ROW_HEIGHT);
+        ide_ui_common::ui_size::follow_rows(&view, ide_ui_common::style::ROW_HEIGHT);
         // SAFETY: The outline view holds its data source and delegate weakly; `FileTree` keeps the source alive.
         unsafe {
             view.setDataSource(Some(ProtocolObject::from_ref(&*source)));

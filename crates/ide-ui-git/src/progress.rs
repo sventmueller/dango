@@ -227,7 +227,9 @@ impl GitPanel {
             banner.resume.setTitle(&ns(t("Fertig")));
             banner.abort.setTitle(&ns(t("Abbrechen …")));
             banner.detail.setStringValue(&ns(&detail));
-            banner.detail.setPreferredMaxLayoutWidth(self.ui().text_width(16.0));
+            banner
+                .detail
+                .setPreferredMaxLayoutWidth(self.ui().text_width(super::ui::BANNER_INSET));
             banner.view.setHidden(false);
             self.update_busy();
             return;
@@ -244,7 +246,9 @@ impl GitPanel {
             _ => left,
         };
         banner.detail.setStringValue(&ns(&detail));
-        banner.detail.setPreferredMaxLayoutWidth(self.ui().text_width(16.0));
+        banner
+            .detail
+            .setPreferredMaxLayoutWidth(self.ui().text_width(super::ui::BANNER_INSET));
         banner.view.setHidden(false);
         self.update_busy();
     }

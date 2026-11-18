@@ -20,6 +20,7 @@ use super::model::variables::Row;
 use super::ui::Ui;
 use ide_ui_common::panel::{RowItem, RowItems};
 use ide_ui_common::registry::WindowPart;
+use ide_ui_common::ui_size;
 use ide_ui_common::util::{guarded, ns};
 use ide_ui_common::window::{Inspector, Panels, Trust, Window};
 
@@ -102,15 +103,15 @@ define_class!(
 
         #[unsafe(method(outlineView:heightOfRowByItem:))]
         fn row_height(&self, _view: &NSOutlineView, item: &AnyObject) -> f64 {
-            guarded(24.0, || {
+            guarded(ui_size::scaled(24.0), || {
                 let empty = matches!(key_of(item), Some(Key::Empty(_))) || matches!(row_of(item), Some(Row::Empty(_)));
-                if empty {
+                ui_size::scaled(if empty {
                     super::ui::NOTE_HEIGHT
                 } else if matches!(key_of(item), Some(Key::Session(_))) {
                     super::ui::SESSION_HEIGHT
                 } else {
                     24.0
-                }
+                })
             })
         }
 

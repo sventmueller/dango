@@ -234,8 +234,9 @@
 "Sandbox aus; eingeschaltet gilt: {}" = "沙盒已关闭；开启后：{}";
 "Schließen" = "关闭";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "仅能在项目内写入；读取任意位置和网络访问不受限";
-"Schriftgröße:" = "字体大小：";
+"Schriftgröße in Editor und Terminal:" = "编辑器和终端字体大小：";
 "Schriftgröße im AI-Tab:" = "AI 标签页字体大小：";
+"Schriftgröße in Seitenleiste und Tabs:" = "边栏和标签页字体大小：";
 "Seite des Browser-Tabs" = "浏览器标签页的页面";
 "Seitenleiste ein-/ausblenden" = "显示/隐藏边栏";
 "Seitenleisten-Auswahl" = "边栏选择器";

@@ -21,6 +21,7 @@ use splat_i18n::t;
 
 use crate::Resume;
 use ide_ui_common::panel::ACCESSORY_INSET;
+use ide_ui_common::ui_size;
 use ide_ui_common::util::{main_after, main_soon, ns};
 use ide_ui_common::window::{AsWindow, Panel, Panels, Window};
 pub use rows::{flipped, section_label, small_label, spacer};
@@ -226,11 +227,13 @@ impl AgentPanel {
         let view = NSStackView::new(mtm);
         view.setOrientation(objc2_app_kit::NSUserInterfaceLayoutOrientation::Vertical);
         view.setAlignment(NSLayoutAttribute::Leading);
-        view.setEdgeInsets(objc2_foundation::NSEdgeInsets {
-            top: 0.0,
-            left: SIDE,
-            bottom: 8.0,
-            right: ACCESSORY_INSET,
+        ui_size::keep(&*view, ui_size::Aspect::Insets, |view| {
+            view.setEdgeInsets(objc2_foundation::NSEdgeInsets {
+                top: 0.0,
+                left: SIDE,
+                bottom: ui_size::scaled(8.0),
+                right: ACCESSORY_INSET,
+            });
         });
         let state = crate::host::state();
         let ids = &state.agent_panels.last_id;

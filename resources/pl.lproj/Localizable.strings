@@ -234,8 +234,9 @@
 "Sandbox aus; eingeschaltet gilt: {}" = "Piaskownica wyłączona; po włączeniu: {}";
 "Schließen" = "Zamknij";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "Zapis tylko w projekcie; odczyt wszędzie i sieć pozostają otwarte";
-"Schriftgröße:" = "Rozmiar czcionki:";
+"Schriftgröße in Editor und Terminal:" = "Rozmiar czcionki w edytorze i terminalu:";
 "Schriftgröße im AI-Tab:" = "Rozmiar czcionki na karcie AI:";
+"Schriftgröße in Seitenleiste und Tabs:" = "Rozmiar czcionki na pasku bocznym i kartach:";
 "Seite des Browser-Tabs" = "Strona karty przeglądarki";
 "Seitenleiste ein-/ausblenden" = "Przełącz pasek boczny";
 "Seitenleisten-Auswahl" = "Wybór paska bocznego";

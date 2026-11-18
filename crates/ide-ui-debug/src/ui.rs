@@ -6,15 +6,17 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject, Sel};
 use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSButton, NSColor, NSControl, NSEvent, NSLayoutAttribute, NSLayoutConstraintOrientation, NSMenu,
-    NSOutlineView, NSPopUpButton, NSScrollView, NSStackView, NSStackViewDistribution, NSTextField,
-    NSUserInterfaceLayoutOrientation, NSView,
+    NSAccessibility, NSButton, NSColor, NSControl, NSControlSize, NSEvent, NSLayoutAttribute, NSLayoutConstraint,
+    NSLayoutConstraintOrientation, NSMenu, NSOutlineView, NSPopUpButton, NSScrollView, NSStackView,
+    NSStackViewDistribution, NSTextField, NSUserInterfaceLayoutOrientation, NSView,
 };
 use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::t;
 
 use super::model::Command;
 use super::panel::DebugPanel;
+use ide_ui_common::style::{BODY, small_system, space};
+use ide_ui_common::ui_size;
 use ide_ui_common::util::{activate, auto_layout, label, ns, pin_edges, pin_sides, set_action};
 
 /// How far the panel's content keeps from the sidebar's edges: as far as the panel's title.
@@ -238,7 +240,7 @@ impl Ui {
         content.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
         content.setAlignment(NSLayoutAttribute::Leading);
         content.setDistribution(NSStackViewDistribution::Fill);
-        content.setSpacing(ide_ui_common::style::space::S);
+        ui_size::follow_spacing(&content, space::S);
         content.setEdgeInsets(objc2_foundation::NSEdgeInsets {
             top: 0.0,
             left: 0.0,
@@ -301,7 +303,7 @@ impl InspectorUi {
         let watch = NSTextField::new(mtm);
         watch.setPlaceholderString(Some(&ns(t("Ausdruck überwachen …"))));
         watch.setAccessibilityLabel(Some(&ns(t("Neuer überwachter Ausdruck"))));
-        watch.setFont(Some(&ide_ui_common::style::small_system()));
+        ui_size::set_font(&watch, &small_system());
         set_action(&watch, panel, sel!(ideDebugAddWatch:));
         // SAFETY: The field holds its delegate weakly; the panel registry keeps the panel alive.
         unsafe { watch.setDelegate(Some(ProtocolObject::from_ref(panel))) };
@@ -318,34 +320,34 @@ impl InspectorUi {
         auto_layout(&[&title, &close, &list, &watch]);
         let guide = page.safeAreaLayoutGuide();
         activate([
-            title
-                .topAnchor()
-                .constraintEqualToAnchor_constant(&guide.topAnchor(), MARGIN),
+            scaling(title.topAnchor().constraintEqualToAnchor(&guide.topAnchor()), MARGIN),
             title
                 .leadingAnchor()
                 .constraintEqualToAnchor_constant(&page.leadingAnchor(), MARGIN + 4.0),
-            title
-                .trailingAnchor()
-                .constraintLessThanOrEqualToAnchor_constant(&close.leadingAnchor(), -4.0),
+            scaling(
+                title
+                    .trailingAnchor()
+                    .constraintLessThanOrEqualToAnchor(&close.leadingAnchor()),
+                -4.0,
+            ),
             close.centerYAnchor().constraintEqualToAnchor(&title.centerYAnchor()),
             close
                 .trailingAnchor()
                 .constraintEqualToAnchor_constant(&page.trailingAnchor(), -ide_ui_common::panel::ACCESSORY_INSET),
-            list.topAnchor()
-                .constraintEqualToAnchor_constant(&title.bottomAnchor(), 4.0),
+            scaling(list.topAnchor().constraintEqualToAnchor(&title.bottomAnchor()), 4.0),
             list.leadingAnchor().constraintEqualToAnchor(&page.leadingAnchor()),
             list.trailingAnchor().constraintEqualToAnchor(&page.trailingAnchor()),
-            list.bottomAnchor()
-                .constraintEqualToAnchor_constant(&watch.topAnchor(), -6.0),
+            scaling(list.bottomAnchor().constraintEqualToAnchor(&watch.topAnchor()), -6.0),
             watch
                 .leadingAnchor()
                 .constraintEqualToAnchor_constant(&page.leadingAnchor(), MARGIN),
             watch
                 .trailingAnchor()
                 .constraintEqualToAnchor_constant(&page.trailingAnchor(), -MARGIN),
-            watch
-                .bottomAnchor()
-                .constraintEqualToAnchor_constant(&page.bottomAnchor(), -MARGIN),
+            scaling(
+                watch.bottomAnchor().constraintEqualToAnchor(&page.bottomAnchor()),
+                -MARGIN,
+            ),
         ]);
         InspectorUi {
             page,
@@ -385,14 +387,14 @@ fn start_row(
 ) -> (Retained<NSStackView>, Retained<NSPopUpButton>, Retained<NSButton>) {
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(ide_ui_common::style::space::S);
+    ui_size::follow_spacing(&row, space::S);
     let choices = NSPopUpButton::initWithFrame_pullsDown(
         NSPopUpButton::alloc(mtm),
         NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(160.0, 24.0)),
         false,
     );
-    choices.setControlSize(objc2_app_kit::NSControlSize::Small);
-    choices.setFont(Some(&ide_ui_common::style::small_system()));
+    ui_size::follow_control_size(&choices, NSControlSize::Small);
+    ui_size::set_font(&choices, &small_system());
     choices.setAccessibilityLabel(Some(&ns(t("Startkonfiguration"))));
     choices.setToolTip(Some(&ns(t("Startkonfiguration"))));
     set_action(&choices, panel, sel!(ideDebugChoose:));
@@ -401,7 +403,9 @@ fn start_row(
     // SAFETY: A nil target sends the action along the responder chain; `set_action` aims it at the panel.
     let start = unsafe { NSButton::buttonWithImage_target_action(&image, None, Some(sel!(ideDebugStart:)), mtm) };
     set_action(&start, panel, sel!(ideDebugStart:));
-    start.setControlSize(objc2_app_kit::NSControlSize::Small);
+    ui_size::follow_control_size(&start, NSControlSize::Small);
+    // Without a symbol configuration the button sizes its symbol by its font.
+    ui_size::set_system_font(&start, BODY);
     start.setToolTip(Some(&ns(t("Starten"))));
     ide_ui_common::util::set_label(&start, Some(t("Starten")));
     row.addArrangedSubview(&choices);
@@ -414,7 +418,7 @@ fn untrusted(mtm: MainThreadMarker, panel: &DebugPanel) -> Retained<NSStackView>
     let stack = NSStackView::new(mtm);
     stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     stack.setAlignment(NSLayoutAttribute::Leading);
-    stack.setSpacing(ide_ui_common::style::space::XS);
+    ui_size::follow_spacing(&stack, space::XS);
     let note = NSTextField::wrappingLabelWithString(
         &ns(t(
             "Debuggen startet Programme des Ordners und geht erst, wenn du ihm vertraust.",
@@ -422,8 +426,9 @@ fn untrusted(mtm: MainThreadMarker, panel: &DebugPanel) -> Retained<NSStackView>
         mtm,
     );
     note.setTextColor(Some(&NSColor::secondaryLabelColor()));
-    note.setFont(Some(&ide_ui_common::style::small_system()));
+    ui_size::set_font(&note, &small_system());
     let trust = ide_ui_common::util::borderless_button(mtm, t("Ordner vertrauen …"), Some(panel), sel!(ideDebugTrust:));
+    ui_size::set_system_font(&trust, BODY);
     trust.setContentTintColor(Some(&NSColor::controlAccentColor()));
     stack.addArrangedSubview(&note);
     stack.addArrangedSubview(&trust);
@@ -439,6 +444,8 @@ fn outline(
 ) -> (Retained<NSScrollView>, Retained<NSOutlineView>) {
     let view = DebugOutlineView::new(mtm, ide_ui_common::panel::LIST_FRAME);
     let scroll = ide_ui_common::panel::source_list_outline(mtm, &view, "debug", name);
+    // In place of the source list's own row height: the delegate gives each row its height.
+    ui_size::follow_row_heights(&view);
     // SAFETY: The outline view holds its data source and delegate weakly; the panel registry keeps the panel alive.
     unsafe {
         view.setDataSource(Some(ProtocolObject::from_ref(panel)));
@@ -458,6 +465,12 @@ fn outline(
     (scroll, view.into_super())
 }
 
+/// `constraint` with the length `base` at the interface size, now and after a change.
+fn scaling(constraint: Retained<NSLayoutConstraint>, base: f64) -> Retained<NSLayoutConstraint> {
+    ui_size::follow_length(&constraint, base);
+    constraint
+}
+
 /// A row of two texts after a symbol: a name and, dimmer, what it is or where.
 pub(crate) fn row(
     mtm: MainThreadMarker,
@@ -474,26 +487,22 @@ pub(crate) fn row(
         let icon = objc2_app_kit::NSImageView::new(mtm);
         icon.setImage(ide_ui_common::util::symbol(name, "").as_deref());
         icon.setContentTintColor(Some(tint));
-        icon.setSymbolConfiguration(Some(
-            &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
-                11.0,
-                ide_ui_common::constant!(objc2_app_kit::NSFontWeightRegular),
-            ),
-        ));
+        ui_size::follow_image_symbol(&icon, 11.0);
         ide_ui_common::util::hide_from_voiceover(&icon);
         cell.addSubview(&icon);
         icon.setTranslatesAutoresizingMaskIntoConstraints(false);
         activate([
             icon.leadingAnchor().constraintEqualToAnchor(&leading),
             icon.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-            icon.widthAnchor().constraintEqualToConstant(16.0),
+            icon.widthAnchor().constraintEqualToConstant(ui_size::scaled(16.0)),
         ]);
         // SAFETY: The cell holds its image view weakly; the view is its subview and lives as long.
         unsafe { cell.setImageView(Some(&icon)) };
         leading = icon.trailingAnchor();
-        gap = 4.0;
+        gap = ui_size::scaled(4.0);
     }
     let name = label(mtm, title);
+    ui_size::set_system_font(&name, BODY);
     name.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
     name.setContentCompressionResistancePriority_forOrientation(300.0, NSLayoutConstraintOrientation::Horizontal);
     name.setContentHuggingPriority_forOrientation(750.0, NSLayoutConstraintOrientation::Horizontal);
@@ -509,6 +518,7 @@ pub(crate) fn row(
     unsafe { cell.setTextField(Some(&name)) };
     if !detail.is_empty() {
         let more = label(mtm, detail);
+        ui_size::set_system_font(&more, BODY);
         more.setTextColor(Some(&NSColor::secondaryLabelColor()));
         more.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingMiddle);
         more.setContentCompressionResistancePriority_forOrientation(200.0, NSLayoutConstraintOrientation::Horizontal);
@@ -517,7 +527,7 @@ pub(crate) fn row(
         more.setTranslatesAutoresizingMaskIntoConstraints(false);
         activate([
             more.leadingAnchor()
-                .constraintEqualToAnchor_constant(&name.trailingAnchor(), 5.0),
+                .constraintEqualToAnchor_constant(&name.trailingAnchor(), ui_size::scaled(5.0)),
             more.firstBaselineAnchor()
                 .constraintEqualToAnchor(&name.firstBaselineAnchor()),
             more.trailingAnchor()
@@ -539,14 +549,15 @@ pub(crate) fn two_lines(
 ) -> Retained<NSView> {
     let cell = objc2_app_kit::NSTableCellView::new(mtm);
     let icon = objc2_app_kit::NSImageView::new(mtm);
-    icon.setImage(ide_ui_common::util::symbol(symbol.0, "").as_deref());
+    ui_size::follow_symbol_image(&icon, symbol.0, "");
     icon.setContentTintColor(Some(symbol.1));
     ide_ui_common::util::hide_from_voiceover(&icon);
     let name = label(mtm, title);
+    ui_size::set_system_font(&name, BODY);
     name.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
     let more = label(mtm, detail);
     more.setTextColor(Some(&NSColor::secondaryLabelColor()));
-    more.setFont(Some(&ide_ui_common::style::small_system()));
+    ui_size::set_font(&more, &small_system());
     more.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
     for view in [&*icon as &NSView, &name, &more] {
         cell.addSubview(view);
@@ -558,9 +569,9 @@ pub(crate) fn two_lines(
     activate([
         icon.leadingAnchor().constraintEqualToAnchor(&cell.leadingAnchor()),
         icon.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
-        icon.widthAnchor().constraintEqualToConstant(16.0),
+        icon.widthAnchor().constraintEqualToConstant(ui_size::scaled(16.0)),
         name.leadingAnchor()
-            .constraintEqualToAnchor_constant(&icon.trailingAnchor(), 4.0),
+            .constraintEqualToAnchor_constant(&icon.trailingAnchor(), ui_size::scaled(4.0)),
         name.trailingAnchor()
             .constraintLessThanOrEqualToAnchor_constant(&cell.trailingAnchor(), -4.0),
         name.bottomAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
@@ -585,7 +596,7 @@ pub(crate) fn note(mtm: MainThreadMarker, text: &str) -> Retained<NSView> {
     let cell = objc2_app_kit::NSTableCellView::new(mtm);
     let field = NSTextField::wrappingLabelWithString(&ns(text), mtm);
     field.setTextColor(Some(&NSColor::secondaryLabelColor()));
-    field.setFont(Some(&ide_ui_common::style::small_system()));
+    ui_size::set_font(&field, &small_system());
     field.setContentCompressionResistancePriority_forOrientation(250.0, NSLayoutConstraintOrientation::Horizontal);
     cell.addSubview(&field);
     field.setTranslatesAutoresizingMaskIntoConstraints(false);

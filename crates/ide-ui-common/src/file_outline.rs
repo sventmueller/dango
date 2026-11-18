@@ -91,11 +91,11 @@ impl FileOutline {
 
 pub use crate::panel::outdent;
 
-/// A folder's chevron, pointing down when it is open.
+/// A folder's chevron, pointing down when it is open, at the interface size.
 pub fn chevron(open: bool) -> Option<Retained<NSImage>> {
     let name = if open { "chevron.down" } else { "chevron.right" };
     let configuration = NSImageSymbolConfiguration::configurationWithPointSize_weight(
-        CHEVRON_POINTS,
+        crate::ui_size::scaled(CHEVRON_POINTS),
         crate::constant!(objc2_app_kit::NSFontWeightSemibold),
     )
     .configurationByApplyingConfiguration(&NSImageSymbolConfiguration::configurationWithHierarchicalColor(

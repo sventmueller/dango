@@ -107,6 +107,7 @@ pub mod keys {
     pub const SETTINGS: &[Declared] = &[
         REOPEN_PROJECTS.declared(),
         FONT_SIZE.declared(),
+        INTERFACE_FONT_SIZE.declared(),
         FORMAT_ON_SAVE.declared(),
         SHOW_WHITESPACE.declared(),
         MINIMAP.declared(),
@@ -133,6 +134,9 @@ pub mod keys {
 
     /// The size of text in editors and terminals, in points.
     pub const FONT_SIZE: Key<f64> = Key::project("fontSize", Sharing::Shared, || 12.0);
+
+    /// The size of the text of the sidebar and the tab bars, in points; their symbols, rows and room follow it.
+    pub const INTERFACE_FONT_SIZE: Key<f64> = Key::user("interfaceFontSize", Sharing::Shared, || 13.0);
 
     /// Formats a file with its language server when ⌘S saves it.
     pub const FORMAT_ON_SAVE: Key<bool> = Key::project("formatOnSave", Sharing::Shared, || false);

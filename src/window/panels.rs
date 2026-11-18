@@ -15,6 +15,7 @@ use splat_i18n::{t, tf};
 
 use super::{Panel, WindowController};
 use crate::util::{activate, auto_layout, borderless_button, label, ns, pin_inset, pin_sides, symbol};
+use ide_ui_common::ui_size;
 
 /// How far the panel's title keeps from the sidebar's leading edge.
 const HEADER_INSET: f64 = 8.0;
@@ -26,6 +27,10 @@ const TREE_OUTDENT: f64 = 4.0;
 /// How far a title's buttons sit below its centre: symbols are taller than the title's capitals, and this lets
 /// both start at the same height.
 const ACCESSORY_DROP: f64 = 2.0;
+/// How far a page keeps below the panel's title.
+const PAGE_GAP: f64 = 8.0;
+/// The size of the symbol of a place without content.
+const EMPTY_SYMBOL: f64 = 28.0;
 pub(crate) use ide_ui_common::panel::ACCESSORY_INSET;
 
 pub(crate) struct Panels {
@@ -49,19 +54,23 @@ impl Panels {
         view.addSubview(&header);
         view.addSubview(&accessory);
         auto_layout(&[&header, &accessory]);
+        let middle = header
+            .centerYAnchor()
+            .constraintEqualToAnchor_constant(&view.topAnchor(), HEADER_MIDDLE);
+        let drop = accessory
+            .centerYAnchor()
+            .constraintEqualToAnchor_constant(&header.centerYAnchor(), ACCESSORY_DROP);
+        ui_size::follow_length(&middle, HEADER_MIDDLE);
+        ui_size::follow_length(&drop, ACCESSORY_DROP);
         activate([
             header
                 .leadingAnchor()
                 .constraintEqualToAnchor_constant(&view.leadingAnchor(), HEADER_INSET),
-            header
-                .centerYAnchor()
-                .constraintEqualToAnchor_constant(&view.topAnchor(), HEADER_MIDDLE),
+            middle,
             accessory
                 .trailingAnchor()
                 .constraintEqualToAnchor_constant(&view.trailingAnchor(), -ACCESSORY_INSET),
-            accessory
-                .centerYAnchor()
-                .constraintEqualToAnchor_constant(&header.centerYAnchor(), ACCESSORY_DROP),
+            drop,
             header
                 .trailingAnchor()
                 .constraintLessThanOrEqualToAnchor_constant(&accessory.leadingAnchor(), -4.0),
@@ -111,9 +120,12 @@ impl Panels {
         }
         self.view.addSubview(page);
         pin_sides(page, &self.view, 0.0);
+        let below_title = page
+            .topAnchor()
+            .constraintEqualToAnchor_constant(&self.header.bottomAnchor(), PAGE_GAP);
+        ui_size::follow_length(&below_title, PAGE_GAP);
         activate([
-            page.topAnchor()
-                .constraintEqualToAnchor_constant(&self.header.bottomAnchor(), 8.0),
+            below_title,
             page.bottomAnchor().constraintEqualToAnchor(&self.view.bottomAnchor()),
         ]);
     }
@@ -264,34 +276,44 @@ pub(crate) fn empty_state(
     let stack = NSStackView::new(mtm);
     stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     stack.setAlignment(NSLayoutAttribute::CenterX);
-    stack.setSpacing(ide_ui_common::style::space::M);
-    let image = if ide_ui_common::util::is_own_symbol(symbol_name) {
-        ide_ui_common::util::symbol_at(symbol_name, title, 28.0)
+    ui_size::follow_spacing(&stack, ide_ui_common::style::space::M);
+    let own = ide_ui_common::util::is_own_symbol(symbol_name);
+    let image = if own {
+        ide_ui_common::util::symbol_at(symbol_name, title, EMPTY_SYMBOL)
     } else {
         symbol(symbol_name, title)
     };
     if let Some(image) = image {
         let view = NSImageView::imageViewWithImage(&image, mtm);
-        view.setSymbolConfiguration(Some(
-            &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
-                28.0,
-                crate::util::constant!(objc2_app_kit::NSFontWeightLight),
-            ),
-        ));
+        let (name, description) = (symbol_name.to_owned(), title.to_owned());
+        ui_size::keep(&*view, ui_size::Aspect::Symbol, move |view| {
+            let points = ui_size::scaled(EMPTY_SYMBOL);
+            if own {
+                view.setImage(ide_ui_common::util::symbol_at(&name, &description, points).as_deref());
+            }
+            view.setSymbolConfiguration(Some(
+                &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
+                    points,
+                    crate::util::constant!(objc2_app_kit::NSFontWeightLight),
+                ),
+            ));
+        });
         view.setContentTintColor(Some(&NSColor::tertiaryLabelColor()));
         stack.addArrangedSubview(&view);
     }
     let heading = label(mtm, title);
-    heading.setFont(Some(&NSFont::boldSystemFontOfSize(ide_ui_common::style::HEADING)));
+    ui_size::set_font(&heading, &NSFont::boldSystemFontOfSize(ide_ui_common::style::HEADING));
     heading.setAlignment(NSTextAlignment::Center);
     stack.addArrangedSubview(&heading);
     let explanation = NSTextField::wrappingLabelWithString(&ns(detail), mtm);
+    ui_size::set_system_font(&explanation, ide_ui_common::style::BODY);
     explanation.setTextColor(Some(&NSColor::secondaryLabelColor()));
     explanation.setAlignment(NSTextAlignment::Center);
     explanation.setPreferredMaxLayoutWidth(200.0);
     stack.addArrangedSubview(&explanation);
     if let Some((title, action)) = button {
         let button = borderless_button(mtm, title, None, action);
+        ui_size::set_system_font(&button, ide_ui_common::style::BODY);
         button.setContentTintColor(Some(&NSColor::controlAccentColor()));
         stack.addArrangedSubview(&button);
     }

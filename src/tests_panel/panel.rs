@@ -11,6 +11,7 @@ use ide_test::board::{Board, Node, Row};
 use ide_test::{Scope, State, Tool};
 use ide_ui_common::panel::{Nesting, PanelOutline, RowItem, RowItems};
 use ide_ui_common::registry::WindowPart;
+use ide_ui_common::ui_size;
 use ide_ui_common::window::{Window, WindowId};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
@@ -33,6 +34,8 @@ mod poll;
 const POLL: Duration = Duration::from_millis(300);
 /// The most changed rows redrawn one by one; past it the whole outline loads again.
 const RELOADED_ROWS: usize = 100;
+/// The side of the spinner of the status line, AppKit's small one.
+const SPINNER_SIDE: f64 = 16.0;
 
 pub(crate) struct PanelIvars {
     id: u64,
@@ -702,9 +705,7 @@ fn status_row(
 ) {
     let status = NSTextField::wrappingLabelWithString(&ns(""), mtm);
     status.setTextColor(Some(&NSColor::secondaryLabelColor()));
-    status.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(
-        ide_ui_common::style::SMALL,
-    )));
+    ui_size::set_system_font(&status, ide_ui_common::style::SMALL);
     status.setContentCompressionResistancePriority_forOrientation(
         objc2_app_kit::NSLayoutPriorityDefaultLow,
         objc2_app_kit::NSLayoutConstraintOrientation::Horizontal,
@@ -716,9 +717,15 @@ fn status_row(
     let spinner = NSProgressIndicator::new(mtm);
     spinner.setStyle(NSProgressIndicatorStyle::Spinning);
     spinner.setControlSize(objc2_app_kit::NSControlSize::Small);
+    // A spinning indicator draws to fit its frame, which AppKit's control sizes would only change in steps.
+    for side in [spinner.widthAnchor(), spinner.heightAnchor()] {
+        let constraint = side.constraintEqualToConstant(SPINNER_SIDE);
+        ui_size::follow_length(&constraint, SPINNER_SIDE);
+        constraint.setActive(true);
+    }
     spinner.setHidden(true);
     let row = ide_ui_common::panel::padded(mtm, &status);
-    row.setSpacing(ide_ui_common::style::space::S);
+    ui_size::follow_spacing(&row, ide_ui_common::style::space::S);
     row.insertArrangedSubview_atIndex(&spinner, 0);
     row.setHidden(true);
     (row, status, spinner)

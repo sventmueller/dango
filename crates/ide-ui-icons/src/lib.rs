@@ -21,6 +21,7 @@ use std::path::Path;
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::{NSColor, NSFontWeightRegular, NSImage, NSImageScaling, NSImageSymbolConfiguration, NSImageView};
+use objc2_foundation::{NSCopying, NSSize};
 use splat_markdown::palette::Rgb;
 
 pub(crate) use kinds::Tint;
@@ -46,8 +47,13 @@ pub fn image_view(mtm: MainThreadMarker, path: &Path, folder: bool) -> Retained<
 
 /// Shows the icon of the file at `path` in `view`, one of [`image_view`]'s, or nothing for a folder.
 pub fn show(view: &NSImageView, path: &Path, folder: bool) {
+    show_scaled(view, path, folder, 1.0);
+}
+
+/// [`show`] with the icon `scale` times as large, for a list that follows the interface size.
+pub fn show_scaled(view: &NSImageView, path: &Path, folder: bool, scale: f64) {
     let icon = (!folder).then(|| icon_of(&file_name(path)));
-    let image = icon.as_ref().and_then(template);
+    let image = icon.as_ref().and_then(|icon| template_at(icon, scale));
     view.setImage(image.as_deref());
     view.setContentTintColor(icon.filter(|_| image.is_some()).map(|icon| color(icon.tint)).as_deref());
 }
@@ -55,8 +61,13 @@ pub fn show(view: &NSImageView, path: &Path, folder: bool) {
 /// The icon of the file at `path` drawn in its colour, for a place that takes an image rather than an image view,
 /// such as the title of a tab.
 pub fn image(path: &Path) -> Option<Retained<NSImage>> {
+    image_scaled(path, 1.0)
+}
+
+/// [`image`] `scale` times as large, for a tab bar that follows the interface size.
+pub fn image_scaled(path: &Path, scale: f64) -> Option<Retained<NSImage>> {
     let icon = icon_of(&file_name(path));
-    let template = template(&icon)?;
+    let template = template_at(&icon, scale)?;
     Some(ide_ui_common::util::tinted(&template, &color(icon.tint)))
 }
 
@@ -67,11 +78,26 @@ fn file_name(path: &Path) -> String {
 
 /// The icon's shape as a template image.
 pub fn template(icon: &Icon) -> Option<Retained<NSImage>> {
+    template_at(icon, 1.0)
+}
+
+/// [`template`] `scale` times as large.
+fn template_at(icon: &Icon, scale: f64) -> Option<Retained<NSImage>> {
     match icon.shape {
-        Shape::Logo(name) => logo::image(name),
+        Shape::Logo(name) => {
+            let image = logo::image(name)?;
+            if (scale - 1.0).abs() < f64::EPSILON {
+                return Some(image);
+            }
+            // The cached image is shared, so a resized one is a copy.
+            let image = image.copy();
+            image.setSize(NSSize::new(logo::SIDE * scale, logo::SIDE * scale));
+            Some(image)
+        }
         Shape::Symbol(name) => {
             let weight = ide_ui_common::constant!(NSFontWeightRegular);
-            let configuration = NSImageSymbolConfiguration::configurationWithPointSize_weight(SYMBOL_SIZE, weight);
+            let points = SYMBOL_SIZE * scale;
+            let configuration = NSImageSymbolConfiguration::configurationWithPointSize_weight(points, weight);
             ide_ui_common::util::symbol(name, "")?.imageWithSymbolConfiguration(&configuration)
         }
     }

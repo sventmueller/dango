@@ -11,7 +11,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSEdgeInsets, NSPoint, NSRect, NSSize};
 
 use crate::style::space;
-use crate::util::{activate, label, ns, symbol};
+use crate::util::{activate, label, ns};
 
 /// The frame a panel's list starts with, before the sidebar lays it out.
 pub const LIST_FRAME: NSRect = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(240.0, 400.0));
@@ -43,7 +43,8 @@ pub fn source_list_outline(
     let column = one_column(mtm, view, id, name);
     // SAFETY: The column was just added to this outline view, which keeps it.
     unsafe { view.setOutlineTableColumn(Some(&column)) };
-    view.setIndentationPerLevel(INDENT);
+    crate::ui_size::follow_indent(view, INDENT);
+    crate::ui_size::follow_row_height(view);
     view.setAutoresizesOutlineColumn(false);
     view.setColumnAutoresizingStyle(NSTableViewColumnAutoresizingStyle::FirstColumnOnlyAutoresizingStyle);
     let scroll = scroll(mtm, view);
@@ -89,7 +90,7 @@ pub fn padded(mtm: MainThreadMarker, view: &NSView) -> Retained<NSStackView> {
 /// A heading of the sidebar, `text` cut at its end: a panel's title, or a section's title in a panel's list.
 pub fn heading(mtm: MainThreadMarker, text: &str) -> Retained<NSTextField> {
     let heading = label(mtm, text);
-    heading.setFont(Some(&NSFont::boldSystemFontOfSize(crate::style::SMALL)));
+    crate::ui_size::set_font(&heading, &NSFont::boldSystemFontOfSize(crate::style::SMALL));
     heading.setTextColor(Some(&NSColor::secondaryLabelColor()));
     heading.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
     heading.setContentCompressionResistancePriority_forOrientation(
@@ -120,7 +121,7 @@ pub fn section_cell(mtm: MainThreadMarker, title: &str) -> Retained<NSTableCellV
 pub fn panel_page(mtm: MainThreadMarker) -> Retained<NSStackView> {
     let page = NSStackView::new(mtm);
     page.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
-    page.setEdgeInsets(PAGE_INSETS);
+    crate::ui_size::follow_insets(&page, PAGE_INSETS);
     page
 }
 
@@ -135,18 +136,21 @@ pub fn icon_row(
     spoken: &str,
 ) -> (Retained<NSStackView>, Retained<NSTextField>) {
     let icon = NSImageView::new(mtm);
-    icon.setImage(symbol(name, description).as_deref());
+    crate::ui_size::follow_symbol_image(&icon, name, description);
     icon.setContentTintColor(Some(tint));
     let text = label(mtm, text);
+    crate::ui_size::set_system_font(&text, crate::style::BODY);
     text.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(space::S);
-    row.setEdgeInsets(NSEdgeInsets {
-        top: 0.0,
-        left: row_indent(level),
-        bottom: 0.0,
-        right: ROW_INSET,
+    crate::ui_size::follow_spacing(&row, space::S);
+    crate::ui_size::keep(&*row, crate::ui_size::Aspect::Insets, move |row| {
+        row.setEdgeInsets(NSEdgeInsets {
+            top: 0.0,
+            left: row_indent(level),
+            bottom: 0.0,
+            right: ROW_INSET,
+        });
     });
     row.addView_inGravity(&icon, NSStackViewGravity::Leading);
     row.addView_inGravity(&text, NSStackViewGravity::Leading);
@@ -159,5 +163,5 @@ pub fn icon_row(
 /// Where a row `level` deep begins.
 #[expect(clippy::cast_precision_loss, reason = "a nesting level of a few at most")]
 fn row_indent(level: usize) -> f64 {
-    ROW_INSET + level as f64 * INDENT
+    ROW_INSET + level as f64 * crate::ui_size::scaled(INDENT)
 }

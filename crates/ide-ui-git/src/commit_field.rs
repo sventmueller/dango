@@ -7,6 +7,7 @@ use objc2_app_kit::{NSBezierPath, NSEvent, NSEventModifierFlags, NSTextView};
 use objc2_foundation::{NSArray, NSObjectProtocol, NSPoint, NSRect, NSSize};
 
 use super::panel::GitPanel;
+use ide_ui_common::ui_size::scaled;
 use ide_ui_common::util::guarded;
 
 /// Return and the Return of the number block.
@@ -88,19 +89,16 @@ impl CommitTextView {
     }
 
     /// Keeps the text out of the top far corner, where the button that asks a model for the message sits.
-    fn keep_corner_free(&self) {
+    pub(super) fn keep_corner_free(&self) {
         // SAFETY: A text view made by `new` always has its container; nothing here keeps it beyond this call.
         let Some(container) = (unsafe { self.textContainer() }) else {
             return;
         };
         let width = container.size().width;
+        let size = NSSize::new(scaled(BUTTON_CORNER.width), scaled(BUTTON_CORNER.height));
         let rtl = self.userInterfaceLayoutDirection() == objc2_app_kit::NSUserInterfaceLayoutDirection::RightToLeft;
-        let x = if rtl {
-            0.0
-        } else {
-            (width - BUTTON_CORNER.width).max(0.0)
-        };
-        let corner = NSBezierPath::bezierPathWithRect(NSRect::new(NSPoint::new(x, 0.0), BUTTON_CORNER));
+        let x = if rtl { 0.0 } else { (width - size.width).max(0.0) };
+        let corner = NSBezierPath::bezierPathWithRect(NSRect::new(NSPoint::new(x, 0.0), size));
         container.setExclusionPaths(&NSArray::from_retained_slice(&[corner]));
     }
 

@@ -178,7 +178,10 @@ fn switching(root: PathBuf) {
     );
     dragged_out(&controller, &root);
     select(&controller, tab_of(&controller, &root, "a.rs"));
-    helpers::after(PAUSE, move || beside(root));
+    let file = root.join("a.rs");
+    helpers::after(PAUSE, move || {
+        super::interface_size::run(root, file, |root| helpers::after(PAUSE, move || beside(root)));
+    });
 }
 
 /// A tab moved to a window of its own keeps the sidebar's picture while the other window has the sidebar, gets the

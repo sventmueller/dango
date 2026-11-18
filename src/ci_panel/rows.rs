@@ -2,6 +2,8 @@
 //! which of them stand open, the context menu and what a row's action acts on.
 
 use ide_ci::{Item, Job, Kind, Run, State};
+use ide_ui_common::style::{BODY, small_system, space};
+use ide_ui_common::ui_size::{self, Aspect};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Sel};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
@@ -24,6 +26,10 @@ const RETURN_KEYS: [u16; 2] = [36, 76];
 const RUN_HEIGHT: f64 = 36.0;
 const JOB_HEIGHT: f64 = 24.0;
 const STEP_HEIGHT: f64 = 22.0;
+/// The size of a row's state symbol.
+const SYMBOL_POINTS: f64 = 12.0;
+/// The room between a row's text and the value at its end.
+const VALUE_GAP: f64 = 6.0;
 
 /// How far AppKit's source list sets its disclosure triangles in past the panel's title.
 const OUTDENT: f64 = 6.0;
@@ -94,12 +100,13 @@ pub(crate) fn key_of(item: &AnyObject) -> Option<Key> {
     ide_ui_common::panel::RowItems::<Key>::key_of(item)
 }
 
+/// The height of the row of `key` at the interface size.
 pub(crate) fn height(key: Option<&Key>) -> f64 {
-    match key {
+    ui_size::scaled(match key {
         Some(Key::Run(_) | Key::Item(_)) => RUN_HEIGHT,
         Some(Key::Step(..)) => STEP_HEIGHT,
         _ => JOB_HEIGHT,
-    }
+    })
 }
 
 impl CiPanel {
@@ -496,23 +503,26 @@ fn styled_cell(
     if let Some(image) = symbol(symbol_name, word) {
         icon.setImage(Some(&image));
     }
-    icon.setSymbolConfiguration(Some(&NSImageSymbolConfiguration::configurationWithPointSize_weight(
-        12.0,
-        crate::util::constant!(objc2_app_kit::NSFontWeightMedium),
-    )));
+    ui_size::keep(&*icon, Aspect::Symbol, |icon| {
+        icon.setSymbolConfiguration(Some(&NSImageSymbolConfiguration::configurationWithPointSize_weight(
+            ui_size::scaled(SYMBOL_POINTS),
+            crate::util::constant!(objc2_app_kit::NSFontWeightMedium),
+        )));
+    });
     icon.setContentTintColor(Some(color));
     icon.setContentCompressionResistancePriority_forOrientation(1000.0, NSLayoutConstraintOrientation::Horizontal);
     let name = label(mtm, title);
+    ui_size::set_system_font(&name, BODY);
     name.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
     name.setContentCompressionResistancePriority_forOrientation(250.0, NSLayoutConstraintOrientation::Horizontal);
     let lines = NSStackView::new(mtm);
     lines.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     lines.setAlignment(NSLayoutAttribute::Leading);
-    lines.setSpacing(ide_ui_common::style::space::HAIR);
+    ui_size::follow_spacing(&lines, space::HAIR);
     lines.addArrangedSubview(&name);
     if let Some(detail) = detail {
         let second = label(mtm, detail);
-        second.setFont(Some(&ide_ui_common::style::small_system()));
+        ui_size::set_font(&second, &small_system());
         second.setTextColor(Some(&NSColor::secondaryLabelColor()));
         second.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
         second.setContentCompressionResistancePriority_forOrientation(250.0, NSLayoutConstraintOrientation::Horizontal);
@@ -520,7 +530,7 @@ fn styled_cell(
     }
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(ide_ui_common::style::space::S);
+    ui_size::follow_spacing(&row, space::S);
     row.addArrangedSubview(&icon);
     row.addArrangedSubview(&lines);
     cell.addSubview(&row);
@@ -532,10 +542,13 @@ fn styled_cell(
     let mut spoken = tf("{}: {}", &[title, word]);
     if let Some(value) = value {
         let end = label(mtm, value);
-        end.setFont(Some(&NSFont::monospacedDigitSystemFontOfSize_weight(
-            NSFont::smallSystemFontSize(),
-            crate::util::constant!(objc2_app_kit::NSFontWeightRegular),
-        )));
+        ui_size::set_font(
+            &end,
+            &NSFont::monospacedDigitSystemFontOfSize_weight(
+                NSFont::smallSystemFontSize(),
+                crate::util::constant!(objc2_app_kit::NSFontWeightRegular),
+            ),
+        );
         end.setTextColor(Some(&NSColor::secondaryLabelColor()));
         end.setContentCompressionResistancePriority_forOrientation(1000.0, NSLayoutConstraintOrientation::Horizontal);
         cell.addSubview(&end);
@@ -545,7 +558,7 @@ fn styled_cell(
                 .constraintEqualToAnchor_constant(&cell.trailingAnchor(), -6.0),
             end.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
             row.trailingAnchor()
-                .constraintLessThanOrEqualToAnchor_constant(&end.leadingAnchor(), -6.0),
+                .constraintLessThanOrEqualToAnchor_constant(&end.leadingAnchor(), -ui_size::scaled(VALUE_GAP)),
         ]);
         spoken = tf("{}, {}", &[&spoken, value]);
     } else {

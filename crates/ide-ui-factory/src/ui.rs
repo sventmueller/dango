@@ -234,17 +234,13 @@ pub(crate) fn tone_color(tone: Tone) -> Retained<NSColor> {
     }
 }
 
-/// The small red dot of an order that waits for the user (E71), which VoiceOver skips as the row says "wartet".
+/// The small red dot of an order in the panel's list that waits for the user (E71), at the interface size, which
+/// VoiceOver skips as the row says "wartet".
 pub(crate) fn dot(mtm: MainThreadMarker) -> Retained<NSImageView> {
     let image = NSImageView::new(mtm);
     image.setImage(symbol("circle.fill", "").as_deref());
     image.setContentTintColor(Some(&NSColor::systemRedColor()));
-    image.setSymbolConfiguration(Some(
-        &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
-            style::symbol::TAB_CLOSE,
-            ide_ui_common::constant!(objc2_app_kit::NSFontWeightRegular),
-        ),
-    ));
+    ide_ui_common::ui_size::follow_image_symbol(&image, style::symbol::TAB_CLOSE);
     image.setAccessibilityElement(false);
     image
 }

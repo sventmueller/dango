@@ -29,6 +29,13 @@ impl Change {
 }
 
 pub(super) fn apply(cx: &crate::context::AppContext, names: &[String]) {
+    if names.iter().any(|name| name == keys::FONT_SIZE.declared().name) {
+        let size = ide_core::settings::Settings::load_user().get(&keys::FONT_SIZE);
+        for view in cx.editors().live() {
+            super::set_font_size(&view, size);
+        }
+        crate::preview::font_size_changed(cx, size);
+    }
     for change in names.iter().filter_map(|name| Change::named(name)) {
         match change {
             Change::Minimap => cx.editor().minimap.forget(),

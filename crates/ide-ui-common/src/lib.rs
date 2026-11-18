@@ -19,5 +19,6 @@ pub mod notify;
 pub mod panel;
 pub mod registry;
 pub mod style;
+pub mod ui_size;
 pub mod util;
 pub mod window;

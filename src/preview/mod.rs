@@ -255,6 +255,14 @@ fn allow_web_pictures(key: u64) {
     with(key, |preview| preview.allow_web_pictures());
 }
 
+/// Shows the open previews of `cx` as large as editors at `font_size` points.
+pub(crate) fn font_size_changed(cx: &crate::context::AppContext, font_size: f64) {
+    let open = cx.previews().open.borrow().clone();
+    for preview in open.iter().filter(|preview| !preview.is_closed()) {
+        preview.set_font_size(font_size);
+    }
+}
+
 fn appearance_changed(key: u64) {
     with(key, |preview| preview.lay_out());
 }

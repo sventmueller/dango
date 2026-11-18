@@ -516,17 +516,7 @@ fn configure(view: &EditorTextView, font_size: f64) {
     view.setMaxSize(NSSize::new(f64::MAX, f64::MAX));
     view.setTextContainerInset(NSSize::new(6.0, 8.0));
     view.setBackgroundColor(&NSColor::textBackgroundColor());
-    let font = style::code_font(font_size);
-    view.setFont(Some(&font));
-    let attributes = NSDictionary::<NSString, objc2::runtime::AnyObject>::from_retained_objects(
-        &[
-            constant!(NSFontAttributeName),
-            constant!(NSForegroundColorAttributeName),
-        ],
-        &[font.into(), NSColor::textColor().into()],
-    );
-    // SAFETY: The dictionary holds a font and a colour under their keys, as typing attributes expect.
-    unsafe { view.setTypingAttributes(&attributes) };
+    show_font(view, font_size);
     let (text, read_only, name) = {
         let document = view.document();
         let name = document.path().map(display_name).unwrap_or_default();
@@ -548,6 +538,35 @@ fn configure(view: &EditorTextView, font_size: f64) {
     view.setEditable(!read_only);
     view.setAccessibilityLabel(Some(&ns(&tf("Editor: {}", &[&name]))));
     view.follow_storage();
+}
+
+/// Sets the code font of `font_size` on `view`, for its text and for what is typed.
+fn show_font(view: &EditorTextView, font_size: f64) {
+    let font = style::code_font(font_size);
+    view.setFont(Some(&font));
+    let attributes = NSDictionary::<NSString, objc2::runtime::AnyObject>::from_retained_objects(
+        &[
+            constant!(NSFontAttributeName),
+            constant!(NSForegroundColorAttributeName),
+        ],
+        &[font.into(), NSColor::textColor().into()],
+    );
+    // SAFETY: The dictionary holds a font and a colour under their keys, as typing attributes expect.
+    unsafe { view.setTypingAttributes(&attributes) };
+}
+
+/// Shows the open `view` at `font_size` points, as a change in the settings asks: its text, the styles of its syntax
+/// and Markdown, and the line numbers beside it.
+pub(crate) fn set_font_size(view: &EditorTextView, font_size: f64) {
+    if view.ivars().font_size.replace(font_size).to_bits() == font_size.to_bits() {
+        return;
+    }
+    show_font(view, font_size);
+    highlight::recolor_all(view);
+    if let Some(gutter) = view.ivars().around.gutter.borrow().as_ref().and_then(Weak::load) {
+        gutter.fit();
+    }
+    container::redraw_gutter(view);
 }
 
 /// What other parts of the app follow: the language server and a project search that shows unsaved text.

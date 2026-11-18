@@ -26,7 +26,8 @@ use splat_i18n::{t, tf};
 use super::WindowController;
 use super::agent_choices::AgentChoices;
 use super::panes::{PaneId, Panes, Place};
-use crate::util::{activate, fixed_size, item, ns, pin_edges, pin_sides, separator, submenu, symbol, symbol_button};
+use crate::util::{activate, fixed_size, item, ns, pin_edges, pin_sides, separator, submenu, symbol};
+use ide_ui_common::ui_size;
 
 const WINDOW_SIZE: NSSize = NSSize::new(1240.0, 780.0);
 const MIN_WINDOW_SIZE: NSSize = NSSize::new(720.0, 440.0);
@@ -34,6 +35,8 @@ const MIN_WINDOW_SIZE: NSSize = NSSize::new(720.0, 440.0);
 const BADGE_INSET: f64 = 8.0;
 /// The height of the icon before a tab's title.
 const ICON_HEIGHT: f64 = 14.0;
+/// The size of the symbol before a tab's title.
+const ICON_POINTS: f64 = 11.0;
 
 pub(crate) use ide_ui_common::window::{TabId, TabKind};
 #[cfg(feature = "selftest")]
@@ -74,7 +77,7 @@ impl Document {
     ) -> Rc<Document> {
         let mtm = controller.mtm();
         let host = NSView::new(mtm);
-        let close = symbol_button(
+        let close = ui_size::symbol_button(
             mtm,
             "xmark",
             "",
@@ -169,14 +172,15 @@ impl Document {
     pub(super) fn icon(&self) -> Option<Retained<NSImage>> {
         let tint = self.tint.borrow().clone();
         let path = self.key.as_deref().map(std::path::Path::new);
+        let file_icon = |path: &std::path::Path| crate::file_icon::image_scaled(path, ui_size::scaled(1.0));
         let name = match self.kind {
             TabKind::Editor => {
-                if let Some(image) = path.and_then(crate::file_icon::image) {
+                if let Some(image) = path.and_then(file_icon) {
                     return Some(image);
                 }
                 "doc.text"
             }
-            TabKind::Preview if let Some(image) = path.and_then(crate::file_icon::image) => return Some(image),
+            TabKind::Preview if let Some(image) = path.and_then(file_icon) => return Some(image),
             kind => kind.symbol(),
         };
         let four = self.four_colours.borrow().clone();
@@ -185,13 +189,14 @@ impl Document {
             (None, TabKind::Agent | TabKind::Plan) => ide_ui_agent::Agent::Claude.colour(),
             (None, _) => NSColor::secondaryLabelColor(),
         };
+        let points = ui_size::scaled(ICON_POINTS);
         let configuration = NSImageSymbolConfiguration::configurationWithPointSize_weight(
-            11.0,
+            points,
             crate::util::constant!(objc2_app_kit::NSFontWeightRegular),
         )
         .configurationByApplyingConfiguration(&NSImageSymbolConfiguration::configurationWithHierarchicalColor(&color));
         let image = if ide_ui_common::util::is_own_symbol(name) {
-            ide_ui_common::util::own_symbol_in(name, "", 11.0, &color)?
+            ide_ui_common::util::own_symbol_in(name, "", points, &color)?
         } else {
             symbol(name, "")?.imageWithSymbolConfiguration(&configuration)?
         };
@@ -228,7 +233,7 @@ impl Document {
             (
                 t("Vorschau").to_string(),
                 t("Vorschau schließen").to_string(),
-                symbol("eye", ""),
+                ide_ui_common::util::symbol_at("eye", "", ui_size::scaled(ui_size::DEFAULT)),
             )
         } else {
             let title = self.title();
@@ -256,7 +261,7 @@ impl Document {
 /// The badge of a document beside another: its icon, its name and `close`, on a rounded plate.
 fn badge(mtm: MainThreadMarker, close: &NSButton) -> (Retained<NSBox>, Retained<NSTextField>, Retained<NSImageView>) {
     let title = NSTextField::labelWithString(&ns(""), mtm);
-    title.setFont(Some(&NSFont::systemFontOfSize(ide_ui_common::style::SMALL)));
+    ui_size::set_system_font(&title, ide_ui_common::style::SMALL);
     title.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
     title.setContentCompressionResistancePriority_forOrientation(
         200.0,
@@ -267,16 +272,19 @@ fn badge(mtm: MainThreadMarker, close: &NSButton) -> (Retained<NSBox>, Retained<
     crate::util::hide_from_voiceover(&icon);
     let row = NSStackView::new(mtm);
     row.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    row.setSpacing(ide_ui_common::style::space::SNUG);
+    ui_size::follow_spacing(&row, ide_ui_common::style::space::SNUG);
     row.addArrangedSubview(&icon);
     row.addArrangedSubview(&title);
     row.addArrangedSubview(close);
-    row.setEdgeInsets(objc2_foundation::NSEdgeInsets {
-        top: 3.0,
-        left: 8.0,
-        bottom: 3.0,
-        right: 6.0,
-    });
+    ui_size::follow_insets(
+        &row,
+        objc2_foundation::NSEdgeInsets {
+            top: 3.0,
+            left: 8.0,
+            bottom: 3.0,
+            right: 6.0,
+        },
+    );
     let plate = NSBox::new(mtm);
     plate.setBoxType(objc2_app_kit::NSBoxType::Custom);
     plate.setTitlePosition(objc2_app_kit::NSTitlePosition::NoTitle);
@@ -407,7 +415,7 @@ impl TabWindow {
         };
         let mut toolbar_watch = super::full_screen::follow_frames(&[&content, &top], follow.clone());
         toolbar_watch.push(super::full_screen::follow_toolbar_window(&window, follow));
-        Rc::new(TabWindow {
+        let tab = Rc::new(TabWindow {
             window,
             split,
             sidebar,
@@ -421,7 +429,9 @@ impl TabWindow {
             status,
             sidebar_watch,
             toolbar_watch,
-        })
+        });
+        follow_interface_size(&tab);
+        tab
     }
 
     /// The documents, pane by pane, left to right and top to bottom.
@@ -528,7 +538,7 @@ impl TabWindow {
         };
         let title = doc.title();
         let tab = self.window.tab();
-        let font = NSFont::systemFontOfSize(NSFont::systemFontSize());
+        let font = ui_size::system(NSFont::systemFontSize());
         let font = if doc.preview.get() {
             NSFontManager::sharedFontManager(self.window.mtm())
                 .convertFont_toHaveTrait(&font, NSFontTraitMask::ItalicFontMask)
@@ -656,7 +666,7 @@ fn titled(icon: Option<&NSImage>, title: &str, font: &NSFont) -> Retained<NSAttr
     let text = NSMutableAttributedString::new();
     if let Some(icon) = icon {
         let size = icon.size();
-        let height = ICON_HEIGHT.min(size.height.max(1.0));
+        let height = ui_size::scaled(ICON_HEIGHT).min(size.height.max(1.0));
         let width = size.width * height / size.height.max(1.0);
         let attachment = NSTextAttachment::new();
         attachment.setImage(Some(icon));
@@ -680,14 +690,28 @@ fn attributed(text: &str, font: &NSFont) -> Retained<NSAttributedString> {
     unsafe { NSAttributedString::initWithString_attributes(NSAttributedString::alloc(), &ns(text), Some(&attributes)) }
 }
 
+/// Titles the tab of `tab` and the badges of its documents anew whenever the interface size changes.
+fn follow_interface_size(tab: &Rc<TabWindow>) {
+    let weak = Rc::downgrade(tab);
+    let first = Cell::new(true);
+    ui_size::keep(&*tab.window, ui_size::Aspect::Layout, move |_| {
+        if first.replace(false) {
+            return;
+        }
+        if let Some(tab) = weak.upgrade() {
+            for document in tab.documents() {
+                document.name_badge();
+            }
+            tab.refresh();
+        }
+    });
+}
+
 /// The dot of a document's state, such as an agent's turn, beside its tab's title.
 fn status_dot(mtm: MainThreadMarker) -> Retained<NSImageView> {
     let status = NSImageView::new(mtm);
     status.setImage(symbol("circle.fill", "").as_deref());
-    status.setSymbolConfiguration(Some(&NSImageSymbolConfiguration::configurationWithPointSize_weight(
-        7.0,
-        crate::util::constant!(objc2_app_kit::NSFontWeightRegular),
-    )));
+    ui_size::follow_image_symbol(&status, 7.0);
     status
 }
 

@@ -62,6 +62,7 @@ pub(crate) use search::{HierarchyPanels, SearchPanels};
 #[cfg(feature = "selftest")]
 pub(crate) use search::{LIMIT as SEARCH_LIMIT, Toggle as SearchToggle, selftest as search_selftest};
 pub(crate) use search::{buffer_edited, files_changed as files_changed_on_disk};
+#[cfg(feature = "selftest")]
 pub(crate) use sidebar::ACTIVITY_WIDTH;
 #[cfg(feature = "selftest")]
 pub(crate) use sidebar::{PANEL_DEFAULT_WIDTH, SIDEBAR_RAISE};

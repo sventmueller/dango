@@ -234,8 +234,9 @@
 "Sandbox aus; eingeschaltet gilt: {}" = "Korumalı alan kapalı; açıkken: {}";
 "Schließen" = "Kapat";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "Yazma yalnızca projede; her yerde okuma ve ağ açık kalır";
-"Schriftgröße:" = "Font boyutu:";
+"Schriftgröße in Editor und Terminal:" = "Düzenleyici ve terminal font boyutu:";
 "Schriftgröße im AI-Tab:" = "AI sekmesi font boyutu:";
+"Schriftgröße in Seitenleiste und Tabs:" = "Kenar çubuğu ve sekme font boyutu:";
 "Seite des Browser-Tabs" = "Tarayıcı sekmesinin sayfası";
 "Seitenleiste ein-/ausblenden" = "Kenar Çubuğunu Göster/Gizle";
 "Seitenleisten-Auswahl" = "Kenar çubuğu seçici";

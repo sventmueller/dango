@@ -187,7 +187,7 @@ ungesicherten Puffer zurück.
 
   | Klasse | Schlüssel (Stand 2026-11-13, 39 insgesamt) |
   |---|---|
-  | abgleichen (24) | `agentEffort`, `agentModel`, `agentPrices`, `blameAtLineEnd`, `ciHosts`, `ciOAuthClients`, `commitMessageModel`, `dictation` (ohne Mikrofon, siehe unten), `dictationWithFn`, `editPrediction`, `editPredictionExclude`, `editPredictionOffFor`, `fontSize`, `formatOnSave`, `hiddenSidebarPanels`, `inlayHints`, `inlayHintsOffFor`, `markdownPreviewBeside`, `optionAsMeta`, `previewTabs`, `reopenProjects`, `searchEngine`, `showIgnoredFiles`, `showWhitespace` |
+  | abgleichen (25) | `agentEffort`, `agentModel`, `agentPrices`, `blameAtLineEnd`, `ciHosts`, `ciOAuthClients`, `commitMessageModel`, `dictation` (ohne Mikrofon, siehe unten), `dictationWithFn`, `editPrediction`, `editPredictionExclude`, `editPredictionOffFor`, `fontSize`, `formatOnSave`, `hiddenSidebarPanels`, `inlayHints`, `inlayHintsOffFor`, `interfaceFontSize`, `markdownPreviewBeside`, `optionAsMeta`, `previewTabs`, `reopenProjects`, `searchEngine`, `showIgnoredFiles`, `showWhitespace` |
   | je Mac, Pfade und lokale Adressen (6) | `agentAllowedFolders`, `agentEndpoints`, `agentRules`, `editPredictionLmStudio`, `editPredictionOllama`, `languageServers` |
   | je Mac, Zustimmungen und Merker (3) | `commitMessageConsent`, `editPredictionConsent`, `dictationLowspeakOffered` |
   | Zustand, nie (6) | `agentChoices`, `claudeRuleFolders`, `dictationAccessibilityAsked`, `openProjects`, `openWindows`, `recentProjects` |

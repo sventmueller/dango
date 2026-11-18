@@ -10,6 +10,7 @@ use ide_ui_common::panel::{Nesting, PanelOutline, RowItem, RowItems};
 use ide_ui_common::registry::WindowPart;
 use ide_ui_common::util::{guarded, ns};
 use ide_ui_common::window::{Panel, Panels, Window};
+use ide_ui_common::{style, ui_size};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
@@ -340,24 +341,32 @@ impl FactoryPanel {
     }
 }
 
+/// The size the empty state draws the factory's symbol at.
+const EMPTY_SYMBOL: f64 = 28.0;
+
 /// The factory's symbol, "Noch kein Auftrag", what an order is and a button that starts the first, centred as the
 /// panels show a place without content.
 fn empty_state(mtm: MainThreadMarker, panel: &AnyObject) -> Retained<NSStackView> {
     let stack = NSStackView::new(mtm);
     stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
     stack.setAlignment(NSLayoutAttribute::CenterX);
-    stack.setSpacing(ide_ui_common::style::space::M);
+    ui_size::follow_spacing(&stack, style::space::M);
     let title = t("Noch kein Auftrag");
-    if let Some(image) = ide_ui_common::util::symbol_at(ide_ui_common::util::FACTORY_SYMBOL, title, 28.0) {
+    let symbol = move |points: f64| ide_ui_common::util::symbol_at(ide_ui_common::util::FACTORY_SYMBOL, title, points);
+    if let Some(image) = symbol(EMPTY_SYMBOL) {
         let view = NSImageView::imageViewWithImage(&image, mtm);
+        ui_size::keep(&*view, ui_size::Aspect::Symbol, move |view| {
+            view.setImage(symbol(ui_size::scaled(EMPTY_SYMBOL)).as_deref());
+        });
         view.setContentTintColor(Some(&NSColor::tertiaryLabelColor()));
         stack.addArrangedSubview(&view);
     }
     let heading = ide_ui_common::util::label(mtm, title);
-    heading.setFont(Some(&ide_ui_common::style::bold(ide_ui_common::style::HEADING)));
+    ui_size::set_font(&heading, &style::bold(style::HEADING));
     heading.setAlignment(NSTextAlignment::Center);
     stack.addArrangedSubview(&heading);
     let explanation = NSTextField::wrappingLabelWithString(&ns(&crate::model::words::order_explained()), mtm);
+    ui_size::set_system_font(&explanation, style::BODY);
     explanation.setTextColor(Some(&NSColor::secondaryLabelColor()));
     explanation.setAlignment(NSTextAlignment::Center);
     explanation.setPreferredMaxLayoutWidth(200.0);
@@ -368,6 +377,7 @@ fn empty_state(mtm: MainThreadMarker, panel: &AnyObject) -> Retained<NSStackView
         Some(panel),
         sel!(ideFactoryNewOrder:),
     );
+    ui_size::set_system_font(&start, style::BODY);
     start.setContentTintColor(Some(&NSColor::controlAccentColor()));
     stack.addArrangedSubview(&start);
     stack

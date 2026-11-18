@@ -234,8 +234,9 @@
 "Sandbox aus; eingeschaltet gilt: {}" = "Sandbox tắt; khi bật: {}";
 "Schließen" = "Đóng";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "Chỉ ghi trong dự án; đọc ở mọi nơi và mạng vẫn mở";
-"Schriftgröße:" = "Cỡ chữ:";
+"Schriftgröße in Editor und Terminal:" = "Cỡ chữ trong trình soạn thảo và Terminal:";
 "Schriftgröße im AI-Tab:" = "Cỡ chữ trong tab AI:";
+"Schriftgröße in Seitenleiste und Tabs:" = "Cỡ chữ trong thanh bên và tab:";
 "Seite des Browser-Tabs" = "Trang của tab trình duyệt";
 "Seitenleiste ein-/ausblenden" = "Hiển thị/Ẩn Thanh bên";
 "Seitenleisten-Auswahl" = "Bộ chọn thanh bên";

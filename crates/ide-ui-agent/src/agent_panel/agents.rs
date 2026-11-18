@@ -96,7 +96,7 @@ impl Agents {
         let button =
             ide_ui_common::util::borderless_button(self.mtm, t("+ Neue Sitzung"), None, sel!(ideAgentsNewSession:));
         set_action(&button, &self.target, sel!(ideAgentsNewSession:));
-        button.setFont(Some(&crate::style::small()));
+        ide_ui_common::ui_size::set_font(&button, &crate::style::small());
         button.setContentTintColor(Some(&NSColor::linkColor()));
         button
     }

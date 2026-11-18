@@ -234,8 +234,9 @@
 "Sandbox aus; eingeschaltet gilt: {}" = "सैंडबॉक्स बंद; चालू होने पर : {}";
 "Schließen" = "बंद करें";
 "Schreiben nur im Projekt; Lesen überall und Netzwerk bleiben offen" = "लिखना केवल प्रोजेक्ट में; हर जगह पढ़ना और नेटवर्क खुले रहते हैं";
-"Schriftgröße:" = "फ़ॉन्ट आकार :";
+"Schriftgröße in Editor und Terminal:" = "एडिटर और टर्मिनल का फ़ॉन्ट आकार :";
 "Schriftgröße im AI-Tab:" = "AI टैब का फ़ॉन्ट आकार :";
+"Schriftgröße in Seitenleiste und Tabs:" = "साइडबार और टैब का फ़ॉन्ट आकार :";
 "Seite des Browser-Tabs" = "ब्राउज़र टैब का पेज";
 "Seitenleiste ein-/ausblenden" = "साइडबार दिखाएँ या छिपाएँ";
 "Seitenleisten-Auswahl" = "साइडबार चयनकर्ता";

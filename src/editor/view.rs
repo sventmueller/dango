@@ -867,6 +867,11 @@ impl EditorTextView {
         }
     }
 
+    /// The size of its text in points.
+    pub(crate) fn font_size(&self) -> f64 {
+        self.ivars().font_size.get()
+    }
+
     pub(crate) fn document(&self) -> std::cell::Ref<'_, Document> {
         self.ivars().document.borrow()
     }

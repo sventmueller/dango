@@ -21,14 +21,21 @@ use super::Side;
 use crate::util::{activate, constant, guarded, item, ns, pin_sides, separator, set_target, symbol, symbol_button};
 use crate::window::tabs::Document;
 use crate::window::{TabId, WindowController};
+use ide_ui_common::ui_size;
 
 /// The height of a pane's bar, the window's own tab bar's: its capsule and the room around it.
 pub(super) const BAR_HEIGHT: f64 = 40.0;
 /// The capsule that holds the tabs.
 const TRACK_HEIGHT: f64 = 30.0;
+/// How far the capsule keeps from the bar's top.
+const TRACK_TOP: f64 = 4.0;
 const TAB_HEIGHT: f64 = 26.0;
 const MIN_TAB_WIDTH: f64 = 60.0;
 const TITLE_POINTS: f64 = 13.0;
+/// The size of a tab's close symbol and of the dot of unsaved changes in its place.
+const CLOSE_POINTS: f64 = 9.0;
+/// The size of the dot that tells whether an agent works or waits.
+const STATUS_POINTS: f64 = 6.0;
 
 pub(crate) struct TabIvars {
     id: TabId,
@@ -157,7 +164,6 @@ define_class!(
 impl PaneTab {
     fn new(mtm: MainThreadMarker, target: &WindowController, id: TabId) -> Retained<PaneTab> {
         let title = NSTextField::labelWithString(&ns(""), mtm);
-        title.setFont(Some(&NSFont::systemFontOfSize(TITLE_POINTS)));
         title.setLineBreakMode(NSLineBreakMode::ByTruncatingMiddle);
         title.setContentCompressionResistancePriority_forOrientation(
             200.0,
@@ -167,19 +173,13 @@ impl PaneTab {
             mtm,
             "xmark",
             t("Schließen"),
-            9.0,
+            CLOSE_POINTS,
             Some(target),
             sel!(ideCloseTabButton:),
         );
         close.setTag(id.get());
         let status = NSImageView::new(mtm);
         status.setImage(symbol("circle.fill", "").as_deref());
-        status.setSymbolConfiguration(Some(
-            &objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
-                6.0,
-                constant!(objc2_app_kit::NSFontWeightRegular),
-            ),
-        ));
         status.setHidden(true);
         let icon = NSImageView::new(mtm);
         crate::util::hide_from_voiceover(&icon);
@@ -202,6 +202,7 @@ impl PaneTab {
         // SAFETY: NSView's initializer, called once on the newly allocated object.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
         this.lay_out();
+        ui_size::keep(&*this, ui_size::Aspect::Layout, |tab| tab.size_parts());
         this.setAccessibilityElement(true);
         this.setAccessibilityRole(Some(constant!(NSAccessibilityRadioButtonRole)));
         this.setAccessibilitySubrole(Some(constant!(NSAccessibilityTabButtonSubrole)));
@@ -215,7 +216,7 @@ impl PaneTab {
         let ivars = self.ivars();
         let stack = NSStackView::new(self.mtm());
         stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        stack.setSpacing(ide_ui_common::style::space::SNUG);
+        ui_size::follow_spacing(&stack, ide_ui_common::style::space::SNUG);
         for view in [&*ivars.icon as &NSView, &ivars.title, &ivars.status] {
             stack.addArrangedSubview(view);
         }
@@ -225,6 +226,10 @@ impl PaneTab {
         }
         let centred = stack.centerXAnchor().constraintEqualToAnchor(&self.centerXAnchor());
         centred.setPriority(700.0);
+        let height = self.heightAnchor().constraintEqualToConstant(TAB_HEIGHT);
+        let width = self.widthAnchor().constraintGreaterThanOrEqualToConstant(MIN_TAB_WIDTH);
+        ui_size::follow_length(&height, TAB_HEIGHT);
+        ui_size::follow_length(&width, MIN_TAB_WIDTH);
         activate([
             ivars
                 .close
@@ -242,9 +247,34 @@ impl PaneTab {
             stack
                 .trailingAnchor()
                 .constraintLessThanOrEqualToAnchor_constant(&self.trailingAnchor(), -8.0),
-            self.heightAnchor().constraintEqualToConstant(TAB_HEIGHT),
-            self.widthAnchor().constraintGreaterThanOrEqualToConstant(MIN_TAB_WIDTH),
+            height,
+            width,
         ]);
+    }
+
+    /// Gives the title, the close symbol and the dot their sizes at the interface size.
+    fn size_parts(&self) {
+        let ivars = self.ivars();
+        ivars.title.setFont(Some(&self.title_font()));
+        let points = |size: f64| {
+            objc2_app_kit::NSImageSymbolConfiguration::configurationWithPointSize_weight(
+                ui_size::scaled(size),
+                constant!(objc2_app_kit::NSFontWeightRegular),
+            )
+        };
+        ivars.close.setSymbolConfiguration(Some(&points(CLOSE_POINTS)));
+        ivars.status.setSymbolConfiguration(Some(&points(STATUS_POINTS)));
+    }
+
+    /// The title's font: italic for the preview.
+    fn title_font(&self) -> Retained<NSFont> {
+        let regular = ui_size::system(TITLE_POINTS);
+        if self.ivars().preview.get() {
+            NSFontManager::sharedFontManager(self.mtm())
+                .convertFont_toHaveTrait(&regular, NSFontTraitMask::ItalicFontMask)
+        } else {
+            regular
+        }
     }
 
     pub(super) fn id(&self) -> TabId {
@@ -265,14 +295,7 @@ impl PaneTab {
         ivars.dirty.set(document.dirty());
         let preview = document.is_preview();
         if ivars.preview.replace(preview) != preview {
-            let regular = NSFont::systemFontOfSize(TITLE_POINTS);
-            let font = if preview {
-                NSFontManager::sharedFontManager(self.mtm())
-                    .convertFont_toHaveTrait(&regular, NSFontTraitMask::ItalicFontMask)
-            } else {
-                regular
-            };
-            ivars.title.setFont(Some(&font));
+            ivars.title.setFont(Some(&self.title_font()));
         }
         let status = document.status_colour();
         ivars.status.setHidden(status.is_none());
@@ -448,25 +471,27 @@ impl PaneBar {
         view.setAccessibilityElement(true);
         view.setAccessibilityRole(Some(constant!(NSAccessibilityTabGroupRole)));
         view.setAccessibilityLabel(Some(&ns(t("Tabs"))));
-        let close = symbol_button(mtm, "xmark", t("Bereich schließen"), 11.0, None, sel!(ideClosePane:));
+        let close = ui_size::symbol_button(mtm, "xmark", t("Bereich schließen"), 11.0, None, sel!(ideClosePane:));
         close.setTag(isize::try_from(number).unwrap_or(0));
         close.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
         crate::util::set_label(&close, Some(t("Bereich schließen")));
-        let plus = symbol_button(mtm, "plus", t("Neuer Tab …"), 13.0, None, sel!(ideNewTabInPane:));
+        let plus = ui_size::symbol_button(mtm, "plus", t("Neuer Tab …"), 13.0, None, sel!(ideNewTabInPane:));
         plus.setTag(isize::try_from(number).unwrap_or(0));
         plus.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
         crate::util::set_label(&plus, Some(t("Neuer Tab …")));
         let track = NSBox::new(mtm);
         track.setBoxType(NSBoxType::Custom);
         track.setBorderWidth(0.0);
-        track.setCornerRadius(TRACK_HEIGHT / 2.0);
+        ui_size::keep(&*track, ui_size::Aspect::Layout, |track| {
+            track.setCornerRadius(ui_size::scaled(TRACK_HEIGHT) / 2.0);
+        });
         track.setFillColor(&NSColor::quaternarySystemFillColor());
         track.setTitlePosition(objc2_app_kit::NSTitlePosition::NoTitle);
         track.setContentViewMargins(objc2_foundation::NSSize::new(0.0, 0.0));
         let strip = NSStackView::new(mtm);
         strip.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
         strip.setDistribution(NSStackViewDistribution::FillEqually);
-        strip.setSpacing(ide_ui_common::style::space::XXS);
+        ui_size::follow_spacing(&strip, ide_ui_common::style::space::XXS);
         let line = NSBox::new(mtm);
         line.setBoxType(NSBoxType::Separator);
         let drop = drop_highlight(mtm);
@@ -475,6 +500,17 @@ impl PaneBar {
             part.setTranslatesAutoresizingMaskIntoConstraints(false);
         }
         let height = view.heightAnchor().constraintEqualToConstant(0.0);
+        ui_size::keep(&*height, ui_size::Aspect::Length, |height| {
+            if height.constant() > 0.0 {
+                height.setConstant(ui_size::scaled(BAR_HEIGHT));
+            }
+        });
+        let track_top = track
+            .topAnchor()
+            .constraintEqualToAnchor_constant(&view.topAnchor(), TRACK_TOP);
+        let track_height = track.heightAnchor().constraintEqualToConstant(TRACK_HEIGHT);
+        ui_size::follow_length(&track_top, TRACK_TOP);
+        ui_size::follow_length(&track_height, TRACK_HEIGHT);
         let inset = (TRACK_HEIGHT - TAB_HEIGHT) / 2.0;
         pin_sides(&strip, &track, inset);
         pin_sides(&line, &view, 0.0);
@@ -496,10 +532,8 @@ impl PaneBar {
             plus.trailingAnchor()
                 .constraintEqualToAnchor_constant(&view.trailingAnchor(), -10.0),
             plus.centerYAnchor().constraintEqualToAnchor(&track.centerYAnchor()),
-            track
-                .topAnchor()
-                .constraintEqualToAnchor_constant(&view.topAnchor(), 4.0),
-            track.heightAnchor().constraintEqualToConstant(TRACK_HEIGHT),
+            track_top,
+            track_height,
             strip.centerYAnchor().constraintEqualToAnchor(&track.centerYAnchor()),
             line.bottomAnchor().constraintEqualToAnchor(&view.bottomAnchor()),
             height.clone(),
@@ -519,7 +553,8 @@ impl PaneBar {
     pub(super) fn set_shown(&self, shown: bool) {
         if self.view.isHidden() == shown {
             self.view.setHidden(!shown);
-            self.height.setConstant(if shown { BAR_HEIGHT } else { 0.0 });
+            self.height
+                .setConstant(if shown { ui_size::scaled(BAR_HEIGHT) } else { 0.0 });
         }
     }
 

@@ -37,6 +37,7 @@ needs a row here first, and a reason from the list above.
 | `crates/ide-ui-common/src/style.rs` | `ACCENT` | the terracotta as a dynamic colour | app | stays: cache |
 | `crates/ide-ui-common/src/style.rs` | `ACCENTS` | accent colours by base colour | app | stays: cache |
 | `crates/ide-ui-common/src/style.rs` | `TOKEN_COLORS` | colours by token kind | app, until the appearance changes | stays: cache |
+| `crates/ide-ui-common/src/ui_size.rs` | `SIZE` | the interface's text size as last read from the settings | app | stays: cache (a setting as last read) |
 | `crates/ide-ui-dictation/src/hub/fn_key.rs` | `FN` | what fn does: hotkey, gesture, running recording, observers | app | AppContext: `dictation` (`ide_ui_dictation::State`, reached through its `Host`; nur mit `dictation`) |
 | `crates/ide-ui-dictation/src/hub.rs` | `HUB` | the dictations: fields, running recognition, keys, questions | app | AppContext: `dictation` (`ide_ui_dictation::State`, reached through its `Host`; nur mit `dictation`) |
 | `crates/ide-ui-dictation/src/hub.rs` | `TARGET` | action target of the dictation buttons and menu item, without state | app (menu items hold their target weakly) | stays: cache (stateless object that aims at no window) |

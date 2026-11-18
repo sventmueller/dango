@@ -9,20 +9,23 @@ use std::path::PathBuf;
 use ide_lsp::lsp_types::{Range, SymbolKind};
 use ide_lsp::{HierarchyItem, Neighbour, Ticket};
 use ide_ui_common::panel::{RowItem, RowItems};
+use ide_ui_common::style::space;
+use ide_ui_common::ui_size;
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAccessibility, NSAutoresizingMaskOptions, NSColor, NSControlSize, NSControlTextEditingDelegate, NSFont,
-    NSImageView, NSLayoutAttribute, NSLayoutConstraintOrientation, NSLineBreakMode, NSOutlineView,
-    NSOutlineViewDataSource, NSOutlineViewDelegate, NSPopUpButton, NSScrollView, NSSegmentSwitchTracking,
-    NSSegmentedControl, NSStackView, NSTableColumn, NSUserInterfaceLayoutOrientation, NSView,
+    NSAccessibility, NSAutoresizingMaskOptions, NSColor, NSControlSize, NSControlTextEditingDelegate, NSImageView,
+    NSLayoutConstraintOrientation, NSLineBreakMode, NSOutlineView, NSOutlineViewDataSource, NSOutlineViewDelegate,
+    NSPopUpButton, NSScrollView, NSSegmentSwitchTracking, NSSegmentedControl, NSStackView, NSTableColumn,
+    NSUserInterfaceLayoutOrientation, NSView,
 };
-use objc2_foundation::{NSEdgeInsets, NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
+use objc2_foundation::{NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
 use super::SearchPanel;
-use crate::util::{activate, guarded, label, ns, pin_sides, set_action, set_label, symbol};
+use super::views::{layout, top_bar};
+use crate::util::{guarded, label, ns, set_action, set_label};
 use ide_ui_lsp::{Direction, Hierarchy, HierarchyKind};
 
 /// How many hierarchies the menu keeps.
@@ -570,19 +573,21 @@ impl HierarchyPanel {
 fn row(mtm: MainThreadMarker, name: &str, kind: SymbolKind, place: &str) -> Retained<NSView> {
     let stack = NSStackView::new(mtm);
     stack.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-    stack.setSpacing(ide_ui_common::style::space::SNUG);
-    if let Some(image) = symbol(ide_ui_lsp::kind_symbol(kind), "") {
+    stack.setSpacing(ui_size::scaled(space::SNUG));
+    // The size an SF Symbol has without a configuration of its own.
+    let points = ui_size::scaled(ui_size::DEFAULT);
+    if let Some(image) = ide_ui_common::util::symbol_at(ide_ui_lsp::kind_symbol(kind), "", points) {
         let icon = NSImageView::imageViewWithImage(&image, mtm);
         icon.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
         icon.setAccessibilityElement(false);
         stack.addArrangedSubview(&icon);
     }
     let title = label(mtm, name);
-    title.setFont(Some(&crate::editor::code_font(SMALL_FONT + 1.0)));
+    title.setFont(Some(&crate::editor::code_font(ui_size::scaled(SMALL_FONT + 1.0))));
     title.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
     title.setContentCompressionResistancePriority_forOrientation(750.0, NSLayoutConstraintOrientation::Horizontal);
     let where_ = label(mtm, place);
-    where_.setFont(Some(&NSFont::systemFontOfSize(SMALL_FONT)));
+    where_.setFont(Some(&ui_size::system(SMALL_FONT)));
     where_.setTextColor(Some(&NSColor::secondaryLabelColor()));
     where_.setLineBreakMode(NSLineBreakMode::ByTruncatingHead);
     where_.setContentCompressionResistancePriority_forOrientation(200.0, NSLayoutConstraintOrientation::Horizontal);
@@ -598,8 +603,8 @@ fn build(mtm: MainThreadMarker, panel: &HierarchyPanel) -> Views {
         NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(200.0, 22.0)),
         false,
     );
-    history.setControlSize(NSControlSize::Small);
-    history.setFont(Some(&NSFont::systemFontOfSize(SMALL_FONT)));
+    ide_ui_common::ui_size::follow_control_size(&history, NSControlSize::Small);
+    ui_size::set_system_font(&history, SMALL_FONT);
     set_label(&history, Some(t("Verlauf")));
     set_action(&history, panel, sel!(ideHierarchyHistory:));
     history.setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
@@ -607,21 +612,12 @@ fn build(mtm: MainThreadMarker, panel: &HierarchyPanel) -> Views {
     direction.setSegmentCount(2);
     direction.setTrackingMode(NSSegmentSwitchTracking::SelectOne);
     direction.setSegmentDistribution(objc2_app_kit::NSSegmentDistribution::FillEqually);
-    direction.setControlSize(NSControlSize::Small);
-    direction.setFont(Some(&ide_ui_common::style::small_system()));
+    ide_ui_common::ui_size::follow_control_size(&direction, NSControlSize::Small);
+    ui_size::set_font(&direction, &ide_ui_common::style::small_system());
     direction.setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
     set_label(&direction, Some(t("Was die Liste zeigt")));
     set_action(&direction, panel, sel!(ideHierarchyDirection:));
-    let bar = NSStackView::new(mtm);
-    bar.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
-    bar.setAlignment(NSLayoutAttribute::Leading);
-    bar.setSpacing(ide_ui_common::style::space::S);
-    bar.setEdgeInsets(NSEdgeInsets {
-        top: 0.0,
-        left: 8.0,
-        bottom: 4.0,
-        right: 8.0,
-    });
+    let bar = top_bar(mtm);
     for view in [&*history as &NSView, &direction] {
         bar.addArrangedSubview(view);
         view.trailingAnchor()
@@ -631,16 +627,7 @@ fn build(mtm: MainThreadMarker, panel: &HierarchyPanel) -> Views {
     let (scroll, outline) = tree(mtm, panel);
     page.addSubview(&bar);
     page.addSubview(&scroll);
-    for view in [&*bar as &NSView, &scroll] {
-        pin_sides(view, &page, 0.0);
-    }
-    activate([
-        bar.topAnchor().constraintEqualToAnchor(&page.topAnchor()),
-        scroll
-            .topAnchor()
-            .constraintEqualToAnchor_constant(&bar.bottomAnchor(), 2.0),
-        scroll.bottomAnchor().constraintEqualToAnchor(&page.bottomAnchor()),
-    ]);
+    layout(&page, &bar, &scroll);
     page.setHidden(true);
     Views {
         page,
@@ -653,7 +640,7 @@ fn build(mtm: MainThreadMarker, panel: &HierarchyPanel) -> Views {
 fn tree(mtm: MainThreadMarker, panel: &HierarchyPanel) -> (Retained<NSScrollView>, Retained<NSOutlineView>) {
     let outline = NSOutlineView::initWithFrame(NSOutlineView::alloc(mtm), ide_ui_common::panel::LIST_FRAME);
     let scroll = ide_ui_common::panel::source_list_outline(mtm, &outline, "symbol", t("Aufrufhierarchie"));
-    outline.setRowHeight(22.0);
+    ui_size::follow_rows(&outline, ide_ui_common::style::ROW_HEIGHT);
     // SAFETY: The outline view holds its data source and delegate weakly; the search panel keeps this panel alive.
     unsafe {
         outline.setDataSource(Some(ProtocolObject::from_ref(panel)));

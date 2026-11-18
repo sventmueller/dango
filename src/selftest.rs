@@ -87,6 +87,7 @@ mod helpers;
 mod inlay;
 mod inlay_repo;
 mod insets;
+mod interface_size;
 mod line_diagnostics;
 mod lsp;
 mod lsp_actions;

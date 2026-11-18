@@ -22,6 +22,7 @@ use super::panel::{GitPanel, with_panel};
 use super::rows::{HoverCell, file_text, letter_label, pill_with};
 use super::{sheets, work};
 use ide_ui_common::constant;
+use ide_ui_common::ui_size::{font_like, scaled, system};
 use ide_ui_common::util::{activate, center_y, label, ns};
 
 /// How far a row's text keeps from the graph.
@@ -196,24 +197,27 @@ impl GitPanel {
         let graph_view = add_graph(mtm, &cell, graph);
         let subject = label(mtm, &commit.subject);
         subject.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
-        if head {
-            subject.setFont(Some(&NSFont::boldSystemFontOfSize(NSFont::systemFontSize())));
-        }
+        let font = if head {
+            NSFont::boldSystemFontOfSize(scaled(NSFont::systemFontSize()))
+        } else {
+            system(NSFont::systemFontSize())
+        };
+        subject.setFont(Some(&font));
         subject
             .setContentCompressionResistancePriority_forOrientation(100.0, NSLayoutConstraintOrientation::Horizontal);
         let author = label(mtm, &commit.author_name);
-        author.setFont(Some(&ide_ui_common::style::small_system()));
+        author.setFont(Some(&font_like(&ide_ui_common::style::small_system())));
         author.setTextColor(Some(&NSColor::secondaryLabelColor()));
         author.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
         author.setContentCompressionResistancePriority_forOrientation(90.0, NSLayoutConstraintOrientation::Horizontal);
         let text = NSStackView::new(mtm);
         text.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        text.setSpacing(ide_ui_common::style::space::S);
+        text.setSpacing(scaled(ide_ui_common::style::space::S));
         text.addArrangedSubview(&subject);
         text.addArrangedSubview(&author);
         let pills = NSStackView::new(mtm);
         pills.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-        pills.setSpacing(ide_ui_common::style::space::TIGHT);
+        pills.setSpacing(scaled(ide_ui_common::style::space::TIGHT));
         for (badge, name) in names.iter().take(MAX_BADGES) {
             pills.addArrangedSubview(&badge_view(mtm, *badge, name));
         }
@@ -223,10 +227,10 @@ impl GitPanel {
         }
         activate([
             text.leadingAnchor()
-                .constraintEqualToAnchor_constant(&graph_view.trailingAnchor(), AFTER_GRAPH),
+                .constraintEqualToAnchor_constant(&graph_view.trailingAnchor(), scaled(AFTER_GRAPH)),
             pills.trailingAnchor().constraintEqualToAnchor(&cell.trailingAnchor()),
             text.trailingAnchor()
-                .constraintLessThanOrEqualToAnchor_constant(&pills.leadingAnchor(), -6.0),
+                .constraintLessThanOrEqualToAnchor_constant(&pills.leadingAnchor(), -scaled(6.0)),
         ]);
         cell.setToolTip(Some(&ns(&details(&commit, &names, changes.as_ref()))));
         let short = commit.hash.short();
@@ -274,10 +278,10 @@ impl GitPanel {
         }
         activate([
             text.leadingAnchor()
-                .constraintEqualToAnchor_constant(&graph_view.trailingAnchor(), FILE_INDENT),
+                .constraintEqualToAnchor_constant(&graph_view.trailingAnchor(), scaled(FILE_INDENT)),
             letter.trailingAnchor().constraintEqualToAnchor(&cell.trailingAnchor()),
             text.trailingAnchor()
-                .constraintLessThanOrEqualToAnchor_constant(&letter.leadingAnchor(), -4.0),
+                .constraintLessThanOrEqualToAnchor_constant(&letter.leadingAnchor(), -scaled(4.0)),
         ]);
         let described = tf("{}, {}", &[&path.display().to_string(), mark.word()]);
         cell.setToolTip(Some(&ns(&described)));
@@ -296,12 +300,12 @@ impl GitPanel {
         let graph_view = add_graph(mtm, &cell, lanes);
         let more = label(mtm, &tf("{} weitere laden …", &[&HISTORY_PAGE.to_string()]));
         more.setTextColor(Some(&NSColor::linkColor()));
-        more.setFont(Some(&ide_ui_common::style::small_system()));
+        more.setFont(Some(&font_like(&ide_ui_common::style::small_system())));
         cell.addSubview(&more);
         more.setTranslatesAutoresizingMaskIntoConstraints(false);
         activate([
             more.leadingAnchor()
-                .constraintEqualToAnchor_constant(&graph_view.trailingAnchor(), AFTER_GRAPH),
+                .constraintEqualToAnchor_constant(&graph_view.trailingAnchor(), scaled(AFTER_GRAPH)),
             more.centerYAnchor().constraintEqualToAnchor(&cell.centerYAnchor()),
         ]);
         // SAFETY: The label is a subview of the cell, which keeps it.
