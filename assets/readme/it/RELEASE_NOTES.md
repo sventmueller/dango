@@ -7,3 +7,6 @@
 
 ## AI
 - Il pulsante dell’output di un processo in background non apre più un file vuoto finché il processo non ha prodotto nulla; indica invece che non c’è ancora alcun output o, al termine del processo, che non ne ha prodotto alcuno. Un secondo clic mostra l’output attuale invece della copia precedente, e il pulsante ora mostra anche l’output di un terminale Codex, dove prima non faceva nulla.
+
+## Markdown
+- Le immagini nell’anteprima Markdown compaiono circa tre volte più in fretta: vengono ridimensionate con istruzioni vettoriali, e le immagini su iCloud Drive, su un disco esterno o su una condivisione di rete si caricano a gruppi anziché una dopo l’altra.

@@ -7,3 +7,6 @@
 
 ## AI
 - Butang output bagi proses latar belakang tidak lagi membuka fail kosong selagi proses belum menghasilkan apa-apa; sebaliknya ia memberitahu bahawa belum ada output, atau selepas proses tamat, bahawa tiada output langsung. Klik kedua menunjukkan output semasa dan bukan salinan terdahulu, dan butang itu kini juga menunjukkan output terminal Codex, yang sebelum ini tidak berbuat apa-apa.
+
+## Markdown
+- Gambar dalam pratonton Markdown kini dipaparkan kira-kira tiga kali lebih pantas: gambar dikecilkan dengan arahan vektor, dan gambar pada iCloud Drive, cakera luaran atau perkongsian rangkaian dimuatkan beberapa sekali gus dan bukan satu demi satu.

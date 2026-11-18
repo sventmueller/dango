@@ -7,3 +7,6 @@
 
 ## AI
 - Tombol output proses latar belakang tidak lagi membuka file kosong selama proses belum menghasilkan apa pun; tombol itu memberi tahu bahwa belum ada output, atau setelah proses selesai, bahwa tidak ada output sama sekali. Klik kedua menampilkan output terkini alih-alih salinan sebelumnya, dan tombol itu kini juga menampilkan output terminal Codex, yang sebelumnya tidak melakukan apa pun.
+
+## Markdown
+- Gambar di pratinjau Markdown kini tampil sekitar tiga kali lebih cepat: gambar diperkecil dengan instruksi vektor, dan gambar di iCloud Drive, disk eksternal, atau berbagi jaringan dimuat beberapa sekaligus, bukan satu per satu.

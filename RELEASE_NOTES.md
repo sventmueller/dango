@@ -14,3 +14,8 @@
   says that nothing has been printed yet, or nothing at all once the process has ended. A second click shows the
   current output instead of the earlier copy, and the button now also shows the output of a Codex terminal, where it
   did nothing before.
+
+## Markdown
+- Pictures in the Markdown preview show about three times as fast: they are scaled down with vector
+  instructions, and pictures on iCloud Drive, an external disk or a network share load several at a time instead of
+  one after the other.

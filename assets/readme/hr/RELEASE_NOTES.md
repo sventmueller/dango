@@ -7,3 +7,6 @@
 
 ## AI
 - Tipka izlaza pozadinskog procesa više ne otvara praznu datoteku dok proces ništa nije ispisao; umjesto toga javlja da još nema izlaza ili, nakon završetka procesa, da izlaza nema. Drugi klik prikazuje trenutačni izlaz umjesto ranije kopije, a tipka sada prikazuje i izlaz Codex terminala, gdje prije nije radila ništa.
+
+## Markdown
+- Slike u Markdown pregledu prikazuju se otprilike tri puta brže: smanjuju se vektorskim instrukcijama, a slike na iCloud Driveu, vanjskom disku ili mrežnom dijeljenju učitavaju se po nekoliko odjednom umjesto jedna za drugom.

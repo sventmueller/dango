@@ -7,3 +7,6 @@
 
 ## AI
 - Bir arka plan işleminin çıktı düğmesi, işlem henüz bir şey yazdırmamışken artık boş bir dosya açmaz; bunun yerine henüz çıktı olmadığını ya da işlem bittikten sonra hiç çıktı olmadığını söyler. İkinci tıklama önceki kopya yerine güncel çıktıyı gösterir ve düğme artık daha önce hiçbir şey yapmadığı bir Codex terminalinin çıktısını da gösterir.
+
+## Markdown
+- Markdown önizlemesindeki resimler yaklaşık üç kat daha hızlı görünür: vektör komutlarıyla küçültülürler ve iCloud Drive’daki, harici bir diskteki ya da bir ağ paylaşımındaki resimler tek tek yerine birkaçı birden yüklenir.

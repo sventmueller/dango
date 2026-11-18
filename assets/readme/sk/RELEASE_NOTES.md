@@ -7,3 +7,6 @@
 
 ## AI
 - Tlačidlo výstupu procesu na pozadí už neotvára prázdny súbor, kým proces nič nevypísal; namiesto toho oznámi, že zatiaľ neprišiel žiadny výstup, alebo po skončení procesu, že neprišiel žiadny. Druhé kliknutie zobrazí aktuálny výstup namiesto skoršej kópie a tlačidlo teraz zobrazí aj výstup terminálu Codexu, kde predtým nerobilo nič.
+
+## Markdown
+- Obrázky v náhľade Markdownu sa zobrazujú zhruba trikrát rýchlejšie: zmenšujú sa pomocou vektorových inštrukcií a obrázky na iCloud Drive, externom disku alebo sieťovom zdieľaní sa načítavajú po niekoľkých naraz namiesto jeden po druhom.

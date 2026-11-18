@@ -7,3 +7,6 @@
 
 ## AI
 - Outputknappen for en baggrundsproces åbner ikke længere en tom fil, så længe processen ikke har skrevet noget ud; den fortæller i stedet, at der endnu ikke er skrevet noget ud, eller at der slet intet blev skrevet ud, når processen er slut. Et klik mere viser det aktuelle output i stedet for den tidligere kopi, og knappen viser nu også outputtet fra en Codex-terminal, hvor den før ikke gjorde noget.
+
+## Markdown
+- Billeder i Markdown-eksemplet vises omkring tre gange så hurtigt: De skaleres ned med vektorinstruktioner, og billeder på iCloud Drive, en ekstern disk eller en netværksdeling indlæses flere ad gangen i stedet for et ad gangen.

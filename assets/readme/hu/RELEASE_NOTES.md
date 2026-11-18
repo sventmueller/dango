@@ -7,3 +7,6 @@
 
 ## AI
 - Egy háttérfolyamat kimenetgombja már nem nyit meg üres fájlt, amíg a folyamat nem írt ki semmit; ehelyett jelzi, hogy még nem írt ki semmit, vagy a folyamat befejeződése után, hogy semmit sem írt ki. Egy második kattintás a korábbi másolat helyett az aktuális kimenetet mutatja, és a gomb most már egy Codex-terminál kimenetét is megjeleníti, ahol korábban semmit sem csinált.
+
+## Markdown
+- A Markdown-előnézet képei nagyjából háromszor olyan gyorsan jelennek meg: vektorutasításokkal kicsinyülnek, és az iCloud Drive-on, külső lemezen vagy hálózati megosztáson lévő képek egyszerre többesével töltődnek be, nem egyenként.

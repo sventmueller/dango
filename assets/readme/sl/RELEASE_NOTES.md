@@ -7,3 +7,6 @@
 
 ## AI
 - Gumb za izpis procesa v ozadju ne odpre več prazne datoteke, dokler proces ni ničesar izpisal; namesto tega sporoči, da izpisa še ni, po koncu procesa pa, da izpisa ni bilo. Drugi klik pokaže trenutni izpis namesto prejšnje kopije, gumb pa zdaj pokaže tudi izpis terminala Codex, kjer prej ni naredil ničesar.
+
+## Markdown
+- Slike v predogledu Markdown se prikažejo približno trikrat hitreje: pomanjšajo se z vektorskimi ukazi, slike na iCloud Drive, zunanjem disku ali omrežni skupni rabi pa se naložijo po več hkrati namesto ena za drugo.

@@ -7,3 +7,6 @@
 
 ## KI
 - Utdataknappen til en bakgrunnsprosess åpner ikke lenger en tom fil så lenge prosessen ikke har skrevet ut noe; den sier i stedet at ingenting er skrevet ut ennå, eller at ingenting ble skrevet ut når prosessen er avsluttet. Et nytt klikk viser gjeldende utdata i stedet for den tidligere kopien, og knappen viser nå også utdataene fra en Codex-terminal, der den ikke gjorde noe før.
+
+## Markdown
+- Bilder i Markdown-forhåndsvisningen vises omtrent tre ganger så raskt: De skaleres ned med vektorinstruksjoner, og bilder på iCloud Drive, en ekstern disk eller en nettverksdeling lastes inn flere om gangen i stedet for ett etter ett.

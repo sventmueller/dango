@@ -7,3 +7,6 @@
 
 ## AI
 - De uitvoerknop van een achtergrondproces opent geen leeg bestand meer zolang het proces nog niets heeft uitgevoerd; hij meldt dat er nog geen uitvoer is, of na afloop van het proces dat er helemaal geen uitvoer was. Een tweede klik toont de huidige uitvoer in plaats van de eerdere kopie, en de knop toont nu ook de uitvoer van een Codex-terminal, waar hij eerder niets deed.
+
+## Markdown
+- Afbeeldingen in de Markdown-voorvertoning verschijnen ongeveer drie keer zo snel: ze worden verkleind met vectorinstructies, en afbeeldingen op iCloud Drive, een externe schijf of een netwerkdeel worden met meerdere tegelijk geladen in plaats van een voor een.

@@ -7,3 +7,6 @@
 
 ## IA
 - El botón de salida de un proceso en segundo plano ya no abre un archivo vacío mientras el proceso no ha generado nada; indica que aún no ha generado ninguna salida o, una vez terminado, que no ha generado ninguna. Un segundo clic muestra la salida actual en lugar de la copia anterior, y el botón ahora también muestra la salida de un terminal de Codex, donde antes no hacía nada.
+
+## Markdown
+- Las imágenes de la vista previa de Markdown aparecen unas tres veces más rápido: se reducen con instrucciones vectoriales, y las imágenes de iCloud Drive, de un disco externo o de una carpeta compartida en red se cargan varias a la vez en lugar de una tras otra.

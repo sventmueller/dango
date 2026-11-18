@@ -7,3 +7,6 @@
 
 ## IA
 - Le bouton de sortie d’un processus en arrière-plan n’ouvre plus de fichier vide tant que le processus n’a rien affiché ; il indique que rien n’a encore été affiché ou, une fois le processus terminé, que rien n’a été affiché. Un second clic montre la sortie actuelle au lieu de la copie précédente, et le bouton montre désormais aussi la sortie d’un terminal Codex, où il ne faisait rien auparavant.
+
+## Markdown
+- Les images de l’aperçu Markdown s’affichent environ trois fois plus vite : elles sont réduites avec des instructions vectorielles, et les images sur iCloud Drive, un disque externe ou un partage réseau se chargent plusieurs à la fois au lieu de l’une après l’autre.

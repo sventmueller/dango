@@ -7,3 +7,6 @@
 
 ## IA
 - El botó de sortida d’un procés en segon pla ja no obre un fitxer buit mentre el procés no ha generat res; indica que encara no ha generat cap sortida o, un cop acabat, que no n’ha generat cap. Un segon clic mostra la sortida actual en lloc de la còpia anterior, i el botó ara també mostra la sortida d’un terminal de Codex, on abans no feia res.
+
+## Markdown
+- Les imatges de la previsualització de Markdown es mostren gairebé tres vegades més de pressa: es redueixen amb instruccions vectorials, i les imatges d’iCloud Drive, d’un disc extern o d’una carpeta compartida a la xarxa es carreguen diverses alhora en lloc d’una darrere l’altra.

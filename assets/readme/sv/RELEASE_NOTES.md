@@ -7,3 +7,6 @@
 
 ## AI
 - Utdataknappen för en bakgrundsprocess öppnar inte längre en tom fil så länge processen inte har skrivit ut något; den säger i stället att inget har skrivits ut ännu, eller när processen har avslutats att inget skrevs ut. Ett andra klick visar aktuella utdata i stället för den tidigare kopian, och knappen visar nu även utdata från en Codex-terminal, där den inte gjorde något tidigare.
+
+## Markdown
+- Bilder i Markdown-förhandsvisningen visas ungefär tre gånger så snabbt: de skalas ned med vektorinstruktioner, och bilder på iCloud Drive, en extern disk eller en nätverksdelning läses in flera åt gången i stället för en i taget.

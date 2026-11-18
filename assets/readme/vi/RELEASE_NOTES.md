@@ -7,3 +7,6 @@
 
 ## AI
 - Nút đầu ra của một tiến trình nền không còn mở tệp trống khi tiến trình chưa xuất ra gì; thay vào đó nút cho biết chưa có đầu ra, hoặc sau khi tiến trình kết thúc thì cho biết không có đầu ra nào. Lần bấm thứ hai hiển thị đầu ra hiện tại thay vì bản sao trước đó, và giờ nút còn hiển thị đầu ra của một Terminal Codex, nơi trước đây nút không làm gì.
+
+## Markdown
+- Hình ảnh trong bản xem trước Markdown hiển thị nhanh hơn khoảng ba lần: chúng được thu nhỏ bằng lệnh vectơ, và hình ảnh trên iCloud Drive, ổ đĩa ngoài hoặc thư mục chia sẻ mạng được tải nhiều ảnh cùng lúc thay vì lần lượt từng ảnh.

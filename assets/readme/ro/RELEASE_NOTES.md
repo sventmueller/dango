@@ -7,3 +7,6 @@
 
 ## IA
 - Butonul de ieșire al unui proces în fundal nu mai deschide un fișier gol cât timp procesul nu a afișat nimic; în schimb spune că încă nu există nicio ieșire sau, după încheierea procesului, că nu a existat nicio ieșire. Un al doilea clic arată ieșirea curentă în locul copiei anterioare, iar butonul arată acum și ieșirea unui terminal Codex, unde înainte nu făcea nimic.
+
+## Markdown
+- Imaginile din previzualizarea Markdown apar de aproximativ trei ori mai repede: sunt micșorate cu instrucțiuni vectoriale, iar imaginile de pe iCloud Drive, de pe un disc extern sau dintr-o partajare de rețea se încarcă mai multe deodată în loc de una după alta.

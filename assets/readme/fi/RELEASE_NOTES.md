@@ -7,3 +7,6 @@
 
 ## AI
 - Taustaprosessin tulostepainike ei enää avaa tyhjää tiedostoa, kun prosessi ei ole tulostanut mitään; se kertoo, ettei mitään ole vielä tulostettu, tai prosessin päätyttyä, ettei mitään tulostettu. Toinen klikkaus näyttää nykyisen tulosteen aiemman kopion sijaan, ja painike näyttää nyt myös Codex-päätteen tulosteen, jossa se ei aiemmin tehnyt mitään.
+
+## Markdown
+- Markdown-esikatselun kuvat näkyvät noin kolme kertaa nopeammin: ne pienennetään vektorikäskyillä, ja iCloud Drivessa, ulkoisella levyllä tai verkkojaossa olevat kuvat latautuvat useampi kerrallaan eivätkä yksi kerrallaan.
