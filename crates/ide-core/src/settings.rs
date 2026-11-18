@@ -133,7 +133,7 @@ pub mod keys {
     pub const REOPEN_PROJECTS: Key<bool> = Key::user("reopenProjects", Sharing::Shared, || true);
 
     /// The size of text in editors and terminals, in points.
-    pub const FONT_SIZE: Key<f64> = Key::project("fontSize", Sharing::Shared, || 12.0);
+    pub const FONT_SIZE: Key<f64> = Key::project("fontSize", Sharing::Shared, || 13.0);
 
     /// The size of the text of the sidebar and the tab bars, in points; their symbols, rows and room follow it.
     pub const INTERFACE_FONT_SIZE: Key<f64> = Key::user("interfaceFontSize", Sharing::Shared, || 13.0);
