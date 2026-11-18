@@ -1,12 +1,2 @@
-## Bantuan
-- Menu “Bantuan” membawa anda ke projek di GitHub: “Laporkan Masalah…” membuka borang laporan dengan versi Dango, versi macOS dan jenis Mac yang sudah diisi, “Cadangkan Ciri…” memulakan idea baharu dalam perbincangan, dan “Dango di GitHub” membuka repositori.
-
-## Editor dan terminal
-- Editor dan terminal kini bermula pada 13 pt, seperti bar sisi, bar tab dan tab AI; saiz yang anda tetapkan sendiri kekal.
-- Nombor baris kini turut mengira baris kosong selepas pemisah baris terakhir dan satu-satunya baris dalam dokumen kosong, di sebelah kursor.
-
-## AI
-- Butang output bagi proses latar belakang tidak lagi membuka fail kosong selagi proses belum menghasilkan apa-apa; sebaliknya ia memberitahu bahawa belum ada output, atau selepas proses tamat, bahawa tiada output langsung. Klik kedua menunjukkan output semasa dan bukan salinan terdahulu, dan butang itu kini juga menunjukkan output terminal Codex, yang sebelum ini tidak berbuat apa-apa.
-
-## Markdown
-- Gambar dalam pratonton Markdown kini dipaparkan kira-kira tiga kali lebih pantas: gambar dikecilkan dengan arahan vektor, dan gambar pada iCloud Drive, cakera luaran atau perkongsian rangkaian dimuatkan beberapa sekali gus dan bukan satu demi satu.
+## Pepohon fail
+- Beberapa baris dalam pepohon fail boleh dipilih dengan ⇧-klik dan ⌘-klik, dan menu konteks pada salah satunya bertindak ke atas kesemuanya: “Salin Laluan” dan “Salin Laluan Relatif” menyalin satu laluan bagi setiap baris, “Tunjukkan dalam Finder” memilih kesemuanya bersama dalam Finder, dan “Pindah ke Sampah” memindahkan kesemuanya. “Nama Semula…” dan perintah yang membuka satu fail tidak tersedia ketika itu; menu pada baris di luar pilihan hanya bertindak ke atas baris itu.

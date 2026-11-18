@@ -1,12 +1,2 @@
-## Aiuto
-- Il menu “Aiuto” porta al progetto su GitHub: “Segnala un problema…” apre il modulo di segnalazione con la versione di Dango, la versione di macOS e il tipo di Mac già compilati, “Suggerisci una funzionalità…” avvia una nuova idea nelle discussioni e “Dango su GitHub” apre il repository.
-
-## Editor e terminale
-- Gli editor e i terminali partono da 13 punti, come la barra laterale, le barre dei pannelli e il pannello AI; una dimensione che hai impostato tu resta invariata.
-- I numeri di riga contano ora anche la riga vuota dopo l’ultima interruzione di riga e l’unica riga di un documento vuoto, accanto al cursore.
-
-## AI
-- Il pulsante dell’output di un processo in background non apre più un file vuoto finché il processo non ha prodotto nulla; indica invece che non c’è ancora alcun output o, al termine del processo, che non ne ha prodotto alcuno. Un secondo clic mostra l’output attuale invece della copia precedente, e il pulsante ora mostra anche l’output di un terminale Codex, dove prima non faceva nulla.
-
-## Markdown
-- Le immagini nell’anteprima Markdown compaiono circa tre volte più in fretta: vengono ridimensionate con istruzioni vettoriali, e le immagini su iCloud Drive, su un disco esterno o su una condivisione di rete si caricano a gruppi anziché una dopo l’altra.
+## Albero dei file
+- Nell’albero dei file si possono selezionare più righe con ⇧-clic e ⌘-clic, e il menu contestuale su una di esse agisce su tutte: “Copia percorso” e “Copia percorso relativo” copiano un percorso per riga, “Mostra nel Finder” le seleziona insieme nel Finder e “Sposta nel Cestino” le sposta tutte. “Rinomina…” e i comandi che aprono un singolo file non sono allora disponibili; il menu su una riga fuori dalla selezione agisce solo su quella riga.

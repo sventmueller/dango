@@ -1,12 +1,2 @@
-## Hjälp
-- Menyn ”Hjälp” leder till projektet på GitHub: ”Rapportera ett problem…” öppnar rapportformuläret med Dangos version, macOS-versionen och typen av Mac redan ifyllda, ”Föreslå en funktion…” startar en ny idé i diskussionerna och ”Dango på GitHub” öppnar repot.
-
-## Redigerare och terminal
-- Redigerare och terminaler börjar på 13 punkter, liksom sidofältet, flikfälten och AI-fliken; en storlek du själv har ställt in behålls.
-- Radnumren räknar nu även den tomma raden efter den sista radbrytningen och den enda raden i ett tomt dokument, bredvid markören.
-
-## AI
-- Utdataknappen för en bakgrundsprocess öppnar inte längre en tom fil så länge processen inte har skrivit ut något; den säger i stället att inget har skrivits ut ännu, eller när processen har avslutats att inget skrevs ut. Ett andra klick visar aktuella utdata i stället för den tidigare kopian, och knappen visar nu även utdata från en Codex-terminal, där den inte gjorde något tidigare.
-
-## Markdown
-- Bilder i Markdown-förhandsvisningen visas ungefär tre gånger så snabbt: de skalas ned med vektorinstruktioner, och bilder på iCloud Drive, en extern disk eller en nätverksdelning läses in flera åt gången i stället för en i taget.
+## Filträd
+- Flera rader i filträdet kan markeras med ⇧-klick och ⌘-klick, och kontextmenyn på en av dem verkar på alla: ”Kopiera sökväg” och ”Kopiera relativ sökväg” kopierar en sökväg per rad, ”Visa i Finder” markerar dem tillsammans i Finder och ”Flytta till papperskorgen” flyttar alla. ”Byt namn…” och kommandona som öppnar en enda fil är då inte tillgängliga; menyn på en rad utanför markeringen verkar bara på den raden.

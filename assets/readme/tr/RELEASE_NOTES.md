@@ -1,12 +1,2 @@
-## Yardım
-- “Yardım” menüsü GitHub’daki projeye götürür: “Sorun Bildir…” Dango sürümünün, macOS sürümünün ve Mac türünün önceden doldurulduğu bildirim formunu açar, “Özellik Öner…” tartışmalarda yeni bir fikir başlatır ve “GitHub’da Dango” depoyu açar.
-
-## Düzenleyici ve terminal
-- Düzenleyiciler ve terminaller, kenar çubuğu, sekme çubukları ve AI sekmesi gibi 13 puntoyla başlar; kendiniz ayarladığınız boyut korunur.
-- Satır numaraları artık son satır sonundan sonraki boş satırı ve boş bir belgenin tek satırını da imlecin yanında sayar.
-
-## AI
-- Bir arka plan işleminin çıktı düğmesi, işlem henüz bir şey yazdırmamışken artık boş bir dosya açmaz; bunun yerine henüz çıktı olmadığını ya da işlem bittikten sonra hiç çıktı olmadığını söyler. İkinci tıklama önceki kopya yerine güncel çıktıyı gösterir ve düğme artık daha önce hiçbir şey yapmadığı bir Codex terminalinin çıktısını da gösterir.
-
-## Markdown
-- Markdown önizlemesindeki resimler yaklaşık üç kat daha hızlı görünür: vektör komutlarıyla küçültülürler ve iCloud Drive’daki, harici bir diskteki ya da bir ağ paylaşımındaki resimler tek tek yerine birkaçı birden yüklenir.
+## Dosya ağacı
+- Dosya ağacında ⇧-tıklama ve ⌘-tıklama ile birden fazla satır seçilebilir ve bunlardan birindeki bağlam menüsü hepsine uygulanır: “Yolu Kopyala” ve “Göreli Yolu Kopyala” her satıra bir yol kopyalar, “Finder’da Göster” onları Finder’da birlikte seçer ve “Çöp Sepeti’ne Taşı” hepsini taşır. Bu durumda “Adını Değiştir…” ve tek bir dosyayı açan komutlar kullanılamaz; seçimin dışındaki bir satırdaki menü yalnızca o satıra uygulanır.

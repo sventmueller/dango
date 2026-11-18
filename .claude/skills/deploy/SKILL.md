@@ -33,7 +33,7 @@ Do not bump VERSION yourself or run `make release-notarized` before `make deploy
 A deploy does not ask for a CI seal: run neither `/ci` nor `make seal-explain`, and do not stop because a seal is
 missing or red. Run `git status --porcelain`; commit all intended project changes with a message that describes them
 and leave nothing uncommitted, since `make deploy` refuses a dirty tree. A green seal that `/ci` minted earlier for
-exactly this content is pushed along, so GitHub's CI skips its tests; without one GitHub runs `make check`.
+exactly this content is pushed along as the record of what was tested; no GitHub workflow tests the push.
 
 ## Phase 2: deploy
 
@@ -57,9 +57,7 @@ Run `make deploy` in the background with a log under `target/` and observe compl
 ## Phase 3: verify the release
 
 Verify `gh release view v<version> --json url,isDraft,tagName,assets`: the release must be public with all assets.
-Check `https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg`. The push still starts `ci.yml`
-(`make check` on a macOS runner unless a green seal went along); the release does not depend on it, so do not wait for
-it.
+Check `https://github.com/sventmueller/dango/releases/latest/download/Dango.dmg`.
 
 ## Report
 

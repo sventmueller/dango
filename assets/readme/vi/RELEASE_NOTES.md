@@ -1,12 +1,2 @@
-## Trợ giúp
-- Menu “Trợ giúp” dẫn đến dự án trên GitHub: “Báo cáo sự cố…” mở biểu mẫu báo cáo với phiên bản Dango, phiên bản macOS và loại máy Mac đã được điền sẵn, “Đề xuất tính năng…” bắt đầu một ý tưởng mới trong phần thảo luận, và “Dango trên GitHub” mở kho lưu trữ.
-
-## Trình soạn thảo và Terminal
-- Trình soạn thảo và Terminal bắt đầu ở 13 điểm, giống như thanh bên, thanh tab và tab AI; cỡ chữ bạn tự đặt vẫn được giữ nguyên.
-- Số dòng giờ cũng đánh số dòng trống sau dấu ngắt dòng cuối cùng và dòng duy nhất của một tài liệu trống, bên cạnh con trỏ.
-
-## AI
-- Nút đầu ra của một tiến trình nền không còn mở tệp trống khi tiến trình chưa xuất ra gì; thay vào đó nút cho biết chưa có đầu ra, hoặc sau khi tiến trình kết thúc thì cho biết không có đầu ra nào. Lần bấm thứ hai hiển thị đầu ra hiện tại thay vì bản sao trước đó, và giờ nút còn hiển thị đầu ra của một Terminal Codex, nơi trước đây nút không làm gì.
-
-## Markdown
-- Hình ảnh trong bản xem trước Markdown hiển thị nhanh hơn khoảng ba lần: chúng được thu nhỏ bằng lệnh vectơ, và hình ảnh trên iCloud Drive, ổ đĩa ngoài hoặc thư mục chia sẻ mạng được tải nhiều ảnh cùng lúc thay vì lần lượt từng ảnh.
+## Cây tệp
+- Có thể chọn nhiều hàng trong cây tệp bằng ⇧-bấm và ⌘-bấm, và menu ngữ cảnh trên một hàng trong số đó áp dụng cho tất cả: “Sao chép đường dẫn” và “Sao chép đường dẫn tương đối” sao chép mỗi dòng một đường dẫn, “Hiển thị trong Finder” chọn chúng cùng lúc trong Finder và “Chuyển vào Thùng rác” chuyển tất cả. Khi đó “Đổi tên…” và các lệnh mở một tệp duy nhất không khả dụng; menu trên một hàng nằm ngoài vùng chọn chỉ áp dụng cho hàng đó.

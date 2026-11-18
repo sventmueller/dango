@@ -1,12 +1,2 @@
-## Nápověda
-- Nabídka „Nápověda“ vede k projektu na GitHubu: „Nahlásit problém…“ otevře formulář hlášení s již vyplněnou verzí Danga, verzí macOS a typem Macu, „Navrhnout funkci…“ založí nový nápad v diskusích a „Dango na GitHubu“ otevře repozitář.
-
-## Editor a terminál
-- Editory a terminály začínají na 13 bodech, stejně jako boční panel, lišty panelů a panel AI; velikost, kterou jste si nastavili sami, zůstává.
-- Čísla řádků nyní počítají i prázdný řádek za posledním zalomením řádku a jediný řádek prázdného dokumentu, vedle kurzoru.
-
-## AI
-- Tlačítko výstupu procesu na pozadí už neotevírá prázdný soubor, dokud proces nic nevypsal; místo toho oznámí, že zatím nepřišel žádný výstup, nebo po skončení procesu, že nepřišel žádný. Druhé kliknutí zobrazí aktuální výstup místo dřívější kopie a tlačítko nyní zobrazí i výstup terminálu Codexu, kde dříve nedělalo nic.
-
-## Markdown
-- Obrázky v náhledu Markdownu se zobrazují zhruba třikrát rychleji: zmenšují se pomocí vektorových instrukcí a obrázky na iCloud Drive, externím disku nebo síťovém sdílení se načítají po několika najednou místo jeden po druhém.
+## Strom souborů
+- Ve stromu souborů lze vybrat více řádků pomocí ⇧-kliknutí a ⌘-kliknutí a místní nabídka na jednom z nich působí na všechny: „Zkopírovat cestu“ a „Zkopírovat relativní cestu“ zkopírují jednu cestu na řádek, „Zobrazit ve Finderu“ je ve Finderu vybere společně a „Přesunout do koše“ přesune všechny. „Přejmenovat…“ a příkazy, které otevírají jediný soubor, pak nejsou k dispozici; nabídka na řádku mimo výběr působí jen na tento řádek.

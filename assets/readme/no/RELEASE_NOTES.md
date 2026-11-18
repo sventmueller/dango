@@ -1,12 +1,2 @@
-## Hjelp
-- Hjelp-menyen fører til prosjektet på GitHub: «Rapporter et problem…» åpner rapportskjemaet med Dango-versjonen, macOS-versjonen og typen Mac allerede fylt ut, «Foreslå en funksjon…» starter en ny idé i diskusjonene, og «Dango på GitHub» åpner repositoryet.
-
-## Editor og terminal
-- Editorer og terminaler starter på 13 punkter, som sidepanelet, fanelinjene og KI-fanen; en størrelse du har valgt selv, beholdes.
-- Linjenumrene teller nå også den tomme linjen etter det siste linjeskiftet og den eneste linjen i et tomt dokument, ved siden av markøren.
-
-## KI
-- Utdataknappen til en bakgrunnsprosess åpner ikke lenger en tom fil så lenge prosessen ikke har skrevet ut noe; den sier i stedet at ingenting er skrevet ut ennå, eller at ingenting ble skrevet ut når prosessen er avsluttet. Et nytt klikk viser gjeldende utdata i stedet for den tidligere kopien, og knappen viser nå også utdataene fra en Codex-terminal, der den ikke gjorde noe før.
-
-## Markdown
-- Bilder i Markdown-forhåndsvisningen vises omtrent tre ganger så raskt: De skaleres ned med vektorinstruksjoner, og bilder på iCloud Drive, en ekstern disk eller en nettverksdeling lastes inn flere om gangen i stedet for ett etter ett.
+## Filtre
+- Flere rader i filtreet kan velges med ⇧-klikk og ⌘-klikk, og kontekstmenyen på én av dem virker på alle: «Kopier bane» og «Kopier relativ bane» kopierer én bane per linje, «Vis i Finder» markerer dem samlet i Finder, og «Flytt til papirkurv» flytter alle. «Endre navn…» og kommandoene som åpner én enkelt fil, er da ikke tilgjengelige; menyen på en rad utenfor markeringen virker bare på den raden.
