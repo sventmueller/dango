@@ -495,6 +495,10 @@ impl ide_ui_agent::Host for AppHost {
             crate::activity::show_tab(&c, key, part, anchor);
         }
     }
+
+    fn reread_file(&self, path: &Path) {
+        crate::editor::check_disk_below(path);
+    }
 }
 
 impl ide_ui_lsp::Host for AppHost {

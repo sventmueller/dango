@@ -1,7 +1,7 @@
 //! What the user answers in an AI tab's cards: permissions and their rules, questions, plans, and the background tasks a turn started.
 
-use ide_ui_common::window::Files;
-use std::path::PathBuf;
+use ide_ui_common::window::{Files, Notices, Window};
+use std::path::{Path, PathBuf};
 
 use ide_claude::{PermissionAnswer, PlanAnswer};
 use ide_thread::{Answer, EntryKind, PermissionOption, RequestState, RuleScope};
@@ -15,6 +15,7 @@ use super::actions::pop_up;
 use super::cards::pack;
 use super::cards::request::{ALLOW_ALWAYS, ALLOW_ONCE, DENY, PLAN_APPROVE, PLAN_REJECT, edited_input, scope_name};
 use super::tab::AgentTab;
+use crate::AgentKey;
 use ide_ui_common::util::main_soon;
 
 /// What the model is told when the user refuses a tool; for the model, so not translated.
@@ -315,56 +316,96 @@ impl AgentTab {
         }
     }
 
-    /// Shows the whole output of background task `task`: the file the CLI writes it to, else what it hands over.
+    /// Shows the whole output of background task `task`: the file the CLI writes it to, else what it hands over, else
+    /// what the session streamed of it; a notice where there is none yet.
     pub fn show_background_output(&self, task: &str) {
         let Some(controller) = self.controller() else { return };
-        let path = {
+        let (path, streamed, about) = {
             let state = self.state.borrow();
-            state
-                .thread()
-                .background()
-                .iter()
-                .find(|b| b.id == task)
-                .and_then(|b| b.output.path.clone())
+            let item = state.thread().background().iter().find(|b| b.id == task);
+            (
+                item.and_then(|b| b.output.path.clone()).map(PathBuf::from),
+                item.and_then(|b| b.output.text.clone()).unwrap_or_default(),
+                Silent {
+                    label: item.map_or_else(|| task.to_string(), |b| b.label.clone()),
+                    ended: item.is_some_and(|b| b.status.is_final()),
+                },
+            )
         };
-        if let Some(path) = path.map(PathBuf::from).filter(|p| p.is_file()) {
-            controller.open_file(&path);
+        if let Some(path) = path.filter(|p| p.is_file()) {
+            if std::fs::metadata(&path).is_ok_and(|m| m.len() > 0) {
+                show_file(&controller, &path);
+            } else {
+                controller.show_notice(&about.notice());
+            }
             return;
         }
-        let Some(session) = self.state.borrow().source().session() else {
-            return;
-        };
         let key = self.key;
         let task = task.to_string();
+        let Some(session) = self.state.borrow().source().session() else {
+            return snapshot(key, task, streamed, about);
+        };
         // The answer comes on the session's reader thread, which must not wait for the disk.
         session.task_output(&task).then(move |output| {
-            let Ok(output) = output else { return };
-            let _ = ide_core::lane::DISK.try_run(move || {
-                // The agent names the task, and a name with a folder in it must not lead out of the app's folder.
-                let Some(name) = std::path::Path::new(&task)
-                    .file_name()
-                    .map(|n| n.to_string_lossy().into_owned())
-                else {
-                    return;
-                };
-                let file = ide_core::paths::data_dir()
-                    .join("task-output")
-                    .join(format!("{name}.txt"));
-                let written = file
-                    .parent()
-                    .map(std::fs::create_dir_all)
-                    .transpose()
-                    .and_then(|_| std::fs::write(&file, output.output));
-                if written.is_ok() {
-                    main_soon(move || {
-                        if let Some(controller) = super::get(key).and_then(|t| t.controller()) {
-                            controller.open_file(&file);
-                        }
-                    });
-                }
-            });
+            let output = output.map(|o| o.output).unwrap_or(streamed);
+            snapshot(key, task, output, about);
         });
     }
+}
+
+/// A background task, for the notice that it has written nothing.
+struct Silent {
+    label: String,
+    ended: bool,
+}
+
+impl Silent {
+    fn notice(&self) -> String {
+        if self.ended {
+            tf("„{}“ hat nichts ausgegeben.", &[&self.label])
+        } else {
+            tf("„{}“ hat noch nichts ausgegeben.", &[&self.label])
+        }
+    }
+}
+
+/// Opens `path`, whose editor, when it is open already, takes the file again: a file outside the project's folders
+/// changes unwatched.
+fn show_file(controller: &Window, path: &Path) {
+    controller.open_file(path);
+    crate::host::host().reread_file(path);
+}
+
+/// Writes `output` of background task `task` to a file of the app's and shows it in the window of AI tab `key`, or
+/// tells that there is no output yet; any thread may call it.
+fn snapshot(key: AgentKey, task: String, output: String, about: Silent) {
+    let _ = ide_core::lane::DISK.try_run(move || {
+        // The agent names the task, and a name with a folder in it must not lead out of the app's folder.
+        let Some(name) = Path::new(&task).file_name().map(|n| n.to_string_lossy().into_owned()) else {
+            return;
+        };
+        let file = ide_core::paths::data_dir()
+            .join("task-output")
+            .join(format!("{name}.txt"));
+        let written = if output.is_empty() {
+            None
+        } else {
+            let made = file.parent().map(std::fs::create_dir_all).transpose();
+            match made.and_then(|_| std::fs::write(&file, output)) {
+                Ok(()) => Some(file),
+                Err(_) => return,
+            }
+        };
+        main_soon(move || {
+            let Some(controller) = super::get(key).and_then(|t| t.controller()) else {
+                return;
+            };
+            match written {
+                Some(file) => show_file(&controller, &file),
+                None => controller.show_notice(&about.notice()),
+            }
+        });
+    });
 }
 
 #[cfg(test)]

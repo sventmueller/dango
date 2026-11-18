@@ -188,6 +188,9 @@ mod tests {
         fn show_work(&self, _: WindowId, _: AgentKey, _: Part, _: &NSView) {
             unreachable!()
         }
+        fn reread_file(&self, _: &Path) {
+            unreachable!()
+        }
     }
 
     fn store(folder: &Path, git: Option<Git>) -> Store {

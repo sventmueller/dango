@@ -51,6 +51,8 @@ pub trait Host {
     fn trust(&self, folder: &Path);
     /// Opens the activity view's list of `part` of the AI tab `key` below `anchor`.
     fn show_work(&self, window: WindowId, key: AgentKey, part: Part, anchor: &NSView);
+    /// The open editor of `path` takes what changed on disk.
+    fn reread_file(&self, path: &Path);
 }
 
 static HOST: OnceLock<&'static (dyn Host + Sync)> = OnceLock::new();

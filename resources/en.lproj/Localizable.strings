@@ -713,6 +713,8 @@
 "Aus dem Archiv holen" = "Unarchive";
 "Aus der Warteschlange nehmen" = "Remove from Queue";
 "Ausgabe zeigen" = "Show Output";
+"„{}“ hat nichts ausgegeben." = "“{}” printed nothing.";
+"„{}“ hat noch nichts ausgegeben." = "“{}” has printed nothing yet.";
 "Auto" = "Auto";
 "Befehle" = "Commands";
 "Beides zurückspulen" = "Rewind Both";
