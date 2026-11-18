@@ -1,16 +1,9 @@
-## Tailles de police
-- Un nouveau réglage, « Taille de police de la barre latérale et des onglets », fixe la taille de la barre latérale,
-  de ses icônes et des barres d’onglets entre 10 et 18 points. Chaque panneau de la barre latérale, la barre d’icônes
-  à gauche, les titres des onglets de la fenêtre et les barres d’onglets propres aux zones grandissent et rétrécissent
-  en proportion : texte, icônes, lignes et l’espace qui les sépare. Les fenêtres ouvertes suivent aussitôt.
-- La taille de police de l’éditeur et du terminal atteint désormais aussitôt les éditeurs ouverts, avec leurs styles
-  Markdown et leurs numéros de ligne, et l’aperçu Markdown grandit et rétrécit dans la même proportion.
-- L’en-tête d’un onglet IA suit la taille de police de l’onglet IA, comme sa chronologie, son champ de message et sa
-  ligne d’état.
+## Aide
+- Le menu « Aide » mène au projet sur GitHub : « Signaler un problème… » ouvre le formulaire de signalement avec la version de Dango, la version de macOS et le type de Mac déjà renseignés, « Suggérer une fonctionnalité… » lance une nouvelle idée dans les discussions et « Dango sur GitHub » ouvre le dépôt.
+
+## Éditeur et terminal
+- Les éditeurs et les terminaux démarrent à 13 points, comme la barre latérale, les barres d’onglets et l’onglet IA ; une taille que vous avez choisie vous-même est conservée.
+- Les numéros de ligne comptent aussi la ligne vide après le dernier saut de ligne et l’unique ligne d’un document vide, à côté du curseur.
 
 ## IA
-- Les sessions Codex listent leurs sous-agents et leurs terminaux en arrière-plan derrière les deux boutons de
-  l’en-tête de l’onglet, comme les sessions Claude ; les demandes d’autorisation d’un sous-agent et son bouton d’arrêt
-  agissent indépendamment.
-- Le bouton qui affiche uniquement la conversation se trouve désormais entre le bouton des processus en arrière-plan
-  et le signet.
+- Le bouton de sortie d’un processus en arrière-plan n’ouvre plus de fichier vide tant que le processus n’a rien affiché ; il indique que rien n’a encore été affiché ou, une fois le processus terminé, que rien n’a été affiché. Un second clic montre la sortie actuelle au lieu de la copie précédente, et le bouton montre désormais aussi la sortie d’un terminal Codex, où il ne faisait rien auparavant.

@@ -1,16 +1,9 @@
-## Tamanhos do tipo de letra
-- Uma nova definição, “Tamanho do tipo de letra na barra lateral e nos separadores”, fixa o tamanho da barra lateral,
-  dos respetivos ícones e das barras de separadores entre 10 e 18 pontos. Cada painel da barra lateral, a barra de
-  ícones à esquerda, os títulos dos separadores da janela e as barras de separadores próprias das áreas aumentam e
-  diminuem na mesma proporção: texto, ícones, linhas e o espaço entre eles. As janelas abertas acompanham de imediato.
-- O tamanho do tipo de letra no editor e no terminal chega agora de imediato também aos editores abertos, com os
-  respetivos estilos de Markdown e números de linha, e a pré-visualização de Markdown aumenta e diminui na mesma
-  proporção.
-- O cabeçalho de um separador de IA segue o tamanho do tipo de letra do separador de IA, tal como a respetiva
-  cronologia, o campo de mensagem e a linha de estado.
+## Ajuda
+- O menu “Ajuda” leva ao projeto no GitHub: “Comunicar um problema…” abre o formulário de comunicação com a versão do Dango, a versão do macOS e o tipo de Mac já preenchidos, “Sugerir uma funcionalidade…” inicia uma nova ideia nas discussões e “Dango no GitHub” abre o repositório.
+
+## Editor e terminal
+- Os editores e os terminais começam com 13 pontos, tal como a barra lateral, as barras de separadores e o separador de IA; um tamanho que tenha definido manualmente mantém-se.
+- Os números de linha passam também a contar a linha vazia após a última quebra de linha e a única linha de um documento vazio, ao lado do cursor.
 
 ## IA
-- As sessões do Codex listam os respetivos subagentes e terminais em segundo plano por trás dos dois botões no
-  cabeçalho do separador, tal como as sessões do Claude; os pedidos de permissão de um subagente e o respetivo botão
-  de parar funcionam de forma independente.
-- O botão que mostra apenas a conversa fica agora entre o botão dos processos em segundo plano e o marcador.
+- O botão de saída de um processo em segundo plano já não abre um ficheiro vazio enquanto o processo não produziu nada; indica que ainda não há saída ou, depois de o processo terminar, que não houve qualquer saída. Um segundo clique mostra a saída atual em vez da cópia anterior, e o botão mostra agora também a saída de um terminal do Codex, onde antes não fazia nada.

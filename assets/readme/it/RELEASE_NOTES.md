@@ -1,16 +1,9 @@
-## Dimensioni del font
-- Una nuova impostazione, “Dimensione font nella barra laterale e nei pannelli”, imposta la dimensione della barra
-  laterale, delle sue icone e delle barre dei pannelli tra 10 e 18 punti. Ogni riquadro della barra laterale, la barra
-  delle icone a sinistra, i titoli dei pannelli della finestra e le barre dei pannelli proprie delle aree crescono e
-  si riducono in proporzione: testo, icone, righe e lo spazio tra di essi. Le finestre aperte si adeguano subito.
-- La dimensione del font nell’editor e nel terminale ora raggiunge subito anche gli editor aperti, con i loro stili
-  Markdown e i numeri di riga, e l’anteprima Markdown cresce e si riduce nella stessa proporzione.
-- L’intestazione di un pannello AI segue la dimensione del font del pannello AI, come la sua timeline, il campo dei
-  messaggi e la riga di stato.
+## Aiuto
+- Il menu “Aiuto” porta al progetto su GitHub: “Segnala un problema…” apre il modulo di segnalazione con la versione di Dango, la versione di macOS e il tipo di Mac già compilati, “Suggerisci una funzionalità…” avvia una nuova idea nelle discussioni e “Dango su GitHub” apre il repository.
+
+## Editor e terminale
+- Gli editor e i terminali partono da 13 punti, come la barra laterale, le barre dei pannelli e il pannello AI; una dimensione che hai impostato tu resta invariata.
+- I numeri di riga contano ora anche la riga vuota dopo l’ultima interruzione di riga e l’unica riga di un documento vuoto, accanto al cursore.
 
 ## AI
-- Le sessioni Codex elencano i loro subagenti e i terminali in background dietro i due pulsanti nell’intestazione del
-  pannello, come le sessioni Claude; le richieste di permesso di un subagente e il suo pulsante di stop agiscono in
-  modo indipendente.
-- Il pulsante che mostra solo la conversazione ora si trova tra il pulsante dei processi in background e il
-  segnalibro.
+- Il pulsante dell’output di un processo in background non apre più un file vuoto finché il processo non ha prodotto nulla; indica invece che non c’è ancora alcun output o, al termine del processo, che non ne ha prodotto alcuno. Un secondo clic mostra l’output attuale invece della copia precedente, e il pulsante ora mostra anche l’output di un terminale Codex, dove prima non faceva nulla.

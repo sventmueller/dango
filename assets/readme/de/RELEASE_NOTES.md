@@ -1,15 +1,16 @@
-## Schriftgrößen
-- Eine neue Einstellung, „Schriftgröße in Seitenleiste und Tabs“, stellt die Seitenleiste, ihre Symbole und die
-  Tableisten auf 10 bis 18 Punkt. Jedes Panel der Seitenleiste, die Symbolleiste links, die Tabtitel des Fensters und
-  die eigenen Tableisten der Bereiche wachsen und schrumpfen im Verhältnis mit: Text, Symbole, Zeilen und der Raum
-  dazwischen. Offene Fenster folgen sofort.
-- Die Schriftgröße in Editor und Terminal erreicht jetzt auch offene Editoren sofort, mit ihren Markdown-Stilen und
-  Zeilennummern, und die Markdown-Vorschau wächst und schrumpft im selben Verhältnis.
-- Der Kopf eines AI-Tabs folgt der Schriftgröße des AI-Tabs, wie sein Verlauf, das Nachrichtenfeld und die
-  Statuszeile.
+## Hilfe
+- Das Menü „Hilfe“ führt zum Projekt auf GitHub: „Problem melden …“ öffnet das Formular für einen Fehlerbericht, in
+  dem die Version von Dango, die macOS-Version und die Art des Mac schon eingetragen sind, „Funktion vorschlagen …“
+  beginnt eine neue Idee in den Diskussionen, und „Dango auf GitHub“ öffnet das Repository.
+
+## Editor und Terminal
+- Editoren und Terminals beginnen bei 13 Punkt, wie die Seitenleiste, die Tableisten und der AI-Tab; eine selbst
+  eingestellte Größe bleibt.
+- Die Zeilennummern zählen auch die leere Zeile nach dem letzten Zeilenumbruch und die einzige Zeile eines leeren
+  Dokuments, neben der Einfügemarke.
 
 ## AI
-- Codex-Sitzungen listen ihre Subagenten und Hintergrund-Terminals hinter den beiden Knöpfen im Kopf des Tabs auf,
-  wie Claude-Sitzungen; die Berechtigungsanfragen und der Stopp-Knopf eines Subagenten wirken für sich.
-- Der Knopf, der nur die Unterhaltung zeigt, sitzt jetzt zwischen dem Knopf der Hintergrundprozesse und dem
-  Lesezeichen.
+- Der Ausgabe-Knopf eines Hintergrundprozesses öffnet keine leere Datei mehr, solange der Prozess nichts ausgegeben
+  hat; er sagt, dass noch nichts ausgegeben wurde, oder nach dem Ende des Prozesses, dass gar nichts ausgegeben
+  wurde. Ein zweiter Klick zeigt die aktuelle Ausgabe statt der früheren Kopie, und der Knopf zeigt jetzt auch die
+  Ausgabe eines Codex-Terminals, wo er vorher nichts tat.

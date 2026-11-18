@@ -1,13 +1,9 @@
-## Skriftstørrelser
-- En ny innstilling, «Skriftstørrelse i sidepanel og faner», stiller inn sidepanelet, symbolene i det og fanelinjene
-  fra 10 til 18 punkter. Hvert panel i sidepanelet, symbollinjen til venstre, vinduets fanetitler og rutenes egne
-  fanelinjer vokser og krymper forholdsmessig: tekst, symboler, rader og avstanden mellom dem. Åpne vinduer endres med
-  en gang.
-- Skriftstørrelsen i editor og terminal når nå også åpne editorer med en gang, med Markdown-stilene og linjenumrene
-  deres, og Markdown-forhåndsvisningen vokser og krymper i samme forhold.
-- Toppteksten i en KI-fane følger KI-fanens skriftstørrelse, slik tidslinjen, meldingsfeltet og statuslinjen gjør.
+## Hjelp
+- Hjelp-menyen fører til prosjektet på GitHub: «Rapporter et problem…» åpner rapportskjemaet med Dango-versjonen, macOS-versjonen og typen Mac allerede fylt ut, «Foreslå en funksjon…» starter en ny idé i diskusjonene, og «Dango på GitHub» åpner repositoryet.
+
+## Editor og terminal
+- Editorer og terminaler starter på 13 punkter, som sidepanelet, fanelinjene og KI-fanen; en størrelse du har valgt selv, beholdes.
+- Linjenumrene teller nå også den tomme linjen etter det siste linjeskiftet og den eneste linjen i et tomt dokument, ved siden av markøren.
 
 ## KI
-- Codex-økter viser underagentene og bakgrunnsterminalene sine bak de to knappene i fanens topptekst, slik
-  Claude-økter gjør; en underagents forespørsler om tillatelse og stoppknappen dens virker hver for seg.
-- Knappen som bare viser samtalen, sitter nå mellom knappen for bakgrunnsprosessene og bokmerket.
+- Utdataknappen til en bakgrunnsprosess åpner ikke lenger en tom fil så lenge prosessen ikke har skrevet ut noe; den sier i stedet at ingenting er skrevet ut ennå, eller at ingenting ble skrevet ut når prosessen er avsluttet. Et nytt klikk viser gjeldende utdata i stedet for den tidligere kopien, og knappen viser nå også utdataene fra en Codex-terminal, der den ikke gjorde noe før.

@@ -1,13 +1,9 @@
-## Fonttikoot
-- Uusi asetus, ”Sivupalkin ja välilehtien fonttikoko”, asettaa sivupalkin, sen symbolien ja välilehtipalkkien koon
-  10–18 pisteeseen. Sivupalkin jokainen paneeli, vasemman reunan symbolipalkki, ikkunan välilehtien otsikot ja
-  ruutujen omat välilehtipalkit kasvavat ja pienenevät samassa suhteessa: teksti, symbolit, rivit ja niiden välinen
-  tila. Avoimet ikkunat seuraavat heti.
-- Editorin ja päätteen fonttikoko ulottuu nyt heti myös avoimiin editoreihin Markdown-tyyleineen ja rivinumeroineen,
-  ja Markdown-esikatselu kasvaa ja pienenee samassa suhteessa.
-- AI-välilehden otsake seuraa AI-välilehden fonttikokoa, kuten sen aikajana, viestikenttä ja tilarivi.
+## Ohje
+- Ohje-valikko vie projektiin GitHubissa: ”Ilmoita ongelmasta…” avaa ongelmailmoituksen lomakkeen, johon Dangon versio, macOS:n versio ja Macin tyyppi on jo täytetty, ”Ehdota ominaisuutta…” aloittaa uuden idean keskusteluissa ja ”Dango GitHubissa” avaa repositorion.
+
+## Editori ja pääte
+- Editorit ja päätteet alkavat 13 pisteen koosta, kuten sivupalkki, välilehtipalkit ja AI-välilehti; itse asettamasi koko säilyy.
+- Rivinumerot laskevat nyt myös viimeisen rivinvaihdon jälkeisen tyhjän rivin ja tyhjän dokumentin ainoan rivin kohdistimen vieressä.
 
 ## AI
-- Codex-istunnot luettelevat aliagenttinsa ja taustapäätteensä välilehden otsakkeen kahden painikkeen takana, kuten
-  Claude-istunnot; aliagentin lupapyynnöt ja sen pysäytyspainike toimivat erikseen.
-- Painike, joka näyttää vain keskustelun, on nyt taustaprosessien painikkeen ja kirjanmerkin välissä.
+- Taustaprosessin tulostepainike ei enää avaa tyhjää tiedostoa, kun prosessi ei ole tulostanut mitään; se kertoo, ettei mitään ole vielä tulostettu, tai prosessin päätyttyä, ettei mitään tulostettu. Toinen klikkaus näyttää nykyisen tulosteen aiemman kopion sijaan, ja painike näyttää nyt myös Codex-päätteen tulosteen, jossa se ei aiemmin tehnyt mitään.

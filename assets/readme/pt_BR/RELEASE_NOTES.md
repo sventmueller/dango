@@ -1,15 +1,9 @@
-## Tamanhos de fonte
-- Um novo ajuste, “Tamanho da fonte na barra lateral e nas abas”, define o tamanho da barra lateral, de seus ícones e
-  das barras de abas entre 10 e 18 pontos. Cada painel da barra lateral, a barra de ícones à esquerda, os títulos das
-  abas da janela e as barras de abas próprias das áreas crescem e diminuem na mesma proporção: texto, ícones, linhas e
-  o espaço entre eles. As janelas abertas acompanham na hora.
-- O tamanho da fonte no editor e no terminal agora chega na hora também aos editores abertos, com seus estilos de
-  Markdown e números de linha, e a pré-visualização de Markdown cresce e diminui na mesma proporção.
-- O cabeçalho de uma aba de IA segue o tamanho da fonte da aba de IA, assim como sua linha do tempo, o campo de
-  mensagem e a linha de status.
+## Ajuda
+- O menu “Ajuda” leva ao projeto no GitHub: “Relatar um Problema…” abre o formulário de relato com a versão do Dango, a versão do macOS e o tipo de Mac já preenchidos, “Sugerir um Recurso…” inicia uma nova ideia nas discussões e “Dango no GitHub” abre o repositório.
+
+## Editor e terminal
+- Editores e terminais começam com 13 pontos, como a barra lateral, as barras de abas e a aba de IA; um tamanho que você mesmo definiu é mantido.
+- Os números de linha agora também contam a linha vazia após a última quebra de linha e a única linha de um documento vazio, ao lado do cursor.
 
 ## IA
-- As sessões do Codex listam seus subagentes e terminais em segundo plano atrás dos dois botões no cabeçalho da aba,
-  como as sessões do Claude; os pedidos de permissão de um subagente e seu botão de parar funcionam de forma
-  independente.
-- O botão que mostra apenas a conversa agora fica entre o botão dos processos em segundo plano e o favorito.
+- O botão de saída de um processo em segundo plano não abre mais um arquivo vazio enquanto o processo não gerou nada; ele informa que ainda não há saída ou, depois que o processo termina, que não houve saída. Um segundo clique mostra a saída atual em vez da cópia anterior, e o botão agora também mostra a saída de um terminal do Codex, onde antes não fazia nada.

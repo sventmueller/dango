@@ -1,13 +1,9 @@
-## Cỡ chữ
-- Cài đặt mới “Cỡ chữ trong thanh bên và tab” đặt cỡ của thanh bên, các biểu tượng của nó và các thanh tab trong
-  khoảng từ 10 đến 18 điểm. Mọi khung của thanh bên, thanh biểu tượng bên trái, tiêu đề tab của cửa sổ và thanh tab
-  riêng của các ngăn đều to lên và nhỏ lại theo cùng tỷ lệ: văn bản, biểu tượng, hàng và khoảng cách giữa chúng. Các
-  cửa sổ đang mở thay đổi theo ngay lập tức.
-- Cỡ chữ trong trình soạn thảo và Terminal giờ cũng áp dụng ngay cho các trình soạn thảo đang mở, cùng với kiểu
-  Markdown và số dòng của chúng, và bản xem trước Markdown to lên và nhỏ lại theo cùng tỷ lệ.
-- Phần đầu của tab AI theo cỡ chữ trong tab AI, giống như dòng thời gian, trường tin nhắn và dòng trạng thái của nó.
+## Trợ giúp
+- Menu “Trợ giúp” dẫn đến dự án trên GitHub: “Báo cáo sự cố…” mở biểu mẫu báo cáo với phiên bản Dango, phiên bản macOS và loại máy Mac đã được điền sẵn, “Đề xuất tính năng…” bắt đầu một ý tưởng mới trong phần thảo luận, và “Dango trên GitHub” mở kho lưu trữ.
+
+## Trình soạn thảo và Terminal
+- Trình soạn thảo và Terminal bắt đầu ở 13 điểm, giống như thanh bên, thanh tab và tab AI; cỡ chữ bạn tự đặt vẫn được giữ nguyên.
+- Số dòng giờ cũng đánh số dòng trống sau dấu ngắt dòng cuối cùng và dòng duy nhất của một tài liệu trống, bên cạnh con trỏ.
 
 ## AI
-- Các phiên Codex liệt kê tác nhân phụ và terminal nền của chúng sau hai nút trong phần đầu tab, giống như các phiên
-  Claude; yêu cầu cấp quyền và nút dừng của một tác nhân phụ hoạt động riêng.
-- Nút chỉ hiển thị cuộc hội thoại giờ nằm giữa nút tiến trình nền và dấu trang.
+- Nút đầu ra của một tiến trình nền không còn mở tệp trống khi tiến trình chưa xuất ra gì; thay vào đó nút cho biết chưa có đầu ra, hoặc sau khi tiến trình kết thúc thì cho biết không có đầu ra nào. Lần bấm thứ hai hiển thị đầu ra hiện tại thay vì bản sao trước đó, và giờ nút còn hiển thị đầu ra của một Terminal Codex, nơi trước đây nút không làm gì.

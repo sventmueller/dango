@@ -1,13 +1,9 @@
-## Font boyutları
-- Yeni bir ayar olan “Kenar çubuğu ve sekme font boyutu”, kenar çubuğunun, simgelerinin ve sekme çubuklarının boyutunu
-  10 ile 18 punto arasında ayarlar. Kenar çubuğunun her paneli, soldaki simge çubuğu, pencerenin sekme başlıkları ve
-  bölmelerin kendi sekme çubukları orantılı olarak büyür ve küçülür: metin, simgeler, satırlar ve aralarındaki boşluk.
-  Açık pencereler hemen uyum sağlar.
-- Düzenleyici ve terminal font boyutu artık açık düzenleyicilere de Markdown stilleri ve satır numaralarıyla birlikte
-  hemen ulaşır; Markdown önizlemesi de aynı oranda büyür ve küçülür.
-- AI sekmesinin başlığı, tıpkı zaman çizelgesi, ileti alanı ve durum satırı gibi, AI sekmesi font boyutunu izler.
+## Yardım
+- “Yardım” menüsü GitHub’daki projeye götürür: “Sorun Bildir…” Dango sürümünün, macOS sürümünün ve Mac türünün önceden doldurulduğu bildirim formunu açar, “Özellik Öner…” tartışmalarda yeni bir fikir başlatır ve “GitHub’da Dango” depoyu açar.
+
+## Düzenleyici ve terminal
+- Düzenleyiciler ve terminaller, kenar çubuğu, sekme çubukları ve AI sekmesi gibi 13 puntoyla başlar; kendiniz ayarladığınız boyut korunur.
+- Satır numaraları artık son satır sonundan sonraki boş satırı ve boş bir belgenin tek satırını da imlecin yanında sayar.
 
 ## AI
-- Codex oturumları, Claude oturumlarında olduğu gibi alt ajanlarını ve arka plan terminallerini sekmenin başlığındaki
-  iki düğmenin arkasında listeler; bir alt ajanın izin istekleri ve Durdur düğmesi kendi başına çalışır.
-- Yalnızca konuşmayı gösteren düğme artık arka plan işlemleri düğmesi ile yer işareti arasında yer alır.
+- Bir arka plan işleminin çıktı düğmesi, işlem henüz bir şey yazdırmamışken artık boş bir dosya açmaz; bunun yerine henüz çıktı olmadığını ya da işlem bittikten sonra hiç çıktı olmadığını söyler. İkinci tıklama önceki kopya yerine güncel çıktıyı gösterir ve düğme artık daha önce hiçbir şey yapmadığı bir Codex terminalinin çıktısını da gösterir.

@@ -1,13 +1,9 @@
-## Skriftstørrelser
-- En ny indstilling, “Skriftstørrelse i indholdsoversigt og faner”, sætter indholdsoversigten, dens symboler og
-  fanelinjerne til 10 til 18 punkter. Hvert panel i indholdsoversigten, symbollinjen til venstre, vinduets fanetitler
-  og rudernes egne fanelinjer vokser og skrumper i forhold: tekst, symboler, rækker og afstanden mellem dem. Åbne
-  vinduer følger straks med.
-- Skriftstørrelsen i editor og terminal når nu også åbne editorer med det samme, med deres Markdown-typografier og
-  linjenumre, og Markdown-eksemplet vokser og skrumper i samme forhold.
-- Toppen af en AI-fane følger AI-fanens skriftstørrelse, ligesom dens tidslinje, beskedfelt og statuslinje.
+## Hjælp
+- Menuen “Hjælp” fører til projektet på GitHub: “Rapportér et problem…” åbner fejlrapportformularen med Dango-versionen, macOS-versionen og typen af Mac allerede udfyldt, “Foreslå en funktion…” starter en ny idé i diskussionerne, og “Dango på GitHub” åbner repository’et.
+
+## Editor og terminal
+- Editorer og terminaler starter på 13 punkter ligesom indholdsoversigten, fanelinjerne og AI-fanen; en størrelse, du selv har indstillet, bevares.
+- Linjenumrene tæller nu også den tomme linje efter det sidste linjeskift og den eneste linje i et tomt dokument, ved siden af markøren.
 
 ## AI
-- Codex-sessioner viser deres subagenter og baggrundsterminaler bag de to knapper i fanens top, ligesom
-  Claude-sessioner; en subagents anmodninger om tilladelse og dens stopknap virker hver for sig.
-- Knappen, der kun viser samtalen, sidder nu mellem baggrundsprocessernes knap og bogmærket.
+- Outputknappen for en baggrundsproces åbner ikke længere en tom fil, så længe processen ikke har skrevet noget ud; den fortæller i stedet, at der endnu ikke er skrevet noget ud, eller at der slet intet blev skrevet ud, når processen er slut. Et klik mere viser det aktuelle output i stedet for den tidligere kopi, og knappen viser nu også outputtet fra en Codex-terminal, hvor den før ikke gjorde noget.

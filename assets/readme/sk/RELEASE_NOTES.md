@@ -1,13 +1,9 @@
-## Veľkosti písma
-- Nové nastavenie „Veľkosť písma v postrannom paneli a taboch“ určuje veľkosť postranného panela, jeho ikon a líšt
-  tabov v rozsahu 10 až 18 bodov. Každý panel postranného panela, lišta ikon vľavo, názvy tabov okna aj vlastné lišty
-  tabov jednotlivých oblastí sa úmerne zväčšujú a zmenšujú: text, ikony, riadky aj priestor medzi nimi. Otvorené okná
-  sa prispôsobia okamžite.
-- Veľkosť písma v editore a termináli sa teraz okamžite prejaví aj v otvorených editoroch, vrátane ich štýlov
-  Markdownu a čísel riadkov, a náhľad Markdownu sa zväčšuje a zmenšuje v rovnakom pomere.
-- Hlavička AI tabu sa riadi veľkosťou písma v AI tabe, rovnako ako jeho časová os, pole správy a stavový riadok.
+## Pomocník
+- Ponuka „Pomocník“ vedie k projektu na GitHube: „Nahlásiť problém…“ otvorí formulár hlásenia s už vyplnenou verziou Danga, verziou macOS a typom Macu, „Navrhnúť funkciu…“ založí nový nápad v diskusiách a „Dango na GitHube“ otvorí repozitár.
+
+## Editor a terminál
+- Editory a terminály začínajú na 13 bodoch, rovnako ako postranný panel, lišty tabov a AI tab; veľkosť, ktorú ste si nastavili sami, zostáva.
+- Čísla riadkov teraz počítajú aj prázdny riadok za posledným zalomením riadka a jediný riadok prázdneho dokumentu, vedľa kurzora.
 
 ## AI
-- Relácie Codexu zobrazujú svojich subagentov a terminály na pozadí za dvoma tlačidlami v hlavičke tabu, rovnako ako
-  relácie Claude; žiadosti subagenta o povolenie a jeho tlačidlo Zastaviť fungujú samostatne.
-- Tlačidlo, ktoré zobrazuje iba konverzáciu, je teraz medzi tlačidlom procesov na pozadí a záložkou.
+- Tlačidlo výstupu procesu na pozadí už neotvára prázdny súbor, kým proces nič nevypísal; namiesto toho oznámi, že zatiaľ neprišiel žiadny výstup, alebo po skončení procesu, že neprišiel žiadny. Druhé kliknutie zobrazí aktuálny výstup namiesto skoršej kópie a tlačidlo teraz zobrazí aj výstup terminálu Codexu, kde predtým nerobilo nič.

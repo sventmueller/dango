@@ -1,13 +1,9 @@
-## Ukuran font
-- Pengaturan baru, “Ukuran font bar samping dan tab”, mengatur ukuran bar samping, ikonnya, dan bar tab dari 10 hingga
-  18 poin. Setiap panel di bar samping, bar ikon di sebelah kiri, judul tab jendela, dan bar tab milik setiap area
-  membesar dan mengecil secara proporsional: teks, ikon, baris, dan ruang di antaranya. Jendela yang terbuka langsung
-  mengikuti.
-- Ukuran font editor dan terminal kini juga langsung berlaku pada editor yang terbuka, beserta gaya Markdown dan nomor
-  barisnya, dan pratinjau Markdown membesar dan mengecil dengan proporsi yang sama.
-- Kepala tab AI mengikuti ukuran font tab AI, seperti linimasa, bidang pesan, dan baris statusnya.
+## Bantuan
+- Menu “Bantuan” mengarah ke proyek di GitHub: “Laporkan Masalah…” membuka formulir laporan dengan versi Dango, versi macOS, dan jenis Mac yang sudah terisi, “Sarankan Fitur…” memulai ide baru di diskusi, dan “Dango di GitHub” membuka repositori.
+
+## Editor dan terminal
+- Editor dan terminal kini dimulai pada 13 poin, seperti bar samping, bar tab, dan tab AI; ukuran yang Anda atur sendiri tetap dipertahankan.
+- Nomor baris kini juga menghitung baris kosong setelah jeda baris terakhir dan satu-satunya baris dalam dokumen kosong, di samping kursor.
 
 ## AI
-- Sesi Codex mencantumkan subagen dan terminal latar belakangnya di balik dua tombol di kepala tab, seperti sesi
-  Claude; permintaan izin dan tombol hentikan milik subagen bekerja secara terpisah.
-- Tombol yang hanya menampilkan percakapan kini berada di antara tombol proses latar belakang dan penanda.
+- Tombol output proses latar belakang tidak lagi membuka file kosong selama proses belum menghasilkan apa pun; tombol itu memberi tahu bahwa belum ada output, atau setelah proses selesai, bahwa tidak ada output sama sekali. Klik kedua menampilkan output terkini alih-alih salinan sebelumnya, dan tombol itu kini juga menampilkan output terminal Codex, yang sebelumnya tidak melakukan apa pun.

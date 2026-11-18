@@ -1,13 +1,9 @@
-## Rozmiary czcionki
-- Nowe ustawienie „Rozmiar czcionki na pasku bocznym i kartach” określa rozmiar paska bocznego, jego ikon i pasków
-  kart w zakresie od 10 do 18 punktów. Każdy panel paska bocznego, pasek ikon po lewej, tytuły kart okna i własne
-  paski kart okienek rosną i maleją proporcjonalnie: tekst, ikony, wiersze i odstępy między nimi. Otwarte okna
-  dostosowują się od razu.
-- Rozmiar czcionki w edytorze i terminalu trafia teraz od razu także do otwartych edytorów, razem z ich stylami
-  Markdown i numerami wierszy, a podgląd Markdown rośnie i maleje w tej samej proporcji.
-- Nagłówek karty AI podąża za rozmiarem czcionki na karcie AI, tak jak jej oś czasu, pole wiadomości i wiersz stanu.
+## Pomoc
+- Menu „Pomoc” prowadzi do projektu w serwisie GitHub: „Zgłoś problem…” otwiera formularz zgłoszenia z już wpisaną wersją Dango, wersją macOS i rodzajem Maca, „Zaproponuj funkcję…” rozpoczyna nowy pomysł w dyskusjach, a „Dango w serwisie GitHub” otwiera repozytorium.
+
+## Edytor i terminal
+- Edytory i terminale zaczynają od 13 punktów, tak jak pasek boczny, paski kart i karta AI; rozmiar ustawiony samodzielnie pozostaje bez zmian.
+- Numery wierszy obejmują teraz także pusty wiersz po ostatnim podziale wiersza i jedyny wiersz pustego dokumentu, obok kursora.
 
 ## AI
-- Sesje Codex pokazują swoje subagenty i terminale w tle za dwoma przyciskami w nagłówku karty, tak jak sesje Claude;
-  prośby subagenta o uprawnienia i jego przycisk Zatrzymaj działają niezależnie.
-- Przycisk, który pokazuje tylko rozmowę, znajduje się teraz między przyciskiem procesów w tle a zakładką.
+- Przycisk danych wyjściowych procesu w tle nie otwiera już pustego pliku, dopóki proces niczego nie wypisał; zamiast tego informuje, że na razie brak danych wyjściowych, a po zakończeniu procesu, że ich nie było. Drugie kliknięcie pokazuje bieżące dane wyjściowe zamiast wcześniejszej kopii, a przycisk pokazuje teraz także dane wyjściowe terminala Codex, gdzie wcześniej nic nie robił.

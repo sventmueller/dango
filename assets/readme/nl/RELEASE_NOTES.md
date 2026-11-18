@@ -1,14 +1,9 @@
-## Lettergroottes
-- Een nieuwe instelling, 'Lettergrootte in navigatiekolom en tabbladen', zet de navigatiekolom, de symbolen ervan en
-  de tabbladbalken op 10 tot 18 punten. Elk paneel van de navigatiekolom, de symbolenbalk links, de tabbladtitels van
-  het venster en de eigen tabbladbalken van de deelvensters worden naar verhouding groter en kleiner: tekst, symbolen,
-  rijen en de ruimte ertussen. Open vensters volgen meteen.
-- De lettergrootte in editor en terminal bereikt nu ook open editors meteen, met hun Markdown-stijlen en regelnummers,
-  en de Markdown-voorvertoning wordt in dezelfde verhouding groter en kleiner.
-- De kop van een AI-tabblad volgt de lettergrootte in het AI-tabblad, net als de tijdlijn, het berichtveld en de
-  statusregel.
+## Help
+- Het menu 'Help' leidt naar het project op GitHub: 'Meld een probleem…' opent het meldingsformulier met de versie van Dango, de macOS-versie en het soort Mac al ingevuld, 'Stel een functie voor…' begint een nieuw idee in de discussies en 'Dango op GitHub' opent de repository.
+
+## Editor en terminal
+- Editors en terminals beginnen op 13 punten, net als de navigatiekolom, de tabbladbalken en het AI-tabblad; een grootte die je zelf hebt ingesteld, blijft behouden.
+- De regelnummers tellen nu ook de lege regel na de laatste regeleinde en de enige regel van een leeg document, naast de cursor.
 
 ## AI
-- Codex-sessies tonen hun subagents en achtergrondterminals achter de twee knoppen in de kop van het tabblad, net als
-  Claude-sessies; de toestemmingsverzoeken en de stopknop van een subagent werken op zichzelf.
-- De knop die alleen het gesprek toont, staat nu tussen de knop van de achtergrondprocessen en de bladwijzer.
+- De uitvoerknop van een achtergrondproces opent geen leeg bestand meer zolang het proces nog niets heeft uitgevoerd; hij meldt dat er nog geen uitvoer is, of na afloop van het proces dat er helemaal geen uitvoer was. Een tweede klik toont de huidige uitvoer in plaats van de eerdere kopie, en de knop toont nu ook de uitvoer van een Codex-terminal, waar hij eerder niets deed.

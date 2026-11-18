@@ -1,13 +1,9 @@
-## Teckenstorlekar
-- En ny inställning, ”Teckenstorlek i sidofält och flikar”, ställer in sidofältet, dess symboler och flikfälten på 10
-  till 18 punkter. Varje panel i sidofältet, symbolfältet till vänster, fönstrets fliktitlar och rutornas egna
-  flikfält växer och krymper i proportion: text, symboler, rader och utrymmet mellan dem. Öppna fönster följer med
-  direkt.
-- Teckenstorleken i redigerare och terminal når nu även öppna redigerare direkt, med deras Markdown-stilar och
-  radnummer, och Markdown-förhandsvisningen växer och krymper i samma proportion.
-- Sidhuvudet i en AI-flik följer AI-flikens teckenstorlek, liksom dess tidslinje, meddelandefält och statusrad.
+## Hjälp
+- Menyn ”Hjälp” leder till projektet på GitHub: ”Rapportera ett problem…” öppnar rapportformuläret med Dangos version, macOS-versionen och typen av Mac redan ifyllda, ”Föreslå en funktion…” startar en ny idé i diskussionerna och ”Dango på GitHub” öppnar repot.
+
+## Redigerare och terminal
+- Redigerare och terminaler börjar på 13 punkter, liksom sidofältet, flikfälten och AI-fliken; en storlek du själv har ställt in behålls.
+- Radnumren räknar nu även den tomma raden efter den sista radbrytningen och den enda raden i ett tomt dokument, bredvid markören.
 
 ## AI
-- Codex-sessioner listar sina underagenter och bakgrundsterminaler bakom de två knapparna i flikens sidhuvud, precis
-  som Claude-sessioner; en underagents behörighetsförfrågningar och dess stoppknapp fungerar var för sig.
-- Knappen som bara visar konversationen sitter nu mellan bakgrundsprocessernas knapp och bokmärket.
+- Utdataknappen för en bakgrundsprocess öppnar inte längre en tom fil så länge processen inte har skrivit ut något; den säger i stället att inget har skrivits ut ännu, eller när processen har avslutats att inget skrevs ut. Ett andra klick visar aktuella utdata i stället för den tidigare kopian, och knappen visar nu även utdata från en Codex-terminal, där den inte gjorde något tidigare.

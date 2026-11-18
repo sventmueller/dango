@@ -1,16 +1,9 @@
-## Tamaños de letra
-- Un ajuste nuevo, «Tamaño de letra en la barra lateral y las pestañas», fija el tamaño de la barra lateral, sus
-  iconos y las barras de pestañas entre 10 y 18 puntos. Cada panel de la barra lateral, la barra de iconos de la
-  izquierda, los títulos de las pestañas de la ventana y las barras de pestañas propias de las áreas crecen y encogen
-  en proporción: el texto, los iconos, las filas y el espacio entre ellos. Las ventanas abiertas lo siguen al
-  instante.
-- El tamaño de letra en el editor y el terminal ahora llega al instante también a los editores abiertos, con sus
-  estilos de Markdown y sus números de línea, y la vista previa de Markdown crece y encoge en la misma proporción.
-- La cabecera de una pestaña de IA sigue el tamaño de letra de la pestaña de IA, como su historial, el campo de
-  mensaje y la línea de estado.
+## Ayuda
+- El menú «Ayuda» lleva al proyecto en GitHub: «Informar de un problema…» abre el formulario de incidencias con la versión de Dango, la versión de macOS y el tipo de Mac ya rellenados, «Sugerir una función…» empieza una idea nueva en las discusiones y «Dango en GitHub» abre el repositorio.
+
+## Editor y terminal
+- Los editores y los terminales empiezan con 13 puntos, como la barra lateral, las barras de pestañas y la pestaña de IA; un tamaño que hayas elegido tú se mantiene.
+- Los números de línea también cuentan la línea vacía tras el último salto de línea y la única línea de un documento vacío, junto al cursor.
 
 ## IA
-- Las sesiones de Codex muestran sus subagentes y terminales en segundo plano tras los dos botones de la cabecera de
-  la pestaña, como las sesiones de Claude; las solicitudes de permiso de un subagente y su botón de detener funcionan
-  por separado.
-- El botón que muestra solo la conversación está ahora entre el botón de los procesos en segundo plano y el marcador.
+- El botón de salida de un proceso en segundo plano ya no abre un archivo vacío mientras el proceso no ha generado nada; indica que aún no ha generado ninguna salida o, una vez terminado, que no ha generado ninguna. Un segundo clic muestra la salida actual en lugar de la copia anterior, y el botón ahora también muestra la salida de un terminal de Codex, donde antes no hacía nada.
