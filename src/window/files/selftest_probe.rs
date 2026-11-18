@@ -54,7 +54,7 @@ impl FileTree {
             .ivars()
             .model
             .borrow_mut()
-            .open_menu(Some(path), Some(super::model::Kind::File));
+            .open_menu(Some(path), Some(super::model::Kind::File), &[]);
         self.source.open_in_chosen_pane(number);
     }
 }

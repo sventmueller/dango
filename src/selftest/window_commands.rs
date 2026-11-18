@@ -2,9 +2,9 @@
 //! the tabs, the activity bar leaves a symbol out and brings it back, the search and symbol commands open their
 //! panels, "+" asks for the menu of new tabs and the agent settings open on their tab. The folder tree's context menu
 //! copies a path, opens a file beside, as preview or new, makes a folder, renames a file and says why a name is taken;
-//! a click opens the row. The search panel takes typing, the arrow down and Return from its field, Return and Esc in
-//! its results, follows its options, opens its filters and replace field, opens and replaces from a row's menu and a
-//! click, folds a file and asks before replacing everything.
+//! on one of several selected rows it copies all their paths; a click opens the row. The search panel takes typing, the
+//! arrow down and Return from its field, Return and Esc in its results, follows its options, opens its filters and
+//! replace field, opens and replaces from a row's menu and a click, folds a file and asks before replacing everything.
 
 use std::path::{Path, PathBuf};
 
@@ -17,7 +17,7 @@ use objc2_app_kit::{
     NSPasteboard, NSPasteboardTypeString, NSResponder, NSTabViewController, NSTextField, NSTextView, NSView, NSWindow,
     NSWindowDidEnterFullScreenNotification, NSWindowStyleMask, NSWindowWillExitFullScreenNotification,
 };
-use objc2_foundation::{NSNotificationCenter, NSObject, NSPoint, NSRect, NSSize, NSString};
+use objc2_foundation::{NSMutableIndexSet, NSNotificationCenter, NSObject, NSPoint, NSRect, NSSize, NSString};
 
 use super::helpers::{self, answer_alert, answer_alert_saying, open_project, wait_until, when_alert_shows, window_of};
 use super::settings_pages::all_in;
@@ -250,6 +250,41 @@ fn tree_command(c: &WindowController, path: &Path, title: &str) -> Option<Vec<St
     pick(&menu, title).then_some(shown)
 }
 
+/// Several rows selected, as ⇧- and ⌘-clicks select them: the context menu on one of them copies all their paths, top
+/// to bottom, and offers no rename.
+fn several_rows(c: &WindowController, root: &Path) {
+    let Some(outline) = c.file_tree_outline() else {
+        return give_up(NAME, "the folder tree is shown");
+    };
+    let files = [root.join("src/lib.rs"), root.join("src/main.rs")];
+    let rows = NSMutableIndexSet::new();
+    for row in files.iter().filter_map(|file| row_of(&outline, file)) {
+        rows.addIndex(row.cast_unsigned());
+    }
+    outline.selectRowIndexes_byExtendingSelection(&rows, false);
+    let menu = row_of(&outline, &files[1]).and_then(|row| menu_at(&outline, row));
+    let rename = menu.as_ref().and_then(|menu| {
+        let index = menu.indexOfItemWithTitle(&ns("Umbenennen …"));
+        menu.itemAtIndex(index).map(|item| item.isEnabled())
+    });
+    let copied = menu.as_ref().is_some_and(|menu| pick(menu, "Pfad kopieren"));
+    let expected = format!("{}\n{}", files[0].display(), files[1].display());
+    check(
+        "several rows can be selected, and the context menu on one of them copies all their paths and renames none",
+        outline.allowsMultipleSelection()
+            && outline.numberOfSelectedRows() == 2
+            && copied
+            && pasteboard() == expected
+            && rename == Some(false),
+        format!(
+            "{} selected, rename {rename:?}, {:?}",
+            outline.numberOfSelectedRows(),
+            pasteboard()
+        ),
+    );
+    outline.selectRowIndexes_byExtendingSelection(&NSMutableIndexSet::new(), false);
+}
+
 /// Opens `src` in the folder tree and waits for its rows, which are read on the disk lane.
 fn files_menu(root: PathBuf) {
     let Some(c) = controller(&root) else {
@@ -286,6 +321,7 @@ fn files_menu_shown(root: PathBuf) {
             && pasteboard() == "src/lib.rs",
         format!("{menu:?} {absolute}"),
     );
+    several_rows(&c, &root);
     c.open_file(&root.join("src/main.rs"));
     let beside = tree_command(&c, &lib, "Daneben öffnen").is_some();
     check(

@@ -32,7 +32,14 @@ impl FileTreeSource {
             controller.open_file_beside(&path, Side::Right);
             return true;
         }
-        self.ivars().model.borrow_mut().open_menu(Some(&path), Some(Kind::File));
+        if let Ok(row) = usize::try_from(row) {
+            // Shift extends the selection before the click arrives; the pane menu is for this one file.
+            view.selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(row), false);
+        }
+        self.ivars()
+            .model
+            .borrow_mut()
+            .open_menu(Some(&path), Some(Kind::File), &[]);
         let menu = self.pane_menu(&controller.pane_choices());
         let rect = view.rectOfRow(row);
         let point = objc2_foundation::NSPoint::new(rect.origin.x + 24.0, rect.origin.y + rect.size.height);

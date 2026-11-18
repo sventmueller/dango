@@ -318,7 +318,7 @@ impl FileTreeSource {
             return;
         };
         let path = view.itemAtRow(view.clickedRow()).and_then(|item| path_of(&item));
-        let entries = self.menu_opens(path.as_deref());
+        let entries = self.menu_opens(path.as_deref(), &selected_paths(&view));
         for entry in entries {
             let MenuEntry::Item {
                 title,
@@ -343,6 +343,24 @@ impl FileTreeSource {
         }
         menu.setAutoenablesItems(false);
     }
+}
+
+/// The paths of the selected rows, top to bottom.
+fn selected_paths(view: &NSOutlineView) -> Vec<PathBuf> {
+    let rows = view.selectedRowIndexes();
+    let mut paths = Vec::new();
+    let mut row = rows.firstIndex();
+    while row != objc2_foundation::NSNotFound.cast_unsigned() {
+        if let Some(path) = isize::try_from(row)
+            .ok()
+            .and_then(|row| view.itemAtRow(row))
+            .and_then(|item| path_of(&item))
+        {
+            paths.push(path);
+        }
+        row = rows.indexGreaterThanIndex(row);
+    }
+    paths
 }
 
 /// The action of the menu item for `command`.

@@ -39,6 +39,7 @@ impl FileTree {
         ));
         let scroll = ide_ui_common::panel::source_list_outline(mtm, &view, "name", t("Dateien"));
         view.setUsesAutomaticRowHeights(false);
+        view.setAllowsMultipleSelection(true);
         ide_ui_common::ui_size::follow_rows(&view, ide_ui_common::style::ROW_HEIGHT);
         // SAFETY: The outline view holds its data source and delegate weakly; `FileTree` keeps the source alive.
         unsafe {

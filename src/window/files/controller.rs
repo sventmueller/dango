@@ -57,10 +57,10 @@ impl FileTreeSource {
         }
     }
 
-    /// What the context menu offers for `path`, the row it opens on.
-    pub(super) fn menu_opens(&self, path: Option<&Path>) -> Vec<MenuEntry> {
+    /// What the context menu offers for `path`, the row it opens on, with the `selected` rows.
+    pub(super) fn menu_opens(&self, path: Option<&Path>, selected: &[PathBuf]) -> Vec<MenuEntry> {
         let kind = path.and_then(kind_of);
-        self.ivars().model.borrow_mut().open_menu(path, kind)
+        self.ivars().model.borrow_mut().open_menu(path, kind, selected)
     }
 
     pub(super) fn command(&self, command: Command) {
@@ -256,16 +256,18 @@ impl FileTreeSource {
                     crate::site_preview::open(&controller, &path);
                 }
             }
-            Effect::RevealInFinder(path) => {
-                let urls = NSArray::from_retained_slice(&[file_url(&path)]);
-                NSWorkspace::sharedWorkspace().activateFileViewerSelectingURLs(&urls);
+            Effect::RevealInFinder(paths) => {
+                let urls: Vec<_> = paths.iter().map(|path| file_url(path)).collect();
+                NSWorkspace::sharedWorkspace().activateFileViewerSelectingURLs(&NSArray::from_retained_slice(&urls));
             }
             Effect::Copy(text) => copy_text(&text),
-            Effect::MoveToTrash(path) => {
-                let moved =
-                    NSFileManager::defaultManager().trashItemAtURL_resultingItemURL_error(&file_url(&path), None);
-                if let Err(error) = moved {
-                    crate::diag::report("moving to the Trash", error.localizedDescription());
+            Effect::MoveToTrash(paths) => {
+                for path in paths {
+                    let moved =
+                        NSFileManager::defaultManager().trashItemAtURL_resultingItemURL_error(&file_url(&path), None);
+                    if let Err(error) = moved {
+                        crate::diag::report("moving to the Trash", error.localizedDescription());
+                    }
                 }
             }
             Effect::AskName { naming, title, current } => self.ask_name(&naming, title, &current),

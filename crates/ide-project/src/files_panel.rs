@@ -105,12 +105,12 @@ pub enum Effect {
     OpenAsPreview(PathBuf),
     /// Open the page in a browser tab, served by the app.
     OpenInBrowserTab(PathBuf),
-    /// Show the path in the Finder.
-    RevealInFinder(PathBuf),
+    /// Show the paths in the Finder, selected.
+    RevealInFinder(Vec<PathBuf>),
     /// Put the text on the pasteboard.
     Copy(String),
-    /// Move the path to the Trash.
-    MoveToTrash(PathBuf),
+    /// Move the paths to the Trash.
+    MoveToTrash(Vec<PathBuf>),
     /// Ask for a name, prefilled with `current`, under `title`.
     AskName {
         /// What the name is for.
@@ -150,6 +150,8 @@ pub struct Model {
     rows: HashMap<PathBuf, Row>,
     /// The path the context menu was opened on.
     clicked: Option<PathBuf>,
+    /// Every selected row when the menu opened on one of several selected rows, as in the Finder; empty otherwise.
+    selection: Vec<PathBuf>,
 }
 
 impl Model {
@@ -159,6 +161,7 @@ impl Model {
             root,
             rows: HashMap::new(),
             clicked: None,
+            selection: Vec::new(),
         }
     }
 
@@ -191,11 +194,14 @@ impl Model {
         (kind == Kind::File).then(|| Effect::Open(path.to_path_buf()))
     }
 
-    /// Remembers the row the context menu opens on, the root for the empty space below the rows, and says what the
-    /// menu offers; `kind` is what `path` is on disk, if it still is.
-    pub fn open_menu(&mut self, path: Option<&Path>, kind: Option<Kind>) -> Vec<MenuEntry> {
+    /// Remembers the row the context menu opens on, the root for the empty space below the rows, and the `selected`
+    /// rows it acts on as well when it opens on one of them, and says what the menu offers; `kind` is what `path` is on
+    /// disk, if it still is.
+    pub fn open_menu(&mut self, path: Option<&Path>, kind: Option<Kind>, selected: &[PathBuf]) -> Vec<MenuEntry> {
         self.clicked = Some(path.map_or_else(|| self.root.clone(), Path::to_path_buf));
-        let file = kind == Some(Kind::File);
+        let several = selected.len() > 1 && path.is_some_and(|path| selected.iter().any(|s| s == path));
+        self.selection = if several { selected.to_vec() } else { Vec::new() };
+        let file = kind == Some(Kind::File) && !several;
         let row = path.is_some();
         let item = |title, command, enabled| MenuEntry::Item {
             title,
@@ -213,7 +219,7 @@ impl Model {
             item(t("Pfad kopieren"), Command::CopyPath, true),
             item(t("Relativen Pfad kopieren"), Command::CopyRelativePath, true),
             MenuEntry::Separator,
-            item(t("Umbenennen …"), Command::Rename, row),
+            item(t("Umbenennen …"), Command::Rename, row && !several),
             item(t("In den Papierkorb legen"), Command::Trash, row),
         ];
         if file && path.is_some_and(is_page) {
@@ -225,9 +231,15 @@ impl Model {
         entries
     }
 
-    /// What `command` of the context menu does to the clicked row; `kind` is what that row is on disk.
+    /// What `command` of the context menu does to the clicked row, or to every selected row for the commands that can
+    /// act on several; `kind` is what the clicked row is on disk.
     pub fn command(&self, command: Command, kind: Option<Kind>) -> Option<Effect> {
         let path = self.clicked.clone()?;
+        let targets = if self.selection.is_empty() {
+            vec![path.clone()]
+        } else {
+            self.selection.clone()
+        };
         Some(match command {
             Command::OpenBeside => Effect::OpenBeside(path),
             Command::OpenBelow => Effect::OpenBelow(path),
@@ -241,20 +253,15 @@ impl Model {
                 };
                 return Some(create_in(&path, kind, new));
             }
-            Command::Reveal => Effect::RevealInFinder(path),
-            Command::CopyPath => Effect::Copy(path.to_string_lossy().into_owned()),
-            Command::CopyRelativePath => Effect::Copy(
-                path.strip_prefix(&self.root)
-                    .unwrap_or(&path)
-                    .to_string_lossy()
-                    .into_owned(),
-            ),
+            Command::Reveal => Effect::RevealInFinder(targets),
+            Command::CopyPath => Effect::Copy(lines(&targets, |p| p)),
+            Command::CopyRelativePath => Effect::Copy(lines(&targets, |p| p.strip_prefix(&self.root).unwrap_or(p))),
             Command::Rename => Effect::AskName {
                 current: file_name(&path),
                 naming: Naming::Rename { path },
                 title: t("Umbenennen"),
             },
-            Command::Trash => Effect::MoveToTrash(path),
+            Command::Trash => Effect::MoveToTrash(outermost(targets)),
         })
     }
 
@@ -335,6 +342,21 @@ fn create_in(at: &Path, kind: Option<Kind>, new: Kind) -> Effect {
         },
         current: String::new(),
     }
+}
+
+/// `paths` one per line, each as `shown` puts it.
+fn lines<'a>(paths: &'a [PathBuf], shown: impl Fn(&'a Path) -> &'a Path) -> String {
+    paths
+        .iter()
+        .map(|path| shown(path).to_string_lossy())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// `paths` without those inside another of them, which go along with it.
+fn outermost(paths: Vec<PathBuf>) -> Vec<PathBuf> {
+    let inside = |path: &PathBuf| paths.iter().any(|other| other != path && path.starts_with(other));
+    paths.iter().filter(|path| !inside(path)).cloned().collect()
 }
 
 fn file_name(path: &Path) -> String {
@@ -482,7 +504,7 @@ mod tests {
     #[test]
     fn the_menu_on_empty_space_acts_on_the_root_and_cannot_rename_it() {
         let mut model = model();
-        let entries = model.open_menu(None, None);
+        let entries = model.open_menu(None, None, &[]);
         assert_eq!(model.clicked(), Some(Path::new("/p")));
         assert_eq!(enabled(&entries, Command::Rename), Some(false));
         assert_eq!(enabled(&entries, Command::Trash), Some(false));
@@ -494,17 +516,17 @@ mod tests {
     #[test]
     fn only_an_svg_file_offers_its_drawing() {
         let mut model = model();
-        let entries = model.open_menu(Some(Path::new("/p/logo.SVG")), Some(Kind::File));
+        let entries = model.open_menu(Some(Path::new("/p/logo.SVG")), Some(Kind::File), &[]);
         assert_eq!(enabled(&entries, Command::OpenAsPreview), Some(true));
         assert_eq!(enabled(&entries, Command::OpenBeside), Some(true));
-        let entries = model.open_menu(Some(Path::new("/p/x.svg")), Some(Kind::Folder));
+        let entries = model.open_menu(Some(Path::new("/p/x.svg")), Some(Kind::Folder), &[]);
         assert_eq!(enabled(&entries, Command::OpenAsPreview), None);
     }
 
     #[test]
     fn a_new_file_goes_into_a_clicked_folder_or_beside_a_clicked_file() {
         let mut model = model();
-        model.open_menu(Some(Path::new("/p/src")), Some(Kind::Folder));
+        model.open_menu(Some(Path::new("/p/src")), Some(Kind::Folder), &[]);
         let Some(Effect::AskName { naming, .. }) = model.command(Command::NewFile, Some(Kind::Folder)) else {
             panic!("no question for the name");
         };
@@ -515,7 +537,7 @@ mod tests {
                 kind: Kind::File
             }
         );
-        model.open_menu(Some(Path::new("/p/src/main.rs")), Some(Kind::File));
+        model.open_menu(Some(Path::new("/p/src/main.rs")), Some(Kind::File), &[]);
         let Some(Effect::AskName { naming, .. }) = model.command(Command::NewFolder, Some(Kind::File)) else {
             panic!("no question for the name");
         };
@@ -552,7 +574,7 @@ mod tests {
     #[test]
     fn copying_the_relative_path_leaves_out_the_root() {
         let mut model = model();
-        model.open_menu(Some(Path::new("/p/src/main.rs")), Some(Kind::File));
+        model.open_menu(Some(Path::new("/p/src/main.rs")), Some(Kind::File), &[]);
         assert_eq!(
             model.command(Command::CopyRelativePath, Some(Kind::File)),
             Some(Effect::Copy("src/main.rs".into()))
@@ -560,6 +582,49 @@ mod tests {
         assert_eq!(
             model.command(Command::CopyPath, Some(Kind::File)),
             Some(Effect::Copy("/p/src/main.rs".into()))
+        );
+    }
+
+    #[test]
+    fn the_menu_on_one_of_several_selected_rows_acts_on_them_all_and_offers_no_one_file_commands() {
+        let mut model = model();
+        let selected = [
+            PathBuf::from("/p/src"),
+            PathBuf::from("/p/src/lib.rs"),
+            PathBuf::from("/p/notes.md"),
+        ];
+        let entries = model.open_menu(Some(Path::new("/p/notes.md")), Some(Kind::File), &selected);
+        assert_eq!(enabled(&entries, Command::Rename), Some(false));
+        assert_eq!(enabled(&entries, Command::OpenBeside), Some(false));
+        assert_eq!(enabled(&entries, Command::Trash), Some(true));
+        assert_eq!(
+            model.command(Command::CopyRelativePath, Some(Kind::File)),
+            Some(Effect::Copy("src\nsrc/lib.rs\nnotes.md".into()))
+        );
+        assert_eq!(
+            model.command(Command::Trash, Some(Kind::File)),
+            Some(Effect::MoveToTrash(vec!["/p/src".into(), "/p/notes.md".into()]))
+        );
+        assert!(matches!(
+            model.command(Command::NewFile, Some(Kind::File)),
+            Some(Effect::AskName { naming: Naming::Create { parent, .. }, .. }) if parent == Path::new("/p")
+        ));
+    }
+
+    #[test]
+    fn the_menu_on_a_row_outside_the_selection_acts_on_that_row_alone() {
+        let mut model = model();
+        let selected = [PathBuf::from("/p/a.rs"), PathBuf::from("/p/b.rs")];
+        let entries = model.open_menu(Some(Path::new("/p/c.rs")), Some(Kind::File), &selected);
+        assert_eq!(enabled(&entries, Command::Rename), Some(true));
+        assert_eq!(
+            model.command(Command::Reveal, Some(Kind::File)),
+            Some(Effect::RevealInFinder(vec!["/p/c.rs".into()]))
+        );
+        model.open_menu(Some(Path::new("/p/a.rs")), Some(Kind::File), &selected[..1]);
+        assert_eq!(
+            model.command(Command::Trash, Some(Kind::File)),
+            Some(Effect::MoveToTrash(vec!["/p/a.rs".into()]))
         );
     }
 
