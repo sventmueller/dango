@@ -108,6 +108,7 @@ objc2-quartz-core = { version = "0.3" }
 rustix = { version = "1", default-features = false, features = ["event", "pipe", "process", "stdio", "termios"] }
 security-framework-sys = { version = "2" }
 smallvec = { version = "1", default-features = false, features = ["union", "write"] }
+thiserror = { version = "2" }
 yoke = { version = "0.8", features = ["derive"] }
 
 [target.aarch64-apple-darwin.build-dependencies]
@@ -123,6 +124,7 @@ objc2-quartz-core = { version = "0.3" }
 rustix = { version = "1", default-features = false, features = ["event", "pipe", "process", "stdio", "termios"] }
 security-framework-sys = { version = "2" }
 smallvec = { version = "1", default-features = false, features = ["union", "write"] }
+thiserror = { version = "2" }
 yoke = { version = "0.8", features = ["derive"] }
 
 [target.x86_64-apple-darwin.dependencies]
@@ -138,6 +140,7 @@ objc2-quartz-core = { version = "0.3" }
 rustix = { version = "1", default-features = false, features = ["event", "pipe", "process", "stdio", "termios"] }
 security-framework-sys = { version = "2" }
 smallvec = { version = "1", default-features = false, features = ["union", "write"] }
+thiserror = { version = "2" }
 yoke = { version = "0.8", features = ["derive"] }
 
 [target.x86_64-apple-darwin.build-dependencies]
@@ -153,6 +156,7 @@ objc2-quartz-core = { version = "0.3" }
 rustix = { version = "1", default-features = false, features = ["event", "pipe", "process", "stdio", "termios"] }
 security-framework-sys = { version = "2" }
 smallvec = { version = "1", default-features = false, features = ["union", "write"] }
+thiserror = { version = "2" }
 yoke = { version = "0.8", features = ["derive"] }
 
 ### END HAKARI SECTION
