@@ -45,3 +45,18 @@ impl SubscriberId {
         self.0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn each_id_gives_its_number_and_names_itself_by_kind() {
+        assert_eq!(SessionId(3).get(), 3);
+        assert_eq!(SessionId(3).to_string(), "s3");
+        assert_eq!(TurnId(2).get(), 2);
+        assert_eq!(TurnId(2).to_string(), "turn 2");
+        assert_eq!(SubscriberId(5).get(), 5);
+        assert!(TurnId(1) < TurnId(2), "turns count up in the order the prompts came");
+    }
+}

@@ -1,6 +1,7 @@
 //! The `panes` scenario (E145): splitting takes the window's tabs into panes, right and below, nested, each with a bar of
 //! its own in place of the window's; a file opens in a native tab of its own while the window is not split and in the
-//! active pane once it is; tabs move between panes and to a pane's edge; a pane fills the window and closes; a terminal
+//! active pane once it is; tabs move between panes and to a pane's edge; a pane fills the window and closes; the
+//! commands of a pane's bar and of the menu and the tree's Option click and pane menu act on panes; a terminal
 //! and an AI thread keep running behind another document; the panes come back when the folder opens again; and the
 //! last pane but one closing gives the documents native tabs again.
 
@@ -9,7 +10,7 @@ use std::time::Duration;
 
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
-use splat_i18n::tf;
+use splat_i18n::{t, tf};
 
 use super::{check, finish, give_up_saying, helpers, snapshot};
 use crate::window::panes::Side;
@@ -181,6 +182,106 @@ fn dragging(root: PathBuf) {
         controller.pane_shape() == "H([a.rs, b.rs*] [d.rs]!)" && tab_of(&controller, &root, "c.rs").is_none(),
         controller.pane_shape(),
     );
+    commands(root, a);
+}
+
+/// The commands of a pane's bar and of the menu: what the menu offers, a double click on a tab, the next document
+/// of a pane, a document split off into a pane of its own, and an empty pane closed by its number.
+fn commands(root: PathBuf, a: TabId) {
+    let Some(controller) = window_of(&root) else { return };
+    let (Some(b), Some(d)) = (tab_of(&controller, &root, "b.rs"), tab_of(&controller, &root, "d.rs")) else {
+        return check("the documents are open", false, controller.pane_shape());
+    };
+    let state = controller.pane_menu_state();
+    let holds = (controller.pane_has_more(a), controller.pane_has_more(d));
+    check(
+        "the menu sees two panes, the active one with one document and not filling the tab; only the first holds more",
+        state == Some((2, 1, false)) && holds == (true, false),
+        format!("{state:?}, {holds:?}"),
+    );
+    controller.click_pane_tab(a, 2);
+    let clicked = controller.pane_shape();
+    controller.step_pane_tab(1);
+    check(
+        "a click on a pane's tab brings its document and pane to the front, and the menu steps to the next document",
+        clicked == "H([a.rs*, b.rs]! [d.rs])"
+            && controller.pane_shape() == "H([a.rs, b.rs*]! [d.rs])"
+            && controller.selected_tab() == Some(b),
+        format!("{clicked} then {}", controller.pane_shape()),
+    );
+    controller.split_off_pane(b, Side::Below);
+    lay_out(&controller);
+    let split = (
+        controller.pane_menu_state(),
+        controller.pane_of(a),
+        controller.pane_of(b),
+    );
+    if let Some(into) = controller.pane_of(a) {
+        controller.drop_tab_on_pane(b, into, 0.5, 0.5);
+    }
+    lay_out(&controller);
+    check(
+        "a document split off gets a pane of its own below and goes back by a drop",
+        split.0.map(|(panes, _, _)| panes) == Some(3)
+            && split.1.zip(split.2).is_some_and(|(a, b)| a != b)
+            && controller.pane_shape() == "H([a.rs, b.rs*]! [d.rs])",
+        format!("{split:?}, then {}", controller.pane_shape()),
+    );
+    controller.select_tab_by_id(d);
+    controller.split_pane(Side::Right);
+    let empty = controller.pane_choices().into_iter().find(|(_, front)| front.is_none());
+    let with_empty = controller.pane_shape();
+    if let Some((number, _)) = empty {
+        controller.close_pane_numbered(number);
+    }
+    lay_out(&controller);
+    check(
+        "an empty pane closes by its number and gives its room back",
+        with_empty == "H([a.rs, b.rs*] [d.rs] []!)"
+            && controller.pane_shape().replace('!', "") == "H([a.rs, b.rs*] [d.rs])",
+        format!("{with_empty} then {}", controller.pane_shape()),
+    );
+    from_tree(root, a, d);
+}
+
+/// The tree's Option click opens a file beside the document in front, its pane menu opens one in the pane picked, and
+/// closing the other documents of a pane leaves the one asked for.
+fn from_tree(root: PathBuf, a: TabId, d: TabId) {
+    let Some(controller) = window_of(&root) else { return };
+    let beside = controller.option_click_file(&root.join("c.rs"));
+    let missing = controller.option_click_file(&root.join("missing.rs"));
+    lay_out(&controller);
+    let c = tab_of(&controller, &root, "c.rs");
+    let own = c.and_then(|c| controller.pane_of(c));
+    check(
+        "an Option click on a file in the tree opens it in a pane of its own beside, on no row it does nothing",
+        beside
+            && !missing
+            && own.is_some()
+            && own != controller.pane_of(a)
+            && own != controller.pane_of(d)
+            && controller.pane_menu_state().map(|(panes, _, _)| panes) == Some(3),
+        format!("{beside} {missing} {}", controller.pane_shape()),
+    );
+    if let Some(number) = controller.pane_of(d) {
+        controller.choose_pane_for_file(&root.join("e.rs"), number);
+    }
+    let e = tab_of(&controller, &root, "e.rs");
+    let picked = e.and_then(|e| controller.pane_of(e));
+    controller.close_others_in_pane(d);
+    check(
+        "a file picked from the tree's pane menu opens in that pane, and closing the others of the pane closes it again",
+        picked.is_some() && picked == controller.pane_of(d) && tab_of(&controller, &root, "e.rs").is_none(),
+        format!("{picked:?} {}", controller.pane_shape()),
+    );
+    select(&controller, c);
+    controller.close_pane();
+    lay_out(&controller);
+    check(
+        "closing the opened pane leaves the two panes as they were, and a split without Option goes right",
+        controller.pane_shape().replace('!', "") == "H([a.rs, b.rs*] [d.rs])" && controller.split_side() == Side::Right,
+        controller.pane_shape(),
+    );
     behind(root, a);
 }
 
@@ -282,6 +383,12 @@ fn restored(root: PathBuf, shape: String, share: Option<f64>) {
         controller.window_tabs() == [vec!["a.rs".to_string()], vec!["b.rs".to_string()]]
             && controller.tab_bar_visible(),
         format!("{:?}, bar {}", controller.window_tabs(), controller.tab_bar_visible()),
+    );
+    let menu = controller.file_pane_menu();
+    check(
+        "without panes, Option-Shift on a file offers beside, below and a window tab of its own",
+        menu == [t("Daneben öffnen"), t("Darunter öffnen"), t("In neuem Tab öffnen")],
+        format!("{menu:?}"),
     );
     finish(SCENARIO);
 }

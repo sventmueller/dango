@@ -296,11 +296,210 @@ pub(super) fn export_name(thread: &ide_thread::Thread) -> String {
 
 #[cfg(test)]
 mod tests {
-    use ide_thread::{Thread, ThreadId};
+    use std::sync::mpsc::{Receiver, channel};
+    use std::time::Duration;
+
+    use ide_thread::{Thread, ThreadId, Update};
+    use serde_json::json;
+
+    use super::*;
+    use crate::dialogs::model::Transport;
+
+    /// A backend that offers nothing beyond what every backend must answer.
+    struct Nothing;
+
+    impl Backend for Nothing {
+        fn live(&self) -> bool {
+            true
+        }
+    }
+
+    /// `done` and where its answer arrives, reduced to the reason of a failure.
+    fn answered<T: 'static>() -> (Done<T>, Receiver<Option<String>>) {
+        let (tx, rx) = channel();
+        let done: Done<T> = Box::new(move |result| {
+            let _ = tx.send(result.err().map(|why| why.0));
+        });
+        (done, rx)
+    }
+
+    /// Whether `call` answers at once that the agent cannot do it.
+    fn refuses<T: 'static>(call: impl FnOnce(Done<T>)) -> bool {
+        let (done, rx) = answered();
+        call(done);
+        rx.try_recv() == Ok(Some(unavailable().0))
+    }
+
+    fn hook() -> Hook {
+        Hook {
+            event: "PreToolUse".into(),
+            matcher: "Bash".into(),
+            kind: "command".into(),
+            text: "true".into(),
+            place: "settings.json".into(),
+            source: "user".into(),
+            definition: None,
+        }
+    }
+
+    fn hook_draft() -> HookDraft {
+        HookDraft {
+            event: "PreToolUse".into(),
+            matcher: String::new(),
+            command: "true".into(),
+            timeout: None,
+            scope: Scope::User,
+        }
+    }
+
+    fn mcp_draft() -> McpDraft {
+        McpDraft {
+            name: "docs".into(),
+            transport: Transport::Stdio,
+            command: vec!["true".into()],
+            url: String::new(),
+            env: Vec::new(),
+            headers: Vec::new(),
+            scope: Scope::User,
+        }
+    }
+
+    fn skill() -> Skill {
+        Skill {
+            name: "review".into(),
+            shown: "review".into(),
+            description: String::new(),
+            source: "user".into(),
+            tokens: None,
+            enabled: true,
+            handles: json!({}),
+        }
+    }
+
+    fn rule() -> PermissionRule {
+        PermissionRule {
+            behavior: Behavior::Allow,
+            rule: "Bash(ls)".into(),
+            source: "user".into(),
+            place: "settings.json".into(),
+            wording: None,
+            editable: true,
+        }
+    }
+
+    #[test]
+    fn a_backend_that_offers_nothing_refuses_every_question_at_once() {
+        let b = Nothing;
+        assert!(refuses(|done| b.status(done)));
+        assert!(refuses(|done| b.export(done)));
+        assert!(refuses(|done| b.plugins(done)));
+        assert!(refuses(|done| b.plugin_install("p@m", Scope::User, false, None, done)));
+        assert!(refuses(|done| b.plugin_change(
+            "p@m",
+            Scope::User,
+            PluginChange::Disable,
+            done
+        )));
+        assert!(refuses(|done| b.market_change("m", MarketChange::Update, done)));
+        assert!(refuses(|done| b.account(done)));
+        assert!(refuses(|done| b.sign_out(done)));
+        assert!(refuses(|done| b.send_feedback(FeedbackKind::Bug, "t", "d", done)));
+        assert!(refuses(|done| b.set_setting("mode", "plan", done)));
+        assert!(refuses(|done| b.aside("why?", &[], done)));
+        assert!(refuses(|done| b.permissions(done)));
+        assert!(refuses(|done| b.rule_add(
+            "Bash(ls)",
+            Behavior::Ask,
+            Scope::Project,
+            done
+        )));
+        assert!(refuses(|done| b.rule_remove(&rule(), done)));
+        assert!(refuses(|done| b.hooks(done)));
+        assert!(refuses(|done| b.hook_add(hook_draft(), done)));
+        assert!(refuses(|done| b.hook_replace(&hook(), hook_draft(), done)));
+        assert!(refuses(|done| b.hook_remove(&hook(), done)));
+        assert!(refuses(|done| b.memory(done)));
+        assert!(refuses(|done| b.set_auto_memory(true, done)));
+        assert!(refuses(|done| b.settings(done)));
+        assert!(refuses(|done| b.set_style("default", done)));
+        assert!(refuses(|done| b.skills(done)));
+        assert!(refuses(|done| b.set_skill(&skill(), false, done)));
+    }
+
+    #[test]
+    fn a_backend_that_offers_nothing_refuses_every_server_change_at_once() {
+        let b = Nothing;
+        assert!(refuses(|done| b.mcp_servers(done)));
+        assert!(refuses(|done| b.mcp_toggle("docs", false, done)));
+        assert!(refuses(|done| b.mcp_reconnect("docs", done)));
+        assert!(refuses(|done| b.mcp_sign_in("docs", done)));
+        assert!(refuses(|done| b.mcp_sign_in_answer(
+            "docs",
+            "http://localhost/cb",
+            done
+        )));
+        assert!(refuses(|done| b.mcp_sign_out("docs", done)));
+        assert!(refuses(|done| b.mcp_add(mcp_draft(), done)));
+        assert!(refuses(|done| b.mcp_remove("docs", Scope::Local, done)));
+    }
+
+    #[test]
+    fn what_a_backend_leaves_out_is_greyed_with_the_reason() {
+        let b = Nothing;
+        let mcp = b.mcp_caps();
+        let blocked = [
+            mcp.live,
+            mcp.toggle,
+            mcp.reconnect,
+            mcp.sign_in,
+            mcp.add,
+            mcp.remove,
+            mcp.restart,
+        ];
+        assert!(blocked.iter().all(|why| *why == cannot() && why.is_some()));
+        assert!(mcp.transports.is_empty() && mcp.scopes.is_empty());
+        let permissions = b.permission_caps();
+        assert_eq!((permissions.add, permissions.remove), (cannot(), cannot()));
+        assert!(permissions.scopes.is_empty());
+        assert_eq!(b.hooks_blocked(), cannot());
+        assert_eq!(b.feedback_sends(), None);
+        assert!(!Unavailable.live());
+        assert_eq!(cannot(), Some(unavailable().0.as_str()));
+    }
+
+    #[test]
+    fn work_answers_from_the_work_lane_and_a_panic_answers_that_it_failed() {
+        let (tx, rx) = channel();
+        on_work(
+            || Ok(std::thread::current().name().map(str::to_string)),
+            Box::new(move |result| {
+                let _ = tx.send(result);
+            }),
+        );
+        let ran = rx.recv_timeout(Duration::from_secs(10)).expect("an answer");
+        assert!(ran.is_ok_and(|name| name.is_some_and(|n| n.starts_with("ide-work"))));
+
+        let (done, rx) = answered::<()>();
+        on_work(|| panic!("the work fails"), done);
+        let failed = rx.recv_timeout(Duration::from_secs(10)).expect("an answer");
+        assert_eq!(failed, Some(unavailable().0));
+
+        let (done, rx) = answered::<()>();
+        on_work(|| Err(Explained("no".into())), done);
+        assert_eq!(rx.recv_timeout(Duration::from_secs(10)), Ok(Some("no".into())));
+    }
 
     #[test]
     fn a_conversation_without_a_title_is_exported_under_a_plain_name() {
         let thread = Thread::new(ThreadId::from("t"), "agent", "/p");
         assert!(!super::export_name(&thread).starts_with('.'));
+        assert!(super::export_name(&thread).ends_with(".txt"));
+    }
+
+    #[test]
+    fn an_exported_conversation_is_named_after_its_title_without_what_a_file_name_cannot_hold() {
+        let mut thread = Thread::new(ThreadId::from("t"), "agent", "/p");
+        thread.apply(Update::Title("  ..fix a/b: now ".into()));
+        assert_eq!(super::export_name(&thread), "fix a-b- now.txt");
     }
 }

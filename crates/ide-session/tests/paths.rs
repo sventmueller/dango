@@ -8,8 +8,8 @@ use std::path::{Path, PathBuf};
 
 use ide_session::rule::UserRule;
 use ide_session::{
-    AgentPath, Contract, Launch, LaunchError, Order, Outcome, PathKind, Prompt, Registry, Role, SessionId, Signal,
-    StreamState, UserChoices, Verdict,
+    AgentPath, AnswerError, Contract, Launch, LaunchError, Order, Outcome, PathKind, Prompt, Registry, Role, SessionId,
+    Signal, StreamState, UserChoices, Verdict,
 };
 use ide_thread::{EntryKind, Lane};
 use serde_json::{Value, json};
@@ -199,11 +199,18 @@ fn opencode_reports_a_lost_completion_event_ends_the_users_turn_and_reads_the_se
     assert!(lost < caught_up, "{signals:?}");
     let driver = harness.registry.get(session).unwrap();
     assert_eq!(*driver.stream(), StreamState::Live);
+    assert!(
+        driver.opencode().is_some(),
+        "an OpenCode session offers what only OpenCode has"
+    );
+    assert!(driver.codex().is_none() && driver.acp().is_none() && driver.own().is_none());
     let answered =
         driver.thread().entries(&Lane::Main).iter().any(
             |e| matches!(&e.kind, EntryKind::AgentMessage(m) if m.markdown == ide_opencode::test_server::GAP_ANSWER),
         );
     assert!(answered);
+    let unknown = (harness.registry.get_mut(session).unwrap()).answer_option("no-such-request", Some(0));
+    assert!(matches!(unknown, Err(AnswerError::NoRequest(id)) if id == "no-such-request"));
     let failing = send(&mut harness, session, Prompt::new("fail now"));
     assert!(failed_with(
         &harness.end_of(watcher, failing).outcome,
@@ -351,6 +358,8 @@ fn the_own_agent_works_on_an_order_under_the_orders_policy_and_ends_its_turns_ty
     let contract = Contract::Order(order(&project, Some(scratch.join("build"))));
     let launch = Launch::new(AgentPath::Own(Box::new(config)), &project, Vec::new(), contract);
     let session = start(&mut harness, launch);
+    let driver = harness.registry.get(session).unwrap();
+    assert!(driver.own().is_some() && driver.opencode().is_none());
     let watcher = harness.follow(session);
     let first = send(&mut harness, session, Prompt::new("Build it"));
     assert_eq!(harness.end_of(watcher, first).outcome, Outcome::Succeeded);

@@ -184,4 +184,39 @@ mod tests {
         store.delete("a").unwrap();
         assert_eq!(store.get("a").unwrap(), None);
     }
+
+    #[test]
+    fn the_user_reads_the_systems_words_without_the_status_code() {
+        use ide_core::explain::Explain;
+        let error = SecretError {
+            status: -25293,
+            message: "denied".into(),
+        };
+        let words = error.explain();
+        assert!(words.contains("denied") && !words.contains("-25293"), "{words}");
+    }
+
+    #[test]
+    fn a_keychain_error_keeps_its_status_and_the_systems_message() {
+        let error = SecretError::from(security_framework::base::Error::from_code(NOT_FOUND));
+        assert_eq!(error.status, NOT_FOUND);
+        assert!(!error.message.is_empty());
+        assert!(error.to_string().starts_with("the keychain refused (-25300): "));
+    }
+
+    #[test]
+    fn a_store_that_is_not_ready_refuses_every_call_in_words() {
+        let store = NotReady;
+        let refused = NotReady::refused();
+        assert_eq!(store.get("a"), Err(refused.clone()));
+        assert_eq!(store.set("a", "1"), Err(refused.clone()));
+        assert_eq!(store.delete("a"), Err(refused.clone()));
+        assert!(refused.to_string().contains("not ready"));
+    }
+
+    #[test]
+    fn the_apps_keychain_is_named_like_its_data_folders() {
+        assert_eq!(Keychain::new("com.example.ide").service, "com.example.ide");
+        assert_eq!(Keychain::of_app().service, ide_core::paths::identity());
+    }
 }

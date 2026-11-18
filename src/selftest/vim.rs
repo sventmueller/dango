@@ -1,7 +1,8 @@
 //! The `editor-vim` scenario (B26): Editor ▸ Vim-Modus puts the editor in Normal mode with a block caret and the mode in
 //! the status bar; keys through the input context run motions and operators, `ciw…Esc` and `.` repeat, `u` undoes on
 //! the editor's history and an insert pass of several lines is one undo step; a Japanese input method types in Insert
-//! mode; `^` of a German keyboard goes to the line's first word; ⌃R redoes only in the editor with the focus, also with
+//! mode; `^` of a German keyboard goes to the line's first word; a Cyrillic letter is the US key at its place only
+//! on a keyboard that does not type ASCII; ⌃R redoes only in the editor with the focus, also with
 //! a second editor beside it; and an agent's change during an insert pass is an undo step of its own. Then the
 //! prompt and `:s` through the input context, the marked match, keys that wait for a character, insert in a Visual
 //! block, `gv`, `=`, a paste after a visual delete and undo, and `:q`, `:wq`, `:x` and `:q!` closing only their own
@@ -196,7 +197,26 @@ fn input_method(view: &EditorTextView) {
         caret == 2,
         format!("caret at {caret}"),
     );
+    cyrillic_key(view);
     control_keys(view);
+}
+
+/// A Cyrillic `о`, at the place of `j` on the US layout, moves down only where the keyboard does not type ASCII.
+fn cyrillic_key(view: &EditorTextView) {
+    let line_end = text(view).find('\n').unwrap_or_default();
+    let line_end = text(view)[..line_end].encode_utf16().count();
+    keys(view, "о");
+    let caret = view.selectedRange().location;
+    let latin = editor::vim_types_ascii();
+    check(
+        "a Cyrillic letter in Normal mode is the US key at its place only on a keyboard that does not type ASCII",
+        (caret > line_end) != latin && editor::vim_mode(view) == Some(ide_vim::Mode::Normal),
+        format!("caret at {caret}, first line ends at {line_end}, ASCII keyboard {latin}"),
+    );
+    keys(view, "<Esc>");
+    if caret > line_end {
+        keys(view, "k");
+    }
 }
 
 fn control_keys(view: &EditorTextView) {

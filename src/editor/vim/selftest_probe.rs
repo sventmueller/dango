@@ -26,3 +26,8 @@ pub(crate) fn carets(view: &EditorTextView) -> usize {
     let vim = view.ivars().vim.borrow().vim.as_ref().map_or(1, Vim::carets);
     vim + super::super::multi::extra(view).len()
 }
+
+/// Whether the keyboard layout in use types ASCII, which decides how Vim reads a character outside Insert mode.
+pub(crate) fn types_ascii() -> bool {
+    keyboard::types_ascii()
+}

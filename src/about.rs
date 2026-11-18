@@ -62,3 +62,38 @@ fn credits() -> Retained<NSMutableAttributedString> {
     }
     text
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The page the link at the UTF-16 index `at` of `text` leads to.
+    fn link_at(text: &NSMutableAttributedString, at: usize) -> Option<String> {
+        // SAFETY: A null effective range is allowed, and `at` lies inside the text.
+        let value =
+            unsafe { text.attribute_atIndex_effectiveRange(constant!(NSLinkAttributeName), at, std::ptr::null_mut()) }?;
+        let url = value.downcast_ref::<NSURL>()?;
+        url.absoluteString().map(|s| s.to_string())
+    }
+
+    #[test]
+    fn the_credits_name_the_repository_and_both_licenses_each_linked_to_its_page() {
+        let text = credits();
+        let shown = text.string().to_string();
+        assert_eq!(
+            shown,
+            format!("github.com/sventmueller/dango\n{}", t("Lizenz: MIT oder Apache 2.0"))
+        );
+        let at = |name: &str| shown[..shown.find(name).unwrap()].encode_utf16().count();
+        assert_eq!(link_at(&text, 0).as_deref(), Some(REPOSITORY));
+        assert_eq!(
+            link_at(&text, at("MIT") + 2).as_deref(),
+            Some("https://github.com/sventmueller/dango/blob/main/LICENSE-MIT")
+        );
+        assert_eq!(
+            link_at(&text, at("Apache 2.0") + "Apache 2.0".len() - 1).as_deref(),
+            Some("https://github.com/sventmueller/dango/blob/main/LICENSE-APACHE")
+        );
+        assert_eq!(link_at(&text, at("\n")), None);
+    }
+}

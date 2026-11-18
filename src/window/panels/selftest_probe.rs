@@ -35,7 +35,9 @@ impl Panels {
             if let Some(field) = view.downcast_ref::<NSTextField>() {
                 out.push(field.stringValue().to_string());
             } else if let Some(button) = view.downcast_ref::<objc2_app_kit::NSButton>() {
+                // Once drawn, a button holds a private NSButtonTextField with its title, which would count it twice.
                 out.push(button.title().to_string());
+                return;
             }
             for child in view.subviews().iter() {
                 texts(&child, out);

@@ -407,3 +407,8 @@ impl SpecDoc {
         });
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;

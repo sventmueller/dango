@@ -2,7 +2,7 @@
 //! the first. It also knows where the insets of E81 are, which the layout fragments draw, for their clicks, tooltips
 //! and pointer. Clicks pass through to the text, except on an inset that does something.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 use objc2::rc::{Retained, Weak};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send};
@@ -21,6 +21,8 @@ pub(crate) struct OverlayIvars {
     /// The insets its tooltip areas and pointer are for: where each is, in the overlay's coordinates, whether it has a
     /// tooltip and whether a click on it does something.
     offered: RefCell<Vec<(NSRect, bool, bool)>>,
+    /// The top left of the part on screen when it last drew.
+    drawn_at: Cell<Option<NSPoint>>,
 }
 
 define_class!(
@@ -86,6 +88,11 @@ define_class!(
         fn draw_rect(&self, dirty: NSRect) {
             guarded((), || self.draw(dirty));
         }
+
+        #[unsafe(method(ideDrawAgain))]
+        fn draw_again(&self) {
+            self.setNeedsDisplay(true);
+        }
     }
 );
 
@@ -96,6 +103,7 @@ pub(crate) fn attach(editor: &EditorTextView) {
     let this = Overlay::alloc(editor.mtm()).set_ivars(OverlayIvars {
         editor: Weak::from(editor),
         offered: RefCell::new(Vec::new()),
+        drawn_at: Cell::new(None),
     });
     // SAFETY: NSView's initializer, called once on the newly allocated object.
     let this: Retained<Overlay> = unsafe { msg_send![super(this), initWithFrame: editor.visibleRect()] };
@@ -154,6 +162,10 @@ impl Overlay {
         let Some(editor) = self.ivars().editor.load() else {
             return;
         };
+        let seen = editor.visibleRect().origin;
+        if self.ivars().drawn_at.replace(Some(seen)) != Some(seen) {
+            self.draw_again_soon();
+        }
         // What follows draws in the editor's coordinates, of which the overlay shows the part on screen.
         let origin = self.frame().origin;
         let shift = objc2_foundation::NSAffineTransform::transform();
@@ -165,6 +177,18 @@ impl Overlay {
         self.draw_carets(&editor);
         super::vim::draw_block(&editor);
         self.offer_tooltips(&editor);
+    }
+
+    /// Draws again on the next turn of the run loop. While the overlay draws over lines a scroll just brought on
+    /// screen, TextKit 2 answers their places with the bottom of what shows; it knows them once the text is drawn.
+    fn draw_again_soon(&self) {
+        use objc2_foundation::NSObjectNSDelayedPerforming;
+        let object: &objc2::runtime::NSObject = self;
+        // SAFETY: A selector without arguments that this class answers; the run loop retains the target until the call.
+        unsafe {
+            let modes = objc2_foundation::NSArray::from_slice(&[objc2_foundation::NSRunLoopCommonModes]);
+            object.performSelector_withObject_afterDelay_inModes(objc2::sel!(ideDrawAgain), None, 0.0, &modes);
+        }
     }
 
     /// Gives every inset with a tooltip a tooltip area, which the overlay answers from the inset under the mouse; only

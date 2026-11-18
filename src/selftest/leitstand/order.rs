@@ -2,11 +2,14 @@
 //! its own with the scripted session in place of an agent and a gate command that passes (`true`). Only Claude counts
 //! as ready, so the order runs in stage 1: the specification is skipped, the builder writes a file in the order's
 //! worktree, the factory commits it, the path scope, the secrets scan and the gate pass, the reviewer agent is skipped,
-//! and the evidence waits for acceptance. At acceptance the order's tab offers the report the path scope names and a
-//! terminal in the worktree beside its next step, and both open; G2 takes it over into the base branch of the working
-//! copy, the worktree goes and the report is kept in the project folder. The done order stays in the panel until it
-//! is deleted, which removes its log and its kept report. The order holds the wake lock while it runs and lets it go while it waits; no notification reaches the user
-//! and no activity keeps the Mac awake.
+//! and the evidence waits for acceptance. The order comes in through "Ablage ▸ Neuer Auftrag …" and the sheet. At
+//! acceptance the order's tab offers the report the path scope names and a terminal in the worktree beside its next
+//! step, and both open; G2 from the tab takes it over into the base branch of the working copy, the worktree goes and
+//! the report is kept in the project folder. The done order stays in the panel until "Auftrag löschen …" deletes it,
+//! which removes its log and its kept report. The order holds the wake lock while it runs and lets it go while it
+//! waits; no notification reaches the user and no activity keeps the Mac awake.
+
+mod acceptance;
 
 use std::cell::Cell;
 use std::collections::BTreeMap;
@@ -14,21 +17,27 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::Duration;
 
-use ide_factory::options::NewOrder;
 use ide_factory::routing::{Agent, AgentStatus};
 use ide_factory::{Condition, OrderId, Station, WaitReason};
 use ide_git::CommitOptions;
 use ide_session::{End, Script, ScriptTurn, Step};
 use ide_ui_factory::model::detail::Command as OrderCommand;
+use ide_ui_factory::selftest::{SheetControl, SheetTyped};
+use objc2::sel;
+use objc2_app_kit::NSAlertFirstButtonReturn;
 
 use super::super::git::{append, fixture_git};
-use super::super::helpers::{self, wait_within};
+use super::super::helpers::{self, wait_for_within, wait_within};
 use super::super::{check, finish, give_up, give_up_saying, snapshot};
+use super::drive;
 use crate::leitstand::Command;
 use crate::util::main_soon;
+use crate::window::WindowController;
 
 const SCENARIO: &str = "leitstand-order";
 const PROJECT: &str = "leitstand-order-project";
+/// The order's title, which the sheet takes and its alerts name.
+const TITLE: &str = "Gruß schreiben";
 /// The file the scripted builder writes.
 const WRITTEN: &str = "hello.txt";
 const CONTENT: &str = "hello\n";
@@ -129,7 +138,79 @@ fn confirm(root: PathBuf) {
             if !confirmed {
                 return give_up(SCENARIO, "the gate command is confirmed");
             }
-            start(root);
+            new_order(root);
+        },
+    );
+}
+
+/// Opens "Ablage ▸ Neuer Auftrag …" as the user does and waits for the sheet.
+fn new_order(root: PathBuf) {
+    let Some(controller) = helpers::window_of(&root) else {
+        return give_up(SCENARIO, "the folder has a window");
+    };
+    let Some(item) = drive::menu_item(sel!(ideFactoryMenuNewOrder:), None) else {
+        return give_up(SCENARIO, "the File menu has \"Neuer Auftrag …\"");
+    };
+    check(
+        "\"Neuer Auftrag …\" in the File menu is enabled for a folder with a Leitstand",
+        drive::enabled(&item),
+        item.title().to_string(),
+    );
+    drive::choose(&item);
+    let probe = controller.clone();
+    wait_within(
+        SHORT,
+        move || ide_ui_factory::selftest::order_sheet(probe.handle()).is_some(),
+        move |open| {
+            if !open {
+                return give_up(SCENARIO, "\"Neuer Auftrag …\" opens the sheet");
+            }
+            start(root, &controller);
+        },
+    );
+}
+
+/// The only order of the folder, once the factory took it in.
+fn the_order(root: &Path) -> Option<OrderId> {
+    let panel = crate::context::app().leitstand().panel(root)?;
+    let mut ids = (panel.groups().iter()).flat_map(|(_, rows)| rows.iter().map(|row| row.id().clone()));
+    ids.next()
+}
+
+/// Types the order into the sheet and presses "Starten"; the sheet closes and the order comes in.
+fn start(root: PathBuf, controller: &WindowController) {
+    let notices = ide_ui_common::notify::posted();
+    let window = controller.handle();
+    let typed = SheetTyped {
+        title: TITLE.into(),
+        goal: "Write a greeting into hello.txt.".into(),
+        criteria: "- hello.txt says hello\n".into(),
+        scope: format!("{WRITTEN}, {REPORT}"),
+        budget: String::new(),
+    };
+    let filled = ide_ui_factory::selftest::type_into_order_sheet(window, &typed);
+    let seen = ide_ui_factory::selftest::order_sheet(window);
+    check(
+        "the sheet takes the typed order and can start it",
+        filled && seen.as_ref().is_some_and(|s| s.start && s.title == TITLE),
+        format!("{seen:?}"),
+    );
+    if !ide_ui_factory::selftest::press_order_sheet(window, SheetControl::Start) {
+        return give_up(SCENARIO, "the sheet has \"Starten\"");
+    }
+    let probe = root.clone();
+    wait_for_within(
+        SHORT,
+        move || the_order(&probe),
+        move |id| {
+            let Some(id) = id else {
+                return give_up(SCENARIO, "\"Starten\" brings the order in");
+            };
+            let closed = helpers::window_of(&root)
+                .and_then(|c| c.window())
+                .is_some_and(|w| w.attachedSheet().is_none());
+            check("\"Starten\" closes the sheet", closed, "");
+            run_to_acceptance(root, id, notices);
         },
     );
 }
@@ -150,20 +231,8 @@ fn state(root: &Path, id: &OrderId) -> String {
         .unwrap_or_else(|| "no such order".into())
 }
 
-/// Starts the order from the sheet's fields and waits until its evidence waits for acceptance.
-fn start(root: PathBuf) {
-    let cx = crate::context::app();
-    let notices = ide_ui_common::notify::posted();
-    let order = NewOrder {
-        title: "Gruß schreiben".into(),
-        goal: "Write a greeting into hello.txt.".into(),
-        criteria: "- hello.txt says hello\n".into(),
-        scope: vec![WRITTEN.into(), REPORT.into()],
-        ..NewOrder::default()
-    };
-    let Some(id) = cx.leitstand().command(&cx, &root, Command::New(order)) else {
-        return give_up(SCENARIO, "the order comes in");
-    };
+/// Waits until the order's evidence waits for acceptance.
+fn run_to_acceptance(root: PathBuf, id: OrderId, notices: usize) {
     let (probe, waited) = ((root.clone(), id.clone()), id.clone());
     let held = Rc::new(Cell::new(false));
     let seen_held = Rc::clone(&held);
@@ -253,15 +322,16 @@ fn at_acceptance(root: &Path, id: &OrderId, notices: usize) {
         format!("{:?}", seen.evidence),
     );
     quiet(notices);
-    let Some((fingerprint, _)) = seen.evidence else {
+    if seen.evidence.is_none() {
         return give_up(SCENARIO, "the order has evidence to accept");
-    };
-    acceptance_tab(root.to_path_buf(), id.clone(), fingerprint);
+    }
+    acceptance_tab(root.to_path_buf(), id.clone());
 }
 
-/// The order's tab at acceptance offers "Bericht öffnen" and "Im Terminal öffnen" in its bar; the report opens in an
-/// editor and the terminal in the worktree.
-fn acceptance_tab(root: PathBuf, id: OrderId, fingerprint: String) {
+/// The order's tab at acceptance offers "Bericht öffnen" and "Im Terminal öffnen" in its bar; the panel's row, the
+/// menu "Ablage ▸ Auftrag" and "Zurück an den Builder …" act on the order (`acceptance`), the report opens in an
+/// editor from the menu and the terminal in the worktree from the tab.
+fn acceptance_tab(root: PathBuf, id: OrderId) {
     let Some(controller) = helpers::window_of(&root) else {
         return give_up(SCENARIO, "the folder has a window");
     };
@@ -292,25 +362,19 @@ fn acceptance_tab(root: PathBuf, id: OrderId, fingerprint: String) {
                 window.displayIfNeeded();
                 snapshot(&window, "leitstand-order-acceptance");
             }
-            open_both(&root, &id, &controller);
-            accept(root, id, fingerprint);
+            let Some(tree) = crate::context::app().leitstand().worktree(&root, &id) else {
+                return give_up(SCENARIO, "the order has a worktree at acceptance");
+            };
+            acceptance::row(&controller);
+            acceptance::menus(&controller, &id, &tree);
+            open_terminal(&tree, &id, &controller);
+            acceptance::back_to_builder(root, id, accept);
         },
     );
 }
 
-fn open_both(root: &Path, id: &OrderId, controller: &crate::window::WindowController) {
-    let cx = crate::context::app();
-    let Some(tree) = cx.leitstand().worktree(root, id) else {
-        return give_up(SCENARIO, "the order has a worktree at acceptance");
-    };
+fn open_terminal(tree: &Path, id: &OrderId, controller: &crate::window::WindowController) {
     let (window, ui) = (controller.handle(), controller.context().factory_ui());
-    let report = tree.join(REPORT);
-    let pressed = ide_ui_factory::selftest::press_order(window, ui, id, OrderCommand::OpenReport);
-    check(
-        "\"Bericht öffnen\" opens the report the order wrote in an editor",
-        pressed && controller.tab_with_key(&report.to_string_lossy()).is_some(),
-        format!("pressed: {pressed}, {}", report.display()),
-    );
     let pressed = ide_ui_factory::selftest::press_order(window, ui, id, OrderCommand::OpenTerminal);
     let opened = crate::terminal::inspect::latest().map(|(_, view)| view.cwd());
     let same = |path: &Path| path.canonicalize().ok();
@@ -320,7 +384,7 @@ fn open_both(root: &Path, id: &OrderId, controller: &crate::window::WindowContro
             && opened
                 .as_deref()
                 .and_then(same)
-                .is_some_and(|cwd| Some(cwd) == same(&tree)),
+                .is_some_and(|cwd| Some(cwd) == same(tree)),
         format!("pressed: {pressed}, {opened:?} for {}", tree.display()),
     );
 }
@@ -341,15 +405,16 @@ fn quiet(notices: usize) {
     );
 }
 
-/// G2: accepts the evidence whole and waits until the order is taken over and its worktree is gone.
-fn accept(root: PathBuf, id: OrderId, fingerprint: String) {
-    let cx = crate::context::app();
-    let command = Command::Accept {
-        order: id.clone(),
-        fingerprint,
-        rejected: Vec::new(),
-    };
-    cx.leitstand().command(&cx, &root, command);
+/// G2 from the order's tab: accepts the evidence whole and waits until the order is taken over and its worktree is
+/// gone.
+fn accept(root: PathBuf, id: OrderId) {
+    let pressed = helpers::window_of(&root).is_some_and(|controller| {
+        let (window, ui) = (controller.handle(), controller.context().factory_ui());
+        ide_ui_factory::selftest::press_order(window, ui, &id, OrderCommand::Accept)
+    });
+    if !pressed {
+        return give_up(SCENARIO, "the order's tab gives G2");
+    }
     let probe = (root.clone(), id.clone());
     wait_within(
         STATIONS,
@@ -387,14 +452,21 @@ fn taken_over(root: &Path, id: &OrderId) {
         cx.leitstand().worktree(root, id).is_none() && on_disk.is_empty(),
         format!("{:?}, on disk {on_disk:?}", cx.leitstand().worktree(root, id)),
     );
-    let lock = cx.leitstand().wake_lock();
-    check(
-        "the wake lock stays let go once the order is done",
-        !lock.requested && !lock.activity,
-        format!("{lock:?}"),
-    );
-    kept_and_listed(root, id);
-    delete(root.to_path_buf(), id.clone());
+    // The factory lets the lock go with the effect of the step after the take-over.
+    let let_go = || {
+        let lock = crate::context::app().leitstand().wake_lock();
+        !lock.requested && !lock.activity
+    };
+    let (root, id) = (root.to_path_buf(), id.clone());
+    wait_within(Duration::from_secs(5), let_go, move |released| {
+        check(
+            "the wake lock stays let go once the order is done",
+            released,
+            format!("{:?}", crate::context::app().leitstand().wake_lock()),
+        );
+        kept_and_listed(&root, &id);
+        delete(root, id);
+    });
 }
 
 /// The done order keeps its report in the project folder, which git ignores, and stays in the panel's group "Erledigt".
@@ -430,10 +502,33 @@ fn kept_and_listed(root: &Path, id: &OrderId) {
     );
 }
 
-/// Deleting the done order takes it out of the factory and removes its log and its kept report.
+/// "Auftrag löschen …" in the done order's tab asks first, naming the order; its first button deletes it.
 fn delete(root: PathBuf, id: OrderId) {
-    let cx = crate::context::app();
-    cx.leitstand().command(&cx, &root, Command::Delete(id.clone()));
+    let pressed = helpers::window_of(&root).is_some_and(|controller| {
+        let (window, ui) = (controller.handle(), controller.context().factory_ui());
+        ide_ui_factory::selftest::press_order(window, ui, &id, OrderCommand::Delete)
+    });
+    if !pressed {
+        return give_up(SCENARIO, "the done order's tab is open");
+    }
+    drive::when_alert(root, move |root, shown| {
+        let texts = drive::alert_texts(&root);
+        check(
+            "\"Auftrag löschen …\" asks first, naming the order",
+            shown && texts.iter().any(|text| text.contains(TITLE)),
+            format!("{texts:?}"),
+        );
+        drive::answer(root, NSAlertFirstButtonReturn, move |root, answered| {
+            if !answered {
+                return give_up(SCENARIO, "the alert \"Auftrag löschen …\" takes its answer");
+            }
+            deleted(root, id);
+        });
+    });
+}
+
+/// Deleting the done order takes it out of the factory and removes its log and its kept report.
+fn deleted(root: PathBuf, id: OrderId) {
     let log = ide_core::paths::data_dir()
         .join("leitstand")
         .join(ide_core::paths::project_key(&root))

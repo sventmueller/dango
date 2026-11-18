@@ -1,8 +1,8 @@
 //! The `opencode` scenario (E147): the OpenCode choice starts the server of `ide_opencode::test_server` (this
 //! program, started with `IDE_OPENCODE_TEST_SERVER`) instead of `opencode acp`, every request with the password of
 //! that start. Its agents and models fill the composer's menus, a turn asks for a command, which the user allows
-//! once, and runs to its end; the overlays OpenCode offers are in the `/` menu, and `/status` says the route. No
-//! OpenCode on the Mac ever starts.
+//! once, and runs to its end; the overlays OpenCode offers are in the `/` menu, `/status` says the route and the
+//! others reach OpenCode (`backend_dialogs`). No OpenCode on the Mac ever starts.
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -22,7 +22,7 @@ const OPENCODE: usize = 3;
 /// A moment for the timeline to lay out the card it scrolled to.
 const SCROLL_SETTLE: Duration = Duration::from_millis(300);
 
-fn log() -> PathBuf {
+pub(super) fn log() -> PathBuf {
     ide_core::paths::home().join("opencode-test-log")
 }
 
@@ -174,7 +174,8 @@ fn status(key: AgentKey) {
             if let Some(tab) = tab_of(key) {
                 tab.dismiss_dialog();
             }
-            question(key);
+            let walk = super::backend_dialogs::Walk { name: NAME, key, log };
+            super::backend_dialogs::opencode(walk, move || question(key));
         },
     );
 }

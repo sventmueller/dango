@@ -1,7 +1,8 @@
 //! The `agent-dialogs` scenario (E146): the overlays of a Claude tab against the stand-in of `agent_stand_in`. A
 //! command typed alone opens its overlay instead of going to the CLI and the `/` menu offers it; the overlay fills
 //! from the CLI's answer, Esc closes it and gives the focus back to the composer; Copy takes the exported
-//! conversation; a request the CLI refuses offers the terminal; and two tabs each keep their own overlay.
+//! conversation and Save writes it; a request the CLI refuses offers the terminal; and two tabs each keep their own
+//! overlay.
 
 use std::path::PathBuf;
 
@@ -160,7 +161,30 @@ fn export_overlay(root: PathBuf, key: AgentKey) {
                 pressed && copied.as_deref() == Some(EXPORTED),
                 format!("{copied:?}"),
             );
-            tab.dismiss_dialog();
+            export_save(root, key);
+        },
+    );
+}
+
+/// Save writes all of the conversation under the name the agent suggests; in a self-test it goes to `exported` of the
+/// self-test's home instead of asking in a save panel.
+fn export_save(root: PathBuf, key: AgentKey) {
+    let file = ide_core::paths::home().join("exported").join("conversation.txt");
+    let _ = std::fs::remove_file(&file);
+    let pressed = tab_of(key).is_some_and(|tab| tab.press_dialog_button("Sichern …"));
+    let probe = file.clone();
+    helpers::wait_until(
+        move || probe.is_file(),
+        move |written| {
+            let text = std::fs::read_to_string(&file).ok();
+            check(
+                "/export's Save writes all of the conversation under the name the agent suggests",
+                pressed && written && text.as_deref() == Some(EXPORTED),
+                format!("pressed {pressed}, written {written}: {text:?}"),
+            );
+            if let Some(tab) = tab_of(key) {
+                tab.dismiss_dialog();
+            }
             mcp_overlay(root, key);
         },
     );

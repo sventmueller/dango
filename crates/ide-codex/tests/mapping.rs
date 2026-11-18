@@ -190,3 +190,36 @@ fn every_line_of_the_fixtures_is_a_notification_the_schema_names() {
         }
     }
 }
+
+#[test]
+fn the_initialize_parameters_name_only_what_the_schema_defines() {
+    let schema: Value = serde_json::from_str(
+        &std::fs::read_to_string(format!(
+            "{}/tests/fixtures/schema/InitializeParams.json",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .unwrap(),
+    )
+    .unwrap();
+    let params = ide_codex::initialize_params();
+    let keys = |value: &Value| value.as_object().unwrap().keys().cloned().collect::<Vec<_>>();
+    let known = |definition: &Value, key: &str| definition["properties"].get(key).is_some();
+    for key in keys(&params) {
+        assert!(known(&schema, &key), "initialize: {key}");
+    }
+    let client = &schema["definitions"]["ClientInfo"];
+    for key in keys(&params["clientInfo"]) {
+        assert!(known(client, &key), "clientInfo: {key}");
+    }
+    for required in client["required"].as_array().unwrap() {
+        assert!(
+            params["clientInfo"][required.as_str().unwrap()].is_string(),
+            "clientInfo needs {required}"
+        );
+    }
+    let capabilities = &schema["definitions"]["InitializeCapabilities"];
+    for key in keys(&params["capabilities"]) {
+        assert!(known(capabilities, &key), "capabilities: {key}");
+    }
+    assert_eq!(params["capabilities"]["experimentalApi"], false);
+}

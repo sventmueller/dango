@@ -358,3 +358,12 @@ impl ide_ui_factory::Host for Orders {
         Ok(())
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub(crate) use selftest_probe::*;
+
+#[cfg(test)]
+#[path = "leitstand_ui_tests.rs"]
+mod tests;

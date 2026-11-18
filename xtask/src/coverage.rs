@@ -23,7 +23,7 @@ const FILE_GOAL: f64 = 50.0;
 /// The line coverage, in percent to one decimal, that `cargo test` alone reaches in the app crate's `src/` outside its
 /// self-test, whose logic otherwise only the window self-tests run. A ratchet held like the others: `--check` fails
 /// below it and names the value to raise it to above it.
-const APP_UNIT_FLOOR: f64 = 8.4;
+const APP_UNIT_FLOOR: f64 = 12.7;
 
 /// Where the profiles of `cargo test` wait while the self-test alone is reported.
 const UNIT_PROFILES: &str = "unit-profiles";
@@ -449,15 +449,24 @@ fn is_not_counted(name: &str) -> bool {
 const UNMEASURABLE: &[&str] = &["src/decoder_main.rs"];
 
 /// Code that exists only to test the rest, at `file` from the workspace root: the window self-test scenarios and their
-/// hooks, and the ACP test agent with its recorder. xtask's self-test runner is tooling and counts.
+/// hooks, the ACP test agent with its recorder, and the stand-ins of the Codex and OpenCode servers. xtask's
+/// self-test runner is tooling and counts.
 fn is_test_only(file: &str) -> bool {
     file == "src/selftest.rs"
         || file.starts_with("src/selftest/")
         || (file.ends_with("/selftest.rs") && !file.starts_with("xtask/"))
         || file.contains("/selftest/")
+        || file.ends_with("/selftest_probe.rs")
+        || file.contains("/selftest_probe/")
         || file == "crates/ide-ui-terminal/src/inspect.rs"
         || file == "crates/ide-acp/src/test_agent.rs"
         || file.starts_with("crates/ide-acp/src/bin/")
+        || file == "crates/ide-codex/src/test_server.rs"
+        || file == "crates/ide-opencode/src/test_server.rs"
+        || file.starts_with("crates/ide-opencode/src/test_server/")
+        || ["ide-codex", "ide-opencode", "ide-session"]
+            .iter()
+            .any(|c| file.starts_with(&format!("crates/{c}/src/bin/")))
 }
 
 /// Every source file the instrumented build compiled, from the dep-info files cargo writes beside each artifact in
@@ -848,15 +857,21 @@ mod tests {
     }
 
     #[test]
-    fn self_test_code_and_the_acp_test_agent_are_not_counted() {
+    fn self_test_code_and_the_agents_stand_ins_are_not_counted() {
         for file in [
             "src/selftest.rs",
             "src/selftest/git/stash.rs",
             "src/debug/selftest.rs",
             "crates/ide-ui-dictation/src/hub/selftest.rs",
+            "crates/ide-ui-lsp/src/install/selftest_probe.rs",
+            "crates/ide-ui-lsp/src/selftest_probe/probe.rs",
             "crates/ide-ui-terminal/src/inspect.rs",
             "crates/ide-acp/src/test_agent.rs",
             "crates/ide-acp/src/bin/acp-record.rs",
+            "crates/ide-codex/src/test_server.rs",
+            "crates/ide-codex/src/bin/codex-test-server.rs",
+            "crates/ide-opencode/src/test_server/wire.rs",
+            "crates/ide-session/src/bin/session-stand-in.rs",
         ] {
             assert!(is_test_only(file), "{file}");
         }
@@ -864,6 +879,8 @@ mod tests {
             "xtask/src/selftest.rs",
             "src/debug/session.rs",
             "crates/ide-acp/src/session.rs",
+            "crates/ide-codex/src/session.rs",
+            "crates/ide-opencode/src/launch.rs",
         ] {
             assert!(!is_test_only(file), "{file}");
         }

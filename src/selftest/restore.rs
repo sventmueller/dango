@@ -139,7 +139,40 @@ fn quit(a: &Path, b: &Path) {
     if let Ok(json) = serde_json::to_string(&before) {
         let _ = std::fs::write(record(), json);
     }
-    finish(SCENARIO);
+    let folders = [a.to_path_buf(), b.to_path_buf()];
+    wait_until(
+        move || recorded_both(&folders),
+        move |recorded| {
+            check(
+                "the record of open windows holds both folders, the first with all its documents",
+                recorded,
+                format!("{:?}", crate::session::recorded()),
+            );
+            finish(SCENARIO);
+        },
+    );
+}
+
+/// Whether the record of open windows holds a window of each of `folders`, the first with both its documents; only
+/// the welcome tab and editors are recorded, the rest comes back through its own state.
+fn recorded_both(folders: &[PathBuf; 2]) -> bool {
+    let records = crate::session::recorded();
+    let canonical = |path: &Path| path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    let of = |folder: &Path| {
+        let folder = canonical(folder);
+        records
+            .iter()
+            .find(|r| r.project.as_deref().is_some_and(|p| canonical(p) == folder))
+    };
+    let documents = ["main.rs", "notes.md"].map(|name| canonical(&folders[0].join(name)));
+    let holds_documents = of(&folders[0]).is_some_and(|r| {
+        documents.iter().all(|document| {
+            r.tabs.iter().any(|tab| {
+                matches!(tab, crate::session::TabRecord::Editor { path: Some(path), .. } if canonical(path) == *document)
+            })
+        })
+    });
+    holds_documents && of(&folders[1]).is_some()
 }
 
 /// Whether both windows came back with their tabs and the second its sidebar folded, as the record says.

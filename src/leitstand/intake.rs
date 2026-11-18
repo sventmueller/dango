@@ -328,3 +328,6 @@ fn intake_tick(back: &Back) {
         crate::util::main_after(EVERY, move || intake_tick(&back));
     }
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

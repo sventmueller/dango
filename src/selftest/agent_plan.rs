@@ -369,8 +369,14 @@ fn closed(root: PathBuf, key: AgentKey, id: u64, (requests, first, then): Next) 
     if let Some(doc) = doc {
         controller.close_tab(doc);
     }
-    if let Some(tab) = tab_of(requests) {
-        tab.select();
-    }
-    then(root, requests, first);
+    let window = controller.window();
+    super::agent_spec::run(move || {
+        if let Some(window) = window {
+            window.makeKeyAndOrderFront(None);
+        }
+        if let Some(tab) = tab_of(requests) {
+            tab.select();
+        }
+        then(root, requests, first);
+    });
 }

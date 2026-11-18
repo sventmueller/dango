@@ -58,16 +58,7 @@ fn show(tab: &AgentTab, open: &Open, exported: Exported) {
 
 /// Asks where to save the conversation, then writes it there on the disk lane.
 fn save_as(tab: &AgentTab, exported: &Exported) {
-    let panel = NSSavePanel::savePanel(tab.mtm);
-    panel.setNameFieldStringValue(&ns(&exported.file_name));
-    if panel.runModal() != objc2_app_kit::NSModalResponseOK {
-        return;
-    }
-    let Some(path) = panel
-        .URL()
-        .and_then(|url| url.path())
-        .map(|p| std::path::PathBuf::from(p.to_string()))
-    else {
+    let Some(path) = save_path(tab, &exported.file_name) else {
         return;
     };
     let text = exported.text.clone();
@@ -88,3 +79,23 @@ fn save_as(tab: &AgentTab, exported: &Exported) {
         },
     );
 }
+
+/// Where the user saves the conversation, offered under `file_name`; none when the save panel is cancelled.
+fn save_path(tab: &AgentTab, file_name: &str) -> Option<std::path::PathBuf> {
+    #[cfg(feature = "selftest")]
+    if std::env::var_os("IDE_SELFTEST").is_some() {
+        return Some(selftest_probe::save_path(file_name));
+    }
+    let panel = NSSavePanel::savePanel(tab.mtm);
+    panel.setNameFieldStringValue(&ns(file_name));
+    if panel.runModal() != objc2_app_kit::NSModalResponseOK {
+        return None;
+    }
+    panel
+        .URL()
+        .and_then(|url| url.path())
+        .map(|p| std::path::PathBuf::from(p.to_string()))
+}
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

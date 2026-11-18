@@ -21,7 +21,8 @@ fn folder(scenario: &str, appearance: &str) -> PathBuf {
     root().join("tests/snapshots").join(scenario).join(appearance)
 }
 
-/// The appearance the report in `reports` of `scenario` names, `light` or `dark`.
+/// The appearance the report in `reports` of `scenario` names, `light` or `dark`, with `-dictation` from a build with
+/// dictation.
 fn appearance(scenario: &str, reports: &Path) -> Result<String, String> {
     let written = std::fs::read(reports.join(format!("{scenario}.json"))).ok();
     let report = parse_report(scenario, written.as_deref())?;

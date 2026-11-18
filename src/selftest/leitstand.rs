@@ -1,13 +1,17 @@
 //! The `leitstand` scenario (E175): a folder without orders shows the Leitstand panel's empty state under ⌘9, its
 //! symbol named only "Leitstand" since no order waits (E69); the Leitstand tab opens with every station of the strip
-//! at zero, the table's six columns and its empty note; window pictures of both and the accessibility audit. Its
-//! children are the scenarios that run orders.
+//! at zero, the table's six columns and its empty note; window pictures of both and the accessibility audit; then the
+//! sheet "Neuer Auftrag", empty, typed into and from an issue (`new_order`). Its children are the scenarios that run
+//! orders.
 
 pub(super) mod attach;
+mod drive;
 mod folder;
 pub(super) mod gaps;
 pub(super) mod hunks;
+pub(super) mod intake;
 pub(super) mod metrics;
+mod new_order;
 pub(super) mod order;
 pub(super) mod pause;
 pub(super) mod queue;
@@ -16,7 +20,7 @@ pub(super) mod setup;
 use objc2::rc::Retained;
 
 use super::helpers::{self, wait_until};
-use super::{check, finish, give_up, snapshot};
+use super::{check, give_up, snapshot};
 use crate::window::{Panel, WindowController};
 
 const SCENARIO: &str = "leitstand";
@@ -100,5 +104,5 @@ fn empty_tab(controller: &Retained<WindowController>) {
             .collect::<Vec<_>>()
             .join("; "),
     );
-    finish(SCENARIO);
+    new_order::run(controller);
 }

@@ -17,6 +17,7 @@ pub(crate) use super::super::minimap::{click as click_minimap, probe as minimap}
 pub(crate) use super::super::sticky::{click as click_sticky, height as sticky_height, shown as sticky_shown};
 pub(crate) use super::super::vim::{
     carets as vim_carets, marked as vim_marked, mode as vim_mode, shown as vim_shown, toggle as toggle_vim,
+    types_ascii as vim_types_ascii,
 };
 
 /// The logical lines `view` shows, the first to the last on screen, for the self-test.

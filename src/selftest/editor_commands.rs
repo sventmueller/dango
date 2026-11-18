@@ -126,6 +126,7 @@ fn pairs() {
     let Some(view) = open("pairs.rs") else {
         return give_up(SCENARIO, "pairs.rs opens in an editor");
     };
+    hears_the_mouse(&view);
     type_at(&view, NSRange::new(0, 0), "(");
     check(
         "a bracket typed in front of a word stays single",
@@ -160,6 +161,29 @@ fn pairs() {
         format!("{wrapped:?}"),
     );
     next(returns);
+}
+
+/// The editor hears the mouse move over its text for hover texts, through one tracking area however often AppKit
+/// asks it to update them.
+fn hears_the_mouse(view: &EditorTextView) {
+    let ours = || {
+        view.trackingAreas()
+            .iter()
+            .filter(|area| {
+                area.options()
+                    .contains(objc2_app_kit::NSTrackingAreaOptions::MouseMoved)
+                    && area.owner().is_some_and(|owner| std::ptr::eq(&*owner, view.as_ref()))
+            })
+            .count()
+    };
+    view.updateTrackingAreas();
+    let first = ours();
+    view.updateTrackingAreas();
+    check(
+        "the editor hears the mouse move through one tracking area of its own, also after an update",
+        first == 1 && ours() == 1,
+        format!("{first}, {}", ours()),
+    );
 }
 
 /// Return between brackets and after a colon, and Tab over several lines.

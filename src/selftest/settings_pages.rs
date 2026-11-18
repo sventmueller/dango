@@ -23,6 +23,7 @@ use objc2_app_kit::{
 };
 use serde_json::json;
 
+use super::agent_stand_in::StandIn;
 use super::helpers::{self, answer_alert, answer_alert_saying, wait_until, when_alert_shows};
 use super::{check, finish, give_up};
 use crate::editor::predict::model::{self as predict, Choice, Local};
@@ -657,13 +658,40 @@ fn stored_rule(f: Fixture) {
     if let (Some(table), Some(row)) = (&table, row) {
         table.selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(row), false);
     }
+    if !old_claude(&f) {
+        return give_up(NAME, "the stand-in for an old claude is written");
+    }
     let removed = row.is_some() && press(sel!(ideRemoveStoredRule:));
-    let file = std::fs::read_to_string(f.elsewhere.join(".claude/settings.local.json")).unwrap_or_default();
-    check(
-        "a folder whose rules Claude stored is listed without a window, and \"−\" takes its rule out",
-        removed && !file.contains(RULE_ELSEWHERE),
-        format!("{place}: {cells:?}"),
+    let path = f.elsewhere.join(".claude/settings.local.json");
+    let read = move || std::fs::read_to_string(&path).unwrap_or_default();
+    let gone = read.clone();
+    wait_until(
+        move || !gone().contains(RULE_ELSEWHERE),
+        move |_| {
+            check(
+                "a folder whose rules Claude stored is listed without a window, and \"−\" takes its rule out",
+                removed && !read().contains(RULE_ELSEWHERE),
+                format!("{place}: {cells:?}"),
+            );
+            own_agent_tab(f);
+        },
     );
+}
+
+/// Stands in for a `claude` too old for its rule writer, so the app takes the rule out itself and no real CLI starts.
+fn old_claude(f: &Fixture) -> bool {
+    let Ok(stand_in) = StandIn::new(&ide_core::paths::home().join("settings-claude-stand-in"), &f.elsewhere) else {
+        return false;
+    };
+    let written = [
+        stand_in.write("sub-edit-permission-rules.out.err", "error: unknown option '--json'\n"),
+        stand_in.write("sub-edit-permission-rules.out.code", "1"),
+    ];
+    ide_ui_agent::set_test_claude(stand_in.program());
+    written.iter().all(Result::is_ok)
+}
+
+fn own_agent_tab(f: Fixture) {
     let led = press(sel!(ideAgentsOwnSettings:));
     check(
         "the Agents tab leads to the own agent's tab",

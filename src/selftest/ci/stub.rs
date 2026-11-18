@@ -38,6 +38,21 @@ struct Inner {
     run_reads: usize,
     cancelled: bool,
     device_polls: usize,
+    /// Answers a scenario set, which come before the service's own.
+    canned: Vec<Canned>,
+}
+
+/// A status, body and headers to answer with.
+type Answer = (u16, String, Vec<(String, String)>);
+
+/// An answer a scenario set for one method and target.
+#[derive(Clone)]
+struct Canned {
+    method: String,
+    target: String,
+    status: u16,
+    body: String,
+    headers: Vec<(String, String)>,
 }
 
 /// A running stub.
@@ -87,6 +102,42 @@ impl Stub {
         self.lock().seen.clone()
     }
 
+    /// Answers `method` on `target` with `status`, `body` and `headers` from now on, in place of what the service
+    /// would answer and of an answer set before for the same request.
+    pub(crate) fn answer(&self, method: &str, target: &str, status: u16, body: &str, headers: &[(&str, &str)]) {
+        let mut inner = self.lock();
+        inner.canned.retain(|c| c.method != method || c.target != target);
+        inner.canned.push(Canned {
+            method: method.to_string(),
+            target: target.to_string(),
+            status,
+            body: body.to_string(),
+            headers: headers
+                .iter()
+                .map(|(name, value)| ((*name).to_string(), (*value).to_string()))
+                .collect(),
+        });
+    }
+
+    /// How many requests of `method` on `target` it was asked so far.
+    pub(crate) fn asked(&self, method: &str, target: &str) -> usize {
+        self.lock()
+            .seen
+            .iter()
+            .filter(|s| s.method == method && s.target == target)
+            .count()
+    }
+
+    fn canned(&self, method: &str, target: &str) -> Option<Answer> {
+        let canned = self
+            .lock()
+            .canned
+            .iter()
+            .find(|c| c.method == method && c.target == target)
+            .cloned()?;
+        Some((canned.status, self.fill(&canned.body), canned.headers))
+    }
+
     fn lock(&self) -> std::sync::MutexGuard<'_, Inner> {
         self.inner.lock_ignoring_poison()
     }
@@ -130,9 +181,10 @@ impl Stub {
             body: sent,
         });
         let (status, body, headers) = if allowed {
-            match self.service {
-                Service::GitHub => self.github(&method, &target),
-                Service::GitLab => self.gitlab(&method, &target),
+            match (self.canned(&method, &target), self.service) {
+                (Some(canned), _) => canned,
+                (None, Service::GitHub) => self.github(&method, &target),
+                (None, Service::GitLab) => self.gitlab(&method, &target),
             }
         } else {
             (401, "{\"message\":\"401 Unauthorized\"}".to_string(), Vec::new())

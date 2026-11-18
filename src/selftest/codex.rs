@@ -1,8 +1,9 @@
 //! The `codex` scenario (E147): the Codex choice starts the app-server of `ide_codex::test_server` (this program,
 //! started with `IDE_CODEX_TEST_SERVER`) instead of the ACP adapter. Its models and modes fill the composer's
 //! menus, a turn asks for a command, which the user allows once, and runs to its end; the overlays Codex offers are
-//! in the `/` menu, and `/status` says the route. The phone in the head turns Remote Control on, which moves the
-//! session to the shared server (E148), and its menu turns it off. No Codex on the Mac ever starts.
+//! in the `/` menu, `/status` says the route and the others reach Codex (`backend_dialogs`). The phone in the head
+//! turns Remote Control on, which moves the session to the shared server (E148), and its menu turns it off. No Codex
+//! on the Mac ever starts.
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -22,7 +23,7 @@ const CODEX: usize = 0;
 /// A moment for the timeline to lay out the card it scrolled to.
 const SCROLL_SETTLE: Duration = Duration::from_millis(300);
 
-fn log() -> PathBuf {
+pub(super) fn log() -> PathBuf {
     ide_core::paths::home().join("codex-test-log")
 }
 
@@ -237,7 +238,8 @@ fn status(key: AgentKey) {
             if let Some(tab) = tab_of(key) {
                 tab.dismiss_dialog();
             }
-            question(key);
+            let walk = super::backend_dialogs::Walk { name: NAME, key, log };
+            super::backend_dialogs::codex(walk, move || question(key));
         },
     );
 }

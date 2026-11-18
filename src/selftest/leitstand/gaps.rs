@@ -2,7 +2,9 @@
 //! role list and a risk pattern from `.dango/factory.toml`, the rest "Vorgabe"; "Auf Vorgabe zurücksetzen" takes the
 //! risk pattern out, and saving keeps the file's comment and its other values. Then a scripted builder objects to the
 //! criteria in its first turn: the order waits, its tab shows the objection's text with "Weiter" and "Kriterien ändern
-//! …" ready, and "Weiter" overrules it, so the builder's next turn carries the order on to acceptance.
+//! …" ready. "Kriterien ändern …" asks with the criteria as they are and "Auftrag abbrechen …" asks first, and
+//! "Abbrechen" leaves both alone; "Weiter" overrules the objection, so the builder's next turn carries the order on to
+//! acceptance, where "Auftrag abbrechen …" and its alert abort it.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -17,10 +19,12 @@ use ide_ui_factory::model::detail::Command as OrderCommand;
 use ide_ui_factory::model::settings::{Origin, ProjectValue, gate_sandbox_words, role_title};
 use ide_ui_factory::selftest::ProjectRowSeen;
 use objc2::rc::Retained;
+use objc2_app_kit::{NSAlertFirstButtonReturn, NSAlertSecondButtonReturn};
 
 use super::super::git::{append, fixture_git};
 use super::super::helpers::{self, wait_for_window, wait_within};
 use super::super::{check, finish, give_up, give_up_saying, snapshot};
+use super::drive;
 use crate::leitstand::Command;
 use crate::util::main_soon;
 use crate::window::WindowController;
@@ -31,6 +35,7 @@ const COMMENT: &str = "# Rules of the self-test.";
 const WORKFLOW: &str = "# Rules of the self-test.\n[[gates.command]]\nname = \"check\"\nrun = \"true\"\n\n\
                         [[roles.reviewer]]\nagent = \"claude\"\n\n[risk]\nhigh = [\"src/pay/**\"]\n";
 const REASON: &str = "- [K1] needs a sample file to be checked";
+const CRITERION: &str = "notes.txt holds notes";
 const STATIONS: Duration = Duration::from_secs(120);
 const SHORT: Duration = Duration::from_secs(20);
 
@@ -218,7 +223,7 @@ fn start(root: PathBuf, controller: &Retained<WindowController>) {
     let order = NewOrder {
         title: "Notizen schreiben".into(),
         goal: "Write notes into notes.txt.".into(),
-        criteria: "- notes.txt holds notes\n".into(),
+        criteria: format!("- {CRITERION}\n"),
         ..NewOrder::default()
     };
     let Some(id) = cx.leitstand().command(&cx, &root, Command::New(order)) else {
@@ -293,9 +298,74 @@ fn objection_tab(root: PathBuf, id: OrderId, controller: &Retained<WindowControl
                 snapshot(&window, "leitstand-gaps-objection");
             }
             narrow_sidebar(&controller);
-            overrule(root, id);
+            change_criteria(root, id);
         },
     );
+}
+
+/// Presses `command` in the order's tab; whether the tab is open.
+fn press(root: &Path, id: &OrderId, command: OrderCommand) -> bool {
+    helpers::window_of(root).is_some_and(|controller| {
+        let (window, ui) = (controller.handle(), controller.context().factory_ui());
+        ide_ui_factory::selftest::press_order(window, ui, id, command)
+    })
+}
+
+fn objects(root: &Path, id: &OrderId) -> bool {
+    crate::context::app()
+        .leitstand()
+        .with_order(root, id, |o| {
+            matches!(o.condition(), Condition::Waiting(WaitReason::CriteriaObjection { .. }))
+        })
+        .unwrap_or(false)
+}
+
+/// "Kriterien ändern …" asks in a sheet that holds the criteria as they are; "Abbrechen" changes nothing.
+fn change_criteria(root: PathBuf, id: OrderId) {
+    if !press(&root, &id, OrderCommand::ChangeCriteria) {
+        return give_up(SCENARIO, "the order's tab is open");
+    }
+    drive::when_alert(root, move |root, shown| {
+        let texts = drive::alert_texts(&root);
+        check(
+            "\"Kriterien ändern …\" asks in a sheet that names the order and holds its criteria",
+            shown
+                && texts.iter().any(|t| t.contains("Notizen schreiben"))
+                && texts.iter().any(|t| t.contains(CRITERION)),
+            format!("{texts:?}"),
+        );
+        drive::answer(root, NSAlertSecondButtonReturn, move |root, answered| {
+            check(
+                "\"Abbrechen\" leaves the criteria and the objection as they are",
+                answered && objects(&root, &id),
+                state(&root, &id),
+            );
+            abort_asks(root, id);
+        });
+    });
+}
+
+/// "Auftrag abbrechen …" asks first, naming the order; "Abbrechen" keeps it.
+fn abort_asks(root: PathBuf, id: OrderId) {
+    if !press(&root, &id, OrderCommand::Abort) {
+        return give_up(SCENARIO, "the order's tab is open");
+    }
+    drive::when_alert(root, move |root, shown| {
+        let texts = drive::alert_texts(&root);
+        check(
+            "\"Auftrag abbrechen …\" asks first, naming the order",
+            shown && texts.iter().any(|t| t.contains("Notizen schreiben")),
+            format!("{texts:?}"),
+        );
+        drive::answer(root, NSAlertSecondButtonReturn, move |root, answered| {
+            check(
+                "\"Abbrechen\" in the alert keeps the order waiting on the objection",
+                answered && objects(&root, &id),
+                state(&root, &id),
+            );
+            overrule(root, id);
+        });
+    });
 }
 
 /// An order's tab lets the sidebar beside it be dragged to its narrowest and back.
@@ -335,11 +405,42 @@ fn overrule(root: PathBuf, id: OrderId) {
                         .unwrap_or(false),
                 state(&root, &id),
             );
-            let cx = crate::context::app();
-            cx.leitstand().command(&cx, &root, Command::Abort(id));
-            cx.leitstand().use_script(None);
-            cx.leitstand().use_agents(None);
-            finish(SCENARIO);
+            abort(root, id);
         },
     );
+}
+
+/// "Auftrag abbrechen …" and the alert's first button abort the order.
+fn abort(root: PathBuf, id: OrderId) {
+    if !press(&root, &id, OrderCommand::Abort) {
+        return give_up(SCENARIO, "the order's tab is open at acceptance");
+    }
+    drive::when_alert(root, move |root, shown| {
+        if !shown {
+            return give_up(SCENARIO, "\"Auftrag abbrechen …\" asks first");
+        }
+        drive::answer(root, NSAlertFirstButtonReturn, move |root, answered| {
+            let probe = (root.clone(), id.clone());
+            wait_within(
+                SHORT,
+                move || {
+                    crate::context::app()
+                        .leitstand()
+                        .with_order(&probe.0, &probe.1, |o| *o.condition() == Condition::Aborted)
+                        .unwrap_or(false)
+                },
+                move |aborted| {
+                    check(
+                        "the alert's first button aborts the order",
+                        answered && aborted,
+                        state(&root, &id),
+                    );
+                    let cx = crate::context::app();
+                    cx.leitstand().use_script(None);
+                    cx.leitstand().use_agents(None);
+                    finish(SCENARIO);
+                },
+            );
+        });
+    });
 }

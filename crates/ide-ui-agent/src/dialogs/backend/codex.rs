@@ -308,3 +308,88 @@ fn status(
     }
     sections
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use ide_codex::{Account as CodexAccount, Capabilities, Version};
+    use ide_thread::{LimitStatus, RateLimit};
+
+    use super::*;
+
+    fn row(label: &str, value: &str) -> (Option<String>, String) {
+        (Some(label.to_string()), value.to_string())
+    }
+
+    /// What the status says of the account `account`.
+    fn account(account: Option<CodexAccount>) -> Option<String> {
+        let caps = Capabilities {
+            account,
+            ..Capabilities::default()
+        };
+        let sections = status(&caps, Path::new("/p"), &[]);
+        sections[0]
+            .rows
+            .iter()
+            .find(|(label, _)| label.as_deref() == Some(t("Konto")))
+            .map(|(_, value)| value.clone())
+    }
+
+    #[test]
+    fn the_status_names_the_account_however_codex_is_signed_in() {
+        let chatgpt = |email: Option<&str>| CodexAccount::ChatGpt {
+            email: email.map(str::to_string),
+            plan: "pro".into(),
+        };
+        assert_eq!(
+            account(Some(chatgpt(Some("dev@example.test")))).as_deref(),
+            Some("ChatGPT pro · dev@example.test")
+        );
+        assert_eq!(account(Some(chatgpt(None))).as_deref(), Some("ChatGPT pro"));
+        assert_eq!(account(Some(CodexAccount::ApiKey)).as_deref(), Some(t("API-Schlüssel")));
+        assert_eq!(
+            account(Some(CodexAccount::Provider("gcp".into()))).as_deref(),
+            Some("gcp")
+        );
+        assert_eq!(account(None).as_deref(), Some(t("Nicht angemeldet")));
+    }
+
+    #[test]
+    fn the_status_shows_the_thread_and_the_plan_limits_only_when_there_are_some() {
+        let caps = Capabilities {
+            version: Some(Version {
+                major: 0,
+                minor: 167,
+                patch: 0,
+            }),
+            model: Some("gpt-5.5".into()),
+            effort: Some("high".into()),
+            ..Capabilities::default()
+        };
+        let without = status(&caps, Path::new("/p"), &[]);
+        assert_eq!(without.len(), 2);
+        assert_eq!(without[0].rows[1], row(t("Version"), "0.167.0"));
+        assert_eq!(
+            without[1].rows,
+            [
+                row(t("Ordner"), "/p"),
+                row(t("Modell"), "gpt-5.5"),
+                row(t("Aufwand"), "high")
+            ]
+        );
+        let limit = |window: &str, utilization| RateLimit {
+            window: window.into(),
+            status: LimitStatus::Allowed,
+            utilization,
+            resets_at: None,
+        };
+        let with = status(
+            &caps,
+            Path::new("/p"),
+            &[limit("five_hour", Some(0.42)), limit("weekly", None)],
+        );
+        assert_eq!(with[2].title, t("Grenzen"));
+        assert_eq!(with[2].rows, [row("five_hour", "42 %"), row("weekly", "—")]);
+    }
+}

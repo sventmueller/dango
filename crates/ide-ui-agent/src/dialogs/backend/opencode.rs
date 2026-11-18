@@ -226,3 +226,68 @@ fn status(
         },
     ]
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use ide_opencode::{Capabilities, Credential, CredentialKind, ModelRef};
+
+    use super::*;
+
+    fn row(label: &str, value: &str) -> (Option<String>, String) {
+        (Some(label.to_string()), value.to_string())
+    }
+
+    fn credential(integration: &str, label: &str, active: bool) -> Credential {
+        Credential {
+            id: format!("cred_{integration}"),
+            integration: integration.into(),
+            label: label.into(),
+            active,
+            kind: CredentialKind::Key,
+        }
+    }
+
+    #[test]
+    fn the_status_names_the_session_and_only_the_providers_in_use() {
+        let caps = Capabilities {
+            server_version: Some("2.2.6".into()),
+            agent: Some("build".into()),
+            default_model: Some(ModelRef {
+                provider: "anthropic".into(),
+                model: "claude-opus".into(),
+                variant: None,
+            }),
+            ..Capabilities::default()
+        };
+        let credentials = [
+            credential("anthropic", "Work", true),
+            credential("openai", "", true),
+            credential("google", "Old", false),
+        ];
+        let sections = status(&caps, Path::new("/p"), &credentials);
+        assert_eq!(sections[0].rows[1], row(t("Version"), "2.2.6"));
+        assert_eq!(
+            sections[1].rows,
+            [
+                row(t("Ordner"), "/p"),
+                row(t("Modus"), "build"),
+                row(t("Modell"), "anthropic/claude-opus")
+            ]
+        );
+        assert_eq!(sections[2].rows, [(None, "anthropic (Work), openai".to_string())]);
+    }
+
+    #[test]
+    fn a_status_without_a_model_or_providers_says_so() {
+        let sections = status(
+            &Capabilities::default(),
+            Path::new("/p"),
+            &[credential("google", "", false)],
+        );
+        assert_eq!(sections[0].rows.len(), 2, "no version");
+        assert_eq!(sections[1].rows, [row(t("Ordner"), "/p")]);
+        assert_eq!(sections[2].rows, [(None, "—".to_string())]);
+    }
+}

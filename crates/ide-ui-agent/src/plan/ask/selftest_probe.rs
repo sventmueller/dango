@@ -21,3 +21,20 @@ pub fn view() -> Option<(Retained<NSView>, String)> {
         Some((view, ask.popover.field.stringValue().to_string()))
     })
 }
+
+impl Popover {
+    /// Types `text` into its field, for the self-test.
+    pub(in crate::plan) fn type_text(&self, text: &str) {
+        self.field.setStringValue(&ns(text));
+    }
+
+    /// What its field holds, for the self-test.
+    pub(in crate::plan) fn field_text(&self) -> String {
+        self.field.stringValue().to_string()
+    }
+
+    /// Its content, for the self-test.
+    pub(in crate::plan) fn content(&self) -> Option<Retained<NSView>> {
+        Some(self.popover.contentViewController()?.view())
+    }
+}

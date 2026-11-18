@@ -342,3 +342,10 @@ fn not_run() -> OpResult {
 fn untrusted() -> OpResult {
     failed_with(splat_i18n::t("Der Ordner ist nicht vertraut; nichts wurde gesendet.").into())
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+
+#[cfg(test)]
+#[path = "publish_tests.rs"]
+mod tests;

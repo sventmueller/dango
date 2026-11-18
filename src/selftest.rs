@@ -18,11 +18,13 @@ mod agent_plan;
 mod agent_rewind;
 mod agent_rows;
 mod agent_sessions;
+mod agent_spec;
 mod agent_stand_in;
 mod agent_text_size;
 mod app_context;
 mod app_menus;
 pub(crate) mod application;
+mod backend_dialogs;
 mod blame;
 mod browser;
 mod browser_dev;
@@ -39,6 +41,7 @@ mod panels;
 mod panes;
 mod paste_cli;
 mod preview;
+mod probe_app;
 mod tabs;
 mod terminal;
 mod terminal_view;
@@ -319,7 +322,7 @@ fn probe() {
         return;
     };
     probe_window(&controller);
-    probe_app(mtm);
+    probe_app::run(mtm);
 }
 
 /// The sidebar's first symbol and title start level with the tabs' top edge, which sits on its safe area's top.
@@ -477,53 +480,6 @@ fn probe_symbol_menu(controller: &window::WindowController) {
         "every symbol comes back",
         controller.shown_symbols() == Panel::ALL,
         format!("{:?}", controller.shown_symbols()),
-    );
-}
-
-/// Settings, texts, opening a folder and the login shell's environment, which ends the run.
-fn probe_app(mtm: MainThreadMarker) {
-    crate::settings::show(mtm);
-    let visible = crate::settings::window().is_some_and(|w| w.isVisible());
-    check("the settings window opens", visible, "");
-    if let Some(window) = crate::settings::window() {
-        snapshot(&window, "probe-settings");
-    }
-    check(
-        "the interface texts load from the bundle",
-        !crate::app::localized_strings().is_empty(),
-        "",
-    );
-    let folder = ide_core::paths::home().join("probe-project");
-    for (path, text) in [
-        ("src/main.rs", "// Grüße, ünïcödé\nfn main() {}\n"),
-        ("README.md", "# Probe\n"),
-        (".gitignore", "target/\n"),
-        ("target/ignored.txt", "x\n"),
-    ] {
-        let file = folder.join(path);
-        let _ = std::fs::create_dir_all(file.parent().unwrap_or(&folder));
-        let _ = std::fs::write(file, text);
-    }
-    crate::app::open_project(mtm, folder.clone());
-    let canonical = folder.canonicalize().unwrap_or(folder);
-    check(
-        "an opened folder gets its window",
-        window::open_projects().contains(&canonical),
-        format!("{:?}", window::open_projects()),
-    );
-    let Some(controller) = window::open_windows()
-        .into_iter()
-        .find(|w| w.project().as_ref() == Some(&canonical))
-    else {
-        give_up("probe", "the opened folder has its window");
-        return;
-    };
-    check("an untrusted folder asks for trust", controller.has_sheet(), "");
-    clicks_pass_through(mtm);
-    let probe = canonical.clone();
-    helpers::wait_until(
-        move || window::for_project(&probe).is_some_and(|c| c.tree_rows() > 0),
-        move |_| probe_ignored(canonical),
     );
 }
 
@@ -966,11 +922,13 @@ fn write_report(scenario: &str) {
     }
 }
 
-/// `light` or `dark`, the app's appearance, which the runner's accepted window pictures are kept by.
+/// `light` or `dark`, the app's appearance, with `-dictation` in a build with dictation, whose settings have a tab
+/// more; the runner keeps its accepted window pictures by it.
 fn appearance() -> &'static str {
     use objc2_app_kit::{NSAppearanceNameAqua, NSAppearanceNameDarkAqua};
+    let dictation = cfg!(feature = "dictation");
     let Some(mtm) = MainThreadMarker::new() else {
-        return "light";
+        return if dictation { "light-dictation" } else { "light" };
     };
     // SAFETY: The appearance names are constants AppKit defines for the life of the process.
     let (aqua, dark) = unsafe { (NSAppearanceNameAqua, NSAppearanceNameDarkAqua) };
@@ -978,7 +936,12 @@ fn appearance() -> &'static str {
     let best = NSApplication::sharedApplication(mtm)
         .effectiveAppearance()
         .bestMatchFromAppearancesWithNames(&names);
-    if best.as_deref() == Some(dark) { "dark" } else { "light" }
+    match (best.as_deref() == Some(dark), dictation) {
+        (true, true) => "dark-dictation",
+        (true, false) => "dark",
+        (false, true) => "light-dictation",
+        (false, false) => "light",
+    }
 }
 
 /// `s` as a JSON string.

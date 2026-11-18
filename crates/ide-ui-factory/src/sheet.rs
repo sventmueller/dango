@@ -395,3 +395,6 @@ fn panel(mtm: MainThreadMarker) -> Retained<NSWindow> {
     panel.setTitle(&ns(t("Neuer Auftrag")));
     panel
 }
+
+#[cfg(feature = "selftest")]
+mod selftest_probe;

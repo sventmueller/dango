@@ -24,6 +24,10 @@ pub use super::ask::{type_comment, view as comment_view};
 
 pub use super::doc::{inspect, text_of};
 
+pub use super::spec::{
+    SpecButton, SpecNoteAction, SpecSeen, spec_answer_popover, spec_note, spec_press, spec_seen, spec_select, spec_type,
+};
+
 /// How many passages `text` marks, for the self-test.
 pub(super) fn count_marks(text: &NSAttributedString) -> usize {
     let key = ide_ui_common::constant!(objc2_app_kit::NSToolTipAttributeName);

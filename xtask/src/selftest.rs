@@ -103,7 +103,7 @@ pub(crate) struct Report {
     pub(crate) scenario: String,
     pub(crate) ending: Ending,
     pub(crate) checks: Vec<Check>,
-    /// `light` or `dark`, which the window pictures were taken in.
+    /// `light` or `dark`, which the window pictures were taken in, with `-dictation` from a build with dictation.
     #[serde(default)]
     pub(crate) appearance: Option<String>,
 }

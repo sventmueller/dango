@@ -7,7 +7,7 @@
 use super::*;
 
 /// Where the language servers tab sits in the toolbar.
-pub(super) const SERVERS_TAB: isize = 4;
+pub(super) const SERVERS_TAB: isize = 5;
 
 pub(crate) use super::predict::shown as prediction_shown;
 

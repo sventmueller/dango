@@ -39,4 +39,22 @@ impl FileTree {
             .map(|item| item.title().to_string())
             .collect()
     }
+
+    /// Clicks the row of `path` with Option, without Shift, which opens a file beside the document in front; whether
+    /// the click took a file.
+    pub(crate) fn option_click(&self, path: &std::path::Path) -> bool {
+        let row = self.source.row_of(&self.view, path);
+        self.source.row_alt_clicked(&self.view, row, false)
+    }
+
+    /// Picks the pane numbered `number` from the Option-Shift menu of the file `path`, or 0 for a window tab.
+    pub(crate) fn choose_pane(&self, path: &std::path::Path, number: isize) {
+        let _ = self
+            .source
+            .ivars()
+            .model
+            .borrow_mut()
+            .open_menu(Some(path), Some(super::model::Kind::File));
+        self.source.open_in_chosen_pane(number);
+    }
 }
