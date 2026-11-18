@@ -1,0 +1,12 @@
+Running with gitlab-runner 17.5.0 (abc123)
+[0Ksection_start:1731153725:prepare_executor[0K[0K[36;1mPreparing the "docker" executor[0;m
+Using Docker executor with image rust:1.99
+section_end:1731153727:prepare_executor[0K
+section_start:1731153730:step_script[0K[0K[36;1mExecuting "step_script" stage of the job script[0;m
+$ cargo test
+Downloading crates ...Downloaded 120 crates
+test api::lists_items ... FAILED
+error: test failed, to rerun pass `--lib`
+section_end:1731153900:step_script[0K
+[31;1mERROR: Job failed: exit code 101
+[0;m

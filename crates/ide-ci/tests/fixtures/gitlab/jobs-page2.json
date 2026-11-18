@@ -1,0 +1,24 @@
+[
+  {
+    "id": 3003,
+    "name": "lint",
+    "stage": "test",
+    "status": "running",
+    "ref": "{{BRANCH}}",
+    "started_at": "2026-11-09T12:02:05.000Z",
+    "finished_at": null,
+    "web_url": "https://gitlab.example.com/gitlab/group/app/-/jobs/3003",
+    "pipeline": { "id": 501 }
+  },
+  {
+    "id": 3004,
+    "name": "deploy",
+    "stage": "deploy",
+    "status": "manual",
+    "ref": "{{BRANCH}}",
+    "started_at": null,
+    "finished_at": null,
+    "web_url": "https://gitlab.example.com/gitlab/group/app/-/jobs/3004",
+    "pipeline": { "id": 501 }
+  }
+]

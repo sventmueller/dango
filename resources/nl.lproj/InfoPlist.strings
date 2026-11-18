@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "De dicteerfunctie zet wat je zegt om in tekst in de editor en in het invoerveld van AI-tabbladen.";

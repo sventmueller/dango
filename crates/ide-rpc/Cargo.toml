@@ -1,0 +1,19 @@
+[package]
+name = "ide-rpc"
+version = "0.0.0"
+description = "The transport under language servers and debug adapters: framed messages, requests with deadlines, answers owed"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ide-core.workspace = true
+ide-process.workspace = true
+serde_json.workspace = true
+ide-workspace-hack.workspace = true
+
+[dev-dependencies]
+ide-core = { workspace = true, features = ["testing"] }

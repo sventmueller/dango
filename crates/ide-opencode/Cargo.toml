@@ -1,0 +1,23 @@
+[package]
+name = "ide-opencode"
+version = "0.0.0"
+description = "OpenCode over its own v2 HTTP API (E147): the server process, its event stream, the management calls and the mapping onto the thread model"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "opencode-test-server"
+path = "src/bin/opencode-test-server.rs"
+test = false
+
+[dependencies]
+base64 = "0.23.1"
+ide-process = { path = "../ide-process" }
+ide-thread = { path = "../ide-thread" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+ide-workspace-hack.workspace = true

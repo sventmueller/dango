@@ -1,0 +1,16 @@
+[package]
+name = "ide-secrets"
+version = "0.0.0"
+description = "The one place secrets are kept: the login keychain under the app's service, or memory in tests"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ide-core.workspace = true
+splat-i18n.workspace = true
+security-framework = "3.7.0"
+ide-workspace-hack.workspace = true

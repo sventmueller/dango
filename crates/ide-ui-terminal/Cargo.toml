@@ -1,0 +1,34 @@
+[package]
+name = "ide-ui-terminal"
+version = "0.0.0"
+description = "A terminal tab's view: keys, mouse, pasteboard, banners, and its drawing with Core Graphics or Metal"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ide-core.workspace = true
+ide-process.workspace = true
+ide-terminal.workspace = true
+ide-ui-common.workspace = true
+splat-i18n.workspace = true
+block2.workspace = true
+objc2 = { workspace = true, features = ["catch-all"] }
+objc2-app-kit.workspace = true
+objc2-core-foundation.workspace = true
+objc2-core-graphics.workspace = true
+objc2-core-text.workspace = true
+objc2-foundation.workspace = true
+objc2-metal.workspace = true
+objc2-quartz-core.workspace = true
+ide-workspace-hack.workspace = true
+
+[dev-dependencies]
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[features]
+# What the self-test drives and reads in a terminal view.
+selftest = []

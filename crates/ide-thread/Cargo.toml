@@ -1,0 +1,23 @@
+[package]
+name = "ide-thread"
+version = "0.0.0"
+description = "The one thread model every agent connection fills: entries, subagents, background work and a persisted index"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+# The checks the agent connections' fuzz targets run on the thread they fill.
+fuzzing = []
+
+[dependencies]
+ide-core = { path = "../ide-core" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+ide-workspace-hack.workspace = true
+
+[dev-dependencies]
+ide-core = { path = "../ide-core", features = ["testing"] }

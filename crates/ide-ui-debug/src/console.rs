@@ -1,0 +1,347 @@
+//! The debug console as a tab of its own (E60, E94): what the program and the adapter write, and a field that
+//! evaluates an expression in the paused frame. Once its session ended, or after a restart, it shows its history only
+//! and says so (Review C18).
+
+use std::cell::{Cell, RefCell};
+use std::collections::VecDeque;
+use std::rc::Rc;
+
+use ide_dap::kept::{ConsoleKind, ConsoleLine};
+use objc2::rc::Retained;
+use objc2::runtime::{AnyObject, ProtocolObject};
+use objc2::{AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, sel};
+use objc2_app_kit::{
+    NSAccessibility, NSColor, NSScrollView, NSStackView, NSTextField, NSTextStorage, NSTextView,
+    NSUserInterfaceLayoutOrientation, NSView,
+};
+use objc2_foundation::{NSAttributedString, NSDictionary, NSPoint, NSRange, NSRect, NSSize, NSString};
+use splat_i18n::{t, tf};
+
+use super::model::console::Console;
+use super::panel::DebugPanel;
+use ide_ui_common::constant;
+use ide_ui_common::util::{label, ns, pin_sides, set_action, with_editing};
+use ide_ui_common::window::{TabId, TabKind, Tabs, Window};
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+
+/// A debug console tab.
+pub(crate) struct ConsoleTab {
+    /// The tab's document number; none when its window had closed.
+    pub(crate) tab: Option<TabId>,
+    /// The session it belongs to; none once it came back after a restart.
+    pub(crate) session: Cell<Option<u64>>,
+    pub(crate) title: RefCell<String>,
+    model: RefCell<Console>,
+    shown: RefCell<Shown>,
+    text: Retained<NSTextView>,
+    input: Retained<NSTextField>,
+    finished: Retained<NSTextField>,
+    /// How far ↑ went back through what was asked.
+    back: Cell<Option<usize>>,
+}
+
+impl ConsoleTab {
+    /// Opens a console tab for the session `session` named `title`, beside nothing, in `controller`'s window.
+    pub(crate) fn open(panel: &DebugPanel, controller: &Window, session: u64, title: &str) -> Rc<ConsoleTab> {
+        let console = ConsoleTab::build(panel, controller, title, Console::default());
+        console.session.set(Some(session));
+        console
+    }
+
+    /// Opens the finished console `title` with `history`, as a restart brings it back; no session starts.
+    pub(crate) fn reopen(
+        panel: &DebugPanel,
+        controller: &Window,
+        title: &str,
+        history: Vec<ConsoleLine>,
+    ) -> Rc<ConsoleTab> {
+        ConsoleTab::build(panel, controller, title, Console::finished(history))
+    }
+
+    fn build(panel: &DebugPanel, controller: &Window, title: &str, model: Console) -> Rc<ConsoleTab> {
+        let mtm = controller.mtm();
+        let (root, text, input, finished) = views(mtm, panel);
+        let tab = controller.add_tab(TabKind::Console, None, &tf("Debug-Konsole: {}", &[title]), root);
+        input.setTag(tab.map_or(-1, TabId::get));
+        let console = Rc::new(ConsoleTab {
+            tab,
+            session: Cell::new(None),
+            title: RefCell::new(title.to_string()),
+            model: RefCell::new(model),
+            shown: RefCell::default(),
+            text,
+            input,
+            finished,
+            back: Cell::new(None),
+        });
+        console.show_all();
+        console
+    }
+
+    pub(crate) fn lines(&self) -> Vec<ConsoleLine> {
+        self.model.borrow().lines().to_vec()
+    }
+
+    pub(crate) fn is_finished(&self) -> bool {
+        self.model.borrow().finished
+    }
+
+    /// Adds `text` of `kind` and shows it.
+    pub(crate) fn push(&self, kind: ConsoleKind, text: &str) {
+        self.model.borrow_mut().push(kind, text);
+        self.show_all();
+    }
+
+    /// Takes the expression the user typed; `None` when there is nothing to evaluate.
+    pub(crate) fn ask(&self, expression: &str) -> Option<String> {
+        let asked = self.model.borrow_mut().ask(expression)?;
+        self.back.set(None);
+        self.input.setStringValue(&ns(""));
+        self.show_all();
+        Some(asked)
+    }
+
+    /// Ends the console with `note`: it takes no more input and says it is over.
+    pub(crate) fn finish(&self, note: &str) {
+        self.model.borrow_mut().finish(note);
+        self.session.set(None);
+        self.show_all();
+    }
+
+    /// Empties a finished console for a new session named `title`, which writes to it from now on.
+    pub(crate) fn start_over(&self, controller: &Window, title: &str) {
+        *self.model.borrow_mut() = Console::default();
+        *self.title.borrow_mut() = title.to_string();
+        self.session.set(None);
+        if let Some(tab) = self.tab {
+            controller.set_tab_title(tab, &tf("Debug-Konsole: {}", &[title]));
+        }
+        self.show_all();
+    }
+
+    /// Puts what was asked one step further back (↑) or forward (↓) into the field.
+    pub(crate) fn step_history(&self, older: bool) {
+        let back = match (self.back.get(), older) {
+            (None, true) => Some(0),
+            (None, false) => None,
+            (Some(back), true) => Some(back + 1),
+            (Some(0), false) => None,
+            (Some(back), false) => Some(back - 1),
+        };
+        let text = match back {
+            Some(back) => match self.model.borrow().asked(back) {
+                Some(text) => text.to_string(),
+                None => return,
+            },
+            None => String::new(),
+        };
+        self.back.set(back);
+        self.input.setStringValue(&ns(&text));
+    }
+
+    /// Shows the whole history and, once it is over, the note instead of the field.
+    fn show_all(&self) {
+        let model = self.model.borrow();
+        // SAFETY: The view keeps its text storage alive; asking for it keeps a TextKit 2 view on TextKit 2.
+        let Some(storage) = (unsafe { self.text.textStorage() }) else {
+            return;
+        };
+        with_editing(&storage, || self.shown.borrow_mut().update(&storage, &model));
+        let end = storage.length();
+        self.text.scrollRangeToVisible(NSRange::new(end, 0));
+        self.input.setHidden(model.finished);
+        self.finished.setHidden(!model.finished);
+        self.text.setAccessibilityLabel(Some(&ns(&if model.finished {
+            tf("Debug-Konsole: {}, beendet", &[&self.title.borrow()])
+        } else {
+            tf("Debug-Konsole: {}", &[&self.title.borrow()])
+        })));
+    }
+}
+
+/// What the history view holds of a console: the length of each line as drawn, in UTF-16 code units, and how many
+/// of the console's oldest lines had gone when it was drawn.
+#[derive(Default)]
+struct Shown {
+    lengths: VecDeque<usize>,
+    dropped: usize,
+}
+
+impl Shown {
+    /// Brings `storage` in line with `console`, drawing again only the lines that went and the last one drawn: a
+    /// console loses lines only at the front, and output continues only its last line.
+    fn update(&mut self, storage: &NSTextStorage, console: &Console) {
+        let lines = console.lines();
+        let kept = console
+            .dropped()
+            .checked_sub(self.dropped)
+            .and_then(|gone| self.lengths.len().checked_sub(gone))
+            .filter(|kept| (1..=lines.len()).contains(kept));
+        self.dropped = console.dropped();
+        let Some(kept) = kept else {
+            storage.setAttributedString(&NSAttributedString::new());
+            self.lengths.clear();
+            return self.append(storage, lines);
+        };
+        let empty = NSAttributedString::new();
+        let last = self.lengths.pop_back().unwrap_or(0);
+        let at = storage.length().saturating_sub(last);
+        storage.replaceCharactersInRange_withAttributedString(NSRange::new(at, storage.length() - at), &empty);
+        let gone = self.lengths.len() + 1 - kept;
+        let front: usize = self.lengths.drain(..gone).sum();
+        storage.replaceCharactersInRange_withAttributedString(NSRange::new(0, front.min(storage.length())), &empty);
+        self.append(storage, &lines[kept - 1..]);
+    }
+
+    fn append(&mut self, storage: &NSTextStorage, lines: &[ConsoleLine]) {
+        for line in lines {
+            let mut text = match line.kind {
+                ConsoleKind::Input => format!("› {}", line.text),
+                _ => line.text.clone(),
+            };
+            if !text.ends_with('\n') {
+                text.push('\n');
+            }
+            let drawn = styled(&text, line.kind);
+            self.lengths.push_back(drawn.length());
+            storage.appendAttributedString(&drawn);
+        }
+    }
+}
+
+/// A line of the console in the colour of its kind.
+fn styled(text: &str, kind: ConsoleKind) -> Retained<NSAttributedString> {
+    let color = match kind {
+        ConsoleKind::Input | ConsoleKind::Output => NSColor::labelColor(),
+        ConsoleKind::Result => NSColor::secondaryLabelColor(),
+        ConsoleKind::Error => NSColor::systemRedColor(),
+        ConsoleKind::Note => NSColor::tertiaryLabelColor(),
+    };
+    let font = ide_ui_common::style::mono(12.0);
+    let keys = [
+        constant!(objc2_app_kit::NSFontAttributeName),
+        constant!(objc2_app_kit::NSForegroundColorAttributeName),
+    ];
+    let values: [&AnyObject; 2] = [&font, &color];
+    let attributes = NSDictionary::<NSString, AnyObject>::from_slices(&keys, &values);
+    // SAFETY: The attributes map the font and colour keys to a font and a colour.
+    unsafe { NSAttributedString::initWithString_attributes(NSAttributedString::alloc(), &ns(text), Some(&attributes)) }
+}
+
+/// The console's views: the history, the field below it, and the note that takes the field's place once it is over.
+fn views(
+    mtm: MainThreadMarker,
+    panel: &DebugPanel,
+) -> (
+    Retained<NSView>,
+    Retained<NSTextView>,
+    Retained<NSTextField>,
+    Retained<NSTextField>,
+) {
+    let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(600.0, 400.0));
+    let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), frame);
+    scroll.setHasVerticalScroller(true);
+    scroll.setAutohidesScrollers(true);
+    let text = NSTextView::initWithFrame(NSTextView::alloc(mtm), frame);
+    text.setEditable(false);
+    text.setSelectable(true);
+    text.setRichText(false);
+    text.setTextContainerInset(NSSize::new(8.0, 8.0));
+    text.setAutoresizingMask(objc2_app_kit::NSAutoresizingMaskOptions::ViewWidthSizable);
+    scroll.setDocumentView(Some(&text));
+    let input = NSTextField::new(mtm);
+    input.setPlaceholderString(Some(&ns(t("Ausdruck im angehaltenen Frame auswerten"))));
+    input.setAccessibilityLabel(Some(&ns(t("Ausdruck auswerten"))));
+    input.setFont(Some(&ide_ui_common::style::mono(12.0)));
+    set_action(&input, panel, sel!(ideDebugEvaluate:));
+    // SAFETY: The field holds its delegate weakly; the panel registry keeps the panel alive.
+    unsafe { input.setDelegate(Some(ProtocolObject::from_ref(panel))) };
+    let finished = label(mtm, t("Beendet: nur der Verlauf, ohne laufende Sitzung."));
+    finished.setTextColor(Some(&NSColor::secondaryLabelColor()));
+    finished.setFont(Some(&ide_ui_common::style::small_system()));
+    let stack = NSStackView::new(mtm);
+    stack.setOrientation(NSUserInterfaceLayoutOrientation::Vertical);
+    stack.setSpacing(ide_ui_common::style::space::S);
+    stack.setEdgeInsets(objc2_foundation::NSEdgeInsets {
+        top: 0.0,
+        left: 0.0,
+        bottom: 8.0,
+        right: 0.0,
+    });
+    stack.addArrangedSubview(&scroll);
+    for below in [&input, &finished] {
+        stack.addArrangedSubview(below);
+        pin_sides(below, &stack, 8.0);
+    }
+    pin_sides(&scroll, &stack, 0.0);
+    scroll.setContentHuggingPriority_forOrientation(1.0, objc2_app_kit::NSLayoutConstraintOrientation::Vertical);
+    (stack.into_super(), text, input, finished)
+}
+
+impl DebugPanel {
+    /// The console of the tab `tab`.
+    pub(crate) fn console_of_tab(&self, tab: TabId) -> Option<Rc<ConsoleTab>> {
+        self.ivars()
+            .links
+            .borrow()
+            .consoles
+            .iter()
+            .find(|c| c.tab == Some(tab))
+            .cloned()
+    }
+
+    /// The console of the session `session`.
+    pub(crate) fn console_of(&self, session: u64) -> Option<Rc<ConsoleTab>> {
+        self.ivars()
+            .links
+            .borrow()
+            .consoles
+            .iter()
+            .find(|c| c.session.get() == Some(session))
+            .cloned()
+    }
+
+    /// The tab of a console closed.
+    pub(crate) fn console_closed(&self, tab: TabId) {
+        self.ivars().links.borrow_mut().consoles.retain(|c| c.tab != Some(tab));
+    }
+
+    /// Opens the finished console `title` with `history`, as the layout brings it back.
+    pub(crate) fn reopen_console(&self, title: &str, history: Vec<ConsoleLine>) -> bool {
+        let Some(controller) = self.controller() else {
+            return false;
+        };
+        let console = ConsoleTab::reopen(self, &controller, title, history);
+        self.ivars().links.borrow_mut().consoles.push(console);
+        true
+    }
+
+    /// The expression typed into the console of the tab the field belongs to, evaluated in the paused frame.
+    pub(super) fn console_typed(&self, sender: Option<&AnyObject>) {
+        let Some(field) = sender.and_then(|s| s.downcast_ref::<NSTextField>()) else {
+            return;
+        };
+        let Some(console) = self.console_of_tab(TabId::new(field.tag())) else {
+            return;
+        };
+        let text = field.stringValue().to_string();
+        let Some(expression) = console.ask(&text) else { return };
+        let Some(session) = console.session.get() else { return };
+        self.evaluate_in_console(session, &expression);
+    }
+
+    /// ↑ and ↓ in a console's field go through what was asked.
+    pub(super) fn console_key(&self, field: &NSTextField, older: bool) -> bool {
+        match self
+            .console_of_tab(TabId::new(field.tag()))
+            .filter(|c| std::ptr::eq(&*c.input, field))
+        {
+            Some(console) => {
+                console.step_history(older);
+                true
+            }
+            None => false,
+        }
+    }
+}

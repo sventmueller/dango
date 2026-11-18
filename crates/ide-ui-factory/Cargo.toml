@@ -1,0 +1,30 @@
+[package]
+name = "ide-ui-factory"
+version = "0.0.0"
+description = "The Leitstand's panel, its tab with station strip and table, the order tab with timeline and evidence, the sheet \"Neuer Auftrag\" and the project dialog"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ide-core.workspace = true
+ide-factory.workspace = true
+ide-product.workspace = true
+ide-ui-common.workspace = true
+splat-i18n.workspace = true
+block2.workspace = true
+objc2 = { workspace = true, features = ["catch-all"] }
+objc2-app-kit.workspace = true
+objc2-foundation.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+libc.workspace = true
+toml_edit = "0.25.19"
+ide-workspace-hack.workspace = true
+
+[features]
+# What the self-test reads of the panel and the tabs.
+selftest = []

@@ -1,0 +1,28 @@
+[package]
+name = "ide-project"
+version = "0.0.0"
+description = "A project folder without a window: its tree, changes on disk, quick open, search and whether it is trusted"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ide-core = { path = "../ide-core" }
+ide-process.workspace = true
+grep-matcher = "0.1.9"
+grep-regex = "0.1.14"
+grep-searcher = "0.1.17"
+ignore = "0.4.34"
+notify = { version = "8.2.2", default-features = false, features = ["macos_fsevent"] }
+splat-i18n.workspace = true
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+unicode-normalization = "0.1.26"
+ide-workspace-hack.workspace = true
+
+[dev-dependencies]
+ide-core = { path = "../ide-core", features = ["testing"] }
+proptest = "1.12.0"

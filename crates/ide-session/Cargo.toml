@@ -1,0 +1,42 @@
+[package]
+name = "ide-session"
+version = "0.0.0"
+description = "One driver over every agent session, with or without a tab: start, send, answer requests by a rule, checkpoint before each prompt, fan events out to any number of views, and a typed end of each turn"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# The stand-ins of the Codex and OpenCode servers and an ACP agent as one program, for the integration tests; not in
+# the shipped app.
+[[bin]]
+name = "session-stand-in"
+path = "src/bin/session-stand-in.rs"
+test = false
+required-features = ["selftest"]
+
+[features]
+# The scripted session (F61), for the self-test and the tests, and the ACP test agent of the stand-in; not in the
+# shipped app.
+selftest = ["ide-acp/testing"]
+
+[dependencies]
+ide-acp = { workspace = true }
+ide-agent = { workspace = true }
+ide-claude = { workspace = true }
+ide-codex = { workspace = true }
+ide-core = { workspace = true }
+ide-git = { workspace = true }
+ide-opencode = { workspace = true }
+ide-process = { workspace = true }
+ide-thread = { workspace = true }
+serde_json = "1.0.154"
+ide-workspace-hack.workspace = true
+
+[dev-dependencies]
+# Itself with the scripted session and the stand-ins, for the integration tests.
+ide-session = { path = ".", features = ["selftest"] }
+ide-agent = { workspace = true, features = ["testing"] }
+ide-core = { workspace = true, features = ["testing"] }

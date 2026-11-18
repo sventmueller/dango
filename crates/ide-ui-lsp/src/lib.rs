@@ -1,0 +1,669 @@
+//! Language servers for the editors of a window (E10): started only in folders the user trusts (E22), through the
+//! supervisor with the login shell's environment (E23), and told about every edit without making typing wait (E25).
+//! A missing server is offered for installation in the editor's status bar, never installed silently. The crate
+//! reaches an editor only through its `Editor` trait and the app through its `Host` (E144).
+//!
+//! A diagnostic's range follows the edits made before the server speaks again:
+//!
+//! ```
+//! use ide_document::{Document, Edit};
+//!
+//! let mut document = Document::untitled("let a = b;");
+//! let change = document.apply(Edit { range_utf16: 0..0, text: "// x\n".into() }).unwrap();
+//! let mut range = 8..9;
+//! assert!(ide_ui_lsp::follow(&mut range, &change));
+//! assert_eq!(range, 13..14);
+//! ```
+
+mod actions;
+mod agent;
+use ide_lsp::workspace_edit as apply;
+mod complete;
+mod decorate;
+pub mod editor;
+mod edits;
+mod events;
+mod hierarchy;
+pub mod host;
+mod hover;
+pub mod inlay;
+mod install;
+mod lease;
+mod lifecycle;
+pub use lifecycle::{changed, closed, files_changed, opened, saved, trust_changed, window_closed};
+use lifecycle::{end_later, find, refresh_slot, slot_at, views_of};
+mod markdown;
+mod navigate;
+mod outline;
+mod prettier;
+pub use outline::scopes as symbol_scopes;
+#[cfg(feature = "selftest")]
+pub use status::note_of as status_note;
+mod project_symbols;
+mod rename;
+mod signature;
+pub mod status;
+use ide_lsp::offsets as text;
+
+use std::cell::{Cell, RefCell};
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
+use std::rc::Rc;
+use std::sync::{Arc, OnceLock};
+use std::time::Duration;
+
+use ide_core::settings::{Key, Settings};
+use ide_document::Revision;
+use ide_lsp::lsp_types::{Diagnostic, MessageType, Uri, WorkDoneProgress};
+use ide_lsp::{Cancel, CustomServer, Language, NotFound, Refresh, Registry, Server, Status, uri};
+use ide_process::Supervisor;
+use objc2::sel;
+use splat_i18n::tf;
+
+use editor::Editor;
+use ide_ui_common::util::main_soon;
+
+pub use actions::{Kind as ActionKind, bulb_line, place_bulb};
+pub(crate) use agent::AgentDiagnostics;
+pub use agent::agent_diagnostics;
+pub use decorate::{
+    Painted, Severity, follow, follow_squiggles, line_marks, line_messages, paint, paint_due, paint_tokens, text_range,
+};
+pub use host::{Host, State as LspState, install};
+
+/// The semantic tokens of an editor's language server state, by position.
+pub fn painted(state: &ViewState) -> &[Painted] {
+    &state.tokens
+}
+pub use hierarchy::{Direction, Hierarchy, HierarchyKind, call_hierarchy, kind_symbol, type_hierarchy};
+pub use hover::{dismiss as dismiss_hover, hover_at_cursor, hover_rest, mouse_moved, rect_of, show as show_hover};
+pub use navigate::{Goto, definition, go_to, jump_to, next_problem, open_at, references, symbols};
+pub use project_symbols::{FoundSymbol, SymbolAnswer, open_symbol, search_symbols};
+pub use rename::{format, rename, save};
+pub(crate) use {
+    actions::CodeActions, complete::Completion, navigate::LocationSheets, project_symbols::Leases, rename::Formatting,
+    signature::ShownSignature,
+};
+
+/// How long typing must pause before semantic tokens and pulled diagnostics are asked for again.
+const REFRESH_DELAY: f64 = 0.4;
+
+/// The settings this crate declares, for the app's registry of every setting.
+pub const SETTINGS: &[ide_core::settings::Declared] = &[LANGUAGE_SERVERS.declared(), install::DECLINED.declared()];
+
+/// The language servers the user set up, which take their files from the built-in ones.
+pub const LANGUAGE_SERVERS: Key<Vec<CustomServer>> =
+    Key::user("languageServers", ide_core::settings::Sharing::PerMac, Vec::new);
+
+/// The protocol's error for an answer the server dropped because the document changed meanwhile; asking again helps.
+const CONTENT_MODIFIED: i64 = -32801;
+
+/// What the language server side knows about one editor.
+#[derive(Default)]
+pub struct ViewState {
+    /// Tells editors apart in callbacks from other threads, which cannot hold a view.
+    pub(crate) serial: EditorSerial,
+    slot: Option<u64>,
+    /// The second servers beside the main one (E140): their slots and the document's language id for them.
+    companions: Vec<(u64, String)>,
+    uri: Option<Uri>,
+    marks: Vec<decorate::Mark>,
+    tokens: Vec<decorate::Painted>,
+    /// What edits since the last painting changed of the colours: the stretches to paint again, and whether the lines on
+    /// screen need it as a whole, after scrolling.
+    repaint: decorate::Repaint,
+    snippet: Option<complete::Session>,
+    status: Option<status::Bar>,
+    hover: hover::State,
+    squiggles: Option<objc2::rc::Weak<decorate::Squiggles>>,
+    crumbs: Vec<outline::Crumb>,
+    actions: actions::State,
+    /// `marks` by line for a revision of the document, until the marks change.
+    line_marks: Option<(Revision, Rc<decorate::LineMarks>)>,
+    /// A passing remark in the status bar, such as why a save went without formatting.
+    note: Option<String>,
+}
+
+/// A server for one language and project root, or what keeps it from running.
+enum State {
+    Finding,
+    Running(Server),
+    Missing(NotFound),
+    Installing(Cancel, String),
+    Failed(String),
+}
+
+struct Slot {
+    id: u64,
+    language: Language,
+    root: PathBuf,
+    state: RefCell<State>,
+    /// Work the server reports, such as indexing, by its token: its title and the text shown for it.
+    progress: RefCell<BTreeMap<String, (String, String)>>,
+    /// When the server last reported progress, for the self-test to tell when it settled.
+    #[cfg(feature = "selftest")]
+    progress_at: std::cell::Cell<Option<std::time::Instant>>,
+    /// The last message the server asked to show.
+    message: RefCell<Option<String>>,
+    /// When editors and the project symbol search last let go of the slot.
+    hold: Cell<lease::Hold>,
+    /// Whether a look at the end of the slot is pending.
+    timer: Cell<bool>,
+}
+
+/// The servers of one window's folder.
+struct Workspace {
+    root: PathBuf,
+    slots: RefCell<Vec<Rc<Slot>>>,
+}
+
+thread_local! {
+    static CUSTOM: RefCell<Option<Vec<Arc<CustomServer>>>> = const { RefCell::new(None) };
+}
+
+/// The language server workspaces of every window and the id the next one gets.
+pub(crate) struct Workspaces {
+    workspaces: RefCell<Vec<Rc<Workspace>>>,
+    next_id: Cell<u64>,
+}
+
+impl Default for Workspaces {
+    fn default() -> Self {
+        Workspaces {
+            workspaces: RefCell::new(Vec::new()),
+            next_id: Cell::new(1),
+        }
+    }
+}
+
+fn with_workspaces<R>(f: impl FnOnce(&RefCell<Vec<Rc<Workspace>>>) -> R) -> R {
+    f(&crate::host::state().lsp_workspaces.workspaces)
+}
+
+fn with_next_id<R>(f: impl FnOnce(&Cell<u64>) -> R) -> R {
+    f(&crate::host::state().lsp_workspaces.next_id)
+}
+
+static REGISTRY: OnceLock<Arc<Registry>> = OnceLock::new();
+
+/// The language servers the user set up, read from the settings once and again after `servers_changed`.
+fn custom_servers() -> Vec<Arc<CustomServer>> {
+    CUSTOM.with(|cell| {
+        cell.borrow_mut()
+            .get_or_insert_with(|| {
+                Settings::load_user()
+                    .get(&LANGUAGE_SERVERS)
+                    .into_iter()
+                    .map(Arc::new)
+                    .collect()
+            })
+            .clone()
+    })
+}
+
+/// The language of `path` and the document's language id, the user's servers first.
+fn language_of(path: &Path) -> Option<(Language, String)> {
+    Language::detect(path, &custom_servers())
+}
+
+/// Looks off the main thread for the server of every built-in language, as for a file in the home folder, and hands
+/// `done` each language's name with where its server is or what is missing, on the main thread.
+pub fn survey(done: fn(Vec<(String, String)>)) {
+    if let Err(why) = ide_ui_common::util::spawn("lsp-survey", move || {
+        let registry = registry();
+        let home = ide_core::paths::home();
+        let found: Vec<(Language, Result<PathBuf, NotFound>)> = ide_lsp::BUILT_IN
+            .iter()
+            .map(|language| {
+                let found = registry.find(language, &home, &home).map(|launch| launch.program);
+                (language.clone(), found)
+            })
+            .collect();
+        main_soon(move || {
+            let lines = found
+                .into_iter()
+                .map(|(language, found)| (language.name().to_string(), survey_text(found)))
+                .collect();
+            done(lines);
+        });
+    }) {
+        done(
+            ide_lsp::BUILT_IN
+                .iter()
+                .map(|l| (l.name().to_string(), why.0.clone()))
+                .collect(),
+        );
+    }
+}
+
+fn survey_text(found: Result<PathBuf, NotFound>) -> String {
+    match found {
+        Ok(program) => crate::host::display_path(&program),
+        Err(missing) if missing.install.is_some() && missing.missing.is_none() => {
+            tf("{} fehlt – im Editor installierbar", &[&missing.program])
+        }
+        Err(missing) => missing_text(&missing).0,
+    }
+}
+
+/// The user changed their language servers: every editor goes to the server that serves its file now.
+pub fn servers_changed() {
+    CUSTOM.with(|cell| cell.borrow_mut().take());
+    for view in host::all_editors() {
+        opened(&*view);
+    }
+}
+
+pub(crate) fn next_id() -> u64 {
+    with_next_id(|next| {
+        let id = next.get();
+        next.set(id + 1);
+        id
+    })
+}
+
+/// The number that tells an editor apart from every other one while the app runs, which callbacks from other threads
+/// carry instead of the view.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct EditorSerial(u64);
+
+/// A serial no editor had before.
+pub fn new_serial() -> EditorSerial {
+    EditorSerial(next_id())
+}
+
+impl ViewState {
+    /// The state of the new editor `serial`.
+    pub fn new(serial: EditorSerial) -> ViewState {
+        ViewState {
+            serial,
+            ..ViewState::default()
+        }
+    }
+}
+
+/// Whether the menu command `action` can run in `view`: the code commands need a running server, the problem
+/// commands problems; `None` for every other command.
+pub fn validate(view: &dyn Editor, action: Option<objc2::runtime::Sel>) -> Option<bool> {
+    let action = action?;
+    let code = [
+        sel!(ideComplete:),
+        sel!(ideHover:),
+        sel!(ideDefinition:),
+        sel!(ideReferences:),
+        sel!(ideSymbols:),
+        sel!(ideRename:),
+        sel!(ideFormat:),
+    ];
+    if code.contains(&action) {
+        return Some(server_of(view).is_some());
+    }
+    if let Some(offered) = navigate::offered(view, action) {
+        return Some(offered);
+    }
+    if let Some(offered) = actions::validate(view, action).or_else(|| signature::validate(view, action)) {
+        return Some(offered);
+    }
+    if action == sel!(ideNextProblem:) || action == sel!(idePreviousProblem:) {
+        return Some(!view.lsp().borrow().marks.is_empty());
+    }
+    None
+}
+
+/// Asks for completions at the cursor; false when no server serves the editor, so the system's completion runs.
+pub fn complete(view: &dyn Editor) -> bool {
+    if server_of(view).is_none() {
+        return false;
+    }
+    complete::complete(view);
+    true
+}
+
+/// Text was typed into `view`: the completion list follows it.
+pub fn typed(view: &dyn Editor, text: &objc2::runtime::AnyObject) {
+    let typed = if let Some(s) = text.downcast_ref::<objc2_foundation::NSString>() {
+        s.to_string()
+    } else if let Some(s) = text.downcast_ref::<objc2_foundation::NSAttributedString>() {
+        s.string().to_string()
+    } else {
+        return;
+    };
+    hover::dismiss(view);
+    complete::typed(view, &typed);
+    signature::typed(view, &typed);
+}
+
+/// A command of the keyboard reached `view`; whether the completion list, a snippet or the signature window took it.
+pub fn command(view: &dyn Editor, command: objc2::runtime::Sel) -> bool {
+    complete::command(view, command) || signature::command(view, command)
+}
+
+/// After a command the editor ran itself, such as deleting backwards: the completion list follows or closes.
+pub fn after_command(view: &dyn Editor, command: objc2::runtime::Sel) {
+    complete::after_command(view, command);
+}
+
+/// The cursor moved: the breadcrumbs, the code actions and the signature window follow.
+pub fn selection_moved(view: &dyn Editor) {
+    outline::selection_moved(view);
+    actions::moved(view);
+    signature::moved(view);
+}
+
+/// The cursor of `view` moved earlier, while its state was in use: the code actions follow now.
+pub fn actions_moved(view: &dyn Editor) {
+    actions::moved(view);
+}
+
+/// Lists the code actions of `kind` at the cursor of `view` in a menu there (E82).
+pub fn code_actions(view: &dyn Editor, kind: ActionKind) {
+    actions::open(view, kind);
+}
+
+/// Shows the signature of the call around the cursor of `view` (E84).
+pub fn signature_help(view: &dyn Editor) {
+    signature::show(view);
+}
+
+/// A click with ⌘ goes to the definition of what it hit; whether it was one.
+pub fn command_click(view: &dyn Editor, event: &objc2_app_kit::NSEvent) -> bool {
+    use objc2_app_kit::NSEventModifierFlags;
+    let flags = event.modifierFlags() & NSEventModifierFlags::DeviceIndependentFlagsMask;
+    if flags != NSEventModifierFlags::Command || server_of(view).is_none() {
+        return false;
+    }
+    let point = view.convertPoint_fromView(event.locationInWindow(), None);
+    let index = view.characterIndexForInsertionAtPoint(point);
+    view.setSelectedRange(objc2_foundation::NSRange::new(index, 0));
+    navigate::definition_at(view, index);
+    true
+}
+
+/// Puts the diagnostics' overlay over the new editor `view`.
+pub fn attach(view: &dyn Editor) {
+    decorate::Squiggles::attach(view);
+}
+
+/// `view` shows other lines: the server's decorations are painted again for them, popovers go and the hints of the
+/// lines that came into view are asked for.
+pub fn scrolled(view: &dyn Editor) {
+    let busy = {
+        let state = view.lsp().borrow();
+        !state.marks.is_empty() || !state.tokens.is_empty()
+    };
+    if busy {
+        view.lsp().borrow_mut().repaint.screen = true;
+        view.later(sel!(ideDecorate), 0.05);
+    }
+    hover::dismiss(view);
+    signature::dismiss_for(view);
+    inlay::scrolled(view);
+    view.follow_overlay();
+}
+
+/// The registry, built once the login shell's environment is known; blocks until then, so only off the main thread.
+fn registry() -> Arc<Registry> {
+    REGISTRY
+        .get_or_init(|| {
+            let environment = ide_ui_common::window::environment(Duration::from_secs(20));
+            Arc::new(Registry::new(Supervisor::global(), environment))
+        })
+        .clone()
+}
+
+fn workspace(root: &Path) -> Option<Rc<Workspace>> {
+    with_workspaces(|all| all.borrow().iter().find(|w| w.root == root).cloned())
+}
+
+fn workspace_or_new(root: &Path) -> Rc<Workspace> {
+    workspace(root).unwrap_or_else(|| {
+        let created = Rc::new(Workspace {
+            root: root.to_path_buf(),
+            slots: RefCell::new(vec![]),
+        });
+        with_workspaces(|all| all.borrow_mut().push(created.clone()));
+        created
+    })
+}
+
+fn slot(root: &Path, id: u64) -> Option<Rc<Slot>> {
+    workspace(root)?.slots.borrow().iter().find(|s| s.id == id).cloned()
+}
+
+/// The window folder of `view`, if the user trusts it.
+fn trusted_root(view: &dyn Editor) -> Option<PathBuf> {
+    let root = view.project_root()?;
+    crate::host::is_trusted(&root).then_some(root)
+}
+
+/// The slot `view` belongs to and the running server in it.
+fn server_of(view: &dyn Editor) -> Option<(Server, Uri)> {
+    let root = view.project_root()?;
+    let (id, uri) = {
+        let state = view.lsp().borrow();
+        (state.slot?, state.uri.clone()?)
+    };
+    let slot = slot(&root, id)?;
+    let state = slot.state.borrow();
+    match &*state {
+        State::Running(server) => Some((server.clone(), uri)),
+        _ => None,
+    }
+}
+
+/// The running servers of `view`, the main one first, each with its slot's id (E140).
+fn servers_of(view: &dyn Editor) -> Vec<(u64, Server, Uri)> {
+    let Some(root) = view.project_root() else {
+        return Vec::new();
+    };
+    let (ids, uri) = {
+        let state = view.lsp().borrow();
+        let ids: Vec<u64> = state
+            .slot
+            .into_iter()
+            .chain(state.companions.iter().map(|(id, _)| *id))
+            .collect();
+        (ids, state.uri.clone())
+    };
+    let Some(uri) = uri else { return Vec::new() };
+    ids.into_iter()
+        .filter_map(|id| {
+            let slot = slot(&root, id)?;
+            let state = slot.state.borrow();
+            match &*state {
+                State::Running(server) => Some((id, server.clone(), uri.clone())),
+                _ => None,
+            }
+        })
+        .collect()
+}
+
+/// The running server of slot `id` for `view`, main or second.
+fn server_by_id(view: &dyn Editor, id: u64) -> Option<(Server, Uri)> {
+    servers_of(view)
+        .into_iter()
+        .find(|(slot, _, _)| *slot == id)
+        .map(|(_, server, uri)| (server, uri))
+}
+
+fn version(view: &dyn Editor) -> i32 {
+    i32::try_from(view.document().revision().get()).unwrap_or(i32::MAX)
+}
+
+/// Asks again, after a pause in typing, for what the server computes over the whole document.
+pub fn refresh(view: &dyn Editor) {
+    if let Some((server, uri)) = server_of(view) {
+        outline::refresh(view, &server, &uri);
+    }
+    next(view, |view| {
+        if server_of(view).is_some() {
+            inlay::request(view);
+        }
+        next(view, |view| {
+            if let Some((server, uri)) = server_of(view) {
+                semantic_tokens(view, &server, &uri);
+            }
+            next(view, |view| pull_diagnostics(view, view.lsp().borrow().serial));
+        });
+    });
+}
+
+/// Runs `step` for `view` on a later turn of the run loop while its text stays as it is, so that the questions after
+/// a pause in typing each take a turn of their own instead of holding up the next keystroke together.
+fn next(view: &dyn Editor, step: fn(&dyn Editor)) {
+    let serial = view.lsp().borrow().serial;
+    let revision = view.document().revision();
+    main_soon(move || {
+        if let Some(view) = host::find_editor(serial)
+            && view.document().revision() == revision
+        {
+            step(&*view);
+        }
+    });
+}
+
+/// Asks the main server for the colours of the whole document.
+fn semantic_tokens(view: &dyn Editor, server: &Server, uri: &Uri) {
+    let serial = view.lsp().borrow().serial;
+    let revision = view.document().revision();
+    let _ = server.semantic_tokens(uri, move |answer| {
+        main_soon(move || {
+            let Some(view) = host::find_editor(serial) else {
+                return;
+            };
+            match answer {
+                Ok(tokens) if view.document().revision() == revision => decorate::set_tokens(&*view, &tokens),
+                Err(ide_lsp::Error::Server { code, .. }) if code == CONTENT_MODIFIED => {
+                    view.later(sel!(ideLspRefresh), REFRESH_DELAY);
+                }
+                _ => {}
+            }
+        });
+    });
+}
+
+/// Asks every server of `view` that offers pulled diagnostics for them (E140); ESLint sends no others (E132).
+fn pull_diagnostics(view: &dyn Editor, serial: EditorSerial) {
+    for (source, server, uri) in servers_of(view) {
+        if !server.capabilities().is_some_and(|c| c.diagnostic_provider.is_some()) {
+            continue;
+        }
+        let _ = server.pull_diagnostics(&uri, move |answer| {
+            if let Ok(diagnostics) = answer {
+                main_soon(move || {
+                    if let Some(view) = host::find_editor(serial) {
+                        decorate::set_diagnostics_from(&*view, source, &diagnostics);
+                    }
+                });
+            }
+        });
+    }
+}
+
+/// A server's progress as the status bar shows it; the share only once, also when the server already wrote it.
+fn progress_text(title: &str, message: Option<&str>, percentage: Option<u32>) -> String {
+    let mut text = title.to_string();
+    if let Some(message) = message.filter(|m| !m.is_empty()) {
+        text.push_str(" – ");
+        text.push_str(message);
+    }
+    if let Some(percentage) = percentage {
+        let written = [format!("{percentage}%"), format!("{percentage} %")]
+            .iter()
+            .any(|share| text.contains(share.as_str()));
+        if !written {
+            text.push_str(&format!(" ({percentage} %)"));
+        }
+    }
+    text
+}
+
+/// Counts of the problems `view` shows, errors first, or `None` when no server watches its document.
+pub(crate) fn problem_counts(view: &dyn Editor) -> Option<(usize, usize)> {
+    server_of(view)?;
+    let state = view.lsp().borrow();
+    let errors = state.marks.iter().filter(|m| m.severity == Severity::Error).count();
+    let warnings = state.marks.iter().filter(|m| m.severity == Severity::Warning).count();
+    Some((errors, warnings))
+}
+
+pub use edits::apply_text_edits;
+use install::missing_text;
+pub(crate) use install::server_status;
+pub use install::status_action;
+#[cfg(feature = "selftest")]
+mod selftest_probe;
+#[cfg(feature = "selftest")]
+pub use selftest_probe::*;
+
+/// Shows `failures`, lines from 1 with their messages, as errors in `view` from `source`, beside the servers' own
+/// diagnostics (E111).
+pub fn show_failures(view: &dyn Editor, source: u64, failures: &[(u32, String)]) {
+    use ide_lsp::lsp_types::{Diagnostic, DiagnosticSeverity, Position, Range};
+    let diagnostics: Vec<Diagnostic> = failures
+        .iter()
+        .map(|(line, message)| {
+            let line = line.saturating_sub(1);
+            Diagnostic {
+                range: Range::new(Position::new(line, 0), Position::new(line, u32::MAX)),
+                severity: Some(DiagnosticSeverity::ERROR),
+                source: Some("test".into()),
+                message: message.clone(),
+                ..Diagnostic::default()
+            }
+        })
+        .collect();
+    decorate::set_diagnostics_from(view, source, &diagnostics);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_missing_server_is_offered_for_installation_unless_its_tool_is_missing_too() {
+        let missing = |missing| NotFound {
+            language: Language::Rust,
+            program: "rust-analyzer".into(),
+            install: Some(ide_lsp::Install::RustAnalyzer),
+            missing,
+            hint: None,
+        };
+        let (text, action) = missing_text(&missing(None));
+        assert_eq!(action, status::Action::Install);
+        assert!(text.contains("rust-analyzer"));
+        let (text, action) = missing_text(&missing(Some("go")));
+        assert_eq!(action, status::Action::None, "nothing to offer without go");
+        assert!(text.contains("go"));
+    }
+
+    #[test]
+    fn a_server_the_app_cannot_install_names_how_to_get_it() {
+        let missing = NotFound {
+            language: Language::Lua,
+            program: "lua-language-server".into(),
+            install: None,
+            missing: None,
+            hint: Some("brew install lua-language-server"),
+        };
+        let (text, action) = missing_text(&missing);
+        assert_eq!(action, status::Action::None);
+        assert!(text.contains("brew install lua-language-server"), "{text}");
+        let custom = NotFound { hint: None, ..missing };
+        assert!(missing_text(&custom).0.contains("lua-language-server"));
+    }
+
+    #[test]
+    fn progress_reads_as_title_message_and_share() {
+        assert_eq!(
+            progress_text("Indexing", Some("3/10"), Some(30)),
+            "Indexing – 3/10 (30 %)"
+        );
+        assert_eq!(progress_text("Fetching", Some(""), None), "Fetching");
+        assert_eq!(
+            progress_text("Indexing", Some("4/21 (core) 19%"), Some(19)),
+            "Indexing – 4/21 (core) 19%"
+        );
+        assert_eq!(progress_text("Loading 40 %", None, Some(40)), "Loading 40 %");
+    }
+}

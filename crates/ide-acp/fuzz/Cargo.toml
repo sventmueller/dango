@@ -1,0 +1,26 @@
+[package]
+name = "ide-acp-fuzz"
+version = "0.0.0"
+description = "Fuzz targets of ide-acp (E95); `cargo xtask fuzz` runs them with the nightly cargo-fuzz needs"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+# A workspace of its own, so that the nightly-only build stays out of the app's.
+[workspace]
+members = ["."]
+
+[dependencies]
+libfuzzer-sys = "0.4.10"
+ide-acp = { path = ".." }
+ide-thread = { path = "../../ide-thread", features = ["fuzzing"] }
+serde_json = "1.0.154"
+
+[[bin]]
+name = "updates"
+path = "fuzz_targets/updates.rs"
+test = false
+doc = false
+bench = false

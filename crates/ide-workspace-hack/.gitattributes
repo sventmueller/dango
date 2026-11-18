@@ -1,0 +1,2 @@
+# Merging conflict markers into the generated Cargo.toml would break cargo; regenerate it instead.
+Cargo.toml merge=binary -crlf

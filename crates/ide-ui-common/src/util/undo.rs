@@ -1,0 +1,23 @@
+use objc2_app_kit::NSTextView;
+
+use super::UndoGroupGuard;
+
+/// Runs `edit`, whose changes of `view` become one undoable step of their own, also right after typing in the same
+/// turn of the run loop; inside a group a caller opened, they join it.
+pub fn undo_step(view: &NSTextView, edit: impl FnOnce()) {
+    view.breakUndoCoalescing();
+    let undo = view.undoManager();
+    if let Some(undo) = &undo
+        && undo.groupsByEvent()
+        && undo.groupingLevel() == 1
+    {
+        // AppKit closes the turn's group only at its end and until then refuses registrations without an open group,
+        // so a fresh one replaces it, which the end of the turn or the next undo closes.
+        undo.endUndoGrouping();
+        undo.beginUndoGrouping();
+    }
+    let group = undo.as_deref().map(UndoGroupGuard::begin);
+    edit();
+    drop(group);
+    view.breakUndoCoalescing();
+}

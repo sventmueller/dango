@@ -1,0 +1,24 @@
+[package]
+name = "ide-claude"
+version = "0.0.0"
+description = "The Claude CLI connection: stream-json frames, control requests and their mapping onto the thread model"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+splat-i18n.workspace = true
+base64 = "0.23.1"
+ide-core = { path = "../ide-core" }
+ide-net = { path = "../ide-net" }
+ide-process = { path = "../ide-process" }
+ide-thread = { path = "../ide-thread" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+ide-workspace-hack.workspace = true
+
+[dev-dependencies]
+ide-core = { path = "../ide-core", features = ["testing"] }

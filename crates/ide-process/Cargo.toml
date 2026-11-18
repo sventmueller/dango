@@ -1,0 +1,19 @@
+[package]
+name = "ide-process"
+version = "0.0.0"
+description = "Every process the app starts, in its own group, stopped in order and listed for the activity view"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ide-core.workspace = true
+ide-product.workspace = true
+libc.workspace = true
+ide-workspace-hack.workspace = true
+
+[dev-dependencies]
+ide-core = { path = "../ide-core", features = ["testing"] }

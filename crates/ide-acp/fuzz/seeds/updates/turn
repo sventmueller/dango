@@ -1,0 +1,11 @@
+{"sessionId": "s", "update": {"sessionUpdate": "agent_thought_chunk", "content": {"type": "text", "text": "Thinking"}}}
+{"sessionId": "s", "update": {"sessionUpdate": "agent_message_chunk", "content": {"type": "text", "text": "Let me look."}}}
+{"sessionId": "s", "update": {"sessionUpdate": "plan", "entries": [{"content": "Read", "priority": "high", "status": "in_progress"}]}}
+{"sessionId": "s", "update": {"sessionUpdate": "tool_call", "toolCallId": "call-1", "title": "ls -la", "kind": "execute", "status": "pending", "rawInput": {"command": "ls -la"}}}
+{"sessionId": "s", "update": {"sessionUpdate": "tool_call_update", "toolCallId": "call-1", "status": "completed", "content": [{"type": "content", "content": {"type": "text", "text": "a.txt"}}]}}
+{"sessionId": "s", "update": {"sessionUpdate": "tool_call", "toolCallId": "call-2", "title": "Edit a.txt", "kind": "edit", "status": "completed", "content": [{"type": "diff", "path": "/tmp/a.txt", "oldText": "one\ntwo\n", "newText": "one\n2\n"}], "locations": [{"path": "/tmp/a.txt", "line": 2}]}}
+{"sessionId": "s", "update": {"sessionUpdate": "usage_update", "used": 12000, "size": 200000, "cost": {"amount": 0.0123, "currency": "USD"}}}
+{"sessionId": "s", "update": {"sessionUpdate": "session_info_update", "title": "Listing files"}}
+{"sessionId": "s", "update": {"sessionUpdate": "current_mode_update", "currentModeId": "ask"}}
+{"sessionId": "s", "update": {"sessionUpdate": "available_commands_update", "availableCommands": [{"name": "init", "description": "Set up"}]}}
+{"sessionId": "s", "update": {"sessionUpdate": "mystery_update", "detail": "not in the protocol"}}

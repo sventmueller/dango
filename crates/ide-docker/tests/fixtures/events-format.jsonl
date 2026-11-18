@@ -1,0 +1,2 @@
+{"status":"start","id":"3f2a1c","from":"postgres:16","Type":"container","Action":"start","Actor":{"ID":"3f2a1c","Attributes":{"com.docker.compose.project":"shop","image":"postgres:16","name":"shop-db-1"}},"scope":"local","time":1794596400,"timeNano":1794596400000000000}
+{"Type":"volume","Action":"destroy","Actor":{"ID":"shop_data","Attributes":{"driver":"local"}},"scope":"local","time":1794596401,"timeNano":1794596401000000000}

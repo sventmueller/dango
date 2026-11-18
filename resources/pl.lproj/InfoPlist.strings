@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "Dyktowanie zamienia to, co mówisz, na tekst w edytorze i w polu wprowadzania kart AI.";

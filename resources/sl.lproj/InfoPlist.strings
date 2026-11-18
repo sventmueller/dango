@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "Narekovanje pretvori vaš govor v besedilo v urejevalniku in v vnosnem polju zavihkov AI.";

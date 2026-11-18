@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "Diktering gjør det du sier, om til tekst i editoren og i inndatafeltet i KI-faner.";

@@ -1,0 +1,20 @@
+{
+  "total_count": 2,
+  "jobs": [
+    {
+      "id": 72,
+      "run_id": 9001,
+      "name": "test",
+      "status": "completed",
+      "conclusion": "failure",
+      "html_url": "https://github.com/acme/widget/actions/runs/9001/job/72",
+      "started_at": "2026-11-09T12:02:15Z",
+      "completed_at": "2026-11-09T12:04:25Z",
+      "steps": [
+        { "name": "Set up job", "status": "completed", "conclusion": "success", "number": 1 },
+        { "name": "Run cargo test", "status": "completed", "conclusion": "failure", "number": 2 },
+        { "name": "Upload report", "status": "completed", "conclusion": "skipped", "number": 3 }
+      ]
+    }
+  ]
+}

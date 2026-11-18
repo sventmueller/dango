@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "La dictée transforme vos paroles en texte dans l’éditeur et dans le champ de saisie des onglets IA.";

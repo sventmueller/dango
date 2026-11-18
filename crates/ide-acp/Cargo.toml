@@ -1,0 +1,47 @@
+[package]
+name = "ide-acp"
+version = "0.0.0"
+description = "Agents over the Agent Client Protocol (E4, E5): the connection, the register of agents and their installation"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "acp-test-agent"
+path = "src/bin/acp-test-agent.rs"
+test = false
+required-features = ["testing"]
+
+[[bin]]
+name = "acp-record"
+path = "src/bin/acp-record.rs"
+test = false
+
+[features]
+# The scripted test agent and its program, for tests and the self-test; not in the shipped app.
+testing = []
+
+[dependencies]
+# Pinned exactly (E4, R2): the unstable feature may change in a 5.x minor, and each minor pins a newer schema;
+# raising it is a decision of its own, see docs/acp.md.
+agent-client-protocol = { version = "=5.2.0", features = ["unstable_end_turn_token_usage", "unstable_session_fork"] }
+blocking = "1.7.0"
+futures = { version = "0.3.34", default-features = false, features = ["std", "executor"] }
+ide-core = { path = "../ide-core" }
+ide-net = { path = "../ide-net" }
+ide-process = { path = "../ide-process" }
+ide-product = { path = "../ide-product" }
+ide-thread = { path = "../ide-thread" }
+splat-i18n.workspace = true
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+ide-workspace-hack.workspace = true
+
+[dev-dependencies]
+ide-core = { path = "../ide-core", features = ["testing"] }
+# Itself with the test agent, for the integration tests.
+ide-acp = { path = ".", features = ["testing"] }
+sha2 = "0.11.1"

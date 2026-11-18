@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "Dikteringen gör om det du säger till text i redigeraren och i inmatningsfältet i AI-flikarna.";

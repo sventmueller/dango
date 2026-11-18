@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "A diktálás a kimondott szöveget írott szöveggé alakítja a szerkesztőben és az AI-lapok beviteli mezőjében.";

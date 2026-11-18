@@ -1,0 +1,11 @@
+[
+  {
+    "id": 8001,
+    "iid": 7,
+    "title": "Deploy stage hangs on Mondays",
+    "author": { "username": "ops" },
+    "web_url": "https://gitlab.example.com/gitlab/group/app/-/issues/7",
+    "updated_at": "2026-11-09T08:00:00.000Z",
+    "state": "opened"
+  }
+]

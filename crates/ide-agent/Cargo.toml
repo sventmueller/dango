@@ -1,0 +1,38 @@
+[package]
+name = "ide-agent"
+version = "0.0.0"
+description = "The app's own agent (E6): language model providers, their keys and prices, and the agent's tools and loop"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# Entry points for the fuzz targets in `fuzz/`, which reach parts that are not public.
+[features]
+# The scripted provider `stub`, for tests and the self-test; not in the shipped app.
+testing = []
+fuzzing = []
+
+[dependencies]
+splat-i18n.workspace = true
+ide-secrets = { path = "../ide-secrets" }
+ide-net = { path = "../ide-net" }
+base64 = "0.23.1"
+globset = "0.4.21"
+ide-core = { path = "../ide-core" }
+ide-process = { path = "../ide-process" }
+ide-product = { path = "../ide-product" }
+ide-project = { path = "../ide-project" }
+ide-thread = { path = "../ide-thread" }
+ignore = "0.4.34"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+similar = "3.2.1"
+ide-workspace-hack.workspace = true
+
+[dev-dependencies]
+ide-core = { path = "../ide-core", features = ["testing"] }
+# Itself with the scripted provider, for the integration tests and doctests.
+ide-agent = { path = ".", features = ["testing"] }

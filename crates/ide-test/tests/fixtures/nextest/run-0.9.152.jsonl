@@ -1,0 +1,16 @@
+{"type":"suite","event":"started","test_count":4,"nextest":{"crate":"sample","test_binary":"sample","kind":"lib"}}
+{"type":"test","event":"started","name":"sample::sample$tests::slow"}
+{"type":"suite","event":"started","test_count":1,"nextest":{"crate":"sample","test_binary":"api","kind":"test"}}
+{"type":"test","event":"started","name":"sample::api$api_works"}
+{"type":"test","event":"started","name":"sample::sample$tests::nested::inner"}
+{"type":"test","event":"started","name":"sample::sample$tests::adds"}
+{"type":"test","event":"started","name":"sample::sample$tests::fails"}
+{"type":"test","event":"ignored","name":"sample::sample$tests::slow"}
+{"type":"test","event":"ok","name":"sample::sample$tests::adds","exec_time":0.018275666}
+{"type":"test","event":"ok","name":"sample::sample$tests::nested::inner","exec_time":0.018636}
+{"type":"suite","event":"ok","passed":2,"failed":0,"ignored":1,"measured":0,"filtered_out":0,"exec_time":0.036911666,"nextest":{"crate":"sample","test_binary":"sample","kind":"lib"}}
+{"type":"test","event":"ok","name":"sample::api$api_works","exec_time":0.020671}
+{"type":"suite","event":"ok","passed":1,"failed":0,"ignored":0,"measured":0,"filtered_out":0,"exec_time":0.020671,"nextest":{"crate":"sample","test_binary":"api","kind":"test"}}
+{"type":"suite","event":"started","test_count":4,"nextest":{"crate":"sample","test_binary":"sample","kind":"lib"}}
+{"type":"test","event":"failed","name":"sample::sample$tests::fails","exec_time":0.018785709,"stdout":"\nthread 'tests::fails' (2565911) panicked at src/lib.rs:16:9:\nassertion `left == right` failed: one and two\n  left: 3\n right: 4\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"}
+{"type":"suite","event":"failed","passed":0,"failed":1,"ignored":1,"measured":0,"filtered_out":2,"exec_time":0.018785709,"nextest":{"crate":"sample","test_binary":"sample","kind":"lib"}}
