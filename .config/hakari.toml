@@ -7,7 +7,7 @@ resolver = "2"
 unify-target-host = "replicate-target-on-host"
 platforms = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
 
-# xtask also runs on the Linux runners of GitHub, where the AppKit bindings in the workspace-hack do not build.
+# xtask keeps its own dependencies out of the unification; CI runs it on macOS, where its crates' AppKit bindings build.
 [traversal-excludes]
 workspace-members = ["xtask"]
 

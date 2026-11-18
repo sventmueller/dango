@@ -16,7 +16,8 @@ permissions:
 
 jobs:
   seal:
-    runs-on: ubuntu-latest
+    # The workspace-hack gives xtask's crates the AppKit bindings, which build only on macOS.
+    runs-on: macos-15
     timeout-minutes: 15
     outputs:
       verdict: ${{ steps.seal.outputs.verdict }}
