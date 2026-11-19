@@ -49,6 +49,7 @@ pub mod style;
 mod suggest;
 mod tab;
 mod tab_driven;
+mod tab_parking;
 #[cfg(feature = "selftest")]
 mod tab_probe;
 mod tab_session;

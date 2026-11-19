@@ -28,7 +28,7 @@ const WORKSPACE: [&str; 3] = ["src", "crates", "xtask"];
 /// How many times the app's production code may look the app context up through `context::app()`, `try_app()`,
 /// `AppContext::get` or `AppContext::of_delegate`, or call a function that does, instead of being handed it or a
 /// window id (E97, E143); a ratchet: lower it whenever the count drops, it never rises.
-const APP_LOOKUPS: usize = 404;
+const APP_LOOKUPS: usize = 403;
 
 /// How many times the UI crates' production code may look their state up through their host's `state()` or call a
 /// function that does, instead of being handed it, a ratchet like `APP_LOOKUPS` (E143).

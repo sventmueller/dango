@@ -127,6 +127,10 @@ impl WindowController {
 
     /// Brings `tab` to the front of its tab group and gives it the sidebar.
     pub(super) fn select(&self, tab: &Rc<TabWindow>) {
+        if self.restoring_editor_tabs() {
+            *self.ivars().documents.current.borrow_mut() = Some(tab.clone());
+            return;
+        }
         if let Some(group) = tab.window.tabGroup() {
             group.setSelectedWindow(Some(&tab.window));
         }
@@ -154,8 +158,12 @@ impl WindowController {
     /// that shows. The tab it leaves keeps a picture of it while its window stays on screen beside; a tab that comes
     /// on screen later without coming to the front gets its picture then.
     pub(in crate::window) fn make_current(&self, tab: &Rc<TabWindow>) {
+        if self.restoring_editor_tabs() {
+            return;
+        }
         let previous = self.current_tab();
         if previous.as_ref().is_some_and(|previous| Rc::ptr_eq(previous, tab)) {
+            self.load_restored_editors(tab);
             self.list_front_tabs();
             return;
         }
@@ -164,11 +172,15 @@ impl WindowController {
             .is_some_and(|previous| self.sidebar_leaves(previous, tab));
         *self.ivars().documents.current.borrow_mut() = Some(tab.clone());
         self.sidebar_joins(tab, collapsed);
+        self.load_restored_editors(tab);
         self.list_front_tabs();
     }
 
     /// A window tab came on screen or left it: one on screen beside the tab in front shows a picture of the sidebar.
     pub(in crate::window) fn tab_visibility_changed(&self, tab: &Rc<TabWindow>) {
+        if self.restoring_editor_tabs() {
+            return;
+        }
         let current = self.current_tab();
         if current.is_some_and(|current| Rc::ptr_eq(&current, tab)) || tab.has_picture() {
             return;
@@ -230,8 +242,12 @@ impl WindowController {
             *documents.current.borrow_mut() = None;
             let next = neighbour.or_else(|| documents.tabs.borrow().first().cloned());
             if let Some(next) = next {
-                self.make_current(&next);
-                self.later(WindowController::follow_selection);
+                if self.restoring_editor_tabs() {
+                    self.select(&next);
+                } else {
+                    self.make_current(&next);
+                    self.later(WindowController::follow_selection);
+                }
             }
         }
         crate::session::changed();

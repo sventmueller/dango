@@ -20,7 +20,7 @@ const SETTLE: Duration = Duration::from_millis(1500);
 
 /// Runs `step` with 0 to `count` - 1, each in a turn of its own and drawn before the next, then `then` with how long
 /// each step took with its drawing.
-fn steps(count: usize, step: impl Fn(usize) + 'static, then: impl FnOnce(Vec<Duration>) + 'static) {
+pub(super) fn steps(count: usize, step: impl Fn(usize) + 'static, then: impl FnOnce(Vec<Duration>) + 'static) {
     next(0, count, Rc::new(step), Vec::new(), Box::new(then));
 }
 
@@ -50,7 +50,7 @@ fn next(
 }
 
 /// What the steps took, for a check's detail: the 95th percentile and the longest.
-fn spread(times: &[Duration]) -> String {
+pub(super) fn spread(times: &[Duration]) -> String {
     let mut sorted = times.to_vec();
     sorted.sort();
     let at = |percent: usize| {

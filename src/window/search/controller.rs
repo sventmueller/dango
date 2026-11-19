@@ -2,7 +2,7 @@
 //! their own, brings the list in line with the model and carries out opening and replacing.
 
 use std::path::{Path, PathBuf};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use ide_project::{Cancel, FileResult, SearchOptions};
 use ide_ui_common::alert::{Alert, Role, first};
@@ -38,7 +38,49 @@ impl SearchPanel {
         }
         let _ = this.ivars().hierarchy.set(hierarchy);
         with_panels(|panels| panels.borrow_mut().push(Weak::from(&*this)));
+        if let Some(views) = this.ivars().views.get() {
+            let came = Weak::from(&*this);
+            let went = came.clone();
+            ide_ui_common::panel::watch_view(
+                &views.header,
+                move || {
+                    if let Some(panel) = came.load() {
+                        panel.caught_up();
+                    }
+                },
+                Some((
+                    Duration::ZERO,
+                    Box::new(move || {
+                        if let Some(panel) = went.load()
+                            && let Some(refresh) = panel.model().suspend()
+                        {
+                            panel.ivars().deferred_refresh.set(Some(refresh));
+                            panel.ivars().deferred_show.set(true);
+                        }
+                    }),
+                )),
+            );
+        }
         this
+    }
+
+    fn visible(&self) -> bool {
+        self.ivars()
+            .views
+            .get()
+            .is_some_and(|views| !ide_ui_common::panel::out_of_view(&views.header))
+    }
+
+    fn caught_up(&self) {
+        if let Some(pending) = self.ivars().deferred_start.take() {
+            self.start(pending);
+        }
+        if let Some(refresh) = self.ivars().deferred_refresh.take() {
+            self.refresh(refresh);
+        }
+        if self.ivars().deferred_show.replace(false) {
+            self.show();
+        }
     }
 
     /// Shows `hierarchy` in place of the text search, which keeps what it holds.
@@ -119,6 +161,11 @@ impl SearchPanel {
 
     fn start(&self, pending: u64) {
         let options = self.options();
+        if !self.visible() && !options.pattern.is_empty() {
+            let deferred = &self.ivars().deferred_start;
+            deferred.set(Some(deferred.get().map_or(pending, |next| next.max(pending))));
+            return;
+        }
         let started = self.model().start(pending, &options);
         match started {
             Started::Nothing => {}
@@ -137,7 +184,7 @@ impl SearchPanel {
         let job = Job {
             id: self.ivars().id,
             generation,
-            buffers: crate::editor::unsaved_buffers(&root),
+            buffers: crate::editor::unsaved_texts(&root),
             root,
             options,
             progressive,
@@ -158,6 +205,10 @@ impl SearchPanel {
         let Some(refresh) = self.model().refresh_soon() else {
             return;
         };
+        if !self.visible() {
+            self.ivars().deferred_refresh.set(Some(refresh));
+            return;
+        }
         let id = self.ivars().id;
         main_after(REFRESH_DELAY, move || {
             if let Some(panel) = panel(id) {
@@ -168,6 +219,11 @@ impl SearchPanel {
 
     /// Searches again for the matches on show and puts the new ones in their place when the search ends.
     fn refresh(&self, refresh: u64) {
+        if !self.visible() {
+            let deferred = &self.ivars().deferred_refresh;
+            deferred.set(Some(deferred.get().map_or(refresh, |pending| pending.max(refresh))));
+            return;
+        }
         let options = self.options();
         let generation = self.model().refresh(refresh, &options);
         if let Some(generation) = generation {
@@ -186,6 +242,10 @@ impl SearchPanel {
     /// Shows the tree or the matches with their status, keeping the selected row where it can.
     pub(super) fn show(&self) {
         let Some(views) = self.ivars().views.get() else { return };
+        if !self.visible() {
+            self.ivars().deferred_show.set(true);
+            return;
+        }
         // The outline calls back into the panel while it reloads and expands, so the model is not held meanwhile.
         let (searching, (status, problem), unfolded, can_replace_all) = {
             let model = self.read();
@@ -387,7 +447,7 @@ struct Job {
     generation: u64,
     root: PathBuf,
     options: SearchOptions,
-    buffers: Vec<(PathBuf, String)>,
+    buffers: Vec<(PathBuf, ide_document::Text)>,
     /// Hands what is found over in batches as it comes, rather than all at the end.
     progressive: bool,
 }
@@ -402,8 +462,15 @@ fn run(job: Job, cancel: Cancel) {
         buffers,
         progressive,
     } = job;
+    if cancel.is_cancelled() {
+        return;
+    }
     let mut batch = Vec::new();
     let mut flushed = Instant::now();
+    let buffers: Vec<_> = buffers
+        .into_iter()
+        .map(|(path, text)| (path, text.to_string()))
+        .collect();
     let result = ide_project::search_with(&root, &options, &buffers, &cancel, |found| {
         batch.push(found);
         if progressive && flushed.elapsed() >= FLUSH {

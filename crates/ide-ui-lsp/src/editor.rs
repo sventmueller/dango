@@ -14,6 +14,9 @@ use objc2_app_kit::{NSStackView, NSTextStorage, NSTextView};
 
 use super::ViewState;
 
+/// Receives an editor once its restored file is available.
+pub type Ready = Box<dyn FnOnce(Box<dyn Editor>)>;
+
 /// An editor; it is the text view it shows its document in.
 pub trait Editor: Deref<Target = NSTextView> {
     /// Tells this editor apart from every other one in callbacks that cannot hold a view.

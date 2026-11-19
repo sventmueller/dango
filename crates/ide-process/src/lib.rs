@@ -8,6 +8,7 @@
 
 #![warn(missing_docs)]
 
+mod agent_tree;
 pub mod framing;
 pub mod gate;
 pub mod order_env;

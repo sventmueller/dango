@@ -208,6 +208,17 @@ impl Model {
         }
     }
 
+    /// Pauses a running search while its panel is hidden, invalidating any batches already en route.
+    pub fn suspend(&mut self) -> Option<u64> {
+        if !self.running {
+            return None;
+        }
+        self.stop();
+        self.run += 1;
+        self.running = false;
+        self.refresh_soon()
+    }
+
     /// A search went off with `cancel`; one that is not `progressive` shows its matches only once it ends.
     pub fn spawned(&mut self, cancel: Cancel, progressive: bool) {
         self.cancel = Some(cancel);
@@ -615,6 +626,21 @@ mod tests {
         assert_eq!(model.files(), [PathBuf::from("/p/a.rs")]);
         model.take(again, vec![found("/p/b.rs", &[(2, 1)])], done(false));
         assert_eq!(model.files(), [PathBuf::from("/p/b.rs")]);
+    }
+
+    #[test]
+    fn suspending_a_search_cancels_it_and_drops_batches_still_in_flight() {
+        let mut model = Model::new("/p".into());
+        let before = searching(&mut model, "a");
+        let cancel = Cancel::new();
+        model.spawned(cancel.clone(), true);
+        let refresh = model.suspend().unwrap();
+        assert!(cancel.is_cancelled());
+        assert!(!model.take(before, vec![found("/p/old.rs", &[(1, 1)])], done(false)));
+        let again = model.refresh(refresh, &query("a")).unwrap();
+        model.spawned(Cancel::new(), false);
+        assert!(model.take(again, vec![found("/p/new.rs", &[(1, 1)])], done(false)));
+        assert_eq!(model.files(), [PathBuf::from("/p/new.rs")]);
     }
 
     #[test]

@@ -523,6 +523,29 @@ impl Session {
         self.shared.closed.load(Ordering::SeqCst)
     }
 
+    /// The supervisor's handle for this CLI process.
+    pub fn process_id(&self) -> ProcessId {
+        self.shared.process
+    }
+
+    /// Whether the latest state allows closing the CLI and resuming later.
+    pub fn can_park(&self) -> bool {
+        let state = self.shared.lock_state();
+        !self.is_ended()
+            && state.thread.session().is_some()
+            && state.thread.status() == ide_thread::Status::Idle
+            && state.asks.is_empty()
+            && state.thread.pending_requests().is_empty()
+            && matches!(state.remote, RemoteControl::Unavailable | RemoteControl::Off)
+            && state.thread.subagents().iter().all(|task| task.status.is_final())
+            && state.thread.background().iter().all(|task| task.status.is_final())
+    }
+
+    /// Checks for work in the live process tree, including commands Claude has not reported.
+    pub fn has_process_work(&self) -> bool {
+        self.shared.supervisor.agent_has_work(self.shared.process)
+    }
+
     /// Closes the CLI's input; it finishes what it has and ends.
     pub fn close_input(&self) {
         self.shared.end_expected.store(true, Ordering::SeqCst);

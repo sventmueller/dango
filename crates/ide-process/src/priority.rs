@@ -101,7 +101,7 @@ const COMMANDS: &[&str] = &[
 ];
 
 /// Whether a process named `name` runs an agent's commands.
-fn runs_commands(name: &str) -> bool {
+pub(crate) fn runs_commands(name: &str) -> bool {
     COMMANDS.contains(&name.trim_start_matches('-'))
 }
 

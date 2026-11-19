@@ -395,12 +395,25 @@ fn opened_match(root: PathBuf, opened: bool) {
     if let Some(window) = controller.window() {
         snapshot(&window, "search-editor");
     }
+    controller.activate_panel(Panel::Files);
     if let Some(editor) = editor {
         let end = editor.document().text().len_utf16();
         editor.setSelectedRange(objc2_foundation::NSRange::new(end, 0));
         crate::editor::type_text(&editor, "// needle, not saved yet\n");
     }
-    poll(root, buffer_counted, unsaved);
+    helpers::after(std::time::Duration::from_millis(750), move || {
+        check(
+            "editing while search is hidden defers the refresh",
+            seen(&root).is_some_and(|seen| {
+                seen.settled && seen.files.iter().any(|(path, n)| path == "src/main.rs" && *n == 3)
+            }),
+            "",
+        );
+        if let Some(controller) = window_of(&root) {
+            controller.show_search();
+        }
+        poll(root, buffer_counted, unsaved);
+    });
 }
 
 fn buffer_counted(seen: &search::Seen) -> bool {

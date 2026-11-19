@@ -511,6 +511,9 @@ impl TabWindow {
     pub(super) fn activate_pane(&self, pane: PaneId) {
         self.panes.set_active(pane);
         self.refresh();
+        if let Some(controller) = self.controller.load() {
+            controller.load_restored_editors(self);
+        }
         match self.panes.focus_target(pane) {
             Some(view) => self.window.makeFirstResponder(Some(&view)),
             None => self.window.makeFirstResponder(None),

@@ -5,9 +5,11 @@
 use std::ops::Range;
 use std::path::Path;
 use std::sync::Arc;
+use std::time::Duration;
 
+use dispatch2::MainThreadBound;
 use ide_document::Snapshot;
-use objc2::rc::Retained;
+use objc2::rc::{Retained, Weak};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
     NSColor, NSFont, NSLineBreakMode, NSPopover, NSPopoverBehavior, NSScrollView, NSStackView, NSTextField,
@@ -40,6 +42,7 @@ const PADDING: NSEdgeInsets = NSEdgeInsets {
 };
 
 /// The file in the last commit, as the marks compare against it.
+#[derive(Clone)]
 struct Head {
     commit: Oid,
     text: Arc<str>,
@@ -56,6 +59,8 @@ pub(crate) struct Marks {
     revision: Option<ide_document::Revision>,
     /// Counts questions, so that the answer to an older one is dropped.
     asked: u64,
+    running: Option<Request>,
+    pending: Option<Request>,
     popover: Option<Retained<NSPopover>>,
     /// The hunk the popover shows, with the document revision it was found in.
     shown: Option<(Hunk, ide_document::Revision)>,
@@ -98,15 +103,15 @@ fn decode(bytes: Vec<u8>) -> Option<String> {
 
 /// The file's repository, commit and committed text; `None` outside a repository, before the first commit, for a file
 /// the commit does not hold, and for a repository this reader cannot read.
-fn read_head(path: &Path, known: Option<Oid>) -> Option<Result<Head, Oid>> {
+fn read_head(path: &Path, known: Option<Head>) -> Option<Head> {
     let repository = splat_git::find(path)?;
     let commit = repository.head_commit().ok()??;
-    if known == Some(commit) {
-        return Some(Err(commit));
+    if let Some(known) = known.filter(|known| known.commit == commit) {
+        return Some(known);
     }
     let bytes = repository.head_version(path).ok()??;
     let text: Arc<str> = decode(bytes)?.into();
-    Some(Ok(Head { commit, text }))
+    Some(Head { commit, text })
 }
 
 fn hunks_of(head: &str, snapshot: &Snapshot) -> (Vec<Hunk>, usize, ide_document::Revision) {
@@ -117,29 +122,11 @@ fn hunks_of(head: &str, snapshot: &Snapshot) -> (Vec<Hunk>, usize, ide_document:
 
 /// Reads the file's last commit again and compares; `force` reads it even when the commit is the one already known.
 pub(crate) fn reload(view: &EditorTextView, force: bool) {
-    let Some(path) = view.document().path().map(Path::to_path_buf) else {
-        clear(view);
-        return;
-    };
-    let snapshot = view.document().snapshot();
-    let known = if force {
-        None
+    if view.document().path().is_some() {
+        request(view, if force { Request::Force } else { Request::Reload });
     } else {
-        view.ivars().marks.borrow().head.as_ref().map(|h| h.commit)
-    };
-    let asked = next_question(view);
-    let serial = view.ivars().serial;
-    spawn(move || {
-        let answer = match read_head(&path, known) {
-            None => Answer::Gone,
-            Some(Err(_same)) => Answer::Same,
-            Some(Ok(head)) => {
-                let (hunks, lines, revision) = hunks_of(&head.text, &snapshot);
-                Answer::Head(head, hunks, lines, revision)
-            }
-        };
-        main_soon(move || deliver(serial, asked, answer));
-    });
+        clear(view);
+    }
 }
 
 /// Compares the text with the commit once typing pauses.
@@ -156,80 +143,111 @@ pub(crate) fn schedule_head(view: &EditorTextView) {
 
 /// Compares the text as it is now with the commit known.
 pub(crate) fn compare(view: &EditorTextView) {
-    let Some(text) = view.ivars().marks.borrow().head.as_ref().map(|h| h.text.clone()) else {
-        return;
-    };
-    let snapshot = view.document().snapshot();
-    let asked = next_question(view);
-    let serial = view.ivars().serial;
-    spawn(move || {
-        let (hunks, lines, revision) = hunks_of(&text, &snapshot);
-        main_soon(move || deliver(serial, asked, Answer::Hunks(hunks, lines, revision)));
-    });
+    request(view, Request::Compare);
 }
 
-fn next_question(view: &EditorTextView) -> u64 {
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum Request {
+    Compare,
+    Reload,
+    Force,
+}
+
+fn request(view: &EditorTextView, request: Request) {
     let mut marks = view.ivars().marks.borrow_mut();
     marks.asked += 1;
-    marks.asked
+    // An outstanding HEAD read can carry information a plain comparison still needs.
+    marks.pending = Some(
+        request
+            .max(marks.running.unwrap_or(request))
+            .max(marks.pending.unwrap_or(request)),
+    );
+    drop(marks);
+    start(view);
 }
 
-fn spawn(job: impl FnOnce() + Send + 'static) {
-    let job = move || {
-        ide_process::priority::set_qos(ide_process::priority::Qos::Utility);
-        job();
+fn start(view: &EditorTextView) {
+    let (request, asked, head) = {
+        let mut marks = view.ivars().marks.borrow_mut();
+        if marks.running.is_some() {
+            return;
+        }
+        let Some(request) = marks.pending.take() else { return };
+        marks.running = Some(request);
+        (request, marks.asked, marks.head.clone())
     };
-    if let Err(error) = crate::util::spawn("ide-git-marks", job) {
-        crate::diag::report("comparing with the last commit", error);
+    let path = view.document().path().map(Path::to_path_buf);
+    let snapshot = view.document().snapshot();
+    let editor = MainThreadBound::new(Weak::from(view), view.mtm());
+    let queued = ide_core::lane::WORK.ask(
+        move || {
+            let head = match request {
+                Request::Compare => head,
+                Request::Reload => path.and_then(|path| read_head(&path, head)),
+                Request::Force => path.and_then(|path| read_head(&path, None)),
+            }?;
+            let (hunks, lines, revision) = hunks_of(&head.text, &snapshot);
+            Some((head, hunks, lines, revision))
+        },
+        move |answer| {
+            main_soon(move || {
+                if let Some(view) = MainThreadMarker::new().and_then(|mtm| editor.get(mtm).load())
+                    && view.window().is_some()
+                {
+                    deliver(&view, asked, answer);
+                }
+            })
+        },
+    );
+    if queued.is_err() {
+        let mut marks = view.ivars().marks.borrow_mut();
+        marks.running = None;
+        marks.pending = Some(request);
+        let editor = MainThreadBound::new(Weak::from(view), view.mtm());
+        crate::util::main_after(Duration::from_millis(50), move || {
+            if let Some(view) = MainThreadMarker::new().and_then(|mtm| editor.get(mtm).load())
+                && view.window().is_some()
+            {
+                start(&view);
+            }
+        });
     }
 }
 
-enum Answer {
-    Gone,
-    /// The commit is the one known, so only the text is compared again.
-    Same,
-    Head(Head, Vec<Hunk>, usize, ide_document::Revision),
-    Hunks(Vec<Hunk>, usize, ide_document::Revision),
-}
+type Diff = (Head, Vec<Hunk>, usize, ide_document::Revision);
 
-fn deliver(serial: ide_ui_lsp::EditorSerial, asked: u64, answer: Answer) {
-    let Some(view) = super::find_editor(serial) else { return };
-    {
+fn deliver(view: &EditorTextView, asked: u64, answer: Option<Option<Diff>>) {
+    let changed = {
         let mut marks = view.ivars().marks.borrow_mut();
-        if marks.asked != asked {
-            return;
-        }
-        match answer {
-            Answer::Same => {
-                drop(marks);
-                compare(&view);
-                return;
-            }
-            Answer::Gone => {
-                marks.head = None;
-                marks.hunks.clear();
-            }
-            Answer::Head(head, hunks, lines, revision) => {
+        marks.running = None;
+        if let Some(answer) = answer.filter(|_| marks.asked == asked) {
+            if let Some((head, hunks, lines, revision)) = answer {
                 marks.head = Some(head);
                 marks.hunks = hunks;
                 marks.lines = lines;
                 marks.revision = Some(revision);
+            } else {
+                marks.head = None;
+                marks.hunks.clear();
+                marks.revision = None;
             }
-            Answer::Hunks(hunks, lines, revision) => {
-                marks.hunks = hunks;
-                marks.lines = lines;
-                marks.revision = Some(revision);
-            }
+            true
+        } else {
+            false
         }
+    };
+    if changed {
+        super::redraw_gutter(view);
+        super::blame::marks_changed(view);
     }
-    super::redraw_gutter(&view);
-    super::blame::marks_changed(&view);
+    start(view);
 }
 
 fn clear(view: &EditorTextView) {
     {
         let mut marks = view.ivars().marks.borrow_mut();
         marks.asked += 1;
+        marks.pending = None;
         marks.head = None;
         marks.hunks.clear();
     }

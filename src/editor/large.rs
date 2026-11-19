@@ -43,12 +43,14 @@ pub(super) fn open(controller: &WindowController, path: &Path, font_size: f64, p
 }
 
 /// Runs `then` with the editor of `path` in `controller`: now, or once the tab of a large file opens after its read.
-pub(super) fn with_opened(
+pub(crate) fn with_opened(
     controller: &WindowController,
     path: &Path,
     then: impl FnOnce(&EditorTextView) + Send + 'static,
 ) {
-    look(controller.id(), path.to_path_buf(), TRIES, then);
+    if let Err(then) = controller.when_restored_editor(path, then) {
+        look(controller.id(), path.to_path_buf(), TRIES, then);
+    }
 }
 
 fn look(window: WindowId, path: PathBuf, tries: u32, then: impl FnOnce(&EditorTextView) + Send + 'static) {

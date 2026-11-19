@@ -4,6 +4,7 @@
 
 mod front;
 mod pane_commands;
+mod restored;
 mod split_mode;
 
 pub(super) use pane_commands::side_with_option;
@@ -30,6 +31,7 @@ pub(super) struct State {
     next_id: Cell<isize>,
     /// Where a document about to open goes instead of where it would by default (E145).
     target: RefCell<Option<Target>>,
+    restored: restored::Editors,
 }
 
 impl Default for State {
@@ -39,6 +41,7 @@ impl Default for State {
             current: RefCell::default(),
             next_id: Cell::new(1),
             target: RefCell::default(),
+            restored: restored::Editors::default(),
         }
     }
 }
@@ -287,12 +290,15 @@ impl WindowController {
             if let Some(next) = next.filter(open) {
                 self.select(&next);
             }
+        } else if self.current_tab().is_some_and(|current| Rc::ptr_eq(&current, &tab)) {
+            self.load_restored_editors(&tab);
         }
         crate::session::changed();
     }
 
     /// Takes the document `id` out of `tab` and tells what showed it that it closes.
     pub(super) fn forget_document(&self, tab: &TabWindow, id: TabId) {
+        self.ivars().documents.restored.pending.borrow_mut().remove(&id);
         crate::editor::closing(self, id);
         crate::preview::closing(self, id);
         crate::debug::closing(self, id);

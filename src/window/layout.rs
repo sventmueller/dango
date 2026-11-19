@@ -161,9 +161,12 @@ fn restore_tab(controller: &WindowController, opener: &Documents, window_tab: &W
     let first = tab.focused().map(|doc| doc.id);
     // A preview is not saved, as it opens with its Markdown editor when nothing else is beside it.
     if tab.documents().len() == 1
-        && let Some(view) = first.and_then(|id| crate::editor::editor_of_tab(controller, id))
+        && let Some(id) = first
     {
-        crate::markdown::opened(&view);
+        controller.allow_restored_preview(id);
+        if let Some(view) = crate::editor::editor_of_tab(controller, id) {
+            crate::markdown::opened(&view);
+        }
     }
     first
 }
@@ -251,9 +254,11 @@ impl WindowController {
     /// Opens the tabs the folder's window had when it closed, as opening a folder does.
     pub(crate) fn restore_layout(&self) {
         let size = ide_core::settings::Settings::load_user().get(&ide_core::settings::keys::FONT_SIZE);
-        restore(self, &mut |controller, document| match document {
-            Document::File(path) => path.is_file() && crate::editor::open_quietly(controller, path, size),
-            Document::Untitled(_) => false,
+        self.restore_editor_tabs(|| {
+            restore(self, &mut |controller, document| match document {
+                Document::File(path) => controller.restore_editor(path, size).is_some(),
+                Document::Untitled(_) => false,
+            });
         });
     }
 
@@ -275,7 +280,9 @@ impl WindowController {
         for document in self.documents() {
             let tab = match document.kind {
                 TabKind::Welcome => TabRecord::Welcome,
-                TabKind::Editor => match crate::editor::tab_document(self, document.id) {
+                TabKind::Editor => match crate::editor::tab_document(self, document.id)
+                    .or_else(|| self.restored_editor_record(document.id))
+                {
                     Some((path, recovery)) => TabRecord::Editor {
                         path,
                         recovery: recovery.as_str().to_string(),

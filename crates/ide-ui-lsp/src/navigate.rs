@@ -175,16 +175,20 @@ fn go(view: &dyn Editor, location: &Location) {
 pub fn open_at(window: WindowId, path: &Path, range: LspRange) -> bool {
     Window::new(window).open_file(path);
     let Some(target) = editor::editor_in(window, path) else {
-        return false;
+        return editor::when_editor_ready(window, path, Box::new(move |target| select_at(&*target, range)));
     };
+    select_at(&*target, range);
+    true
+}
+
+fn select_at(target: &dyn Editor, range: LspRange) {
     let selection = text::range(target.document().text(), range);
     let range = NSRange::new(selection.start, selection.end - selection.start);
     target.setSelectedRange(range);
     target.scrollRangeToVisible(range);
     if let Some(window) = target.window() {
-        window.makeFirstResponder(Some(&target));
+        window.makeFirstResponder(Some(&**target));
     }
-    true
 }
 
 /// Shows `path` with `selection` in the window of `folder`, as a server may ask.

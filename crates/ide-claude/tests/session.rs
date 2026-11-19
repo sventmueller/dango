@@ -99,6 +99,7 @@ fn a_session_answers_permissions_refuses_unknown_requests_and_ends_cleanly() {
     let (session, rx) = start(&launch, &supervisor);
     wait_for(&rx, |_| session.with_thread(|t| !t.pending_requests().is_empty()));
     assert_eq!(session.with_thread(Thread::status), Status::RequiresAction);
+    assert!(!session.can_park());
     assert!(matches!(
         session.answer(
             "nope",
@@ -695,6 +696,7 @@ fn the_settings_of_a_running_session_reach_the_cli_and_its_answers_land_on_the_t
     let supervisor = Supervisor::new();
     let (session, rx) = start(&launch, &supervisor);
     wait_for(&rx, |_| session.with_thread(|t| !t.background().is_empty()));
+    assert!(!session.can_park(), "a background shell keeps the CLI live");
 
     assert_eq!(session.set_permission_mode(PermissionMode::Plan).wait(), Ok(()));
     assert_eq!(session.set_model(Some("claude-opus-5-5")).wait(), Ok(()));

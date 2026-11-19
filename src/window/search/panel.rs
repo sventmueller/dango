@@ -1,7 +1,7 @@
 //! The view of the search panel: the data source and delegate of its list of matches, which draws the rows from the
 //! model, and the actions of its fields, buttons and menu, which go on to the controller.
 
-use std::cell::{OnceCell, RefCell, RefMut};
+use std::cell::{Cell, OnceCell, RefCell, RefMut};
 
 use ide_ui_common::panel::{RowItem, RowItems};
 use objc2::rc::{Retained, Weak};
@@ -23,6 +23,9 @@ pub(crate) struct SearchIvars {
     pub(super) controller: Weak<WindowController>,
     pub(super) views: OnceCell<views::Views>,
     pub(super) hierarchy: OnceCell<Retained<hierarchy::HierarchyPanel>>,
+    pub(super) deferred_start: Cell<Option<u64>>,
+    pub(super) deferred_refresh: Cell<Option<u64>>,
+    pub(super) deferred_show: Cell<bool>,
     model: RefCell<Model>,
     /// The objects that stand for rows in the outline view, which keeps no reference of its own.
     items: RowItems<Spot>,
@@ -35,6 +38,9 @@ impl SearchIvars {
             controller,
             views: OnceCell::new(),
             hierarchy: OnceCell::new(),
+            deferred_start: Cell::new(None),
+            deferred_refresh: Cell::new(None),
+            deferred_show: Cell::new(false),
             model: RefCell::new(model),
             items: RowItems::default(),
         }

@@ -191,6 +191,7 @@ impl AgentTab {
         if busy {
             self.state.borrow_mut().enqueue(message);
             self.refresh_queue();
+            self.resume_parked();
             return;
         }
         self.send_message(message);

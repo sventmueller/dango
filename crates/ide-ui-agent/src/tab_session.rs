@@ -27,6 +27,7 @@ impl AgentTab {
             self.set_problem(Some(Problem::Untrusted));
             return;
         }
+        self.parking.process.take();
         let before = self.state.borrow_mut().start();
         before.end();
         self.refresh();
@@ -104,8 +105,12 @@ impl AgentTab {
     /// Runs `driven`, the tab's own session the registry started, on any path; one a start that overtook this one
     /// began ends.
     pub(super) fn run_session(&self, driven: Driven) {
+        let claude = driven.kind() == ide_session::PathKind::Claude;
         let replaced = self.state.borrow_mut().started(Source::Session(driven));
         replaced.end();
+        if claude {
+            self.watch_for_parking();
+        }
     }
 
     /// The launch of the tab's Claude session with `exe` in `env` on `thread`, as the user's picks, the sandbox

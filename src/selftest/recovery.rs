@@ -187,9 +187,9 @@ fn after_crash(shown: bool) {
         ),
     );
     check(
-        "a file without unsaved text reopens as it is on disk",
-        text(KEPT).as_deref() == Some("unverändert\n"),
-        text(KEPT).unwrap_or_default(),
+        "a clean background file has a tab but has not loaded",
+        tab(&controller, KEPT).is_some() && text(KEPT).is_none(),
+        "",
     );
     let marks = controller.tab_dirty_marks();
     check(
@@ -213,13 +213,35 @@ fn after_crash(shown: bool) {
         shown && bars[0] == Some(changed_bar(NOTES)) && bars[1] == Some(changed_bar(MERGED)),
         format!("{bars:?}"),
     );
-    if let Some(id) = tab(&controller, NOTES) {
+    if let Some(id) = tab(&controller, KEPT) {
+        controller.select_tab_by_id(id);
+    }
+    let window = controller.id();
+    wait_until(
+        move || {
+            crate::host::window(window)
+                .and_then(|controller| editor(&controller, KEPT))
+                .is_some_and(|view| text_of(&view) == "unverändert\n")
+        },
+        move |opened| {
+            check("selecting a clean tab loads the file from disk", opened, "");
+            if let Some(controller) = crate::host::window(window) {
+                restored(&controller);
+            } else {
+                give_up(SCENARIO, "the restored window is open");
+            }
+        },
+    );
+}
+
+fn restored(controller: &crate::window::WindowController) {
+    if let Some(id) = tab(controller, NOTES) {
         controller.select_tab_by_id(id);
     }
     if let Some(window) = controller.window() {
         snapshot(&window, "recovery-restored");
     }
-    merge_both(&controller);
+    merge_both(controller);
 }
 
 fn check_set_aside_and_orphan() {

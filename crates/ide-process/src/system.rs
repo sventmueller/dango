@@ -50,6 +50,16 @@ pub fn group_members(group: i32) -> Vec<i32> {
     })
 }
 
+/// The physical footprint reported by macOS for a live process, in bytes.
+pub fn physical_footprint(pid: u32) -> Option<u64> {
+    let pid = i32::try_from(pid).ok()?;
+    let mut usage = std::mem::MaybeUninit::<libc::rusage_info_v0>::uninit();
+    // SAFETY: The requested flavor writes a rusage_info_v0 into the supplied buffer.
+    let status = unsafe { libc::proc_pid_rusage(pid, libc::RUSAGE_INFO_V0, usage.as_mut_ptr().cast()) };
+    // SAFETY: On success the buffer contains a complete rusage_info_v0.
+    (status == 0).then(|| unsafe { usage.assume_init().ri_phys_footprint })
+}
+
 /// The processes `parent` started that still run.
 pub(crate) fn children(parent: u32) -> Vec<u32> {
     let Ok(parent) = libc::pid_t::try_from(parent) else {

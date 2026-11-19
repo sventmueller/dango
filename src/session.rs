@@ -217,6 +217,10 @@ impl Restore {
         if record.tabs.is_empty() && !layout {
             return;
         }
+        controller.restore_editor_tabs(|| self.tabs(&controller, record, layout));
+    }
+
+    fn tabs(&mut self, controller: &WindowController, record: &WindowRecord, layout: bool) {
         controller.clear_tabs();
         let mut restored = 0;
         if layout {
@@ -233,11 +237,11 @@ impl Restore {
                         .and_then(|path| controller.tab_with_key(&path.to_string_lossy()));
                     match (open, self.copies.remove(recovery)) {
                         (Some(id), _) => Some(id),
-                        (None, Some(copy)) if self.recovered(&controller, &copy) => {
+                        (None, Some(copy)) if self.recovered(controller, &copy) => {
                             restored += 1;
                             controller.selected_tab()
                         }
-                        _ => self.reopen(&controller, path.as_deref()),
+                        _ => self.reopen(controller, path.as_deref()),
                     }
                 }
             };
@@ -298,8 +302,7 @@ impl Restore {
     }
 
     fn reopen(&self, controller: &WindowController, path: Option<&Path>) -> Option<TabId> {
-        let path = path.filter(|path| path.is_file())?;
-        crate::editor::open_quietly(controller, path, self.font_size).then(|| controller.selected_tab())?
+        controller.restore_editor(path?, self.font_size)
     }
 }
 

@@ -45,13 +45,14 @@ use objc2::rc::{Retained, Weak};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
     NSAccessibility, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSColor, NSFontAttributeName,
-    NSForegroundColorAttributeName, NSScrollView, NSUserInterfaceLayoutDirection,
+    NSForegroundColorAttributeName, NSScrollView, NSUserInterfaceLayoutDirection, NSView,
 };
 use objc2_foundation::{NSDictionary, NSPoint, NSRect, NSSize, NSString};
 use splat_i18n::{t, tf};
 
 use crate::util::{FlagGuard, constant, ns};
 use crate::window::{TabId, TabKind, WindowController};
+pub(crate) use large::with_opened;
 pub(crate) use view::EditorTextView;
 
 /// The state of the editors beside the list of them.
@@ -164,12 +165,20 @@ pub(crate) fn git_changed(root: &Path) {
 /// The texts of the editors with unsaved changes to files below `root`, which a project search reads in place of
 /// the files.
 pub(crate) fn unsaved_buffers(root: &Path) -> Vec<(PathBuf, String)> {
+    unsaved_texts(root)
+        .into_iter()
+        .map(|(path, text)| (path, text.to_string()))
+        .collect()
+}
+
+/// Shares unsaved text with a worker without materializing the whole buffer on the main thread.
+pub(crate) fn unsaved_texts(root: &Path) -> Vec<(PathBuf, ide_document::Text)> {
     open_editors()
         .iter()
         .filter_map(|view| {
             let document = view.document();
             let path = document.path().filter(|p| document.is_dirty() && p.starts_with(root))?;
-            Some((path.to_path_buf(), document.text().to_string()))
+            Some((path.to_path_buf(), document.text().clone()))
         })
         .collect()
 }
@@ -189,26 +198,24 @@ mod settings_change;
 pub(crate) fn take_back_buffers(controller: &WindowController, buffers: Vec<(PathBuf, Vec<u8>)>) {
     for (path, bytes) in buffers {
         let Ok(text) = String::from_utf8(bytes) else { continue };
-        let view = match open_editors()
+        let apply = move |view: &EditorTextView| {
+            take_disk(view);
+            let changes = view.document_mut().replace_all(&text);
+            match changes {
+                Ok(changes) => view.apply_model_changes(&changes),
+                Err(error) => crate::diag::report("taking back an unsaved text", error),
+            }
+            update_dirty(view);
+        };
+        if let Some(view) = open_editors()
             .into_iter()
             .find(|v| v.document().path() == Some(path.as_path()))
         {
-            Some(view) => view,
-            None => {
-                controller.open_file(&path);
-                let Some(view) = editor_for(controller, &path) else {
-                    continue;
-                };
-                view
-            }
-        };
-        take_disk(&view);
-        let changes = view.document_mut().replace_all(&text);
-        match changes {
-            Ok(changes) => view.apply_model_changes(&changes),
-            Err(error) => crate::diag::report("taking back an unsaved text", error),
+            apply(&view);
+        } else {
+            controller.open_file(&path);
+            with_opened(controller, &path, apply);
         }
-        update_dirty(&view);
     }
 }
 
@@ -346,30 +353,6 @@ fn opened(
     crate::markdown::opened(&view);
 }
 
-/// Opens `path` in a new editor tab of `controller` as a launch puts back the tabs of the last run: a file that cannot
-/// be read is left out and only logged; whether it opened.
-pub(crate) fn open_quietly(controller: &WindowController, path: &Path, font_size: f64) -> bool {
-    match Document::open(path) {
-        Ok(document) => {
-            let key = path.to_string_lossy().into_owned();
-            add_tab(
-                controller,
-                document,
-                Some(key),
-                &tab_title(path),
-                font_size,
-                false,
-                RecoveryId::new(),
-            );
-            true
-        }
-        Err(error) => {
-            crate::diag::report("reopening a file", error);
-            false
-        }
-    }
-}
-
 /// Opens the text a crash left unsaved in a new editor tab of `controller`, marked unsaved; its copy stays until the
 /// text is saved or given up. A look at its file follows with `check_recovered`.
 pub(crate) fn open_recovered(
@@ -456,6 +439,41 @@ fn add_tab(
     preview: bool,
     recovery: RecoveryId,
 ) -> Retained<EditorTextView> {
+    let (view, container) = build_editor(controller, document, font_size, recovery);
+    let id = if preview {
+        controller.add_preview_tab(TabKind::Editor, key, title, container)
+    } else {
+        controller.add_tab(TabKind::Editor, key, title, container)
+    };
+    finish_editor(controller, &view, id);
+    if !preview && let Some(window) = view.window() {
+        window.makeFirstResponder(Some(&view));
+    }
+    view
+}
+
+/// Fills the existing tab without changing its identity or its position in the pane.
+pub(crate) fn attach_restored(
+    controller: &WindowController,
+    id: TabId,
+    host: &NSView,
+    document: Document,
+    font_size: f64,
+    recovery: RecoveryId,
+) -> Retained<EditorTextView> {
+    let (view, container) = build_editor(controller, document, font_size, recovery);
+    host.addSubview(&container);
+    crate::util::pin_edges(&container, host);
+    finish_editor(controller, &view, id);
+    view
+}
+
+fn build_editor(
+    controller: &WindowController,
+    document: Document,
+    font_size: f64,
+    recovery: RecoveryId,
+) -> (Retained<EditorTextView>, Retained<NSView>) {
     let mtm = controller.mtm();
     let view = EditorTextView::create(mtm, document, controller, recovery);
     configure(&view, font_size);
@@ -479,21 +497,16 @@ fn add_tab(
     insets::attach(&view);
     crate::debug::attach_rotor(&view, controller.context().debug_rotors());
     *view.ivars().around.gutter.borrow_mut() = Some(objc2::rc::Weak::from(&*gutter));
-    let id = if preview {
-        controller.add_preview_tab(TabKind::Editor, key, title, container)
-    } else {
-        controller.add_tab(TabKind::Editor, key, title, container)
-    };
+    (view, container)
+}
+
+fn finish_editor(controller: &WindowController, view: &EditorTextView, id: TabId) {
     view.ivars().tab.set(Some(id));
     let editors = controller.context().editors();
-    editors.insert(editors.next_id(), Weak::from(&*view));
-    highlight::recolor_all(&view);
-    ide_ui_lsp::opened(&*view);
-    changes::reload(&view, true);
-    if !preview && let Some(window) = view.window() {
-        window.makeFirstResponder(Some(&view));
-    }
-    view
+    editors.insert(editors.next_id(), Weak::from(view));
+    highlight::recolor_all(view);
+    ide_ui_lsp::opened(view);
+    changes::reload(view, true);
 }
 
 fn configure(view: &EditorTextView, font_size: f64) {

@@ -8,6 +8,8 @@ use std::process::{ChildStderr, ChildStdin, ChildStdout, Command};
 use std::sync::{Arc, Condvar, Mutex, OnceLock, Weak};
 use std::time::{Duration, Instant, SystemTime};
 
+use crate::agent_tree::AgentTree;
+
 /// What a process is there for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Kind {
@@ -123,6 +125,7 @@ const ENDINGS_KEPT: usize = 256;
 struct Register {
     next: u64,
     entries: BTreeMap<ProcessId, Entry>,
+    agent_trees: BTreeMap<ProcessId, Arc<Mutex<AgentTree>>>,
     next_listener: u64,
     listeners: Vec<(u64, Listener)>,
     ended: VecDeque<(ProcessId, Ending)>,
@@ -351,16 +354,38 @@ impl Supervisor {
         ide_core::thread::detach_or_run("stop", move || supervisor.end(&[id], grace));
     }
 
+    /// Whether an agent still owns a shell, a command or a separately grouped worker.
+    /// A missing process observation is treated as busy.
+    pub fn agent_has_work(&self, id: ProcessId) -> bool {
+        let tree = self.register.0.lock_ignoring_poison().agent_trees.get(&id).cloned();
+        tree.is_none_or(|tree| tree.lock_ignoring_poison().has_work())
+    }
+
+    /// Whether shutdown has processes to clean up, including descendants whose leader exited.
+    pub fn has_managed_processes(&self) -> bool {
+        let register = self.register.0.lock_ignoring_poison();
+        !register.entries.is_empty() || !register.agent_trees.is_empty()
+    }
+
     /// Ends every process as `stop` does and returns once all are gone or `grace` has passed three times.
     pub fn shutdown(&self, grace: Duration) {
-        let ids: Vec<ProcessId> = self.running().iter().map(|info| info.id).collect();
+        let ids: HashSet<_> = {
+            let register = self.register.0.lock_ignoring_poison();
+            register
+                .entries
+                .keys()
+                .chain(register.agent_trees.keys())
+                .copied()
+                .collect()
+        };
+        let ids: Vec<_> = ids.into_iter().collect();
         self.end(&ids, grace);
     }
 
     fn end(&self, ids: &[ProcessId], grace: Duration) {
         let mut graceful = vec![];
         let mut groups = vec![];
-        {
+        let trees: Vec<_> = {
             let (lock, _) = &*self.register;
             let mut register = lock.lock_ignoring_poison();
             for id in ids {
@@ -369,20 +394,26 @@ impl Supervisor {
                     graceful.extend(entry.graceful.take());
                 }
             }
+            ids.iter()
+                .filter_map(|id| register.agent_trees.get(id).cloned())
+                .collect()
+        };
+        for tree in &trees {
+            tree.lock_ignoring_poison().refresh();
         }
         let had_graceful = !graceful.is_empty();
         for step in graceful {
             let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(step));
         }
-        if had_graceful && self.wait_until_gone(ids, &groups, grace) {
+        if had_graceful && self.wait_until_gone(ids, &groups, &trees, grace) {
             return;
         }
-        signal_groups(&groups, libc::SIGTERM);
-        if self.wait_until_gone(ids, &groups, grace) {
+        signal_owned(&groups, &trees, libc::SIGTERM);
+        if self.wait_until_gone(ids, &groups, &trees, grace) {
             return;
         }
-        signal_groups(&groups, libc::SIGKILL);
-        if !self.wait_until_gone(ids, &groups, grace) {
+        signal_owned(&groups, &trees, libc::SIGKILL);
+        if !self.wait_until_gone(ids, &groups, &trees, grace) {
             // A registered process whose owner never reports its end would otherwise stay listed for good.
             for id in ids {
                 if self.origin(*id) == Some(Origin::Registered) {
@@ -398,7 +429,13 @@ impl Supervisor {
     }
 
     /// Whether all of `ids` ended and nothing is left in `groups` within `timeout`.
-    fn wait_until_gone(&self, ids: &[ProcessId], groups: &[libc::pid_t], timeout: Duration) -> bool {
+    fn wait_until_gone(
+        &self,
+        ids: &[ProcessId],
+        groups: &[libc::pid_t],
+        trees: &[Arc<Mutex<AgentTree>>],
+        timeout: Duration,
+    ) -> bool {
         let (lock, _) = &*self.register;
         let watched = || {
             let registered: Vec<i32> = {
@@ -410,6 +447,11 @@ impl Supervisor {
                     .collect()
             };
             let mut pids: Vec<i32> = groups.iter().flat_map(|&g| crate::system::group_members(g)).collect();
+            for tree in trees {
+                let mut tree = tree.lock_ignoring_poison();
+                tree.refresh();
+                pids.extend(tree.pids());
+            }
             pids.extend(registered);
             pids.sort_unstable();
             pids.dedup();
@@ -417,9 +459,17 @@ impl Supervisor {
         };
         let gone = || {
             self.prune_registered();
-            let register = lock.lock_ignoring_poison();
-            ids.iter().all(|id| !register.entries.contains_key(id))
+            let removed = {
+                let register = lock.lock_ignoring_poison();
+                ids.iter().all(|id| !register.entries.contains_key(id))
+            };
+            removed
                 && !groups.iter().any(|&g| crate::system::group_exists(g))
+                && trees.iter().all(|tree| {
+                    let mut tree = tree.lock_ignoring_poison();
+                    tree.refresh();
+                    tree.empty()
+                })
         };
         crate::reaper::wait_until(timeout, watched, gone)
     }
@@ -452,6 +502,11 @@ impl Supervisor {
     }
 
     fn add(&self, pid: u32, kind: Kind, label: String, origin: Origin) -> ProcessInfo {
+        let tree = if matches!(kind, Kind::Agent | Kind::AgentCommand) && origin == Origin::Started {
+            AgentTree::new(pid)
+        } else {
+            None
+        };
         let (lock, _) = &*self.register;
         let mut register = lock.lock_ignoring_poison();
         register.next += 1;
@@ -470,7 +525,10 @@ impl Supervisor {
                 graceful: None,
             },
         );
-        let govern = kind == Kind::Agent && !register.governed;
+        if let Some(tree) = tree {
+            register.agent_trees.insert(info.id, Arc::new(Mutex::new(tree)));
+        }
+        let govern = matches!(kind, Kind::Agent | Kind::AgentCommand) && !register.governed;
         register.governed |= govern;
         drop(register);
         if govern {
@@ -495,6 +553,27 @@ impl Supervisor {
                     .filter(|e| e.info.kind == Kind::Agent)
                     .map(|e| e.info.pid)
                     .collect();
+                let trees: Vec<_> = register
+                    .0
+                    .lock_ignoring_poison()
+                    .agent_trees
+                    .iter()
+                    .map(|(&id, tree)| (id, tree.clone()))
+                    .collect();
+                let gone: Vec<_> = trees
+                    .into_iter()
+                    .filter_map(|(id, tree)| {
+                        let mut tree = tree.lock_ignoring_poison();
+                        tree.refresh();
+                        tree.empty().then_some(id)
+                    })
+                    .collect();
+                if !gone.is_empty() {
+                    let mut state = register.0.lock_ignoring_poison();
+                    for id in gone {
+                        state.agent_trees.remove(&id);
+                    }
+                }
                 drop(register);
                 if !agents.is_empty() || !lowered.is_empty() {
                     crate::priority::lower_agent_commands(&agents, &mut lowered);
@@ -559,6 +638,13 @@ impl Supervisor {
             let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| listener(event)));
         }
     }
+}
+
+fn signal_owned(groups: &[libc::pid_t], trees: &[Arc<Mutex<AgentTree>>], signal: i32) {
+    for tree in trees {
+        tree.lock_ignoring_poison().signal(signal, groups);
+    }
+    signal_groups(groups, signal);
 }
 
 /// Sends `signal` to each of `groups` that still has members, whether or not its leader is still there.
@@ -795,6 +881,43 @@ mod tests {
         assert!(gone_within(member, GRACE), "the member survived SIGKILL");
         assert!(started.elapsed() < Duration::from_secs(3));
         drop(spawned);
+    }
+
+    #[test]
+    fn an_agent_child_in_its_own_session_is_still_cleaned_up() {
+        let supervisor = Supervisor::new();
+        let mut command = Command::new("/usr/bin/perl");
+        command
+            .args([
+                "-MPOSIX=setsid",
+                "-e",
+                r#"
+                $| = 1;
+                my $child = fork();
+                die "fork" unless defined $child;
+                if (!$child) {
+                    setsid() >= 0 or die "setsid";
+                    print "$$\n";
+                    exec "/bin/sleep", "8";
+                }
+                scalar <STDIN>;
+            "#,
+            ])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped());
+        let mut spawned = supervisor.spawn(command, Kind::Agent, "test agent").unwrap();
+        let mut line = String::new();
+        BufReader::new(spawned.stdout.take().unwrap())
+            .read_line(&mut line)
+            .unwrap();
+        let child = line.trim().parse::<u32>().unwrap();
+        let work = supervisor.agent_has_work(spawned.id);
+        let stdin = Mutex::new(spawned.stdin);
+        supervisor.on_stop(spawned.id, move || drop(stdin.lock_ignoring_poison().take()));
+        supervisor.shutdown(Duration::from_millis(200));
+        let gone = gone_within(child, GRACE);
+        assert!(work, "a worker in an independent session prevents parking");
+        assert!(gone, "the child survived shutdown");
     }
 
     #[test]

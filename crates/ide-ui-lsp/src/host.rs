@@ -10,7 +10,7 @@ use std::sync::{Arc, OnceLock};
 use objc2::rc::Retained;
 use objc2_app_kit::{NSColor, NSFont};
 
-use crate::editor::Editor;
+use crate::editor::{Editor, Ready};
 use crate::hierarchy::Hierarchy;
 
 /// What the language servers keep beyond one editor.
@@ -37,6 +37,8 @@ pub trait Host {
     fn all_editors(&self) -> Vec<Box<dyn Editor>>;
     /// The editor of `path` in the window `window`.
     fn editor_in(&self, window: WindowId, path: &Path) -> Option<Box<dyn Editor>>;
+    /// Queues a callback to a restored editor still loading, if there is one.
+    fn when_editor_ready(&self, window: WindowId, path: &Path, ready: Ready) -> bool;
     /// Shows `hierarchy` in the window `window`.
     fn show_hierarchy(&self, window: WindowId, hierarchy: Hierarchy);
     /// The editor's font of code at `size` points.
@@ -74,6 +76,10 @@ pub(crate) fn all_editors() -> Vec<Box<dyn Editor>> {
 
 pub(crate) fn editor_in(window: WindowId, path: &Path) -> Option<Box<dyn Editor>> {
     host().editor_in(window, path)
+}
+
+pub(crate) fn when_editor_ready(window: WindowId, path: &Path, ready: Ready) -> bool {
+    host().when_editor_ready(window, path, ready)
 }
 
 pub(crate) fn show_hierarchy(window: WindowId, hierarchy: Hierarchy) {

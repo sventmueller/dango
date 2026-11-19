@@ -154,6 +154,16 @@ impl Driven {
         self.with(|driver| driver.claude().cloned()).flatten()
     }
 
+    pub(crate) fn parkable_claude(&self) -> Option<ide_claude::Session> {
+        self.with(|driver| {
+            if !self.own || !driver.is_ready() || driver.is_working() {
+                return None;
+            }
+            driver.claude().filter(|session| session.can_park()).cloned()
+        })
+        .flatten()
+    }
+
     /// The Codex session behind the driver, for what only Codex does.
     pub(crate) fn codex(&self) -> Option<ide_codex::Session> {
         self.with(|driver| driver.codex().cloned()).flatten()

@@ -137,6 +137,7 @@ pub struct AgentTab {
     pub(super) state: RefCell<State>,
     pub(super) store: Store,
     pub(super) ticking: std::cell::Cell<bool>,
+    pub(super) parking: super::tab_parking::Parking,
     /// Where the keyboard focus was before ⌘Esc moved it into the composer.
     pub(super) previous_focus: RefCell<Option<Weak<NSResponder>>>,
     /// The overlay open over the tab (E146).
@@ -256,6 +257,7 @@ impl AgentTab {
             agent,
             state,
             ticking: std::cell::Cell::new(false),
+            parking: super::tab_parking::Parking::default(),
             previous_focus: RefCell::new(None),
             dialog: RefCell::new(None),
             dialogs_opened: std::cell::Cell::new(0),
@@ -467,6 +469,7 @@ impl AgentTab {
 
     /// Resumes presentation and live labels after a background tab comes back into view.
     pub(crate) fn show_pending(&self) {
+        self.parking.hidden_since.take();
         self.timeline.show_pending();
         self.start_ticking();
     }
@@ -488,6 +491,9 @@ impl AgentTab {
         let refresh = super::refresh::Refresh::of(&snapshot, changes);
         let before = self.state.borrow().status();
         let now = snapshot.status();
+        if now != Status::Idle || snapshot.background().iter().any(|task| !task.status.is_final()) {
+            self.parking.hidden_since.take();
+        }
         let delegated_before = delegates(self.state.borrow().thread());
         let delegated_now = delegates(&snapshot);
         let title_changed = snapshot.title() != self.state.borrow().thread().title();

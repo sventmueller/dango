@@ -21,6 +21,9 @@ pub(crate) fn run() {
         for entries in [1000, 10_000, 1000, 1000] {
             let tab = ide_ui_agent::open_replay(&controller).expect("replay tab");
             tab.feed(&history(entries));
+            if entries == 10_000 {
+                append_tools(&tab);
+            }
             begin(&tab);
             tabs.push(tab);
         }
@@ -49,6 +52,27 @@ pub(crate) fn run() {
         }));
         helpers::after(TURN, move || prepare_case(bench));
     });
+}
+
+fn append_tools(tab: &AgentTab) {
+    let old = tab.timeline().count();
+    let started = Instant::now();
+    for n in 0..50 {
+        tab.feed(
+            &json!({
+                "type":"assistant", "parent_tool_use_id":null, "uuid":format!("tool-message-{n}"),
+                "message":{"id":format!("tool-message-{n}"),"role":"assistant","content":[
+                    {"type":"tool_use","id":format!("tool-{n}"),"name":"Read","input":{"file_path":"example.txt"}}
+                ]}
+            })
+            .to_string(),
+        );
+    }
+    check(
+        "new tool entries append to a 10000-card timeline",
+        tab.timeline().count() == old + 50,
+        format!("50 appends in {} ms", started.elapsed().as_millis()),
+    );
 }
 
 fn history(entries: usize) -> String {

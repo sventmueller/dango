@@ -84,7 +84,7 @@ define_class!(
                 crate::editor::recovery::quit(RECOVERY_GRACE);
                 // Running orders pause with "app ended" before the supervisor ends their builders and gates (E167).
                 let orders = cx.leitstand().quit(&cx);
-                if Supervisor::global().running().is_empty() {
+                if !Supervisor::global().has_managed_processes() {
                     orders.wait();
                     return NSApplicationTerminateReply::TerminateNow;
                 }

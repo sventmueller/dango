@@ -5,8 +5,8 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use ide_ui_common::window::{self, Panel, TabId, TabKind, WindowId};
-use objc2::MainThreadMarker;
 use objc2::rc::Retained;
+use objc2::{MainThreadMarker, Message};
 use objc2_app_kit::{NSColor, NSView, NSWindow};
 
 use crate::window::WindowController;
@@ -316,19 +316,18 @@ impl ide_ui_debug::Host for AppHost {
         let Some(c) = self::window(window) else { return };
         c.open_file(path);
         // The keyboard focus stays where it is, such as in the list of frames the user goes through.
-        let Some(editor) = crate::editor::editor_for(&c, path) else {
-            return;
-        };
-        let at = {
-            let document = editor.document();
-            let text = document.text();
-            let byte = text.offset(line, 0, ide_document::Unit::Utf16).ok();
-            byte.and_then(|byte| text.byte_to_utf16(byte).ok())
-        };
-        if let Some(at) = at {
-            editor.setSelectedRange(objc2_foundation::NSRange::new(at, 0));
-            editor.scrollRangeToVisible(objc2_foundation::NSRange::new(at, 0));
-        }
+        crate::editor::with_opened(&c, path, move |editor| {
+            let at = {
+                let document = editor.document();
+                let text = document.text();
+                let byte = text.offset(line, 0, ide_document::Unit::Utf16).ok();
+                byte.and_then(|byte| text.byte_to_utf16(byte).ok())
+            };
+            if let Some(at) = at {
+                editor.setSelectedRange(objc2_foundation::NSRange::new(at, 0));
+                editor.scrollRangeToVisible(objc2_foundation::NSRange::new(at, 0));
+            }
+        });
     }
 
     fn open_running(&self, window: WindowId, cwd: &Path, line: String, then: Box<dyn FnOnce(Option<u32>) + Send>) {
@@ -520,6 +519,14 @@ impl ide_ui_lsp::Host for AppHost {
     fn editor_in(&self, window: WindowId, path: &Path) -> Option<Box<dyn ide_ui_lsp::editor::Editor>> {
         let controller = self::window(window)?;
         crate::editor::editor_for(&controller, path).map(crate::editor::lsp_editor)
+    }
+
+    fn when_editor_ready(&self, window: WindowId, path: &Path, ready: ide_ui_lsp::editor::Ready) -> bool {
+        self::window(window).is_some_and(|controller| {
+            controller
+                .when_restored_editor(path, move |editor| ready(crate::editor::lsp_editor(editor.retain())))
+                .is_ok()
+        })
     }
 
     fn show_hierarchy(&self, window: WindowId, hierarchy: ide_ui_lsp::Hierarchy) {

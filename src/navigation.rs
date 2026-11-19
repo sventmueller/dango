@@ -2,7 +2,7 @@
 //! a place goes into the history when the user leaves it for another file or jumps more than `JUMP` lines away.
 
 use std::cell::{OnceCell, RefCell};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, NSObject, Sel};
@@ -192,22 +192,28 @@ fn show(controller: &WindowController, place: &Place) {
     with_history(controller, |history| history.moving = true);
     let moving = OnDrop::new(|| with_history(controller, |history| history.moving = false));
     controller.open_file(&place.path);
-    if let Some(view) = editor_of(controller, &place.path) {
-        let at = place.offset.min(view.document().text().len_utf16());
+    let target = place.offset;
+    let expected = place.clone();
+    crate::editor::with_opened(controller, &place.path, move |view| {
+        let Some(controller) = view.controller() else { return };
+        let previous = with_history(&controller, |history| {
+            if history.moving || history.here.as_ref() == Some(&expected) {
+                Some(std::mem::replace(&mut history.moving, true))
+            } else {
+                None
+            }
+        });
+        let Some(previous) = previous else { return };
+        let _moving = OnDrop::new(|| with_history(&controller, |history| history.moving = previous));
+        let at = target.min(view.document().text().len_utf16());
         view.setSelectedRange(NSRange::new(at, 0));
         view.scrollRangeToVisible(NSRange::new(at, 0));
         if let Some(window) = view.window() {
-            window.makeFirstResponder(Some(&view));
+            window.makeFirstResponder(Some(view));
         }
-    }
+    });
     drop(moving);
     with_history(controller, |history| history.here = Some(place.clone()));
-}
-
-fn editor_of(controller: &WindowController, path: &Path) -> Option<Retained<EditorTextView>> {
-    crate::editor::all_editors()
-        .into_iter()
-        .find(|v| v.document().path() == Some(path) && v.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
 }
 
 define_class!(

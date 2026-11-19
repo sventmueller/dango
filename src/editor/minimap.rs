@@ -94,7 +94,7 @@ pub(crate) fn redraw(view: &EditorTextView) {
 }
 
 /// The lines no fold hides, with the revision and the folded ranges they belong to.
-type Unfolded = (ide_document::Revision, Vec<Range<usize>>, Rc<[usize]>);
+type Unfolded = (ide_document::Revision, Vec<Range<usize>>, Rc<[Run]>);
 
 pub(crate) struct MinimapIvars {
     editor: Weak<EditorTextView>,
@@ -142,21 +142,30 @@ define_class!(
 /// The logical line of each row: every line, or those no fold hides.
 enum Lines {
     All(usize),
-    Unfolded(Rc<[usize]>),
+    Unfolded(Rc<[Run]>),
+}
+
+struct Run {
+    lines: Range<usize>,
+    row: usize,
 }
 
 impl Lines {
     fn len(&self) -> usize {
         match self {
             Lines::All(count) => *count,
-            Lines::Unfolded(lines) => lines.len(),
+            Lines::Unfolded(runs) => runs.last().map_or(0, |run| run.row + run.lines.len()),
         }
     }
 
     fn get(&self, row: usize) -> Option<usize> {
         match self {
             Lines::All(count) => (row < *count).then_some(row),
-            Lines::Unfolded(lines) => lines.get(row).copied(),
+            Lines::Unfolded(runs) => {
+                let run = runs.get(runs.partition_point(|run| run.row <= row).checked_sub(1)?)?;
+                let offset = row - run.row;
+                (offset < run.lines.len()).then(|| run.lines.start + offset)
+            }
         }
     }
 
@@ -164,7 +173,13 @@ impl Lines {
     fn row_of(&self, line: usize) -> usize {
         match self {
             Lines::All(count) => line.min(*count),
-            Lines::Unfolded(lines) => lines.partition_point(|&l| l < line),
+            Lines::Unfolded(runs) => {
+                let index = runs.partition_point(|run| run.lines.start <= line);
+                index.checked_sub(1).map_or(0, |index| {
+                    let run = &runs[index];
+                    run.row + line.min(run.lines.end) - run.lines.start
+                })
+            }
         }
     }
 }
@@ -362,6 +377,7 @@ impl Minimap {
         let document = editor.document();
         let count = document.text().line_count();
         if hidden.is_empty() {
+            self.ivars().unfolded.borrow_mut().take();
             return Lines::All(count);
         }
         let revision = document.revision();
@@ -371,23 +387,50 @@ impl Minimap {
         {
             return Lines::Unfolded(lines.clone());
         }
-        let lines: Rc<[usize]> = unfolded(&hidden, (0..count).map(|line| editor_line_start(&document, line))).collect();
+        let lines = unfolded(
+            count,
+            hidden.iter().map(|range| {
+                first_line_at_or_after(count, range.start, |line| editor_line_start(&document, line))
+                    ..first_line_at_or_after(count, range.end, |line| editor_line_start(&document, line))
+            }),
+        );
         *self.ivars().unfolded.borrow_mut() = Some((revision, hidden, lines.clone()));
         Lines::Unfolded(lines)
     }
 }
 
-/// The lines whose starts, in order, `starts` gives that none of `hidden`, sorted by start, contains.
-fn unfolded(hidden: &[Range<usize>], starts: impl Iterator<Item = usize>) -> impl Iterator<Item = usize> {
-    let mut next = 0;
-    let mut covered = 0;
-    starts.enumerate().filter_map(move |(line, start)| {
-        while let Some(range) = hidden.get(next).filter(|r| r.start <= start) {
-            covered = covered.max(range.end);
-            next += 1;
+/// Maps a UTF-16 boundary to the first logical line start at or after it.
+fn first_line_at_or_after(count: usize, offset: usize, start: impl Fn(usize) -> usize) -> usize {
+    let (mut low, mut high) = (0, count);
+    while low < high {
+        let mid = low + (high - low) / 2;
+        if start(mid) < offset {
+            low = mid + 1;
+        } else {
+            high = mid;
         }
-        (start >= covered).then_some(line)
-    })
+    }
+    low
+}
+
+/// Stores one run per gap between the folded ranges, which arrive sorted by start.
+fn unfolded(count: usize, hidden: impl Iterator<Item = Range<usize>>) -> Rc<[Run]> {
+    let mut runs = Vec::new();
+    let (mut next, mut row) = (0, 0);
+    for range in hidden.chain(std::iter::once(count..count)) {
+        if range.is_empty() && range.start != count {
+            continue;
+        }
+        if next < range.start {
+            runs.push(Run {
+                lines: next..range.start,
+                row,
+            });
+            row += range.start - next;
+        }
+        next = next.max(range.end);
+    }
+    runs.into()
 }
 
 fn editor_line_start(document: &ide_document::Document, line: usize) -> usize {
@@ -502,14 +545,24 @@ fn index(value: f64) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::unfolded;
+    use super::{Lines, first_line_at_or_after, unfolded};
 
     #[test]
     fn lines_a_fold_hides_get_no_row_also_inside_a_fold_in_a_fold() {
-        let starts = [0, 10, 20, 30, 40, 50, 60];
-        let hidden = [10..40, 20..30, 50..60];
-        assert_eq!(unfolded(&hidden, starts.into_iter()).collect::<Vec<_>>(), [0, 4, 6]);
-        assert_eq!(unfolded(&[], starts.into_iter()).count(), starts.len());
+        let lines = Lines::Unfolded(unfolded(7, [1..4, 2..3, 5..6].into_iter()));
+        assert_eq!(
+            (0..lines.len()).map(|row| lines.get(row).unwrap()).collect::<Vec<_>>(),
+            [0, 4, 6]
+        );
+        assert_eq!(
+            (0..=7).map(|line| lines.row_of(line)).collect::<Vec<_>>(),
+            [0, 1, 1, 1, 1, 2, 2, 3]
+        );
+        assert_eq!(lines.get(3), None);
+        assert_eq!(lines.get(usize::MAX), None);
+        assert_eq!(first_line_at_or_after(7, 11, |line| line * 10), 2);
+        assert_eq!(first_line_at_or_after(7, 60, |line| line * 10), 6);
+        assert_eq!(first_line_at_or_after(7, 61, |line| line * 10), 7);
     }
 }
 

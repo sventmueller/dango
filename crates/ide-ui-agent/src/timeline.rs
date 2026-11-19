@@ -448,7 +448,7 @@ impl Timeline {
         let following = self.follows() || self.count() == 0;
         let structural = self.structure_changed(&thread, changes);
         let old_len = self.count();
-        let appended = !structural || self.reindex(&thread);
+        let appended = !structural || self.append_rows(&thread, changes) || self.reindex(&thread);
         *self.thread.borrow_mut() = thread;
         let reload = self.changed_rows(changes);
         if !structural && reload.is_empty() {
@@ -992,9 +992,9 @@ fn at_bottom(scroll: &NSScrollView) -> bool {
 #[path = "timeline_tests.rs"]
 mod tests;
 
+mod append;
 mod follow;
 mod park;
-mod text_size;
-
 #[cfg(feature = "selftest")]
 mod selftest_probe;
+mod text_size;
