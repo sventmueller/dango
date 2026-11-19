@@ -262,7 +262,8 @@ impl SpecDoc {
 
     /// Closes the comment popover, dropping what was typed.
     fn dismiss(&self) {
-        if let Some(popover) = self.asking.borrow_mut().take() {
+        let open = self.asking.borrow_mut().take();
+        if let Some(popover) = open {
             popover.dismiss();
         }
     }
@@ -281,7 +282,9 @@ impl SpecDoc {
 
     /// Takes what was typed into the comment popover.
     fn commit(&self) {
-        let Some(asked) = self.asking.borrow_mut().take().map(Popover::finish) else {
+        // Closing the popover commits once more, which must find nothing left to take.
+        let open = self.asking.borrow_mut().take();
+        let Some(asked) = open.map(Popover::finish) else {
             return;
         };
         let comment = asked.comment.trim().to_string();

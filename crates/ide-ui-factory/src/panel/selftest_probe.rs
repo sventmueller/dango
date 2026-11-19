@@ -24,6 +24,12 @@ impl FactoryPanel {
     /// What each row of the outline shows, its view made as scrolling it into sight does.
     pub(crate) fn rows_seen(&self) -> Vec<PanelRowSeen> {
         let outline = &self.ui().outline;
+        // Out of view the outline waits for the panel to show before it loads the list, as its rows are read here.
+        if usize::try_from(outline.numberOfRows()).ok() != Some(self.list().lines().len()) {
+            ide_ui_common::panel::reload(outline);
+            // SAFETY: `None` stands for the outline's root, which holds every station's row.
+            unsafe { outline.expandItem_expandChildren(None, true) };
+        }
         (0..outline.numberOfRows())
             .filter_map(|row| outline.viewAtColumn_row_makeIfNecessary(0, row, true))
             .map(|view| {

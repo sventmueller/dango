@@ -269,9 +269,18 @@ pub(crate) fn lock(dest: &Path) -> Option<File> {
         .truncate(false)
         .open(dest.join(".cargo-build-lock"))
         .ok()?;
-    file.try_lock().ok()?;
-    Some(file)
+    // A process forked meanwhile holds a copy of a just released lock until it execs, a build holds it for good.
+    for _ in 0..LOCK_TRIES {
+        if file.try_lock().is_ok() {
+            return Some(file);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    None
 }
+
+/// How often `lock` tries before it takes a folder as held by a build.
+const LOCK_TRIES: u32 = 10;
 
 /// The units of a profile's folder in either layout, and its incremental caches.
 fn units_of(dest: &Path) -> Vec<Unit> {

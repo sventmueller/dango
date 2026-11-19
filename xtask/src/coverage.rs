@@ -461,9 +461,10 @@ fn is_test_only(file: &str) -> bool {
         || file == "crates/ide-ui-terminal/src/inspect.rs"
         || file == "crates/ide-acp/src/test_agent.rs"
         || file.starts_with("crates/ide-acp/src/bin/")
-        || file == "crates/ide-codex/src/test_server.rs"
-        || file == "crates/ide-opencode/src/test_server.rs"
-        || file.starts_with("crates/ide-opencode/src/test_server/")
+        || ["ide-codex", "ide-opencode"].iter().any(|c| {
+            file == format!("crates/{c}/src/test_server.rs")
+                || file.starts_with(&format!("crates/{c}/src/test_server/"))
+        })
         || ["ide-codex", "ide-opencode", "ide-session"]
             .iter()
             .any(|c| file.starts_with(&format!("crates/{c}/src/bin/")))
@@ -869,6 +870,7 @@ mod tests {
             "crates/ide-acp/src/test_agent.rs",
             "crates/ide-acp/src/bin/acp-record.rs",
             "crates/ide-codex/src/test_server.rs",
+            "crates/ide-codex/src/test_server/tasks.rs",
             "crates/ide-codex/src/bin/codex-test-server.rs",
             "crates/ide-opencode/src/test_server/wire.rs",
             "crates/ide-session/src/bin/session-stand-in.rs",

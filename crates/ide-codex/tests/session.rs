@@ -757,3 +757,52 @@ fn a_child_approval_after_the_parent_turn_restores_the_idle_parent() {
     assert!(!run.session.snapshot().subagents()[0].status.is_final());
     run.session.stop(Duration::from_millis(100));
 }
+
+#[test]
+fn a_child_thread_and_background_terminals_reach_the_thread_and_stop_one_by_one() {
+    let run = ready("basic", "tasks");
+    run.session.send(message("tasks early")).unwrap();
+    wait("the child and three terminals", || {
+        run.session
+            .with_thread(|t| t.subagents().len() == 1 && t.background().len() == 3)
+    });
+    let child_lane = run
+        .session
+        .with_thread(|t| Lane::Subagent(t.subagents()[0].key.clone()));
+    let asked_in_child = || {
+        run.session.with_thread(|t| {
+            t.entries(&child_lane).iter().find_map(|e| match &e.kind {
+                EntryKind::PermissionRequest(p) if p.state == RequestState::Pending => Some(p.request_id.clone()),
+                _ => None,
+            })
+        })
+    };
+    wait("the child's request", || asked_in_child().is_some());
+    run.session
+        .answer(&asked_in_child().unwrap(), Choice::Option(0))
+        .unwrap();
+    let (child, terminals) = run
+        .session
+        .with_thread(|t| (t.subagents()[0].clone(), t.background().to_vec()));
+    assert!(run.session.with_thread(|t| {
+        t.entries(&Lane::Subagent(child.key.clone()))
+            .iter()
+            .any(|e| matches!(&e.kind, EntryKind::AgentMessage(m) if m.markdown == "Reviewing"))
+    }));
+    if let Some(task) = &child.task_id {
+        run.session.stop_task(task);
+    }
+    for terminal in &terminals {
+        run.session.stop_task(&terminal.id);
+    }
+    wait("each task ended", || {
+        run.session
+            .with_thread(|t| t.background().iter().all(|b| b.status.is_final()))
+    });
+    let methods = run.sent_methods();
+    assert!(
+        methods.iter().any(|m| m == "thread/backgroundTerminals/terminate"),
+        "{methods:?}"
+    );
+    assert!(methods.iter().any(|m| m == "turn/interrupt"), "{methods:?}");
+}
