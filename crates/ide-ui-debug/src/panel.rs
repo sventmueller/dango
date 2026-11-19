@@ -36,6 +36,8 @@ pub struct PanelIvars {
     pub(crate) unfolding: Cell<bool>,
     /// The running sessions and their consoles.
     pub(crate) links: RefCell<super::controller::Links>,
+    /// Whether the project's launch configurations were read, which waits until the panel shows or a start needs them.
+    pub(crate) configured: Cell<bool>,
 }
 
 define_class!(
@@ -257,7 +259,6 @@ impl DebugPanel {
         controller.set_panel_page(ide_ui_common::window::Panel::Debug, &panel.ui().page);
         controller.set_panel_accessory(ide_ui_common::window::Panel::Debug, &panel.ui().header);
         controller.set_inspector_content(&panel.ui().inspector.page);
-        panel.load_configurations();
         panel.refresh();
         panel
     }
@@ -274,6 +275,7 @@ impl DebugPanel {
             items: RowItems::default(),
             unfolding: Cell::new(false),
             links: RefCell::new(super::controller::Links::default()),
+            configured: Cell::new(false),
         };
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         let panel: Retained<DebugPanel> = unsafe { msg_send![super(DebugPanel::alloc(mtm).set_ivars(ivars)), init] };

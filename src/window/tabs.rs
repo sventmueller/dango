@@ -808,17 +808,8 @@ pub(crate) fn new_tab_menu(mtm: MainThreadMarker, choices: &AgentChoices) -> Ret
     if let Some(worktree) = worktree_menu(mtm, choices) {
         menu.addItem(&worktree);
     }
-    for entry in [
-        entry(
-            t("Agenten verwalten …"),
-            "gearshape",
-            Some(sel!(ideOpenAgentsSettings:)),
-        ),
-        separator(mtm),
-        entry(t("Willkommen"), "house", Some(sel!(ideOpenWelcome:))),
-    ] {
-        menu.addItem(&entry);
-    }
+    menu.addItem(&separator(mtm));
+    menu.addItem(&entry(t("Willkommen"), "house", Some(sel!(ideOpenWelcome:))));
     menu
 }
 

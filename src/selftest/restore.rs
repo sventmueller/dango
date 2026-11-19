@@ -204,14 +204,43 @@ fn came_back(a: PathBuf, b: PathBuf, c: PathBuf, saved: Option<[f64; 4]>) {
     let before: Option<Before> = std::fs::read(record())
         .ok()
         .and_then(|bytes| serde_json::from_slice(&bytes).ok());
-    let (Some(before), Some(first), Some(second)) = (before, window_of(&a), window_of(&b)) else {
+    let (Some(before), Some(first)) = (before, window_of(&a)) else {
         return give_up(SCENARIO, "both folder windows come back");
     };
-    check(
-        "each folder window comes back with its tabs in their order, the Markdown file with its preview",
-        first.window_tabs() == before.first && second.window_tabs() == before.second,
-        format!("{:?} / {:?}", first.window_tabs(), second.window_tabs()),
+    // A file tab behind others loads its file, and with it its preview, when it comes to the front.
+    let notes = a.join("notes.md");
+    let canonical = notes.canonicalize().unwrap_or_else(|_| notes.clone());
+    for key in [notes, canonical] {
+        if first.select_tab(&key.to_string_lossy()) {
+            break;
+        }
+    }
+    let wanted = (before.first.clone(), before.second.clone());
+    let (at, bt) = (a.clone(), b.clone());
+    let tabs = move || {
+        window_of(&at)
+            .zip(window_of(&bt))
+            .map(|(f, s)| (f.window_tabs(), s.window_tabs()))
+    };
+    let shown = tabs.clone();
+    wait_until(
+        move || tabs().is_some_and(|tabs| tabs == wanted),
+        move |_| {
+            check(
+                "each folder window comes back with its tabs in their order, the Markdown file with its preview",
+                shown().is_some_and(|tabs| tabs == (before.first.clone(), before.second.clone())),
+                format!("{:?}", shown()),
+            );
+            whole(a, b, c, saved, &before);
+        },
     );
+}
+
+/// The rest of the second launch's checks, once the tabs are back.
+fn whole(a: PathBuf, b: PathBuf, c: PathBuf, saved: Option<[f64; 4]>, before: &Before) {
+    let (Some(first), Some(second)) = (window_of(&a), window_of(&b)) else {
+        return give_up(SCENARIO, "both folder windows come back");
+    };
     ai_sessions(&first, &a);
     let frame = first.window().map(|w| rect(w.frame()));
     let same = |a: [f64; 4], b: [f64; 4]| a.iter().zip(b).all(|(a, b)| (a - b).abs() < 0.5);
@@ -232,7 +261,7 @@ fn came_back(a: PathBuf, b: PathBuf, c: PathBuf, saved: Option<[f64; 4]>) {
         second.sidebar_folded() && !first.sidebar_folded(),
         format!("{} / {}", second.sidebar_folded(), first.sidebar_folded()),
     );
-    newcomer(&c, &before);
+    newcomer(&c, before);
     finish(SCENARIO);
 }
 

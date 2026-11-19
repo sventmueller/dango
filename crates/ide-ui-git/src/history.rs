@@ -345,7 +345,9 @@ impl GitPanel {
             Some(Err(error)) => return self.report(&error),
             None => return,
         };
-        self.state().commit_changes.insert(hash.clone(), changes);
+        if !self.state().note_commit_changes(hash, changes) {
+            return;
+        }
         let item = self.item_for(&RowKey::Commit(hash.clone()));
         let outline = &self.ui().outline;
         // SAFETY: The item is one the data source hands to this view, kept alive by the panel.

@@ -207,14 +207,14 @@ impl Surface {
     }
 
     /// The quads `paint` makes over sprites drawn with `fonts`; a frame whose sprites do not fit is painted again into
-    /// a larger atlas.
+    /// an emptied atlas, and into a larger one when it alone fills it.
     fn quads(&mut self, fonts: &Fonts, paint: &dyn Fn(&mut QuadCanvas)) -> Vec<Quad> {
         loop {
             self.sprites.prepare(fonts);
             let mut canvas = QuadCanvas::new(&mut self.sprites, fonts);
             paint(&mut canvas);
             let quads = canvas.quads;
-            if !self.sprites.full() || !self.sprites.grow() {
+            if !self.sprites.full() || !self.sprites.make_room() {
                 return quads;
             }
         }

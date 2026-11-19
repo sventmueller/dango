@@ -137,7 +137,11 @@ pub(crate) fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarI
         };
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         let activity: Retained<Activity> = unsafe { msg_send![super(Activity::alloc(mtm).set_ivars(ivars)), init] };
-        with_activities(|all| all.borrow_mut().push(activity.clone()));
+        with_activities(|all| {
+            let mut all = all.borrow_mut();
+            all.retain(|a| a.ivars().controller.load().is_some());
+            all.push(activity.clone());
+        });
         activity
     });
     let item = NSToolbarItem::initWithItemIdentifier(NSToolbarItem::alloc(mtm), &ns(ID));
@@ -169,7 +173,11 @@ fn watch_supervisor() {
                 let pending = pending.clone();
                 main_soon(move || {
                     pending.store(false, Ordering::Release);
-                    let all: Vec<Retained<Activity>> = with_activities(|a| a.borrow().clone());
+                    let all: Vec<Retained<Activity>> = with_activities(|all| {
+                        let mut all = all.borrow_mut();
+                        all.retain(|a| a.ivars().controller.load().is_some());
+                        all.clone()
+                    });
                     for activity in all {
                         activity.changed();
                     }

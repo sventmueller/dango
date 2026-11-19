@@ -274,6 +274,14 @@ pub(crate) fn tab_title(title: &str, url: Option<&str>, limit: usize) -> Option<
     Some(format!("{}…", short.trim_end()))
 }
 
+/// A tab title for `address` before its page loaded: the host of its URL, else its file's name.
+pub(crate) fn title_before_load(address: &Address, limit: usize) -> Option<String> {
+    match address {
+        Address::Url(url) => tab_title("", Some(url), limit),
+        Address::File(path) => path.file_name().map(|name| name.to_string_lossy().into_owned()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -397,5 +405,13 @@ mod tests {
             Some("localhost")
         );
         assert_eq!(tab_title("", None, 30), None);
+    }
+
+    #[test]
+    fn a_tab_that_has_not_loaded_is_titled_by_its_host_or_file() {
+        let url = Address::Url("https://docs.rs/objc2/latest".into());
+        assert_eq!(title_before_load(&url, 30).as_deref(), Some("docs.rs"));
+        let file = Address::File(PathBuf::from("/p/site/index.html"));
+        assert_eq!(title_before_load(&file, 30).as_deref(), Some("index.html"));
     }
 }

@@ -270,6 +270,27 @@ impl BoardView {
             t("Kein Auftrag an dieser Station.").to_string()
         }
     }
+
+    /// What the strip and the table show, which a new board that shows the same need not build again.
+    pub fn look(&self) -> BoardLook {
+        BoardLook {
+            strip: self.strip(),
+            rows: self.rows.clone(),
+            empty: if self.rows.is_empty() {
+                self.empty_words()
+            } else {
+                String::new()
+            },
+        }
+    }
+}
+
+/// What the strip and the table of the Leitstand tab show.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BoardLook {
+    strip: Vec<Stop>,
+    rows: Vec<TableRow>,
+    empty: String,
 }
 
 /// The fleet line's parts (E175).
@@ -412,6 +433,22 @@ mod tests {
         assert_eq!(view.rows(), shown.as_slice());
         view.set(None, factory.now().wall);
         assert!(view.rows().is_empty(), "without a board the table has no rows");
+    }
+
+    #[test]
+    fn the_look_changes_only_with_what_the_strip_and_the_table_show() {
+        let factory = waiting();
+        let board = || Some(Board::new(&factory, factory.now()));
+        let wall = factory.now().wall;
+        let mut view = BoardView::default();
+        view.set(board(), wall + 61_000);
+        let shown = view.look();
+        view.set(board(), wall + 62_000);
+        assert_eq!(view.look(), shown, "the wait still reads one minute");
+        view.set(board(), wall + 121_000);
+        assert_ne!(view.look(), shown, "the wait moved on to two minutes");
+        view.click(Station::Done);
+        assert_ne!(view.look().empty, String::new(), "the filter leaves no row");
     }
 
     #[test]

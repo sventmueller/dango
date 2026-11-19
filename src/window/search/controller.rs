@@ -9,11 +9,11 @@ use ide_ui_common::alert::{Alert, Role, first};
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::Sel;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, msg_send, sel};
-use objc2_app_kit::{NSControl, NSMenu};
-use objc2_foundation::{NSIndexSet, NSNotification};
+use objc2_app_kit::{NSControl, NSMenu, NSTableViewAnimationOptions};
+use objc2_foundation::{NSIndexSet, NSMutableIndexSet, NSNotification};
 use splat_i18n::t;
 
-use super::model::{MenuCommand, Model, Outcome, Query, Started, Toggle, replaced_note};
+use super::model::{MenuCommand, Model, Outcome, Query, Started, Taken, Toggle, replaced_note};
 use super::panel::{SearchIvars, SearchPanel, spot_of};
 use super::{DEBOUNCE, FLUSH, REFRESH_DELAY, hierarchy, panel, replace, views, with_next_id, with_panels};
 use crate::util::{main_after, main_soon, ns};
@@ -233,9 +233,46 @@ impl SearchPanel {
 
     /// Takes `files` and maybe the end of search `generation`, unless another search started since.
     fn take(&self, generation: u64, files: Vec<FileResult>, outcome: Option<Outcome>) {
-        let changed = self.model().take(generation, files, outcome);
-        if changed {
-            self.show();
+        let taken = self.model().take(generation, files, outcome);
+        match taken {
+            Taken::Nothing => {}
+            Taken::Added(added) if self.ivars().synced.get() && self.visible() => self.add(&added),
+            Taken::Added(_) | Taken::Replaced => self.show(),
+        }
+    }
+
+    /// Puts the groups at `added` into the outline, which holds every other group already, and opens those the user
+    /// did not fold; the other rows, their selection and folds stay as they are.
+    fn add(&self, added: &[usize]) {
+        let Some(views) = self.ivars().views.get() else { return };
+        let ((status, problem), can_replace_all, unfolded) = {
+            let model = self.read();
+            (model.status(), model.can_replace_all(), model.unfolded_at(added))
+        };
+        views.replace_all.setEnabled(can_replace_all);
+        views.set_status(&status, problem);
+        if added.is_empty() {
+            return;
+        }
+        let indexes = NSMutableIndexSet::new();
+        for &at in added {
+            indexes.addIndex(at);
+        }
+        views.outline.beginUpdates();
+        // SAFETY: Nil stands for the top, whose children the data source answers for; the indexes are the new groups'
+        // positions among them.
+        unsafe {
+            views.outline.insertItemsAtIndexes_inParent_withAnimation(
+                &indexes,
+                None,
+                NSTableViewAnimationOptions::empty(),
+            );
+        }
+        views.outline.endUpdates();
+        for spot in &unfolded {
+            let item = self.item(spot);
+            // SAFETY: The item is one the data source hands out, kept alive by the panel.
+            unsafe { views.outline.expandItem(Some(&item)) };
         }
     }
 
@@ -244,6 +281,7 @@ impl SearchPanel {
         let Some(views) = self.ivars().views.get() else { return };
         if !self.visible() {
             self.ivars().deferred_show.set(true);
+            self.ivars().synced.set(false);
             return;
         }
         // The outline calls back into the panel while it reloads and expands, so the model is not held meanwhile.
@@ -260,6 +298,7 @@ impl SearchPanel {
         views.replace_all.setEnabled(can_replace_all);
         if !searching {
             self.forget_items();
+            self.ivars().synced.set(false);
             return;
         }
         views.set_status(&status, problem);
@@ -269,6 +308,7 @@ impl SearchPanel {
             .and_then(|i| spot_of(&i));
         self.forget_items();
         views.outline.reloadData();
+        self.ivars().synced.set(true);
         views.outline.sizeLastColumnToFit();
         for spot in &unfolded {
             let item = self.item(spot);

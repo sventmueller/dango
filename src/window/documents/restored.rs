@@ -47,7 +47,8 @@ impl WindowController {
         }
     }
 
-    pub(in crate::window) fn restoring_editor_tabs(&self) -> bool {
+    /// Whether the window is putting back the documents of its folder's layout or of the last run.
+    pub(crate) fn restoring_editor_tabs(&self) -> bool {
         self.ivars().documents.restored.restoring.get()
     }
 

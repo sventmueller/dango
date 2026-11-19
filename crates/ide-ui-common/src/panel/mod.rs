@@ -20,7 +20,7 @@ use objc2_foundation::{NSDictionary, NSNumber, NSPoint, NSRect, NSSize};
 use crate::constant;
 use crate::util::{ns, set_label};
 pub use cells::{KeptCells, reload};
-pub use held::{HeldReload, out_of_view, watch_view};
+pub use held::{HeldReload, out_of_view, watch_view, when_first_shown};
 pub use items::{RowItem, RowItems};
 pub use list::*;
 pub use outline::{Nesting, PanelOutline};

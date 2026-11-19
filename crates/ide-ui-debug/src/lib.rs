@@ -49,10 +49,10 @@ pub fn of(window: Window) -> Option<Retained<DebugPanel>> {
     panel::of(&window)
 }
 
-/// The user trusts `root` now: its configurations are read and sessions may start.
+/// The user trusts `root` now: its configurations are read again if they were, and sessions may start.
 pub fn trust_changed(root: &Path) {
     if let Some(panel) = panel::for_root(root) {
-        panel.load_configurations();
+        panel.configure_again();
         panel.refresh();
     }
 }

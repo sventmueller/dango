@@ -311,6 +311,7 @@ impl WindowController {
             tab.mark_focused(id);
             self.select(&tab);
             ide_ui_agent::show_pending(self);
+            self.tabs_came_forward();
         }
     }
 

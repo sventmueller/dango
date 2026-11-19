@@ -229,16 +229,16 @@ pub fn changed(view: &dyn Editor, change: &Change) {
     }
 }
 
-/// The watcher of the window of `folder` saw `files` change: each running server hears of those it watches.
-pub fn files_changed(folder: &Path, files: &std::collections::BTreeMap<PathBuf, ide_project::FileChange>) {
+/// The watcher of the window of `folder` saw `files` change: each running server hears of those it watches, which
+/// are picked off the main thread.
+pub fn files_changed(
+    folder: &Path,
+    files: &std::sync::Arc<std::collections::BTreeMap<PathBuf, ide_project::FileChange>>,
+) {
     let Some(workspace) = workspace(folder) else { return };
     for slot in workspace.slots.borrow().iter() {
         if let State::Running(server) = &*slot.state.borrow() {
-            let events = ide_lsp::file_watch::events(&server.watchers(), files);
-            if events.is_empty() {
-                continue;
-            }
-            match server.watched_files_changed(events) {
+            match server.files_changed(files.clone()) {
                 Ok(()) | Err(ide_lsp::Error::NotRunning | ide_lsp::Error::ServerGone) => {}
                 Err(error) => ide_ui_common::diag::report("telling the language server about changed files", error),
             }

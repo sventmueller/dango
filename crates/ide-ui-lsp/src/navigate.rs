@@ -2,7 +2,7 @@
 //! the uses of a symbol in a list, to a symbol of the file through a menu at the cursor, and from problem to problem.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use ide_lsp::lsp_types::{DocumentSymbol, Location, Range as LspRange, SymbolKind};
@@ -421,13 +421,15 @@ fn list(view: &dyn Editor, title: &str, mut locations: Vec<Location>) {
         ))
     });
 
+    let wanted: HashSet<PathBuf> = locations.iter().filter_map(|l| ide_lsp::uri::to_path(&l.uri)).collect();
     let mut open = HashMap::new();
-    for path in locations.iter().filter_map(|l| ide_lsp::uri::to_path(&l.uri)) {
-        if let Some(editor) = editor::all_editors()
-            .into_iter()
-            .find(|v| v.document().path() == Some(&*path))
+    for editor in editor::all_editors() {
+        let document = editor.document();
+        if let Some(path) = document.path()
+            && wanted.contains(path)
+            && !open.contains_key(path)
         {
-            open.insert(path, Some(editor.document().text().to_string()));
+            open.insert(path.to_path_buf(), Some(document.text().to_string()));
         }
     }
     let serial = view.lsp().borrow().serial;

@@ -143,10 +143,8 @@ pub(crate) fn past_sessions_cached(cwd: &Path, limit: usize) -> Vec<(Resume, Sys
 /// The session `session` of the folder `root` and the agent that ran it: the agent its thread names, else Claude, whose
 /// sessions started in a terminal have no thread. Reads the disk.
 pub fn past_session(root: &Path, session: &str) -> Option<(Agent, Resume)> {
-    let (resume, _) = super::past_sessions(root, KEPT)
-        .into_iter()
-        .find(|(resume, _)| resume.session == session)?;
     let index = ThreadIndex::open(&ThreadIndex::default_dir());
+    let resume = super::find_past_session(&index, root, session)?;
     let agent = resume
         .thread
         .as_ref()

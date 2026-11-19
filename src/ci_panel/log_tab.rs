@@ -1,7 +1,8 @@
 //! A CI job's log in a tab: read only, without escape sequences, error and warning lines in colour, searchable with
 //! ⌘F; read again while the job runs.
 
-use std::cell::{OnceCell, RefCell};
+use std::cell::{Cell, OnceCell, RefCell};
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 
 use ide_ci::log::{LineKind, LogLine};
@@ -31,8 +32,13 @@ pub(crate) struct LogIvars {
     job: RefCell<Job>,
     run: String,
     ui: OnceCell<LogUi>,
+    #[cfg(feature = "selftest")]
     lines: RefCell<Vec<LogLine>>,
-    loading: std::cell::Cell<bool>,
+    /// What the text view shows of the log, `None` while it shows a message instead.
+    shown: Cell<Option<Shown>>,
+    /// Whether a read was left out while the tab was out of view, which it catches up on in view.
+    stale: Cell<bool>,
+    loading: Cell<bool>,
 }
 
 pub(crate) struct LogUi {
@@ -101,6 +107,7 @@ pub(crate) fn key(host: &str, job: &Job) -> String {
 pub(crate) fn show(controller: &WindowController, window_root: &Path, client: Client, job: Job, run: String) {
     let key = key(&client.forge().host, &job);
     if controller.select_tab(&key) {
+        came_to_front(controller);
         return;
     }
     let title = tf("Log: {}", &[&job.name]);
@@ -132,7 +139,21 @@ pub(crate) fn refresh_for(window_root: &Path, runs: &[ide_ci::panel::RunRow]) {
         *tab.ivars().job.borrow_mut() = job.clone();
         tab.show_state();
         if was_active || job.state.is_active() {
-            tab.reload();
+            tab.reload_in_view();
+        }
+    }
+}
+
+/// A tab of `controller`'s window may have come to the front: the log tabs that left out a read and show now read.
+pub(crate) fn came_to_front(controller: &WindowController) {
+    for tab in controller.context().ci_log_tabs().tabs.live() {
+        if tab
+            .ivars()
+            .controller
+            .load()
+            .is_some_and(|c| std::ptr::eq(&*c, controller))
+        {
+            tab.catch_up();
         }
     }
 }
@@ -154,8 +175,11 @@ impl LogTab {
             job: RefCell::new(job),
             run,
             ui: OnceCell::new(),
+            #[cfg(feature = "selftest")]
             lines: RefCell::new(Vec::new()),
-            loading: std::cell::Cell::new(false),
+            shown: Cell::new(None),
+            stale: Cell::new(false),
+            loading: Cell::new(false),
         };
         let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(600.0, 400.0));
         // SAFETY: NSView's designated initializer, called once on the newly allocated object.
@@ -163,7 +187,34 @@ impl LogTab {
             unsafe { msg_send![super(LogTab::alloc(mtm).set_ivars(ivars)), initWithFrame: frame] };
         let _ = tab.ivars().ui.set(LogUi::new(mtm, &tab));
         tab.show_state();
+        let weak = Weak::from(&*tab);
+        let came = move || {
+            if let Some(tab) = weak.load() {
+                tab.catch_up();
+            }
+        };
+        ide_ui_common::panel::watch_view(&tab, came, None);
         tab
+    }
+
+    /// Whether the tab shows: in the window tab in front and not hidden.
+    fn in_view(&self) -> bool {
+        !self.isHiddenOrHasHiddenAncestor() && self.window().is_some_and(|w| crate::window::in_front(&w))
+    }
+
+    /// Reads the log again if the tab shows, else once it comes into view.
+    fn reload_in_view(&self) {
+        if self.in_view() {
+            self.reload();
+        } else {
+            self.ivars().stale.set(true);
+        }
+    }
+
+    fn catch_up(&self) {
+        if self.ivars().stale.get() && self.in_view() {
+            self.reload();
+        }
     }
 
     pub(crate) fn ui(&self) -> &LogUi {
@@ -189,18 +240,24 @@ impl LogTab {
         if self.ivars().loading.replace(true) {
             return;
         }
+        self.ivars().stale.set(false);
         let client = self.ivars().client.clone();
         let job = self.ivars().job.borrow().clone();
         let id = self.ivars().id;
+        let before = self.ivars().shown.get();
         let queued = work::run(
-            move || client.log(&job).map(|raw| Prepared::of(ide_ci::log::lines(&raw))),
+            move || {
+                client
+                    .log(&job)
+                    .map(|raw| Prepared::of(ide_ci::log::lines(&raw), before))
+            },
             move |result| {
                 with_tab(id, |tab| {
                     tab.ivars().loading.set(false);
                     match result {
-                        Some(Ok(prepared)) => tab.show_lines(prepared),
+                        Some(Ok(Some(prepared))) => tab.show_lines(prepared),
                         Some(Err(error)) => tab.show_message(&text::problem(&error)),
-                        None => {}
+                        Some(Ok(None)) | None => {}
                     }
                 });
             },
@@ -211,35 +268,52 @@ impl LogTab {
     }
 
     fn show_message(&self, message: &str) {
+        self.ivars().shown.set(None);
         self.ui().text.setString(&ns(message));
     }
 
     fn show_lines(&self, prepared: Prepared) {
         let ui = self.ui();
-        let at_end = is_at_end(&ui.scroll);
-        ui.text.setString(&ns(&prepared.text));
         // SAFETY: The text view keeps its text storage for as long as it lives.
-        if let Some(storage) = unsafe { ui.text.textStorage() } {
-            let foreground = constant!(NSForegroundColorAttributeName);
-            with_editing(&storage, || {
-                for &(offset, length, kind) in &prepared.marked {
-                    let color = match kind {
-                        LineKind::Error => Some(NSColor::systemRedColor()),
-                        LineKind::Warning => Some(NSColor::systemOrangeColor()),
-                        LineKind::Section => Some(NSColor::systemBlueColor()),
-                        LineKind::Plain => None,
-                    };
-                    if let Some(color) = color {
-                        // SAFETY: The range lies within the text just set, line by line; the value is a colour as
-                        // the attribute wants.
-                        unsafe {
-                            storage.addAttribute_value_range(foreground, &color, NSRange::new(offset, length));
-                        }
+        let Some(storage) = (unsafe { ui.text.textStorage() }) else {
+            return;
+        };
+        if prepared.from > 0 && storage.length() != prepared.from {
+            self.ivars().shown.set(None);
+            return self.reload();
+        }
+        let at_end = is_at_end(&ui.scroll);
+        if prepared.from == 0 {
+            ui.text.setString(&ns(&prepared.text));
+        }
+        let foreground = constant!(NSForegroundColorAttributeName);
+        with_editing(&storage, || {
+            if prepared.from > 0 {
+                storage.replaceCharactersInRange_withString(NSRange::new(prepared.from, 0), &ns(&prepared.text));
+                let recolor = NSRange::new(prepared.recolor, storage.length() - prepared.recolor);
+                storage.removeAttribute_range(foreground, recolor);
+            }
+            for &(offset, length, kind) in &prepared.marked {
+                let color = match kind {
+                    LineKind::Error => Some(NSColor::systemRedColor()),
+                    LineKind::Warning => Some(NSColor::systemOrangeColor()),
+                    LineKind::Section => Some(NSColor::systemBlueColor()),
+                    LineKind::Plain => None,
+                };
+                if let Some(color) = color {
+                    // SAFETY: The range lies within the text just set, line by line; the value is a colour as the
+                    // attribute wants.
+                    unsafe {
+                        storage.addAttribute_value_range(foreground, &color, NSRange::new(offset, length));
                     }
                 }
-            });
+            }
+        });
+        self.ivars().shown.set(Some(prepared.shown));
+        #[cfg(feature = "selftest")]
+        {
+            *self.ivars().lines.borrow_mut() = prepared.lines;
         }
-        *self.ivars().lines.borrow_mut() = prepared.lines;
         if at_end || self.ivars().job.borrow().state == State::Failed {
             // SAFETY: A nil sender is what AppKit's own key bindings pass.
             unsafe { ui.text.scrollToEndOfDocument(None) };
@@ -247,30 +321,87 @@ impl LogTab {
     }
 }
 
-/// A log made ready on the CI lane, so the main thread only hands it to the view: its text, where each marked line
-/// starts and how long it is in UTF-16 code units with its kind, and its lines.
+/// What a log tab shows of a log, so the next read can tell whether it only grew.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Shown {
+    bytes: usize,
+    utf16: usize,
+    hash: u64,
+}
+
+impl Shown {
+    fn of(text: &str) -> Shown {
+        Shown {
+            bytes: text.len(),
+            utf16: text.encode_utf16().count(),
+            hash: hash(text),
+        }
+    }
+}
+
+fn hash(text: &str) -> u64 {
+    let mut hasher = std::hash::DefaultHasher::new();
+    text.hash(&mut hasher);
+    hasher.finish()
+}
+
+/// A log made ready on the CI lane, so the main thread only hands it to the view: the text from `from` on, where each
+/// marked line from `recolor` on starts and how long it is in UTF-16 code units with its kind, and its lines.
 struct Prepared {
+    /// The whole text when `from` is 0, else what follows the text shown.
     text: String,
+    /// Where `text` goes, in UTF-16 code units: 0 puts it in place of all, else it follows what shows.
+    from: usize,
+    /// Where the line that `text` continues starts, from which the colours are laid again.
+    recolor: usize,
     marked: Vec<(usize, usize, LineKind)>,
+    shown: Shown,
+    #[cfg(feature = "selftest")]
     lines: Vec<LogLine>,
 }
 
 impl Prepared {
-    fn of(lines: Vec<LogLine>) -> Prepared {
+    /// `lines` as the tab shows them after `before`; `None` when they show already.
+    fn of(lines: Vec<LogLine>, before: Option<Shown>) -> Option<Prepared> {
+        let text = ide_ci::log::text(&lines);
+        let shown = Shown::of(&text);
+        if before == Some(shown) {
+            return None;
+        }
+        let grown = before.filter(|before| {
+            before.bytes > 0
+                && before.bytes < text.len()
+                && text.is_char_boundary(before.bytes)
+                && hash(&text[..before.bytes]) == before.hash
+        });
+        let from = grown.map_or(0, |before| before.utf16);
         let mut marked = Vec::new();
+        let mut recolor = 0;
         let mut offset = 0usize;
         for line in &lines {
             let length = line.text.encode_utf16().count();
+            if offset <= from {
+                recolor = offset;
+            }
             if line.kind != LineKind::Plain {
                 marked.push((offset, length, line.kind));
             }
             offset += length + 1;
         }
-        Prepared {
-            text: ide_ci::log::text(&lines),
+        marked.retain(|&(offset, _, _)| offset >= recolor);
+        let text = match grown {
+            Some(before) => text[before.bytes..].to_string(),
+            None => text,
+        };
+        Some(Prepared {
+            text,
+            from,
+            recolor,
             marked,
+            shown,
+            #[cfg(feature = "selftest")]
             lines,
-        }
+        })
     }
 }
 
@@ -379,20 +510,69 @@ fn text_view(mtm: MainThreadMarker, job: &str) -> (Retained<NSScrollView>, Retai
 mod tests {
     use super::*;
 
-    #[test]
-    fn a_prepared_log_marks_its_lines_where_the_text_has_them() {
-        let line = |text: &str, kind| LogLine {
+    fn line(text: &str, kind: LineKind) -> LogLine {
+        LogLine {
             text: text.into(),
             kind,
-        };
-        let prepared = Prepared::of(vec![
-            line("plain", LineKind::Plain),
-            line("Error: ä😀", LineKind::Error),
-            line("Run", LineKind::Section),
-        ]);
+        }
+    }
+
+    #[test]
+    fn a_prepared_log_marks_its_lines_where_the_text_has_them() {
+        let prepared = Prepared::of(
+            vec![
+                line("plain", LineKind::Plain),
+                line("Error: ä😀", LineKind::Error),
+                line("Run", LineKind::Section),
+            ],
+            None,
+        )
+        .expect("nothing shows yet");
         assert_eq!(prepared.text, "plain\nError: ä😀\nRun");
+        assert_eq!((prepared.from, prepared.recolor), (0, 0));
         assert_eq!(prepared.marked, [(6, 10, LineKind::Error), (17, 3, LineKind::Section)]);
-        assert_eq!(prepared.lines.len(), 3);
+        assert_eq!(prepared.shown, Shown::of("plain\nError: ä😀\nRun"));
+    }
+
+    #[test]
+    fn a_log_read_again_unchanged_leaves_the_tab_as_it_is() {
+        let lines = || vec![line("a", LineKind::Plain), line("Error: b", LineKind::Error)];
+        let shown = Prepared::of(lines(), None).map(|p| p.shown);
+        assert!(Prepared::of(lines(), shown).is_none());
+    }
+
+    #[test]
+    fn a_log_that_only_grew_hands_over_its_new_tail_with_the_colours_from_its_last_line_on() {
+        let before = Shown::of("ä\nError: b");
+        let prepared = Prepared::of(
+            vec![
+                line("ä", LineKind::Plain),
+                line("Error: b", LineKind::Error),
+                line("c", LineKind::Plain),
+                line("Warning: d", LineKind::Warning),
+            ],
+            Some(before),
+        )
+        .expect("the log grew");
+        assert_eq!(prepared.text, "\nc\nWarning: d");
+        assert_eq!((prepared.from, prepared.recolor), (10, 2));
+        assert_eq!(prepared.marked, [(2, 8, LineKind::Error), (13, 10, LineKind::Warning)]);
+        assert_eq!(prepared.shown, Shown::of("ä\nError: b\nc\nWarning: d"));
+    }
+
+    #[test]
+    fn a_log_whose_start_changed_is_shown_anew() {
+        let before = Shown::of("a\nb");
+        let prepared = Prepared::of(
+            vec![
+                line("x", LineKind::Plain),
+                line("b", LineKind::Plain),
+                line("c", LineKind::Plain),
+            ],
+            Some(before),
+        )
+        .expect("the log changed");
+        assert_eq!((prepared.text.as_str(), prepared.from), ("x\nb\nc", 0));
     }
 }
 

@@ -77,6 +77,8 @@ pub struct ToolCall {
     pub background_task: Option<String>,
     /// How many lines of the output were dropped once the call ended.
     pub(crate) left_out: usize,
+    /// How many added and removed lines of a diff output were dropped once the call ended.
+    pub(crate) changes_left_out: (usize, usize),
 }
 
 /// How many lines of a tool's text output stay once the call has ended; no card shows more.
@@ -104,6 +106,7 @@ impl ToolCall {
             summary: None,
             background_task: None,
             left_out: 0,
+            changes_left_out: (0, 0),
         }
     }
 
@@ -112,9 +115,15 @@ impl ToolCall {
         self.left_out
     }
 
+    /// How many added and removed lines of a diff output were dropped once the call ended, beyond those it still
+    /// holds.
+    pub fn changes_left_out(&self) -> (usize, usize) {
+        self.changes_left_out
+    }
+
     /// Once the call has ended, drops what no card shows: the raw input where the view has its fields, the
-    /// proposed change once the diff is there, and text output beyond `OUTPUT_LINES`. A subagent's report stays
-    /// whole.
+    /// proposed change once the diff is there, and text output and diff lines beyond `OUTPUT_LINES`. A subagent's
+    /// report stays whole.
     pub(crate) fn settle(&mut self) {
         if !matches!(self.status, ToolStatus::Completed | ToolStatus::Failed) {
             return;
@@ -135,9 +144,47 @@ impl ToolCall {
         self.left_out += match &mut self.output {
             Some(ToolOutput::Text(text)) => cut(text),
             Some(ToolOutput::Terminal { stdout, stderr, .. }) => cut(stdout) + cut(stderr),
-            _ => 0,
+            Some(ToolOutput::Diff { hunks, .. }) => {
+                let (lines, added, removed) = cut_hunks(hunks);
+                self.changes_left_out.0 += added;
+                self.changes_left_out.1 += removed;
+                lines
+            }
+            None => 0,
         };
     }
+}
+
+/// Cuts `hunks` to their first `OUTPUT_LINES` lines, counting the one a card shows between two hunks; returns how
+/// many lines were dropped, separators included, and how many of them added and removed lines.
+fn cut_hunks(hunks: &mut Vec<Hunk>) -> (usize, usize, usize) {
+    let mut room = OUTPUT_LINES;
+    let (mut lines, mut added, mut removed) = (0, 0, 0);
+    let mut lines_of_separators = 0;
+    let mut first = true;
+    let mut count = |dropped: &[String]| {
+        lines += dropped.len();
+        added += dropped.iter().filter(|line| line.starts_with('+')).count();
+        removed += dropped.iter().filter(|line| line.starts_with('-')).count();
+    };
+    hunks.retain_mut(|hunk| {
+        let separator = usize::from(!std::mem::take(&mut first));
+        if room <= separator {
+            count(&hunk.lines);
+            lines_of_separators += separator;
+            return false;
+        }
+        room -= separator;
+        let kept = hunk.lines.len().min(room);
+        room -= kept;
+        if kept < hunk.lines.len() {
+            count(&hunk.lines[kept..]);
+            hunk.lines.truncate(kept);
+            hunk.lines.shrink_to_fit();
+        }
+        true
+    });
+    (lines + lines_of_separators, added, removed)
 }
 
 /// Cuts `text` to its first `OUTPUT_LINES` lines of at most `OUTPUT_LINE` characters, a cut line ending in `…`;

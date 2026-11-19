@@ -60,7 +60,7 @@ impl Project {
                 if let WatchEvent::Changed(changes) = &event
                     && !changes.files.is_empty()
                 {
-                    let (root, files) = (window_root.clone(), changes.files.clone());
+                    let (root, files) = (window_root.clone(), Arc::new(changes.files.clone()));
                     main_soon(move || {
                         ide_ui_lsp::files_changed(&root, &files);
                         if let Some(mtm) = objc2::MainThreadMarker::new() {

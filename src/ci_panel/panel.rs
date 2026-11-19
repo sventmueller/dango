@@ -31,6 +31,9 @@ pub(crate) struct PanelIvars {
     items: RowItems<Key>,
     pub(crate) cells: KeptCells<Key>,
     pub(crate) held: HeldReload,
+    /// Whether the panel reads nothing until it shows, as its symbol is hidden (E80) and the state of the runs, which
+    /// its tooltip names (E69), is seen nowhere else.
+    pub(crate) idle: Cell<bool>,
 }
 
 define_class!(
@@ -290,6 +293,7 @@ impl CiPanel {
             items: RowItems::default(),
             cells: KeptCells::default(),
             held: HeldReload::default(),
+            idle: Cell::new(false),
         };
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         let panel: Retained<CiPanel> = unsafe { msg_send![super(CiPanel::alloc(mtm).set_ivars(ivars)), init] };

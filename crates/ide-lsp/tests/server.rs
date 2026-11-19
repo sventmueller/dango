@@ -1,6 +1,7 @@
 //! The client against the fake server in `support/fake_server.rs`, a real process under a real supervisor.
 
-use std::path::Path;
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -11,6 +12,7 @@ use ide_lsp::lsp_types::{
 };
 use ide_lsp::{Documents, Encoding, Error, Event, Refresh, RestartPolicy, Server, ServerConfig, Status, uri, wait};
 use ide_process::{Ending, Supervisor};
+use ide_project::FileChange;
 use serde_json::{Value, json};
 
 const WAIT: Duration = Duration::from_secs(10);
@@ -311,6 +313,21 @@ fn requests_from_the_server_are_answered_by_the_client_or_the_app() {
     .unwrap();
     f.expect(|s| *s == Seen::Capabilities);
     assert_eq!(f.server.watchers()[0]["watchers"][0]["globPattern"], "**/*.rs");
+    let watched = || {
+        f.received()
+            .iter()
+            .filter(|m| *m == "workspace/didChangeWatchedFiles")
+            .count()
+    };
+    let changed = |path: &str, change| Arc::new(BTreeMap::from([(PathBuf::from(path), change)]));
+    f.server
+        .files_changed(changed("/p/target/a.o", FileChange::Created))
+        .unwrap();
+    assert_eq!(watched(), 0, "no file a watcher asks for sends nothing");
+    f.server
+        .files_changed(changed("/p/src/a.rs", FileChange::Changed))
+        .unwrap();
+    assert_eq!(watched(), 1);
     f.ask("fake/ask", json!({"method": "client/unregisterCapability", "params": {"unregisterations": [{"id": "w", "method": "workspace/didChangeWatchedFiles"}]}}))
         .unwrap();
     assert!(f.server.watchers().is_empty());

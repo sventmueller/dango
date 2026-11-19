@@ -26,6 +26,8 @@ pub(crate) struct SearchIvars {
     pub(super) deferred_start: Cell<Option<u64>>,
     pub(super) deferred_refresh: Cell<Option<u64>>,
     pub(super) deferred_show: Cell<bool>,
+    /// Whether the outline holds every group of the model, so that new ones can go in without reading the rest anew.
+    pub(super) synced: Cell<bool>,
     model: RefCell<Model>,
     /// The objects that stand for rows in the outline view, which keeps no reference of its own.
     items: RowItems<Spot>,
@@ -41,6 +43,7 @@ impl SearchIvars {
             deferred_start: Cell::new(None),
             deferred_refresh: Cell::new(None),
             deferred_show: Cell::new(false),
+            synced: Cell::new(false),
             model: RefCell::new(model),
             items: RowItems::default(),
         }

@@ -119,6 +119,23 @@ impl Inputs {
         self.chosen.retain(|(entry, _), _| *entry != id);
         self.plan_text.remove(&id);
     }
+
+    /// Forgets the input editors of the permission requests that `changes` answered or withdrew in `thread`, however
+    /// they were answered.
+    pub(crate) fn forget_answered(&mut self, thread: &Thread, changes: &[ide_thread::Change]) {
+        if self.editors.is_empty() {
+            return;
+        }
+        for change in changes {
+            if let ide_thread::Change::Updated { id, .. } = change
+                && thread.entry(*id).is_some_and(
+                    |entry| matches!(&entry.kind, EntryKind::PermissionRequest(r) if r.state != RequestState::Pending),
+                )
+            {
+                self.editors.remove(&id.get());
+            }
+        }
+    }
 }
 
 /// A label whose running time the tab advances every second.

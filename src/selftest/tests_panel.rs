@@ -83,7 +83,8 @@ fn listed(controller: Retained<WindowController>) {
                 format!("tree shown {shown}, {:?}", rows()),
             );
             controller.open_file(&root().join(FILE));
-            wait_within(Duration::from_secs(10), || editor_view().is_some(), |_| gutter());
+            let marked = || editor_view().is_some_and(|view| crate::tests_panel::gutter_mark(&view, 10).is_some());
+            wait_within(Duration::from_secs(10), marked, |_| gutter());
         },
     );
 }

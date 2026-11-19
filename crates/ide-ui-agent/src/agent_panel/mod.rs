@@ -158,17 +158,8 @@ pub(crate) fn past_sessions(cwd: &Path, limit: usize) -> Vec<(Resume, SystemTime
         .into_iter()
         .filter(|e| e.cwd.as_deref() == Some(cwd))
         .filter_map(|e| {
-            let session = e.session.clone()?;
-            Some((
-                Resume {
-                    transcript: transcript(cwd, &session),
-                    session,
-                    thread: Some(e.id.clone()),
-                    title: Some(e.title.clone()).filter(|t| !t.is_empty()),
-                    agent: None,
-                },
-                e.last_activity,
-            ))
+            let session = e.session.as_deref()?;
+            Some((indexed(e, session, transcript(cwd, session)), e.last_activity))
         })
         .collect();
     let known: BTreeSet<String> = past.iter().map(|(r, _)| r.session.clone()).collect();
@@ -176,17 +167,8 @@ pub(crate) fn past_sessions(cwd: &Path, limit: usize) -> Vec<(Resume, SystemTime
         if known.contains(&session.id) {
             continue;
         }
-        let title = session.heading();
-        past.push((
-            Resume {
-                session: session.id.clone(),
-                thread: None,
-                title,
-                transcript: Some(session.path.clone()),
-                agent: None,
-            },
-            session.modified,
-        ));
+        let modified = session.modified;
+        past.push((from_terminal(session), modified));
     }
     let known: BTreeSet<String> = past.iter().map(|(r, _)| r.session.clone()).collect();
     past.extend(
@@ -199,6 +181,56 @@ pub(crate) fn past_sessions(cwd: &Path, limit: usize) -> Vec<(Resume, SystemTime
     past
 }
 
+/// The session `session` of `cwd` as `past_sessions` lists it, read without listing the others.
+pub(crate) fn find_past_session(index: &ThreadIndex, cwd: &Path, session: &str) -> Option<Resume> {
+    find_past_in(index, &config_dir(), cwd, session, || crate::codex::past_threads(cwd))
+}
+
+/// `find_past_session` with the CLI's configuration folder `config` and the folder's Codex threads from `codex`.
+fn find_past_in(
+    index: &ThreadIndex,
+    config: &Path,
+    cwd: &Path,
+    session: &str,
+    codex: impl FnOnce() -> Vec<(Resume, SystemTime)>,
+) -> Option<Resume> {
+    let entry = index
+        .list(&ide_thread::Filter::default())
+        .into_iter()
+        .find(|e| e.cwd.as_deref() == Some(cwd) && e.session.as_deref() == Some(session));
+    if let Some(entry) = entry {
+        return Some(indexed(entry, session, transcript_in(config, cwd, session)));
+    }
+    if let Some(past) = ide_claude::history::find(config, cwd, session) {
+        return Some(from_terminal(past));
+    }
+    codex()
+        .into_iter()
+        .filter(|(resume, _)| resume.session == session)
+        .min_by_key(|(_, when)| std::cmp::Reverse(*when))
+        .map(|(resume, _)| resume)
+}
+
+fn indexed(entry: &ide_thread::IndexEntry, session: &str, transcript: Option<std::path::PathBuf>) -> Resume {
+    Resume {
+        transcript,
+        session: session.to_string(),
+        thread: Some(entry.id.clone()),
+        title: Some(entry.title.clone()).filter(|t| !t.is_empty()),
+        agent: None,
+    }
+}
+
+fn from_terminal(session: ide_claude::history::PastSession) -> Resume {
+    Resume {
+        title: session.heading(),
+        session: session.id,
+        thread: None,
+        transcript: Some(session.path),
+        agent: None,
+    }
+}
+
 fn config_dir() -> std::path::PathBuf {
     ide_claude::history::config_dir(&ide_ui_common::window::environment(std::time::Duration::ZERO))
 }
@@ -209,10 +241,14 @@ fn terminal_sessions(cwd: &Path) -> Vec<ide_claude::history::PastSession> {
 }
 
 fn transcript(cwd: &Path, session: &str) -> Option<std::path::PathBuf> {
+    transcript_in(&config_dir(), cwd, session)
+}
+
+fn transcript_in(config: &Path, cwd: &Path, session: &str) -> Option<std::path::PathBuf> {
     if session.contains('/') {
         return None;
     }
-    let path = config_dir()
+    let path = config
         .join("projects")
         .join(ide_claude::history::project_folder(cwd))
         .join(format!("{session}.jsonl"));
@@ -378,5 +414,58 @@ mod tests {
             .map(|e| e.unwrap().file_name())
             .collect();
         assert_eq!(names, ["bookmarks.json"]);
+    }
+
+    #[test]
+    fn one_past_session_is_found_where_the_listing_would_take_it_from() {
+        let dir = ide_core::testing::scratch("find-past");
+        let cwd = Path::new("/work/find-past");
+        let config = dir.path().join("config");
+        let folder = config.join("projects").join(ide_claude::history::project_folder(cwd));
+        std::fs::create_dir_all(&folder).unwrap();
+        let prompt = r#"{"type":"user","uuid":"u","message":{"role":"user","content":[{"type":"text","text":"From a terminal"}]}}"#;
+        for session in ["indexed", "terminal"] {
+            std::fs::write(folder.join(format!("{session}.jsonl")), prompt).unwrap();
+        }
+        let mut index = ThreadIndex::open(&dir.path().join("threads"));
+        let entry = |id: &str, session: &str, archived: bool| ide_thread::IndexEntry {
+            id: ide_thread::ThreadId::from(id),
+            title: "Kept".into(),
+            agent: "claude".into(),
+            group: None,
+            archived,
+            last_activity: SystemTime::UNIX_EPOCH,
+            status: ide_thread::Status::default(),
+            session: Some(session.into()),
+            cwd: Some(cwd.to_path_buf()),
+            cost_usd: None,
+        };
+        index.upsert(entry("t1", "indexed", false)).unwrap();
+        index.upsert(entry("t2", "archived", true)).unwrap();
+        let codex = || {
+            let thread = Resume {
+                session: "codex".into(),
+                thread: None,
+                title: Some("Codex".into()),
+                transcript: None,
+                agent: Some("codex".into()),
+            };
+            vec![(thread, SystemTime::UNIX_EPOCH)]
+        };
+        let find = |session: &str| find_past_in(&index, &config, cwd, session, codex);
+
+        let indexed = find("indexed").unwrap();
+        assert_eq!(indexed.thread, Some(ide_thread::ThreadId::from("t1")));
+        assert_eq!(indexed.title.as_deref(), Some("Kept"));
+        assert_eq!(indexed.transcript, Some(folder.join("indexed.jsonl")));
+        let terminal = find("terminal").unwrap();
+        assert_eq!(
+            (terminal.thread, terminal.title),
+            (None, Some("From a terminal".into()))
+        );
+        assert_eq!(terminal.transcript, Some(folder.join("terminal.jsonl")));
+        assert_eq!(find("codex").unwrap().agent.as_deref(), Some("codex"));
+        assert!(find("archived").is_none(), "the listing leaves archived threads out");
+        assert!(find("missing").is_none());
     }
 }

@@ -72,9 +72,13 @@ pub(crate) fn list(root: &Path, scratch: &Path) -> Command {
 /// The test file a listed line names last, such as `src/a.test.ts` or a runner's `dom\tsrc/a.test.ts`.
 fn listed_file(line: &str) -> Option<&str> {
     let file = line.split_whitespace().last()?;
-    let name = file.rsplit('/').next()?;
-    let (_, extension) = name.rsplit_once('.')?;
-    (EXTENSIONS.contains(&extension) && ENDINGS.iter().any(|ending| name.contains(ending))).then_some(file)
+    is_test_file(file.rsplit('/').next()?).then_some(file)
+}
+
+/// Whether the file `name` is one the JavaScript runners take for a test file, such as `a.test.ts`.
+pub(crate) fn is_test_file(name: &str) -> bool {
+    name.rsplit_once('.')
+        .is_some_and(|(_, extension)| EXTENSIONS.contains(&extension) && ENDINGS.iter().any(|e| name.contains(e)))
 }
 
 /// The listing names files only; each stands for its tests until a run names them.

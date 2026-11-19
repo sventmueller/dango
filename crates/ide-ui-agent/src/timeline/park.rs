@@ -11,7 +11,8 @@ use crate::tab::AgentTab;
 const PARK_AFTER: Duration = Duration::from_secs(30);
 
 impl Timeline {
-    /// Lets the timeline of `tab` let go of its cards once it stayed out of view, and build them again when it shows.
+    /// Lets the timeline of `tab` let go of its cards once it stayed out of view, and build them again when it shows,
+    /// which also starts a restored session that waited for it.
     pub(crate) fn watch(tab: &Rc<AgentTab>) {
         let (came, away) = (Rc::downgrade(tab), Rc::downgrade(tab));
         ide_ui_common::panel::watch_view(
@@ -19,6 +20,7 @@ impl Timeline {
             move || {
                 if let Some(tab) = came.upgrade() {
                     tab.timeline().unpark();
+                    tab.wake_deferred();
                 }
             },
             Some((

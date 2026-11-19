@@ -398,12 +398,12 @@ fn read_card(ctx: &Ctx<'_>, id: EntryId, call: &ToolCall, path: &str) -> Retaine
 /// A changed file: the change as red and green lines, and a way into the editor.
 fn diff_card(ctx: &Ctx<'_>, id: EntryId, call: &ToolCall, path: &str, proposed: &[String]) -> Retained<NSView> {
     let mtm = ctx.mtm;
-    let lines: Vec<String> = match &call.output {
-        Some(ToolOutput::Diff { hunks, .. }) => hunk_lines(hunks),
-        _ => proposed.to_vec(),
+    let (lines, left_out, (added_out, removed_out)) = match &call.output {
+        Some(ToolOutput::Diff { hunks, .. }) => (hunk_lines(hunks), call.lines_left_out(), call.changes_left_out()),
+        _ => (proposed.to_vec(), 0, (0, 0)),
     };
-    let added = lines.iter().filter(|l| l.starts_with('+')).count();
-    let removed = lines.iter().filter(|l| l.starts_with('-')).count();
+    let added = lines.iter().filter(|l| l.starts_with('+')).count() + added_out;
+    let removed = lines.iter().filter(|l| l.starts_with('-')).count() + removed_out;
     let counts = ui::label(
         mtm,
         &format!("+{added} −{removed}"),
@@ -448,11 +448,12 @@ fn diff_card(ctx: &Ctx<'_>, id: EntryId, call: &ToolCall, path: &str, proposed: 
         ui::insets(0.0, 0.0, 0.0, 0.0),
     );
     let mut parts = vec![head, ui::view(&frame)];
-    if lines.len() > DIFF_LINES {
+    let total = lines.len() + left_out;
+    if total > DIFF_LINES {
         let title = if open {
             t("Weniger zeigen").to_string()
         } else {
-            tf("Alle {} Zeilen zeigen", &[&lines.len().to_string()])
+            tf("Alle {} Zeilen zeigen", &[&total.to_string()])
         };
         let link = ui::link(
             mtm,

@@ -11,7 +11,7 @@ use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
     NSAccessibility, NSBox, NSButton, NSColor, NSImageView, NSLayoutAttribute, NSLayoutConstraintOrientation,
-    NSStackView, NSView,
+    NSStackView, NSTextField, NSView,
 };
 use splat_i18n::{t, tf};
 
@@ -22,8 +22,14 @@ use crate::ui;
 /// How wide text wraps until the tab wraps it at its own width.
 const WIDTH: f64 = 640.0;
 
-/// Fills `body` with what `detail` shows; `rejected` are the sections turned down so far.
-pub(crate) fn fill(tab: &OrderTab, body: &NSStackView, detail: &Detail, rejected: &BTreeSet<HunkId>) {
+/// Fills `body` with what `detail` shows; `rejected` are the sections turned down so far. Gives the timeline's
+/// labels, in the order of [`timeline_texts`].
+pub(crate) fn fill(
+    tab: &OrderTab,
+    body: &NSStackView,
+    detail: &Detail,
+    rejected: &BTreeSet<HunkId>,
+) -> Vec<Retained<NSTextField>> {
     let mtm = tab.mtm();
     if let Some(objection) = detail.objection() {
         let reasons = if objection.is_empty() {
@@ -58,39 +64,67 @@ pub(crate) fn fill(tab: &OrderTab, body: &NSStackView, detail: &Detail, rejected
     section(mtm, body, t("Kriterien"));
     lines(mtm, body, detail.criteria(), false);
     divide(mtm, body);
-    timeline(mtm, body, detail);
+    let ages = timeline(mtm, body, detail);
     divide(mtm, body);
     evidence(mtm, body, detail);
     if !detail.sections().is_empty() {
         divide(mtm, body);
         sections(tab, body, detail, rejected);
     }
+    ages
 }
 
-/// The stations the order passed, stands at or skipped, a row each, and those still ahead on one line.
-fn timeline(mtm: MainThreadMarker, body: &NSStackView, detail: &Detail) {
+/// The text of each station's row on the timeline, then the line of those still ahead, if any.
+pub(crate) fn timeline_texts(detail: &Detail) -> Vec<String> {
+    let (ahead, rows): (Vec<_>, Vec<_>) = detail
+        .timeline()
+        .iter()
+        .partition(|stage| stage.passage() == Passage::Ahead);
+    let mut texts: Vec<String> = rows.iter().map(|stage| stage.words()).collect();
+    if !ahead.is_empty() {
+        let ahead: Vec<String> = ahead.iter().map(|stage| stage.words()).collect();
+        texts.push(tf("Noch offen: {}", &[&ahead.join(" · ")]));
+    }
+    texts
+}
+
+/// The stations the order passed, stands at or skipped, a row each, and those still ahead on one line; gives the
+/// labels of their texts.
+fn timeline(mtm: MainThreadMarker, body: &NSStackView, detail: &Detail) -> Vec<Retained<NSTextField>> {
     section(mtm, body, t("Zeitleiste"));
-    let mut ahead = Vec::new();
-    for stage in detail.timeline() {
-        if stage.passage() == Passage::Ahead {
-            ahead.push(stage.words());
-            continue;
-        }
+    let mut texts = timeline_texts(detail).into_iter();
+    let mut labels = Vec::new();
+    for stage in detail
+        .timeline()
+        .iter()
+        .filter(|stage| stage.passage() != Passage::Ahead)
+    {
         let passage = passage_words(stage.passage());
         let tint = if stage.passage() == Passage::Current {
             NSColor::controlAccentColor()
         } else {
             NSColor::secondaryLabelColor()
         };
-        body.addArrangedSubview(&marked(mtm, stage.symbol(), passage, &tint, stage.words()));
+        let label = ui::text(mtm, &texts.next().unwrap_or_default(), WIDTH);
+        body.addArrangedSubview(&marked(mtm, stage.symbol(), passage, &tint, &label));
+        labels.push(label);
     }
-    if !ahead.is_empty() {
-        body.addArrangedSubview(&ui::note(mtm, &tf("Noch offen: {}", &[&ahead.join(" · ")]), WIDTH));
+    if let Some(ahead) = texts.next() {
+        let label = ui::note(mtm, &ahead, WIDTH);
+        body.addArrangedSubview(&label);
+        labels.push(label);
     }
+    labels
 }
 
 /// A row of the symbol `name`, named `meaning` for VoiceOver and tinted `tint`, before `words`.
-fn marked(mtm: MainThreadMarker, name: &str, meaning: &str, tint: &NSColor, words: &str) -> Retained<NSStackView> {
+fn marked(
+    mtm: MainThreadMarker,
+    name: &str,
+    meaning: &str,
+    tint: &NSColor,
+    words: &NSTextField,
+) -> Retained<NSStackView> {
     let row = ui::row(mtm, space::S);
     row.setAlignment(NSLayoutAttribute::Top);
     let image = NSImageView::new(mtm);
@@ -99,7 +133,7 @@ fn marked(mtm: MainThreadMarker, name: &str, meaning: &str, tint: &NSColor, word
     image.setAccessibilityLabel(Some(&ns(meaning)));
     image.setContentHuggingPriority_forOrientation(751.0, NSLayoutConstraintOrientation::Horizontal);
     row.addArrangedSubview(&image);
-    row.addArrangedSubview(&ui::text(mtm, words, WIDTH));
+    row.addArrangedSubview(words);
     row
 }
 
@@ -195,7 +229,7 @@ fn evidence(mtm: MainThreadMarker, body: &NSStackView, detail: &Detail) {
             "exclamationmark.triangle.fill",
             t("Abweichung"),
             &warning,
-            deviation,
+            &ui::text(mtm, deviation, WIDTH),
         );
         body.addArrangedSubview(&row);
     }

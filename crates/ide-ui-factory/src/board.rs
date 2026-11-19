@@ -22,7 +22,7 @@ use splat_i18n::{t, tf};
 use crate::actions::Target;
 use crate::host::host;
 use crate::model::board::{
-    BoardView, COLUMNS, FleetWords, column_of, column_title, confirm_label, key_of, loosening_of,
+    BoardLook, BoardView, COLUMNS, FleetWords, column_of, column_title, confirm_label, key_of, loosening_of,
 };
 use crate::table::OrderTable;
 use crate::ui;
@@ -38,6 +38,14 @@ pub(crate) struct BoardIvars {
     view: RefCell<BoardView>,
     /// The hashes of the loosenings shown, by the tags of their buttons.
     loosenings: RefCell<Vec<String>>,
+    /// What the strip and the table, the fleet line and the notices show, each built again only when it changes.
+    look: RefCell<Option<BoardLook>>,
+    fleet: RefCell<Option<FleetWords>>,
+    notices: RefCell<Option<Vec<String>>>,
+    /// Whether the tab shows the red dot.
+    waits: Cell<Option<bool>>,
+    /// Whether a reload came while the tab was out of view, which it catches up on in view.
+    stale: Cell<bool>,
     ui: OnceCell<BoardUi>,
 }
 
@@ -131,6 +139,9 @@ define_class!(
 pub(crate) fn show(target: &Target) -> bool {
     let window = target.window();
     if window.select_tab(TAB_KEY) {
+        if let Some(state) = target.state() {
+            crate::came_to_front(window, &state);
+        }
         return true;
     }
     let Some(state) = target.state() else { return false };
@@ -157,11 +168,23 @@ impl BoardTab {
             tab: Cell::new(None),
             view: RefCell::new(BoardView::default()),
             loosenings: RefCell::new(Vec::new()),
+            look: RefCell::new(None),
+            fleet: RefCell::new(None),
+            notices: RefCell::new(None),
+            waits: Cell::new(None),
+            stale: Cell::new(false),
             ui: OnceCell::new(),
         };
         // SAFETY: NSView's initializer, called once on the newly allocated object.
         let tab: Retained<BoardTab> = unsafe { msg_send![super(BoardTab::alloc(mtm).set_ivars(ivars)), init] };
         let _ = tab.ivars().ui.set(tab.build(mtm));
+        let weak = objc2::rc::Weak::from_retained(&tab);
+        let came = move || {
+            if let Some(tab) = weak.load() {
+                tab.catch_up();
+            }
+        };
+        ide_ui_common::panel::watch_view(&tab, came, None);
         tab
     }
 
@@ -255,6 +278,11 @@ impl BoardTab {
         self.ivars().target.root()
     }
 
+    /// Its window.
+    pub(crate) fn window(&self) -> ide_ui_common::window::Window {
+        self.ivars().target.window()
+    }
+
     /// Its tab.
     pub(crate) fn tab(&self) -> Option<TabId> {
         self.ivars().tab.get()
@@ -265,12 +293,50 @@ impl BoardTab {
         self.ivars().view.borrow()
     }
 
-    /// Reads the folder's orders and fleet again and shows them, with the filter and sort kept.
+    /// Reads the folder's orders and fleet again and shows what changed, with the filter and sort kept; out of view
+    /// only the tab's red dot follows until it comes back.
     pub(crate) fn reload(&self) {
         let now = crate::now();
         let board = host().board(self.root());
         self.ivars().view.borrow_mut().set(board, now);
+        let waits = self.view().waits();
+        if self.ivars().waits.replace(Some(waits)) != Some(waits)
+            && let Some(tab) = self.tab()
+        {
+            let red = NSColor::systemRedColor();
+            self.ivars().target.window().set_tab_status(tab, waits.then_some(&*red));
+        }
+        let away = !ui::on_screen(self);
+        self.ivars().stale.set(away);
+        if !away {
+            self.show_changes(now);
+        }
+    }
+
+    /// Shows what changed of the board read last, the fleet line at `now` (wall clock), the figures and the notices.
+    fn show_changes(&self, now: u64) {
+        self.ivars().stale.set(false);
+        self.show_fleet(now);
+        self.ui().metrics.set(host().metrics(self.root()).as_ref());
+        self.show_notices();
+        if self.ivars().look.borrow().as_ref() != Some(&self.view().look()) {
+            self.show();
+        }
+    }
+
+    /// Reads the folder again if a reload came while the tab was out of view and it is in view now.
+    pub(crate) fn catch_up(&self) {
+        if self.ivars().stale.get() && ui::on_screen(self) {
+            self.reload();
+        }
+    }
+
+    /// The fleet line at `now` (wall clock), built again when its words changed.
+    fn show_fleet(&self, now: u64) {
         let fleet = FleetWords::new(host().fleet(self.root()).as_ref(), now, &crate::local_day(now));
+        if self.ivars().fleet.borrow().as_ref() == Some(&fleet) {
+            return;
+        }
         let mtm = self.mtm();
         let ui = self.ui();
         ui::clear(&ui.fleet);
@@ -281,18 +347,31 @@ impl BoardTab {
         {
             ui.fleet.addArrangedSubview(&ui::note(mtm, line, 640.0));
         }
-        ui.metrics.set(host().metrics(self.root()).as_ref());
-        self.show_notices();
-        self.show();
+        *self.ivars().fleet.borrow_mut() = Some(fleet);
     }
 
-    /// Errors of the workflow file, unreadable logs and loosenings that wait for confirmation, above the fleet.
+    /// Errors of the workflow file, unreadable logs and loosenings that wait for confirmation, above the fleet; built
+    /// again when they changed.
     fn show_notices(&self) {
+        let notices = host().notices(self.root());
+        let errors = notices
+            .errors
+            .iter()
+            .map(|error| tf("Workflow-Datei: {}", &[&crate::model::words::workflow_error(error)]));
+        let problems = notices.problems.iter().map(crate::model::words::restore_problem);
+        let loosenings = notices
+            .loosenings
+            .iter()
+            .flat_map(|loosening| [crate::model::words::loosening(loosening), loosening.hash()]);
+        let said: Vec<String> = errors.chain(problems).chain(loosenings).collect();
+        if self.ivars().notices.borrow().as_ref() == Some(&said) {
+            return;
+        }
+        *self.ivars().notices.borrow_mut() = Some(said);
         let mtm = self.mtm();
         let me: &AnyObject = self.as_ref();
         let ui = self.ui();
         ui::clear(&ui.notices);
-        let notices = host().notices(self.root());
         for error in &notices.errors {
             let line = tf("Workflow-Datei: {}", &[&crate::model::words::workflow_error(error)]);
             ui.notices.addArrangedSubview(&ui::note(mtm, &line, 640.0));
@@ -367,18 +446,15 @@ impl BoardTab {
             String::new()
         }));
         ui.empty.setHidden(!rows.is_empty());
-        let waits = view.waits();
+        let look = view.look();
         drop(view);
+        *self.ivars().look.borrow_mut() = Some(look);
         ui.table.reloadData();
         if let Some(id) = selected
             && let Some(index) = self.ivars().view.borrow().rows().iter().position(|r| *r.id() == id)
         {
             let rows = objc2_foundation::NSIndexSet::indexSetWithIndex(index);
             ui.table.selectRowIndexes_byExtendingSelection(&rows, false);
-        }
-        if let Some(tab) = self.tab() {
-            let red = NSColor::systemRedColor();
-            self.ivars().target.window().set_tab_status(tab, waits.then_some(&*red));
         }
     }
 

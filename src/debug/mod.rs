@@ -21,6 +21,16 @@ pub(crate) use rotor::{Rotors, attach as attach_rotor};
 /// Puts the debugger of the window's folder in place, with the breakpoints and watches the project kept.
 pub(crate) fn attach(controller: &WindowController) {
     ide_ui_debug::attach(controller.handle());
+    if controller.shown_panel() == Some(crate::window::Panel::Debug) {
+        shown(controller);
+    }
+}
+
+/// The window shows its Debug panel: the project's launch configurations are read the first time.
+pub(crate) fn shown(controller: &WindowController) {
+    if let Some(panel) = ide_ui_debug::of(controller.handle()) {
+        panel.configure();
+    }
 }
 
 /// The user trusts `root` now: its configurations are read and sessions may start.

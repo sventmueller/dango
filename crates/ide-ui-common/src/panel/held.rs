@@ -4,15 +4,21 @@
 //! On macOS 27 every `reloadData` of an outline view leaves the disclosure button of each expandable row it shows
 //! behind for good, so a list that reloads out of sight piles them up for nothing.
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
+use std::ptr::NonNull;
 use std::time::Duration;
 
-use objc2::rc::Retained;
-use objc2::runtime::{AnyObject, NSObject};
+use block2::RcBlock;
+use objc2::rc::{Retained, Weak};
+use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
 use objc2::{ClassType, DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
-use objc2_app_kit::NSView;
-use objc2_foundation::NSObjectProtocol;
+use objc2_app_kit::{
+    NSView, NSWindowDidBecomeKeyNotification, NSWindowDidBecomeMainNotification,
+    NSWindowDidChangeOcclusionStateNotification,
+};
+use objc2_foundation::{NSNotification, NSNotificationCenter, NSObjectProtocol};
 
+use crate::constant;
 use crate::util::guarded;
 
 /// Whether `view` is out of view: in no window, or hidden itself or by an ancestor.
@@ -24,10 +30,30 @@ struct Watch {
     came: Box<dyn Fn()>,
     /// What runs once the view stayed out of view for the time given, in seconds.
     away: Option<(Box<dyn Fn()>, f64)>,
+    /// `came` runs once, when the view is in view in the window tab in front of its tab group, and the watch goes.
+    once_in_front: bool,
+    /// The notifications of its window a watch `once_in_front` follows, since a tab group selecting another window
+    /// changes no view.
+    observers: RefCell<Vec<Retained<ProtocolObject<dyn NSObjectProtocol>>>>,
+}
+
+impl Drop for Watch {
+    fn drop(&mut self) {
+        stop_observing(self.observers.get_mut());
+    }
+}
+
+fn stop_observing(observers: &mut Vec<Retained<ProtocolObject<dyn NSObjectProtocol>>>) {
+    let center = NSNotificationCenter::defaultCenter();
+    for token in observers.drain(..) {
+        // SAFETY: The token came from this center's block-based `addObserverForName`.
+        unsafe { center.removeObserver(token.as_ref()) };
+    }
 }
 
 define_class!(
-    // SAFETY: NSView has no subclassing requirements and `InViewWatch` does not implement Drop.
+    // SAFETY: NSView has no subclassing requirements and `InViewWatch` does not implement Drop; its ivars do, and
+    // objc2 drops them when the view is deallocated.
     /// An empty view that tells when it, or the view it sits in, comes into view and when it stayed out of it.
     #[unsafe(super(NSView))]
     #[thread_kind = MainThreadOnly]
@@ -51,6 +77,9 @@ define_class!(
         #[unsafe(method(viewDidMoveToWindow))]
         fn did_move_to_window(&self) {
             guarded((), || {
+                if self.ivars().once_in_front {
+                    self.follow_window();
+                }
                 if self.window().is_some() {
                     self.came();
                 } else {
@@ -62,7 +91,15 @@ define_class!(
         #[unsafe(method(ideCameIntoView))]
         fn came_into_view(&self) {
             guarded((), || {
-                if !out_of_view(self) {
+                if out_of_view(self) {
+                    return;
+                }
+                if !self.ivars().once_in_front {
+                    return (self.ivars().came)();
+                }
+                if self.window().is_some_and(|window| super::in_front(&window)) {
+                    stop_observing(&mut self.ivars().observers.borrow_mut());
+                    self.removeFromSuperview();
                     (self.ivars().came)();
                 }
             });
@@ -102,6 +139,31 @@ impl InViewWatch {
         };
     }
 
+    /// Looks again whether the view shows each time its window becomes key or main or comes on screen.
+    fn follow_window(&self) {
+        stop_observing(&mut self.ivars().observers.borrow_mut());
+        let Some(window) = self.window() else { return };
+        let center = NSNotificationCenter::defaultCenter();
+        for name in [
+            constant!(NSWindowDidBecomeKeyNotification),
+            constant!(NSWindowDidBecomeMainNotification),
+            constant!(NSWindowDidChangeOcclusionStateNotification),
+        ] {
+            let watch = Weak::from(self);
+            let block = RcBlock::new(move |_: NonNull<NSNotification>| {
+                guarded((), || {
+                    if let Some(watch) = watch.load() {
+                        watch.came();
+                    }
+                });
+            });
+            // SAFETY: The block holds the watch weakly and runs on the main thread, where windows post these.
+            let token =
+                unsafe { center.addObserverForName_object_queue_usingBlock(Some(name), Some(&window), None, &block) };
+            self.ivars().observers.borrow_mut().push(token);
+        }
+    }
+
     fn cancel(&self, selector: objc2::runtime::Sel) {
         // SAFETY: NSObject's class method, with the target, selector and argument the watch scheduled.
         let _: () = unsafe {
@@ -113,11 +175,38 @@ impl InViewWatch {
 /// Puts a watch into `view` that runs `came` whenever `view` or a view around it comes into view, and `away` once it
 /// has stayed out of view for `after`.
 pub fn watch_view(view: &NSView, came: impl Fn() + 'static, away: Option<(Duration, Box<dyn Fn()>)>) {
+    add_watch(
+        view,
+        Watch {
+            came: Box::new(came),
+            away: away.map(|(after, away)| (away, after.as_secs_f64())),
+            once_in_front: false,
+            observers: RefCell::new(Vec::new()),
+        },
+    );
+}
+
+/// Runs `shown` once, the first time `view` is in view in the window tab in front of its tab group, as work a tab
+/// restored behind others leaves until the user looks at it.
+pub fn when_first_shown(view: &NSView, shown: impl FnOnce() + 'static) {
+    let shown = Cell::new(Some(shown));
+    add_watch(
+        view,
+        Watch {
+            came: Box::new(move || {
+                if let Some(shown) = shown.take() {
+                    shown();
+                }
+            }),
+            away: None,
+            once_in_front: true,
+            observers: RefCell::new(Vec::new()),
+        },
+    );
+}
+
+fn add_watch(view: &NSView, watch: Watch) {
     let mtm = MainThreadMarker::from(view);
-    let watch = Watch {
-        came: Box::new(came),
-        away: away.map(|(after, away)| (away, after.as_secs_f64())),
-    };
     let watch = InViewWatch::alloc(mtm).set_ivars(watch);
     // SAFETY: NSView's initializer, called once on the newly allocated object.
     let watch: Retained<InViewWatch> = unsafe { msg_send![super(watch), init] };

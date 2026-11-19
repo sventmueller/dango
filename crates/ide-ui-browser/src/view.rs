@@ -36,7 +36,7 @@ use ide_ui_common::window::{TabId, Tabs, Window, WindowId};
 mod selftest_probe;
 
 /// The longest tab title, in characters.
-const TITLE_LIMIT: usize = 32;
+pub(crate) const TITLE_LIMIT: usize = 32;
 
 /// The properties of the web view the controls follow.
 const OBSERVED: [&str; 5] = ["title", "URL", "loading", "canGoBack", "canGoForward"];
@@ -57,12 +57,24 @@ struct Parts {
     shortcuts: Retained<NSMenu>,
 }
 
+/// What loads an address into a tab that waited to show.
+pub type Loader = Box<dyn FnOnce(&str)>;
+
+/// What a tab restored out of view does once it first shows.
+pub(crate) enum Wake {
+    Go(Address),
+    /// Runs with what loads a page into the tab, for a page whose server starts only then.
+    Run(Box<dyn FnOnce(Loader)>),
+}
+
 pub(crate) struct Ivars {
     /// The id of the window the tab lives in.
     window: WindowId,
     key: String,
     tab: Cell<Option<TabId>>,
+    /// Built when the tab first shows, or when it is asked to do something.
     parts: OnceCell<Parts>,
+    waiting: RefCell<Option<Wake>>,
     /// What was last asked for, which the field shows until the page has an address, and "Try Again" asks again.
     asked: RefCell<Option<Address>>,
     failure: RefCell<Option<Failure>>,
@@ -273,8 +285,14 @@ define_class!(
         #[unsafe(method(performKeyEquivalent:))]
         fn perform_key_equivalent(&self, event: &NSEvent) -> bool {
             let shows = !self.isHiddenOrHasHiddenAncestor();
+            let shortcuts = || {
+                self.ivars()
+                    .parts
+                    .get()
+                    .is_some_and(|parts| parts.shortcuts.performKeyEquivalent(event))
+            };
             shows
-                && (guarded(false, || self.parts().shortcuts.performKeyEquivalent(event))
+                && (guarded(false, shortcuts)
                     // SAFETY: NSView's own implementation, which offers the event to the subviews.
                     || unsafe { msg_send![super(self), performKeyEquivalent: event] })
         }
@@ -397,17 +415,7 @@ impl BrowserView {
         configuration: Option<&WKWebViewConfiguration>,
         key: String,
     ) -> Retained<BrowserView> {
-        let this = Self::alloc(mtm).set_ivars(Ivars {
-            window,
-            key,
-            tab: Cell::new(None),
-            parts: OnceCell::new(),
-            asked: RefCell::new(None),
-            failure: RefCell::new(None),
-            title: RefCell::new(String::new()),
-        });
-        // SAFETY: NSView's designated initializer, called once on the newly allocated object.
-        let this: Retained<Self> = unsafe { msg_send![super(this), initWithFrame: NSRect::ZERO] };
+        let this = Self::unbuilt(mtm, window, key, None);
         let own;
         let configuration = match configuration {
             Some(configuration) => configuration,
@@ -418,6 +426,62 @@ impl BrowserView {
         };
         this.build(mtm, configuration);
         this
+    }
+
+    /// A tab's view in `window` that shows `asked` and builds its page only once it first shows, then does `wake`.
+    pub(crate) fn waiting(
+        mtm: MainThreadMarker,
+        window: WindowId,
+        key: String,
+        asked: Address,
+        wake: Wake,
+    ) -> Retained<BrowserView> {
+        let this = Self::unbuilt(mtm, window, key, Some(asked));
+        *this.ivars().waiting.borrow_mut() = Some(wake);
+        let view = Weak::from(&*this);
+        ide_ui_common::panel::when_first_shown(&this, move || {
+            if let Some(view) = view.load() {
+                view.wake();
+            }
+        });
+        this
+    }
+
+    fn unbuilt(mtm: MainThreadMarker, window: WindowId, key: String, asked: Option<Address>) -> Retained<BrowserView> {
+        let this = Self::alloc(mtm).set_ivars(Ivars {
+            window,
+            key,
+            tab: Cell::new(None),
+            parts: OnceCell::new(),
+            waiting: RefCell::new(None),
+            asked: RefCell::new(asked),
+            failure: RefCell::new(None),
+            title: RefCell::new(String::new()),
+        });
+        // SAFETY: NSView's designated initializer, called once on the newly allocated object.
+        unsafe { msg_send![super(this), initWithFrame: NSRect::ZERO] }
+    }
+
+    /// Builds the page of a tab that waited to show, and does what it waited for.
+    fn wake(&self) {
+        if self.ivars().parts.get().is_some() {
+            return;
+        }
+        let mtm = self.mtm();
+        self.build(mtm, &web::configuration(mtm));
+        let waiting = self.ivars().waiting.take();
+        match waiting {
+            Some(Wake::Go(address)) => self.go(address),
+            Some(Wake::Run(run)) => {
+                let view = Weak::from(self);
+                run(Box::new(move |url| {
+                    if let Some(view) = view.load() {
+                        view.go(Address::of_url(url));
+                    }
+                }));
+            }
+            None => self.refresh(),
+        }
     }
 
     fn build(&self, mtm: MainThreadMarker, configuration: &WKWebViewConfiguration) {
@@ -501,7 +565,10 @@ impl BrowserView {
     }
 
     fn parts(&self) -> &Parts {
-        self.ivars().parts.get().expect("`new` builds the parts")
+        if self.ivars().parts.get().is_none() {
+            self.wake();
+        }
+        self.ivars().parts.get().expect("`wake` builds the parts")
     }
 
     pub(crate) fn key(&self) -> &str {
@@ -524,6 +591,14 @@ impl BrowserView {
         self.parts().web.clone()
     }
 
+    /// Whether `web` is the page of this tab, without building one.
+    pub(crate) fn shows_web(&self, web: &WKWebView) -> bool {
+        self.ivars()
+            .parts
+            .get()
+            .is_some_and(|parts| std::ptr::eq(&*parts.web, web))
+    }
+
     fn project_root(&self) -> Option<PathBuf> {
         Window::new(self.window_id()).project_root()
     }
@@ -531,7 +606,8 @@ impl BrowserView {
     /// The address of the page, or of what was asked for while there is none or it failed.
     pub(crate) fn current_url(&self) -> Option<String> {
         if self.ivars().failure.borrow().is_none()
-            && let Some(url) = web::state(&self.parts().web).url
+            && let Some(parts) = self.ivars().parts.get()
+            && let Some(url) = web::state(&parts.web).url
         {
             return Some(url);
         }
@@ -549,6 +625,7 @@ impl BrowserView {
 
     /// Shows `address`: a web page, a file of the window's folder, or the reason it does not.
     pub(crate) fn go(&self, address: Address) {
+        self.ivars().waiting.take();
         let parts = self.parts();
         *self.ivars().asked.borrow_mut() = Some(address.clone());
         match &address {
@@ -588,6 +665,10 @@ impl BrowserView {
 
     /// Reloads the page, or asks again for what failed.
     pub(crate) fn reload_page(&self) {
+        // A tab that waits to show loads its page fresh once it does.
+        if self.ivars().parts.get().is_none() {
+            return;
+        }
         if self.ivars().failure.borrow().is_none() {
             web::reload(&self.parts().web);
             return;
@@ -651,10 +732,13 @@ impl BrowserView {
     }
 
     pub(super) fn validate(&self, action: Option<Sel>) -> bool {
-        let state = web::state(&self.parts().web);
+        let (back, forward) = self.ivars().parts.get().map_or((false, false), |parts| {
+            let state = web::state(&parts.web);
+            (state.back, state.forward)
+        });
         match action {
-            Some(action) if action == sel!(ideBrowserBack:) => state.back,
-            Some(action) if action == sel!(ideBrowserForward:) => state.forward,
+            Some(action) if action == sel!(ideBrowserBack:) => back,
+            Some(action) if action == sel!(ideBrowserForward:) => forward,
             _ => true,
         }
     }

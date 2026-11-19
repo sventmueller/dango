@@ -70,6 +70,8 @@ pub(crate) struct PanelIvars {
     status_row: RefCell<Option<Retained<NSStackView>>>,
     failed: RefCell<Option<Retained<NSButton>>>,
     polling: Cell<bool>,
+    /// Whether the folder's tests were listed, which waits until the panel shows or an editor needs them.
+    listed: Cell<bool>,
     /// The output of the last run of each test, by entry index, for "show output".
     pub(super) output: RefCell<String>,
 }
@@ -217,6 +219,7 @@ impl TestsPanel {
             status_row: RefCell::new(None),
             failed: RefCell::new(None),
             polling: Cell::new(false),
+            listed: Cell::new(false),
             output: RefCell::new(String::new()),
         });
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
@@ -314,7 +317,22 @@ impl TestsPanel {
 
     /// Finds the folder's tools and lists their tests; with `all`, also those that list by building.
     pub(crate) fn list(&self, all: bool) {
+        self.ivars().listed.set(true);
         self.find_tools(move |panel| panel.list_found(all));
+    }
+
+    /// Lists the folder's tests the first time something needs them.
+    pub(crate) fn needed(&self) {
+        if !self.ivars().listed.get() {
+            self.list(false);
+        }
+    }
+
+    /// The user trusts the folder now: lists its tests again if they were needed before.
+    pub(crate) fn trusted(&self) {
+        if self.ivars().listed.get() {
+            self.list(false);
+        }
     }
 
     /// Lists the tests of the tools found; with `all`, also those that list by building.
@@ -377,6 +395,7 @@ impl TestsPanel {
     /// Runs every test of every tool.
     pub(crate) fn run_everything(&self) {
         if self.ivars().tools.borrow().is_empty() {
+            self.ivars().listed.set(true);
             self.find_tools(|panel| {
                 panel.list_found(false);
                 panel.run_known();

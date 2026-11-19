@@ -5,9 +5,12 @@ use std::time::{Duration, Instant};
 
 use dispatch2::MainThreadBound;
 use ide_process::{ProcessId, Supervisor};
+use ide_thread::{Change, Lane};
 use ide_ui_common::util::{main_after, main_soon};
+use ide_ui_common::window::Trust;
 use objc2::MainThreadMarker;
 
+use crate::Agent;
 use crate::tab::AgentTab;
 
 const CHECK_AFTER: Duration = Duration::from_secs(30);
@@ -18,6 +21,8 @@ const WAKE_CHECK: Duration = Duration::from_millis(100);
 pub(super) struct Parking {
     pub(super) hidden_since: Cell<Option<Instant>>,
     pub(super) process: Cell<Option<ProcessId>>,
+    /// Whether a restored tab waits to start its CLI until it comes to the front or gets a prompt.
+    pub(super) deferred: Cell<bool>,
     watching: Cell<bool>,
     waking: Cell<bool>,
 }
@@ -104,14 +109,59 @@ impl AgentTab {
         self.refresh();
     }
 
-    /// Keeps the queued prompt until the old process has exited, then uses the usual Claude resume path.
-    pub(super) fn resume_parked(&self) {
-        let Some(process) = self.parking.process.get() else {
+    /// Opens a restored Claude session as a parked one: its conversation read from the transcript, its CLI started
+    /// only once the tab comes to the front or gets a prompt. Other agents start at once.
+    pub(crate) fn start_parked(&self) {
+        let trusted = self.controller().is_some_and(|controller| controller.is_trusted());
+        if !matches!(self.agent, Agent::Claude) || self.is_driven() || !trusted {
+            self.start();
+            return;
+        }
+        self.parking.deferred.set(true);
+        self.refresh();
+        let Some(path) = self.state.borrow().resume().and_then(|r| r.transcript.clone()) else {
             return;
         };
+        let tab = MainThreadBound::new(self.me.borrow().clone(), self.mtm);
+        let thread = self.snapshot();
+        let spawned = ide_ui_common::util::spawn("claude-parked", move || {
+            let Ok(rebuilt) = ide_claude::history::rebuild(thread, &path) else {
+                return;
+            };
+            ide_ui_common::util::give_back_memory_soon();
+            main_soon(move || {
+                if let Some(tab) = MainThreadMarker::new().and_then(|mtm| tab.get(mtm).upgrade())
+                    && tab.parking.deferred.get()
+                    && tab.state.borrow().thread().entries(&Lane::Main).is_empty()
+                {
+                    tab.absorb(rebuilt, &[Change::Cleared]);
+                }
+            });
+        });
+        if spawned.is_err() {
+            self.start();
+        }
+    }
+
+    /// Starts the CLI of a restored tab that waited for it, once the tab is in front.
+    pub(crate) fn wake_deferred(&self) {
+        if self.parking.deferred.get() && self.is_shown() {
+            self.start();
+        }
+    }
+
+    /// Keeps the queued prompt until the old process has exited, then uses the usual Claude resume path; a restored
+    /// tab that waited starts right away.
+    pub(super) fn resume_parked(&self) {
         if self.state.borrow().queue().is_empty() {
             return;
         }
+        let Some(process) = self.parking.process.get() else {
+            if self.parking.deferred.get() {
+                self.start();
+            }
+            return;
+        };
         if Supervisor::global().wait(process, Duration::ZERO).is_some() {
             self.start();
         } else if !self.parking.waking.replace(true) {

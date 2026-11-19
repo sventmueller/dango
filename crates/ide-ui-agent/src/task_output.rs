@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use ide_thread::{BackgroundItem, EntryKind, Thread, ToolView};
 
 /// The most of a file a tab shows: the end of a longer one, which the editor opens whole.
-pub(crate) const MAX_SHOWN: u64 = 8 * 1024 * 1024;
+pub(crate) const MAX_SHOWN: u64 = 2 * 1024 * 1024;
 
 /// What a read changes in the shown output.
 #[derive(Debug, PartialEq, Eq)]

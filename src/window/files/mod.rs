@@ -84,6 +84,12 @@ impl FileTree {
         for (dir, entries) in listings {
             self.source.listed(&self.view, dir, entries.as_ref());
         }
+        self.source.forget_rows();
+    }
+
+    /// Has the outline view read the folders that closed anew, then lets go of the rows it no longer holds.
+    fn settle(&self) {
+        self.source.settle(&self.view);
     }
 
     /// Shows a spinner in `dir` while its entries are still being read.

@@ -84,10 +84,19 @@ impl Connection {
         method: &str,
         build: impl FnOnce() -> Value + Send + 'static,
     ) -> Result<(), Error> {
+        self.notify_if(method, move || Some(build()))
+    }
+
+    /// Sends a notification as `notify_with`, or nothing when `build` makes no parameters.
+    pub(crate) fn notify_if(
+        &self,
+        method: &str,
+        build: impl FnOnce() -> Option<Value> + Send + 'static,
+    ) -> Result<(), Error> {
         let method = method.to_string();
         self.transport
             .send_built(Box::new(move || {
-                encode(&notification(&method, build()))
+                encode(&notification(&method, build()?))
                     .inspect_err(|error| ide_core::diag::report("lsp: notification", error))
                     .ok()
             }))

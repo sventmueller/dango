@@ -2,7 +2,7 @@
 //! beside each that waits, "+ Neuer Auftrag" and the Leitstand tab in its title, an empty state without orders; a double
 //! click opens an order's tab, the context menu runs the order's commands.
 
-use std::cell::{OnceCell, RefCell};
+use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};
 use std::rc::Weak;
 
@@ -38,6 +38,8 @@ pub(crate) struct PanelIvars {
     items: RowItems<Key>,
     ui: OnceCell<PanelUi>,
     held: HeldReload,
+    /// Whether the outline shows `list`, which a step that leaves the list as it was does not load again.
+    fresh: Cell<bool>,
     cells: KeptCells<Key>,
 }
 
@@ -175,6 +177,7 @@ impl FactoryPanel {
             items: RowItems::default(),
             ui: OnceCell::new(),
             held: HeldReload::default(),
+            fresh: Cell::new(false),
             cells: KeptCells::default(),
         };
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
@@ -259,13 +262,16 @@ impl FactoryPanel {
         let selected = self.selected_order();
         let words = list.symbol_words();
         let empty = list.is_empty();
+        let same = *self.ivars().list.borrow() == list;
         *self.ivars().list.borrow_mut() = list;
         let Some(ui) = self.ivars().ui.get() else { return };
         ui.empty.setHidden(!empty);
         if let Some(superview) = ui.outline.enclosingScrollView() {
             superview.setHidden(empty);
         }
-        if !self.ivars().held.holds(&ui.outline) {
+        let held = self.ivars().held.holds(&ui.outline);
+        let was_fresh = self.ivars().fresh.replace(!held);
+        if !held && !(same && was_fresh) {
             self.ivars().cells.keep_shown();
             ide_ui_common::panel::reload(&ui.outline);
             let live: Vec<Key> = self.list().lines().iter().map(Line::key).collect();

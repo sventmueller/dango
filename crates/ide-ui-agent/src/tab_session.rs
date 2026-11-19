@@ -19,6 +19,7 @@ use ide_ui_common::util::{main_after, main_soon};
 impl AgentTab {
     /// Looks for `claude` and the login shell's environment on a worker thread, then starts the session.
     pub(crate) fn start(&self) {
+        self.parking.deferred.set(false);
         if self.is_driven() {
             return;
         }

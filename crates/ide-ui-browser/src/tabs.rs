@@ -10,7 +10,7 @@ use splat_i18n::t;
 
 use super::address::{self, Address};
 use super::host::state;
-use super::view::BrowserView;
+use super::view::{BrowserView, Loader, TITLE_LIMIT, Wake};
 use ide_ui_common::util::main_soon;
 use ide_ui_common::window::{TabId, TabKind, Tabs, Window, WindowId};
 #[cfg(feature = "selftest")]
@@ -41,7 +41,7 @@ pub fn open_tab(mtm: MainThreadMarker, window: WindowId, url: Option<&str>) {
     let engine = Settings::load_user().get(&keys::SEARCH_ENGINE);
     let Some(address) = url.and_then(|url| address::resolve(url, engine)) else {
         let view = BrowserView::new(mtm, window, None, unique_key());
-        if attach(&view) {
+        if attach(&view, t("Browser")) {
             view.start_empty();
         }
         return;
@@ -56,9 +56,35 @@ pub fn open_tab(mtm: MainThreadMarker, window: WindowId, url: Option<&str>) {
         return;
     }
     let view = BrowserView::new(mtm, window, None, key);
-    if attach(&view) {
+    if attach(&view, t("Browser")) {
         view.go(address);
     }
+}
+
+/// Opens a browser tab at `url` in `window` that builds its page and loads it only once it first shows, as a tab the
+/// window restores behind others.
+pub fn open_restored_tab(mtm: MainThreadMarker, window: WindowId, url: &str) {
+    let engine = Settings::load_user().get(&keys::SEARCH_ENGINE);
+    let Some(address) = address::resolve(url, engine) else {
+        return open_tab(mtm, window, Some(url));
+    };
+    let title = address::title_before_load(&address, TITLE_LIMIT).unwrap_or_else(|| t("Browser").to_string());
+    let view = BrowserView::waiting(mtm, window, address.key(), address.clone(), Wake::Go(address));
+    attach(&view, &title);
+}
+
+/// Opens a browser tab titled `title` in `window` that keeps `url` as its address until it first shows; `shown` then
+/// gets what loads a page into it, for a page whose server starts only then.
+pub fn open_restored_page(
+    mtm: MainThreadMarker,
+    window: WindowId,
+    title: &str,
+    url: &str,
+    shown: impl FnOnce(Loader) + 'static,
+) {
+    let asked = Address::Url(url.to_string());
+    let view = BrowserView::waiting(mtm, window, unique_key(), asked, Wake::Run(Box::new(shown)));
+    attach(&view, title);
 }
 
 /// Reloads the open tabs of `window` that show a page of `origin`, such as `http://localhost:5173`, for a dev server
@@ -91,7 +117,7 @@ pub fn url_of_tab(window: WindowId, tab: TabId) -> Option<String> {
 /// Opens `url` from a link of `opener`'s page in a new tab beside it.
 pub(super) fn open_tab_beside(opener: &BrowserView, url: &str) {
     let view = BrowserView::new(opener.mtm(), opener.window_id(), None, unique_key());
-    if attach(&view) {
+    if attach(&view, t("Browser")) {
         view.go(Address::Url(url.to_string()));
     }
 }
@@ -100,7 +126,7 @@ pub(super) fn open_tab_beside(opener: &BrowserView, url: &str) {
 /// view this returns, which keeps the page's link to its opener.
 pub(super) fn open_popup(opener: &BrowserView, configuration: &WKWebViewConfiguration) -> Option<Retained<WKWebView>> {
     let view = BrowserView::new(opener.mtm(), opener.window_id(), Some(configuration), unique_key());
-    attach(&view).then(|| view.web_view())
+    attach(&view, t("Browser")).then(|| view.web_view())
 }
 
 /// Closes the tab of `view` once WebKit is done with the call that asked for it.
@@ -119,12 +145,12 @@ pub(super) fn close_later(view: &BrowserView) {
     });
 }
 
-/// Adds `view` as a tab of its window; whether the window was still open.
-fn attach(view: &Retained<BrowserView>) -> bool {
+/// Adds `view` as a tab titled `title` of its window; whether the window was still open.
+fn attach(view: &Retained<BrowserView>, title: &str) -> bool {
     let added = Window::new(view.window_id()).add_tab(
         TabKind::Browser,
         Some(view.key().to_string()),
-        t("Browser"),
+        title,
         Retained::into_super(view.clone()),
     );
     let Some(id) = added else { return false };
@@ -139,7 +165,7 @@ pub(super) fn tab_of(web: &WKWebView) -> Option<Retained<BrowserView>> {
         tabs.borrow()
             .iter()
             .filter_map(Weak::load)
-            .find(|view| std::ptr::eq(&*view.web_view(), web))
+            .find(|view| view.shows_web(web))
     })
 }
 

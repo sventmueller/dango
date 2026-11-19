@@ -195,6 +195,20 @@ const NOT_PROJECTS: [&str; 7] = [
     "fixtures",
 ];
 
+/// Whether `path` is named as a tool names its test files: Go's `*_test.go`, pytest's `test_*.py` and `*_test.py`, the
+/// JavaScript runners' `*.test.ts` and kin. Rust's tests may stand in any file, which only its text tells
+/// ([`board::in_source`]).
+pub fn named_as_test(path: &Path) -> bool {
+    let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+        return false;
+    };
+    match path.extension().and_then(|extension| extension.to_str()) {
+        Some("go") => name.ends_with("_test.go"),
+        Some("py") => name.starts_with("test_") || name.ends_with("_test.py"),
+        _ => bun::is_test_file(name),
+    }
+}
+
 /// The tools whose tests the project at `root` has, each with the folder its commands run in, the ones found on
 /// `path` taken into account: cargo-nextest in place of `cargo test` where it is installed. A tool whose files are
 /// not in `root` itself is looked for in its subfolders, the shallowest first, so a repository with its Go module

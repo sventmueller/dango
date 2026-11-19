@@ -79,6 +79,9 @@ eingearbeitet (markiert mit *Review*).
     10 000 Zeilen mit 5 ms Median-CPU-Zeit (auch nach einem Sprung), Zuschläge durch Einblendungen und Diagnosen mit
     2 ms, eine fertige Antwortkarte bis ~100 KB mit 200 ms. Grund: ein 10-facher Rückschritt lag unbemerkt knapp
     unter 16 ms.
+  - *Nachtrag (Eigentümer):* Was ein Agent startet, läuft in jeder Sprache im Hintergrund-Zustand von macOS (niedrigste
+    Priorität, gedrosselte Platte und Netz); die Agenten selbst und die Agent-Programme eines Adapters, in denen die
+    Subagenten laufen, mit `nice` 10. Volllast der Agenten darf Dango nie verlangsamen.
 - **E26 Tastatur und Einstellungen** *(Review, neu)*. Eine zentrale Kürzeltabelle mit Nutzer-Überschreibungen;
   feste Regeln, welche Tasten das Terminal bekommt (⌃C, Esc, ⌘K) und welche die App. Fokuswechsel Editor/Terminal/
   Browser/AI per Tastatur. Einstellungen in zwei Ebenen (Nutzer, Projekt) mit Versionsnummer und Migration.
@@ -541,6 +544,8 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   Worktree ▸“ und „Agenten verwalten …“. Das Untermenü „AI-Thread“ entfällt. CLI-Threads (I5) entfallen ganz: kein
   Start mehr, keine Zeilen in AI-Panel und Aktivitätsübersicht, kein Statuspunkt. Ein CLI-Thread aus einem früher
   gesicherten Fensterlayout öffnet als Terminal im Projektordner.
+  *Nachtrag (Eigentümer):* „Agenten verwalten …“ steht nicht mehr im „+“-Menü; es bleibt unter „+ Neue Sitzung“ im
+  Panel „Agenten“ und in den Einstellungen.
 - **E79 Keine Neuer-Tab-Seite, „+“ und ⌘T öffnen das Menü** *(Entscheidung des Eigentümers, ändert E60, E65 und
   E78)*: Die Neuer-Tab-Seite entfällt. Ein Druck auf das „+“, kurz oder gehalten, öffnet darunter das Menü aus E17
   und E78; ein Klick lässt es offen, ein gehaltener Druck zieht hinein. ⌘T und „Ablage ▸ Neuer Tab …“ öffnen

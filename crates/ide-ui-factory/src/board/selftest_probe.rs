@@ -7,6 +7,9 @@ use crate::selftest::BoardSeen;
 impl BoardTab {
     /// What the tab shows.
     pub(crate) fn seen(&self) -> BoardSeen {
+        if self.ivars().stale.get() {
+            self.show_changes(crate::now());
+        }
         let ui = self.ui();
         let view = self.view();
         BoardSeen {

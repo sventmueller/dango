@@ -7,6 +7,9 @@ use crate::selftest::OrderSeen;
 impl OrderTab {
     /// What the tab shows: the texts of its condition and body, its buttons and its commands.
     pub(crate) fn seen(&self) -> OrderSeen {
+        if !self.ivars().shown.get() {
+            self.show_detail();
+        }
         let ui = self.ui();
         let mut seen = OrderSeen {
             texts: Vec::new(),

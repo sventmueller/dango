@@ -28,7 +28,7 @@ pub struct ServerConfig {
     /// The position encodings offered, most wanted first.
     pub position_encodings: Vec<Encoding>,
     /// Whether the app watches files for the server; then servers register their watchers instead of watching
-    /// themselves, and the app must report changes with `Server::watched_files_changed`.
+    /// themselves, and the app must report changes with `Server::files_changed`.
     pub client_watches_files: bool,
     /// When to restart after a crash.
     pub restart: RestartPolicy,

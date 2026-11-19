@@ -23,7 +23,7 @@ use objc2_metal::{
 use crate::boxdraw::{self, Pen};
 use crate::render::{self, Canvas, Face, Fonts, Glyph, Stroke, rect};
 
-/// The side of a view's first atlas in pixels; it doubles when a frame does not fit, up to `LAST_SIDE`.
+/// The side of a view's first atlas in pixels; it doubles when a single frame does not fit, up to `LAST_SIDE`.
 const FIRST_SIDE: usize = 1024;
 const LAST_SIDE: usize = 8192;
 /// Glyphs are drawn at this many positions within a pixel.
@@ -175,6 +175,8 @@ pub(crate) struct Sprites {
     fonts: Option<u64>,
     /// A sprite did not fit since the last `prepare`.
     full: bool,
+    /// The atlas held sprites of earlier frames when the last `prepare` ran.
+    inherited: bool,
 }
 
 impl Sprites {
@@ -188,6 +190,7 @@ impl Sprites {
             widths: HashMap::new(),
             fonts: None,
             full: false,
+            inherited: false,
         })
     }
 
@@ -249,7 +252,12 @@ impl Sprites {
             self.uploads.clear();
             self.shelves = Shelves::new(self.shelves.side);
         }
+        self.start_frame();
+    }
+
+    fn start_frame(&mut self) {
         self.full = false;
+        self.inherited = !self.shelves.rows.is_empty();
     }
 
     /// A sprite did not fit since `prepare`.
@@ -257,8 +265,18 @@ impl Sprites {
         self.full
     }
 
+    /// Makes room after a frame did not fit, for drawing it again: an atlas that still holds sprites of earlier
+    /// frames is emptied at its size, one the frame alone filled doubles; false when it is as large as it gets.
+    pub(crate) fn make_room(&mut self) -> bool {
+        if self.inherited {
+            self.empty(self.shelves.side);
+            return true;
+        }
+        self.grow()
+    }
+
     /// Starts over in an empty atlas twice the size; false when it is as large as it gets.
-    pub(crate) fn grow(&mut self) -> bool {
+    fn grow(&mut self) -> bool {
         let side = self.shelves.side * 2;
         if side > LAST_SIDE {
             return false;
@@ -267,10 +285,17 @@ impl Sprites {
             return false;
         };
         self.texture = texture;
+        self.empty(side);
+        true
+    }
+
+    /// Forgets every sprite and width; frames still on the GPU keep reading the old pixels, as Metal runs the next
+    /// frame's copies over them only after those frames.
+    fn empty(&mut self, side: usize) {
         self.uploads.clear();
         self.shelves = Shelves::new(side);
         self.entries.clear();
-        true
+        self.widths.clear();
     }
 
     fn get(&mut self, key: Key, make: impl FnOnce() -> Option<Picture>) -> Option<Sprite> {
@@ -711,6 +736,55 @@ mod tests {
             );
         }
         assert_eq!(made, 1, "a glyph without a picture is asked for once");
+    }
+
+    #[test]
+    fn a_full_atlas_is_emptied_for_the_frame_and_grows_only_when_one_frame_does_not_fit() {
+        let Some(device) = objc2_metal::MTLCreateSystemDefaultDevice() else {
+            return;
+        };
+        let mut sprites = Sprites::new(&device).unwrap();
+        let tall = |height: usize| {
+            move || {
+                Some(Picture {
+                    width: 8,
+                    height,
+                    left: 0,
+                    top: 0,
+                    pixels: vec![255; 8 * height * 4],
+                    coloured: false,
+                })
+            }
+        };
+        let key = |glyph| Key::Glyph {
+            font: 0,
+            glyph,
+            shift: 0,
+            ink: WHITE,
+        };
+        let three_quarters = FIRST_SIDE * 3 / 4;
+        sprites.start_frame();
+        assert!(sprites.get(key(1), tall(three_quarters)).is_some());
+        assert!(!sprites.full());
+
+        sprites.start_frame();
+        assert!(sprites.get(key(2), tall(FIRST_SIDE / 2)).is_none());
+        assert!(sprites.full(), "the earlier frame's sprite leaves no room");
+        assert!(sprites.make_room());
+        assert_eq!(sprites.texture().width(), FIRST_SIDE, "emptied at its size");
+        assert!(sprites.entries.is_empty() && sprites.uploads.is_empty());
+
+        sprites.start_frame();
+        assert!(sprites.get(key(2), tall(FIRST_SIDE / 2)).is_some());
+        assert!(sprites.get(key(1), tall(three_quarters)).is_none());
+        assert!(sprites.full(), "this frame alone does not fit");
+        assert!(sprites.make_room());
+        assert_eq!(sprites.texture().width(), FIRST_SIDE * 2, "only now the atlas grows");
+
+        sprites.start_frame();
+        assert!(sprites.get(key(2), tall(FIRST_SIDE / 2)).is_some());
+        assert!(sprites.get(key(1), tall(three_quarters)).is_some());
+        assert!(!sprites.full());
     }
 
     #[test]

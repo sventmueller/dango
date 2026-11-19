@@ -267,7 +267,7 @@ define_class!(
             guarded((), || {
                 self.with_panel(|panel| {
                     panel.show_archived.set(!panel.show_archived.get());
-                    panel.reload();
+                    panel.reload_soon();
                 });
             });
         }

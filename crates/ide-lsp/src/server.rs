@@ -8,14 +8,15 @@ mod positions;
 mod sync;
 
 use ide_core::{IgnoringPoison, LockIgnoringPoison};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, Weak};
 use std::time::{Duration, Instant};
 
 use ide_process::tail::Tail;
 use ide_process::{ProcessId, Supervisor};
+use ide_project::FileChange;
 use lsp_types::{Diagnostic, Range, ServerCapabilities, TextDocumentContentChangeEvent, Uri};
 use serde_json::{Value, json};
 
@@ -380,15 +381,24 @@ impl Server {
         state.notify("workspace/didChangeWatchedFiles", json!({"changes": changes}))
     }
 
+    /// Reports the changes among `files` that the server's file watchers ask for, when `client_watches_files` is set;
+    /// they are matched against the watchers registered now on the writer thread, in order with every other message,
+    /// and nothing is sent when none is asked for.
+    pub fn files_changed(&self, files: Arc<BTreeMap<PathBuf, FileChange>>) -> Result<(), Error> {
+        let state = self.inner().lock();
+        let registered = state.watchers();
+        if registered.is_empty() {
+            return Ok(());
+        }
+        state.notify_if("workspace/didChangeWatchedFiles", move || {
+            let changes = crate::file_watch::events(&registered, &files);
+            (!changes.is_empty()).then(|| json!({ "changes": changes }))
+        })
+    }
+
     /// The file watchers the server registered, as `DidChangeWatchedFilesRegistrationOptions`.
     pub fn watchers(&self) -> Vec<Value> {
-        self.inner()
-            .lock()
-            .registrations
-            .values()
-            .filter(|(method, _)| method == "workspace/didChangeWatchedFiles")
-            .map(|(_, options)| options.clone())
-            .collect()
+        self.inner().lock().watchers()
     }
 
     /// Sends any request; positions in it and in the answer are not converted.

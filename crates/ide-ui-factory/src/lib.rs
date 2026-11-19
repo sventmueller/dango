@@ -103,6 +103,17 @@ pub fn changed(state: &State, root: &Path) {
     }
 }
 
+/// A tab of `window` may have come to the front: the Leitstand and order tabs that missed a change out of view and
+/// show now catch up on it.
+pub fn came_to_front(window: Window, state: &State) {
+    for tab in state.boards.live().into_iter().filter(|tab| tab.window() == window) {
+        tab.catch_up();
+    }
+    for tab in state.orders.live().into_iter().filter(|tab| tab.window() == window) {
+        tab.catch_up();
+    }
+}
+
 /// Opens the Leitstand tab of `window`, or brings it to the front; whether it shows.
 pub fn show_leitstand(window: Window, state: &Rc<State>) -> bool {
     state

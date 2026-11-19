@@ -50,6 +50,10 @@ pub(crate) struct OrderIvars {
     detail: RefCell<Option<Detail>>,
     /// Whether the views show `detail`, which a step that leaves the order as it was does not build again.
     shown: Cell<bool>,
+    /// Whether a reload came while the tab was out of view, which it catches up on in view.
+    stale: Cell<bool>,
+    /// The timeline's labels, whose ages move on without the rest of the tab.
+    ages: RefCell<Vec<Retained<NSTextField>>>,
     /// The sections the user turned down for G2.
     rejected: RefCell<BTreeSet<HunkId>>,
     /// The specification the G1 view shows, which a new one replaces.
@@ -141,6 +145,9 @@ pub(crate) fn open(target: &Target, id: &OrderId) -> bool {
     let window = target.window();
     let key = tab_key(id);
     if window.select_tab(&key) {
+        if let Some(state) = target.state() {
+            crate::came_to_front(window, &state);
+        }
         return true;
     }
     let Some(state) = target.state() else { return false };
@@ -166,6 +173,8 @@ impl OrderTab {
             tab: Cell::new(None),
             detail: RefCell::new(None),
             shown: Cell::new(false),
+            stale: Cell::new(false),
+            ages: RefCell::new(Vec::new()),
             rejected: RefCell::new(BTreeSet::new()),
             spec: RefCell::new(None),
             wrap: Cell::new(WIDTH),
@@ -174,6 +183,13 @@ impl OrderTab {
         // SAFETY: NSView's initializer, called once on the newly allocated object.
         let tab: Retained<OrderTab> = unsafe { msg_send![super(OrderTab::alloc(mtm).set_ivars(ivars)), init] };
         let _ = tab.ivars().ui.set(tab.build(mtm));
+        let weak = objc2::rc::Weak::from_retained(&tab);
+        let came = move || {
+            if let Some(tab) = weak.load() {
+                tab.catch_up();
+            }
+        };
+        ide_ui_common::panel::watch_view(&tab, came, None);
         tab
     }
 
@@ -261,6 +277,11 @@ impl OrderTab {
         &self.ivars().order
     }
 
+    /// Its window.
+    pub(crate) fn window(&self) -> ide_ui_common::window::Window {
+        self.ivars().target.window()
+    }
+
     /// Its tab.
     pub(crate) fn tab(&self) -> Option<TabId> {
         self.ivars().tab.get()
@@ -276,26 +297,73 @@ impl OrderTab {
         self.ivars().detail.borrow().clone()
     }
 
-    /// Reads the order again and shows it.
+    /// Reads the order again and shows it; out of view only its tab's title and red dot follow until it comes back.
     pub(crate) fn reload(&self) {
         let detail = host().order(self.root(), self.order());
         if let Some(detail) = &detail {
             let live: BTreeSet<HunkId> = detail.sections().iter().map(|s| s.id().clone()).collect();
             self.ivars().rejected.borrow_mut().retain(|id| live.contains(id));
         }
-        if self.ivars().shown.replace(true) && *self.ivars().detail.borrow() == detail {
+        let changed = *self.ivars().detail.borrow() != detail;
+        if changed {
+            self.ivars().shown.set(false);
+            self.mark_tab(detail.as_ref());
+        }
+        *self.ivars().detail.borrow_mut() = detail;
+        let away = !ui::on_screen(self);
+        self.ivars().stale.set(away);
+        if !away {
+            self.show_detail();
+        }
+    }
+
+    /// Reads the order again if a reload came while the tab was out of view and it is in view now.
+    pub(crate) fn catch_up(&self) {
+        if self.ivars().stale.get() && ui::on_screen(self) {
+            self.reload();
+        }
+    }
+
+    /// Shows the detail read last: built anew if it changed, else only the timeline's ages move on.
+    fn show_detail(&self) {
+        let detail = self.detail();
+        if !self.ivars().shown.replace(true) {
+            self.show(detail.as_ref());
             return;
         }
-        *self.ivars().detail.borrow_mut() = detail.clone();
-        self.show(detail.as_ref());
+        let Some(detail) = detail else { return };
+        let texts = crate::order_view::timeline_texts(&detail);
+        let ages = self.ivars().ages.borrow();
+        if ages.len() != texts.len() {
+            drop(ages);
+            self.show(Some(&detail));
+            return;
+        }
+        for (label, text) in ages.iter().zip(&texts) {
+            if label.stringValue().to_string() != *text {
+                label.setStringValue(&ns(text));
+            }
+        }
+    }
+
+    /// Gives the order's tab its title and, while the order waits for the user, the red dot.
+    fn mark_tab(&self, detail: Option<&Detail>) {
+        let (Some(detail), Some(tab)) = (detail, self.tab()) else {
+            return;
+        };
+        let window = self.ivars().target.window();
+        window.set_tab_title(tab, detail.title());
+        let red = NSColor::systemRedColor();
+        let waits = detail.tone() == crate::model::words::Tone::Waiting;
+        window.set_tab_status(tab, waits.then_some(&*red));
     }
 
     fn show(&self, detail: Option<&Detail>) {
         let mtm = self.mtm();
         let ui = self.ui();
-        let window = self.ivars().target.window();
         ui::clear(&ui.condition);
         ui::clear(&ui.body);
+        self.ivars().ages.borrow_mut().clear();
         let Some(detail) = detail else {
             ui.title.setStringValue(&ns(&self.order().to_string()));
             ui.body
@@ -336,14 +404,9 @@ impl OrderTab {
         ui.accept_note.setHidden(notes.is_empty());
         ui.request.setHidden(detail.request().is_none());
         self.show_spec(Some(detail));
-        crate::order_view::fill(self, &ui.body, detail, &self.ivars().rejected.borrow());
+        let ages = crate::order_view::fill(self, &ui.body, detail, &self.ivars().rejected.borrow());
+        *self.ivars().ages.borrow_mut() = ages;
         self.rewrap();
-        if let Some(tab) = self.tab() {
-            window.set_tab_title(tab, detail.title());
-            let red = NSColor::systemRedColor();
-            let waits = detail.tone() == crate::model::words::Tone::Waiting;
-            window.set_tab_status(tab, waits.then_some(&*red));
-        }
     }
 
     /// Puts the next step and the commands beside it into the bar and greys out the pull-down's commands that do not

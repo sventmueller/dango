@@ -32,7 +32,8 @@ fn of(controller: &WindowController) -> Option<Retained<TestsPanel>> {
     controller.context().tests_panels().of(controller.handle())
 }
 
-/// The window shows a folder: its panel lists the tests, those of tools that list by building from the sources.
+/// The window shows a folder: its panel lists the tests, those of tools that list by building from the sources, once
+/// it shows or an editor's gutter needs them.
 pub(crate) fn attach(controller: &WindowController) {
     let Some(root) = controller.project_root() else { return };
     window_closed(controller);
@@ -42,13 +43,14 @@ pub(crate) fn attach(controller: &WindowController) {
     controller.set_panel_page(Panel::Tests, &page);
     controller.set_panel_accessory(Panel::Tests, &header);
     panels.insert(panel.id(), panel.clone());
-    panel.list(false);
+    let id = panel.id();
+    ide_ui_common::panel::watch_view(&page, move || with_panel(id, TestsPanel::needed), None);
 }
 
-/// The user trusts `root` now: its panels list their tests.
+/// The user trusts `root` now: its panels list their tests, if they were needed already.
 pub(crate) fn trust_changed(cx: &std::rc::Rc<crate::context::AppContext>, root: &Path) {
     for panel in cx.tests_panels().for_root(root) {
-        panel.list(false);
+        panel.trusted();
     }
 }
 
@@ -63,6 +65,7 @@ fn at_cursor(controller: &WindowController) -> Option<(Retained<TestsPanel>, Too
     let editor = crate::editor::focused_editor(controller)?;
     let path = editor.document().path()?.to_path_buf();
     let line = caret_line(&editor);
+    panel.needed();
     locate(&panel, &editor);
     let found = panel
         .ivars()
@@ -101,14 +104,100 @@ fn locate(panel: &TestsPanel, editor: &EditorTextView) {
         }
         marks.found.clone()
     };
-    if found.is_empty() {
+    place(panel, &path, &found);
+}
+
+/// As [`locate`], with the text read on a lane once per revision; the editors of the file draw their gutter again
+/// when it placed tests.
+fn locate_soon(panel: &TestsPanel, editor: &EditorTextView) {
+    let (path, revision, text) = {
+        let document = editor.document();
+        let Some(path) = document.path() else { return };
+        (path.to_path_buf(), document.revision(), document.text().clone())
+    };
+    let found = {
+        let mut marks = panel.ivars().marks.borrow_mut();
+        let marks = marks.entry(path.clone()).or_default();
+        if marks.read == Some(revision) {
+            Some(marks.found.clone())
+        } else if marks.reading == Some(revision) {
+            return;
+        } else {
+            marks.reading = Some(revision);
+            None
+        }
+    };
+    if let Some(found) = found {
+        place(panel, &path, &found);
         return;
     }
-    let known = !panel.ivars().board.borrow().tests_in(&path).is_empty();
-    panel.ivars().board.borrow_mut().place(&path, &found);
+    let id = panel.id();
+    let shown_in = dispatch2::MainThreadBound::new(objc2::rc::Weak::from(editor), editor.mtm());
+    let asked = path.clone();
+    let read = move || {
+        let found = ide_test::board::in_source(&asked, &text.to_string());
+        (asked, found)
+    };
+    let answer = move |answer: Option<(std::path::PathBuf, Vec<(String, u32)>)>| {
+        crate::util::main_soon(move || {
+            if let Some((path, found)) = answer {
+                let editor = objc2::MainThreadMarker::new().and_then(|mtm| shown_in.get(mtm).load());
+                with_panel(id, |panel| located(panel, path, revision, found, editor.as_deref()));
+            }
+        });
+    };
+    if ide_core::lane::WORK.ask(read, answer).is_err() {
+        if let Some(marks) = panel.ivars().marks.borrow_mut().get_mut(&path) {
+            marks.reading = None;
+        }
+        crate::diag::report("finding the tests in a file", "the work lane took no more work");
+    }
+}
+
+/// The lane read the tests of `path` at `revision`, asked by `editor`: the panel keeps them, unless it read a later
+/// text since, and the editor shows the tests it placed.
+fn located(
+    panel: &TestsPanel,
+    path: std::path::PathBuf,
+    revision: ide_document::Revision,
+    found: Vec<(String, u32)>,
+    editor: Option<&EditorTextView>,
+) {
+    {
+        let mut marks = panel.ivars().marks.borrow_mut();
+        let marks = marks.entry(path.clone()).or_default();
+        if marks.reading == Some(revision) {
+            marks.reading = None;
+        }
+        if marks.read.is_some_and(|read| read >= revision) {
+            return;
+        }
+        marks.read = Some(revision);
+        marks.found.clone_from(&found);
+    }
+    if !found.is_empty() {
+        panel.needed();
+    }
+    if place(panel, &path, &found)
+        && let Some(editor) = editor
+    {
+        crate::editor::redraw_gutter(editor);
+    }
+}
+
+/// Puts the tests `found` in `path` on the panel's board, and shows the panel if it knew none there; whether any
+/// test got its place.
+fn place(panel: &TestsPanel, path: &Path, found: &[(String, u32)]) -> bool {
+    if found.is_empty() {
+        return false;
+    }
+    let known = !panel.ivars().board.borrow().tests_in(path).is_empty();
+    let before = panel.ivars().board.borrow().revision();
+    panel.ivars().board.borrow_mut().place(path, found);
     if !known {
         panel.show();
     }
+    panel.ivars().board.borrow().revision() != before
 }
 
 /// Runs the test at the caret, or says there is none (⌃⌥⌘U).
@@ -198,8 +287,11 @@ pub(crate) fn gutter_mark(editor: &EditorTextView, line: usize) -> Option<State>
         .get(&path)
         .is_some_and(|m| m.shown == Some((board, document)));
     if !fresh {
+        if ide_test::named_as_test(&path) {
+            panel.needed();
+        }
         if panel.ivars().board.borrow().tests_in(&path).is_empty() {
-            locate(&panel, editor);
+            locate_soon(&panel, editor);
         }
         let board = panel.ivars().board.borrow();
         let mut by_line = std::collections::HashMap::new();
@@ -221,6 +313,8 @@ pub(crate) fn gutter_mark(editor: &EditorTextView, line: usize) -> Option<State>
 pub(crate) struct Marks {
     /// The document's revision `found` was read at.
     read: Option<ide_document::Revision>,
+    /// The revision whose text a lane reads now.
+    reading: Option<ide_document::Revision>,
     /// The tests the text shows, by function name and line from 1.
     found: Vec<(String, u32)>,
     /// The revisions of the board and the document `by_line` is of.

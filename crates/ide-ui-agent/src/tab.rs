@@ -475,6 +475,7 @@ impl AgentTab {
         self.parking.hidden_since.take();
         self.timeline.show_pending();
         self.start_ticking();
+        self.wake_deferred();
     }
 
     /// Shows the head, the timeline, the composer and the status line at the text size the user chose.
@@ -502,6 +503,7 @@ impl AgentTab {
         let title_changed = snapshot.title() != self.state.borrow().thread().title();
         self.state.borrow_mut().absorbed(snapshot.clone());
         let had_rows = self.timeline.count() > 0;
+        self.timeline.inputs().borrow_mut().forget_answered(&snapshot, changes);
         self.timeline.apply(snapshot, changes);
         if refresh.controls
             || changes.is_empty()

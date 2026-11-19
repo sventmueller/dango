@@ -113,6 +113,30 @@ impl State {
             .notify_with(method, build)
     }
 
+    /// Sends a notification as `notify_with`, or nothing when `build` makes no parameters.
+    pub(super) fn notify_if(
+        &self,
+        method: &str,
+        build: impl FnOnce() -> Option<Value> + Send + 'static,
+    ) -> Result<(), Error> {
+        if self.status != Status::Running {
+            return Err(Error::NotRunning);
+        }
+        self.connection
+            .as_ref()
+            .ok_or(Error::NotRunning)?
+            .notify_if(method, build)
+    }
+
+    /// The file watchers the server registered, as `DidChangeWatchedFilesRegistrationOptions`.
+    pub(super) fn watchers(&self) -> Vec<Value> {
+        self.registrations
+            .values()
+            .filter(|(method, _)| method == "workspace/didChangeWatchedFiles")
+            .map(|(_, options)| options.clone())
+            .collect()
+    }
+
     pub(super) fn notify_document(&self, method: &str, params: Value) {
         if self.sync_options().open_close {
             let _ = self.notify(method, params);

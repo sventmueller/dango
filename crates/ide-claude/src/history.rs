@@ -107,6 +107,18 @@ pub fn list(config_dir: &Path, cwd: &Path) -> Vec<PastSession> {
     sessions
 }
 
+/// The session `id` saved for `cwd` as `list` has it, read from its transcript alone.
+pub fn find(config_dir: &Path, cwd: &Path, id: &str) -> Option<PastSession> {
+    if id.is_empty() || id.contains('/') {
+        return None;
+    }
+    let path = config_dir
+        .join("projects")
+        .join(project_folder(cwd))
+        .join(format!("{id}.jsonl"));
+    path.is_file().then(|| read_summary(&path)).flatten()
+}
+
 fn read_summary(path: &Path) -> Option<PastSession> {
     let id = path.file_stem()?.to_string_lossy().into_owned();
     let mut file = File::open(path).ok()?;
@@ -481,6 +493,23 @@ mod tests {
         );
         std::fs::remove_file(folder.join("a.jsonl")).unwrap();
         assert_eq!(titles(list(&config, cwd)), [("b".to_string(), None)]);
+    }
+
+    #[test]
+    fn one_session_is_found_as_the_listing_has_it_without_reading_the_others() {
+        let config = scratch("find");
+        let cwd = Path::new("/work/find");
+        let folder = config.join("projects").join(project_folder(cwd));
+        std::fs::create_dir_all(&folder).unwrap();
+        let prompt = r#"{"type":"user","uuid":"u","message":{"role":"user","content":[{"type":"text","text":"Hi"}]}}"#;
+        std::fs::write(folder.join("a.jsonl"), prompt).unwrap();
+        std::fs::write(folder.join("blank.jsonl"), "").unwrap();
+        let listed = list(&config, cwd).into_iter().find(|s| s.id == "a");
+        assert_eq!(find(&config, cwd, "a"), listed);
+        assert!(find(&config, cwd, "a").is_some());
+        assert_eq!(find(&config, cwd, "blank"), None, "the listing leaves it out too");
+        assert_eq!(find(&config, cwd, "missing"), None);
+        assert_eq!(find(&config, cwd, "../find/a"), None);
     }
 
     #[test]

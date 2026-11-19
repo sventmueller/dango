@@ -23,7 +23,7 @@ mod work;
 use std::path::Path;
 
 pub(crate) use load::{access, client, default_branch, remote_client};
-pub(crate) use log_tab::LogTabs;
+pub(crate) use log_tab::{LogTabs, came_to_front};
 pub(crate) use login::CI_OAUTH_CLIENTS;
 pub(crate) use ops::open_url;
 pub(crate) use panel::CiPanels;
@@ -41,6 +41,13 @@ pub(crate) fn attach(controller: &WindowController) {
 /// The client the CI panel of `controller`'s window found for its folder, once it read the service.
 pub(crate) fn client_of(controller: &WindowController) -> Option<ide_ci::Client> {
     panel::of(controller).and_then(|p| p.read().client.clone())
+}
+
+/// The window shows its CI panel, or the panel's symbol again: a panel that waited for that starts reading.
+pub(crate) fn shown(controller: &WindowController) {
+    if let Some(panel) = panel::of(controller) {
+        panel.wake();
+    }
 }
 
 /// Something changed below `root`; the panel reads again when HEAD moved.

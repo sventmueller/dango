@@ -17,6 +17,8 @@ use crate::window::WindowController;
 const QUIET: Duration = Duration::from_millis(200);
 /// How often a running server looks whether a tab still shows its pages.
 const SWEEP: Duration = Duration::from_secs(10);
+/// Names the page of a preview tab that waits to show, before its server runs; only `page_of` reads it.
+const WAITING: &str = "sitepreview:";
 
 /// The servers of the open previews, one per folder.
 #[derive(Default)]
@@ -50,7 +52,8 @@ pub(crate) fn is_page(path: &Path) -> bool {
 }
 
 /// Opens `page` in a browser tab of `controller`, served from its project folder; only in a trusted folder, since the
-/// page's scripts can read every file the server serves.
+/// page's scripts can read every file the server serves. A tab the window restores starts the server once it first
+/// shows.
 pub(crate) fn open(controller: &WindowController, page: &Path) {
     let mtm = objc2::MainThreadOnly::mtm(controller);
     let root = controller
@@ -64,6 +67,27 @@ pub(crate) fn open(controller: &WindowController, page: &Path) {
         );
         return;
     }
+    let window = controller.id();
+    if controller.restoring_editor_tabs() {
+        let title = page
+            .file_name()
+            .map_or_else(|| t("Browser").to_string(), |name| name.to_string_lossy().into_owned());
+        let page = page.to_path_buf();
+        ide_ui_browser::open_restored_page(mtm, window, &title, &waiting_url(&page), move |load| {
+            if let Some((url, secret)) = serve(mtm, &root, &page) {
+                with_cookie(mtm, &secret, move || load(&url));
+            }
+        });
+        return;
+    }
+    let Some((url, secret)) = serve(mtm, &root, page) else {
+        return;
+    };
+    with_cookie(mtm, &secret, move || ide_ui_browser::open_tab(mtm, window, Some(&url)));
+}
+
+/// The address of `page` on the server of `root`, which starts unless it runs, and the server's secret.
+fn serve(mtm: MainThreadMarker, root: &Path, page: &Path) -> Option<(String, String)> {
     let cx = previews(mtm);
     let started = {
         let mut sites = cx.site_previews().sites.borrow_mut();
@@ -74,7 +98,7 @@ pub(crate) fn open(controller: &WindowController, page: &Path) {
             Some(index) => Ok(index),
             None => secret()
                 .ok_or_else(|| std::io::Error::other("the system's random source gave nothing"))
-                .and_then(|secret| Site::start(&root, secret))
+                .and_then(|secret| Site::start(root, secret))
                 .map(|site| {
                     sites.push(site);
                     sites.len() - 1
@@ -83,32 +107,46 @@ pub(crate) fn open(controller: &WindowController, page: &Path) {
     };
     let index = match started {
         Ok(index) => index,
-        Err(error) => return crate::diag::report("starting the page preview's server", error),
+        Err(error) => {
+            crate::diag::report("starting the page preview's server", error);
+            return None;
+        }
     };
     let (url, secret) = {
         let sites = cx.site_previews().sites.borrow();
         let site = &sites[index];
         (site.url_of(page), site.secret().to_string())
     };
-    let Some(url) = url else { return };
-    let window = controller.id();
-    let set = ide_ui_browser::set_local_cookie(mtm, COOKIE, &secret, move || {
-        ide_ui_browser::open_tab(mtm, window, Some(&url));
-    });
-    if set.is_none() {
+    sweep_later(mtm);
+    Some((url?, secret))
+}
+
+/// Gives WebKit the server's `secret` as its cookie, then runs `then`.
+fn with_cookie(mtm: MainThreadMarker, secret: &str, then: impl FnOnce() + 'static) {
+    if ide_ui_browser::set_local_cookie(mtm, COOKIE, secret, then).is_none() {
         crate::diag::report("the page preview's cookie", "WebKit made no cookie");
     }
-    sweep_later(mtm);
 }
 
 /// The page file a preview tab at `url` shows, for opening it again after a restart.
 pub(crate) fn page_of(mtm: MainThreadMarker, url: &str) -> Option<PathBuf> {
+    if let Some(page) = waiting_page(url) {
+        return Some(page);
+    }
     previews(mtm)
         .site_previews()
         .sites
         .borrow()
         .iter()
         .find_map(|site| site.file_of(url))
+}
+
+fn waiting_url(page: &Path) -> String {
+    format!("{WAITING}{}", page.display())
+}
+
+fn waiting_page(url: &str) -> Option<PathBuf> {
+    url.strip_prefix(WAITING).map(PathBuf::from)
 }
 
 /// Files below `root` changed on disk: the previews of that folder reload once they rest.
@@ -191,3 +229,16 @@ fn secret() -> Option<String> {
 mod selftest_probe;
 #[cfg(feature = "selftest")]
 pub(crate) use selftest_probe::*;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_preview_that_waits_to_show_keeps_its_page_and_no_web_address_names_one() {
+        let page = Path::new("/p/site/a page.html");
+        assert_eq!(waiting_page(&waiting_url(page)).as_deref(), Some(page));
+        assert_eq!(waiting_page("http://127.0.0.1:4000/index.html"), None);
+        assert_eq!(waiting_page("file:///p/site/index.html"), None);
+    }
+}

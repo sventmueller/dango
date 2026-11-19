@@ -358,7 +358,7 @@ fn every_plus_entry(controller: &WindowController, root: &Path) {
                 let front = controller.front_title();
                 (format!("front {front:?}"), front.as_deref() == Some(t("Willkommen")))
             }
-            "ideOpenAgentsSettings:" | "ideOpenAgentSettings:" => {
+            "ideOpenAgentSettings:" => {
                 let shown = settings_shown();
                 close_settings();
                 (format!("settings shown {shown}"), shown)

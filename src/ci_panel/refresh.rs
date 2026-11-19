@@ -4,7 +4,7 @@
 use std::time::Duration;
 
 use ide_ci::State as RunState;
-use objc2::MainThreadOnly;
+use objc2::{DefinedClass, MainThreadOnly};
 
 use super::load;
 use super::model::{FIRST_WAIT, Phase, Refresh, Tab};
@@ -36,11 +36,23 @@ impl CiPanel {
             .ci_panels()
             .panels
             .insert(panel.id(), panel.clone());
+        let idle = controller.shown_panel() != Some(Panel::Ci) && WindowController::symbol_hidden(Panel::Ci);
+        panel.ivars().idle.set(idle);
         panel.refresh(true);
+    }
+
+    /// The panel shows, or its symbol does again: it starts reading if it waited for that.
+    pub(crate) fn wake(&self) {
+        if self.ivars().idle.replace(false) {
+            self.refresh(true);
+        }
     }
 
     /// Reads the service again now, or right after the read that runs; `fresh` starts the wait for running runs over.
     pub(crate) fn refresh(&self, fresh: bool) {
+        if self.ivars().idle.get() {
+            return;
+        }
         let trusted = self.controller().is_some_and(|c| c.is_trusted());
         let refresh = self.state().refresh(trusted, fresh);
         let (known, tab) = match refresh {
@@ -88,7 +100,7 @@ impl CiPanel {
 
     /// Something in the folder changed; reads again when HEAD moved.
     pub(crate) fn changed(&self) {
-        if self.state().changed() {
+        if !self.ivars().idle.get() && self.state().changed() {
             let id = self.id();
             main_after(HEAD_DEBOUNCE, move || with_panel(id, CiPanel::check_head));
         }

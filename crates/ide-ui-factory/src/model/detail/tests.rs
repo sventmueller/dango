@@ -79,3 +79,21 @@ fn the_next_step_is_the_command_that_moves_the_order_on() {
     let built = only(&[Command::OpenReport, Command::OpenTerminal, Command::OpenDiff]);
     assert_eq!(companions(&built, None, false), [Command::OpenDiff]);
 }
+
+#[test]
+fn a_tick_alone_leaves_the_model_equal_while_the_age_on_its_timeline_moves_on() {
+    let factory = super::super::testing::waiting();
+    let order = factory.order(&OrderId("o1".into())).expect("the factory has its order");
+    let wall = factory.now().wall;
+    let first = Detail::new(order, wall, Vec::new());
+    let later = Detail::new(order, wall + 90_000, Vec::new());
+    assert_eq!(first, later, "only the time differs");
+    let words = |detail: &Detail| detail.timeline().iter().map(Stage::words).collect::<Vec<_>>();
+    assert_ne!(words(&first), words(&later));
+    let minute = tf("vor {}", &[&words::duration(90_000)]);
+    assert!(
+        words(&later).iter().any(|line| line.contains(&minute)),
+        "{:?}",
+        words(&later)
+    );
+}

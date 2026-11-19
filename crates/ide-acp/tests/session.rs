@@ -192,7 +192,7 @@ fn a_turn_fills_the_thread_with_every_kind_of_entry() {
         (permission.tool_name.as_str(), permission.title.as_deref()),
         ("ls -la", Some("ls -la"))
     );
-    assert_eq!(permission.input["command"], "ls -la");
+    assert!(permission.input.is_null(), "an allowed request lets go of its input");
     assert_eq!(
         Some(&permission.state),
         Some(&RequestState::Decided(Decision::Allowed {

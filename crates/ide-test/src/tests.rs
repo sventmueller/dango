@@ -469,3 +469,28 @@ fn a_run_read_in_pieces_ends_with_the_reports_of_the_whole() {
         assert_eq!(merged, whole, "{dir}");
     }
 }
+
+#[test]
+fn test_files_are_told_apart_by_the_names_their_tools_give_them() {
+    for test in [
+        "a/b_test.go",
+        "test_a.py",
+        "a_test.py",
+        "src/a.test.ts",
+        "a.spec.jsx",
+        "a_spec.mjs",
+    ] {
+        assert!(named_as_test(Path::new(test)), "{test}");
+    }
+    for other in [
+        "a/b.go",
+        "a.py",
+        "testing.py",
+        "src/a.ts",
+        "Cargo.toml",
+        "src/lib.rs",
+        "test",
+    ] {
+        assert!(!named_as_test(Path::new(other)), "{other}");
+    }
+}

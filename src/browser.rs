@@ -24,9 +24,14 @@ impl ide_core::layout::Kind for KeptPage {
 }
 
 /// Opens a browser tab at `url`, or empty. A URL whose tab is open selects that tab instead; a tab of a local server
-/// reloads, since a dev server that called it has new content.
+/// reloads, since a dev server that called it has new content. A tab the window restores loads once it first shows.
 pub(crate) fn open_tab(controller: &WindowController, url: Option<&str>) {
-    ide_ui_browser::open_tab(controller.mtm(), controller.id(), url);
+    match url {
+        Some(url) if controller.restoring_editor_tabs() => {
+            ide_ui_browser::open_restored_tab(controller.mtm(), controller.id(), url);
+        }
+        _ => ide_ui_browser::open_tab(controller.mtm(), controller.id(), url),
+    }
 }
 
 /// Reloads the open tabs of `controller`'s window that show a page of `origin`, such as `http://localhost:5173`,

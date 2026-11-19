@@ -177,15 +177,26 @@ pub fn open_agent(controller: &(impl AsWindow + ?Sized), agent: Agent, resume: O
         open.select();
         return Some(open);
     }
+    open_new(controller, agent, resume, AgentTab::start)
+}
+
+/// Opens the AI tab of `agent`'s past session `resume` again as the window's layout comes back, which opened no tab
+/// of it yet: a Claude session shows its conversation parked, its CLI starting once the tab comes to the front or
+/// gets a prompt.
+pub fn restore_agent(controller: &(impl AsWindow + ?Sized), agent: Agent, resume: Resume) -> Option<Rc<AgentTab>> {
+    open_new(&controller.as_window(), agent, Some(resume), AgentTab::start_parked)
+}
+
+fn open_new(controller: &Window, agent: Agent, resume: Option<Resume>, start: fn(&AgentTab)) -> Option<Rc<AgentTab>> {
     let state = crate::host::state();
     let tab = AgentTab::open(controller, &state, agent, resume)?;
-    started(controller, &state, &tab);
+    started(controller, &state, &tab, start);
     Some(tab)
 }
 
-fn started(controller: &Window, state: &State, tab: &Rc<AgentTab>) {
+fn started(controller: &Window, state: &State, tab: &Rc<AgentTab>, start: fn(&AgentTab)) {
     state.agent_tabs.tabs.borrow_mut().push(tab.clone());
-    tab.start();
+    start(tab);
     changed(controller);
 }
 
@@ -198,7 +209,7 @@ pub fn open_own(
     let state = crate::host::state();
     let tab = AgentTab::open(controller, &state, Agent::Own, None)?;
     tab.state.borrow_mut().pick_own(choice);
-    started(controller, &state, &tab);
+    started(controller, &state, &tab, AgentTab::start);
     Some(tab)
 }
 
@@ -216,7 +227,7 @@ pub fn open_agent_in(
     if let Some(title) = title {
         tab.set_custom_title(title);
     }
-    started(controller, &state, &tab);
+    started(controller, &state, &tab, AgentTab::start);
     Some(tab)
 }
 

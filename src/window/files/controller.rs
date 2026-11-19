@@ -16,7 +16,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSArray, NSFileManager, NSMutableIndexSet, NSPoint, NSRect, NSSize, NSURL};
 use splat_i18n::t;
 
-use super::model::{Changes, Command, Effect, Kind, MenuEntry, Model, Naming, changes, valid_name};
+use super::model::{Changes, Command, Effect, Kind, Live, MenuEntry, Model, Naming, changes, valid_name};
 use super::view::{FileTreeSource, Pending, path_of};
 use crate::util::{FlagGuard, constant, main_after, ns};
 
@@ -124,6 +124,47 @@ impl FileTreeSource {
         ivars.shown.borrow_mut().retain(|dir, _| !dir.starts_with(path));
         ivars.pending.borrow_mut().retain(|dir, _| !dir.starts_with(path));
         ivars.project.collapse(path);
+        let first = {
+            let mut closing = ivars.closing.borrow_mut();
+            closing.push(path.to_path_buf());
+            closing.len() == 1
+        };
+        // Reloading inside the collapse notification could change rows the outline view is still collapsing.
+        if first && let Some(window) = ivars.controller.load().map(|c| c.id()) {
+            crate::window::deliver(window, |controller| {
+                controller.with_file_tree(|files| files.settle());
+            });
+        }
+    }
+
+    /// Has the outline view read the folders that closed and are still closed anew, which leaves them without rows
+    /// inside, then lets go of the rows it no longer holds.
+    pub(super) fn settle(&self, view: &NSOutlineView) {
+        let closing = std::mem::take(&mut *self.ivars().closing.borrow_mut());
+        for dir in &closing {
+            let Some(item) = self.item_of(dir) else { continue };
+            // SAFETY: The item is kept alive in `items`; the view answers -1 and false for one it does not know.
+            let (row, open) = unsafe { (view.rowForItem(Some(&item)), view.isItemExpanded(Some(&item))) };
+            if row >= 0 && !open {
+                // SAFETY: The item is one the data source handed this view, which shows its row.
+                unsafe { view.reloadItem_reloadChildren(Some(&item), true) };
+            }
+        }
+        self.ivars().stale.set(true);
+        self.forget_rows();
+    }
+
+    /// Lets go of the items and rows of paths the outline view no longer holds, once rows left it.
+    pub(super) fn forget_rows(&self) {
+        let ivars = self.ivars();
+        if !ivars.stale.replace(false) {
+            return;
+        }
+        let (shown, pending, closing) = (ivars.shown.borrow(), ivars.pending.borrow(), ivars.closing.borrow());
+        let unsettled = pending.keys().chain(closing.iter()).map(PathBuf::as_path);
+        let live = Live::new(shown.values().map(|entries| &entries[..]), unsettled);
+        ivars.items.keep(|path| live.contains(path));
+        ivars.model.borrow_mut().keep_rows(&live);
     }
 
     /// Shows a spinner in `dir` while its entries are still being read.
@@ -194,6 +235,9 @@ impl FileTreeSource {
             }
         }
         view.endUpdates();
+        if !changes.removed.is_empty() {
+            self.ivars().stale.set(true);
+        }
         for entry in changes.redrawn.iter().filter_map(|i| entries.get(*i)) {
             let item = self.item_for(entry);
             // SAFETY: The item is one the data source handed this view.
@@ -213,6 +257,7 @@ impl FileTreeSource {
 
     /// Asks the view for the rows of `dir` again, and of the folders inside.
     fn reload_folder(&self, view: &NSOutlineView, dir: &Path) {
+        self.ivars().stale.set(true);
         if dir == self.ivars().project.root() {
             // SAFETY: Nil stands for the root, whose children the data source answers for.
             unsafe { view.reloadItem_reloadChildren(None, true) };

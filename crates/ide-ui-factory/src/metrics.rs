@@ -2,7 +2,7 @@
 //! table of first-pass rate, review rounds, cost and runtime per role, agent, model and risk class, with the lines
 //! that say how many orders the figures rest on. Closed, it takes one line of the tab.
 
-use std::cell::{OnceCell, RefCell};
+use std::cell::{Cell, OnceCell, RefCell};
 
 use ide_factory::metrics::Metrics;
 use ide_ui_common::style::space;
@@ -26,6 +26,8 @@ const WIDTHS: [f64; 8] = [90.0, 170.0, 90.0, 70.0, 110.0, 80.0, 130.0, 90.0];
 
 pub(crate) struct MetricsIvars {
     view: RefCell<MetricsView>,
+    /// Whether it showed figures once, after which only a change shows them again.
+    shown: Cell<bool>,
     ui: OnceCell<MetricsUi>,
 }
 
@@ -90,6 +92,7 @@ impl MetricsSection {
     pub(crate) fn new(mtm: MainThreadMarker) -> Retained<MetricsSection> {
         let ivars = MetricsIvars {
             view: RefCell::new(MetricsView::default()),
+            shown: Cell::new(false),
             ui: OnceCell::new(),
         };
         // SAFETY: NSView's initializer, called once on the newly allocated object.
@@ -167,9 +170,13 @@ impl MetricsSection {
         self.ivars().view.borrow()
     }
 
-    /// Takes the folder's figures, with the sort and whether the section is open kept.
+    /// Takes the folder's figures, with the sort and whether the section is open kept; shows them when they changed.
     pub(crate) fn set(&self, metrics: Option<&Metrics>) {
+        let before = self.view().clone();
         self.ivars().view.borrow_mut().set(metrics);
+        if self.ivars().shown.replace(true) && *self.view() == before {
+            return;
+        }
         self.show();
     }
 

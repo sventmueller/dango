@@ -277,7 +277,8 @@ impl OutputTab {
             Change::Replace(text) => {
                 let empty = text.is_empty();
                 let shown = if empty { notice } else { &text };
-                if storage.string().to_string() != shown {
+                let differs = storage.length() != shown.encode_utf16().count() || storage.string().to_string() != shown;
+                if differs {
                     let origin = ui.scroll.contentView().bounds().origin;
                     ui.text.setString(&ns(shown));
                     if !at_end {

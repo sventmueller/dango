@@ -202,7 +202,9 @@ impl GitPanel {
             Some(Err(error)) => return self.report(&error),
             None => return,
         };
-        self.state().stash_changes.insert(hash.clone(), files);
+        if !self.state().note_stash_changes(hash, files) {
+            return;
+        }
         let item = self.item_for(&RowKey::Stash(hash.clone()));
         let outline = &self.ui().outline;
         // SAFETY: The item is one the data source hands to this view, kept alive by the panel.

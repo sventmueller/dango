@@ -30,15 +30,19 @@ pub(crate) struct TreeIvars {
     pub(super) project: Rc<Project>,
     pub(super) controller: Weak<WindowController>,
     pub(super) model: RefCell<Model>,
-    /// The objects that stand for rows in the outline view, one per path for as long as the tree lives, since the
+    /// The objects that stand for rows in the outline view, one per path while the view may hold its row, since the
     /// view keeps no reference of its own.
-    items: RowItems<PathBuf>,
+    pub(super) items: RowItems<PathBuf>,
     /// The entries of each open folder as the outline view was last told them.
     pub(super) shown: RefCell<HashMap<PathBuf, Arc<[Entry]>>>,
     /// The folders opened whose entries are still being read.
     pub(super) pending: RefCell<HashMap<PathBuf, Pending>>,
     /// Set while the tree opens the folders inside one the user opened with all its folders.
     pub(super) cascade: Cell<bool>,
+    /// Folders that closed whose rows the outline view still holds until it reads them anew.
+    pub(super) closing: RefCell<Vec<PathBuf>>,
+    /// Whether rows left the outline view since the items of rows it no longer holds were let go of.
+    pub(super) stale: Cell<bool>,
 }
 
 /// A folder that opened before its entries were read.
@@ -279,6 +283,8 @@ impl FileTreeSource {
             shown: RefCell::new(HashMap::new()),
             pending: RefCell::new(HashMap::new()),
             cascade: Cell::new(false),
+            closing: RefCell::new(Vec::new()),
+            stale: Cell::new(false),
         };
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         unsafe { msg_send![super(FileTreeSource::alloc(mtm).set_ivars(ivars)), init] }

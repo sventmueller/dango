@@ -176,6 +176,13 @@ impl WindowController {
         self.list_front_tabs();
     }
 
+    /// Another tab may have come to the front or on screen: the Software Factory's tabs and the CI logs that left out
+    /// a change while out of view catch up on it.
+    pub(crate) fn tabs_came_forward(&self) {
+        ide_ui_factory::came_to_front(self.handle(), self.context().factory_ui());
+        crate::ci_panel::came_to_front(self);
+    }
+
     /// A window tab came on screen or left it: one on screen beside the tab in front shows a picture of the sidebar.
     pub(in crate::window) fn tab_visibility_changed(&self, tab: &Rc<TabWindow>) {
         if self.restoring_editor_tabs() {

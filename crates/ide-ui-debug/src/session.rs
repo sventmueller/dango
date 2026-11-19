@@ -55,8 +55,23 @@ impl DebugPanel {
         }
     }
 
+    /// Reads the configurations the first time the panel shows or a start needs them.
+    pub fn configure(&self) {
+        if !self.ivars().configured.get() {
+            self.load_configurations();
+        }
+    }
+
+    /// Reads the configurations again if they were read before, as the folder's trust changed.
+    pub(crate) fn configure_again(&self) {
+        if self.ivars().configured.get() {
+            self.load_configurations();
+        }
+    }
+
     /// Reads the configurations of `launch.json` and offers them with "debug the current program" and attaching.
     pub(crate) fn load_configurations(&self) {
+        self.ivars().configured.set(true);
         let trusted = self.controller().is_some_and(|c| c.is_trusted());
         let variables = ide_dap::Variables {
             workspace_folder: self.root().to_path_buf(),
@@ -122,6 +137,7 @@ impl DebugPanel {
 
     /// Starts what the configuration menu shows.
     pub(crate) fn start_chosen(&self) {
+        self.configure();
         match self.ui().configurations.selectedTag() {
             CURRENT_TAG => self.debug_current_program(),
             ATTACH_TAG => self.ask_attach(),

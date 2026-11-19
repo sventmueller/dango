@@ -230,6 +230,61 @@ mod tests {
     }
 
     #[test]
+    fn an_ended_diff_keeps_the_lines_a_card_shows_and_counts_the_changes_it_dropped() {
+        let mut thread = thread();
+        let mut edit = ToolCall::new("e", "Edit", ToolKind::Edit);
+        edit.view = ToolView::Edit {
+            path: "a.txt".into(),
+            edits: Vec::new(),
+        };
+        thread.apply(put("e", EntryKind::ToolCall(edit)));
+        let hunk = |lines: Vec<String>| Hunk {
+            old_start: 1,
+            old_lines: 0,
+            new_start: 1,
+            new_lines: 0,
+            lines,
+        };
+        let changed = |sign: char, n: usize| (0..n).map(|i| format!("{sign}{i}")).collect::<Vec<_>>();
+        let first = [changed('+', 150), changed('-', 150)].concat();
+        let hunks = vec![hunk(first), hunk(changed('+', 150)), hunk(changed('-', 10))];
+        let shown = 300 + 1 + 150 + 1 + 10;
+        thread.apply(Update::Tool {
+            key: "e".into(),
+            patch: ToolPatch {
+                status: Some(ToolStatus::Completed),
+                output: Some(ToolOutput::Diff {
+                    path: "a.txt".into(),
+                    hunks,
+                }),
+                ..ToolPatch::default()
+            },
+        });
+        thread.apply(Update::Tool {
+            key: "e".into(),
+            patch: ToolPatch {
+                title: Some("Edit a.txt".into()),
+                ..ToolPatch::default()
+            },
+        });
+        let EntryKind::ToolCall(call) = &thread.entry_by_key("e").unwrap().kind else {
+            panic!()
+        };
+        let Some(ToolOutput::Diff { hunks, .. }) = &call.output else {
+            panic!("{:?}", call.output)
+        };
+        let kept: Vec<usize> = hunks.iter().map(|h| h.lines.len()).collect();
+        assert_eq!(kept, [300, 99], "the separator between the hunks takes a line too");
+        assert_eq!(kept.iter().sum::<usize>() + 1, OUTPUT_LINES);
+        assert_eq!(
+            OUTPUT_LINES + call.lines_left_out(),
+            shown,
+            "settling twice drops nothing more"
+        );
+        assert_eq!(call.changes_left_out(), (51, 10));
+    }
+
+    #[test]
     fn a_search_keeps_its_result_count_when_its_view_is_replaced() {
         let mut thread = thread();
         thread.apply(put(
@@ -315,6 +370,42 @@ mod tests {
             state: RequestState::Decided(Decision::Answered(vec![])),
         });
         assert!(thread.pending_requests().is_empty());
+    }
+
+    #[test]
+    fn an_answered_permission_request_lets_go_of_its_input_unless_it_was_denied() {
+        let mut thread = thread();
+        let request = PermissionRequest {
+            request_id: "r".into(),
+            tool_call: None,
+            tool_name: "Write".into(),
+            title: None,
+            description: None,
+            reason: None,
+            blocked_path: None,
+            input: json!({"file_path": "a.txt", "content": "a long file"}),
+            options: vec![PermissionOption::AllowOnce, PermissionOption::Deny],
+            default_to_no: false,
+            state: RequestState::Pending,
+        };
+        let allowed = RequestState::Decided(Decision::Allowed {
+            always: false,
+            edited: false,
+        });
+        let denied = RequestState::Decided(Decision::Denied { message: None });
+        for (key, state) in [("a", allowed), ("w", RequestState::Withdrawn), ("d", denied)] {
+            thread.apply(put(key, EntryKind::PermissionRequest(request.clone())));
+            let changes = thread.apply(Update::Resolve {
+                key: key.into(),
+                state: state.clone(),
+            });
+            assert_eq!(changes.len(), 1, "{key}");
+            let EntryKind::PermissionRequest(answered) = &thread.entry_by_key(key).unwrap().kind else {
+                panic!()
+            };
+            assert_eq!(answered.state, state);
+            assert_eq!(answered.input.is_null(), key != "d", "{key}");
+        }
     }
 
     #[test]

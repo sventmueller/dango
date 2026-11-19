@@ -311,9 +311,22 @@ impl WindowController {
         if let Some(activity) = state.activity.borrow().as_ref() {
             activity.select(Some(panel));
         }
-        if self.shown_panel() == Some(Panel::Containers) {
-            crate::containers_panel::shown(self);
+        self.panel_came_into_view();
+    }
+
+    /// The panel the sidebar shows came into view: the panels that read their data only once shown read it now.
+    fn panel_came_into_view(&self) {
+        match self.shown_panel() {
+            Some(Panel::Containers) => crate::containers_panel::shown(self),
+            Some(Panel::Debug) => crate::debug::shown(self),
+            Some(Panel::Ci) => crate::ci_panel::shown(self),
+            _ => {}
         }
+    }
+
+    /// Whether the user hid the activity bar's symbol of `panel` (E80).
+    pub(crate) fn symbol_hidden(panel: Panel) -> bool {
+        super::activity_bar::hidden().contains(&panel)
     }
 
     /// The panel the sidebar shows, if it is open.
@@ -378,8 +391,8 @@ impl WindowController {
             self.remember_sidebar_width(&tab);
         }
         ivars.panel_open.set(open);
-        if open && self.shown_panel() == Some(Panel::Containers) {
-            crate::containers_panel::shown(self);
+        if open {
+            self.panel_came_into_view();
         }
         self.fit_sidebar(&tab, tab.sidebar_collapsed());
         if let Some(activity) = ivars.activity.borrow().as_ref() {

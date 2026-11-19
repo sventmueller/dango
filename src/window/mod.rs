@@ -118,6 +118,7 @@ define_class!(
                     self.follow_toolbar();
                 }
                 ide_ui_agent::show_pending(self);
+                self.tabs_came_forward();
             });
         }
 
@@ -127,6 +128,7 @@ define_class!(
                 if let Some(tab) = self.tab_of_notification(notification) {
                     self.tab_visibility_changed(&tab);
                 }
+                self.tabs_came_forward();
             });
         }
 
@@ -433,11 +435,6 @@ define_class!(
         #[unsafe(method(ideOpenAgentSettings:))]
         fn open_agent_settings_action(&self, _sender: Option<&AnyObject>) {
             guarded((), || crate::settings::show_agent(self.mtm()));
-        }
-
-        #[unsafe(method(ideOpenAgentsSettings:))]
-        fn open_agents_settings_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::settings::show_agents(self.mtm()));
         }
 
         #[unsafe(method(ideNewAcpThread:))]

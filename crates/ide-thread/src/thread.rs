@@ -6,8 +6,8 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use crate::model::{
-    Activity, BackgroundItem, Entry, EntryId, EntryKind, Lane, RateLimit, RequestState, Rewind, Status, Subagent,
-    TaskStatus, Todo, ToolView, Usage,
+    Activity, BackgroundItem, Decision, Entry, EntryId, EntryKind, Lane, RateLimit, RequestState, Rewind, Status,
+    Subagent, TaskStatus, Todo, ToolView, Usage,
 };
 use crate::update::{BackgroundPatch, Change, Field, SubagentPatch, ToolPatch, Update, UsagePatch};
 
@@ -282,7 +282,16 @@ impl Thread {
             Update::Finish { key, text, at } => self.finish(&key, text, at, &mut changes),
             Update::Tool { key, patch } => self.tool(&key, patch, &mut changes),
             Update::Resolve { key, state } => self.edit(&key, &mut changes, |kind| match kind {
-                EntryKind::PermissionRequest(r) => replace(&mut r.state, state),
+                EntryKind::PermissionRequest(r) => {
+                    // A denied request keeps its input, by which the live order tests tell what a rule refused.
+                    if matches!(
+                        state,
+                        RequestState::Decided(Decision::Allowed { .. }) | RequestState::Withdrawn
+                    ) {
+                        r.input = serde_json::Value::Null;
+                    }
+                    replace(&mut r.state, state)
+                }
                 EntryKind::Question(q) => replace(&mut q.state, state),
                 EntryKind::PlanApproval(p) => replace(&mut p.state, state),
                 _ => false,
@@ -447,6 +456,7 @@ impl Thread {
             if let Some(output) = patch.output {
                 changed |= replace(&mut call.output, Some(output));
                 call.left_out = 0;
+                call.changes_left_out = (0, 0);
             }
             if call.started.is_none() && patch.started.is_some() {
                 call.started = patch.started;

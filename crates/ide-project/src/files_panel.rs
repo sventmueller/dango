@@ -1,7 +1,7 @@
 //! What the app's files panel decides without AppKit: what a click does, what the context menu offers and what a new name
 //! for a file means; the controller carries out the effects.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -175,6 +175,11 @@ impl Model {
         self.rows.insert(path.to_path_buf(), row);
     }
 
+    /// Forgets what the tree read of the paths `live` does not know.
+    pub fn keep_rows(&mut self, live: &Live) {
+        self.rows.retain(|path, _| live.contains(path));
+    }
+
     /// The row the context menu was opened on.
     pub fn clicked(&self) -> Option<&Path> {
         self.clicked.as_deref()
@@ -318,6 +323,31 @@ impl Model {
             message: tf("„{}“ wurde nicht umbenannt.", &[&file_name(from)]),
             detail: error.explain(),
         })
+    }
+}
+
+/// The paths whose rows the outline view may still hold: the entries of the folders it was told, and anything in a
+/// folder whose rows it has not read anew since the folder closed or while it waits for them.
+pub struct Live<'a> {
+    entries: HashSet<&'a Path>,
+    unsettled: Vec<&'a Path>,
+}
+
+impl<'a> Live<'a> {
+    /// The rows of the folders `shown` with their entries, and of every path in the folders `unsettled`.
+    pub fn new(
+        shown: impl IntoIterator<Item = &'a [Entry]>,
+        unsettled: impl IntoIterator<Item = &'a Path>,
+    ) -> Live<'a> {
+        Live {
+            entries: shown.into_iter().flatten().map(|e| e.path.as_path()).collect(),
+            unsettled: unsettled.into_iter().collect(),
+        }
+    }
+
+    /// Whether the outline view may still hold the row of `path`.
+    pub fn contains(&self, path: &Path) -> bool {
+        self.entries.contains(path) || self.unsettled.iter().any(|dir| path.starts_with(dir))
     }
 }
 
@@ -471,6 +501,29 @@ mod tests {
             })
         );
         assert_eq!(changes(&new, &new), Some(Changes::default()));
+    }
+
+    #[test]
+    fn rows_live_while_their_folder_lists_them_or_has_not_settled() {
+        let top = [entry("a", EntryKind::Dir, false), entry("b.rs", EntryKind::File, false)];
+        let inside = [Entry {
+            path: "/p/a/c.rs".into(),
+            ..entry("c.rs", EntryKind::File, false)
+        }];
+        let waiting = Path::new("/p/w");
+        let live = Live::new([&top[..], &inside[..]], [waiting]);
+        for path in ["/p/a", "/p/b.rs", "/p/a/c.rs", "/p/w", "/p/w/x/y.rs"] {
+            assert!(live.contains(Path::new(path)), "{path}");
+        }
+        for path in ["/p/gone.rs", "/p/a/d.rs", "/p/wx"] {
+            assert!(!live.contains(Path::new(path)), "{path}");
+        }
+        let mut model = model();
+        model.note(Path::new("/p/b.rs"), Row::of(&top[1]));
+        model.note(Path::new("/p/gone.rs"), Row::default());
+        model.keep_rows(&live);
+        assert!(model.row(Path::new("/p/b.rs")).is_some());
+        assert_eq!(model.row(Path::new("/p/gone.rs")), None);
     }
 
     #[test]

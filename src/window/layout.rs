@@ -233,15 +233,18 @@ impl Documents<'_, '_> {
     }
 }
 
-/// Opens the AI tab of the session `session` again with the agent that ran it, which resumes it; a self-test plays a
-/// recording instead, since it runs no agent.
+/// Opens the AI tab of the session `session` again with the agent that ran it, which resumes it once the tab is in
+/// front or gets a prompt; a self-test plays a recording instead, since it runs no agent.
 fn resume_agent(controller: &WindowController, root: &Path, session: &str) -> bool {
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
         return crate::selftest::replay_agent(controller, session);
     }
-    past_session(root, session)
-        .is_some_and(|(agent, resume)| ide_ui_agent::open_agent(controller, agent, Some(resume)).is_some())
+    let open = ide_ui_agent::of_window(controller)
+        .iter()
+        .any(|tab| tab.session_id().as_deref() == Some(session));
+    open || past_session(root, session)
+        .is_some_and(|(agent, resume)| ide_ui_agent::restore_agent(controller, agent, resume).is_some())
 }
 
 /// The session `session` of the folder `root` and the agent that ran it. Read at once, unlike the AI panel's: the

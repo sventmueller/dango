@@ -52,6 +52,9 @@ pub(crate) fn toggle_activity_symbol(panel: Panel) {
     activity_bar::store_hidden(&hidden);
     for window in windows() {
         window.leave_out_symbols(&hidden);
+        if !hidden.contains(&Panel::Ci) {
+            crate::ci_panel::shown(&window);
+        }
     }
 }
 

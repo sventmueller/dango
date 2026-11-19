@@ -1,7 +1,8 @@
 //! What the app's search panel decides without AppKit (E98): which search is current, the matches it found grouped per file,
 //! what the status line says, and what opening or replacing a row means.
 
-use std::collections::{HashMap, HashSet};
+use std::borrow::Cow;
+use std::collections::HashSet;
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 
@@ -112,6 +113,17 @@ impl Query<'_> {
     }
 }
 
+/// What taking a batch of matches changed of what the list shows.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Taken {
+    /// Nothing, since another search started since.
+    Nothing,
+    /// The groups now at these positions, in ascending order, are new; the others are as they were.
+    Added(Vec<usize>),
+    /// Every group may have changed.
+    Replaced,
+}
+
 /// What starting the search for the field's text leads to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Started {
@@ -146,9 +158,8 @@ pub struct Model {
     cancel: Option<Cancel>,
     /// The options of the search on show, to leave it be when a change gives the same options again.
     started: Option<SearchOptions>,
+    /// Sorted by their relative paths.
     groups: Vec<Group>,
-    /// Each group's position in `groups` by path.
-    index: HashMap<PathBuf, usize>,
     matches: usize,
     running: bool,
     outcome: Option<Outcome>,
@@ -253,56 +264,71 @@ impl Model {
         Some(self.run)
     }
 
-    /// Takes `files` and maybe the end of search `generation`; whether that changed what shows, which it does not when
-    /// another search started since.
-    pub fn take(&mut self, generation: u64, files: Vec<FileResult>, outcome: Option<Outcome>) -> bool {
+    /// Takes `files` and maybe the end of search `generation`, and says what that changed of what shows, which is
+    /// nothing when another search started since.
+    pub fn take(&mut self, generation: u64, files: Vec<FileResult>, outcome: Option<Outcome>) -> Taken {
         if self.run != generation || self.started.is_none() {
-            return false;
+            return Taken::Nothing;
         }
-        if self.quiet && outcome.is_some() {
+        let replaced = self.quiet && outcome.is_some();
+        if replaced {
             self.quiet = false;
             self.clear_matches();
         }
-        for found in files {
-            self.insert(found);
-        }
+        let added = self.insert(files);
         if let Some(outcome) = outcome {
             self.running = false;
             self.cancel = None;
             self.outcome = Some(outcome);
         }
-        true
+        if replaced { Taken::Replaced } else { Taken::Added(added) }
     }
 
     fn clear_matches(&mut self) {
         self.groups.clear();
-        self.index.clear();
         self.matches = 0;
     }
 
-    /// Puts `found` into the groups in the order of their paths.
-    fn insert(&mut self, found: FileResult) {
-        let relative = found
-            .path
-            .strip_prefix(&self.root)
-            .unwrap_or(&found.path)
-            .to_string_lossy()
-            .into_owned();
-        let at = self.groups.partition_point(|g| g.relative < relative);
-        let matches = count(&found.lines);
-        self.matches += matches;
-        self.groups.insert(
-            at,
-            Group {
-                path: found.path,
-                relative,
-                lines: found.lines,
-                matches,
-            },
-        );
-        for (position, group) in self.groups.iter().enumerate().skip(at) {
-            self.index.insert(group.path.clone(), position);
+    /// The path of `path` below the folder, as the groups are sorted by.
+    fn relative<'a>(&self, path: &'a Path) -> Cow<'a, str> {
+        path.strip_prefix(&self.root).unwrap_or(path).to_string_lossy()
+    }
+
+    /// Merges `files` into the groups in the order of their paths, a file before those with the same relative path
+    /// already there and after those of the batch that came before it; the positions of the new groups.
+    fn insert(&mut self, files: Vec<FileResult>) -> Vec<usize> {
+        if files.is_empty() {
+            return Vec::new();
         }
+        let mut new: Vec<Group> = files
+            .into_iter()
+            .rev()
+            .map(|found| {
+                let relative = self.relative(&found.path).into_owned();
+                let matches = count(&found.lines);
+                Group {
+                    path: found.path,
+                    relative,
+                    lines: found.lines,
+                    matches,
+                }
+            })
+            .collect();
+        new.sort_by(|a, b| a.relative.cmp(&b.relative));
+        self.matches += new.iter().map(|g| g.matches).sum::<usize>();
+        let mut old = std::mem::take(&mut self.groups).into_iter().peekable();
+        let mut merged = Vec::with_capacity(old.len() + new.len());
+        let mut added = Vec::with_capacity(new.len());
+        for group in new {
+            while let Some(before) = old.next_if(|g| g.relative < group.relative) {
+                merged.push(before);
+            }
+            added.push(merged.len());
+            merged.push(group);
+        }
+        merged.extend(old);
+        self.groups = merged;
+        added
     }
 
     /// Whether a search shows its matches, rather than the panel the tree.
@@ -329,7 +355,12 @@ impl Model {
 
     /// The matches of the file at `path`.
     pub fn group(&self, path: &Path) -> Option<&Group> {
-        self.groups.get(*self.index.get(path)?)
+        let relative = self.relative(path);
+        let start = self.groups.partition_point(|g| g.relative.as_str() < relative.as_ref());
+        self.groups[start..]
+            .iter()
+            .take_while(|g| g.relative == relative)
+            .find(|g| g.path == path)
     }
 
     /// The match line `spot` points at, the first of its file for a file.
@@ -344,7 +375,7 @@ impl Model {
     /// Whether `spot` is a row of the matches on show.
     pub fn has(&self, spot: &Spot) -> bool {
         match spot {
-            Spot::File(path) => self.index.contains_key(path),
+            Spot::File(path) => self.group(path).is_some(),
             Spot::Line(..) => self.line(spot).is_some(),
         }
     }
@@ -371,6 +402,16 @@ impl Model {
     pub fn unfolded(&self) -> Vec<Spot> {
         self.groups
             .iter()
+            .filter(|g| !self.collapsed.contains(&g.path))
+            .map(|g| Spot::File(g.path.clone()))
+            .collect()
+    }
+
+    /// The files among the groups at `positions` that the user did not fold.
+    pub fn unfolded_at(&self, positions: &[usize]) -> Vec<Spot> {
+        positions
+            .iter()
+            .filter_map(|&at| self.groups.get(at))
             .filter(|g| !self.collapsed.contains(&g.path))
             .map(|g| Spot::File(g.path.clone()))
             .collect()
@@ -576,19 +617,92 @@ mod tests {
         let mut model = Model::new("/p".into());
         let first = searching(&mut model, "a");
         let second = searching(&mut model, "b");
-        assert!(!model.take(first, vec![found("/p/z.rs", &[(1, 1)])], None));
-        assert!(model.take(
-            second,
-            vec![found("/p/b.rs", &[(1, 2)]), found("/p/a.rs", &[(3, 0)])],
-            None
-        ));
+        assert_eq!(
+            model.take(first, vec![found("/p/z.rs", &[(1, 1)])], None),
+            Taken::Nothing
+        );
+        assert_eq!(
+            model.take(
+                second,
+                vec![found("/p/b.rs", &[(1, 2)]), found("/p/a.rs", &[(3, 0)])],
+                None
+            ),
+            Taken::Added(vec![0, 1])
+        );
         let relative: Vec<&str> = model.groups().iter().map(|g| g.relative.as_str()).collect();
         assert_eq!(relative, ["a.rs", "b.rs"]);
         assert_eq!(model.status(), (tf("{} Treffer in {} Dateien", &["3", "2"]), false));
         assert!(!model.can_replace_all());
-        assert!(model.take(second, vec![], done(false)));
+        assert_eq!(model.take(second, vec![], done(false)), Taken::Added(vec![]));
         assert!(model.can_replace_all());
         assert!(!model.running());
+    }
+
+    #[test]
+    fn batches_merge_in_path_order_and_name_the_positions_of_their_new_groups() {
+        let mut model = Model::new("/p".into());
+        let generation = searching(&mut model, "a");
+        let first = vec![found("/p/m.rs", &[(1, 1)]), found("/p/c.rs", &[(1, 2)])];
+        assert_eq!(model.take(generation, first, None), Taken::Added(vec![0, 1]));
+        let second = vec![
+            found("/p/z.rs", &[(1, 1)]),
+            found("/p/a.rs", &[(1, 1)]),
+            found("/p/d.rs", &[(1, 1)]),
+        ];
+        assert_eq!(model.take(generation, second, None), Taken::Added(vec![0, 2, 4]));
+        let relative: Vec<&str> = model.groups().iter().map(|g| g.relative.as_str()).collect();
+        assert_eq!(relative, ["a.rs", "c.rs", "d.rs", "m.rs", "z.rs"]);
+        assert_eq!(model.matches, 6);
+        for group in model.groups() {
+            assert_eq!(model.group(&group.path).map(|g| &g.path), Some(&group.path));
+        }
+        assert!(model.group(Path::new("/p/b.rs")).is_none());
+        assert!(model.has(&Spot::File("/p/d.rs".into())));
+        assert!(!model.has(&Spot::File("/p/e.rs".into())));
+    }
+
+    #[test]
+    fn files_outside_the_folder_and_names_alike_still_find_their_own_group() {
+        let mut model = Model::new("/p".into());
+        let generation = searching(&mut model, "a");
+        let files = vec![
+            found("/p/x/a.rs", &[(1, 1)]),
+            found("x/a.rs", &[(2, 1)]),
+            found("/elsewhere/b.rs", &[(3, 1)]),
+        ];
+        model.take(generation, files, None);
+        let paths: Vec<&Path> = model.groups().iter().map(|g| g.path.as_path()).collect();
+        assert_eq!(
+            paths,
+            [
+                Path::new("/elsewhere/b.rs"),
+                Path::new("x/a.rs"),
+                Path::new("/p/x/a.rs")
+            ],
+            "a later file of a batch goes before an earlier one with the same relative path"
+        );
+        assert_eq!(model.group(Path::new("/p/x/a.rs")).map(|g| g.lines[0].line), Some(1));
+        assert_eq!(model.group(Path::new("x/a.rs")).map(|g| g.lines[0].line), Some(2));
+        assert_eq!(
+            model.group(Path::new("/elsewhere/b.rs")).map(|g| g.lines[0].line),
+            Some(3)
+        );
+    }
+
+    #[test]
+    fn only_new_groups_the_user_did_not_fold_open() {
+        let mut model = Model::new("/p".into());
+        let generation = searching(&mut model, "a");
+        model.folded("/p/b.rs".into(), true);
+        let Taken::Added(added) = model.take(
+            generation,
+            vec![found("/p/b.rs", &[(1, 1)]), found("/p/a.rs", &[(1, 1)])],
+            None,
+        ) else {
+            panic!("the groups were not added");
+        };
+        assert_eq!(model.unfolded_at(&added), [Spot::File("/p/a.rs".into())]);
+        assert_eq!(model.unfolded_at(&[7]), []);
     }
 
     #[test]
@@ -624,7 +738,10 @@ mod tests {
         let again = model.refresh(refresh, &query("a")).expect("same options");
         model.spawned(Cancel::new(), false);
         assert_eq!(model.files(), [PathBuf::from("/p/a.rs")]);
-        model.take(again, vec![found("/p/b.rs", &[(2, 1)])], done(false));
+        assert_eq!(
+            model.take(again, vec![found("/p/b.rs", &[(2, 1)])], done(false)),
+            Taken::Replaced
+        );
         assert_eq!(model.files(), [PathBuf::from("/p/b.rs")]);
     }
 
@@ -636,10 +753,16 @@ mod tests {
         model.spawned(cancel.clone(), true);
         let refresh = model.suspend().unwrap();
         assert!(cancel.is_cancelled());
-        assert!(!model.take(before, vec![found("/p/old.rs", &[(1, 1)])], done(false)));
+        assert_eq!(
+            model.take(before, vec![found("/p/old.rs", &[(1, 1)])], done(false)),
+            Taken::Nothing
+        );
         let again = model.refresh(refresh, &query("a")).unwrap();
         model.spawned(Cancel::new(), false);
-        assert!(model.take(again, vec![found("/p/new.rs", &[(1, 1)])], done(false)));
+        assert_eq!(
+            model.take(again, vec![found("/p/new.rs", &[(1, 1)])], done(false)),
+            Taken::Replaced
+        );
         assert_eq!(model.files(), [PathBuf::from("/p/new.rs")]);
     }
 

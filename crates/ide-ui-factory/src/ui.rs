@@ -245,6 +245,11 @@ pub(crate) fn dot(mtm: MainThreadMarker) -> Retained<NSImageView> {
     image
 }
 
+/// Whether `view` shows: in the tab in front of its window and not hidden.
+pub(crate) fn on_screen(view: &NSView) -> bool {
+    !view.isHiddenOrHasHiddenAncestor() && view.window().is_some_and(|w| ide_ui_common::panel::in_front(&w))
+}
+
 /// Removes every view of `stack`.
 pub(crate) fn clear(stack: &NSStackView) {
     for view in stack.arrangedSubviews().iter() {

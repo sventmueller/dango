@@ -60,7 +60,8 @@ pub(crate) fn folder_of_tab(controller: &WindowController, tab: TabId) -> Option
         .map(|view| view.cwd())
 }
 
-/// Opens a terminal tab in `cwd`, else in the window's folder or the home folder.
+/// Opens a terminal tab in `cwd`, else in the window's folder or the home folder. A terminal the window restores
+/// starts its shell only once it first shows.
 pub(crate) fn open_tab(controller: &WindowController, cwd: Option<&Path>) {
     let cwd = cwd
         .map(Path::to_path_buf)
@@ -69,12 +70,23 @@ pub(crate) fn open_tab(controller: &WindowController, cwd: Option<&Path>) {
         .filter(|dir| dir.is_dir())
         .unwrap_or_else(ide_core::paths::home);
     let (view, root) = TerminalView::new(controller.mtm(), controller.id(), cwd);
+    let restored = controller.restoring_editor_tabs();
+    if restored {
+        let id = view.id();
+        ide_ui_common::panel::when_first_shown(&root, move || {
+            if let Some(view) = find(id) {
+                start(&view);
+            }
+        });
+    }
     let tab = controller.add_tab(TabKind::Terminal, None, t("Terminal"), root);
     view.set_tab(tab);
     if let Some(window) = controller.window() {
         window.makeFirstResponder(Some(&view));
     }
-    start(&view);
+    if !restored {
+        start(&view);
+    }
 }
 
 /// Opens a terminal tab in `cwd` and types `line` into its shell once the shell runs, as a debug adapter's

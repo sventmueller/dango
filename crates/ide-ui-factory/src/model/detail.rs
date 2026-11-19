@@ -57,12 +57,31 @@ pub enum Passage {
     Ahead,
 }
 
+/// The wall clock a model was read at; two readings of the same order count as equal whatever their time, so a tick
+/// alone rebuilds no tab.
+#[derive(Debug, Clone, Copy, Default)]
+struct ReadAt(u64);
+
+impl PartialEq for ReadAt {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for ReadAt {}
+
 /// A station on the timeline.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Stage {
     station: Station,
     passage: Passage,
-    words: String,
+    /// Its words before the time since the order entered it.
+    head: String,
+    /// When the order last entered it (wall clock).
+    entered: Option<u64>,
+    /// The agent and model of its role, after that time.
+    agent: Option<String>,
+    read_at: ReadAt,
 }
 
 impl Stage {
@@ -86,9 +105,16 @@ impl Stage {
         }
     }
 
-    /// "Bau – erledigt · 12 min · 1,20 $ · claude · opus".
-    pub fn words(&self) -> &str {
-        &self.words
+    /// "Bau – erledigt · 12 min · 1,20 $ · vor 3 min · claude · opus", its age as of the time it was read.
+    pub fn words(&self) -> String {
+        let age = self
+            .entered
+            .map(|at| tf("vor {}", &[&words::duration(self.read_at.0.saturating_sub(at))]));
+        std::iter::once(self.head.clone())
+            .chain(age)
+            .chain(self.agent.clone())
+            .collect::<Vec<_>>()
+            .join(" · ")
     }
 }
 
@@ -849,19 +875,17 @@ fn timeline(order: &Order, now: u64) -> Vec<Stage> {
                     parts.push(words::spend(&cost.spend));
                 }
             }
-            if let Some(entered) = order.visits().iter().rev().find(|v| v.station == station) {
-                parts.push(tf("vor {}", &[&words::duration(now.saturating_sub(entered.at.wall))]));
-            }
-            if let Some(slot) = role_of(station).and_then(|role| order.session(role)) {
-                parts.push(agent(
-                    Some(&slot.entry().agent.to_string()),
-                    slot.entry().model.as_deref(),
-                ));
-            }
+            let entered = order.visits().iter().rev().find(|v| v.station == station);
+            let worker = role_of(station)
+                .and_then(|role| order.session(role))
+                .map(|slot| agent(Some(&slot.entry().agent.to_string()), slot.entry().model.as_deref()));
             Stage {
                 station,
                 passage,
-                words: parts.join(" · "),
+                head: parts.join(" · "),
+                entered: entered.map(|visit| visit.at.wall),
+                agent: worker,
+                read_at: ReadAt(now),
             }
         })
         .collect()

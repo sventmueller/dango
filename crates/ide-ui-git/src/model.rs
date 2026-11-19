@@ -234,10 +234,37 @@ impl State {
         if self.phase != Phase::Ready {
             self.model = Model::default();
         }
+        self.forget_gone_changes();
         if self.model.conflicts.is_empty() && self.problem.as_ref().is_some_and(|p| p.conflicts) {
             self.problem = None;
         }
         true
+    }
+
+    /// Forgets what the commits and stash entries changed that the history and the stash no longer hold.
+    fn forget_gone_changes(&mut self) {
+        let commits: HashSet<&CommitId> = self.model.commits.iter().map(|c| &c.hash).collect();
+        self.commit_changes.retain(|hash, _| commits.contains(hash));
+        let stashes: HashSet<&CommitId> = self.model.stashes.iter().map(|s| &s.hash).collect();
+        self.stash_changes.retain(|hash, _| stashes.contains(hash));
+    }
+
+    /// Takes what the commit `hash` changed, unless the history no longer holds it; whether it did.
+    pub(crate) fn note_commit_changes(&mut self, hash: &CommitId, changes: ide_git::CommitChanges) -> bool {
+        let held = self.model.commit(hash).is_some();
+        if held {
+            self.commit_changes.insert(hash.clone(), changes);
+        }
+        held
+    }
+
+    /// Takes what the stash entry `hash` changed, unless the stash no longer holds it; whether it did.
+    pub(crate) fn note_stash_changes(&mut self, hash: &CommitId, files: Vec<ide_git::ChangedFile>) -> bool {
+        let held = self.model.stash(hash).is_some();
+        if held {
+            self.stash_changes.insert(hash.clone(), files);
+        }
+        held
     }
 
     /// Whether a read that yields these rows, branch, branches and stopped operations is what the panel shows already.
@@ -444,6 +471,47 @@ mod tests {
         assert!(state.collapsed.contains(&Section::Staged));
         assert_eq!(state.expansion(RowKey::Section(Section::Staged), true), None);
         assert!(state.collapsed.is_empty());
+    }
+
+    fn commit(digit: char) -> Commit {
+        Commit {
+            hash: id(digit),
+            parents: vec![],
+            subject: String::new(),
+            body: String::new(),
+            author_name: String::new(),
+            author_email: String::new(),
+            author_time: 0,
+            refs: vec![],
+        }
+    }
+
+    fn stash(digit: char) -> Stash {
+        Stash {
+            index: 0,
+            hash: id(digit),
+            message: String::new(),
+            time: 0,
+        }
+    }
+
+    #[test]
+    fn what_commits_and_stash_entries_changed_is_kept_only_while_the_panel_holds_them() {
+        let mut state = State::default();
+        state.model.commits = vec![commit('a'), commit('b')];
+        state.model.stashes = vec![stash('5')];
+        assert!(state.note_commit_changes(&id('a'), ide_git::CommitChanges::default()));
+        assert!(state.note_commit_changes(&id('b'), ide_git::CommitChanges::default()));
+        assert!(!state.note_commit_changes(&id('c'), ide_git::CommitChanges::default()));
+        assert!(state.note_stash_changes(&id('5'), vec![]));
+        assert!(!state.note_stash_changes(&id('6'), vec![]));
+        state.model.commits = vec![commit('b')];
+        state.forget_gone_changes();
+        assert_eq!(state.commit_changes.keys().collect::<Vec<_>>(), [&id('b')]);
+        assert_eq!(state.stash_changes.keys().collect::<Vec<_>>(), [&id('5')]);
+        assert!(state.apply(Loaded::NoGit));
+        assert!(state.commit_changes.is_empty());
+        assert!(state.stash_changes.is_empty());
     }
 
     #[test]

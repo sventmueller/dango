@@ -141,7 +141,7 @@ fn a_bash_permission_is_answered_with_an_edited_command() {
     };
     assert_eq!(request.tool_name, "Bash");
     assert_eq!(request.tool_call.as_deref(), Some("toolu_01SLWVHmA2vx9w1ZrETd52UH"));
-    assert_eq!(request.input["command"], "touch marker.txt && echo created");
+    assert!(request.input.is_null(), "an allowed request lets go of its input");
     assert_eq!(
         request.blocked_path.as_deref(),
         Some("/tmp/vibeedit-fixture/wb/marker.txt")

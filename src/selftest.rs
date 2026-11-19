@@ -385,13 +385,7 @@ fn probe_window(controller: &window::WindowController) {
     );
     check("the welcome tab is open", seen.tabs == 1, format!("{} tabs", seen.tabs));
     probe_symbol_menu(controller);
-    let expected = [
-        t("Neue Datei"),
-        t("Terminal"),
-        t("Browser"),
-        t("Agenten verwalten …"),
-        t("Willkommen"),
-    ];
+    let expected = [t("Neue Datei"), t("Terminal"), t("Browser"), t("Willkommen")];
     check(
         "the new tab menu offers every kind",
         expected
