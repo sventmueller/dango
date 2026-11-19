@@ -578,8 +578,8 @@ fn work(root: PathBuf, key: AgentKey) {
     let listed = tab.has_work(crate::activity::Part::Subagents);
     let at = root.clone();
     soon(
-        "the background output opens in an editor",
-        move || controller_of(&at).is_some_and(|c| c.tab_titles().iter().any(|t| t == "bg1.txt")),
+        "the background output opens in its tab",
+        move || controller_of(&at).is_some_and(|c| c.tab_titles().iter().any(|t| t == "bg1")),
         move || {
             let moved = stand_in().requests("background_tasks");
             let stopped = stand_in().requests("stop_task");

@@ -11,6 +11,7 @@ pub use notice::text as notice_text;
 pub use notice::window_name;
 pub(crate) mod request;
 mod subagent;
+pub(crate) use subagent::status_text;
 mod tool;
 mod turn;
 

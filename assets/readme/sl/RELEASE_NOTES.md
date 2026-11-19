@@ -1,19 +1,8 @@
 ## Zavihki AI
-- Zavihek AI, ki tri minute ni viden, sprosti svoj proces Claude, dokler seja miruje. Pogovor in to, kar ste natipkali,
-  ostaneta v zavihku, naslednji poziv pa sejo nadaljuje. Zavihek obdrži svoj proces, dokler Claude dela, čaka poziv, je
-  odprto vprašanje, še teče podagent, opravilo v ozadju ali ukaz ali je vklopljen Remote Control.
-- Ko se agent konča, se končajo tudi ukazi, ki jih je zagnal v lastni skupini procesov ali lastni seji; prej so ga lahko
-  preživeli.
-- Časovnica doda nove vnose na konec, namesto da bi znova indeksirala vse prejšnje vrstice.
-
-## Hitrost
-- Obnovljena okna se odpirajo hitreje: zavihek datoteke brez neshranjenih sprememb naloži svojo datoteko šele, ko pride
-  v ospredje.
-- Iskanje po projektu, katerega podokno je skrito, se zaustavi in nadaljuje, ko se podokno prikaže.
-- Oznake sprememb Git v urejevalniku za vsako datoteko hkrati izvajajo največ eno primerjavo; spremembe med njo se
-  združijo v eno samo naknadno primerjavo, besedilo datoteke iz commita pa se znova prebere le, če se je commit
-  spremenil.
-- Mini zemljevid datoteke s strnjeno kodo hrani en vnos za vsak nestrnjen del namesto enega za vsako vrstico.
-
-## Iskanje
-- Puščica filtrov je poravnana s puščico Zamenjaj nad njo.
+- »Prikaži izhod« pri ukazu v ozadju odpre zavihek, ki sledi izhodu, dokler ukaz teče, namesto kopije izhoda iz tistega
+  trenutka. Zavihek se odpre na koncu izhoda in tam ostane, ko prihajajo nove vrstice, dokler se ne pomaknete navzgor;
+  ko se pomaknete nazaj na konec, znova sledi izhodu. »Prikaži izhod« pri zavihku, ki je že odprt, ga prenese v ospredje
+  in pokaže konec izhoda.
+  - Ukaz, ki svoj izhod sam piše v datoteko, na primer `make > build.log 2>&1`, prikazuje to datoteko, medtem ko raste.
+  - Ko se ukaz konča, zavihek prikaže ves njegov izhod; »Odpri v urejevalniku« odpre datoteko, iz katere zavihek bere.
+  - Zavihek bere izhod le, dokler je v ospredju.

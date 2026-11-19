@@ -1,18 +1,8 @@
 ## AI-faner
-- En AI-fane, der har været ude af syne i tre minutter, lukker sin Claude-proces, mens sessionen er inaktiv. Samtalen og
-  det, du har skrevet, bliver i fanen, og den næste prompt genoptager sessionen. En fane beholder sin proces, mens
-  Claude arbejder, en prompt venter, et spørgsmål er åbent, en subagent, en baggrundsopgave eller en kommando stadig
-  kører, eller Remote Control er slået til.
-- Når en agent afsluttes, afsluttes også de kommandoer, den har startet i sin egen procesgruppe eller session, og som
-  før kunne overleve den.
-- Tidslinjen føjer nye poster til sidst i stedet for at indeksere alle tidligere rækker igen.
-
-## Hastighed
-- Gendannede vinduer åbner hurtigere: En fil-fane uden ikke-gemte ændringer indlæser først sin fil, når den kommer frem.
-- En projektsøgning, hvis panel er skjult, sættes på pause og fortsætter, når panelet vises.
-- Editorens Git-ændringsmarkører kører højst én sammenligning ad gangen pr. fil; ændringer i mellemtiden samles i én
-  efterfølgende sammenligning, og filens committede tekst læses kun igen, når committen har ændret sig.
-- Minikortet for en fil med foldet kode har én post pr. udfoldet stykke i stedet for én pr. linje.
-
-## Søgning
-- Pilen ved filtrene flugter med pilen ved Erstat lige ovenover.
+- “Vis output” for en baggrundskommando åbner en fane, der følger outputtet, mens kommandoen kører, i stedet for en kopi
+  fra det øjeblik. Fanen åbner ved slutningen af outputtet og bliver der, efterhånden som nye linjer kommer, indtil du
+  ruller op; ruller du tilbage til slutningen, følger den igen. Er fanen allerede åben, bringer “Vis output” den frem
+  ved slutningen.
+  - En kommando, der selv skriver sit output til en fil, f.eks. `make > build.log 2>&1`, viser den fil, mens den vokser.
+  - Når kommandoen er afsluttet, viser fanen hele dens output; “Åbn i editor” åbner filen bag fanen.
+  - En fane læser kun outputtet, mens den er forrest.

@@ -148,6 +148,8 @@ pub struct AgentTab {
     pub(super) asides: RefCell<Vec<super::dialogs::model::Aside>>,
     /// The tab itself, for what holds on to it without keeping it open, such as its overlay.
     pub(super) me: RefCell<std::rc::Weak<AgentTab>>,
+    /// The tabs that show the output of a background task, by task id.
+    pub(super) outputs: RefCell<std::collections::HashMap<String, Weak<super::output_tab::OutputTab>>>,
     /// What the tab does about Codex's Remote Control that the session cannot say yet (E148).
     pub(super) codex_remote: RefCell<Option<crate::codex::Turning>>,
     /// The app's session registry, where the tab runs its session (B37b).
@@ -263,6 +265,7 @@ impl AgentTab {
             dialogs_opened: std::cell::Cell::new(0),
             asides: RefCell::new(Vec::new()),
             me: RefCell::new(std::rc::Weak::new()),
+            outputs: RefCell::default(),
             codex_remote: RefCell::new(None),
             sessions,
             text_size: RefCell::new(None),

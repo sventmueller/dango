@@ -1,18 +1,8 @@
 ## AI tabs
-- An AI tab that has been out of view for three minutes lets its Claude process go while the session is idle. The
-  conversation and what you typed stay in the tab, and the next prompt resumes the session. A tab keeps its process
-  while Claude works, a prompt waits, a question is open, a subagent, background task or command still runs, or
-  Remote Control is on.
-- Ending an agent also ends the commands it started in a process group or session of their own, which could outlive
-  it before.
-- The timeline adds new entries at its end instead of indexing all earlier rows again.
-
-## Speed
-- Restored windows open faster: a file tab without unsaved changes loads its file only when it comes to the front.
-- A project search whose panel is hidden pauses and continues when the panel shows.
-- The Git change markers of the editor run at most one comparison at a time per file; edits during it are merged into
-  one follow-up, and the file's committed text is read again only when the commit changed.
-- The minimap of a file with folded code keeps one entry per unfolded stretch instead of one per line.
-
-## Search
-- The filter chevron lines up with the replace chevron above it.
+- "Show Output" of a background command opens a tab that follows the output while the command runs, instead of a
+  copy of it at that moment. The tab opens at the end of the output and stays there as new lines come, until you
+  scroll up; scrolling back to the end follows again. "Show Output" on a tab that is open brings it to the front at
+  the end.
+  - A command that writes its output to a file itself, such as `make > build.log 2>&1`, shows that file as it grows.
+  - Once the command ends, the tab shows its whole output; "Open in Editor" opens the file behind it.
+  - A tab reads the output only while it is in front.

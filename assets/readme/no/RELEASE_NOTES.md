@@ -1,19 +1,9 @@
 ## KI-faner
-- En KI-fane som har vært ute av syne i tre minutter, avslutter Claude-prosessen sin mens økten er inaktiv. Samtalen og
-  det du har skrevet, blir værende i fanen, og neste prompt fortsetter økten. En fane beholder prosessen sin så lenge
-  Claude arbeider, en prompt venter, et spørsmål er åpent, en underagent, en bakgrunnsoppgave eller en kommando fortsatt
-  kjører, eller Remote Control er på.
-- Når en agent avsluttes, avsluttes også kommandoene den startet i en egen prosessgruppe eller økt; tidligere kunne de
-  leve videre etter agenten.
-- Tidslinjen legger nye oppføringer til på slutten i stedet for å indeksere alle tidligere rader på nytt.
-
-## Hastighet
-- Gjenopprettede vinduer åpnes raskere: en filfane uten ulagrede endringer laster inn filen sin først når den kommer
-  frem.
-- Et prosjektsøk med skjult panel settes på pause og fortsetter når panelet vises.
-- Git-endringsmerkene i editoren kjører høyst én sammenligning om gangen per fil; redigeringer underveis samles i én
-  oppfølgende sammenligning, og filens committede tekst leses bare inn på nytt når committen er endret.
-- Minikartet til en fil med sammenfoldet kode har én oppføring per utfoldet del i stedet for én per linje.
-
-## Søk
-- Pilen for filtrene står nå på linje med pilen for Erstatt over den.
+- «Vis utdata» for en bakgrunnskommando åpner en fane som følger utdataene mens kommandoen kjører, i stedet for en kopi
+  av dem fra det øyeblikket. Fanen åpnes på slutten av utdataene og blir værende der mens nye linjer kommer, til du
+  ruller opp; ruller du tilbake til slutten, følger den igjen. «Vis utdata» for en fane som allerede er åpen, henter den
+  frem, på slutten av utdataene.
+  - En kommando som selv skriver utdataene sine til en fil, for eksempel `make > build.log 2>&1`, viser filen mens den
+    vokser.
+  - Når kommandoen er ferdig, viser fanen alle utdataene; «Åpne i editoren» åpner filen bak den.
+  - En fane leser utdataene bare mens den ligger fremst.

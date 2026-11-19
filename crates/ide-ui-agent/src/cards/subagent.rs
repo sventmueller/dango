@@ -19,7 +19,7 @@ const SHOWN_ENTRIES: usize = 40;
 /// How far a subagent's timeline is set in.
 const INDENT: f64 = 14.0;
 
-pub(super) fn status_text(status: TaskStatus) -> &'static str {
+pub(crate) fn status_text(status: TaskStatus) -> &'static str {
     match status {
         TaskStatus::Pending => t("Wartet"),
         TaskStatus::Running => t("Läuft"),

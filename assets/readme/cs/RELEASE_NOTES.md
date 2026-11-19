@@ -1,17 +1,9 @@
 ## Panely AI
-- Panel AI, který tři minuty není vidět, ukončí svůj proces Claude, dokud je relace nečinná. Konverzace i rozepsaný text
-  v panelu zůstanou a další prompt relaci obnoví. Panel si svůj proces ponechá, dokud Claude pracuje, čeká prompt, je
-  otevřený dotaz, ještě běží subagent, úloha na pozadí nebo příkaz, nebo je zapnutý Remote Control.
-- Ukončení agenta ukončí i příkazy, které spustil ve vlastní skupině procesů nebo relaci a které ho dříve mohly přežít.
-- Časová osa přidává nové položky na konec, místo aby znovu indexovala všechny dřívější řádky.
-
-## Rychlost
-- Obnovená okna se otevírají rychleji: panel souboru bez neuložených změn načte svůj soubor, až když se dostane do
-  popředí.
-- Hledání v projektu, jehož podokno je skryté, se pozastaví a pokračuje, jakmile se podokno zobrazí.
-- Značky změn Git v editoru provádějí u každého souboru nejvýš jedno porovnání najednou; úpravy provedené mezitím se
-  sloučí do jednoho následného porovnání a text souboru z commitu se znovu načte, jen když se commit změnil.
-- Minimapa souboru se sbaleným kódem uchovává jednu položku na každý rozbalený úsek místo jedné na každý řádek.
-
-## Hledání
-- Šipka filtrů je zarovnaná se šipkou Nahradit nad ní.
+- „Zobrazit výstup“ u příkazu na pozadí otevře panel, který výstup sleduje po celou dobu běhu příkazu, místo kopie z
+  okamžiku kliknutí. Panel se otevře na konci výstupu a zůstává tam, zatímco přibývají nové řádky, dokud neposunete
+  zobrazení nahoru; když ho posunete zpět na konec, začne výstup opět sledovat. Je-li panel už otevřený, „Zobrazit
+  výstup“ ho přenese do popředí, na konec výstupu.
+  - Příkaz, který svůj výstup sám zapisuje do souboru, například `make > build.log 2>&1`, zobrazí tento soubor tak, jak
+    postupně roste.
+  - Jakmile příkaz skončí, panel zobrazí celý jeho výstup; „Otevřít v editoru“ otevře soubor, ze kterého panel čte.
+  - Panel čte výstup, jen dokud je v popředí.
