@@ -1,22 +1,20 @@
-## Memòria
-- Les sessions llargues d’agents necessiten molta menys memòria:
-  - En obrir una sessió anterior, se’n llegeix la transcripció línia a línia; una sessió amb una transcripció de 100 MB
-    ara arriba com a màxim a uns 20 MB en lloc de 65 MB.
-  - Una crida d’eina acabada només conserva el que mostra la seva targeta: les primeres 400 línies de la sortida, i ja
-    no l’entrada en brut un cop la targeta mostra els seus camps. “N línies més” continua comptant cada línia.
-  - Una pestanya d’IA que queda fora de la vista durant 30 segons allibera les seves targetes i, quan torna a
-    mostrar-se, construeix les que són a la vista, al lloc on era.
-  - Després de tancar una pestanya o d’obrir una sessió anterior, Dango torna a macOS la memòria que ha alliberat.
-- Les llistes ja no creixen en memòria quan s’actualitzen. A macOS 27, cada actualització d’una llista amb files
-  desplegables deixava enrere per sempre un triangle desplegable, i cada actualització deixava enrere una mica de cada
-  fila:
-  - Les llistes de CI, Contenidors, Software Factory, Proves, Depura, Git i Cerca i la jerarquia de crides dibuixen les
-    seves pròpies fletxes.
-  - Les llistes fora de la vista ja no s’actualitzen; es posen al dia quan es mostren.
-  - Les llistes Sessions, CI, Software Factory i Contenidors conserven les files que no han canviat, i Git només
-    actualitza les files dels fitxers l’estat dels quals ha canviat.
-- Els taulers d’una finestra tancada s’alliberen amb ella.
-
 ## Pestanyes d’IA
-- “Mostra la sortida” d’una ordre en segon pla que escriu ella mateixa la sortida en un fitxer, com ara
-  `make > build.log 2>&1`, mostra aquest fitxer quan la CLI no té res de la sortida.
+- Una pestanya d’IA que fa tres minuts que és fora de la vista tanca el seu procés de Claude mentre la sessió està
+  inactiva. La conversa i el que has escrit es queden a la pestanya, i el prompt següent reprèn la sessió. Una pestanya
+  conserva el seu procés mentre Claude treballa, un prompt espera, hi ha una pregunta oberta, un subagent, una tasca en
+  segon pla o una ordre encara s’executa, o Remote Control està activat.
+- En aturar un agent també s’aturen les ordres que va iniciar en un grup de processos o una sessió propis, que abans
+  podien sobreviure-li.
+- La cronologia afegeix les entrades noves al final en lloc de tornar a indexar totes les files anteriors.
+
+## Velocitat
+- Les finestres restaurades s’obren més de pressa: una pestanya de fitxer sense canvis per desar només en carrega el
+  fitxer quan passa al davant.
+- Una cerca al projecte amb el tauler amagat es posa en pausa i continua quan el tauler es mostra.
+- Les marques de canvis de Git de l’editor fan com a màxim una comparació alhora per fitxer; les edicions fetes
+  mentrestant s’agrupen en una sola comparació posterior, i el text del fitxer al commit només es torna a llegir quan el
+  commit ha canviat.
+- El minimapa d’un fitxer amb codi plegat conserva una entrada per tram desplegat en lloc d’una per línia.
+
+## Cerca
+- La fletxa dels filtres queda alineada amb la fletxa de Substitueix, just a sobre.

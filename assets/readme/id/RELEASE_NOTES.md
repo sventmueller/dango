@@ -1,22 +1,21 @@
-## Memori
-- Sesi agen yang panjang kini membutuhkan jauh lebih sedikit memori:
-  - Membuka sesi lama membaca transkripnya baris demi baris; sesi dengan transkrip 100 MB kini paling banyak memakai
-    sekitar 20 MB, bukan 65 MB.
-  - Panggilan alat yang sudah selesai hanya menyimpan apa yang ditampilkan kartunya: 400 baris pertama output-nya, dan
-    tidak lagi input mentahnya begitu kartu menampilkan kolom-kolomnya. “N baris lagi” tetap menghitung setiap baris.
-  - Tab AI yang tidak terlihat selama 30 detik melepaskan kartunya, dan saat ditampilkan lagi, tab itu membangun kartu
-    yang terlihat, di posisi terakhirnya.
-  - Setelah tab ditutup atau sesi lama dibuka, Dango mengembalikan memori yang dibebaskannya ke macOS.
-- Daftar tidak lagi membengkak di memori saat diperbarui. Di macOS 27, setiap pembaruan daftar dengan baris yang dapat
-  dibuka meninggalkan segitiga pengungkapan secara permanen, dan setiap pembaruan meninggalkan sedikit sisa dari setiap
-  baris:
-  - Daftar CI, Container, Software Factory, Tes, Debug, Git, dan Pencarian serta hierarki panggilan menggambar panahnya
-    sendiri.
-  - Daftar yang tidak terlihat tidak lagi diperbarui; daftar itu menyusul saat ditampilkan.
-  - Daftar Sesi, CI, Software Factory, dan Container mempertahankan baris yang tidak berubah, dan Git hanya memperbarui
-    baris file yang statusnya berubah.
-- Panel dari jendela yang ditutup ikut dilepaskan bersamanya.
-
 ## Tab AI
-- “Tampilkan Output” untuk perintah latar belakang yang menulis output-nya sendiri ke file, seperti
-  `make > build.log 2>&1`, menampilkan file tersebut saat CLI tidak memiliki output apa pun.
+- Tab AI yang tidak terlihat selama tiga menit menghentikan proses Claude-nya selama sesinya tidak aktif. Percakapan
+  dan apa yang Anda ketik tetap ada di tab, dan prompt berikutnya melanjutkan sesi tersebut. Tab tetap mempertahankan
+  prosesnya selama Claude bekerja, prompt sedang menunggu, ada pertanyaan yang belum dijawab, subagen, tugas latar
+  belakang, atau perintah masih berjalan, atau Remote Control aktif.
+- Mengakhiri agen kini juga mengakhiri perintah yang dijalankannya dalam grup proses atau sesinya sendiri, yang
+  sebelumnya bisa tetap berjalan setelah agen berakhir.
+- Linimasa menambahkan entri baru di bagian akhirnya alih-alih mengindeks ulang semua baris sebelumnya.
+
+## Kecepatan
+- Jendela yang dipulihkan terbuka lebih cepat: tab file tanpa perubahan yang belum disimpan baru memuat file-nya saat
+  tab itu berada di depan.
+- Pencarian proyek yang panelnya disembunyikan akan dijeda dan dilanjutkan saat panel ditampilkan.
+- Penanda perubahan Git di editor menjalankan paling banyak satu perbandingan sekaligus per file; suntingan selama
+  perbandingan itu digabungkan menjadi satu perbandingan lanjutan, dan teks file yang telah di-commit hanya dibaca ulang
+  jika commit-nya berubah.
+- Minimap untuk file dengan kode yang diciutkan menyimpan satu entri per bagian yang tidak diciutkan, bukan satu per
+  baris.
+
+## Pencarian
+- Panah filter kini sejajar dengan panah Ganti di atasnya.

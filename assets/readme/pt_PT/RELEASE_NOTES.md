@@ -1,24 +1,20 @@
-## Memória
-- As sessões longas de agentes precisam de muito menos memória:
-  - Ao abrir uma sessão anterior, a respetiva transcrição é lida uma linha de cada vez; uma sessão com uma transcrição
-    de 100 MB atinge agora, no máximo, cerca de 20 MB em vez de 65 MB.
-  - Uma chamada de ferramenta concluída guarda apenas o que o respetivo cartão mostra: as primeiras 400 linhas da saída,
-    e deixa de guardar a entrada em bruto assim que o cartão mostra os seus campos. “Mais N linhas” continua a contar
-    todas as linhas.
-  - Um separador de IA que fique fora de vista durante 30 segundos liberta os seus cartões e, quando volta a ser
-    mostrado, constrói os que estão à vista, no ponto onde estava.
-  - Depois de um separador ser fechado ou de uma sessão anterior ser aberta, o Dango devolve ao macOS a memória que
-    libertou.
-- As listas já não crescem na memória ao serem atualizadas. No macOS 27, cada atualização de uma lista com linhas
-  expansíveis deixava para trás, de vez, um triângulo de expansão, e cada atualização deixava para trás um pouco de cada
-  linha:
-  - As listas de CI, Contentores, Software Factory, Testes, Depurar, Git e Pesquisa e a hierarquia de chamadas desenham
-    as suas próprias setas.
-  - As listas fora de vista já não são atualizadas; põem-se em dia quando são mostradas.
-  - As listas Sessões, CI, Software Factory e Contentores mantêm as linhas que não mudaram, e o Git atualiza apenas as
-    linhas dos ficheiros cujo estado mudou.
-- Os painéis de uma janela fechada são libertados com ela.
-
 ## Separadores de IA
-- “Mostrar saída” de um comando em segundo plano que escreve ele próprio a saída num ficheiro, como
-  `make > build.log 2>&1`, mostra esse ficheiro quando a CLI não tem nada da saída.
+- Um separador de IA que esteja fora de vista durante três minutos termina o respetivo processo do Claude enquanto a
+  sessão está inativa. A conversa e o que escreveu ficam no separador, e o prompt seguinte retoma a sessão. Um separador
+  mantém o seu processo enquanto o Claude trabalha, um prompt aguarda, uma pergunta está em aberto, um subagente, uma
+  tarefa em segundo plano ou um comando ainda está em execução ou o Remote Control está ativado.
+- Terminar um agente também termina os comandos que este iniciou num grupo de processos ou numa sessão próprios, que
+  antes lhe podiam sobreviver.
+- A cronologia acrescenta novas entradas no fim em vez de voltar a indexar todas as linhas anteriores.
+
+## Velocidade
+- As janelas restauradas abrem mais depressa: um separador de ficheiro sem alterações por guardar só carrega o ficheiro
+  quando passa para a frente.
+- Uma pesquisa no projeto cujo painel está oculto fica em pausa e continua quando o painel é mostrado.
+- Os marcadores de alterações do Git no editor executam, no máximo, uma comparação de cada vez por ficheiro; as edições
+  feitas entretanto são reunidas numa única comparação seguinte, e o texto do ficheiro no commit só volta a ser lido
+  quando o commit muda.
+- O minimapa de um ficheiro com código recolhido mantém uma entrada por cada troço expandido em vez de uma por linha.
+
+## Pesquisa
+- A seta dos filtros está alinhada com a seta de Substituir acima dela.

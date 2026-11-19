@@ -1,21 +1,19 @@
-## Bộ nhớ
-- Các phiên tác nhân dài cần ít bộ nhớ hơn nhiều:
-  - Khi mở một phiên trước đây, bản ghi của phiên được đọc từng dòng một; một phiên có bản ghi 100 MB giờ chỉ dùng tối
-    đa khoảng 20 MB thay vì 65 MB.
-  - Một lệnh gọi công cụ đã hoàn tất chỉ giữ những gì thẻ của nó hiển thị: 400 dòng đầu tiên của đầu ra, và không còn
-    giữ đầu vào thô khi thẻ đã hiển thị các trường của nó. “N dòng nữa” vẫn đếm mọi dòng.
-  - Một tab AI nằm ngoài tầm nhìn trong 30 giây sẽ giải phóng các thẻ của nó, và khi hiển thị lại sẽ dựng các thẻ nằm
-    trong tầm nhìn, tại vị trí cũ.
-  - Sau khi đóng một tab hoặc mở một phiên trước đây, Dango trả lại cho macOS bộ nhớ mà nó đã giải phóng.
-- Danh sách không còn phình to trong bộ nhớ khi làm mới. Trên macOS 27, mỗi lần làm mới một danh sách có các hàng mở ra
-  được lại để lại vĩnh viễn một tam giác mở rộng, và mỗi lần làm mới để lại một chút của mỗi hàng:
-  - Các danh sách CI, Container, Software Factory, Kiểm thử, Gỡ lỗi, Git và Tìm kiếm cùng phân cấp lệnh gọi tự vẽ mũi
-    tên của mình.
-  - Danh sách nằm ngoài tầm nhìn không còn làm mới; chúng cập nhật bù khi hiển thị.
-  - Các danh sách Phiên, CI, Software Factory và Container giữ lại các hàng không thay đổi, và Git chỉ làm mới các hàng
-    của những tệp có trạng thái thay đổi.
-- Các khung của một cửa sổ đã đóng được giải phóng cùng với cửa sổ đó.
-
 ## Tab AI
-- “Hiển thị đầu ra” của một lệnh nền tự ghi đầu ra của nó vào tệp, chẳng hạn `make > build.log 2>&1`, sẽ hiển thị tệp đó
-  khi CLI không có chút đầu ra nào.
+- Một tab AI nằm ngoài tầm nhìn trong ba phút sẽ giải phóng tiến trình Claude của nó khi phiên đang rảnh. Cuộc hội thoại
+  và những gì bạn đã gõ vẫn nằm trong tab, và prompt tiếp theo sẽ tiếp tục phiên. Một tab giữ tiến trình của nó khi
+  Claude đang làm việc, có prompt đang chờ, có câu hỏi đang mở, một tác nhân phụ, tác vụ nền hoặc lệnh vẫn đang chạy,
+  hoặc Remote Control đang bật.
+- Kết thúc một tác nhân giờ cũng kết thúc các lệnh mà nó đã khởi chạy trong nhóm tiến trình hoặc phiên riêng của chúng;
+  trước đây các lệnh này có thể vẫn chạy sau khi tác nhân đã dừng.
+- Dòng thời gian thêm các mục mới vào cuối thay vì lập chỉ mục lại tất cả các hàng trước đó.
+
+## Tốc độ
+- Các cửa sổ được khôi phục mở nhanh hơn: một tab tệp không có thay đổi chưa lưu chỉ tải tệp của nó khi được đưa lên
+  phía trước.
+- Tìm kiếm trong dự án có khung bị ẩn sẽ tạm dừng và tiếp tục khi khung hiển thị.
+- Dấu thay đổi Git của trình soạn thảo chạy tối đa một phép so sánh cùng lúc cho mỗi tệp; các chỉnh sửa trong lúc đó
+  được gộp thành một lần so sánh tiếp theo, và văn bản đã commit của tệp chỉ được đọc lại khi commit thay đổi.
+- Bản đồ thu nhỏ của một tệp có mã đã gấp giữ một mục cho mỗi đoạn chưa gấp thay vì một mục cho mỗi dòng.
+
+## Tìm kiếm
+- Mũi tên của bộ lọc thẳng hàng với mũi tên của Thay thế ở phía trên.

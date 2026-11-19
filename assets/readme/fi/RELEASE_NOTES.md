@@ -1,21 +1,21 @@
-## Muisti
-- Pitkät agenttien istunnot tarvitsevat paljon vähemmän muistia:
-  - Aiemman istunnon avaaminen lukee sen keskustelulokin rivi kerrallaan; istunto, jonka keskusteluloki on 100 MB, vie
-    nyt enimmillään noin 20 MB eikä 65 MB.
-  - Valmis työkalukutsu säilyttää vain sen, minkä sen kortti näyttää: tulosteensa ensimmäiset 400 riviä, eikä enää
-    raakasyötettä, kun kortti näyttää kenttänsä. ”N riviä lisää” laskee edelleen jokaisen rivin.
-  - AI-välilehti, joka on poissa näkyvistä 30 sekuntia, vapauttaa korttinsa, ja kun se tulee taas näkyviin, se rakentaa
-    näkyvissä olevat kortit samaan kohtaan, jossa se oli.
-  - Kun välilehti suljetaan tai aiempi istunto avataan, Dango palauttaa vapauttamansa muistin macOS:lle.
-- Luettelot eivät enää kasva muistissa päivittyessään. macOS 27:ssä jokainen avautuvia rivejä sisältävän luettelon
-  päivitys jätti pysyvästi jälkeensä avauskolmion, ja jokainen päivitys jätti jälkeensä vähän jokaisesta rivistä:
-  - Luettelot CI, Kontit, Software Factory, Testit, Virheenjäljitys, Git ja Haku sekä kutsuhierarkia piirtävät omat
-    nuolensa.
-  - Näkymättömissä olevat luettelot eivät enää päivity; ne kurovat eron kiinni, kun ne tulevat näkyviin.
-  - Luettelot Istunnot, CI, Software Factory ja Kontit säilyttävät rivit, jotka eivät muuttuneet, ja Git päivittää vain
-    niiden tiedostojen rivit, joiden tila muuttui.
-- Suljetun ikkunan paneelit vapautetaan sen mukana.
-
 ## AI-välilehdet
-- Kun taustakomento kirjoittaa tulosteensa itse tiedostoon, kuten `make > build.log 2>&1`, ”Näytä tuloste” näyttää tuon
-  tiedoston, jos CLI:llä ei ole tulosteesta mitään.
+- AI-välilehti, joka on ollut kolme minuuttia poissa näkyvistä, lopettaa Claude-prosessinsa, kun istunto on joutilaana.
+  Keskustelu ja kirjoittamasi teksti jäävät välilehteen, ja seuraava kehote jatkaa istuntoa. Välilehti pitää prosessinsa
+  niin kauan kuin Claude työskentelee, kehote odottaa, kysymys on avoinna, aliagentti, taustatehtävä tai komento on yhä
+  käynnissä tai Remote Control on päällä.
+- Kun agentti lopetetaan, päättyvät myös komennot, jotka se käynnisti omassa prosessiryhmässään tai istunnossaan;
+  aiemmin ne saattoivat jäädä käyntiin agentin jälkeen.
+- Aikajana lisää uudet merkinnät loppuunsa sen sijaan, että indeksoisi kaikki aiemmat rivit uudelleen.
+
+## Nopeus
+- Palautetut ikkunat avautuvat nopeammin: tiedostovälilehti, jossa ei ole tallentamattomia muutoksia, lataa tiedostonsa
+  vasta, kun se tulee esiin.
+- Projektihaku, jonka paneeli on piilossa, keskeytyy ja jatkuu, kun paneeli tulee näkyviin.
+- Editorin Git-muutosmerkinnät tekevät kullekin tiedostolle enintään yhden vertailun kerrallaan; sen aikana tehdyt
+  muokkaukset yhdistetään yhdeksi jatkovertailuksi, ja tiedoston commitoitu teksti luetaan uudelleen vain, jos commit on
+  muuttunut.
+- Kutistettua koodia sisältävän tiedoston minikartta pitää yhden merkinnän kutakin avattua jaksoa kohden eikä yhtä riviä
+  kohden.
+
+## Haku
+- Suodattimien nuoli on samassa linjassa suoraan sen yläpuolella olevan Korvaa-nuolen kanssa.

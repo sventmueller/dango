@@ -1,22 +1,20 @@
-## Arbeitsspeicher
-- Lange Agenten-Sitzungen brauchen deutlich weniger Arbeitsspeicher:
-  - Eine frühere Sitzung wird beim Öffnen Zeile für Zeile aus ihrem Transkript gelesen; eine Sitzung mit 100 MB
-    Transkript braucht dabei höchstens etwa 20 MB statt 65 MB.
-  - Ein beendeter Werkzeugaufruf behält nur, was seine Karte zeigt: die ersten 400 Zeilen seiner Ausgabe, und die
-    rohe Eingabe nicht mehr, sobald die Karte ihre Felder zeigt. „N weitere Zeilen“ zählt weiterhin jede Zeile.
-  - Ein AI-Tab, der 30 Sekunden nicht zu sehen ist, gibt seine Karten frei und baut beim Zeigen die sichtbaren neu
-    auf, an derselben Stelle.
-  - Nach dem Schließen eines Tabs und dem Öffnen einer früheren Sitzung gibt Dango den frei gewordenen Speicher an
-    macOS zurück.
-- Listen wachsen beim Aktualisieren nicht mehr im Speicher. Unter macOS 27 ließ jede Aktualisierung einer Liste mit
-  aufklappbaren Zeilen ein Aufklapp-Dreieck dauerhaft zurück, und jede Aktualisierung ein wenig von jeder Zeile:
-  - Die Listen von CI, Container, Software Factory, Tests, Debuggen, Git und Suche sowie die Aufrufhierarchie zeichnen
-    ihre Pfeile selbst.
-  - Listen, die nicht zu sehen sind, aktualisieren sich nicht mehr; sie holen es nach, sobald sie sich zeigen.
-  - Die Listen Sitzungen, CI, Software Factory und Container behalten die Zeilen, die sich nicht geändert haben, und
-    Git aktualisiert nur die Zeilen der Dateien, deren Zustand sich geändert hat.
-- Die Panels eines geschlossenen Fensters werden mit ihm freigegeben.
-
 ## AI-Tabs
-- „Ausgabe zeigen“ eines Hintergrundbefehls, der seine Ausgabe selbst in eine Datei schreibt, etwa
-  `make > build.log 2>&1`, zeigt diese Datei, wenn die CLI nichts von der Ausgabe hat.
+- Ein AI-Tab, der drei Minuten nicht zu sehen ist, beendet seinen Claude-Prozess, solange die Sitzung ruht. Das
+  Gespräch und die Eingabe bleiben im Tab, und der nächste Prompt setzt die Sitzung fort. Ein Tab behält seinen
+  Prozess, solange Claude arbeitet, ein Prompt wartet, eine Frage offen ist, ein Subagent, eine Hintergrundaufgabe
+  oder ein Befehl noch läuft oder Remote Control an ist.
+- Wird ein Agent beendet, enden auch die Befehle, die er in einer eigenen Prozessgruppe oder Sitzung gestartet hat;
+  bisher konnten sie ihn überleben.
+- Die Zeitleiste hängt neue Einträge an, statt alle früheren Zeilen neu zu indizieren.
+
+## Geschwindigkeit
+- Wiederhergestellte Fenster öffnen schneller: Ein Datei-Tab ohne ungesicherte Änderungen lädt seine Datei erst,
+  wenn er nach vorn kommt.
+- Eine Projektsuche, deren Panel verborgen ist, pausiert und läuft weiter, sobald sich das Panel zeigt.
+- Die Git-Änderungsmarken des Editors führen je Datei höchstens einen Vergleich gleichzeitig aus; Änderungen
+  währenddessen werden zu einem einzigen Folgevergleich zusammengefasst, und der eingecheckte Text der Datei wird nur
+  neu gelesen, wenn sich der Commit geändert hat.
+- Die Minimap einer Datei mit eingeklapptem Code hält einen Eintrag je aufgeklapptem Abschnitt statt einen je Zeile.
+
+## Suche
+- Der Pfeil der Filter steht bündig unter dem Pfeil von Ersetzen.

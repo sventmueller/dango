@@ -1,21 +1,19 @@
-## Pamäť
-- Dlhé relácie agentov potrebujú oveľa menej pamäte:
-  - Pri otvorení staršej relácie sa jej prepis číta po riadkoch; relácia s prepisom s veľkosťou 100 MB teraz v špičke
-    zaberie asi 20 MB namiesto 65 MB.
-  - Dokončené volanie nástroja si ponechá iba to, čo ukazuje jeho karta: prvých 400 riadkov výstupu, a len čo karta
-    zobrazí svoje polia, už ani surový vstup. Text „ďalšie riadky: N“ naďalej počíta každý riadok.
-  - AI tab, ktorý 30 sekúnd nie je vidieť, uvoľní svoje karty, a keď sa znova zobrazí, zostaví tie viditeľné, na mieste,
-    kde bol.
-  - Po zatvorení tabu alebo otvorení staršej relácie vráti Dango uvoľnenú pamäť systému macOS.
-- Zoznamy pri obnovovaní už nerastú v pamäti. V macOS 27 každé obnovenie zoznamu s rozbaľovacími riadkami natrvalo
-  zanechalo rozbaľovací trojuholník a každé obnovenie zanechalo kúsok z každého riadka:
-  - Zoznamy CI, Kontajnery, Software Factory, Testy, Ladenie, Git a Vyhľadávanie aj hierarchia volaní si kreslia vlastné
-    šípky.
-  - Zoznamy, ktoré nie je vidieť, sa už neobnovujú; doženú to, keď sa zobrazia.
-  - Zoznamy Relácie, CI, Software Factory a Kontajnery si ponechávajú riadky, ktoré sa nezmenili, a Git obnovuje iba
-    riadky súborov, ktorých stav sa zmenil.
-- Panely zatvoreného okna sa uvoľnia spolu s ním.
-
 ## AI taby
-- „Zobraziť výstup“ pri príkaze na pozadí, ktorý svoj výstup sám zapisuje do súboru, napríklad `make > build.log 2>&1`,
-  zobrazí tento súbor, keď CLI nemá nič z výstupu.
+- AI tab, ktorý tri minúty nie je vidieť, uvoľní svoj proces Claude, kým je relácia nečinná. Konverzácia a to, čo ste
+  napísali, zostanú v tabe a s ďalším promptom relácia pokračuje. Tab si svoj proces ponechá, kým Claude pracuje, čaká
+  prompt, je otvorená otázka, ešte beží subagent, úloha na pozadí alebo príkaz, alebo je zapnutý Remote Control.
+- Ukončenie agenta ukončí aj príkazy, ktoré spustil vo vlastnej skupine procesov alebo vlastnej relácii a ktoré ho
+  predtým mohli prežiť.
+- Časová os pridáva nové položky na koniec namiesto toho, aby znova indexovala všetky predchádzajúce riadky.
+
+## Rýchlosť
+- Obnovené okná sa otvárajú rýchlejšie: tab súboru bez neuložených zmien načíta svoj súbor až vtedy, keď sa dostane do
+  popredia.
+- Vyhľadávanie v projekte, ktorého panel je skrytý, sa pozastaví a pokračuje, keď sa panel zobrazí.
+- Značky zmien Git v editore spúšťajú pre každý súbor najviac jedno porovnanie naraz; úpravy počas neho sa zlúčia do
+  jedného nasledujúceho porovnania a commitnutý text súboru sa znova načíta, iba ak sa commit zmenil.
+- Minimapa súboru so zbaleným kódom si ponecháva jednu položku pre každú nezbalenú časť namiesto jednej pre každý
+  riadok.
+
+## Vyhľadávanie
+- Šípka filtrov je zarovnaná so šípkou Nahradiť nad ňou.

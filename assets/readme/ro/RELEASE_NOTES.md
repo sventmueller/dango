@@ -1,24 +1,21 @@
-## Memorie
-- Sesiunile lungi ale agenților au nevoie de mult mai puțină memorie:
-  - La deschiderea unei sesiuni anterioare, transcrierea ei este citită linie cu linie; o sesiune cu o transcriere de
-    100 MB ajunge acum la cel mult aproximativ 20 MB în loc de 65 MB.
-  - Un apel de instrument încheiat păstrează doar ce arată cardul său: primele 400 de linii ale ieșirii, iar intrarea
-    brută nu o mai păstrează odată ce cardul își arată câmpurile. Eticheta „linii suplimentare: N” numără în continuare
-    fiecare linie.
-  - O filă IA care rămâne în afara vederii timp de 30 de secunde își eliberează cardurile, iar când se arată din nou le
-    construiește pe cele vizibile, în locul în care era.
-  - După închiderea unei file sau deschiderea unei sesiuni anterioare, Dango returnează sistemului macOS memoria
-    eliberată.
-- Listele nu mai cresc în memorie când se reîmprospătează. Pe macOS 27, fiecare reîmprospătare a unei liste cu rânduri
-  care se pot extinde lăsa în urmă definitiv un triunghi de extindere, iar fiecare reîmprospătare lăsa în urmă câte
-  puțin din fiecare rând:
-  - Listele CI, Containere, Software Factory, Teste, Depanare, Git și Căutare, precum și ierarhia apelurilor, își
-    desenează singure săgețile.
-  - Listele care nu sunt vizibile nu se mai reîmprospătează; recuperează când se arată.
-  - Listele Sesiuni, CI, Software Factory și Containere păstrează rândurile care nu s-au schimbat, iar Git
-    reîmprospătează doar rândurile fișierelor a căror stare s-a schimbat.
-- Panourile unei ferestre închise sunt eliberate odată cu ea.
-
 ## File IA
-- Pentru o comandă în fundal care își scrie singură ieșirea într-un fișier, cum ar fi `make > build.log 2>&1`, „Afișați
-  ieșirea” afișează acel fișier când CLI nu are nimic din ieșire.
+- O filă IA care stă trei minute în afara vederii își eliberează procesul Claude cât timp sesiunea este inactivă.
+  Discuția și ce ați tastat rămân în filă, iar următorul prompt reia sesiunea. O filă își păstrează procesul cât timp
+  Claude lucrează, un prompt așteaptă, o întrebare este deschisă, un subagent, o sarcină în fundal sau o comandă încă
+  rulează ori Remote Control este activat.
+- Oprirea unui agent oprește și comenzile pe care acesta le-a pornit într-un grup de procese sau într-o sesiune proprie,
+  care înainte puteau să-i supraviețuiască.
+- Cronologia adaugă intrările noi la sfârșit, în loc să reindexeze toate rândurile anterioare.
+
+## Viteză
+- Ferestrele restaurate se deschid mai repede: o filă de fișier fără modificări nesalvate își încarcă fișierul abia când
+  ajunge în față.
+- O căutare în proiect al cărei panou este ascuns se întrerupe și continuă când panoul se afișează.
+- Marcajele de modificări Git din editor rulează pentru fiecare fișier cel mult o comparație în același timp; editările
+  făcute între timp sunt reunite într-o singură comparație ulterioară, iar textul fișierului din commit este recitit
+  doar când s-a schimbat commitul.
+- Miniharta unui fișier cu cod restrâns păstrează câte o intrare pentru fiecare porțiune extinsă, în loc de câte una
+  pentru fiecare linie.
+
+## Căutare
+- Săgeata filtrelor este acum aliniată cu săgeata de la Înlocuiți de deasupra.

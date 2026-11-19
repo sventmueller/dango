@@ -1,22 +1,20 @@
-## Mémoire
-- Les longues sessions d’agent demandent beaucoup moins de mémoire :
-  - L’ouverture d’une session passée lit sa transcription une ligne à la fois ; une session dont la transcription pèse
-    100 MB culmine désormais à environ 20 MB au lieu de 65 MB.
-  - Un appel d’outil terminé ne garde que ce qu’affiche sa carte : les 400 premières lignes de sa sortie, et non plus
-    l’entrée brute dès que la carte affiche ses champs. « N lignes de plus » compte toujours chaque ligne.
-  - Un onglet IA qui reste hors de vue pendant 30 secondes libère ses cartes et, lorsqu’il réapparaît, construit celles
-    qui sont visibles, à l’endroit où il en était.
-  - Après la fermeture d’un onglet ou l’ouverture d’une session passée, Dango rend à macOS la mémoire qu’il a libérée.
-- Les listes ne grossissent plus en mémoire lorsqu’elles s’actualisent. Sous macOS 27, chaque actualisation d’une liste
-  aux lignes dépliables laissait derrière elle un triangle d’affichage pour de bon, et chaque actualisation laissait
-  derrière elle un peu de chaque ligne :
-  - Les listes CI, Conteneurs, Software Factory, Tests, Déboguer, Git et Recherche ainsi que la hiérarchie d’appels
-    dessinent leurs propres chevrons.
-  - Les listes hors de vue ne s’actualisent plus ; elles rattrapent leur retard lorsqu’elles s’affichent.
-  - Les listes Sessions, CI, Software Factory et Conteneurs gardent les lignes qui n’ont pas changé, et Git n’actualise
-    que les lignes des fichiers dont l’état a changé.
-- Les panneaux d’une fenêtre fermée sont libérés avec elle.
-
 ## Onglets IA
-- « Afficher la sortie » d’une commande en arrière-plan qui écrit elle-même sa sortie dans un fichier, comme
-  `make > build.log 2>&1`, affiche ce fichier lorsque la CLI n’a rien de la sortie.
+- Un onglet IA resté hors de vue pendant trois minutes arrête son processus Claude tant que la session est inactive. La
+  conversation et ce que vous avez saisi restent dans l’onglet, et le prompt suivant reprend la session. Un onglet garde
+  son processus tant que Claude travaille, qu’un prompt attend, qu’une question est ouverte, qu’un sous-agent, une tâche
+  en arrière-plan ou une commande tourne encore, ou que Remote Control est activé.
+- Arrêter un agent met aussi fin aux commandes qu’il a lancées dans un groupe de processus ou une session à part, et qui
+  pouvaient jusqu’ici lui survivre.
+- La chronologie ajoute les nouvelles entrées à sa fin au lieu de réindexer toutes les lignes précédentes.
+
+## Vitesse
+- Les fenêtres restaurées s’ouvrent plus vite : un onglet de fichier sans modifications non enregistrées ne charge son
+  fichier que lorsqu’il passe au premier plan.
+- Une recherche dans le projet dont le panneau est masqué se met en pause et reprend lorsque le panneau s’affiche.
+- Les marques de modification Git de l’éditeur n’effectuent qu’une comparaison à la fois par fichier ; les modifications
+  faites entre-temps sont regroupées en une seule comparaison suivante, et le texte du fichier dans le commit n’est relu
+  que si le commit a changé.
+- La minicarte d’un fichier au code replié garde une entrée par portion dépliée au lieu d’une par ligne.
+
+## Recherche
+- Le chevron des filtres s’aligne sur le chevron de Remplacer, juste au-dessus.

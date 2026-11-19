@@ -1,22 +1,20 @@
-## Memoria
-- Le sessioni lunghe degli agenti richiedono molta meno memoria:
-  - All’apertura di una sessione passata, la sua trascrizione viene letta una riga alla volta; una sessione con una
-    trascrizione di 100 MB ora raggiunge al massimo circa 20 MB invece di 65 MB.
-  - Una chiamata a uno strumento conclusa conserva solo ciò che mostra la sua scheda: le prime 400 righe del suo output,
-    e non più l’input grezzo una volta che la scheda mostra i suoi campi. “Altre N righe” conta ancora ogni riga.
-  - Un pannello AI che resta fuori dalla vista per 30 secondi rilascia le sue schede e, quando torna visibile,
-    costruisce quelle in vista, nel punto in cui si trovava.
-  - Dopo la chiusura di un pannello o l’apertura di una sessione passata, Dango restituisce a macOS la memoria liberata.
-- Gli elenchi non crescono più in memoria quando si aggiornano. Su macOS 27 ogni aggiornamento di un elenco con righe
-  espandibili lasciava dietro di sé per sempre un triangolo di espansione, e ogni aggiornamento lasciava dietro di sé un
-  po’ di ogni riga:
-  - Gli elenchi CI, Container, Software Factory, Test, Debug, Git e Ricerca e la gerarchia delle chiamate disegnano da
-    sé le proprie frecce.
-  - Gli elenchi fuori dalla vista non si aggiornano più; si mettono in pari quando vengono mostrati.
-  - Gli elenchi Sessioni, CI, Software Factory e Container conservano le righe che non sono cambiate, e Git aggiorna
-    solo le righe dei file il cui stato è cambiato.
-- I riquadri di una finestra chiusa vengono rilasciati con essa.
-
 ## Pannelli AI
-- “Mostra output” di un comando in background che scrive da sé il proprio output in un file, come
-  `make > build.log 2>&1`, mostra quel file quando la CLI non ha nulla dell’output.
+- Un pannello AI rimasto fuori dalla vista per tre minuti termina il suo processo Claude mentre la sessione è inattiva.
+  La conversazione e ciò che hai digitato restano nel pannello, e il prompt successivo riprende la sessione. Un pannello
+  mantiene il suo processo finché Claude lavora, un prompt è in attesa, una domanda è aperta, un subagente, un task in
+  background o un comando è ancora in esecuzione, oppure Remote Control è attivo.
+- Terminare un agente termina anche i comandi che ha avviato in un proprio gruppo di processi o in una propria sessione,
+  che prima potevano sopravvivergli.
+- La linea temporale aggiunge le nuove voci in fondo invece di indicizzare di nuovo tutte le righe precedenti.
+
+## Velocità
+- Le finestre ripristinate si aprono più in fretta: un pannello di file senza modifiche non salvate carica il suo file
+  solo quando passa in primo piano.
+- Una ricerca nel progetto il cui riquadro è nascosto va in pausa e prosegue quando il riquadro viene mostrato.
+- Gli indicatori delle modifiche Git dell’editor eseguono al massimo un confronto alla volta per file; le modifiche
+  apportate nel frattempo vengono riunite in un unico confronto successivo, e il testo del file nel commit viene riletto
+  solo quando il commit è cambiato.
+- La minimappa di un file con codice compresso conserva una voce per ogni tratto non compresso invece di una per riga.
+
+## Ricerca
+- La freccia dei filtri è allineata con la freccia di Sostituisci sopra di essa.

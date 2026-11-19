@@ -1,20 +1,19 @@
-## Minne
-- Långa agentsessioner behöver mycket mindre minne:
-  - När en tidigare session öppnas läses dess transkript en rad i taget; en session med ett transkript på 100 MB når nu
-    som mest ungefär 20 MB i stället för 65 MB.
-  - Ett avslutat verktygsanrop behåller bara det som dess kort visar: de första 400 raderna av utdata, och inte längre
-    rå indata när kortet visar sina fält. ”N rader till” räknar fortfarande varje rad.
-  - En AI-flik som är utom synhåll i 30 sekunder släpper sina kort, och när den visas igen bygger den upp dem som syns,
-    på samma ställe som den var.
-  - När en flik stängs eller en tidigare session öppnas lämnar Dango tillbaka det frigjorda minnet till macOS.
-- Listor växer inte längre i minnet när de uppdateras. I macOS 27 lämnade varje uppdatering av en lista med rader som
-  kan öppnas kvar en visningstriangel för gott, och varje uppdatering lämnade kvar lite av varje rad:
-  - Listorna CI, Containrar, Software Factory, Tester, Felsök, Git och Sök samt anropshierarkin ritar sina egna pilar.
-  - Listor som inte syns uppdateras inte längre; de kommer ikapp när de visas.
-  - Listorna Sessioner, CI, Software Factory och Containrar behåller raderna som inte har ändrats, och Git uppdaterar
-    bara raderna för filer vars status har ändrats.
-- Panelerna i ett stängt fönster släpps tillsammans med det.
-
 ## AI-flikar
-- ”Visa utdata” för ett bakgrundskommando som självt skriver sina utdata till en fil, till exempel
-  `make > build.log 2>&1`, visar den filen när CLI inte har något av utdata.
+- En AI-flik som har varit utom synhåll i tre minuter släpper sin Claude-process medan sessionen är inaktiv.
+  Konversationen och det du har skrivit finns kvar i fliken, och nästa prompt återupptar sessionen. En flik behåller sin
+  process medan Claude arbetar, en prompt väntar, en fråga är öppen, en underagent, en bakgrundsuppgift eller ett
+  kommando fortfarande körs eller Remote Control är på.
+- Att avsluta en agent avslutar också de kommandon som den startade i en egen processgrupp eller session och som
+  tidigare kunde leva kvar efter den.
+- Tidslinjen lägger till nya poster i slutet i stället för att indexera om alla tidigare rader.
+
+## Hastighet
+- Återställda fönster öppnas snabbare: en filflik utan osparade ändringar läser in sin fil först när den hamnar längst
+  fram.
+- En sökning i projektet vars panel är dold pausas och fortsätter när panelen visas.
+- Redigerarens Git-ändringsmarkeringar kör högst en jämförelse åt gången per fil; ändringar under tiden slås ihop till
+  en enda uppföljande jämförelse, och filens incheckade text läses bara in igen när committen har ändrats.
+- Minikartan för en fil med ihopfälld kod behåller en post per utfälld del i stället för en per rad.
+
+## Sök
+- Filtrens pil är i linje med pilen för Ersätt ovanför.

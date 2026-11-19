@@ -1,21 +1,19 @@
-## Pomnilnik
-- Dolge seje agentov potrebujejo veliko manj pomnilnika:
-  - Ob odpiranju pretekle seje se njen prepis bere vrstico za vrstico; seja s prepisom velikosti 100 MB zdaj na vrhuncu
-    porabi približno 20 MB namesto 65 MB.
-  - Končan klic orodja obdrži le tisto, kar prikazuje njegova kartica: prvih 400 vrstic izhoda, surovega vnosa pa ne
-    več, ko kartica prikaže svoja polja. »Dodatne vrstice: N« še vedno šteje vsako vrstico.
-  - Zavihek AI, ki 30 sekund ni viden, sprosti svoje kartice, in ko se znova prikaže, zgradi tiste, ki so vidne, na
-    mestu, kjer je bil.
-  - Po zaprtju zavihka ali odprtju pretekle seje Dango vrne sproščeni pomnilnik sistemu macOS.
-- Seznami ob osveževanju ne rastejo več v pomnilniku. V macOS 27 je vsaka osvežitev seznama z razširljivimi vrsticami za
-  seboj trajno pustila trikotnik za razširitev, vsaka osvežitev pa je za seboj pustila tudi delček vsake vrstice:
-  - Seznami CI, Vsebniki, Software Factory, Testi, Odpravljanje napak, Git in Iskanje ter hierarhija klicev sami rišejo
-    svoje puščice.
-  - Seznami, ki niso vidni, se ne osvežujejo več; zamujeno nadoknadijo, ko se prikažejo.
-  - Seznami Seje, CI, Software Factory in Vsebniki obdržijo vrstice, ki se niso spremenile, Git pa osveži le vrstice
-    datotek, katerih stanje se je spremenilo.
-- Podokna zaprtega okna se sprostijo skupaj z njim.
-
 ## Zavihki AI
-- »Prikaži izhod« pri ukazu v ozadju, ki svoj izhod sam zapisuje v datoteko, na primer `make > build.log 2>&1`, prikaže
-  to datoteko, ko CLI nima ničesar od izhoda.
+- Zavihek AI, ki tri minute ni viden, sprosti svoj proces Claude, dokler seja miruje. Pogovor in to, kar ste natipkali,
+  ostaneta v zavihku, naslednji poziv pa sejo nadaljuje. Zavihek obdrži svoj proces, dokler Claude dela, čaka poziv, je
+  odprto vprašanje, še teče podagent, opravilo v ozadju ali ukaz ali je vklopljen Remote Control.
+- Ko se agent konča, se končajo tudi ukazi, ki jih je zagnal v lastni skupini procesov ali lastni seji; prej so ga lahko
+  preživeli.
+- Časovnica doda nove vnose na konec, namesto da bi znova indeksirala vse prejšnje vrstice.
+
+## Hitrost
+- Obnovljena okna se odpirajo hitreje: zavihek datoteke brez neshranjenih sprememb naloži svojo datoteko šele, ko pride
+  v ospredje.
+- Iskanje po projektu, katerega podokno je skrito, se zaustavi in nadaljuje, ko se podokno prikaže.
+- Oznake sprememb Git v urejevalniku za vsako datoteko hkrati izvajajo največ eno primerjavo; spremembe med njo se
+  združijo v eno samo naknadno primerjavo, besedilo datoteke iz commita pa se znova prebere le, če se je commit
+  spremenil.
+- Mini zemljevid datoteke s strnjeno kodo hrani en vnos za vsak nestrnjen del namesto enega za vsako vrstico.
+
+## Iskanje
+- Puščica filtrov je poravnana s puščico Zamenjaj nad njo.
