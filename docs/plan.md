@@ -656,6 +656,7 @@ Code-Review 2026-11-14 *(nichtfunktional, vom Eigentümer beauftragt)*:
   - **Befehle:**
     - Teilen ⌃⌘T rechts und ⌃⌥⌘T unten. Hält der Bereich mehrere Dokumente, wandert das vordere in den neuen Bereich; sonst öffnet er leer und nimmt das nächste Dokument auf.
     - Bereich schließen ⌃⇧⌘W, Bereich maximieren ⌃⇧⌘↩.
+    - *Nachtrag (Eigentümer):* Ein geschlossener Bereich schließt seine Tabs nicht; sie wandern hinter die des Bereichs davor, sonst des Bereichs danach, der sein vorderes Dokument behält. Nur der Bereich einer Vorschau (E59) und der letzte Bereich schließen mit ihren Tabs.
     - Nächster und vorheriger Tab im Bereich ⌃⌥⌘] / ⌃⌥⌘[ (⌃⇥ bleibt dem Fokus vorbehalten, E101).
     - ⌥⌘` geht zum nächsten Bereich.
     - In der Dateiliste: ⌥-Klick und „Daneben öffnen“ für rechts, „Darunter öffnen“ für unten, ⌥⇧-Klick für die Wahl des Bereichs.

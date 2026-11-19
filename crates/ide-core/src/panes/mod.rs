@@ -634,6 +634,40 @@ impl<D: Copy + Eq> PaneTree<D> {
         true
     }
 
+    /// Closes `pane` without closing its documents (E145): they move behind those of the pane before it, else the one
+    /// after, which becomes active and keeps its document in front. The pane they went into; none for a preview's
+    /// pane, which closes with its documents, and for the last pane.
+    pub fn close_pane(&mut self, pane: PaneId) -> Option<PaneId> {
+        let closing = self.pane(pane).filter(|closing| closing.companion_of.is_none())?;
+        let documents = closing.documents.clone();
+        let closing_front = closing.front();
+        let heir = self.heir(pane)?;
+        let front = self.pane(heir)?.front().or(closing_front);
+        for document in documents {
+            self.move_document(document, heir, Some(usize::MAX));
+        }
+        self.remove_pane(pane);
+        if let Some(front) = front {
+            self.select(front);
+        }
+        self.active = heir;
+        Some(heir)
+    }
+
+    /// The pane that takes in the documents of `pane` as it closes: the nearest one before it that is no preview's,
+    /// else the nearest one after.
+    fn heir(&self, pane: PaneId) -> Option<PaneId> {
+        let all = self.all();
+        let at = all.iter().position(|id| *id == pane)?;
+        let takes = |id: &&PaneId| self.pane(**id).is_some_and(|other| other.companion_of.is_none());
+        all[..at]
+            .iter()
+            .rev()
+            .find(takes)
+            .or_else(|| all[at + 1..].iter().find(takes))
+            .copied()
+    }
+
     /// Puts the only child of the split at `path` in its place, merging it into the split around when it runs the
     /// same way, its parts taking their shares of its share.
     fn close_up(&mut self, path: &[usize]) {

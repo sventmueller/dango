@@ -253,6 +253,69 @@ fn the_last_pane_and_a_pane_with_documents_stay() {
 }
 
 #[test]
+fn a_closing_pane_hands_its_documents_to_the_pane_before_else_after() {
+    let mut tree = three_side_by_side();
+    tree.insert("d", Place::Into(pane(3), None));
+    tree.select("c");
+    assert_eq!(tree.close_pane(pane(3)), Some(pane(2)));
+    assert_eq!(
+        shape(&tree),
+        "H([a] [b*, c, d]!)",
+        "the pane before keeps its document in front and takes the others behind it"
+    );
+    assert_eq!(tree.close_pane(pane(1)), Some(pane(2)));
+    assert_eq!(
+        shape(&tree),
+        "[b*, c, d, a]!",
+        "the first pane hands its documents to the one after"
+    );
+    assert!(!tree.is_split());
+    assert_eq!(
+        tree.close_pane(pane(2)),
+        None,
+        "the last pane has no pane to hand them to"
+    );
+}
+
+#[test]
+fn a_pane_closing_into_an_empty_one_brings_its_document_in_front_along() {
+    let mut tree = with(&["a", "b"]);
+    tree.split_active(Side::Right);
+    let empty = tree.add_beside(pane(1), Side::Right).unwrap();
+    tree.insert("c", Place::Into(pane(2), None));
+    tree.select("b");
+    assert_eq!(shape(&tree), "H([a] [] [b*, c]!)");
+    assert_eq!(tree.close_pane(pane(2)), Some(empty));
+    assert_eq!(shape(&tree), "H([a] [b*, c]!)");
+}
+
+#[test]
+fn a_preview_pane_closes_with_its_preview_and_is_never_the_heir() {
+    let mut tree = with(&["a", "b"]);
+    let preview = tree.insert(
+        "p",
+        Place::Beside {
+            anchor: "a",
+            side: Side::Right,
+            companion: true,
+        },
+    );
+    assert_eq!(
+        tree.close_pane(preview),
+        None,
+        "a preview follows its document and goes with it"
+    );
+    tree.set_active(pane(1));
+    let (other, _) = tree.split_active(Side::Right).unwrap();
+    assert_eq!(
+        tree.close_pane(other),
+        Some(pane(1)),
+        "the documents skip the preview's pane"
+    );
+    assert_eq!(tree.pane(preview).map(Pane::count), Some(1));
+}
+
+#[test]
 fn the_last_pane_but_one_closing_spreads_the_documents_onto_native_tabs_again() {
     let mut tree = with(&["a", "b", "c"]);
     tree.split_active(Side::Right);

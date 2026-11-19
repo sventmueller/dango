@@ -224,6 +224,12 @@ impl Panes {
         self.change(|tree| tree.remove_pane(pane));
     }
 
+    /// Closes `pane` and moves its documents into the pane before it, else the one after; that pane, none for a
+    /// preview's pane and the last one.
+    pub(crate) fn close_pane(&self, pane: PaneId) -> Option<PaneId> {
+        self.change(|tree| tree.close_pane(pane))
+    }
+
     /// Fills the window tab with `pane` alone for now, or shows the others again.
     pub(crate) fn toggle_zoom(&self, pane: PaneId) {
         self.tree.borrow_mut().toggle_zoom(pane);

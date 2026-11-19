@@ -177,10 +177,14 @@ fn dragging(root: PathBuf) {
         format!("{zoomed:?} then {:?}", controller.pane_bars()),
     );
     controller.close_pane();
+    let closed = controller.pane_shape();
+    if let Some(c) = tab_of(&controller, &root, "c.rs") {
+        controller.close_tab(c);
+    }
     check(
-        "closing a pane gives its room to the one before",
-        controller.pane_shape() == "H([a.rs, b.rs*] [d.rs]!)" && tab_of(&controller, &root, "c.rs").is_none(),
-        controller.pane_shape(),
+        "closing a pane gives its room and its documents to the one before, which keeps its document in front",
+        closed == "H([a.rs, b.rs*] [d.rs*, c.rs]!)",
+        closed,
     );
     commands(root, a);
 }
@@ -277,10 +281,18 @@ fn from_tree(root: PathBuf, a: TabId, d: TabId) {
     select(&controller, c);
     controller.close_pane();
     lay_out(&controller);
+    let heir = c.and_then(|c| controller.pane_of(c));
+    if let Some(c) = c {
+        controller.close_tab(c);
+    }
+    lay_out(&controller);
     check(
-        "closing the opened pane leaves the two panes as they were, and a split without Option goes right",
-        controller.pane_shape().replace('!', "") == "H([a.rs, b.rs*] [d.rs])" && controller.split_side() == Side::Right,
-        controller.pane_shape(),
+        "closing the opened pane hands its document to a pane beside, and a split without Option goes right",
+        heir.is_some()
+            && (heir == controller.pane_of(a) || heir == controller.pane_of(d))
+            && controller.pane_shape().replace('!', "") == "H([a.rs, b.rs*] [d.rs])"
+            && controller.split_side() == Side::Right,
+        format!("{heir:?} {}", controller.pane_shape()),
     );
     behind(root, a);
 }

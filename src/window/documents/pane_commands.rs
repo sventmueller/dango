@@ -78,13 +78,14 @@ impl WindowController {
         crate::session::changed();
     }
 
-    /// Closes the active pane of the tab in front with its documents, each once it agrees.
+    /// Closes the active pane of the tab in front, as `close_pane_by_tag` does.
     pub(in crate::window) fn close_active_pane(&self) {
         self.close_pane_by_tag(None);
     }
 
-    /// Closes the pane numbered `number` in the tab in front, or its active pane, with its documents once they all
-    /// agree; an empty pane goes unless it is the last.
+    /// Closes the pane numbered `number` in the tab in front, or its active pane: its documents move into the pane
+    /// before it, else the one after; a preview's pane and the last pane close with their documents once they all
+    /// agree, and an empty pane goes unless it is the last.
     pub(in crate::window) fn close_pane_by_tag(&self, number: Option<isize>) {
         let Some(tab) = self.current_tab() else { return };
         let pane = number
@@ -97,6 +98,17 @@ impl WindowController {
             tab.panes.remove_pane(pane);
             self.settle_split();
             tab.activate_pane(tab.panes.active());
+            return;
+        }
+        if let Some(heir) = tab.panes.close_pane(pane) {
+            let front = tab.panes.front(heir).map(|document| document.id);
+            self.settle_split();
+            if let Some(front) = front
+                && let Some(tab) = self.tab_of_document(front)
+            {
+                tab.activate(front);
+            }
+            crate::session::changed();
             return;
         }
         if !self.documents_may_close(&documents) {
