@@ -147,6 +147,9 @@ pub struct Timeline {
     pub(super) positions: RefCell<HashMap<EntryId, usize>>,
     pending: Cell<bool>,
     pending_follow: Cell<bool>,
+    /// The table let go of its rows while out of view, and where it was scrolled to then.
+    parked: Cell<bool>,
+    parked_at: Cell<f64>,
     /// The rows whose cards changed while the timeline was hidden, so showing it builds only those again; `None` once
     /// a change other than an append means rebuilding every card in view.
     behind: RefCell<Option<BTreeSet<usize>>>,
@@ -237,6 +240,8 @@ impl Timeline {
             positions: RefCell::new(positions),
             pending: Cell::new(false),
             pending_follow: Cell::new(false),
+            parked: Cell::new(false),
+            parked_at: Cell::new(0.0),
             behind: RefCell::new(Some(BTreeSet::new())),
             figures: RefCell::new(HashMap::new()),
             list: RefCell::new(list),
@@ -461,6 +466,11 @@ impl Timeline {
             }
             return;
         }
+        if self.is_parked() {
+            self.unpark();
+            self.refresh_marks();
+            return;
+        }
         if self.pending.get() {
             self.catch_up();
             self.refresh_marks();
@@ -604,6 +614,7 @@ impl Timeline {
 
     /// A background tab catches up once, when it becomes visible again.
     pub(crate) fn show_pending(&self) {
+        self.unpark();
         if self.is_visible() && self.pending.get() {
             self.catch_up();
         }
@@ -856,6 +867,9 @@ impl Timeline {
             *self.behind.borrow_mut() = None;
             return;
         }
+        if self.is_parked() {
+            return self.unpark();
+        }
         self.fit_column(width);
         self.width.set(width);
         self.corrections.borrow_mut().clear();
@@ -979,6 +993,7 @@ fn at_bottom(scroll: &NSScrollView) -> bool {
 mod tests;
 
 mod follow;
+mod park;
 mod text_size;
 
 #[cfg(feature = "selftest")]

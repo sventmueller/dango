@@ -50,11 +50,12 @@ pub(crate) fn changed(root: &Path) {
     }
 }
 
-/// The window of `controller` closes: a login it waits for stops and lets the callback port go.
+/// The window of `controller` closes: a login it waits for stops and lets the callback port go, and its panel goes.
 pub(crate) fn window_closed(controller: &WindowController) {
     if let Some(panel) = panel::of(controller) {
         panel.cancel_login();
     }
+    controller.context().ci_panels().panels.detach(controller.handle());
 }
 
 /// The user changed the CI settings, so every panel reads again.

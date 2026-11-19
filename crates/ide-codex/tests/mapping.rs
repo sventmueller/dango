@@ -89,7 +89,10 @@ fn a_turn_with_every_tool_maps_onto_cards_messages_and_notices() {
     assert_eq!(mcp.elapsed, Some(Duration::from_millis(100)));
 
     let file = tool(&kinds, "f1");
-    assert!(matches!(&file.view, ToolView::Write { content, .. } if content == "# Notes\nline\n"));
+    assert!(
+        matches!(&file.view, ToolView::Write { content, .. } if content.is_empty()),
+        "once the diff is there, it stands for the proposed content"
+    );
     let Some(ToolOutput::Diff { hunks, .. }) = &file.output else {
         panic!("{file:?}")
     };

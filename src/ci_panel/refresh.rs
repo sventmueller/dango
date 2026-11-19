@@ -13,6 +13,7 @@ use super::{text, work};
 use crate::util::main_after;
 use crate::window::{Panel, WindowController};
 use ide_ci::panel::Loaded;
+use ide_ui_common::panel::HeldReload;
 
 /// How long changes in `.git` gather before HEAD is read again.
 const HEAD_DEBOUNCE: Duration = Duration::from_millis(1500);
@@ -25,6 +26,10 @@ impl CiPanel {
         controller.context().ci_panels().panels.detach(controller.handle());
         let panel = CiPanel::new(controller.mtm(), controller, root);
         controller.set_panel_page(Panel::Ci, &panel.ui().page);
+        let id = panel.id();
+        HeldReload::watch(&panel.ui().page, move || {
+            with_panel(id, CiPanel::came_into_view);
+        });
         controller.set_panel_accessory(Panel::Ci, &panel.ui().header);
         controller
             .context()

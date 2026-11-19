@@ -39,7 +39,8 @@ pub struct Mapper {
     prompting: bool,
     next: u64,
     turn: u64,
-    /// The tool calls so far by the agent's id: their name, title and input, which a permission request may leave out.
+    /// The tool calls so far by the agent's id: their name, title and, until they end, input, which a permission request
+    /// may leave out.
     tools: HashMap<String, (String, String, Value)>,
 }
 
@@ -382,8 +383,9 @@ impl Mapper {
         let input = call.raw_input.clone().unwrap_or(Value::Null);
         let status = tool_status(&call.status);
         let name = call.name.clone().unwrap_or_else(|| call.title.clone());
-        self.tools
-            .insert(id.clone(), (name.clone(), call.title.clone(), input.clone()));
+        let ended = matches!(status, ToolStatus::Completed | ToolStatus::Failed);
+        let kept = if ended { Value::Null } else { input.clone() };
+        self.tools.insert(id.clone(), (name.clone(), call.title.clone(), kept));
         let mut entry = ToolCall::new(id.clone(), name, kind);
         entry.title = call.title.clone();
         entry.status = status;
@@ -393,7 +395,7 @@ impl Mapper {
         if status != ToolStatus::Pending {
             entry.started = Some(at);
         }
-        if matches!(status, ToolStatus::Completed | ToolStatus::Failed) {
+        if ended {
             entry.ended = Some(at);
         }
         out.push(put(id, at, EntryKind::ToolCall(entry)));
@@ -427,6 +429,11 @@ impl Mapper {
             }
         }
         let status = fields.status.as_ref().map(tool_status);
+        if matches!(status, Some(ToolStatus::Completed | ToolStatus::Failed))
+            && let Some(known) = self.tools.get_mut(&id)
+        {
+            known.2 = Value::Null;
+        }
         let content = fields.content.as_deref().unwrap_or_default();
         let kind = fields.kind.as_ref().map(tool_kind);
         let input = fields.raw_input.clone();

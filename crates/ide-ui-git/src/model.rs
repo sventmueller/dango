@@ -99,6 +99,8 @@ pub(crate) struct State {
     pub(crate) problem: Option<Problem>,
     /// The rows the open context menu acts on.
     pub(crate) menu_keys: Vec<RowKey>,
+    /// The only rows the last refresh changed, when no other row did; the list then reloads just these.
+    pub(crate) reload_only: Option<Vec<RowKey>>,
     refresh: Refresh,
 }
 
@@ -188,6 +190,7 @@ impl State {
     /// Takes what a refresh read; whether anything the panel shows changed.
     pub(crate) fn apply(&mut self, loaded: Loaded) -> bool {
         let was_ready = self.phase == Phase::Ready;
+        self.reload_only = None;
         match loaded {
             Loaded::NoGit => (self.phase, self.repo) = (Phase::NoGit, None),
             Loaded::NotRepository => (self.phase, self.repo) = (Phase::NotRepository, None),
@@ -209,6 +212,13 @@ impl State {
                 let model = Model::new(&status, log, worktrees, stashes, self.history_limit());
                 if was_ready && self.shows_already(&model, &status.branch, &branches, &operation, &apply) {
                     return false;
+                }
+                let heads_alike = self.branch == status.branch
+                    && self.branches == branches
+                    && self.operation == operation
+                    && self.stash_apply == apply;
+                if was_ready && heads_alike {
+                    self.reload_only = changed_files(&self.model, &model);
                 }
                 self.phase = Phase::Ready;
                 self.operation = operation;
@@ -326,6 +336,37 @@ impl State {
     }
 }
 
+/// The file rows that changed from `old` to `new` when nothing else did and every section kept its files in their
+/// order; `None` when more changed.
+fn changed_files(old: &Model, new: &Model) -> Option<Vec<RowKey>> {
+    let rest_alike = old.worktrees == new.worktrees
+        && old.stashes == new.stashes
+        && old.commits == new.commits
+        && old.graph == new.graph
+        && old.more == new.more;
+    if !rest_alike {
+        return None;
+    }
+    let mut keys = Vec::new();
+    for (section, before, after) in [
+        (Section::Conflicts, &old.conflicts, &new.conflicts),
+        (Section::Staged, &old.staged, &new.staged),
+        (Section::Changes, &old.changes, &new.changes),
+    ] {
+        if before.len() != after.len() || before.iter().zip(after).any(|(a, b)| a.path() != b.path()) {
+            return None;
+        }
+        keys.extend(
+            before
+                .iter()
+                .zip(after)
+                .filter(|(a, b)| a != b)
+                .map(|(_, b)| RowKey::File(section, b.path().to_path_buf())),
+        );
+    }
+    Some(keys)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -414,5 +455,48 @@ mod tests {
         assert!(!state.expandable(&RowKey::Worktree("/t".into())));
         assert!(!state.expandable(&RowKey::More));
         assert_eq!(state.children(None), vec![RowKey::Section(Section::Changes)]);
+    }
+}
+
+#[cfg(test)]
+mod reload_tests {
+    use ide_git::{EntryKind, FileState, StatusEntry};
+
+    use super::*;
+
+    fn row(path: &str, mark: Mark) -> FileRow {
+        FileRow {
+            entry: StatusEntry {
+                path: path.into(),
+                kind: EntryKind::Ordinary,
+                index: FileState::Unmodified,
+                worktree: FileState::Modified,
+                submodule: None,
+            },
+            mark,
+        }
+    }
+
+    #[test]
+    fn a_refresh_that_only_changes_files_reloads_just_their_rows() {
+        let old = Model {
+            changes: vec![row("a.rs", Mark::Modified), row("b.rs", Mark::Modified)],
+            ..Model::default()
+        };
+        let mut new = old.clone();
+        new.changes[1].mark = Mark::Deleted;
+        assert_eq!(
+            changed_files(&old, &new),
+            Some(vec![RowKey::File(Section::Changes, "b.rs".into())])
+        );
+        new.changes.push(row("c.rs", Mark::Added));
+        assert_eq!(changed_files(&old, &new), None, "a new file changes the list's shape");
+        let mut more = old.clone();
+        more.more = true;
+        assert_eq!(
+            changed_files(&old, &more),
+            None,
+            "a change past the files reloads everything"
+        );
     }
 }

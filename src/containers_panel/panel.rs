@@ -11,7 +11,7 @@ use std::time::Duration;
 use ide_core::explain::Explain;
 use ide_docker::board::{Board, Look, Node, Row, Section};
 use ide_docker::{Action, Compose};
-use ide_ui_common::panel::{Nesting, PanelOutline, RowItem, RowItems};
+use ide_ui_common::panel::{HeldReload, KeptCells, Nesting, PanelOutline, RowItem, RowItems};
 use ide_ui_common::registry::WindowPart;
 use ide_ui_common::ui_size;
 use ide_ui_common::window::{Window, WindowId};
@@ -66,6 +66,8 @@ pub(crate) struct PanelIvars {
     unfolding: Cell<bool>,
     pub(super) reach: RefCell<Reach>,
     table: RefCell<Option<Retained<NSOutlineView>>>,
+    held: HeldReload,
+    cells: KeptCells<Node>,
     note: RefCell<Option<Retained<NSTextField>>>,
     /// The row that keeps the note off the sidebar's edges, hidden while there is no note.
     note_row: RefCell<Option<Retained<NSStackView>>>,
@@ -123,7 +125,7 @@ define_class!(
             guarded(None, || {
                 let at = self.index_of(item)?;
                 let row = self.ivars().rows.borrow().get(at)?.clone();
-                Some(row_view(self.mtm(), &row))
+                self.ivars().cells.cell(&row.node, &format!("{row:?}"), || Some(row_view(self.mtm(), &row)))
             })
         }
 
@@ -184,6 +186,8 @@ impl ContainersPanel {
             unfolding: Cell::new(false),
             reach: RefCell::new(Reach::Unknown),
             table: RefCell::new(None),
+            held: HeldReload::default(),
+            cells: KeptCells::default(),
             note: RefCell::new(None),
             note_row: RefCell::new(None),
             picker: RefCell::new(None),
@@ -260,6 +264,15 @@ impl ContainersPanel {
         let note_row = ide_ui_common::panel::padded(mtm, &note);
         page.addView_inGravity(&note_row, NSStackViewGravity::Top);
         page.addView_inGravity(&scroll, NSStackViewGravity::Top);
+        let id = self.id();
+        HeldReload::watch(&page, move || {
+            super::with_panel(id, |panel| {
+                let table = panel.ivars().table.borrow().clone();
+                if table.is_some_and(|table| panel.ivars().held.catch_up(&table)) {
+                    panel.show();
+                }
+            });
+        });
         *self.ivars().table.borrow_mut() = Some(table);
         *self.ivars().note.borrow_mut() = Some(note);
         *self.ivars().note_row.borrow_mut() = Some(note_row);
@@ -448,6 +461,7 @@ impl ContainersPanel {
             Vec::new()
         };
         let selected = self.selected_node();
+        let same = *self.ivars().rows.borrow() == rows;
         *self.ivars().rows.borrow_mut() = rows;
         let note = match &reach {
             Reach::Unknown => String::new(),
@@ -473,7 +487,12 @@ impl ContainersPanel {
         let Some(table) = self.ivars().table.borrow().clone() else {
             return;
         };
-        table.reloadData();
+        let caught_up = self.ivars().held.catch_up(&table);
+        if self.ivars().held.holds(&table) || (same && !caught_up) {
+            return;
+        }
+        self.ivars().cells.keep_shown();
+        ide_ui_common::panel::reload(&table);
         self.unfold(&table);
         let again = selected.and_then(|node| self.ivars().rows.borrow().iter().find(|r| r.node == node).cloned());
         self.select_row(&table, again.as_ref());

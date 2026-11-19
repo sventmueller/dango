@@ -197,7 +197,10 @@ fn edits_and_writes_show_their_diffs() {
         panic!("{:?}", edit.view)
     };
     assert_eq!(path, "/tmp/vibeedit-fixture/wa/hello.txt");
-    assert_eq!((edits[0].old.as_str(), edits[0].new.as_str()), ("world", "there"));
+    assert!(
+        edits.is_empty(),
+        "once the diff is there, it stands for the proposed change"
+    );
     let Some(ToolOutput::Diff { hunks, .. }) = &edit.output else {
         panic!("{:?}", edit.output)
     };

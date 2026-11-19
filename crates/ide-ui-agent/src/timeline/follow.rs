@@ -130,7 +130,7 @@ impl Timeline {
     }
 
     /// Scrolls the view to `y` as the timeline's own move.
-    fn scroll_ours(&self, y: f64) {
+    pub(super) fn scroll_ours(&self, y: f64) {
         let clip = self.scroll.contentView();
         let _ours = FlagGuard::raise(&self.follow.ours);
         clip.scrollToPoint(NSPoint::new(0.0, y));

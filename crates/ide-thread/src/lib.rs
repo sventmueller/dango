@@ -24,7 +24,7 @@ pub use update::{BackgroundPatch, Change, Field, SubagentPatch, ToolPatch, Updat
 mod tests {
     use std::time::{Duration, UNIX_EPOCH};
 
-    use serde_json::json;
+    use serde_json::{Value, json};
 
     use super::*;
 
@@ -178,6 +178,55 @@ mod tests {
         assert_eq!(call.status, ToolStatus::Completed);
         assert_eq!(call.elapsed, Some(Duration::from_secs(3)));
         assert_eq!(call.input["command"], "ls");
+    }
+
+    #[test]
+    fn an_ended_call_keeps_only_what_its_card_shows() {
+        let mut thread = thread();
+        let mut write = ToolCall::new("w", "Write", ToolKind::Edit);
+        write.input = json!({"file_path": "a.txt", "content": "new"});
+        write.view = ToolView::Write {
+            path: "a.txt".into(),
+            content: "new".into(),
+        };
+        thread.apply(put("w", EntryKind::ToolCall(write)));
+        let long_line = "y".repeat(OUTPUT_LINE + 5);
+        let text: String = (0..OUTPUT_LINES + 30).map(|n| format!("line {n}\n")).collect();
+        let mut read = ToolCall::new("r", "Read", ToolKind::Read);
+        read.view = ToolView::Read {
+            path: "a.txt".into(),
+            offset: None,
+            limit: None,
+        };
+        read.status = ToolStatus::Completed;
+        read.output = Some(ToolOutput::Text(format!("{long_line}\n{text}")));
+        thread.apply(put("r", EntryKind::ToolCall(read)));
+        thread.apply(Update::Tool {
+            key: "w".into(),
+            patch: ToolPatch {
+                status: Some(ToolStatus::Completed),
+                output: Some(ToolOutput::Diff {
+                    path: "a.txt".into(),
+                    hunks: Vec::new(),
+                }),
+                ..ToolPatch::default()
+            },
+        });
+        let call = |key: &str| match &thread.entry_by_key(key).unwrap().kind {
+            EntryKind::ToolCall(call) => call.clone(),
+            other => panic!("{other:?}"),
+        };
+        let write = call("w");
+        assert_eq!(write.input, Value::Null, "the view has the input's fields");
+        assert!(matches!(&write.view, ToolView::Write { path, content } if path == "a.txt" && content.is_empty()));
+        let read = call("r");
+        let Some(ToolOutput::Text(kept)) = &read.output else {
+            panic!("{:?}", read.output)
+        };
+        assert_eq!(kept.lines().count(), OUTPUT_LINES);
+        assert_eq!(read.lines_left_out(), 31);
+        assert_eq!(kept.lines().next().unwrap().chars().count(), OUTPUT_LINE + 1);
+        assert!(kept.starts_with(&format!("{}…\nline 0\n", &long_line[..OUTPUT_LINE])));
     }
 
     #[test]

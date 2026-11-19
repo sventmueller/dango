@@ -46,7 +46,25 @@ define_class!(
 
     impl CiOutlineView {
         /// The disclosure triangle where the panel's title begins, not in the source list's margin.
+        /// AppKit makes no disclosure button, whose observers would keep it for good; the row's own chevron stands
+        /// where it would be.
         #[unsafe(method(frameOfOutlineCellAtRow:))]
+        fn no_outline_cell(&self, _row: isize) -> NSRect {
+            NSRect::ZERO
+        }
+
+        #[unsafe(method(didAddRowView:forRow:))]
+        fn did_add_row_view(&self, row_view: &objc2_app_kit::NSTableRowView, row: isize) {
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
+            let _: () = unsafe { msg_send![super(self), didAddRowView: row_view, forRow: row] };
+            ide_ui_common::util::guarded((), || {
+                // SAFETY: This class's own method, with its signature.
+                let frame: NSRect = unsafe { msg_send![self, ideDisclosureFrameAtRow: row] };
+                ide_ui_common::panel::chevron::place(self, row_view, frame);
+            });
+        }
+
+        #[unsafe(method(ideDisclosureFrameAtRow:))]
         fn outline_cell_frame(&self, row: isize) -> NSRect {
             // SAFETY: The superclass's implementation, with this method's signature.
             let frame: NSRect = unsafe { msg_send![super(self), frameOfOutlineCellAtRow: row] };
@@ -136,6 +154,38 @@ impl CiPanel {
         let stages = ide_ci::stages(&row.jobs);
         let stage = stages.get(usize::try_from(index).ok()?)?;
         Some((stage.name.to_string(), stage.state()))
+    }
+
+    /// What the row of `key` shows, everything its cell is built from, so the cell stays while this does.
+    pub(crate) fn look(&self, key: &Key) -> Option<String> {
+        Some(match *key {
+            Key::Run(id) => {
+                let run = self.find_run(id)?;
+                let ago = run.updated.or(run.created).map(text::ago);
+                format!("{run:?} {ago:?}")
+            }
+            Key::Stage(run, index) => format!("{:?}", self.find_stage(run, index)?),
+            Key::Job(run, id) => {
+                let job = self.find_job(run, id)?;
+                let took = job.seconds(ide_ci::now()).map(text::took);
+                format!("{job:?} {took:?}")
+            }
+            Key::Item(number) => {
+                let item = self.find_item(number)?;
+                let ago = item.updated.map(text::ago);
+                format!("{item:?} {ago:?} {:?} {}", self.read().tab, self.is_github())
+            }
+            Key::Step(run, job, number) => {
+                let job = self.find_job(run, job)?;
+                format!("{:?}", job.steps.iter().find(|s| s.number == number)?)
+            }
+        })
+    }
+
+    /// The cell of `key`'s row, the one built before while the row shows the same.
+    pub(crate) fn kept_row_view(&self, key: &Key) -> Option<Retained<NSView>> {
+        let look = self.look(key)?;
+        self.ivars().cells.cell(key, &look, || self.row_view(key))
     }
 
     pub(crate) fn row_view(&self, key: &Key) -> Option<Retained<NSView>> {
@@ -263,11 +313,22 @@ impl CiPanel {
         }
     }
 
-    /// Reloads the list, keeping the selection and what the user opened or closed.
+    /// The page came into view: the list catches up with what changed while it was away.
+    pub(crate) fn came_into_view(&self) {
+        if self.ivars().held.catch_up(&self.ui().page) {
+            self.reload_outline();
+        }
+    }
+
+    /// Reloads the list, keeping the selection and what the user opened or closed; out of view it waits.
     pub(crate) fn reload_outline(&self) {
+        if self.ivars().held.holds(&self.ui().page) {
+            return;
+        }
         let outline = &self.ui().outline;
         let selected = self.selected_keys();
-        outline.reloadData();
+        self.ivars().cells.keep_shown();
+        ide_ui_common::panel::reload(outline);
         self.unfold(None);
         let rows = objc2_foundation::NSMutableIndexSet::new();
         for key in &selected {

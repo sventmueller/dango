@@ -4,7 +4,7 @@ use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};
 
 use ide_ci::State as RunState;
-use ide_ui_common::panel::{RowItem, RowItems};
+use ide_ui_common::panel::{HeldReload, KeptCells, RowItem, RowItems};
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
@@ -29,6 +29,8 @@ pub(crate) struct PanelIvars {
     /// The panel itself opens and closes rows, so the user's choices are not touched.
     pub(crate) unfolding: Cell<bool>,
     items: RowItems<Key>,
+    pub(crate) cells: KeptCells<Key>,
+    pub(crate) held: HeldReload,
 }
 
 define_class!(
@@ -73,7 +75,7 @@ define_class!(
             _column: Option<&NSTableColumn>,
             item: &AnyObject,
         ) -> Option<Retained<NSView>> {
-            guarded(None, || self.row_view(&super::rows::key_of(item)?))
+            guarded(None, || self.kept_row_view(&super::rows::key_of(item)?))
         }
 
         #[unsafe(method(outlineView:heightOfRowByItem:))]
@@ -286,6 +288,8 @@ impl CiPanel {
             unfolding: Cell::new(false),
             state: RefCell::new(State::new()),
             items: RowItems::default(),
+            cells: KeptCells::default(),
+            held: HeldReload::default(),
         };
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         let panel: Retained<CiPanel> = unsafe { msg_send![super(CiPanel::alloc(mtm).set_ivars(ivars)), init] };

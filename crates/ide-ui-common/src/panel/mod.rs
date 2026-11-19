@@ -1,6 +1,9 @@
 //! The parts every panel beside the activity bar shares: its title buttons, its page and source lists, lists that line
 //! up with its title, and announcements for VoiceOver.
 
+mod cells;
+pub mod chevron;
+mod held;
 mod items;
 mod list;
 mod outline;
@@ -16,6 +19,8 @@ use objc2_foundation::{NSDictionary, NSNumber, NSPoint, NSRect, NSSize};
 
 use crate::constant;
 use crate::util::{ns, set_label};
+pub use cells::{KeptCells, reload};
+pub use held::{HeldReload, out_of_view, watch_view};
 pub use items::{RowItem, RowItems};
 pub use list::*;
 pub use outline::{Nesting, PanelOutline};

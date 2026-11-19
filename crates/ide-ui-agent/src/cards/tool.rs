@@ -20,10 +20,10 @@ use super::{Ctx, Part, disclosure, head, mono_text, output_text, pack};
 const PREVIEW_LINES: usize = 4;
 /// How many lines of a diff a closed card shows.
 const DIFF_LINES: usize = 12;
-/// How many lines an open card shows at most; the rest stays in the agent's output.
-const MAX_LINES: usize = 400;
+/// How many lines an open card shows at most; the timeline keeps no more once a call has ended.
+const MAX_LINES: usize = ide_thread::OUTPUT_LINES;
 /// How long a line may be before it is cut.
-const MAX_LINE: usize = 400;
+const MAX_LINE: usize = ide_thread::OUTPUT_LINE;
 /// The width of the IN and OUT labels.
 const LABEL_WIDTH: f64 = 28.0;
 
@@ -196,7 +196,8 @@ fn io_box(ctx: &Ctx<'_>, id: EntryId, input: &str, output: Option<&str>, call: &
             rows.push(ui::view(&ui::separator(mtm)));
         }
         let failed = call.status == ToolStatus::Failed;
-        rows.push(io_row(ctx, "OUT", &output_view(ctx, id, output, inner, failed)));
+        let output = output_view(ctx, id, output, call.lines_left_out(), inner, failed);
+        rows.push(io_row(ctx, "OUT", &output));
     }
     let refs: Vec<&NSView> = rows.iter().map(|v| &**v).collect();
     let column = ui::column(mtm, 6.0, &refs);
@@ -230,7 +231,7 @@ fn input_view(ctx: &Ctx<'_>, id: EntryId, input: &str, width: f64) -> Retained<N
     let mtm = ctx.mtm;
     let long = input.contains('\n') || input.chars().count() as f64 * 7.3 > width;
     if long && ctx.is_open(id, Part::Input) {
-        let text = mono_text(ctx, &clip(input, MAX_LINES), width - 16.0, &NSColor::labelColor());
+        let text = mono_text(ctx, &clip(input, MAX_LINES, 0), width - 16.0, &NSColor::labelColor());
         let chevron = disclosure(ctx, id, Part::Input);
         let line = ui::row(mtm, 4.0, &[&text, &chevron]);
         line.setAlignment(NSLayoutAttribute::Top);
@@ -255,7 +256,15 @@ fn input_view(ctx: &Ctx<'_>, id: EntryId, input: &str, width: f64) -> Retained<N
 }
 
 /// The first lines of the output and a link to the rest; all of it, up to a limit, once opened.
-fn output_view(ctx: &Ctx<'_>, id: EntryId, output: &str, width: f64, failed: bool) -> Retained<NSView> {
+/// `left_out` lines that the timeline dropped follow the end of `output`.
+fn output_view(
+    ctx: &Ctx<'_>,
+    id: EntryId,
+    output: &str,
+    left_out: usize,
+    width: f64,
+    failed: bool,
+) -> Retained<NSView> {
     let mtm = ctx.mtm;
     let color = if failed {
         NSColor::systemRedColor()
@@ -270,10 +279,10 @@ fn output_view(ctx: &Ctx<'_>, id: EntryId, output: &str, width: f64, failed: boo
             &NSColor::tertiaryLabelColor(),
         ));
     }
-    let total = output.lines().count();
+    let total = output.lines().count() + left_out;
     let open = ctx.is_open(id, Part::Output);
     let shown = if open { MAX_LINES } else { PREVIEW_LINES };
-    let text = mono_text(ctx, &clip(output, shown), width, &color);
+    let text = mono_text(ctx, &clip(output, shown, left_out), width, &color);
     if total <= PREVIEW_LINES {
         return ui::view(&text);
     }
@@ -294,8 +303,9 @@ fn output_view(ctx: &Ctx<'_>, id: EntryId, output: &str, width: f64, failed: boo
     ui::view(&ui::column(mtm, 2.0, &[&text, &line]))
 }
 
-/// The first `lines` lines of `text`, each at most `MAX_LINE` characters, with a note when more were left out.
-fn clip(text: &str, lines: usize) -> String {
+/// The first `lines` lines of `text`, each at most `MAX_LINE` characters, with a note when more were left out,
+/// counting `left_out` lines that follow `text`.
+fn clip(text: &str, lines: usize, left_out: usize) -> String {
     let mut out: Vec<String> = text
         .lines()
         .take(lines)
@@ -310,7 +320,7 @@ fn clip(text: &str, lines: usize) -> String {
         })
         .collect();
     if lines >= MAX_LINES {
-        let total = text.lines().count();
+        let total = text.lines().count() + left_out;
         if total > lines {
             out.push(tf("… {} weitere Zeilen", &[&(total - lines).to_string()]));
         }
@@ -350,7 +360,12 @@ fn compact_card(
         )));
     }
     if let Some(output) = output.filter(|_| ctx.is_open(id, Part::Output)) {
-        let text = mono_text(ctx, &clip(&output, MAX_LINES), ctx.width - 18.0, &NSColor::labelColor());
+        let text = mono_text(
+            ctx,
+            &clip(&output, MAX_LINES, call.lines_left_out()),
+            ctx.width - 18.0,
+            &NSColor::labelColor(),
+        );
         parts.push(ui::view(&ui::framed(
             mtm,
             &text,
@@ -554,19 +569,25 @@ mod tests {
     #[test]
     fn long_output_is_cut_and_says_how_much_is_left() {
         let text: String = (0..500).map(|n| format!("line {n}\n")).collect();
-        let clipped = clip(&text, MAX_LINES);
+        let clipped = clip(&text, MAX_LINES, 0);
         assert_eq!(clipped.lines().count(), MAX_LINES + 1);
         assert!(clipped.ends_with("100 weitere Zeilen"));
-        assert_eq!(clip("a\nb\nc", PREVIEW_LINES), "a\nb\nc");
+        assert!(clip(&text, MAX_LINES, 50).ends_with("150 weitere Zeilen"));
+        let kept: String = (0..MAX_LINES).map(|n| format!("line {n}\n")).collect();
+        assert!(
+            clip(&kept, MAX_LINES, 7).ends_with("7 weitere Zeilen"),
+            "lines the timeline dropped are counted"
+        );
+        assert_eq!(clip("a\nb\nc", PREVIEW_LINES, 0), "a\nb\nc");
         assert_eq!(
-            clip("a\nb\nc\nd\ne\nf", PREVIEW_LINES),
+            clip("a\nb\nc\nd\ne\nf", PREVIEW_LINES, 0),
             "a\nb\nc\nd",
             "a preview names no rest"
         );
         let long = "x".repeat(MAX_LINE + 1);
-        assert_eq!(clip(&long, 1).chars().count(), MAX_LINE + 1);
-        assert!(clip(&long, 1).ends_with('…'));
-        assert_eq!(clip(&long[..MAX_LINE], 1), &long[..MAX_LINE]);
+        assert_eq!(clip(&long, 1, 0).chars().count(), MAX_LINE + 1);
+        assert!(clip(&long, 1, 0).ends_with('…'));
+        assert_eq!(clip(&long[..MAX_LINE], 1, 0), &long[..MAX_LINE]);
     }
 
     #[test]

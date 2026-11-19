@@ -274,6 +274,7 @@ impl AgentTab {
         let tab = Rc::new(tab);
         *tab.me.borrow_mut() = Rc::downgrade(&tab);
         *tab.text_size.borrow_mut() = Some(crate::text_size::follow(&tab));
+        crate::timeline::Timeline::watch(&tab);
         tab
     }
 

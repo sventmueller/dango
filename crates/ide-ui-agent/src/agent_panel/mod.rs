@@ -20,7 +20,7 @@ use objc2_app_kit::{NSAccessibility, NSLayoutAttribute, NSOutlineView, NSScrollV
 use splat_i18n::t;
 
 use crate::Resume;
-use ide_ui_common::panel::ACCESSORY_INSET;
+use ide_ui_common::panel::{ACCESSORY_INSET, HeldReload};
 use ide_ui_common::ui_size;
 use ide_ui_common::util::{main_after, main_soon, ns};
 use ide_ui_common::window::{AsWindow, Panel, Panels, Window};
@@ -51,6 +51,7 @@ pub(crate) struct AgentPanel {
     /// The latest reading of the lists, so that an older one a worker answers late is dropped.
     reading: Cell<u64>,
     agents: agents::Agents,
+    held: HeldReload,
 }
 
 /// The agent panels of every window.
@@ -79,13 +80,12 @@ fn reload_all() {
     }
 }
 
+/// The panel of `controller`'s window; the panels of closed windows are let go on the way.
 fn panel_of(controller: &Window) -> Option<Rc<AgentPanel>> {
     with_panels(|panels| {
-        panels
-            .borrow()
-            .iter()
-            .find(|p| p.controller.is_open() && p.controller == *controller)
-            .cloned()
+        let mut panels = panels.borrow_mut();
+        panels.retain(|p| p.controller.is_open());
+        panels.iter().find(|p| p.controller == *controller).cloned()
     })
 }
 
@@ -113,7 +113,7 @@ pub fn attach(controller: &(impl AsWindow + ?Sized)) {
 pub(crate) fn refresh(controller: &(impl AsWindow + ?Sized)) {
     let controller = &controller.as_window();
     let Some(panel) = panel_of(controller) else { return };
-    if panel.scheduled.replace(true) {
+    if panel.held.holds(&panel.sessions) || panel.scheduled.replace(true) {
         return;
     }
     let key = panel.id;
@@ -249,6 +249,15 @@ impl AgentPanel {
             scheduled: Cell::new(false),
             reading: Cell::new(0),
             agents,
+            held: HeldReload::default(),
+        });
+        let weak = Rc::downgrade(&panel);
+        HeldReload::watch(&panel.view, move || {
+            if let Some(panel) = weak.upgrade()
+                && panel.held.catch_up(&panel.sessions)
+            {
+                panel.reload_soon();
+            }
         });
         panel.sessions_source.set_panel(panel.id);
         let scroll = scroll(mtm, &panel.sessions);
@@ -294,6 +303,9 @@ impl AgentPanel {
         let Some(controller) = self.controller.load() else {
             return;
         };
+        if self.held.holds(&self.sessions) {
+            return;
+        }
         let tabs = crate::of_window(&controller);
         let model = sessions::Model::build(&sessions::Inputs {
             index: &lists.index,

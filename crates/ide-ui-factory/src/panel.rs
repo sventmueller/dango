@@ -6,7 +6,7 @@ use std::cell::{OnceCell, RefCell};
 use std::path::{Path, PathBuf};
 use std::rc::Weak;
 
-use ide_ui_common::panel::{Nesting, PanelOutline, RowItem, RowItems};
+use ide_ui_common::panel::{HeldReload, KeptCells, Nesting, PanelOutline, RowItem, RowItems};
 use ide_ui_common::registry::WindowPart;
 use ide_ui_common::util::{guarded, ns};
 use ide_ui_common::window::{Panel, Panels, Window};
@@ -37,6 +37,8 @@ pub(crate) struct PanelIvars {
     /// The objects that stand for the outline's rows, the same one for a key as long as its row shows.
     items: RowItems<Key>,
     ui: OnceCell<PanelUi>,
+    held: HeldReload,
+    cells: KeptCells<Key>,
 }
 
 /// The views of the panel.
@@ -93,7 +95,8 @@ define_class!(
                 let key = RowItems::<Key>::key_of(item)?;
                 let list = self.ivars().list.borrow();
                 let line = list.lines().iter().find(|line| line.key() == key)?.clone();
-                Some(super::rows::view(self.mtm(), &line))
+                drop(list);
+                self.ivars().cells.cell(&key, &format!("{line:?}"), || Some(super::rows::view(self.mtm(), &line)))
             })
         }
 
@@ -171,6 +174,8 @@ impl FactoryPanel {
             list: RefCell::new(List::default()),
             items: RowItems::default(),
             ui: OnceCell::new(),
+            held: HeldReload::default(),
+            cells: KeptCells::default(),
         };
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         let panel: Retained<FactoryPanel> =
@@ -178,6 +183,14 @@ impl FactoryPanel {
         let _ = panel.ivars().ui.set(panel.build(mtm));
         state.panels.insert(panel.ivars().id, panel.clone());
         window.set_panel_page(Panel::Leitstand, &panel.ui().page);
+        let weak = objc2::rc::Weak::from_retained(&panel);
+        HeldReload::watch(&panel.ui().page, move || {
+            if let Some(panel) = weak.load()
+                && panel.ivars().held.catch_up(&panel.ui().outline)
+            {
+                panel.reload();
+            }
+        });
         window.set_panel_accessory(Panel::Leitstand, &panel.ui().header);
         panel.reload();
         panel
@@ -247,18 +260,21 @@ impl FactoryPanel {
         let words = list.symbol_words();
         let empty = list.is_empty();
         *self.ivars().list.borrow_mut() = list;
-        let live: Vec<Key> = self.list().lines().iter().map(Line::key).collect();
-        self.ivars().items.keep(|key| live.contains(key));
         let Some(ui) = self.ivars().ui.get() else { return };
         ui.empty.setHidden(!empty);
         if let Some(superview) = ui.outline.enclosingScrollView() {
             superview.setHidden(empty);
         }
-        ui.outline.reloadData();
-        // SAFETY: `None` stands for the outline's root, which holds every station's row.
-        unsafe { ui.outline.expandItem_expandChildren(None, true) };
-        if let Some(id) = selected {
-            self.select(&id);
+        if !self.ivars().held.holds(&ui.outline) {
+            self.ivars().cells.keep_shown();
+            ide_ui_common::panel::reload(&ui.outline);
+            let live: Vec<Key> = self.list().lines().iter().map(Line::key).collect();
+            self.ivars().items.keep(|key| live.contains(key));
+            // SAFETY: `None` stands for the outline's root, which holds every station's row.
+            unsafe { ui.outline.expandItem_expandChildren(None, true) };
+            if let Some(id) = selected {
+                self.select(&id);
+            }
         }
         if let Some(window) = self.ivars().window.load() {
             window.set_symbol_status(Panel::Leitstand, words.as_deref());

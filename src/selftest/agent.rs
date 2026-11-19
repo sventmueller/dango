@@ -715,6 +715,7 @@ fn requests(root: PathBuf, first: AgentKey) {
         ide_ui_agent::of_window(&controller).len() == 2,
         format!("{}", ide_ui_agent::of_window(&controller).len()),
     );
+    super::agent_park::lets_go(&first);
     first.feed(RETRY);
     let first = first.key;
     helpers::after(DRAWN, move || {
@@ -864,6 +865,15 @@ fn terminal(root: PathBuf, first: AgentKey) {
         return give_up(NAME, "the AI tab is open");
     };
     first.select();
+    let key = first.key;
+    super::agent_park::builds_again(key, move || overview(root, key));
+}
+
+/// The overview of the first tab's session lists its subagents and tasks.
+fn overview(root: PathBuf, key: AgentKey) {
+    let (Some(controller), Some(first)) = (controller_of(&root), tab_of(key)) else {
+        return give_up(NAME, "the folder's window and the AI tab are open");
+    };
     first.show_work(Part::All, None);
     let overview = crate::activity::overview_lines(&controller);
     check(
@@ -871,7 +881,6 @@ fn terminal(root: PathBuf, first: AgentKey) {
         overview.iter().any(|l| l.contains("list files")) && overview.iter().any(|l| l.contains("review code")),
         overview.join(" | "),
     );
-    let key = first.key;
     helpers::after(DRAWN, move || {
         if let Some(controller) = controller_of(&root) {
             if let Some(view) = crate::activity::popover_view(&controller) {

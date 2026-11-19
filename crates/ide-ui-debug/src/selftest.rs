@@ -241,8 +241,8 @@ pub fn layout(controller: &(impl AsWindow + ?Sized)) -> Option<Layout> {
             .find(|sub| sub.downcast_ref::<objc2_app_kit::NSTextField>().is_some())?;
         Some(in_page(&field).origin.x)
     };
-    // SAFETY: The superclass's method, with its signature; the row exists.
-    let chevron: objc2_foundation::NSRect = unsafe { objc2::msg_send![&**outline, frameOfOutlineCellAtRow: 0isize] };
+    // SAFETY: The outline class's own method for where its chevron stands, with its signature; the row exists.
+    let chevron: objc2_foundation::NSRect = unsafe { objc2::msg_send![&**outline, ideDisclosureFrameAtRow: 0isize] };
     let chevron = outline.convertRect_toView(chevron, Some(page));
     let list = outline.enclosingScrollView()?;
     Some(Layout {

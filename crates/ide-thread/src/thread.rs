@@ -335,7 +335,17 @@ impl Thread {
         changes.push(Change::Usage);
     }
 
-    fn put(&mut self, lane: Lane, key: Option<String>, at: SystemTime, entry: EntryKind, changes: &mut Vec<Change>) {
+    fn put(
+        &mut self,
+        lane: Lane,
+        key: Option<String>,
+        at: SystemTime,
+        mut entry: EntryKind,
+        changes: &mut Vec<Change>,
+    ) {
+        if let EntryKind::ToolCall(call) = &mut entry {
+            call.settle();
+        }
         if let Some(id) = key.as_ref().and_then(|k| self.keys.get(k)).copied() {
             self.edit_id(id, changes, |kind| replace(kind, entry));
             return;
@@ -436,6 +446,7 @@ impl Thread {
             }
             if let Some(output) = patch.output {
                 changed |= replace(&mut call.output, Some(output));
+                call.left_out = 0;
             }
             if call.started.is_none() && patch.started.is_some() {
                 call.started = patch.started;
@@ -461,6 +472,7 @@ impl Thread {
             if let Some(task) = patch.background_task {
                 changed |= replace(&mut call.background_task, Some(task));
             }
+            call.settle();
             changed
         });
     }

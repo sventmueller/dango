@@ -75,7 +75,14 @@ pub struct ToolCall {
     pub(crate) summary: Option<String>,
     /// The background task it became, when it runs in the background.
     pub background_task: Option<String>,
+    /// How many lines of the output were dropped once the call ended.
+    pub(crate) left_out: usize,
 }
+
+/// How many lines of a tool's text output stay once the call has ended; no card shows more.
+pub const OUTPUT_LINES: usize = 400;
+/// How many characters of one output line stay once the call has ended.
+pub const OUTPUT_LINE: usize = 400;
 
 impl ToolCall {
     /// A call that has just been announced.
@@ -96,8 +103,66 @@ impl ToolCall {
             parent: None,
             summary: None,
             background_task: None,
+            left_out: 0,
         }
     }
+
+    /// How many lines of the output were dropped once the call ended, beyond those `output` still holds.
+    pub fn lines_left_out(&self) -> usize {
+        self.left_out
+    }
+
+    /// Once the call has ended, drops what no card shows: the raw input where the view has its fields, the
+    /// proposed change once the diff is there, and text output beyond `OUTPUT_LINES`. A subagent's report stays
+    /// whole.
+    pub(crate) fn settle(&mut self) {
+        if !matches!(self.status, ToolStatus::Completed | ToolStatus::Failed) {
+            return;
+        }
+        if !matches!(self.view, ToolView::Mcp { .. } | ToolView::Other) {
+            self.input = Value::Null;
+        }
+        if matches!(self.output, Some(ToolOutput::Diff { .. })) {
+            match &mut self.view {
+                ToolView::Edit { edits, .. } => *edits = Vec::new(),
+                ToolView::Write { content, .. } => *content = String::new(),
+                _ => {}
+            }
+        }
+        if matches!(self.view, ToolView::Agent { .. }) {
+            return;
+        }
+        self.left_out += match &mut self.output {
+            Some(ToolOutput::Text(text)) => cut(text),
+            Some(ToolOutput::Terminal { stdout, stderr, .. }) => cut(stdout) + cut(stderr),
+            _ => 0,
+        };
+    }
+}
+
+/// Cuts `text` to its first `OUTPUT_LINES` lines of at most `OUTPUT_LINE` characters, a cut line ending in `…`;
+/// returns how many lines were dropped.
+pub(crate) fn cut(text: &mut String) -> usize {
+    let long_line = |line: &str| line.chars().nth(OUTPUT_LINE).is_some();
+    let total = text.lines().count();
+    if total <= OUTPUT_LINES && !text.lines().any(long_line) {
+        return 0;
+    }
+    let mut kept = String::new();
+    for (n, line) in text.lines().take(OUTPUT_LINES).enumerate() {
+        if n > 0 {
+            kept.push('\n');
+        }
+        if long_line(line) {
+            kept.extend(line.chars().take(OUTPUT_LINE));
+            kept.push('…');
+        } else {
+            kept.push_str(line);
+        }
+    }
+    kept.shrink_to_fit();
+    *text = kept;
+    total.saturating_sub(OUTPUT_LINES)
 }
 
 /// The input of a tool call field by field, for the tools whose cards show more than the raw input.

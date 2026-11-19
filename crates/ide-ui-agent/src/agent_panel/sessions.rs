@@ -22,7 +22,7 @@ use splat_i18n::t;
 use super::rows::{self, Look};
 use crate::AgentKey;
 use crate::{AgentTab, Resume};
-use ide_ui_common::panel::{RowItem, RowItems};
+use ide_ui_common::panel::{KeptCells, RowItem, RowItems};
 use ide_ui_common::util::{guarded, item, ns, set_action, set_target};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
@@ -189,6 +189,7 @@ pub(crate) struct SourceIvars {
     panel: Cell<usize>,
     model: RefCell<Model>,
     items: RowItems<String>,
+    cells: KeptCells<String>,
     /// The id of the row the context menu was opened on.
     clicked: RefCell<Option<String>>,
 }
@@ -235,7 +236,9 @@ define_class!(
             guarded(None, || {
                 let id = id_of(item)?;
                 let node = self.ivars().model.borrow().nodes.get(&id)?.clone();
-                Some(self.cell(&node))
+                let (open, title, dim, detail, badge) = shown(&node);
+                let look = (open, title, dim, &detail, badge.is_some());
+                self.ivars().cells.cell(&id, &look, || Some(self.cell(&node)))
             })
         }
     }
@@ -291,6 +294,30 @@ define_class!(
     }
 );
 
+/// What the row of `node` shows: whether it is open, its title, whether it is dimmed, its age and its badge.
+fn shown(node: &Node) -> (bool, &str, bool, String, Option<&'static str>) {
+    match node {
+        Node::Thread { entry, bookmarked, .. } => (
+            node.open(),
+            if entry.title.is_empty() {
+                t("Neue Sitzung")
+            } else {
+                entry.title.as_str()
+            },
+            entry.archived,
+            crate::short_age(entry.last_activity),
+            bookmarked.then_some("bookmark.fill"),
+        ),
+        Node::Past { resume, when } => (
+            false,
+            resume.title.as_deref().unwrap_or(&resume.session),
+            false,
+            crate::short_age(*when),
+            None,
+        ),
+    }
+}
+
 fn id_of(item: &AnyObject) -> Option<String> {
     RowItems::<String>::key_of(item)
 }
@@ -301,6 +328,7 @@ pub(super) fn outline(mtm: MainThreadMarker) -> (Retained<NSOutlineView>, Retain
         panel: Cell::new(0),
         model: RefCell::new(Model::default()),
         items: RowItems::default(),
+        cells: KeptCells::default(),
         clicked: RefCell::new(None),
     };
     // SAFETY: NSObject's initializer, called once on the newly allocated object.
@@ -352,37 +380,26 @@ impl Source {
 
     pub(super) fn show(&self, view: &NSOutlineView, model: Model) {
         *self.ivars().model.borrow_mut() = model;
-        view.reloadData();
+        self.ivars().cells.keep_shown();
+        ide_ui_common::panel::reload(view);
         let model = self.ivars().model.borrow();
         self.ivars().items.keep(|id| model.order.contains(id));
+        self.ivars().cells.keep(|id| model.order.contains(id));
         drop(model);
         view.sizeLastColumnToFit();
     }
 
     /// The row of `node`: whether it is open, its title and how long ago it was used.
     fn cell(&self, node: &Node) -> Retained<NSView> {
-        let open = node.open();
-        let (title, dim, when, badge) = match node {
-            Node::Thread { entry, bookmarked, .. } => (
-                if entry.title.is_empty() {
-                    t("Neue Sitzung")
-                } else {
-                    entry.title.as_str()
-                },
-                entry.archived,
-                entry.last_activity,
-                bookmarked.then(|| ("bookmark.fill", NSColor::controlAccentColor())),
-            ),
-            Node::Past { resume, when } => (resume.title.as_deref().unwrap_or(&resume.session), false, *when, None),
-        };
+        let (open, title, dim, detail, badge) = shown(node);
         rows::cell(
             self.mtm(),
             &Look {
                 open,
                 title,
                 dim,
-                detail: &crate::short_age(when),
-                badge,
+                detail: &detail,
+                badge: badge.map(|name| (name, NSColor::controlAccentColor())),
             },
         )
     }

@@ -36,11 +36,12 @@ check-dictation: ## Clippy and the tests of the app and ide-ui-dictation with di
 	cargo clippy --package ide-app --package ide-ui-dictation --all-targets --features ide-app/dictation,ide-app/selftest,ide-ui-dictation/engine,ide-ui-dictation/selftest -- -D warnings
 	cargo test --package ide-app --package ide-ui-dictation --features ide-app/dictation,ide-ui-dictation/engine
 
-perf: ## Timing budgets (E25) in a release build; meaningful only while the Mac is otherwise idle
+perf: ## Timing and memory budgets (E25) in a release build; meaningful only while the Mac is otherwise idle
 	cargo test --release -p ide-project -- --ignored --test-threads=1 tree::tests::a_folder_of_many index::tests::twenty_thousand index::tests::two_hundred_thousand
 	cargo test --release -p ide-document -- --ignored --nocapture budget
 	cargo test --release -p ide-terminal --test throughput --test session -- --ignored --test-threads=1
 	cargo test --release -p ide-vim -- --ignored --nocapture ten_megabyte
+	cargo test --release -p ide-claude --test memory -- --ignored --nocapture
 
 fuzz: ## The crates' fuzz targets with the pinned nightly, FUZZ_SECONDS each (60 by default), and the property tests with a fresh seed; ARGS=<target>|properties picks some
 	cargo xtask fuzz $(ARGS)

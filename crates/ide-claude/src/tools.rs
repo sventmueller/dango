@@ -206,6 +206,29 @@ pub(crate) fn result_text(content: &Value) -> String {
     }
 }
 
+/// The fields of a structured tool result that the mapping reads; a transcript read back keeps only these, so that
+/// the whole files an edit or a read carries do not pass through memory.
+pub(crate) const RESULT_FIELDS: [&str; 18] = [
+    "answers",
+    "status",
+    "agentId",
+    "totalTokens",
+    "totalToolUseCount",
+    "totalDurationMs",
+    "stdout",
+    "stderr",
+    "interrupted",
+    "filePath",
+    "structuredPatch",
+    "type",
+    "content",
+    "numMatches",
+    "numLines",
+    "numFiles",
+    "matches",
+    "backgroundTaskId",
+];
+
 /// What a call of `name` returned, from its structured result when the tool has one, else from the text.
 pub(crate) fn output(name: &str, structured: Option<&Value>, content: &Value) -> ToolOutput {
     let structured = structured.filter(|v| v.is_object());

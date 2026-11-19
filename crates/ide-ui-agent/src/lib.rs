@@ -320,6 +320,7 @@ fn remove(key: AgentKey) {
             plan::close_docs(&controller, key);
             changed(&controller);
         }
+        ide_ui_common::util::give_back_memory_soon();
     }
 }
 

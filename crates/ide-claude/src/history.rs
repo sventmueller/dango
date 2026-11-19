@@ -15,6 +15,7 @@ use ide_thread::Thread;
 
 use crate::mapping::Mapper;
 use crate::protocol::{Message, System};
+use crate::tools;
 
 /// How many lines from the start of a transcript are searched for the first prompt.
 const HEAD_LINES: usize = 400;
@@ -203,8 +204,9 @@ fn prompt_text(record: &Value) -> Option<String> {
     (!text.is_empty() && !text.starts_with('<')).then(|| text.to_string())
 }
 
-/// The main conversation of a transcript as frames, for `Mapper::for_history`; records it cannot read are skipped.
-pub(crate) fn load(path: &Path) -> std::io::Result<Vec<Message>> {
+/// The main conversation of a transcript as frames, read one at a time, for `Mapper::for_history`; records it cannot
+/// read are skipped.
+pub(crate) fn frames(path: &Path) -> std::io::Result<impl Iterator<Item = Message>> {
     let file = File::open(path)?;
     Ok(BufReader::new(file)
         .lines()
@@ -215,8 +217,7 @@ pub(crate) fn load(path: &Path) -> std::io::Result<Vec<Message>> {
                 && record.get("isMeta").and_then(Value::as_bool) != Some(true)
         })
         .filter_map(frame)
-        .filter(|message| !matches!(message, Message::Unknown(_) | Message::Malformed(_)))
-        .collect())
+        .filter(|message| !matches!(message, Message::Unknown(_) | Message::Malformed(_))))
 }
 
 /// The frame a transcript record stands for: a slash command as the user typed it, and its output as the CLI sent
@@ -224,6 +225,11 @@ pub(crate) fn load(path: &Path) -> std::io::Result<Vec<Message>> {
 fn frame(mut record: Value) -> Option<Message> {
     match record.get("type").and_then(Value::as_str)? {
         "user" => {
+            match record.get_mut("toolUseResult") {
+                Some(Value::Object(result)) => result.retain(|field, _| tools::RESULT_FIELDS.contains(&field.as_str())),
+                Some(other) => *other = Value::Null,
+                None => {}
+            }
             let typed = record
                 .pointer("/message/content")
                 .and_then(Value::as_str)
@@ -274,7 +280,7 @@ fn between<'a>(text: &'a str, open: &str, close: &str) -> Option<&'a str> {
 pub fn rebuild(mut thread: Thread, path: &Path) -> std::io::Result<Thread> {
     let at = std::fs::metadata(path)?.modified()?;
     let mut mapper = Mapper::for_history();
-    for message in load(path)? {
+    for message in frames(path)? {
         let updates = mapper.map(&message, at);
         thread.apply_all(updates);
     }
@@ -320,8 +326,11 @@ mod tests {
         assert_eq!(s.title.as_deref(), Some("Parser fix"));
         assert_eq!(s.last_prompt.as_deref(), Some("Thanks"));
         assert_eq!(s.git_branch.as_deref(), Some("main"));
-        let frames = load(&s.path).unwrap();
-        assert_eq!(frames.len(), 2, "the meta record and the unreadable line are left out");
+        assert_eq!(
+            frames(&s.path).unwrap().count(),
+            2,
+            "the meta record and the unreadable line are left out"
+        );
         let thread = rebuild(Thread::new(ide_thread::ThreadId::from("t"), "claude", cwd), &s.path).unwrap();
         let texts: Vec<String> = thread
             .entries(&ide_thread::Lane::Main)

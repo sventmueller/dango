@@ -49,7 +49,7 @@ define_class!(
         #[unsafe(method(numberOfRowsInTableView:))]
         fn rows(&self, _table: &NSTableView) -> isize {
             guarded(0, || {
-                self.tab().map_or(0, |tab| isize::try_from(tab.timeline().count()).unwrap_or(0))
+                self.tab().map_or(0, |tab| isize::try_from(tab.timeline().table_rows()).unwrap_or(0))
             })
         }
     }

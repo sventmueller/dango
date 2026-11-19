@@ -30,7 +30,7 @@ in Dark Mode). Only Xcode's `actool` compiles it, so its output `assets/Assets.c
 | `make check` | `sweep` and `lint`, then `cargo test --workspace`; needs no keychain, no window and no network |
 | `make check-dictation` | clippy and the app's tests with the feature `dictation`, for changes that touch it |
 | `make test` | `check`, then `cargo xtask selftest probe` |
-| `make perf` | the timing budgets of E25 in a release build; wall-clock bounds, so only on an otherwise idle Mac |
+| `make perf` | the timing and memory budgets of E25 in a release build; wall-clock bounds, so only on an otherwise idle Mac |
 | `make fuzz` | `cargo xtask fuzz`: the crates' fuzz targets, see [Fuzzing](#fuzzing); outside `make check` |
 | `make coverage` | `cargo xtask coverage`: line coverage of the tests and the offline self-tests, see [Coverage](#coverage) |
 | `make ci` | `cargo xtask ci`: formatter, `check`, coverage with every test and self-test, `perf`; seals the content, see [CI and deploy](#ci-and-deploy) |

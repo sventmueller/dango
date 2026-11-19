@@ -48,7 +48,9 @@ impl AgentTab {
             let git = crate::host::host().git();
             let thread = match transcript {
                 Some(path) if thread.entries(&ide_thread::Lane::Main).is_empty() => {
-                    ide_claude::history::rebuild(thread.clone(), &path).unwrap_or(thread)
+                    let rebuilt = ide_claude::history::rebuild(thread.clone(), &path).unwrap_or(thread);
+                    ide_ui_common::util::give_back_memory_soon();
+                    rebuilt
                 }
                 _ => thread,
             };

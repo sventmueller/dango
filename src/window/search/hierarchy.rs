@@ -638,7 +638,8 @@ fn build(mtm: MainThreadMarker, panel: &HierarchyPanel) -> Views {
 }
 
 fn tree(mtm: MainThreadMarker, panel: &HierarchyPanel) -> (Retained<NSScrollView>, Retained<NSOutlineView>) {
-    let outline = NSOutlineView::initWithFrame(NSOutlineView::alloc(mtm), ide_ui_common::panel::LIST_FRAME);
+    let outline: Retained<NSOutlineView> =
+        ide_ui_common::panel::PanelOutline::new(mtm, ide_ui_common::panel::Nesting::Indented).into_super();
     let scroll = ide_ui_common::panel::source_list_outline(mtm, &outline, "symbol", t("Aufrufhierarchie"));
     ui_size::follow_rows(&outline, ide_ui_common::style::ROW_HEIGHT);
     // SAFETY: The outline view holds its data source and delegate weakly; the search panel keeps this panel alive.

@@ -13,6 +13,7 @@ mod agent_context;
 mod agent_dialogs;
 mod agent_live;
 mod agent_outside;
+mod agent_park;
 mod agent_perf;
 mod agent_plan;
 mod agent_rewind;

@@ -42,7 +42,25 @@ define_class!(
     impl DebugOutlineView {
         /// The disclosure triangle where the panel's title begins, not in the source list's margin; a row below a
         /// section has its triangle where the section has its own.
+        /// AppKit makes no disclosure button, whose observers would keep it for good; the row's own chevron stands
+        /// where it would be.
         #[unsafe(method(frameOfOutlineCellAtRow:))]
+        fn no_outline_cell(&self, _row: isize) -> NSRect {
+            NSRect::ZERO
+        }
+
+        #[unsafe(method(didAddRowView:forRow:))]
+        fn did_add_row_view(&self, row_view: &objc2_app_kit::NSTableRowView, row: isize) {
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
+            let _: () = unsafe { msg_send![super(self), didAddRowView: row_view, forRow: row] };
+            ide_ui_common::util::guarded((), || {
+                // SAFETY: This class's own method, with its signature.
+                let frame: NSRect = unsafe { msg_send![self, ideDisclosureFrameAtRow: row] };
+                ide_ui_common::panel::chevron::place(self, row_view, frame);
+            });
+        }
+
+        #[unsafe(method(ideDisclosureFrameAtRow:))]
         fn outline_cell_frame(&self, row: isize) -> NSRect {
             // SAFETY: The superclass's implementation, with this method's signature.
             let frame: NSRect = unsafe { msg_send![super(self), frameOfOutlineCellAtRow: row] };
@@ -140,7 +158,7 @@ impl DebugOutlineView {
             return self.toward_leading(frame, true);
         };
         // SAFETY: This class's own method, with its signature.
-        let chevron: NSRect = unsafe { msg_send![self, frameOfOutlineCellAtRow: section] };
+        let chevron: NSRect = unsafe { msg_send![self, ideDisclosureFrameAtRow: section] };
         if chevron.size.width <= 0.0 {
             return self.toward_leading(frame, true);
         }
