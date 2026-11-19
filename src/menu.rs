@@ -206,102 +206,99 @@ fn find_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
 }
 
 fn view_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
-    let panel =
-        |panel: Panel, command: &str| tagged(mtm, panel.title(), sel!(ideShowPanel:), &keys.get(command), panel.tag());
+    let panels = Panel::ALL.map(|panel| {
+        let shortcut = keys.get(&format!("panel.{}", panel.id()));
+        tagged(mtm, panel.title(), sel!(ideShowPanel:), &shortcut, panel.tag())
+    });
     submenu(
         mtm,
         t("Darstellung"),
-        vec![
-            panel(Panel::Files, "panel.files"),
-            panel(Panel::Search, "panel.search"),
-            panel(Panel::Agents, "panel.agents"),
-            panel(Panel::Git, "panel.git"),
-            panel(Panel::Tests, "panel.tests"),
-            panel(Panel::Debug, "panel.debug"),
-            panel(Panel::Ci, "panel.ci"),
-            panel(Panel::Containers, "panel.containers"),
-            panel(Panel::Leitstand, "panel.leitstand"),
-            separator(mtm),
-            item(
-                mtm,
-                t("Claude fokussieren"),
-                Some(sel!(ideFocusClaude:)),
-                &keys.get("agent.focus"),
-            ),
-            item(
-                mtm,
-                t("Subagenten dieser Sitzung"),
-                Some(sel!(ideShowSessionSubagents:)),
-                "",
-            ),
-            item(
-                mtm,
-                t("Hintergrundprozesse dieser Sitzung"),
-                Some(sel!(ideShowSessionBackground:)),
-                "",
-            ),
-            separator(mtm),
-            item(
-                mtm,
-                t("Zeilenumbruch"),
-                Some(sel!(ideToggleWrap:)),
-                &keys.get("view.wrap"),
-            ),
-            item(
-                mtm,
-                t("Leerzeichen anzeigen"),
-                Some(sel!(ideToggleWhitespace:)),
-                &keys.get("view.whitespace"),
-            ),
-            item(
-                mtm,
-                t("Vorschau daneben ein-/ausblenden"),
-                Some(sel!(ideShowPreview:)),
-                &keys.get("view.preview"),
-            ),
-            separator(mtm),
-            pane_menu(mtm, keys),
-            item(
-                mtm,
-                t("Seitenleiste ein-/ausblenden"),
-                Some(sel!(toggleSidebar:)),
-                &keys.get("sidebar.toggle"),
-            ),
-            item(
-                mtm,
-                t("Inspektor ein-/ausblenden"),
-                Some(sel!(ideToggleInspector:)),
-                &keys.get("view.inspector"),
-            ),
-            separator(mtm),
-            item(
-                mtm,
-                t("Adresse öffnen …"),
-                Some(sel!(ideBrowserFocusAddress:)),
-                &keys.get("browser.focusAddress"),
-            ),
-            item(
-                mtm,
-                t("Seite neu laden"),
-                Some(sel!(ideBrowserReload:)),
-                &keys.get("browser.reload"),
-            ),
-            item(mtm, t("Zurück"), Some(sel!(ideBrowserBack:)), &keys.get("browser.back")),
-            item(
-                mtm,
-                t("Vorwärts"),
-                Some(sel!(ideBrowserForward:)),
-                &keys.get("browser.forward"),
-            ),
-            separator(mtm),
-            item(
-                mtm,
-                t("Symbolleiste ausblenden"),
-                Some(sel!(toggleToolbarShown:)),
-                "alt+cmd+t",
-            ),
-            item(mtm, t("Vollbildmodus"), Some(sel!(toggleFullScreen:)), "ctrl+cmd+f"),
-        ],
+        [
+            panels.to_vec(),
+            vec![
+                separator(mtm),
+                item(
+                    mtm,
+                    t("Claude fokussieren"),
+                    Some(sel!(ideFocusClaude:)),
+                    &keys.get("agent.focus"),
+                ),
+                item(
+                    mtm,
+                    t("Subagenten dieser Sitzung"),
+                    Some(sel!(ideShowSessionSubagents:)),
+                    "",
+                ),
+                item(
+                    mtm,
+                    t("Hintergrundprozesse dieser Sitzung"),
+                    Some(sel!(ideShowSessionBackground:)),
+                    "",
+                ),
+                separator(mtm),
+                item(
+                    mtm,
+                    t("Zeilenumbruch"),
+                    Some(sel!(ideToggleWrap:)),
+                    &keys.get("view.wrap"),
+                ),
+                item(
+                    mtm,
+                    t("Leerzeichen anzeigen"),
+                    Some(sel!(ideToggleWhitespace:)),
+                    &keys.get("view.whitespace"),
+                ),
+                item(
+                    mtm,
+                    t("Vorschau daneben ein-/ausblenden"),
+                    Some(sel!(ideShowPreview:)),
+                    &keys.get("view.preview"),
+                ),
+                separator(mtm),
+                pane_menu(mtm, keys),
+                item(
+                    mtm,
+                    t("Seitenleiste ein-/ausblenden"),
+                    Some(sel!(toggleSidebar:)),
+                    &keys.get("sidebar.toggle"),
+                ),
+                item(
+                    mtm,
+                    t("Inspektor ein-/ausblenden"),
+                    Some(sel!(ideToggleInspector:)),
+                    &keys.get("view.inspector"),
+                ),
+                separator(mtm),
+                item(
+                    mtm,
+                    t("Adresse öffnen …"),
+                    Some(sel!(ideBrowserFocusAddress:)),
+                    &keys.get("browser.focusAddress"),
+                ),
+                item(
+                    mtm,
+                    t("Seite neu laden"),
+                    Some(sel!(ideBrowserReload:)),
+                    &keys.get("browser.reload"),
+                ),
+                item(mtm, t("Zurück"), Some(sel!(ideBrowserBack:)), &keys.get("browser.back")),
+                item(
+                    mtm,
+                    t("Vorwärts"),
+                    Some(sel!(ideBrowserForward:)),
+                    &keys.get("browser.forward"),
+                ),
+                separator(mtm),
+                item(
+                    mtm,
+                    t("Symbolleiste ausblenden"),
+                    Some(sel!(toggleToolbarShown:)),
+                    "alt+cmd+t",
+                ),
+                item(mtm, t("Vollbildmodus"), Some(sel!(toggleFullScreen:)), "ctrl+cmd+f"),
+            ],
+        ]
+        .concat(),
     )
     .0
 }
