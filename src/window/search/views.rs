@@ -347,7 +347,8 @@ fn disclosure(mtm: MainThreadMarker, panel: &SearchPanel) -> (Retained<NSStackVi
     set_action(&chevron, panel, sel!(ideSearchDisclose:));
     chevron.setBordered(false);
     size_chevron(&chevron);
-    // At its leading edge, as the replace chevron above has it, so the two line up.
+    // At its leading edge, as the replace chevron above has it, so the two line up; the title would show beside it.
+    chevron.setTitle(&ns(""));
     chevron.setImagePosition(NSCellImagePosition::ImageLeading);
     chevron.setButtonType(NSButtonType::PushOnPushOff);
     chevron.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
