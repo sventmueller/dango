@@ -5,6 +5,9 @@ use std::process::Command;
 
 use crate::*;
 
+/// The cargo profile of the distributed programs, in `Cargo.toml`.
+const PROFILE: &str = "dist";
+
 /// Each processor's target for cargo and its architecture for `lipo`.
 pub(crate) const UNIVERSAL: [(&str, &str); 2] = [("aarch64-apple-darwin", "arm64"), ("x86_64-apple-darwin", "x86_64")];
 
@@ -22,7 +25,8 @@ pub(crate) fn universal_programs(
         build.args([
             "build",
             "--locked",
-            "--release",
+            "--profile",
+            PROFILE,
             "--package",
             PACKAGE,
             "--target",
@@ -42,7 +46,7 @@ pub(crate) fn universal_programs(
             let mut join = Command::new("lipo");
             join.arg("-create");
             for (target, _) in UNIVERSAL {
-                join.arg(dir.join(target).join("release").join(name));
+                join.arg(dir.join(target).join(PROFILE).join(name));
             }
             let program = dir.join(name);
             sh.run(join.arg("-output").arg(&program))?;
@@ -175,7 +179,7 @@ mod tests {
         let built: Vec<&str> = sh.of("/tc/bin/cargo");
         assert_eq!(
             built[0],
-            "/tc/bin/cargo build --locked --release --package ide-app --target aarch64-apple-darwin --bin ide --bin \
+            "/tc/bin/cargo build --locked --profile dist --package ide-app --target aarch64-apple-darwin --bin ide --bin \
              ide-decoder --features dictation"
         );
         assert!(built[1].contains("--target x86_64-apple-darwin"));
@@ -185,8 +189,8 @@ mod tests {
             joined[0],
             format!(
                 "lipo -create {} {} -output {}",
-                dir.join("aarch64-apple-darwin/release/ide").display(),
-                dir.join("x86_64-apple-darwin/release/ide").display(),
+                dir.join("aarch64-apple-darwin/dist/ide").display(),
+                dir.join("x86_64-apple-darwin/dist/ide").display(),
                 dir.join("ide").display()
             )
         );
