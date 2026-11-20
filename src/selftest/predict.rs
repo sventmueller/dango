@@ -194,12 +194,23 @@ fn ghost_shown() {
                 first: "le(21, 2);".into(),
                 rest: None,
             })
-            && ghosts.len() == 1
+            && ghosts.len() == 2
             && ghosts[0].ghost
             && insets::shown(&view)
                 .iter()
                 .any(|s| s.layer == Layer::Prediction && !s.in_gap),
         format!("{ghosts:?}; {:?}", insets::shown(&view)),
+    );
+    let drawn: Vec<_> = insets::shown(&view)
+        .into_iter()
+        .filter(|s| s.layer == Layer::Prediction)
+        .collect();
+    check(
+        "after the ghost text a hint says that Tab takes it",
+        ghosts.get(1).is_some_and(|h| h.text == "Tab übernimmt" && !h.ghost)
+            && drawn.len() == 2
+            && drawn[1].rect.origin.x >= drawn[0].rect.origin.x + drawn[0].rect.size.width,
+        format!("{ghosts:?}; {drawn:?}"),
     );
     check(
         "the status bar names the provider",
@@ -473,6 +484,7 @@ fn lines() {
     check(
         "the first line of an insertion goes into the text, the rest into the box below",
         ghost.first().is_some_and(|g| g.text == " // one" && g.ghost)
+            && ghost.get(1).is_some_and(|h| h.text == "Tab übernimmt")
             && predict::boxed_text(&view).as_deref() == Some("    let more = 2;"),
         format!("{ghost:?}, {:?}", predict::boxed_text(&view)),
     );
@@ -489,10 +501,14 @@ fn line_start() {
     let Some(view) = main_view() else {
         return give_up(SCENARIO, "main.rs opens in an editor");
     };
+    let hint = insets::of(&view, Layer::Prediction);
     check(
-        "at a line's start, where no gap can open, the proposal shows in the box (E81)",
-        insets::of(&view, Layer::Prediction).is_empty() && predict::boxed_text(&view).as_deref() == Some("// note"),
-        format!("{:?}", predict::boxed_text(&view)),
+        "at a line's start, where no gap can open, the proposal shows in the box (E81), the hint for Tab on its line",
+        hint.len() == 1
+            && !hint[0].ghost
+            && hint[0].text == "Tab übernimmt"
+            && predict::boxed_text(&view).as_deref() == Some("// note"),
+        format!("{hint:?}, {:?}", predict::boxed_text(&view)),
     );
     press(&view, sel!(cancelOperation:));
     predict::toggle_language("rust");

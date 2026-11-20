@@ -108,6 +108,18 @@ impl SearchPanel {
         if self.ivars().hierarchy.get().is_some_and(|h| h.showing()) {
             self.show_text();
         }
+        self.focus_field();
+    }
+
+    /// Puts the keyboard focus into what the panel shows: the field with what it holds selected, or a hierarchy's tree.
+    pub(crate) fn focus_shown(&self) {
+        match self.ivars().hierarchy.get().filter(|h| h.showing()) {
+            Some(hierarchy) => hierarchy.focus(),
+            None => self.focus_field(),
+        }
+    }
+
+    fn focus_field(&self) {
         let Some(views) = self.ivars().views.get() else { return };
         if let Some(window) = views.page.window() {
             window.makeFirstResponder(Some(&views.field));

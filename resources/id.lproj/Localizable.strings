@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "Copilot tidak dapat dimulai: {}";
 "Aus" = "Nonaktif";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "Saran: Tab menerima, Esc mengabaikan";
+"Tab übernimmt" = "Tab menerima";
 "Tab: Zeile {}" = "Tab: baris {}";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab menuju saran, Tab kedua menerimanya";
 "Vorschlag: {}" = "Saran: {}";

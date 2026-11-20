@@ -932,3 +932,25 @@ fn eslint_asks_for_its_whole_settings_and_its_own_requests_are_answered_and_repo
         f.expect(move |s| matches!(s, Seen::Notice(m) if *m == wanted));
     }
 }
+
+#[test]
+fn a_borrowed_document_closes_again_unless_an_editor_took_it_over() {
+    let f = start("borrowed", &[], |_| {});
+    let (lent, taken) = (f.uri("lent.go"), f.uri("taken.go"));
+    assert!(f.server.open_borrowed(&lent, "go", "package lent\n"));
+    assert!(f.server.open_borrowed(&taken, "go", "package taken\n"));
+    assert!(
+        !f.server.open_borrowed(&taken, "go", "package again\n"),
+        "an open document stays as it is"
+    );
+    f.server.open(&taken, "go", 1, "package taken\n");
+    f.server.close_borrowed(&lent);
+    f.server.close_borrowed(&taken);
+    assert!(!f.server.is_open(&lent));
+    assert!(f.server.is_open(&taken), "the editor's document stays open");
+    let closed = f.received().iter().filter(|m| *m == "textDocument/didClose").count();
+    assert_eq!(
+        closed, 2,
+        "the editor's open replaced the borrowed one, then the lent one closed"
+    );
+}

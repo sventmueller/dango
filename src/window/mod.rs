@@ -7,6 +7,7 @@ mod activity_bar;
 mod agent_choices;
 mod document_area;
 mod documents;
+mod editor_commands;
 pub(crate) mod file_outline;
 mod files;
 mod files_header;
@@ -25,6 +26,7 @@ mod search;
 #[cfg(feature = "selftest")]
 mod selftest_probe;
 mod sidebar;
+mod tab_titles;
 mod tabs;
 pub(crate) mod toolbar;
 mod validate;
@@ -36,7 +38,7 @@ use std::rc::Rc;
 
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, Sel};
-use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
+use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSControl, NSMenuItem, NSMenuItemValidation, NSToolbar, NSToolbarDelegate, NSToolbarItem, NSToolbarItemIdentifier,
     NSView, NSWindow, NSWindowDelegate,
@@ -207,6 +209,23 @@ define_class!(
     }
 
     impl WindowController {
+        #[unsafe(method(respondsToSelector:))]
+        fn responds_to_selector(&self, selector: Sel) -> bool {
+            // SAFETY: The overridden method with arguments of its types, which objc2 checks in debug builds.
+            let own: bool = unsafe { msg_send![super(self), respondsToSelector: selector] };
+            own || guarded(false, || self.editor_for_action(selector).is_some())
+        }
+
+        #[unsafe(method_id(forwardingTargetForSelector:))]
+        fn forwarding_target(&self, selector: Sel) -> Option<Retained<AnyObject>> {
+            guarded(None, || {
+                self.editor_for_action(selector).map(|editor| {
+                    let editor: &AnyObject = &editor;
+                    editor.retain()
+                })
+            })
+        }
+
         #[unsafe(method(ideTestRunAtCursor:))]
         fn test_run_at_cursor(&self, _sender: Option<&AnyObject>) {
             guarded((), || crate::tests_panel::run_at_cursor(self));

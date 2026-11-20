@@ -81,6 +81,8 @@ pub(crate) struct Doc {
     pub(crate) sync: Told,
     pub(crate) tokens: Option<Previous>,
     pub(crate) pulled: Option<(String, Vec<Diagnostic>)>,
+    /// Opened by `open_borrowed`, and not by an editor since.
+    pub(crate) borrowed: bool,
 }
 
 pub(crate) struct State {
@@ -277,9 +279,50 @@ impl Server {
                 sync: Told::NeedsOpen,
                 tokens: None,
                 pulled: None,
+                borrowed: false,
             },
         );
         state.flush(&uri);
+    }
+
+    /// Opens `uri` with `text` unless it is open, for a search that needs the server to know its project; whether it
+    /// opened it. `open` by an editor takes the document over.
+    pub fn open_borrowed(&self, uri: &Uri, language_id: &str, text: &str) -> bool {
+        let uri = uri::normalize(uri);
+        let mut state = self.inner().lock();
+        if state.documents.contains_key(&uri) {
+            return false;
+        }
+        state.documents.insert(
+            uri.clone(),
+            Doc {
+                language: language_id.to_string(),
+                version: 0,
+                text: Text::new(text),
+                sync: Told::NeedsOpen,
+                tokens: None,
+                pulled: None,
+                borrowed: true,
+            },
+        );
+        state.flush(&uri);
+        true
+    }
+
+    /// Closes `uri` if `open_borrowed` opened it and no editor took it over since.
+    pub fn close_borrowed(&self, uri: &Uri) {
+        let uri = uri::normalize(uri);
+        let mut state = self.inner().lock();
+        if !state.documents.get(&uri).is_some_and(|doc| doc.borrowed) {
+            return;
+        }
+        if state
+            .documents
+            .remove(&uri)
+            .is_some_and(|doc| doc.sync != Told::NeedsOpen)
+        {
+            state.notify_document("textDocument/didClose", json!({"textDocument": {"uri": uri}}));
+        }
     }
 
     /// Applies `changes` to `uri`, in order, each range in UTF-16 against the text after the change before it, as

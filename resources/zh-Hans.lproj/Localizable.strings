@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "Copilot 无法启动：{}";
 "Aus" = "关";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "建议：Tab 接受，Esc 放弃";
+"Tab übernimmt" = "Tab 接受";
 "Tab: Zeile {}" = "Tab：第 {} 行";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab 跳到建议处，再按一次 Tab 接受";
 "Vorschlag: {}" = "建议：{}";

@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "Copilot ไม่เริ่มทำงาน: {}";
 "Aus" = "ปิด";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "ข้อเสนอ: Tab ยอมรับ, Esc ละทิ้ง";
+"Tab übernimmt" = "Tab ยอมรับ";
 "Tab: Zeile {}" = "Tab: บรรทัด {}";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab ไปที่ข้อเสนอ Tab ครั้งที่สองยอมรับ";
 "Vorschlag: {}" = "ข้อเสนอ: {}";

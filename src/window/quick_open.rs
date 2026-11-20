@@ -15,7 +15,7 @@ use objc2_app_kit::{
     NSTextFieldDelegate, NSTextView, NSView, NSWindowDelegate, NSWindowStyleMask,
 };
 use objc2_foundation::{NSMutableAttributedString, NSNotification, NSObjectProtocol, NSPoint, NSRange, NSRect, NSSize};
-use splat_i18n::t;
+use splat_i18n::{t, tf};
 
 use super::WindowController;
 use crate::util::{activate, auto_layout, constant, fixed_size, guarded, main_soon, ns, pin_sides, set_action};
@@ -53,6 +53,7 @@ pub(crate) struct QuickIvars {
     root: PathBuf,
     hits: RefCell<Rows>,
     status: RefCell<Option<Retained<NSTextField>>>,
+    mode: RefCell<Option<Retained<NSTextField>>>,
     panel: RefCell<Option<Retained<NSPanel>>>,
     field: RefCell<Option<Retained<NSSearchField>>>,
     table: RefCell<Option<Retained<NSTableView>>>,
@@ -133,6 +134,7 @@ impl QuickOpenPanel {
             root,
             hits: RefCell::new(Rows::Files(vec![])),
             status: RefCell::new(None),
+            mode: RefCell::new(None),
             panel: RefCell::new(None),
             field: RefCell::new(None),
             table: RefCell::new(None),
@@ -218,12 +220,23 @@ impl QuickOpenPanel {
         let status = NSTextField::labelWithString(&ns(""), mtm);
         status.setTextColor(Some(&NSColor::secondaryLabelColor()));
         status.setHidden(true);
+        let mode = NSTextField::labelWithString(&ns(t("Dateien")), mtm);
+        mode.setFont(Some(&NSFont::systemFontOfSize_weight(
+            ide_ui_common::style::SMALL,
+            constant!(NSFontWeightSemibold),
+        )));
+        mode.setTextColor(Some(&NSColor::secondaryLabelColor()));
         let Some(content) = panel.contentView() else { return };
         content.addSubview(&field);
         content.addSubview(&scroll);
         content.addSubview(&status);
-        status.setTranslatesAutoresizingMaskIntoConstraints(false);
+        content.addSubview(&mode);
+        auto_layout(&[&status, &mode]);
         activate([
+            mode.leadingAnchor()
+                .constraintEqualToAnchor_constant(&content.leadingAnchor(), 18.0),
+            mode.bottomAnchor()
+                .constraintEqualToAnchor_constant(&field.topAnchor(), -4.0),
             status.centerXAnchor().constraintEqualToAnchor(&content.centerXAnchor()),
             status
                 .topAnchor()
@@ -242,6 +255,7 @@ impl QuickOpenPanel {
         ]);
         *self.ivars().panel.borrow_mut() = Some(panel);
         *self.ivars().status.borrow_mut() = Some(status);
+        *self.ivars().mode.borrow_mut() = Some(mode);
         *self.ivars().field.borrow_mut() = Some(field);
         *self.ivars().table.borrow_mut() = Some(table);
     }
@@ -261,22 +275,19 @@ impl QuickOpenPanel {
         self.ivars().asked.set(asked);
         let root = self.ivars().root.clone();
         let symbols = symbol_query(&query).map(str::to_string);
-        if let Some(table) = self.ivars().table.borrow().as_ref() {
-            let name = if symbols.is_some() {
-                t("Gefundene Symbole")
-            } else {
-                t("Gefundene Dateien")
-            };
-            table.setAccessibilityLabel(Some(&ns(name)));
-        }
+        self.show_mode(symbols.is_some());
         let Some(symbols) = symbols else {
+            if !query.trim().is_empty() && self.ivars().hits.borrow().len() == 0 {
+                self.set_status(Some(t("Wird gesucht …")));
+            }
             controller.query_files(&query, RESULTS, move |hits| {
                 main_soon(move || super::registry::quick_open_answered(&root, asked, hits));
             });
             return;
         };
         let this = Weak::from(self);
-        ide_ui_lsp::search_symbols(&root, &symbols, move |answer| {
+        let active = active_file(&controller);
+        ide_ui_lsp::search_symbols(&root, &symbols, active.as_deref(), move |answer| {
             if let Some(this) = this.load() {
                 this.symbols_answered(asked, answer);
             }
@@ -288,9 +299,40 @@ impl QuickOpenPanel {
         if asked != self.ivars().asked.get() {
             return;
         }
+        let query = self
+            .ivars()
+            .field
+            .borrow()
+            .as_ref()
+            .map(|f| f.stringValue().to_string())
+            .unwrap_or_default();
+        let status = (hits.is_empty() && !query.trim().is_empty()).then(|| t("Keine Dateien gefunden"));
         *self.ivars().hits.borrow_mut() = Rows::Files(hits);
-        self.set_status(None);
+        self.set_status(status);
         self.reload();
+    }
+
+    /// Names what the panel searches, in the label above the field, the field's placeholder and the list.
+    fn show_mode(&self, symbols: bool) {
+        let (mode, prompt, list) = if symbols {
+            (
+                t("Symbole im Projekt"),
+                t("Symbol im Projekt suchen"),
+                t("Gefundene Symbole"),
+            )
+        } else {
+            (t("Dateien"), t("Datei suchen"), t("Gefundene Dateien"))
+        };
+        if let Some(label) = self.ivars().mode.borrow().as_ref() {
+            label.setStringValue(&ns(mode));
+        }
+        if let Some(field) = self.ivars().field.borrow().as_ref() {
+            field.setPlaceholderString(Some(&ns(prompt)));
+            field.setAccessibilityLabel(Some(&ns(prompt)));
+        }
+        if let Some(table) = self.ivars().table.borrow().as_ref() {
+            table.setAccessibilityLabel(Some(&ns(list)));
+        }
     }
 
     /// Shows the symbols found for query number `asked`; while nothing is found and a server still indexes, the list
@@ -405,7 +447,16 @@ impl QuickOpenPanel {
             }
             panel.orderOut(None);
         }
+        ide_ui_lsp::end_symbol_search(&self.ivars().root);
     }
+}
+
+/// The file of the editor in front of `controller`'s window, if one is.
+fn active_file(controller: &WindowController) -> Option<PathBuf> {
+    let document = controller.current_tab()?.focused()?;
+    matches!(document.kind, super::TabKind::Editor)
+        .then(|| document.key.clone().map(PathBuf::from))
+        .flatten()
 }
 
 /// A symbol: the kind's symbol, the name with what contains it, and below them its file and line.
@@ -423,10 +474,13 @@ fn symbol_view(mtm: MainThreadMarker, found: &ide_ui_lsp::FoundSymbol, root: &st
     )));
     name.setLineBreakMode(objc2_app_kit::NSLineBreakMode::ByTruncatingTail);
     let path = found.path.strip_prefix(root).unwrap_or(&found.path);
-    let place = match symbol.range {
+    let mut place = match symbol.range {
         Some(range) => format!("{}:{}", path.display(), range.start.line + 1),
         None => path.display().to_string(),
     };
+    if found.dependency {
+        place = tf("Abhängigkeit · {}", &[&place]);
+    }
     let place = NSTextField::labelWithString(&ns(&place), mtm);
     place.setFont(Some(&NSFont::systemFontOfSize(ide_ui_common::style::SMALL)));
     place.setTextColor(Some(&NSColor::secondaryLabelColor()));

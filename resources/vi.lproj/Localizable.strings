@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "Copilot không khởi động: {}";
 "Aus" = "Tắt";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "Đề xuất: Tab chấp nhận, Esc bỏ qua";
+"Tab übernimmt" = "Tab chấp nhận";
 "Tab: Zeile {}" = "Tab: dòng {}";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab đi đến đề xuất, Tab thứ hai chấp nhận nó";
 "Vorschlag: {}" = "Đề xuất: {}";

@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "A Copilot nem indul: {}";
 "Aus" = "Ki";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "Javaslat: Tab elfogadja, Esc elveti";
+"Tab übernimmt" = "Tab elfogadja";
 "Tab: Zeile {}" = "Tab: {}. sor";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "A Tab a javaslathoz ugrik, a második Tab elfogadja";
 "Vorschlag: {}" = "Javaslat: {}";

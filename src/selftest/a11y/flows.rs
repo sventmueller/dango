@@ -10,7 +10,7 @@ use std::time::Duration;
 use ide_process::Supervisor;
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, Message};
-use objc2_app_kit::{NSApplication, NSEventModifierFlags, NSSavePanel, NSView, NSWindow};
+use objc2_app_kit::{NSApplication, NSEventModifierFlags, NSSavePanel, NSTextField, NSView, NSWindow};
 
 use super::super::git::sheet_ready;
 use super::super::helpers::{wait_until, wait_within, when_alert_shows};
@@ -100,12 +100,19 @@ fn control_tab_leaves(window: &NSWindow, class: &str, back: bool) -> (bool, Stri
     )
 }
 
-/// ⌘4 shows the Git panel, Tab reaches its list, Space stages the row Down selected, Tab reaches the message, and ⌘↩
-/// commits what was typed there; `then` goes on.
+/// ⌘2 puts the focus into the search field; ⌘4 shows the Git panel, Tab reaches its list, Space stages the row Down
+/// selected, Tab reaches the message, and ⌘↩ commits what was typed there; `then` goes on.
 pub(crate) fn commit(root: PathBuf, then: fn(PathBuf)) {
     let Some(controller) = window_of(&root) else { return };
     let Some(window) = controller.window() else { return };
     controller.activate_panel(Panel::Files);
+    let went = keys::press(&window, "2", 19, COMMAND);
+    let field = keys::focused(&window).and_then(|view| view.downcast::<NSTextField>().ok());
+    check(
+        "⌘2 shows the search panel with the focus in its field",
+        controller.inspect().panel == Some(Panel::Search) && field.is_some_and(|field| field.isEditable()),
+        format!("to {went}, focus on {}", class_of_focus(&window)),
+    );
     let went = keys::press(&window, "4", 21, COMMAND);
     check(
         "⌘4 shows the Git panel with the focus in it",

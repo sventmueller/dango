@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "Copilot się nie uruchamia: {}";
 "Aus" = "Wyłączone";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "Propozycja: Tab przyjmuje, Esc odrzuca";
+"Tab übernimmt" = "Tab przyjmuje";
 "Tab: Zeile {}" = "Tab: wiersz {}";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab przechodzi do propozycji, drugi Tab ją przyjmuje";
 "Vorschlag: {}" = "Propozycja: {}";

@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "لا يبدأ Copilot: {}";
 "Aus" = "متوقف";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "اقتراح: Tab للقبول، Esc للتجاهل";
+"Tab übernimmt" = "Tab للقبول";
 "Tab: Zeile {}" = "Tab: السطر {}";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "يذهب Tab إلى الاقتراح، وTab ثانٍ يقبله";
 "Vorschlag: {}" = "اقتراح: {}";

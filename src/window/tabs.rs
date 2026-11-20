@@ -536,20 +536,14 @@ impl TabWindow {
             self.panes.settle(&controller);
         }
         let documents = self.documents();
-        let Some(doc) = self.focused().or_else(|| documents.first().cloned()) else {
+        let Some(doc) = self.named_after() else {
             return;
         };
-        let title = doc.title();
+        match self.controller.load() {
+            Some(controller) => controller.retitle_tabs(Some(self)),
+            None => self.show_title(&doc.title()),
+        }
         let tab = self.window.tab();
-        let font = ui_size::system(NSFont::systemFontSize());
-        let font = if doc.preview.get() {
-            NSFontManager::sharedFontManager(self.window.mtm())
-                .convertFont_toHaveTrait(&font, NSFontTraitMask::ItalicFontMask)
-        } else {
-            font
-        };
-        tab.setAttributedTitle(Some(&titled(doc.icon().as_deref(), &title, &font)));
-        tab.setTitle(Some(&ns(&title)));
         let names: Vec<String> = documents.iter().map(|doc| doc.title()).collect();
         let tip = if doc.preview.get() {
             t("Vorschau: Die nächste Datei, die du mit einem Klick öffnest, ersetzt diesen Tab. Ein Doppelklick behält ihn.")
@@ -571,6 +565,26 @@ impl TabWindow {
         } else if status.is_none() && current.is_some() {
             tab.setAccessoryView(None);
         }
+    }
+
+    /// The document the tab is named after: the focused one, else the first.
+    pub(super) fn named_after(&self) -> Option<Rc<Document>> {
+        self.focused().or_else(|| self.documents().first().cloned())
+    }
+
+    /// Puts `title` on the tab after the icon of the document it is named after, in italics for a preview tab.
+    pub(super) fn show_title(&self, title: &str) {
+        let Some(doc) = self.named_after() else { return };
+        let font = ui_size::system(NSFont::systemFontSize());
+        let font = if doc.preview.get() {
+            NSFontManager::sharedFontManager(self.window.mtm())
+                .convertFont_toHaveTrait(&font, NSFontTraitMask::ItalicFontMask)
+        } else {
+            font
+        };
+        let tab = self.window.tab();
+        tab.setAttributedTitle(Some(&titled(doc.icon().as_deref(), title, &font)));
+        tab.setTitle(Some(&ns(title)));
     }
 
     /// Puts the folder's sidebar `view` into the tab, in place of its picture.

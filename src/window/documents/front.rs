@@ -9,6 +9,7 @@ use objc2::rc::Retained;
 use objc2_app_kit::{NSWindow, NSWindowTabGroup};
 use objc2_foundation::NSNotification;
 
+use crate::window::tab_titles::{self, Named};
 use crate::window::tabs::{Document, TabWindow};
 use crate::window::{TabId, WindowController, layout};
 
@@ -257,7 +258,34 @@ impl WindowController {
                 }
             }
         }
+        self.retitle_tabs(None);
         crate::session::changed();
+    }
+
+    /// Names every window tab after its document in front, told apart from tabs of the same name; `own` gets its
+    /// title again even when it reads the same, as its icon or style may have changed.
+    pub(in crate::window) fn retitle_tabs(&self, own: Option<&TabWindow>) {
+        let shown: Vec<(Rc<TabWindow>, Rc<Document>)> = self
+            .open_tabs()
+            .into_iter()
+            .filter_map(|tab| tab.named_after().map(|doc| (tab, doc)))
+            .collect();
+        let titles: Vec<String> = shown.iter().map(|(_, doc)| doc.title()).collect();
+        let named: Vec<Named> = shown
+            .iter()
+            .zip(&titles)
+            .map(|((_, doc), title)| Named {
+                title,
+                kind: doc.kind,
+                key: doc.key.as_deref(),
+            })
+            .collect();
+        for ((tab, _), title) in shown.iter().zip(tab_titles::distinct(&named)) {
+            let is_own = own.is_some_and(|own| std::ptr::eq(&**tab, own));
+            if is_own || tab.window.tab().title().to_string() != title {
+                tab.show_title(&title);
+            }
+        }
     }
 
     /// The tab that comes to the front when `tab` closes, as AppKit picks it: the next one in its tab bar, else the one

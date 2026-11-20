@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "Το Copilot δεν ξεκινά: {}";
 "Aus" = "Ανενεργό";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "Πρόταση: το Tab αποδέχεται, το Esc απορρίπτει";
+"Tab übernimmt" = "Το Tab αποδέχεται";
 "Tab: Zeile {}" = "Tab: γραμμή {}";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Το Tab πηγαίνει στην πρόταση, δεύτερο Tab την αποδέχεται";
 "Vorschlag: {}" = "Πρόταση: {}";

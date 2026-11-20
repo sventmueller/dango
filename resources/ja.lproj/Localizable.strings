@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "Copilotが起動しません: {}";
 "Aus" = "オフ";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "提案: Tabで受け入れ、Escで破棄";
+"Tab übernimmt" = "Tabで受け入れ";
 "Tab: Zeile {}" = "Tab: {}行目";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tabで提案の位置へ移動し、もう一度Tabで受け入れます";
 "Vorschlag: {}" = "提案: {}";

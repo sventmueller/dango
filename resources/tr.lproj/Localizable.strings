@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "Copilot başlamıyor: {}";
 "Aus" = "Kapalı";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "Öneri: Tab kabul eder, Esc yok sayar";
+"Tab übernimmt" = "Tab kabul eder";
 "Tab: Zeile {}" = "Tab: satır {}";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab öneriye gider, ikinci Tab onu kabul eder";
 "Vorschlag: {}" = "Öneri: {}";

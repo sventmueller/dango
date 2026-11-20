@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "Copilot शुरू नहीं होता : {}";
 "Aus" = "बंद";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "सुझाव : Tab स्वीकार करता है, Esc हटाता है";
+"Tab übernimmt" = "Tab स्वीकार करता है";
 "Tab: Zeile {}" = "Tab : पंक्ति {}";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab सुझाव पर जाता है, दूसरा Tab उसे स्वीकार करता है";
 "Vorschlag: {}" = "सुझाव : {}";

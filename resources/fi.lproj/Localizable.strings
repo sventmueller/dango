@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "Copilot ei käynnisty: {}";
 "Aus" = "Pois";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "Ehdotus: Tab hyväksyy, Esc hylkää";
+"Tab übernimmt" = "Tab hyväksyy";
 "Tab: Zeile {}" = "Tab: rivi {}";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab siirtyy ehdotukseen, toinen Tab hyväksyy sen";
 "Vorschlag: {}" = "Ehdotus: {}";

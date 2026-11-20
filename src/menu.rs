@@ -28,12 +28,16 @@ pub(crate) fn install(app: &NSApplication, delegate: &AppDelegate, mtm: MainThre
     let main = NSMenu::initWithTitle(NSMenu::alloc(mtm), &ns(""));
     let (window_item, window_menu) = window_menu(mtm, &keys);
     let (help_item, help_menu) = help_menu(mtm);
+    let view_item = crate::editor::with_view_items(mtm, view_menu(mtm, &keys));
+    if let Some(view) = view_item.submenu() {
+        view.setDelegate(Some(ProtocolObject::from_ref(delegate)));
+    }
     for entry in [
         app_menu(app, mtm, &keys),
         file_menu(delegate, mtm, &keys),
         edit_menu(mtm, &keys),
         crate::markdown::format_menu(mtm, &|command| keys.get(command)),
-        crate::editor::with_view_items(mtm, view_menu(mtm, &keys)),
+        view_item,
         go_menu(mtm, &keys),
         crate::editor::predict::with_menu_items(mtm, code_menu(mtm, &keys)),
         ide_ui_git::menu(mtm),
@@ -49,6 +53,19 @@ pub(crate) fn install(app: &NSApplication, delegate: &AppDelegate, mtm: MainThre
     app.setMainMenu(Some(&main));
     app.setWindowsMenu(Some(&window_menu));
     app.setHelpMenu(Some(&help_menu));
+}
+
+/// Hides AppKit's own "Tableiste ausblenden" in the view `menu`, since the tab bar always shows (E60) and gives way to
+/// the panes' bars only when the window is split (E145); whether `menu` is the view menu.
+pub(crate) fn hide_tab_bar_toggle(menu: &NSMenu) -> bool {
+    let items = menu.itemArray();
+    if !items.iter().any(|entry| entry.action() == Some(sel!(ideShowPanel:))) {
+        return false;
+    }
+    for entry in items.iter().filter(|entry| entry.action() == Some(sel!(toggleTabBar:))) {
+        entry.setHidden(true);
+    }
+    true
 }
 
 fn app_menu(app: &NSApplication, mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {

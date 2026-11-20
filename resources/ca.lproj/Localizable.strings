@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "Copilot no s’inicia: {}";
 "Aus" = "Desactivat";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "Suggeriment: Tab accepta, Esc descarta";
+"Tab übernimmt" = "Tab accepta";
 "Tab: Zeile {}" = "Tab: línia {}";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab va al suggeriment, un segon Tab l’accepta";
 "Vorschlag: {}" = "Suggeriment: {}";

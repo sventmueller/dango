@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "Copilot se ne pokreće: {}";
 "Aus" = "Isključeno";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "Prijedlog: Tab prihvaća, Esc odbacuje";
+"Tab übernimmt" = "Tab prihvaća";
 "Tab: Zeile {}" = "Tab: redak {}";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab ide do prijedloga, drugi Tab ga prihvaća";
 "Vorschlag: {}" = "Prijedlog: {}";

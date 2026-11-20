@@ -2,13 +2,16 @@
 
 use objc2::runtime::Sel;
 use objc2::sel;
-use objc2_app_kit::{NSControlStateValueOff, NSControlStateValueOn, NSMenuItem};
+use objc2_app_kit::{NSControlStateValueOff, NSControlStateValueOn, NSMenuItem, NSMenuItemValidation};
 
 use super::{Panel, WindowController, activity_bar, browser_commands};
 
 impl WindowController {
     pub(super) fn validate(&self, item: &NSMenuItem) -> bool {
         let action = item.action();
+        if let Some(editor) = action.and_then(|action| self.editor_for_action(action)) {
+            return editor.validateMenuItem(item);
+        }
         if action == Some(sel!(idePlanComment:)) {
             return ide_ui_agent::plan::keyboard_target(self).is_some();
         }

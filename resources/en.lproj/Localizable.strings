@@ -1354,6 +1354,11 @@
 "Gefundene Symbole" = "Matching Symbols";
 "Wird indexiert …" = "Indexing…";
 "Nichts gefunden" = "Nothing found";
+"Keine Dateien gefunden" = "No files found";
+"Wird gesucht …" = "Searching…";
+"Symbole im Projekt" = "Symbols in Project";
+"Symbol im Projekt suchen" = "Find Symbol in Project";
+"Abhängigkeit · {}" = "Dependency · {}";
 "Aufrufer" = "Callers";
 "Aufgerufene" = "Callees";
 "Obertypen" = "Supertypes";
@@ -1461,6 +1466,7 @@
 "Copilot startet nicht: {}" = "Copilot doesn’t start: {}";
 "Aus" = "Off";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "Suggestion: Tab accepts, Esc dismisses";
+"Tab übernimmt" = "Tab accepts";
 "Tab: Zeile {}" = "Tab: line {}";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab goes to the suggestion, a second Tab accepts it";
 "Vorschlag: {}" = "Suggestion: {}";

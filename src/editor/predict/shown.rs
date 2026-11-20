@@ -1,7 +1,8 @@
 //! How a proposal shows in the editor: ghost text in a gap after the caret (E81), the lines below the caret's line or
 //! a change as before and after in a box under the line, on the system's popover material, the replaced range marked
-//! in the text; the hint "Tab: Zeile 42" at the end of the caret's line for a change elsewhere; and the switch in the
-//! status bar. Nothing here moves: with or without "Bewegung reduzieren", ghost text appears without an animation.
+//! in the text; the hint "Tab übernimmt" after ghost text at a line's end or a box, or "Tab: Zeile 42" after the
+//! caret's line for a change elsewhere; and the switch in the status bar. Nothing here moves: with or without
+//! "Bewegung reduzieren", ghost text appears without an animation.
 
 use std::ops::Range;
 use std::path::Path;
@@ -49,31 +50,39 @@ pub(crate) fn present(view: &EditorTextView, proposal: &Proposal) {
     match &proposal.kind {
         Kind::Insert { first, rest } => {
             let inline = !first.is_empty() && insets::gap_possible(view, at);
+            let line_end = at_line_end(view, at);
+            let mut shown = Vec::new();
             if inline {
                 // At the line's end the ghost text needs no gap, which spares the text an attribute change per keystroke.
-                let place = if at_line_end(view, at) {
-                    Place::LineEnd
-                } else {
-                    Place::Inline
-                };
+                let place = if line_end { Place::LineEnd } else { Place::Inline };
                 let mut ghost = Inset::new(at, first.clone(), place);
                 ghost.ghost = true;
                 ghost.tooltip = Some(t("Vorschlag: Tab übernimmt, Esc verwirft").to_string());
-                insets::set(view, Layer::Prediction, vec![ghost]);
+                shown.push(ghost);
             }
             let below = if inline || first.is_empty() {
                 rest.clone()
             } else {
                 Some(proposal.text.clone())
             };
-            if let Some(below) = below.filter(|lines| !lines.is_empty()) {
-                show_box(view, at, &ghost_lines(view, &below));
+            let below = below.filter(|lines| !lines.is_empty());
+            if let Some(below) = &below {
+                show_box(view, at, &ghost_lines(view, below));
+            }
+            // Beside ghost text within the line the hint would make every keystroke lay out the rest of the line (E25).
+            let hinted = if inline { line_end } else { below.is_some() };
+            if hinted {
+                shown.push(accept_hint(at));
+            }
+            if !shown.is_empty() {
+                insets::set(view, Layer::Prediction, shown);
             }
         }
         Kind::Change => {
             let end = super::utf16(view, proposal.range.end);
             mark(view, at..end);
             show_box(view, end, &before_after(view, &proposal.old, &proposal.text));
+            insets::set(view, Layer::Prediction, vec![accept_hint(end)]);
         }
         Kind::Elsewhere { line } => {
             let caret = view.selectedRange().location;
@@ -82,6 +91,13 @@ pub(crate) fn present(view: &EditorTextView, proposal: &Proposal) {
             insets::set(view, Layer::Prediction, vec![hint]);
         }
     }
+}
+
+/// The hint after the end of the line holding UTF-16 offset `at` that Tab takes the proposal shown there.
+fn accept_hint(at: usize) -> Inset {
+    let mut hint = Inset::new(at, t("Tab übernimmt"), Place::LineEnd);
+    hint.tooltip = Some(t("Vorschlag: Tab übernimmt, Esc verwirft").to_string());
+    hint
 }
 
 /// Whether UTF-16 offset `at` of `view` is where its line's text ends.

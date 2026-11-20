@@ -1,11 +1,14 @@
 //! Part of the `markdown` scenario: a long Markdown line wraps at the editor's visible edge and wraps again when the
-//! window narrows, without a horizontal offset; the editor's context menu has the Format menu.
+//! window narrows, without a horizontal offset; the editor's context menu has the Format menu. The editor keeps the
+//! keyboard focus when its preview opens beside it, and the window answers the Format menu for it while the focus is
+//! elsewhere (QA-04).
 
 use std::path::Path;
 
-use objc2::msg_send;
 use objc2::rc::Retained;
-use objc2_app_kit::{NSEvent, NSEventModifierFlags, NSEventType, NSMenuItem, NSTextElementProvider};
+use objc2::{msg_send, sel};
+use objc2_app_kit::{NSEvent, NSEventModifierFlags, NSEventType, NSMenuItem, NSTextElementProvider, NSView};
+use objc2_foundation::NSObjectProtocol;
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 use splat_i18n::t;
 
@@ -13,6 +16,7 @@ use super::check;
 use super::helpers::{editor, window_of};
 use crate::editor::EditorTextView;
 use crate::util::ns;
+use crate::window::WindowController;
 
 const SENTENCE: &str = "Ein Satz, der mit vielen anderen einen Absatz bildet, so lang, dass er umbrechen muss. ";
 
@@ -67,6 +71,7 @@ pub(super) fn run(root: &Path) {
             "no editor",
         );
     };
+    let kept = has_focus(&view);
     let wide = measure(&view);
     let narrower = view.window().map(|window| {
         let frame = window.frame();
@@ -94,11 +99,43 @@ pub(super) fn run(root: &Path) {
                 .is_some_and(|(w, n)| n.height > w.height),
         format!("{} / {}", describe(wide.as_ref()), describe(narrow.as_ref())),
     );
-    context_menu(&view);
+    if let Some(bold) = context_menu(&view) {
+        focus(&controller, &view, kept, &bold);
+    }
 }
 
-fn context_menu(view: &EditorTextView) {
+fn has_focus(view: &EditorTextView) -> bool {
+    let view: &NSView = view;
+    view.window()
+        .and_then(|window| window.firstResponder())
+        .and_then(|focus| focus.downcast::<NSView>().ok())
+        .is_some_and(|focus| std::ptr::eq(&*focus, view))
+}
+
+/// Whether the editor had the focus once it opened with its preview beside it, and the window enables `bold` for it
+/// while the focus is on the window itself.
+fn focus(controller: &WindowController, view: &EditorTextView, kept: bool, bold: &NSMenuItem) {
+    check(
+        "a Markdown file opened with its preview beside it keeps the keyboard focus in its editor",
+        kept,
+        format!("focus in the editor: {kept}"),
+    );
     let Some(window) = view.window() else { return };
+    window.makeFirstResponder(None);
+    let answers = controller.respondsToSelector(sel!(ideMarkdown:));
+    // SAFETY: The window controller answers validateMenuItem: with a bool for the item, which lives for the call.
+    let enabled: bool = unsafe { msg_send![controller, validateMenuItem: bold] };
+    window.makeFirstResponder(Some(view));
+    check(
+        "with the focus on the window, the window answers the Format menu for its editor",
+        answers && enabled,
+        format!("answers {answers}, enabled {enabled}"),
+    );
+}
+
+/// Checks the editor's context menu; its Format menu's bold item.
+fn context_menu(view: &EditorTextView) -> Option<Retained<NSMenuItem>> {
+    let window = view.window()?;
     let event = NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure(
         NSEventType::RightMouseDown,
         view.convertPoint_toView(NSPoint::new(20.0, 20.0), None),
@@ -129,4 +166,5 @@ fn context_menu(view: &EditorTextView) {
         format.is_some_and(|menu| menu.numberOfItems() >= 13) && enabled && key == "b",
         format!("enabled {enabled}, shortcut {key:?}"),
     );
+    bold
 }

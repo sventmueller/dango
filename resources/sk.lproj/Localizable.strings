@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "Copilot sa nespustí: {}";
 "Aus" = "Vypnuté";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "Návrh: Tab prijme, Esc zahodí";
+"Tab übernimmt" = "Tab prijme";
 "Tab: Zeile {}" = "Tab: riadok {}";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab prejde k návrhu, druhý Tab ho prijme";
 "Vorschlag: {}" = "Návrh: {}";

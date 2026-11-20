@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "Copilot이 시작되지 않음: {}";
 "Aus" = "끔";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "제안: Tab은 수락, Esc는 무시";
+"Tab übernimmt" = "Tab으로 수락";
 "Tab: Zeile {}" = "Tab: {}행";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab은 제안으로 이동하고, 다시 Tab을 누르면 수락합니다";
 "Vorschlag: {}" = "제안: {}";

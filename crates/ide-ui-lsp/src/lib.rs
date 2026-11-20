@@ -78,7 +78,7 @@ pub fn painted(state: &ViewState) -> &[Painted] {
 pub use hierarchy::{Direction, Hierarchy, HierarchyKind, call_hierarchy, kind_symbol, type_hierarchy};
 pub use hover::{dismiss as dismiss_hover, hover_at_cursor, hover_rest, mouse_moved, rect_of, show as show_hover};
 pub use navigate::{Goto, definition, go_to, jump_to, next_problem, open_at, references, symbols};
-pub use project_symbols::{FoundSymbol, SymbolAnswer, open_symbol, search_symbols};
+pub use project_symbols::{FoundSymbol, SymbolAnswer, end_symbol_search, open_symbol, search_symbols};
 pub use rename::{format, rename, save};
 pub(crate) use {
     actions::CodeActions, complete::Completion, navigate::LocationSheets, project_symbols::Leases, rename::Formatting,

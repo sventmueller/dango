@@ -31,6 +31,15 @@ impl WindowController {
         search.focus();
     }
 
+    /// Puts the keyboard focus into the search panel's field, or the tree of a hierarchy on show; whether there is one.
+    pub(in crate::window) fn focus_search(&self) -> bool {
+        let Some(search) = self.ivars().folder.search.borrow().clone() else {
+            return false;
+        };
+        search.focus_shown();
+        true
+    }
+
     /// Shows `hierarchy` in the search panel in place of the text search (E85).
     pub(crate) fn show_hierarchy(&self, hierarchy: ide_ui_lsp::Hierarchy) {
         let Some(search) = self.ivars().folder.search.borrow().clone() else {

@@ -355,6 +355,10 @@ impl WindowController {
     pub(super) fn focus_panel(&self) {
         let Some(window) = self.window() else { return };
         let ivars = &self.ivars().sidebar;
+        // The search's first view that takes the focus is the replace chevron before its field.
+        if self.shown_panel() == Some(Panel::Search) && self.focus_search() {
+            return;
+        }
         let page = ivars.panels.borrow().as_ref().and_then(Panels::shown_page);
         let target = page
             .as_deref()

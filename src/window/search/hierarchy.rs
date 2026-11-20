@@ -319,6 +319,11 @@ impl HierarchyPanel {
             self.ivars().current.set(Some(entries.len() - 1));
         }
         self.present();
+        self.focus();
+    }
+
+    /// Puts the keyboard focus into the tree.
+    pub(super) fn focus(&self) {
         if let Some(views) = self.ivars().views.get()
             && let Some(window) = views.page.window()
         {

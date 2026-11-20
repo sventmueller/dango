@@ -535,7 +535,9 @@ in one tab group under a tabbing identifier of its own, so "Merge All Windows" n
 even with one tab; each tab's title starts with an icon, drawn as a text attachment of its attributed title
 (public `NSWindowTab` API): a file the icon of its type (`file_icon::image`), any other document a symbol
 in its agent's or worktree's colour. The browser shows a globe, not the page's icon, which would take a fetch beside
-WebKit's own. The sidebar exists once per folder and moves into the tab in front, held at the width it has in the others
+WebKit's own. Tabs whose documents share a name are told apart for the tab bar and the overview of all tabs
+(`window::tab_titles`): an editor keeps the name, another kind adds what it is, editors add their file's folder. The
+sidebar exists once per folder and moves into the tab in front, held at the width it has in the others
 until the new tab is laid out; a window of the same folder left on screen beside it, after a tab was dragged out, shows
 a picture of the sidebar until it comes to the front itself; so does every tab behind, for the overview of all tabs.
 `controller.window()` is the tab in front, where sheets and the keyboard focus go. A tab shows one document or two side

@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "Copilot не запускается: {}";
 "Aus" = "Выкл.";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "Предложение: Tab принимает, Esc отклоняет";
+"Tab übernimmt" = "Tab принимает";
 "Tab: Zeile {}" = "Tab: строка {}";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab переходит к предложению, второй Tab принимает его";
 "Vorschlag: {}" = "Предложение: {}";

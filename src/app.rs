@@ -151,7 +151,11 @@ define_class!(
     unsafe impl NSMenuDelegate for AppDelegate {
         #[unsafe(method(menuNeedsUpdate:))]
         fn menu_needs_update(&self, menu: &NSMenu) {
-            guarded((), || fill_recent_menu(self, menu));
+            guarded((), || {
+                if !crate::menu::hide_tab_bar_toggle(menu) {
+                    fill_recent_menu(self, menu);
+                }
+            });
         }
     }
 

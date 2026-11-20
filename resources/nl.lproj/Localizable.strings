@@ -1413,6 +1413,7 @@
 "Copilot startet nicht: {}" = "Copilot start niet: {}";
 "Aus" = "Uit";
 "Vorschlag: Tab übernimmt, Esc verwirft" = "Voorstel: Tab neemt over, Esc negeert";
+"Tab übernimmt" = "Tab neemt over";
 "Tab: Zeile {}" = "Tab: regel {}";
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab gaat naar het voorstel, een tweede Tab neemt het over";
 "Vorschlag: {}" = "Voorstel: {}";

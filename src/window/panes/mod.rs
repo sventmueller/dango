@@ -68,8 +68,33 @@ impl Panes {
     /// Changes the tree with `change` and brings the views in line with it; what `change` answers.
     fn change<T>(&self, change: impl FnOnce(&mut PaneTree<TabId>) -> T) -> T {
         let answer = change(&mut self.tree.borrow_mut());
+        let focus = self.focus_inside();
         self.mirror();
+        if let Some(view) = focus {
+            self.keep_focus(&view);
+        }
         answer
+    }
+
+    /// The view in the panes that has the keyboard focus.
+    fn focus_inside(&self) -> Option<Retained<NSView>> {
+        let responder = self.frame.window()?.firstResponder()?;
+        let view = Retained::downcast::<NSView>(responder).ok()?;
+        view.isDescendantOf(&self.frame).then_some(view)
+    }
+
+    /// Gives the keyboard focus back to `view` while it is in the document commands act on.
+    fn keep_focus(&self, view: &NSView) {
+        let Some(window) = self.frame.window() else { return };
+        // A view that leaves its superview, as a pane does when it moves into a split, leaves the window itself the
+        // first responder even when it comes straight back.
+        let lost = window
+            .firstResponder()
+            .is_none_or(|responder| responder.downcast_ref::<NSView>().is_none());
+        let in_front = self.focused().is_some_and(|doc| view.isDescendantOf(&doc.view));
+        if lost && in_front && view.isDescendantOf(&self.frame) {
+            window.makeFirstResponder(Some(view));
+        }
     }
 
     fn read<T>(&self, read: impl FnOnce(&PaneTree<TabId>) -> T) -> T {
