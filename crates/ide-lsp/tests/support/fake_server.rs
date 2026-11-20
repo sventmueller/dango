@@ -339,6 +339,9 @@ impl Fake {
             .and_then(|sync| serde_json::from_str(&sync).ok())
             .unwrap_or_else(|| json!({"openClose": true, "change": 2, "save": {"includeText": true}}));
         let shapes = std::env::var_os("FAKE_SHAPES").is_some();
+        let diagnostics = std::env::var_os("FAKE_DIAGNOSTICS_REGISTERED_LATER")
+            .is_none()
+            .then(|| json!({"interFileDependencies": false, "workspaceDiagnostics": false}));
         json!({
             "capabilities": {
                 "positionEncoding": self.encoding,
@@ -359,7 +362,7 @@ impl Fake {
                 "renameProvider": {"prepareProvider": true},
                 "documentSymbolProvider": true,
                 "foldingRangeProvider": true,
-                "diagnosticProvider": {"interFileDependencies": false, "workspaceDiagnostics": false},
+                "diagnosticProvider": diagnostics,
                 "signatureHelpProvider": {"triggerCharacters": ["("]},
                 "codeActionProvider": {"resolveProvider": true},
                 "executeCommandProvider": {"commands": ["fake.apply"]},

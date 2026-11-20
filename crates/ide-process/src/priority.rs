@@ -158,11 +158,24 @@ fn walk(parent: u32, below_command: bool, seen: &mut HashSet<u32>, lowered: &mut
     }
 }
 
-/// The nice value of process `pid`, for tests.
+/// The scheduling priority of process `pid`'s task, for tests; macOS 27 shows the background state here and no longer
+/// in the nice value.
 #[cfg(test)]
-fn nice_of(pid: u32) -> i32 {
-    // SAFETY: getpriority reads only its arguments.
-    unsafe { libc::getpriority(libc::PRIO_PROCESS, pid) }
+fn base_priority(pid: u32) -> Option<i32> {
+    let mut info = std::mem::MaybeUninit::<libc::proc_taskinfo>::uninit();
+    let size = i32::try_from(size_of::<libc::proc_taskinfo>()).ok()?;
+    // SAFETY: The kernel writes at most `size` bytes into the buffer. Only a full result is read.
+    let read = unsafe {
+        libc::proc_pidinfo(
+            i32::try_from(pid).ok()?,
+            libc::PROC_PIDTASKINFO,
+            0,
+            info.as_mut_ptr().cast(),
+            size,
+        )
+    };
+    // SAFETY: The full task info was written by proc_pidinfo.
+    (read == size).then(|| unsafe { info.assume_init() }.pti_priority)
 }
 
 #[cfg(test)]
@@ -171,6 +184,9 @@ mod tests {
     use std::process::{Command, Stdio};
 
     use super::*;
+
+    /// The priority macOS gives a task in the background state, `MAXPRI_THROTTLE` in the kernel's sources.
+    const BACKGROUND_PRIORITY: i32 = 4;
 
     #[test]
     fn a_thread_gets_the_class_it_asks_for() {
@@ -210,8 +226,8 @@ mod tests {
         let (helper, shell) = (named("sleep"), named("zsh"));
         let command = children(shell)[0];
         assert_eq!(
-            [nice_of(helper), nice_of(shell), nice_of(command)],
-            [AGENT_COMMAND_NICE; 3],
+            [base_priority(helper), base_priority(shell), base_priority(command)],
+            [Some(BACKGROUND_PRIORITY); 3],
             "everything, and what it started before, is in the background"
         );
         assert_eq!(lowered.len(), 3);

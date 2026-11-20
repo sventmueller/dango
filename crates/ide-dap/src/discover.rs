@@ -243,7 +243,7 @@ impl Adapters {
                 program: "debugpy",
                 needs: None,
                 install: None,
-                command: Some(format!("{} -m pip install debugpy", python.display())),
+                command: Some(self.debugpy_command(&python, root)),
             });
         }
         let args = vec!["-m".to_string(), "debugpy.adapter".to_string()];
@@ -254,6 +254,25 @@ impl Adapters {
             self.env.clone(),
             root,
         ))
+    }
+
+    /// How to install debugpy for `python`: with pip, or into a new virtual environment of the project when the
+    /// interpreter refuses pip's packages (PEP 668), as Homebrew's does.
+    fn debugpy_command(&self, python: &Path, root: &Path) -> String {
+        let managed = self
+            .helper()
+            .run(python, &["-c", EXTERNALLY_MANAGED], root, &mut |_| {})
+            .is_ok_and(|o| o.succeeded());
+        if !managed {
+            return format!("{} -m pip install debugpy", quoted(python));
+        }
+        let venv = root.join(".venv");
+        format!(
+            "{} -m venv {} && {} -m pip install debugpy",
+            quoted(python),
+            quoted(&venv),
+            quoted(&venv.join("bin/python"))
+        )
     }
 
     /// The project's Python: its virtual environment, the one the login shell activated, or `python3` on the PATH.
@@ -272,6 +291,19 @@ impl Adapters {
         self.helper()
             .run(Path::new("/usr/bin/xcode-select"), &["-p"], &self.home(), &mut |_| {})
             .is_ok_and(|o| o.succeeded())
+    }
+}
+
+/// Exits with 0 where pip refuses to install into the interpreter; a virtual environment never refuses.
+const EXTERNALLY_MANAGED: &str = "import os, sys, sysconfig; sys.exit(sys.prefix != sys.base_prefix or not os.path.isfile(os.path.join(sysconfig.get_path('stdlib'), 'EXTERNALLY-MANAGED')))";
+
+/// `path` as one word of a shell command.
+fn quoted(path: &Path) -> String {
+    let text = path.display().to_string();
+    if text.chars().all(|c| c.is_ascii_alphanumeric() || "/._-+".contains(c)) {
+        text
+    } else {
+        format!("'{}'", text.replace('\'', r"'\''"))
     }
 }
 
@@ -388,14 +420,14 @@ mod tests {
         let missing = adapters.find(AdapterKind::Python, &dir).unwrap_err();
         assert_eq!(
             missing.command,
-            Some(format!("{} -m pip install debugpy", python.display()))
+            Some(format!("{} -m pip install debugpy", quoted(&python)))
         );
         assert_eq!(missing.needs, None);
         assert_eq!(
             missing.to_string(),
             format!(
                 "debugpy is not installed; install it with: {} -m pip install debugpy",
-                python.display()
+                quoted(&python)
             )
         );
 
@@ -408,6 +440,35 @@ mod tests {
         let none = adapters.find(AdapterKind::Python, &elsewhere).unwrap_err();
         assert_eq!((none.program, none.needs), ("debugpy", Some("python3")));
         assert_eq!(none.to_string(), "debugpy is not installed; it needs python3");
+    }
+
+    #[test]
+    fn a_python_that_refuses_pip_gets_debugpy_in_a_new_virtual_environment() {
+        let dir = tools(&[]);
+        let python = dir.join("bin/python3");
+        crate::stub_tests::script(&python, "case \"$2\" in *EXTERNALLY-MANAGED*) exit 0;; esac\nexit 1\n");
+        let path = dir.join("bin").display().to_string();
+        let adapters = Adapters::with_tools(&Supervisor::new(), vec![("PATH".into(), path)], dir.to_path_buf());
+        let root = dir.join("my project");
+        std::fs::create_dir_all(&root).unwrap();
+        let missing = adapters.find(AdapterKind::Python, &root).unwrap_err();
+        let venv = format!("'{}/.venv", root.display());
+        assert_eq!(
+            missing.command,
+            Some(format!(
+                "{} -m venv {venv}' && {venv}/bin/python' -m pip install debugpy",
+                quoted(&python)
+            ))
+        );
+    }
+
+    #[test]
+    fn a_path_with_a_space_or_quote_stays_one_shell_word() {
+        assert_eq!(
+            quoted(Path::new("/opt/homebrew/bin/python3")),
+            "/opt/homebrew/bin/python3"
+        );
+        assert_eq!(quoted(Path::new("/a b/it's")), r"'/a b/it'\''s'");
     }
 
     #[test]

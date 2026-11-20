@@ -94,6 +94,7 @@ mod line_diagnostics;
 mod lsp;
 mod lsp_actions;
 mod lsp_commands;
+mod lsp_diagnostics;
 mod lsp_navigation;
 mod minimap;
 mod own_agent;
@@ -727,10 +728,15 @@ fn probe_markdown_shown(root: &std::path::Path) {
         format!("{heading:?} / {body:?}"),
     );
     check("Markdown wraps its long lines", crate::editor::wraps(&editor), "");
-    if let Some(window) = controller.window() {
-        snapshot(&window, "probe-markdown");
-    }
-    probe_environment();
+    let file = root.join("NOTES.md");
+    let rendered = move || crate::preview::seen::text(&file).is_some_and(|(text, _)| text.contains("fn main()"));
+    helpers::wait_until(rendered, move |ok| {
+        check("the preview beside it shows the whole file", ok, "");
+        if let Some(window) = controller.window() {
+            snapshot(&window, "probe-markdown");
+        }
+        probe_environment();
+    });
 }
 
 /// Types `text` into `editor` the way the keyboard does, character by character.

@@ -206,10 +206,12 @@ impl Registry {
             Language::Json | Language::Css | Language::Html => {
                 // The servers taken from VS Code format only when asked to at the start.
                 config.initialization_options = Some(json!({"provideFormatter": true}));
+                // Without settings the CSS and JSON servers check nothing.
                 if launch.language == Language::Css {
-                    // Without settings the CSS server checks nothing.
                     let validate = json!({"validate": true});
                     config.settings = json!({"css": validate, "scss": validate, "less": validate});
+                } else if launch.language == Language::Json {
+                    config.settings = json!({"json": {"validate": {"enable": true}}});
                 }
             }
             Language::Yaml => {
@@ -872,7 +874,7 @@ mod tests {
         assert_eq!(css.settings["less"]["validate"], true);
         let json = config(Language::Json);
         assert_eq!(json.initialization_options.unwrap()["provideFormatter"], true);
-        assert_eq!(json.settings, Value::Null);
+        assert_eq!(json.settings["json"]["validate"]["enable"], true);
         assert_eq!(config(Language::Yaml).settings["yaml"]["schemaStore"]["enable"], false);
         let python = config(Language::Python);
         assert_eq!((python.settings, python.initialization_options), (Value::Null, None));

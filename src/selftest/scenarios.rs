@@ -162,6 +162,10 @@ pub(crate) const SCENARIOS: &[Scenario] = &[
     limited("lsp-navigation", lsp_navigation::run, LANGUAGE_SERVER),
     limited("lsp-actions", lsp_actions::run_rust, LANGUAGE_SERVER),
     limited("lsp-actions-go", lsp_actions::run_go, LANGUAGE_SERVER),
+    Scenario {
+        offline: false,
+        ..limited("lsp-diagnostics", lsp_diagnostics::run, Duration::from_secs(1200))
+    },
     plain("language-servers", servers::run),
     plain("editor-multi", editor_multi::run),
     plain("editor-scroll", editor_scroll::run),

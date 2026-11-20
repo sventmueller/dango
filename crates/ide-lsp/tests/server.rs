@@ -536,6 +536,24 @@ fn editor_requests_come_back_in_utf16_and_in_one_shape() {
 }
 
 #[test]
+fn diagnostics_registered_after_the_start_are_offered_and_pulled() {
+    let f = start("pull-later", &[("FAKE_DIAGNOSTICS_REGISTERED_LATER", "1")], |_| {});
+    let doc = f.uri("main.rs");
+    f.server.open(&doc, "rust", 1, "let a = 1;");
+    assert!(!f.server.offers("diagnosticProvider", "textDocument/diagnostic"));
+    let registration = json!({"registrations": [{"id": "d", "method": "textDocument/diagnostic", "registerOptions": {"interFileDependencies": false, "workspaceDiagnostics": false}}]});
+    f.ask(
+        "fake/ask",
+        json!({"method": "client/registerCapability", "params": registration}),
+    )
+    .unwrap();
+    f.expect(|s| *s == Seen::Capabilities);
+    assert!(f.server.offers("diagnosticProvider", "textDocument/diagnostic"));
+    let pulled = wait(|r| f.server.pull_diagnostics(&doc, r)).unwrap();
+    assert_eq!(pulled[0].message, "pulled");
+}
+
+#[test]
 fn what_the_server_does_not_offer_or_does_not_know_is_refused_before_sending() {
     let f = start("refuse", &[], |_| {});
     let doc = f.uri("a.rs");

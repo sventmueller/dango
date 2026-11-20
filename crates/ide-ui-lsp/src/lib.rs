@@ -545,7 +545,7 @@ fn semantic_tokens(view: &dyn Editor, server: &Server, uri: &Uri) {
 /// Asks every server of `view` that offers pulled diagnostics for them (E140); ESLint sends no others (E132).
 fn pull_diagnostics(view: &dyn Editor, serial: EditorSerial) {
     for (source, server, uri) in servers_of(view) {
-        if !server.capabilities().is_some_and(|c| c.diagnostic_provider.is_some()) {
+        if !server.offers("diagnosticProvider", "textDocument/diagnostic") {
             continue;
         }
         let _ = server.pull_diagnostics(&uri, move |answer| {
