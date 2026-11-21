@@ -236,9 +236,6 @@ impl Supervisor {
         if let Some(nice) = crate::priority::nice(kind) {
             crate::priority::lower(pid, nice);
         }
-        if crate::priority::in_background(kind) {
-            crate::priority::to_background(pid);
-        }
         let info = self.add(pid, kind, label, Origin::Started);
         let id = info.id;
         if awaited {

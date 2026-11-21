@@ -1,6 +1,8 @@
 //! How hard the app's threads and the processes it starts compete for the processor: the terminal, agents' streams
 //! and language servers' replies before indexing and git, the agents themselves in the middle, and everything an agent
-//! starts, in whatever language, last and in macOS's background state, so the app stays quick while agents build.
+//! starts, in whatever language, last, so the app stays quick while agents build. Nice values alone set that order:
+//! macOS's background state would also keep a process off the performance cores and throttle its disk access on an
+//! otherwise idle machine.
 
 use std::collections::HashSet;
 
@@ -66,26 +68,14 @@ pub(crate) fn nice(kind: Kind) -> Option<i32> {
     }
 }
 
-/// Whether a process of `kind` runs in macOS's background state from its start.
-pub(crate) fn in_background(kind: Kind) -> bool {
-    kind == Kind::AgentCommand
-}
-
 /// Gives process `pid` the nice value `nice`; children it starts afterwards inherit it.
 pub(crate) fn lower(pid: u32, nice: i32) {
     // SAFETY: setpriority reads only its arguments; for a process that ended meanwhile it fails and changes nothing.
     unsafe { libc::setpriority(libc::PRIO_PROCESS, pid, nice) };
 }
 
-/// Puts process `pid` in macOS's background state: the lowest scheduling priority, and disk and network access
-/// throttled; children it starts afterwards inherit it.
-pub(crate) fn to_background(pid: u32) {
-    // SAFETY: setpriority reads only its arguments; for a process that ended meanwhile it fails and changes nothing.
-    unsafe { libc::setpriority(libc::PRIO_DARWIN_PROCESS, pid, libc::PRIO_DARWIN_BG) };
-}
-
-/// The agent programs an adapter starts, which keep [`AGENT_NICE`] where everything else an agent starts goes to the
-/// background.
+/// The agent programs an adapter starts, which keep [`AGENT_NICE`] where everything else an agent starts gets
+/// [`AGENT_COMMAND_NICE`].
 const AGENTS: &[&str] = &["claude", "codex", "opencode", "gemini"];
 
 /// The programs that run an agent's commands: shells, and the build tools and language servers agents start on
@@ -130,7 +120,7 @@ pub(crate) fn runs_commands(name: &str) -> bool {
     COMMANDS.contains(&name.trim_start_matches('-'))
 }
 
-/// Puts every process below one of `agents` in the background state, whatever it runs, except the agent programs an
+/// Gives every process below one of `agents` [`AGENT_COMMAND_NICE`], whatever it runs, except the agent programs an
 /// adapter starts, which get [`AGENT_NICE`]. `lowered` remembers the ones done between calls and loses those that
 /// ended.
 pub(crate) fn lower_agent_commands(agents: &[u32], lowered: &mut HashSet<u32>) {
@@ -148,34 +138,10 @@ fn walk(parent: u32, below_command: bool, seen: &mut HashSet<u32>, lowered: &mut
         }
         let command = below_command || !is_agent_program(name(child).as_deref());
         if lowered.insert(child) {
-            if command {
-                to_background(child);
-            } else {
-                lower(child, AGENT_NICE);
-            }
+            lower(child, if command { AGENT_COMMAND_NICE } else { AGENT_NICE });
         }
         walk(child, command, seen, lowered);
     }
-}
-
-/// The scheduling priority of process `pid`'s task, for tests; macOS 27 shows the background state here and no longer
-/// in the nice value.
-#[cfg(test)]
-fn base_priority(pid: u32) -> Option<i32> {
-    let mut info = std::mem::MaybeUninit::<libc::proc_taskinfo>::uninit();
-    let size = i32::try_from(size_of::<libc::proc_taskinfo>()).ok()?;
-    // SAFETY: The kernel writes at most `size` bytes into the buffer. Only a full result is read.
-    let read = unsafe {
-        libc::proc_pidinfo(
-            i32::try_from(pid).ok()?,
-            libc::PROC_PIDTASKINFO,
-            0,
-            info.as_mut_ptr().cast(),
-            size,
-        )
-    };
-    // SAFETY: The full task info was written by proc_pidinfo.
-    (read == size).then(|| unsafe { info.assume_init() }.pti_priority)
 }
 
 #[cfg(test)]
@@ -185,8 +151,10 @@ mod tests {
 
     use super::*;
 
-    /// The priority macOS gives a task in the background state, `MAXPRI_THROTTLE` in the kernel's sources.
-    const BACKGROUND_PRIORITY: i32 = 4;
+    fn nice_of(pid: u32) -> i32 {
+        // SAFETY: getpriority reads only its arguments.
+        unsafe { libc::getpriority(libc::PRIO_PROCESS, pid) }
+    }
 
     #[test]
     fn a_thread_gets_the_class_it_asks_for() {
@@ -203,7 +171,7 @@ mod tests {
     }
 
     #[test]
-    fn everything_an_agent_starts_goes_to_the_background() {
+    fn everything_an_agent_starts_yields_the_most() {
         // A stand-in agent: a helper, and a shell whose `sleep` started before the shell was lowered.
         let mut agent = Command::new("/bin/sh")
             .args(["-c", "/bin/sleep 30 & /bin/zsh -c '/bin/sleep 30 & wait' & wait"])
@@ -234,9 +202,9 @@ mod tests {
         let (helper, shell) = (named("sleep"), named("zsh"));
         let command = children(shell)[0];
         assert_eq!(
-            [base_priority(helper), base_priority(shell), base_priority(command)],
-            [Some(BACKGROUND_PRIORITY); 3],
-            "everything, and what it started before, is in the background"
+            [nice_of(helper), nice_of(shell), nice_of(command)],
+            [AGENT_COMMAND_NICE; 3],
+            "everything, and what it started before, yields the most"
         );
         assert_eq!(lowered.len(), 3);
         // SAFETY: Ends the stand-in's own process group, which the test started.
@@ -247,7 +215,7 @@ mod tests {
     }
 
     #[test]
-    fn only_agent_programs_stay_out_of_the_background() {
+    fn only_agent_programs_keep_the_agents_nice_value() {
         assert!(is_agent_program(Some("claude")) && is_agent_program(Some("codex")));
         assert!(!is_agent_program(Some("node")) && !is_agent_program(Some("python3")) && !is_agent_program(None));
     }
@@ -262,7 +230,6 @@ mod tests {
             "gates yield like agents' commands (F70)"
         );
         assert_eq!(nice(Kind::Agent), Some(AGENT_NICE));
-        assert!(in_background(Kind::AgentCommand) && !in_background(Kind::Gate) && !in_background(Kind::Agent));
         assert_eq!(nice(Kind::Terminal), None);
         assert!(runs_commands("-zsh") && runs_commands("cargo") && !runs_commands("claude"));
     }

@@ -79,9 +79,11 @@ eingearbeitet (markiert mit *Review*).
     10 000 Zeilen mit 5 ms Median-CPU-Zeit (auch nach einem Sprung), Zuschläge durch Einblendungen und Diagnosen mit
     2 ms, eine fertige Antwortkarte bis ~100 KB mit 200 ms. Grund: ein 10-facher Rückschritt lag unbemerkt knapp
     unter 16 ms.
-  - *Nachtrag (Eigentümer):* Was ein Agent startet, läuft in jeder Sprache im Hintergrund-Zustand von macOS (niedrigste
-    Priorität, gedrosselte Platte und Netz); die Agenten selbst und die Agent-Programme eines Adapters, in denen die
-    Subagenten laufen, mit `nice` 10. Volllast der Agenten darf Dango nie verlangsamen.
+  - *Nachtrag (Eigentümer):* Vorrang statt Drosselung: Dango vor den Agenten, die Agenten vor dem, was sie starten.
+    Die Agenten selbst und die Agent-Programme eines Adapters, in denen die Subagenten laufen, laufen mit `nice` 10,
+    alles, was ein Agent startet, in jeder Sprache mit `nice` 20. Der Hintergrund-Zustand von macOS ist dafür
+    verworfen: er hält Prozesse auch auf einer sonst freien Maschine von den Performance-Kernen fern und drosselt
+    Platte und Netz (gemessen: etwa ein Zehntel des Durchsatzes). Volllast der Agenten darf Dango nie verlangsamen.
 - **E26 Tastatur und Einstellungen** *(Review, neu)*. Eine zentrale Kürzeltabelle mit Nutzer-Überschreibungen;
   feste Regeln, welche Tasten das Terminal bekommt (⌃C, Esc, ⌘K) und welche die App. Fokuswechsel Editor/Terminal/
   Browser/AI per Tastatur. Einstellungen in zwei Ebenen (Nutzer, Projekt) mit Versionsnummer und Migration.
