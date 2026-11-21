@@ -647,8 +647,8 @@ impl AgentTab {
         controller.set_tab_status(tab, self.tab_mark().as_deref());
     }
 
-    /// The colour of the dot on the tab: green while the agent or one of its subagents works, red while it waits for
-    /// the user, none when idle.
+    /// The colour of the dot on the tab: green while the agent, one of its subagents or its background work runs, red
+    /// while it waits for the user, none when idle (E71).
     pub fn tab_mark(&self) -> Option<Retained<NSColor>> {
         let state = self.state.borrow();
         match state.status() {
@@ -716,18 +716,10 @@ impl AgentTab {
     }
 }
 
-/// Whether a subagent or workflow of `thread` still runs; background shells and monitors are no part of the session's
-/// work, as a server may run in one for hours.
+/// Whether work of `thread` runs on beside its turn: a subagent, a workflow or a background command, but not the
+/// agent's own housekeeping.
 pub(crate) fn delegates(thread: &Thread) -> bool {
-    thread.subagents().iter().any(|s| !s.status.is_final())
-        || thread.background().iter().any(|b| {
-            !b.status.is_final()
-                && !b.ambient
-                && matches!(
-                    b.kind,
-                    ide_thread::BackgroundKind::Subagent | ide_thread::BackgroundKind::Workflow
-                )
-        })
+    ide_session::turn::running_work(thread) > 0
 }
 
 /// The composer and what stands above and below it at the foot of `column`: as wide as the column but for its inset,

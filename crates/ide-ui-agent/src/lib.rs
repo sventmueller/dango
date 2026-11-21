@@ -364,9 +364,7 @@ fn works(tab: &AgentTab) -> bool {
         return false;
     }
     let thread = tab.view_snapshot();
-    thread.status() != ide_thread::Status::Idle
-        || thread.subagents().iter().any(|s| !s.status.is_final())
-        || thread.background().iter().any(|b| !b.status.is_final() && !b.ambient)
+    thread.status() != ide_thread::Status::Idle || tab::delegates(&thread)
 }
 
 /// Ends the sessions of a window that closes.

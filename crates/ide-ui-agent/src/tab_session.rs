@@ -206,7 +206,8 @@ impl AgentTab {
         self.refresh_tab_mark();
     }
 
-    /// Tells the user who looks elsewhere that the session finished, once its turn and every subagent have ended.
+    /// Tells the user who looks elsewhere that the session finished, once its turn, every subagent and its background
+    /// work have ended.
     pub(super) fn work_moved(&self, busy_before: bool, busy_now: bool) {
         if busy_before && !busy_now && notify::user_looks_elsewhere(self.is_shown()) {
             notify::post(
@@ -267,9 +268,9 @@ mod tests {
     use crate::tab::delegates;
 
     #[test]
-    fn a_running_subagent_or_workflow_keeps_the_session_working_but_a_background_shell_does_not() {
+    fn a_running_subagent_workflow_or_background_command_keeps_the_session_working_but_housekeeping_does_not() {
         let mut thread = Thread::new(ThreadId::from("t"), "claude", "/work");
-        let item = |kind| BackgroundItem {
+        let item = |kind, ambient| BackgroundItem {
             id: format!("{kind:?}"),
             kind,
             label: "work".into(),
@@ -280,13 +281,16 @@ mod tests {
             parent: None,
             output: OutputTail::default(),
             is_backgrounded: true,
-            ambient: false,
+            ambient,
         };
-        thread.apply(Update::Background(vec![item(BackgroundKind::Shell)]));
+        for kind in [BackgroundKind::Shell, BackgroundKind::Monitor, BackgroundKind::Workflow] {
+            thread.apply(Update::Background(vec![item(kind, false)]));
+            assert!(delegates(&thread));
+        }
+        thread.apply(Update::Background(vec![item(BackgroundKind::Monitor, true)]));
         assert!(!delegates(&thread));
-        thread.apply(Update::Background(vec![item(BackgroundKind::Workflow)]));
-        assert!(delegates(&thread));
         thread.apply(Update::Background(Vec::new()));
+        assert!(!delegates(&thread));
         let mut sub = SubagentPatch::new("toolu_1", SystemTime::UNIX_EPOCH);
         sub.status = Some(TaskStatus::Running);
         thread.apply(Update::Subagent(sub));

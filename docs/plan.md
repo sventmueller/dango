@@ -493,6 +493,8 @@ Getroffen nach der Freigabe des Plans; sie ergänzen die Entscheidungen oben und
   zeigt rechts einen grünen Punkt, solange die Sitzung arbeitet, einen roten, solange sie auf eine Aktion des Nutzers
   wartet (Freigabe, Frage, Plan; bei einer CLI die Glocke), und keinen, wenn sie untätig ist. „Fertig, noch nicht
   angesehen“ zeigt keinen Punkt mehr; das meldet die Mitteilung. Die Anbieterfarbe bleibt beim Symbol des Tabs.
+  Eine AI-Sitzung arbeitet, solange ihr Zug, ein Subagent, ein Workflow oder ein Hintergrundbefehl läuft; erst danach
+  erlischt der Punkt und kommt die Mitteilung „fertig“. Ein Dev-Server im Hintergrund hält den Punkt also grün.
 - **E72 Keine Zahl am Dock-Symbol, ein Ordner ein Eintrag** *(Entscheidung des Eigentümers, ändert I9)*: Das
   Dock-Symbol trägt keine Zahl; dass eine Sitzung wartet oder fertig ist, melden der rote Punkt im Tab (E71) und die
   Mitteilung. Fenstermenü und Dock-Menü nennen jeden Ordner einmal, mit dem Tab, der vorn liegt; ein herausgezogener
