@@ -8,14 +8,10 @@ publish = false
 [package.metadata]
 cargo-fuzz = true
 
-# A workspace of its own, so that the nightly-only build stays out of the app's.
-[workspace]
-members = ["."]
-
 [dependencies]
 libfuzzer-sys = "0.4.10"
-ide-claude = { path = ".." }
-ide-thread = { path = "../../ide-thread", features = ["fuzzing"] }
+ide-claude = { path = "../../crates/ide-claude" }
+ide-thread = { path = "../../crates/ide-thread", features = ["fuzzing"] }
 
 [[bin]]
 name = "stream_json"

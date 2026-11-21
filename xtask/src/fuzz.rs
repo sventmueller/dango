@@ -1,6 +1,6 @@
 //! The crates' fuzz targets (E95): each runs for a fixed time with the nightly that cargo-fuzz needs, its corpus
-//! grows in `target/fuzz/corpus/<target>`, and a crash stops the run, leaving the input in the crate's
-//! `fuzz/artifacts/`. Beside them the property tests (E96) run with a fresh seed and many more cases than in
+//! grows in `target/fuzz/corpus/<target>`, and a crash stops the run, leaving the input in
+//! `fuzz/<crate>/artifacts/`. Beside them the property tests (E96) run with a fresh seed and many more cases than in
 //! `make check`, which keeps its fixed ones.
 
 use std::hash::{BuildHasher, RandomState};
@@ -17,16 +17,16 @@ const SECONDS: u64 = 60;
 
 /// Each target with its crate and the folders whose files start its corpus.
 const TARGETS: &[(&str, &str, &[&str])] = &[
-    ("ide-terminal", "scan", &["crates/ide-terminal/fuzz/seeds/scan"]),
-    ("ide-terminal", "procargs", &["crates/ide-terminal/fuzz/seeds/procargs"]),
-    ("ide-lsp", "messages", &["crates/ide-lsp/fuzz/seeds/messages"]),
-    ("ide-acp", "updates", &["crates/ide-acp/fuzz/seeds/updates"]),
-    ("ide-git", "diff", &["crates/ide-git/fuzz/seeds/diff"]),
+    ("ide-terminal", "scan", &["fuzz/ide-terminal/seeds/scan"]),
+    ("ide-terminal", "procargs", &["fuzz/ide-terminal/seeds/procargs"]),
+    ("ide-lsp", "messages", &["fuzz/ide-lsp/seeds/messages"]),
+    ("ide-acp", "updates", &["fuzz/ide-acp/seeds/updates"]),
+    ("ide-git", "diff", &["fuzz/ide-git/seeds/diff"]),
     ("ide-claude", "stream_json", &["crates/ide-claude/tests/fixtures"]),
     ("ide-agent", "stream", &["crates/ide-agent/tests/fixtures"]),
     ("ide-predict", "answer", &["crates/ide-predict/tests/fixtures"]),
-    ("ide-dap", "dap_messages", &["crates/ide-dap/fuzz/seeds/dap_messages"]),
-    ("ide-dap", "launch_json", &["crates/ide-dap/fuzz/seeds/launch_json"]),
+    ("ide-dap", "dap_messages", &["fuzz/ide-dap/seeds/dap_messages"]),
+    ("ide-dap", "launch_json", &["fuzz/ide-dap/seeds/launch_json"]),
 ];
 
 /// The name that picks the property tests instead of a target.
@@ -98,7 +98,7 @@ fn fuzz_in(
         cmd.current_dir(&root)
             .env("PATH", &path)
             .args(["fuzz", "run", "--fuzz-dir"])
-            .arg(root.join("crates").join(krate).join("fuzz"))
+            .arg(root.join("fuzz").join(krate))
             .arg(target)
             .arg(&corpus)
             .args(seeds.iter().map(|seed| root.join(seed)))
@@ -210,12 +210,12 @@ mod tests {
             runs[0],
             format!(
                 "cargo fuzz run --fuzz-dir {} scan {} {} -- -max_total_time=5",
-                root.join("crates/ide-terminal/fuzz").display(),
+                root.join("fuzz/ide-terminal").display(),
                 target.join("fuzz/corpus/scan").display(),
-                root.join("crates/ide-terminal/fuzz/seeds/scan").display()
+                root.join("fuzz/ide-terminal/seeds/scan").display()
             )
         );
-        assert!(runs[1].contains(" diff ") && runs[1].contains("crates/ide-git/fuzz"));
+        assert!(runs[1].contains(" diff ") && runs[1].contains("fuzz/ide-git"));
         assert!(target.join("fuzz/corpus/diff").is_dir());
         drop(sh);
         let path = paths[1].clone().unwrap();
@@ -249,7 +249,7 @@ mod tests {
     fn every_target_has_its_fuzz_folder_and_seeds() {
         let root = crate::root();
         for (krate, target, seeds) in TARGETS {
-            let fuzz = root.join("crates").join(krate).join("fuzz");
+            let fuzz = root.join("fuzz").join(krate);
             assert!(
                 fuzz.join(format!("fuzz_targets/{target}.rs")).exists(),
                 "{krate} {target}"

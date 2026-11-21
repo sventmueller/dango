@@ -100,7 +100,7 @@ durchprobiert; der Nutzen wächst mit der Laufzeit.
   1.99.1 festgelegt (E16). Deshalb `make fuzz` mit `cargo +nightly fuzz`, je Ziel eine feste Laufzeit (Standard
   60 s, `FUZZ_SECONDS=` überschreibt), Fundstücke werden als Regressionstest in die normale Testsuite übernommen und
   laufen dort mit 1.99.1. Startkorpus aus den vorhandenen Mitschnitten (`crates/ide-claude/tests/fixtures/*.ndjson`
-  u. a.). Ziele, je Crate ein Ordner `fuzz/`:
+  u. a.). Ziele, je Crate ein Ordner `fuzz/<crate>/`, alle in einem gemeinsamen Workspace `fuzz/`:
   1. `ide-terminal`: `scan.rs` (OSC 133, OSC 7, Dev-Server-Erkennung) und `parse_procargs`. Der eigentliche
      ANSI-Parser ist `vte` aus alacritty_terminal und wird dort bereits gefuzzt; geprüft wird Dangos eigener Teil.
   2. `ide-lsp`: `framing.rs` (Content-Length-Rahmung) und die Umwandlung eingehender Nachrichten (`incoming.rs`).

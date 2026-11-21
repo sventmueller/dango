@@ -109,16 +109,17 @@ The sweep counts a clone at its full size although it shares its blocks, so the 
 80 GB earlier than the disk does.
 
 ## Fuzzing
-The parsers that read what other programs write have fuzz targets (E95), each in a `fuzz/` folder of its crate: the
+The parsers that read what other programs write have fuzz targets (E95), each crate's in `fuzz/<crate>/`: the
 terminal's scanner and `KERN_PROCARGS2` reader, the language servers' framing with the positions they send, ACP and
 Claude stream-json into the thread model, `git diff` output, the providers' server-sent events, and the answers of
 local fill-in-the-middle models and Copilot that become edit predictions, and the debug adapters' messages and
 `.vscode/launch.json`. They reach
-crate-private parts through the feature `fuzzing`, which only the fuzz crates turn on. cargo-fuzz needs a nightly
+crate-private parts through the feature `fuzzing`, which only the fuzz crates turn on. The fuzz crates form one
+workspace in `fuzz/`, apart from the app's, with one lock file and one build for all targets. cargo-fuzz needs a nightly
 compiler; `xtask/src/fuzz.rs` pins its date (R18), and `rustup toolchain install nightly-<date> --profile minimal`
 plus `cargo install cargo-fuzz` set it up. `make fuzz` runs every target for `FUZZ_SECONDS` (60 by default),
 `make fuzz ARGS=diff` one; the corpus grows in `target/fuzz/corpus/`, the recorded sessions in `tests/fixtures` start
-it. A crash stops the run and leaves its input in the crate's `fuzz/artifacts/`; the fix comes with a unit test built
+it. A crash stops the run and leaves its input in `fuzz/<crate>/artifacts/`; the fix comes with a unit test built
 from that input, then the file goes.
 
 A target checks results, not only that nothing panics. What it holds the code to, per target:

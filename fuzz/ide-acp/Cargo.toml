@@ -8,14 +8,10 @@ publish = false
 [package.metadata]
 cargo-fuzz = true
 
-# A workspace of its own, so that the nightly-only build stays out of the app's.
-[workspace]
-members = ["."]
-
 [dependencies]
 libfuzzer-sys = "0.4.10"
-ide-acp = { path = ".." }
-ide-thread = { path = "../../ide-thread", features = ["fuzzing"] }
+ide-acp = { path = "../../crates/ide-acp" }
+ide-thread = { path = "../../crates/ide-thread", features = ["fuzzing"] }
 serde_json = "1.0.154"
 
 [[bin]]

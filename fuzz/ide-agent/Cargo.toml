@@ -8,13 +8,9 @@ publish = false
 [package.metadata]
 cargo-fuzz = true
 
-# A workspace of its own, so that the nightly-only build stays out of the app's.
-[workspace]
-members = ["."]
-
 [dependencies]
 libfuzzer-sys = "0.4.10"
-ide-agent = { path = "..", features = ["fuzzing"] }
+ide-agent = { path = "../../crates/ide-agent", features = ["fuzzing"] }
 
 [[bin]]
 name = "stream"

@@ -8,13 +8,9 @@ publish = false
 [package.metadata]
 cargo-fuzz = true
 
-# A workspace of its own, so that the nightly-only build stays out of the app's.
-[workspace]
-members = ["."]
-
 [dependencies]
 libfuzzer-sys = "0.4.10"
-ide-dap = { path = "..", features = ["fuzzing"] }
+ide-dap = { path = "../../crates/ide-dap", features = ["fuzzing"] }
 # Without it a number written and read again may differ in its last bit, which the round trips compare.
 serde_json = { version = "1.0.154", features = ["float_roundtrip"] }
 
