@@ -79,7 +79,7 @@ fn assets(version: &str) -> Vec<String> {
 
 /// `cargo xtask deploy`. Normal builds and a standalone notarization never change VERSION.
 pub(crate) fn deploy(args: &[String]) -> Result<(), String> {
-    flags(args, [])?;
+    let [minor] = flags(args, ["--minor"])?;
     let sh: &mut dyn Shell = &mut System;
     let git = Git::at(&root());
     let fp = seal::ready(sh, &git)?;
@@ -111,7 +111,11 @@ pub(crate) fn deploy(args: &[String]) -> Result<(), String> {
         pending.verify(sh, &dist)?;
         pending
     } else {
-        let next = following(&current)?;
+        let next = if minor {
+            following_minor(&current)?
+        } else {
+            following(&current)?
+        };
         let tag = format!("v{next}");
         let tags = git.output(sh, &["tag", "--list", &tag])?;
         let remote = git.output(sh, &["ls-remote", "origin", &format!("refs/tags/{tag}")])?;
@@ -173,7 +177,8 @@ fn pending(dist: &Path, fp: &str, head: &str, current: &str) -> Result<Option<De
     if deployment.fingerprint != fp {
         return Err("a deploy is pending for different content; finish it or remove dist/deployment.json before starting a new deploy".into());
     }
-    if (head == deployment.source_commit && deployment.version == following(current)?)
+    let next = [following(current)?, following_minor(current)?];
+    if (head == deployment.source_commit && next.contains(&deployment.version))
         || (head == deployment.commit && current == deployment.version)
         // Recovery if committing VERSION succeeded but saving the resulting SHA was interrupted.
         || (deployment.commit.is_empty() && current == deployment.version)

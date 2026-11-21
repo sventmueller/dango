@@ -8,7 +8,8 @@ description: Release Dango from this Mac. Prepare release notes and commit the r
 Invoking `/deploy` authorizes committing all intended project changes, signing, notarizing, uploading and pushing the
 release. Never force-push. Do not deploy when the owner only asks to prepare or change this workflow.
 
-Only `make deploy` changes VERSION. It builds the next patch version in memory, notarizes the universal app and disk
+Only `make deploy` changes VERSION. It builds the next patch version in memory (`make deploy ARGS=--minor` the next
+minor version with build number 0, when the owner asked for one), notarizes the universal app and disk
 image, then commits that exact number. Normal builds, self-tests and `make release-notarized` keep VERSION unchanged.
 Do not bump VERSION yourself or run `make release-notarized` before `make deploy`.
 

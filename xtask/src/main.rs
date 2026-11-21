@@ -83,7 +83,8 @@ pub(crate) const USAGE: &str = "usage: cargo xtask <task>
                                    VERSION, with the commits and changes of ../splat and ../lowspeak
   seal explain                     the seals of HEAD's content here and on origin, and the paths that separate it from
                                    the nearest green seal
-  deploy                           on clean main with clean, pushed siblings: notarize the next version, commit VERSION,
+  deploy [--minor]                 on clean main with clean, pushed siblings: notarize the next version (with --minor
+                                   the next minor version, its build number 0), commit VERSION,
                                    upload the draft, push main, its green seal if any and the version tag, then publish
                                    the release
   thread-locals                    fail for a thread-local that docs/thread-locals.md does not allow to stay
@@ -268,6 +269,18 @@ pub(crate) fn following(version: &str) -> Result<String, String> {
     Ok(format!("{head}.{next}"))
 }
 
+/// The version after `version` that raises the minor number and starts the build number at 0.
+pub(crate) fn following_minor(version: &str) -> Result<String, String> {
+    if !is_version(version) {
+        return Err(format!("{version:?} is not major.minor.build"));
+    }
+    let mut parts = version.split('.');
+    let (major, minor) = (parts.next().unwrap_or_default(), parts.next().unwrap_or_default());
+    let minor: u64 = minor.parse().map_err(|e| format!("minor number {minor}: {e}"))?;
+    let next = minor.checked_add(1).ok_or("the minor number is at its maximum")?;
+    Ok(format!("{major}.{next}.0"))
+}
+
 /// `std::fs` with the path in every error.
 pub(crate) mod files {
     use std::fs;
@@ -338,6 +351,9 @@ mod tests {
         assert_eq!(following("2.3.99").unwrap(), "2.3.100");
         assert!(following("1.0").is_err() && following("1.0.x").is_err());
         assert!(following(&format!("1.0.{}", u64::MAX)).is_err());
+        assert_eq!(following_minor("0.2.9").unwrap(), "0.3.0");
+        assert_eq!(following_minor("1.9.0").unwrap(), "1.10.0");
+        assert!(following_minor("1.0").is_err());
     }
 
     #[test]

@@ -44,7 +44,7 @@ in Dark Mode). Only Xcode's `actool` compiles it, so its output `assets/Assets.c
 | `make coverage` | `cargo xtask coverage`: line coverage of the tests and the offline self-tests, see [Coverage](#coverage) |
 | `make ci` | `cargo xtask ci`: formatter, `cargo deny check advisories`, `check`, coverage with every test and self-test, `perf`, 20 s of each fuzz target; seals the content, see [CI and deploy](#ci-and-deploy) |
 | `make seal-explain` | `cargo xtask seal explain`: the seal of HEAD's content here and on GitHub |
-| `make deploy` | notarizes the next version, commits VERSION, stages the assets, pushes `main` and its tag, a green seal along, and publishes the release |
+| `make deploy` | notarizes the next version (`ARGS=--minor`: the next minor version, e.g. 0.2.9 → 0.3.0), commits VERSION, stages the assets, pushes `main` and its tag, a green seal along, and publishes the release |
 | `make release` | `cargo xtask release`: a dry run of the release, see [Release](#release); sends nothing anywhere |
 | `make release-notarized` | `check`, then `cargo xtask release --notarize`: the release for real into `dist/` |
 | `make test-integration` | `cargo xtask integration`: real servers, CLIs and services with the sign-ins, no paid account unless asked; see below |

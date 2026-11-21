@@ -57,8 +57,8 @@ ci: ## The whole pipeline: cargo fmt, check, coverage with every test and offlin
 seal-explain: ## The seal of HEAD's content here and on GitHub, and what separates it from the nearest green seal
 	cargo xtask seal explain
 
-deploy: ## Notarize the next version, commit VERSION, upload the draft, push main, its green seal and tag, then publish the release
-	cargo xtask deploy
+deploy: ## Notarize the next version, commit VERSION, upload the draft, push main, its green seal and tag, then publish the release; ARGS=--minor raises the minor version
+	cargo xtask deploy $(ARGS)
 
 test: check ## check, then the selftest probe and the accessibility audit, left to right and right to left
 	cargo xtask selftest probe a11y a11y-rtl
