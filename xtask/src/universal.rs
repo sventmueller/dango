@@ -64,7 +64,9 @@ pub(crate) fn universal_dsym(name: &str) -> PathBuf {
 /// Joins the dSYMs of `name` that the profile's `split-debuginfo` has cargo leave beside each processor's program.
 fn join_dsyms(sh: &mut dyn Shell, dir: &Path, name: &str) -> Result<(), String> {
     let dsym = universal_dsym(name);
-    let dwarf = |bundle: &Path| bundle.join("Contents/Resources/DWARF").join(name);
+    // rustc names the DWARF file after the crate, whose name has underscores where the program's has hyphens.
+    let file = name.replace('-', "_");
+    let dwarf = |bundle: &Path| bundle.join("Contents/Resources/DWARF").join(&file);
     let mut join = Command::new("lipo");
     join.arg("-create");
     for (target, _) in UNIVERSAL {
@@ -225,6 +227,17 @@ mod tests {
                 dwarf("ide.dSYM")
             ),
             "the debug symbols of both processors in one dSYM"
+        );
+        let decoder = |bundle: &str| format!("{}/Contents/Resources/DWARF/ide_decoder", dir.join(bundle).display());
+        assert_eq!(
+            joined[3],
+            format!(
+                "lipo -create {} {} -output {}",
+                decoder("aarch64-apple-darwin/dist/ide-decoder.dSYM"),
+                decoder("x86_64-apple-darwin/dist/ide-decoder.dSYM"),
+                decoder("ide-decoder.dSYM")
+            ),
+            "the DWARF file is named after the crate, with an underscore"
         );
         assert_eq!(joined.len(), 4);
         assert_eq!(
