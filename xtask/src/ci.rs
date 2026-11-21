@@ -1,6 +1,7 @@
 //! `cargo xtask ci`, the run that seals (docs/development.md, "CI and deploy"): the formatter, the fingerprint of the
-//! working tree, then `make check`, coverage with every test and offline self-test, and `make perf`, stopping at the
-//! first failure. Only a complete run of unchanged content mints a seal.
+//! working tree, then the advisories of the dependencies, `make check`, coverage with every test and offline self-test,
+//! `make perf` and a short fuzzing of every target, stopping at the first failure. Only a complete run of unchanged
+//! content mints a seal.
 
 use std::process::Command;
 use std::time::{Duration, Instant};
@@ -11,9 +12,11 @@ use crate::*;
 
 /// The stages after the fingerprint, in order, each with its command.
 const STAGES: &[(&str, &[&str])] = &[
+    ("advisories", &["cargo", "deny", "--locked", "check", "advisories"]),
     ("check", &["make", "check"]),
     ("coverage", &["cargo", "xtask", "coverage", "--check", "--strict"]),
     ("perf", &["make", "perf"]),
+    ("fuzz", &["env", "FUZZ_SECONDS=20", "cargo", "xtask", "fuzz"]),
 ];
 
 const LOCKED: &str = "the screen is locked: the window self-tests cannot capture their windows then, and the run would \
@@ -169,9 +172,11 @@ mod tests {
                 "ioreg -n Root -d1 -a",
                 "cargo fmt --all",
                 "git -C /repo write-tree",
+                "caffeinate -di cargo deny --locked check advisories",
                 "caffeinate -di make check",
                 "caffeinate -di cargo xtask coverage --check --strict",
                 "caffeinate -di make perf",
+                "caffeinate -di env FUZZ_SECONDS=20 cargo xtask fuzz",
                 "git -C /repo write-tree",
                 &format!("git -C /repo commit-tree --no-gpg-sign -m CI seal refs/ci-seals/green/{FP} {FP}"),
                 &format!("git -C /repo update-ref refs/ci-seals/green/{FP} c0ffee"),

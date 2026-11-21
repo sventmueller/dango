@@ -12,6 +12,7 @@ fn prepared_repository(name: &str) -> (std::path::PathBuf, Git, Deployment) {
         commit: String::new(),
         fingerprint: fp,
         files: BTreeMap::new(),
+        siblings: BTreeMap::new(),
     };
     (dir, git, prepared)
 }
@@ -78,6 +79,7 @@ fn deployment() -> Deployment {
             .into_iter()
             .map(|name| (name, "digest".into()))
             .collect(),
+        siblings: BTreeMap::new(),
     }
 }
 

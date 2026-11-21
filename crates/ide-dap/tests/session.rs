@@ -1,6 +1,8 @@
 //! Sessions against the fake adapter on threads of the test: start, breakpoints of every kind, inspecting, stepping,
 //! the terminal request and the end.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use std::sync::mpsc::{Receiver, channel};
 use std::time::Duration;
 

@@ -82,6 +82,7 @@ pub fn stash_staged(controller: &(impl AsWindow + ?Sized)) {
 
 /// What a stash row offers.
 #[derive(Debug, Clone, Copy)]
+#[expect(missing_docs, reason = "the names say it")]
 pub enum StashAction {
     Apply,
     Pop,
@@ -178,18 +179,25 @@ pub fn can(controller: &(impl AsWindow + ?Sized), action: Sel) -> bool {
 /// What the commit message and its controls show.
 #[derive(Debug, Clone, Default)]
 pub struct MessageSeen {
+    /// The commit message.
     pub text: String,
+    /// Whether the user can edit the message.
     pub editable: bool,
     /// Whether "Von AI erstellt, bitte prüfen" shows.
     pub written: bool,
     /// The checked request that went out last.
     pub sent: Option<String>,
+    /// Whether the button that writes the message is enabled.
     pub button: bool,
+    /// The tooltip of that button.
     pub tip: String,
+    /// Whether an agent is writing the message.
     pub running: bool,
+    /// What the progress label says.
     pub progress: String,
 }
 
+/// What the commit message and its controls of `controller`'s window show.
 pub fn message(controller: &(impl AsWindow + ?Sized)) -> MessageSeen {
     let controller = &controller.as_window();
     let Some(panel) = panel::of(controller) else {

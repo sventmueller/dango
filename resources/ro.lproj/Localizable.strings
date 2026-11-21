@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Instalare: se descarcă…";
 "Installation: lade herunter … {} %" = "Instalare: se descarcă… {} %";
 "Installation: prüfe die Prüfsumme …" = "Instalare: se verifică suma de control…";
-"Installation: suche die neueste Version …" = "Instalare: se caută cea mai nouă versiune…";
 "Installiere …" = "Se instalează…";
 "Installiere … {}" = "Se instalează… {}";
 "Installieren" = "Instalați";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Simboluri găsite";
 "Wird indexiert …" = "Se indexează…";
 "Nichts gefunden" = "Nu s-a găsit nimic";
+"Keine Dateien gefunden" = "Nu s-au găsit fișiere";
+"Wird gesucht …" = "Se caută…";
+"Symbole im Projekt" = "Simboluri în proiect";
+"Symbol im Projekt suchen" = "Găsiți simbolul în proiect";
+"Abhängigkeit · {}" = "Dependență · {}";
 "Aufrufer" = "Apelanți";
 "Aufgerufene" = "Apelate";
 "Obertypen" = "Supertipuri";
@@ -2382,5 +2386,15 @@
 "Funktion vorschlagen …" = "Sugerați o funcție…";
 "Problem melden …" = "Raportați o problemă…";
 "{} auf GitHub" = "{} pe GitHub";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "Dosarului „{}” nu i se poate acorda încredere în ansamblu";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "Încrederea se aplică tuturor dosarelor din interior, inclusiv celor create ulterior. Pentru dosarul de utilizator, rădăcina unui volum, Birou, Documente, Descărcări și Bibliotecă, aceasta ar însemna fiecare descărcare și fiecare depozit clonat. Deschideți chiar dosarul proiectului pentru a-i acorda încredere; aici puteți citi și edita, dar nu pornește nimic.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "Încrederea se aplică și tuturor dosarelor din interior, inclusiv celor create ulterior.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} pornește doar în dosarele în care aveți încredere. Acestui dosar nu i se poate acorda încredere în ansamblu, deoarece conține mult mai mult decât un proiect; deschideți chiar dosarul proiectului.";
+"Vorschläge pausiert: gitleaks fehlt" = "Propuneri în pauză: gitleaks lipsește";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Fără gitleaks, nimic nu verifică dacă codul conține secrete. Instalați-l cu „{}” sau trimiteți neverificat.";
+"Ungeprüft an {} senden?" = "Trimiteți neverificat la {}?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Fără gitleaks, nimic nu verifică dacă codul care pleacă la {} conține secrete. Instalați-l cu „{}” sau trimiteți neverificat; alegerea se aplică pe acest Mac și poate fi retrasă în Configurări, la „Predicție”.";
+"Ungeprüft senden" = "Trimiteți neverificat";
+"Zwischenablage durch Programm ersetzt" = "Clipboard înlocuit de un program";
 "„{}“ hat nichts ausgegeben." = "„{}” nu a afișat nimic.";
 "„{}“ hat noch nichts ausgegeben." = "„{}” nu a afișat încă nimic.";

@@ -2,6 +2,8 @@
 //! They need installed tools or the network and take seconds to index, so they run only on request:
 //! `cargo test -p ide-lsp --test real_servers -- --ignored --test-threads 1`.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};

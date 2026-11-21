@@ -10,8 +10,6 @@ use crate::DownloadError;
 /// A stage of an installation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Step {
-    /// Finding out what to download.
-    Resolving,
     /// Downloading.
     Downloading,
     /// Checking what was downloaded.

@@ -30,6 +30,7 @@ use ide_ui_common::constant;
 
 /// How serious a diagnostic is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[expect(missing_docs, reason = "the names say it")]
 pub enum Severity {
     Hint,
     Info,
@@ -67,6 +68,7 @@ impl Severity {
         }
     }
 
+    /// The system colour its marks and symbols show in.
     pub fn color(self) -> Retained<NSColor> {
         match self {
             Severity::Error => NSColor::systemRedColor(),
@@ -92,7 +94,9 @@ pub(crate) struct Mark {
 /// A stretch the server gave a colour of its own.
 #[derive(Debug, Clone)]
 pub struct Painted {
+    /// The stretch, in UTF-16 offsets of the document.
     pub range: Range<usize>,
+    /// The palette colour it shows in.
     pub token: Token,
 }
 

@@ -145,6 +145,15 @@ pub(crate) fn problem(
                 &[agent],
             ),
         ),
+        Problem::TooBroad => (
+            "lock.shield",
+            t("Ordner nicht vertraut").to_string(),
+            tf(
+                "{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, \
+                 weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst.",
+                &[agent],
+            ),
+        ),
         Problem::NotFound => (
             "exclamationmark.triangle",
             t("Claude Code nicht gefunden").to_string(),
@@ -223,6 +232,7 @@ fn buttons(mtm: MainThreadMarker, target: &AgentTarget, problem: &Problem) -> Ve
                 buttons.push(ui::view(&ui::button(mtm, title, target, action, 0)));
             }
         }
+        Problem::TooBroad => {}
         Problem::NotFound
         | Problem::Start(_)
         | Problem::Missing(_)

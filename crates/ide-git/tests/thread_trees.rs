@@ -2,6 +2,8 @@
 //! threads always were; an order made from its base, taken over into that base only, kept up to date by merging, its
 //! diff compared byte for byte, and removed with its checkpoints also after its folder is gone.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod common;
 
 use std::path::PathBuf;

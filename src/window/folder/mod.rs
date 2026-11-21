@@ -89,13 +89,31 @@ impl WindowController {
     /// The sheet that asks whether the folder may run what it configures itself (E22).
     fn ask_trust(&self, root: PathBuf) {
         let Some(window) = self.window() else { return };
+        if crate::project::too_broad(&root) {
+            let message = splat_i18n::tf("„{}“ lässt sich nicht als Ganzes vertrauen", &[&folder_name(&root)]);
+            Alert::new(self.mtm(), &message)
+                .informative(t(
+                    "Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die \
+                     Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und \
+                     jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen \
+                     und bearbeiten, aber nichts startet.",
+                ))
+                .button(t("Eingeschränkt öffnen"), Role::Plain)
+                .sheet(&window, |_| {});
+            return;
+        }
         let message = splat_i18n::tf("Vertraust du den Dateien in „{}“?", &[&folder_name(&root)]);
         let cx = self.context().clone();
-        Alert::new(self.mtm(), &message)
-            .informative(t(
+        let informative = format!(
+            "{} {}",
+            t(
                 "In einem vertrauten Ordner dürfen Git-Hooks, Sprachserver aus dem Projekt und Agenten laufen. \
-                 Eingeschränkt kannst du lesen und bearbeiten, aber nichts davon startet.",
-            ))
+                 Eingeschränkt kannst du lesen und bearbeiten, aber nichts davon startet."
+            ),
+            t("Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte.")
+        );
+        Alert::new(self.mtm(), &message)
+            .informative(&informative)
             .button(t("Vertrauen"), Role::Plain)
             .button(t("Eingeschränkt öffnen"), Role::Plain)
             .sheet(&window, move |response| {

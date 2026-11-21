@@ -113,7 +113,6 @@
 //! address line, and plays fixed turns; the binary `opencode-test-server` is it as an `opencode` executable.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs, unreachable_pub)]
 
 pub mod capabilities;
 mod diff;

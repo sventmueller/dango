@@ -13,6 +13,23 @@ use crate::*;
 /// The file in Contents/Resources.
 pub(crate) const ACKNOWLEDGEMENTS: &str = "Acknowledgements.txt";
 
+/// The licenses the distribution may carry, the allow-list of `deny.toml`.
+const ALLOWED: [&str; 13] = [
+    "0BSD",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "Unlicense",
+    "Zlib",
+];
+
 /// Of the licenses a crate offers as alternatives, the first one of these is taken.
 const PREFERRED: [&str; 8] = [
     "MIT",
@@ -193,7 +210,11 @@ fn chosen(expression: &str) -> Result<Vec<String>, String> {
             if !options.iter().all(valid) {
                 return Err(not_understood());
             }
-            Ok(options[0].to_string())
+            options
+                .iter()
+                .find(|option| ALLOWED.contains(option))
+                .map(|option| option.to_string())
+                .ok_or_else(|| format!("license {expression:?} offers none of the licenses deny.toml allows"))
         })
         .collect()
 }
@@ -489,6 +510,30 @@ mod tests {
             ["MIT"]
         );
         assert!(chosen("").is_err());
+    }
+
+    #[test]
+    fn a_license_outside_the_allow_list_stops_the_acknowledgements() {
+        assert_eq!(chosen("ISC").unwrap(), ["ISC"]);
+        assert_eq!(chosen("LGPL-2.1-or-later OR CC0-1.0").unwrap(), ["CC0-1.0"]);
+        for refused in ["GPL-3.0-only", "MPL-2.0", "MIT AND AGPL-3.0-or-later"] {
+            let error = chosen(refused).unwrap_err();
+            assert!(
+                error.contains("none of the licenses deny.toml allows"),
+                "{refused}: {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_allow_list_is_the_one_of_deny_toml() {
+        let deny = files::read_to_string(root().join("deny.toml")).unwrap();
+        let (_, licenses) = deny.split_once("\n[licenses]\n").expect("deny.toml has [licenses]");
+        let (_, list) = licenses.split_once("allow = [").expect("[licenses] has allow");
+        let (list, _) = list.split_once(']').unwrap();
+        let allowed: Vec<&str> = list.split('"').skip(1).step_by(2).collect();
+        assert_eq!(allowed, ALLOWED);
+        assert!(PREFERRED.iter().all(|license| ALLOWED.contains(license)));
     }
 
     #[test]

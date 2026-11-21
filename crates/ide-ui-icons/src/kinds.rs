@@ -34,6 +34,7 @@ pub(crate) enum Tint {
 pub struct Icon {
     /// Its name in this table, such as `rust`.
     pub id: &'static str,
+    /// What it draws.
     pub shape: Shape,
     pub(crate) tint: Tint,
 }

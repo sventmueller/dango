@@ -32,6 +32,8 @@ pub(super) fn always_rules(options: &[PermissionOption]) -> Vec<(usize, String, 
 }
 
 impl AgentTab {
+    /// Answers the permission request of entry `id` with the button tagged `what`, offering the rules at `view` when
+    /// several would allow it always.
     pub fn permission(&self, id: u64, what: u8, view: Option<&NSView>) {
         let several_rules = || {
             self.entry(id).is_some_and(|e| match &e.kind {

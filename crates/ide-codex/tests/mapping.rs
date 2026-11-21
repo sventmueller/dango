@@ -1,6 +1,8 @@
 //! Notification sequences, written by hand after the 0.167 schema, mapped onto a thread: every item type the mapper
 //! reads, the streaming of text and reasoning, the ends of turns and what is left out.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use std::time::{Duration, UNIX_EPOCH};
 
 use ide_codex::{Account, Capabilities, Mapper};

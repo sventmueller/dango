@@ -147,12 +147,14 @@ pub(crate) fn patch(diff: &FileDiff, hunks: &[&Hunk], reverse: bool) -> Result<V
     }
     let mut delta: i64 = 0;
     for hunk in hunks {
-        let (old_start, new_start) = renumbered(hunk, delta, reverse).ok_or_else(|| Error::Unexpected {
-            what: format!(
-                "@@ -{},{} +{},{} @@ moved by {delta}",
-                hunk.old_start, hunk.old_count, hunk.new_start, hunk.new_count
-            ),
-        })?;
+        let (old_start, new_start) = renumbered(hunk, delta, reverse)
+            .filter(|&(old, new)| numbered_within(hunk, old, new))
+            .ok_or_else(|| Error::Unexpected {
+                what: format!(
+                    "@@ -{},{} +{},{} @@ moved by {delta}",
+                    hunk.old_start, hunk.old_count, hunk.new_start, hunk.new_count
+                ),
+            })?;
         out.extend(format!("@@ -{old_start},{} +{new_start},{} @@", hunk.old_count, hunk.new_count).as_bytes());
         if !hunk.section.is_empty() {
             out.push(b' ');
@@ -184,6 +186,13 @@ fn name_line(out: &mut Vec<u8>, marker: &[u8], prefix: &str, path: &[u8]) {
         out.push(b'\t');
     }
     out.push(b'\n');
+}
+
+/// Whether the lines of `hunk`, numbered from `old` and `new`, stay within `u32::MAX`, as the diff reader requires.
+fn numbered_within(hunk: &Hunk, old: u32, new: u32) -> bool {
+    let on = |side: fn(&LineKind) -> bool| hunk.lines.iter().filter(|line| side(&line.kind)).count() as u64;
+    let fits = |start: u32, lines: u64| u64::from(start) + lines.saturating_sub(1) <= u64::from(u32::MAX);
+    fits(old, on(|kind| *kind != LineKind::Added)) && fits(new, on(|kind| *kind != LineKind::Removed))
 }
 
 /// The starts of `hunk` once only the chosen hunks before it, which shift it by `delta`, are applied. The side the
@@ -276,6 +285,18 @@ index 1111111..2222222 100644\n\
         };
         assert_eq!(renumbered(&new_file, 0, false), Some((0, 1)));
         assert_eq!(renumbered(&new_file, 0, true), Some((0, 1)));
+    }
+
+    #[test]
+    fn a_patch_whose_lines_would_be_numbered_past_the_limit_is_refused() {
+        let diff =
+            parse(b"diff --git a/a b/a\n--- a/a\n+++ b/a\n@@ -4294967294,2 +4294967295,2 @@\n x\n-y\x0b+z\n").unwrap();
+        let file = &diff[0];
+        assert!(patch(file, &[&file.hunks[0]], false).is_ok());
+        assert!(
+            patch(file, &[&file.hunks[0]], true).is_err(),
+            "the old side would end past u32::MAX"
+        );
     }
 
     #[test]

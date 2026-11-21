@@ -318,6 +318,8 @@ pub(crate) struct TabWindow {
     controller: Weak<WindowController>,
     /// The dot of the tab's state beside its title.
     status: Retained<NSImageView>,
+    /// The title last put on the tab, so that a tab is titled again only when its title changes.
+    shown_title: std::cell::RefCell<String>,
     /// The watch that keeps the toolbar clear above the sidebar in full screen.
     sidebar_watch: Retained<ProtocolObject<dyn NSObjectProtocol>>,
     /// The watches that keep the sidebar below the toolbar as it slides and the documents' column moves with it.
@@ -427,6 +429,7 @@ impl TabWindow {
             panes,
             controller: Weak::from(controller),
             status,
+            shown_title: std::cell::RefCell::new(String::new()),
             sidebar_watch,
             toolbar_watch,
         });
@@ -585,6 +588,12 @@ impl TabWindow {
         let tab = self.window.tab();
         tab.setAttributedTitle(Some(&titled(doc.icon().as_deref(), title, &font)));
         tab.setTitle(Some(&ns(title)));
+        title.clone_into(&mut self.shown_title.borrow_mut());
+    }
+
+    /// The title last put on the tab.
+    pub(super) fn shown_title(&self) -> String {
+        self.shown_title.borrow().clone()
     }
 
     /// Puts the folder's sidebar `view` into the tab, in place of its picture.

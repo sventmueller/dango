@@ -14,9 +14,13 @@ use ide_ui_common::window::Window;
 
 /// A menu of the composer or the head, as a click on its button shows it.
 pub enum TabMenu {
+    /// The slash menu.
     Slash,
+    /// The model pill's menu.
     Model,
+    /// The mode pill's menu.
     Mode,
+    /// The clock's menu of past sessions.
     History,
     /// The phone's menu while the session is connected to Remote Control.
     Remote,
@@ -93,6 +97,7 @@ impl AgentTab {
         widths
     }
 
+    /// What the self-test reads from the tab.
     pub fn inspect(&self) -> Inspection {
         let thread = self.snapshot();
         Inspection {

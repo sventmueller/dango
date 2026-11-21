@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Instalando: baixando…";
 "Installation: lade herunter … {} %" = "Instalando: baixando… {}%";
 "Installation: prüfe die Prüfsumme …" = "Instalando: verificando a soma de verificação…";
-"Installation: suche die neueste Version …" = "Instalando: procurando a versão mais recente…";
 "Installiere …" = "Instalando…";
 "Installiere … {}" = "Instalando… {}";
 "Installieren" = "Instalar";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Símbolos Correspondentes";
 "Wird indexiert …" = "Indexando…";
 "Nichts gefunden" = "Nada encontrado";
+"Keine Dateien gefunden" = "Nenhum arquivo encontrado";
+"Wird gesucht …" = "Buscando…";
+"Symbole im Projekt" = "Símbolos no Projeto";
+"Symbol im Projekt suchen" = "Buscar Símbolo no Projeto";
+"Abhängigkeit · {}" = "Dependência · {}";
 "Aufrufer" = "Chamadores";
 "Aufgerufene" = "Chamados";
 "Obertypen" = "Supertipos";
@@ -2382,5 +2386,15 @@
 "Funktion vorschlagen …" = "Sugerir um Recurso…";
 "Problem melden …" = "Relatar um Problema…";
 "{} auf GitHub" = "{} no GitHub";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "Não É Possível Confiar em “{}” como um Todo";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "A confiança vale para todas as pastas dentro dela, inclusive as criadas depois. Para a pasta pessoal, a raiz de um volume, Mesa, Documentos, Downloads e Biblioteca, isso seria cada download e cada repositório clonado. Abra a própria pasta do projeto para confiar nela; aqui você pode ler e editar, mas nada é iniciado.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "A confiança também vale para todas as pastas dentro dela, inclusive as criadas depois.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} só inicia em pastas em que você confia. Não é possível confiar nesta pasta como um todo, pois ela contém muito mais do que um projeto; abra a própria pasta do projeto.";
+"Vorschläge pausiert: gitleaks fehlt" = "Sugestões pausadas: gitleaks ausente";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Sem o gitleaks, nada verifica se o código contém segredos. Instale-o com “{}” ou envie sem verificação.";
+"Ungeprüft an {} senden?" = "Enviar para {} Sem Verificação?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Sem o gitleaks, nada verifica se o código enviado para {} contém segredos. Instale-o com “{}” ou envie sem verificação; a escolha vale neste Mac e pode ser revogada em Ajustes, em “Previsão”.";
+"Ungeprüft senden" = "Enviar Sem Verificação";
+"Zwischenablage durch Programm ersetzt" = "Área de transferência substituída por um programa";
 "„{}“ hat nichts ausgegeben." = "“{}” não gerou nenhuma saída.";
 "„{}“ hat noch nichts ausgegeben." = "“{}” ainda não gerou nenhuma saída.";

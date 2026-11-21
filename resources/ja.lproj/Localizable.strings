@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "インストール中: ダウンロード中…";
 "Installation: lade herunter … {} %" = "インストール中: ダウンロード中… {}%";
 "Installation: prüfe die Prüfsumme …" = "インストール中: チェックサムを検証中…";
-"Installation: suche die neueste Version …" = "インストール中: 最新バージョンを検索中…";
 "Installiere …" = "インストール中…";
 "Installiere … {}" = "インストール中… {}";
 "Installieren" = "インストール";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "一致するシンボル";
 "Wird indexiert …" = "インデックスを作成中…";
 "Nichts gefunden" = "見つかりません";
+"Keine Dateien gefunden" = "ファイルが見つかりません";
+"Wird gesucht …" = "検索中…";
+"Symbole im Projekt" = "プロジェクト内のシンボル";
+"Symbol im Projekt suchen" = "プロジェクト内のシンボルを検索";
+"Abhängigkeit · {}" = "依存関係 · {}";
 "Aufrufer" = "呼び出し元";
 "Aufgerufene" = "呼び出し先";
 "Obertypen" = "スーパータイプ";
@@ -2382,5 +2386,15 @@
 "Funktion vorschlagen …" = "機能を提案…";
 "Problem melden …" = "問題を報告…";
 "{} auf GitHub" = "GitHubの{}";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "“{}”は全体としては信頼できません";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "信頼は、その中のすべてのフォルダ（後から作成されたものも含む）に適用されます。ホームフォルダ、ボリュームのルート、デスクトップ、書類、ダウンロード、ライブラリでは、ダウンロードしたものやクローンしたリポジトリがすべて対象になってしまいます。信頼するには、プロジェクトフォルダ自体を開いてください。ここでは読み込みと編集はできますが、何も起動しません。";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "信頼は、その中のすべてのフォルダ（後から作成されたものも含む）にも適用されます。";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{}は信頼済みのフォルダでのみ起動します。このフォルダには1つのプロジェクトよりはるかに多くのものが含まれているため、全体としては信頼できません。プロジェクトフォルダ自体を開いてください。";
+"Vorschläge pausiert: gitleaks fehlt" = "提案を一時停止中: gitleaksがありません";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "gitleaksがないと、コードにシークレットが含まれているかを確認できません。“{}”でインストールするか、確認せずに送信してください。";
+"Ungeprüft an {} senden?" = "確認せずに{}に送信しますか?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "gitleaksがないと、{}に送られるコードにシークレットが含まれているかを確認できません。“{}”でインストールするか、確認せずに送信してください。この選択はこのMacに適用され、設定の“予測”で取り消せます。";
+"Ungeprüft senden" = "確認せずに送信";
+"Zwischenablage durch Programm ersetzt" = "プログラムがクリップボードを置き換えました";
 "„{}“ hat nichts ausgegeben." = "“{}”の出力はありませんでした。";
 "„{}“ hat noch nichts ausgegeben." = "“{}”の出力はまだありません。";

@@ -106,6 +106,11 @@ impl TokenAnswer {
 
 /// POSTs `fields` as a form to `url`, asking for JSON.
 fn post_form(transport: &dyn Transport, url: &str, fields: &[(&str, &str)]) -> Result<Response, Error> {
+    if !crate::forge::may_carry_secrets(url) {
+        return Err(Error::Network(format!(
+            "{url} is not an HTTPS address, so it gets no credentials"
+        )));
+    }
     let body = fields
         .iter()
         .map(|(name, value)| format!("{name}={}", encode(value)))
@@ -433,6 +438,33 @@ pub fn refresh_grant(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_refresh_token_never_goes_to_a_plain_address_off_this_mac() {
+        let recorded = crate::http::Recorded::new();
+        let refused = refresh_grant(
+            &recorded,
+            "http://gitlab.example.com",
+            "app",
+            "refresh",
+            "http://127.0.0.1/",
+        );
+        assert!(matches!(refused, Err(LoginError::Api(Error::Network(_)))));
+        let pkce = Pkce::new().unwrap();
+        let refused = exchange_code(
+            &recorded,
+            "http://gitlab.example.com",
+            "app",
+            "code",
+            &pkce,
+            "http://127.0.0.1/",
+        );
+        assert!(matches!(refused, Err(LoginError::Api(Error::Network(_)))));
+        assert!(recorded.asked().is_empty());
+        let local = refresh_grant(&recorded, "http://127.0.0.1:9", "app", "refresh", "http://127.0.0.1/");
+        assert!(local.is_err());
+        assert_eq!(recorded.asked()[0].url, "http://127.0.0.1:9/oauth/token");
+    }
 
     #[test]
     fn the_challenge_of_rfc_7636s_example_verifier_is_its_example_challenge() {

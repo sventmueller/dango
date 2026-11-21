@@ -1,10 +1,11 @@
 //! The secrets check before code leaves the Mac (R15): a request for a provider outside the Mac goes out only after
 //! gitleaks found nothing in its text, checked on a worker thread right before sending and once per revision of a
-//! file. A file with a finding stays paused until a later revision checks clean; without gitleaks the text goes out
-//! unchecked, as commits do.
+//! file. A file with a finding stays paused until a later revision checks clean; without gitleaks nothing goes out
+//! until the user chose to send unchecked (B104).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use crate::{Cancel, Error, Provider, Reply, Request};
@@ -23,18 +24,36 @@ pub enum Verdict {
 }
 
 impl Verdict {
-    /// Whether the text may go out.
-    pub(crate) fn sends(&self) -> bool {
-        matches!(self, Verdict::Clean | Verdict::NotInstalled)
+    /// Whether the text may go out, `unchecked` when the user chose to send it without gitleaks.
+    pub(crate) fn sends(&self, unchecked: bool) -> bool {
+        match self {
+            Verdict::Clean => true,
+            Verdict::NotInstalled => unchecked,
+            Verdict::Found | Verdict::Failed(_) => false,
+        }
     }
 }
 
-/// The secrets check of a text, run in a folder; gitleaks in the app, a fake in tests.
-pub type Scan = Arc<dyn Fn(&Path, &str) -> Verdict + Send + Sync>;
+/// Where a request goes, which decides whether its text is checked first.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Reach {
+    /// A provider on this Mac, which gets the text unchecked.
+    Here,
+    /// A provider outside the Mac.
+    Outside {
+        /// Whether the user chose to send the text there while gitleaks is missing.
+        unchecked: bool,
+    },
+}
 
-/// The last verdict of each file with the revision it belongs to, shared with the worker threads.
+/// The secrets check of a text, in a folder of its own that nothing of the project's configures; gitleaks in the
+/// app, a fake in tests.
+pub type Scan = Arc<dyn Fn(&str) -> Verdict + Send + Sync>;
+
+/// The last verdict of each file with the revision it belongs to, and whether the last check found no gitleaks, shared
+/// with the worker threads.
 #[derive(Default, Clone)]
-pub struct Scans(Arc<Mutex<HashMap<PathBuf, (u64, Verdict)>>>);
+pub struct Scans(Arc<Mutex<HashMap<PathBuf, (u64, Verdict)>>>, Arc<AtomicBool>);
 
 impl Scans {
     fn cached(&self, path: &Path, revision: u64) -> Option<Verdict> {
@@ -43,6 +62,7 @@ impl Scans {
     }
 
     fn keep(&self, path: &Path, revision: u64, verdict: Verdict) {
+        self.1.store(verdict == Verdict::NotInstalled, Ordering::Relaxed);
         if let Ok(mut all) = self.0.lock() {
             all.insert(path.to_path_buf(), (revision, verdict));
         }
@@ -54,29 +74,34 @@ impl Scans {
             .lock()
             .is_ok_and(|all| all.get(path).is_some_and(|(_, v)| *v == Verdict::Found))
     }
+
+    /// Whether the last check found no gitleaks, which holds every request for a provider outside the Mac back until
+    /// the user chooses to send unchecked.
+    pub fn missing(&self) -> bool {
+        self.1.load(Ordering::Relaxed)
+    }
 }
 
-/// Hands `request` to `provider`, checking its text first when the provider is `outside` the Mac; what the check said,
+/// Hands `request` to `provider`, checking its text first when the provider is outside the Mac; what the check said,
 /// if one was made. Blocks for the check, so it runs on a worker thread. A request that may not go out is answered
 /// [`Error::Cancelled`], so the question ends.
 pub fn send(
     request: Request,
-    outside: bool,
+    reach: Reach,
     scans: &Scans,
     scan: &Scan,
     provider: &dyn Provider,
     cancel: Cancel,
     reply: Reply,
 ) -> Option<Verdict> {
-    if !outside {
+    let Reach::Outside { unchecked } = reach else {
         provider.predict(request, cancel, reply);
         return None;
-    }
+    };
     let verdict = match scans.cached(&request.path, request.revision) {
         Some(verdict) => verdict,
         None => {
-            let folder = request.path.parent().unwrap_or(Path::new("/"));
-            let verdict = scan(folder, &request.text);
+            let verdict = scan(&request.text);
             // A failed check is tried again at the next question.
             if !matches!(verdict, Verdict::Failed(_)) {
                 scans.keep(&request.path, request.revision, verdict.clone());
@@ -84,7 +109,7 @@ pub fn send(
             verdict
         }
     };
-    if verdict.sends() && !cancel.is_cancelled() {
+    if verdict.sends(unchecked) && !cancel.is_cancelled() {
         provider.predict(request, cancel, reply);
     } else {
         reply(Err(Error::Cancelled));
@@ -94,7 +119,7 @@ pub fn send(
 
 #[cfg(test)]
 mod tests {
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::atomic::AtomicUsize;
     use std::sync::mpsc::channel;
     use std::time::Duration;
 
@@ -118,18 +143,20 @@ mod tests {
     fn fake(verdict: Verdict) -> (Scan, Arc<AtomicUsize>) {
         let runs = Arc::new(AtomicUsize::new(0));
         let counted = runs.clone();
-        let scan: Scan = Arc::new(move |_: &Path, _: &str| {
+        let scan: Scan = Arc::new(move |_: &str| {
             counted.fetch_add(1, Ordering::SeqCst);
             verdict.clone()
         });
         (scan, runs)
     }
 
-    fn ask(stub: &Stub, outside: bool, scans: &Scans, scan: &Scan, revision: u64) -> Option<Verdict> {
+    const OUTSIDE: Reach = Reach::Outside { unchecked: false };
+
+    fn ask(stub: &Stub, reach: Reach, scans: &Scans, scan: &Scan, revision: u64) -> Option<Verdict> {
         let (tx, rx) = channel();
         let verdict = send(
             request(revision),
-            outside,
+            reach,
             scans,
             scan,
             stub,
@@ -146,17 +173,17 @@ mod tests {
         let stub = Stub::new(vec![], Duration::ZERO);
         let scans = Scans::default();
         let (found, _) = fake(Verdict::Found);
-        assert_eq!(ask(&stub, true, &scans, &found, 1), Some(Verdict::Found));
+        assert_eq!(ask(&stub, OUTSIDE, &scans, &found, 1), Some(Verdict::Found));
         assert!(stub.asked().is_empty(), "nothing went out");
         assert!(scans.paused(Path::new("/p/src/main.rs")));
         let (clean, _) = fake(Verdict::Clean);
         assert_eq!(
-            ask(&stub, true, &scans, &clean, 1),
+            ask(&stub, OUTSIDE, &scans, &clean, 1),
             Some(Verdict::Found),
             "the same revision stays found"
         );
         assert!(stub.asked().is_empty());
-        assert_eq!(ask(&stub, true, &scans, &clean, 2), Some(Verdict::Clean));
+        assert_eq!(ask(&stub, OUTSIDE, &scans, &clean, 2), Some(Verdict::Clean));
         assert_eq!(stub.asked().len(), 1, "a clean later revision goes out");
         assert!(!scans.paused(Path::new("/p/src/main.rs")));
     }
@@ -166,8 +193,8 @@ mod tests {
         let stub = Stub::new(vec![], Duration::ZERO);
         let scans = Scans::default();
         let (clean, runs) = fake(Verdict::Clean);
-        ask(&stub, true, &scans, &clean, 4);
-        ask(&stub, true, &scans, &clean, 4);
+        ask(&stub, OUTSIDE, &scans, &clean, 4);
+        ask(&stub, OUTSIDE, &scans, &clean, 4);
         assert_eq!((stub.asked().len(), runs.load(Ordering::SeqCst)), (2, 1));
     }
 
@@ -175,20 +202,32 @@ mod tests {
     fn a_provider_on_this_mac_gets_the_text_unchecked() {
         let stub = Stub::new(vec![], Duration::ZERO);
         let (found, runs) = fake(Verdict::Found);
-        assert_eq!(ask(&stub, false, &Scans::default(), &found, 1), None);
+        assert_eq!(ask(&stub, Reach::Here, &Scans::default(), &found, 1), None);
         assert_eq!((stub.asked().len(), runs.load(Ordering::SeqCst)), (1, 0));
     }
 
     #[test]
-    fn without_gitleaks_the_text_goes_out_and_a_failed_check_sends_nothing_and_tries_again() {
+    fn without_gitleaks_nothing_goes_out_until_the_user_sends_unchecked_and_a_failed_check_tries_again() {
         let stub = Stub::new(vec![], Duration::ZERO);
         let scans = Scans::default();
-        let (missing, _) = fake(Verdict::NotInstalled);
-        assert_eq!(ask(&stub, true, &scans, &missing, 1), Some(Verdict::NotInstalled));
-        assert_eq!(stub.asked().len(), 1);
+        let (missing, runs) = fake(Verdict::NotInstalled);
+        assert_eq!(ask(&stub, OUTSIDE, &scans, &missing, 1), Some(Verdict::NotInstalled));
+        assert!(stub.asked().is_empty(), "nothing went out unchecked");
+        assert!(scans.missing());
+        let unchecked = Reach::Outside { unchecked: true };
+        assert_eq!(ask(&stub, unchecked, &scans, &missing, 1), Some(Verdict::NotInstalled));
+        assert_eq!((stub.asked().len(), runs.load(Ordering::SeqCst)), (1, 1));
         let (failed, runs) = fake(Verdict::Failed("broken".into()));
-        ask(&stub, true, &scans, &failed, 2);
-        ask(&stub, true, &scans, &failed, 2);
+        ask(&stub, unchecked, &scans, &failed, 2);
+        ask(&stub, unchecked, &scans, &failed, 2);
         assert_eq!((stub.asked().len(), runs.load(Ordering::SeqCst)), (1, 2));
+        assert!(scans.missing(), "a failed check does not say gitleaks is back");
+        let (clean, _) = fake(Verdict::Clean);
+        ask(&stub, OUTSIDE, &scans, &clean, 3);
+        assert!(
+            !scans.missing(),
+            "once gitleaks is installed, requests go out checked again"
+        );
+        assert_eq!(stub.asked().len(), 2);
     }
 }

@@ -1,6 +1,8 @@
 //! The private git folder of a gate: a linked worktree's HEAD, the shared refs packed and loose, the index, and no
 //! link out of the repository followed.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod common;
 
 use std::process::Command;

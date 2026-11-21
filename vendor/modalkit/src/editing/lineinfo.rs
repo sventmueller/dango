@@ -4,11 +4,28 @@
 //!
 //! This module contains logic for tracking line annotations.
 //!
+use std::any::{Any, TypeId};
 use std::cmp::Eq;
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use anymap2::SendSyncAnyMap;
+/// Dango: one value per type, in place of the unmaintained `anymap2::SendSyncAnyMap`.
+#[derive(Default)]
+struct SendSyncAnyMap(HashMap<TypeId, Box<dyn Any + Send + Sync>>);
+
+impl SendSyncAnyMap {
+    fn get<T: Send + Sync + 'static>(&self) -> Option<&T> {
+        self.0.get(&TypeId::of::<T>())?.downcast_ref()
+    }
+
+    fn get_mut<T: Send + Sync + 'static>(&mut self) -> Option<&mut T> {
+        self.0.get_mut(&TypeId::of::<T>())?.downcast_mut()
+    }
+
+    fn insert<T: Send + Sync + 'static>(&mut self, value: T) {
+        self.0.insert(TypeId::of::<T>(), Box::new(value));
+    }
+}
 
 /// Tracks different types of annotations for each line within a given buffer.
 pub struct LineInfoStore<Line: Eq + Hash> {
@@ -45,7 +62,7 @@ where
         if let Some(ref mut any) = self.map.get_mut(&line) {
             any.insert(info);
         } else {
-            let mut any = SendSyncAnyMap::new();
+            let mut any = SendSyncAnyMap::default();
             any.insert(info);
             self.map.insert(line, any);
         }

@@ -1,6 +1,8 @@
 //! A played recording of Claude as the driver's backend (B37b): what it plays reaches the subscribers at once, and it
 //! takes no prompts.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod support;
 
 use std::time::{Duration, SystemTime};

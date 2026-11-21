@@ -115,7 +115,9 @@ define_class!(
     }
 );
 
+/// An AI tab: one session with an agent, its timeline and its composer.
 pub struct AgentTab {
+    /// The tab's number, which the app's registry of AI tabs keeps it under.
     pub key: AgentKey,
     /// The agent the tab runs, for good.
     pub(super) agent: Agent,
@@ -382,14 +384,17 @@ impl AgentTab {
         self.refresh();
     }
 
+    /// The key the window's document tabs know the tab by.
     pub fn tab_key(&self) -> String {
         format!("agent:{}", self.key.get())
     }
 
+    /// The view the window shows as the tab.
     pub fn root(&self) -> Retained<NSView> {
         Retained::into_super(self.root.clone())
     }
 
+    /// The conversation's entries as the tab shows them.
     pub fn timeline(&self) -> &Timeline {
         &self.timeline
     }
@@ -416,6 +421,7 @@ impl AgentTab {
             .or_else(|| state.resume().map(|r| r.session.clone()))
     }
 
+    /// The thread the session belongs to in the agents panel.
     pub fn thread_id(&self) -> &ThreadId {
         &self.thread_id
     }
@@ -451,6 +457,7 @@ impl AgentTab {
         self.state.borrow().source().session().filter(|s| !s.is_ended())
     }
 
+    /// What the session is doing, as the tab's symbol and the agents panel show it.
     pub fn status(&self) -> Status {
         self.state.borrow().status()
     }
@@ -461,6 +468,7 @@ impl AgentTab {
             && !self.root.isHiddenOrHasHiddenAncestor()
     }
 
+    /// Brings the tab and its window to the front.
     pub fn select(&self) {
         if let Some(controller) = self.controller() {
             controller.select_tab(&self.tab_key());
@@ -613,7 +621,10 @@ impl AgentTab {
             ide_ui_common::util::pin_edges(&view, &self.problem_holder);
         }
         self.problem_holder.setHidden(problem.is_none());
-        let blocked = matches!(problem, Some(Problem::Untrusted | Problem::NotFound));
+        let blocked = matches!(
+            problem,
+            Some(Problem::Untrusted | Problem::TooBroad | Problem::NotFound)
+        );
         self.composer.card.setHidden(blocked);
         self.refresh_tab_mark();
     }
@@ -666,6 +677,7 @@ impl AgentTab {
         self.state.borrow().source().interrupt();
     }
 
+    /// Whether the keyboard focus is in the composer.
     pub fn composer_has_focus(&self) -> bool {
         self.composer.has_focus()
     }
@@ -682,6 +694,7 @@ impl AgentTab {
         self.refresh_chips();
     }
 
+    /// Moves the keyboard focus to the composer, remembering where it was.
     pub fn focus_composer(&self) {
         let Some(window) = self.root.window() else { return };
         let previous = window.firstResponder().map(|r| Weak::from(&*r));

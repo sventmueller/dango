@@ -94,6 +94,7 @@ fn remove_observers(observers: &mut Vec<Retained<ProtocolObject<dyn NSObjectProt
 define_class!(
     // SAFETY: NSView has no subclassing requirements and `TerminalView` does not implement Drop; its ivars do, and
     // objc2 drops them when the view is deallocated.
+    /// A terminal tab's view, which draws its session's screen and hands the session keys, mouse, pastes and drops.
     #[unsafe(super(NSView))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDETerminalView"]
@@ -554,6 +555,7 @@ impl TerminalView {
         (this, root)
     }
 
+    /// The number the app's registry of terminal views keeps the view under.
     pub fn id(&self) -> u64 {
         self.ivars().id
     }
@@ -573,6 +575,7 @@ impl TerminalView {
         self.ivars().passing.set(true);
     }
 
+    /// Whether its tab stays closed after a restart.
     pub fn passing(&self) -> bool {
         self.ivars().passing.get()
     }

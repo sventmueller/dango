@@ -34,12 +34,14 @@ pub fn flipped(mtm: MainThreadMarker) -> Retained<NSView> {
     Retained::into_super(view)
 }
 
+/// An empty view that takes the room a row's stack leaves.
 pub fn spacer(mtm: MainThreadMarker) -> Retained<NSView> {
     let view = NSView::new(mtm);
     view.setContentHuggingPriority_forOrientation(1.0, NSLayoutConstraintOrientation::Horizontal);
     view
 }
 
+/// A label of `text` in the small secondary font.
 pub fn small_label(mtm: MainThreadMarker, text: &str) -> Retained<NSTextField> {
     let label = NSTextField::labelWithString(&ns(text), mtm);
     label.setFont(Some(&crate::style::small()));

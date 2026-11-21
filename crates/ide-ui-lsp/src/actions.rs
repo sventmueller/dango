@@ -31,7 +31,9 @@ const REST: Duration = Duration::from_millis(400);
 pub enum Kind {
     /// Everything for the place except source actions, as "Schnellkorrektur …" and the bulb show them.
     Fixes,
+    /// The refactorings the server offers for the place.
     Refactor,
+    /// The actions on the whole file, such as organising its imports.
     Source,
 }
 

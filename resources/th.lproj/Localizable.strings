@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "กำลังติดตั้ง: กำลังดาวน์โหลด…";
 "Installation: lade herunter … {} %" = "กำลังติดตั้ง: กำลังดาวน์โหลด… {}%";
 "Installation: prüfe die Prüfsumme …" = "กำลังติดตั้ง: กำลังตรวจสอบเช็คซัม…";
-"Installation: suche die neueste Version …" = "กำลังติดตั้ง: กำลังค้นหาเวอร์ชั่นล่าสุด…";
 "Installiere …" = "กำลังติดตั้ง…";
 "Installiere … {}" = "กำลังติดตั้ง… {}";
 "Installieren" = "ติดตั้ง";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "สัญลักษณ์ที่ตรงกัน";
 "Wird indexiert …" = "กำลังทำดัชนี…";
 "Nichts gefunden" = "ไม่พบสิ่งใด";
+"Keine Dateien gefunden" = "ไม่พบไฟล์";
+"Wird gesucht …" = "กำลังค้นหา…";
+"Symbole im Projekt" = "สัญลักษณ์ในโปรเจ็กต์";
+"Symbol im Projekt suchen" = "ค้นหาสัญลักษณ์ในโปรเจ็กต์";
+"Abhängigkeit · {}" = "การพึ่งพา · {}";
 "Aufrufer" = "ผู้เรียก";
 "Aufgerufene" = "ผู้ถูกเรียก";
 "Obertypen" = "ชนิดแม่";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "{} บน GitHub";
 "„{}“ hat nichts ausgegeben." = "“{}” ไม่มีเอาต์พุต";
 "„{}“ hat noch nichts ausgegeben." = "“{}” ยังไม่มีเอาต์พุต";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "ไม่สามารถเชื่อถือ “{}” ทั้งโฟลเดอร์ได้";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "ความเชื่อถือครอบคลุมทุกโฟลเดอร์ภายใน รวมถึงโฟลเดอร์ที่สร้างขึ้นภายหลัง สำหรับโฟลเดอร์บ้าน รูทของวอลุ่ม เดสก์ท็อป เอกสาร ดาวน์โหลด และคลัง นั่นจะหมายถึงทุกไฟล์ที่ดาวน์โหลดและทุก Repository ที่โคลนมา เปิดโฟลเดอร์โปรเจ็กต์โดยตรงเพื่อเชื่อถือโฟลเดอร์นั้น ที่นี่คุณอ่านและแก้ไขได้ แต่จะไม่มีสิ่งใดเริ่มทำงาน";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "ความเชื่อถือนี้ครอบคลุมทุกโฟลเดอร์ภายในด้วย รวมถึงโฟลเดอร์ที่สร้างขึ้นภายหลัง";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} จะเริ่มทำงานเฉพาะในโฟลเดอร์ที่คุณเชื่อถือ ไม่สามารถเชื่อถือโฟลเดอร์นี้ทั้งโฟลเดอร์ได้ เนื่องจากโฟลเดอร์นี้มีเนื้อหามากกว่าหนึ่งโปรเจ็กต์อยู่มาก ให้เปิดโฟลเดอร์โปรเจ็กต์โดยตรง";
+"Vorschläge pausiert: gitleaks fehlt" = "หยุดข้อเสนอชั่วคราว: ไม่มี gitleaks";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "หากไม่มี gitleaks จะไม่มีสิ่งใดตรวจหาข้อมูลลับในโค้ด ติดตั้งด้วย “{}” หรือส่งโดยไม่ตรวจ";
+"Ungeprüft an {} senden?" = "ส่งไปยัง {} โดยไม่ตรวจหรือไม่";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "หากไม่มี gitleaks จะไม่มีสิ่งใดตรวจว่าโค้ดที่ส่งไปยัง {} มีข้อมูลลับหรือไม่ ติดตั้งด้วย “{}” หรือส่งโดยไม่ตรวจ ตัวเลือกนี้มีผลบน Mac เครื่องนี้ และเพิกถอนได้ในการตั้งค่า ใต้ “การคาดการณ์”";
+"Ungeprüft senden" = "ส่งโดยไม่ตรวจ";
+"Zwischenablage durch Programm ersetzt" = "โปรแกรมแทนที่คลิปบอร์ดแล้ว";

@@ -37,6 +37,8 @@ pub struct Resume {
 pub(crate) enum Problem {
     /// The folder is not trusted (E22).
     Untrusted,
+    /// The folder is not trusted and holds too much to be trusted as a whole, such as the home folder (E22).
+    TooBroad,
     /// No `claude` on the login shell's PATH.
     NotFound,
     /// The CLI has no usable sign-in.

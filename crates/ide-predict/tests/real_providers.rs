@@ -4,6 +4,8 @@
 //!
 //! They send only the tiny made-up file below, never code of the user's.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::mpsc::channel;

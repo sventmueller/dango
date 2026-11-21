@@ -6,7 +6,7 @@ use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use ide_project::site::{COOKIE, Site};
+use ide_project::site::{Site, cookie_name};
 use objc2::MainThreadMarker;
 use splat_i18n::t;
 
@@ -74,20 +74,22 @@ pub(crate) fn open(controller: &WindowController, page: &Path) {
             .map_or_else(|| t("Browser").to_string(), |name| name.to_string_lossy().into_owned());
         let page = page.to_path_buf();
         ide_ui_browser::open_restored_page(mtm, window, &title, &waiting_url(&page), move |load| {
-            if let Some((url, secret)) = serve(mtm, &root, &page) {
-                with_cookie(mtm, &secret, move || load(&url));
+            if let Some((url, port, secret)) = serve(mtm, &root, &page) {
+                with_cookie(mtm, port, &secret, move || load(&url));
             }
         });
         return;
     }
-    let Some((url, secret)) = serve(mtm, &root, page) else {
+    let Some((url, port, secret)) = serve(mtm, &root, page) else {
         return;
     };
-    with_cookie(mtm, &secret, move || ide_ui_browser::open_tab(mtm, window, Some(&url)));
+    with_cookie(mtm, port, &secret, move || {
+        ide_ui_browser::open_tab(mtm, window, Some(&url))
+    });
 }
 
-/// The address of `page` on the server of `root`, which starts unless it runs, and the server's secret.
-fn serve(mtm: MainThreadMarker, root: &Path, page: &Path) -> Option<(String, String)> {
+/// The address of `page` on the server of `root`, which starts unless it runs, and the server's port and secret.
+fn serve(mtm: MainThreadMarker, root: &Path, page: &Path) -> Option<(String, u16, String)> {
     let cx = previews(mtm);
     let started = {
         let mut sites = cx.site_previews().sites.borrow_mut();
@@ -112,18 +114,18 @@ fn serve(mtm: MainThreadMarker, root: &Path, page: &Path) -> Option<(String, Str
             return None;
         }
     };
-    let (url, secret) = {
+    let (url, port, secret) = {
         let sites = cx.site_previews().sites.borrow();
         let site = &sites[index];
-        (site.url_of(page), site.secret().to_string())
+        (site.url_of(page), site.port(), site.secret().to_string())
     };
     sweep_later(mtm);
-    Some((url?, secret))
+    Some((url?, port, secret))
 }
 
-/// Gives WebKit the server's `secret` as its cookie, then runs `then`.
-fn with_cookie(mtm: MainThreadMarker, secret: &str, then: impl FnOnce() + 'static) {
-    if ide_ui_browser::set_local_cookie(mtm, COOKIE, secret, then).is_none() {
+/// Gives WebKit the `secret` of the server on `port` as its cookie, then runs `then`.
+fn with_cookie(mtm: MainThreadMarker, port: u16, secret: &str, then: impl FnOnce() + 'static) {
+    if ide_ui_browser::set_local_cookie(mtm, port, &cookie_name(port), secret, then).is_none() {
         crate::diag::report("the page preview's cookie", "WebKit made no cookie");
     }
 }

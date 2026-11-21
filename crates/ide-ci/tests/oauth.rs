@@ -2,6 +2,8 @@
 //! pending, slow down and success, its refusals; GitLab's authorization code with PKCE through the browser's return,
 //! a wrong state, the code exchange and the refresh that replaces both tokens; and renewing a kept token.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};

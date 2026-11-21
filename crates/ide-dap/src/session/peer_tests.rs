@@ -214,6 +214,11 @@ impl Peer {
                 self.request("runInTerminal", json!({"cwd": "/p", "args": []}));
                 self.request(
                     "runInTerminal",
+                    json!({"cwd": "/p", "args": ["/p/app"], "env": {"A;touch /tmp/x;B": "1"}}),
+                );
+                self.request("runInTerminal", json!({"cwd": "/p", "args": ["/p/app", "x\n"]}));
+                self.request(
+                    "runInTerminal",
                     json!({"kind": "external", "title": "app", "cwd": "/p", "args": ["/p/app", "--x"],
                         "env": {"A": "1", "B": null}}),
                 );
@@ -441,6 +446,8 @@ fn a_listening_adapter_reports_its_program_and_starts_a_child_that_ends_with_its
         "parent setBreakpoints main.rs [Number(3)]",
         "parent setExceptionBreakpoints [\"panic\"]",
         "parent answer runInTerminal false runInTerminal without a program",
+        "parent answer runInTerminal false runInTerminal with the variable name \"A;touch /tmp/x;B\", which no shell sets",
+        "parent answer runInTerminal false runInTerminal with a control character in an argument or value",
         "parent answer frobnicate false not supported",
     ] {
         assert!(seen.iter().any(|l| l == line), "{line:?} missing from {seen:?}");

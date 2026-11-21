@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Yükleme: indiriliyor…";
 "Installation: lade herunter … {} %" = "Yükleme: indiriliyor… %{}";
 "Installation: prüfe die Prüfsumme …" = "Yükleme: sağlama toplamı doğrulanıyor…";
-"Installation: suche die neueste Version …" = "Yükleme: en son sürüm aranıyor…";
 "Installiere …" = "Yükleniyor…";
 "Installiere … {}" = "Yükleniyor… {}";
 "Installieren" = "Yükle";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Eşleşen Simgeler";
 "Wird indexiert …" = "Dizinleniyor…";
 "Nichts gefunden" = "Hiçbir şey bulunamadı";
+"Keine Dateien gefunden" = "Hiçbir dosya bulunamadı";
+"Wird gesucht …" = "Aranıyor…";
+"Symbole im Projekt" = "Projedeki Simgeler";
+"Symbol im Projekt suchen" = "Projede Simge Bul";
+"Abhängigkeit · {}" = "Bağımlılık · {}";
 "Aufrufer" = "Çağıranlar";
 "Aufgerufene" = "Çağrılanlar";
 "Obertypen" = "Üst Türler";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "GitHub’da {}";
 "„{}“ hat nichts ausgegeben." = "“{}” hiçbir çıktı vermedi.";
 "„{}“ hat noch nichts ausgegeben." = "“{}” henüz çıktı vermedi.";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "“{}” Klasörüne Bir Bütün Olarak Güvenilemez";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "Güven, içindeki tüm klasörleri kapsar; sonradan oluşturulanlar dahil. Kullanıcı klasörü, bir birimin kökü, Masaüstü, Belgeler, İndirilenler ve Kitaplık için bu, her indirme ve klonlanan her depo anlamına gelirdi. Proje klasörüne güvenmek için klasörün kendisini açın; burada okuyup düzenleyebilirsiniz ama hiçbir şey başlamaz.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "Güven, içindeki tüm klasörleri de kapsar; sonradan oluşturulanlar dahil.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} yalnızca güvendiğiniz klasörlerde başlar. Bu klasör bir projeden çok daha fazlasını içerdiği için ona bir bütün olarak güvenilemez; proje klasörünün kendisini açın.";
+"Vorschläge pausiert: gitleaks fehlt" = "Öneriler duraklatıldı: gitleaks yok";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "gitleaks olmadan hiçbir şey kodda gizli bilgi aramaz. Şu komutla yükleyin: “{}” ya da denetlemeden gönderin.";
+"Ungeprüft an {} senden?" = "Denetlenmeden şuraya gönderilsin mi: {}?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "gitleaks olmadan, {} sağlayıcısına giden kodun gizli bilgi içerip içermediğini hiçbir şey denetlemez. Şu komutla yükleyin: “{}” ya da denetlemeden gönderin; seçim bu Mac’te geçerlidir ve Ayarlar’da “Tahmin” altında geri alınabilir.";
+"Ungeprüft senden" = "Denetlemeden Gönder";
+"Zwischenablage durch Programm ersetzt" = "Pano bir program tarafından değiştirildi";

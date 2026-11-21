@@ -6,6 +6,8 @@ mod files;
 mod search;
 mod shell;
 
+use std::path::{Path, PathBuf};
+
 use ide_thread::{Todo, TodoStatus, ToolKind, ToolOutput, ToolView};
 use serde_json::{Value, json};
 
@@ -69,6 +71,8 @@ pub(crate) struct Context<'a> {
     /// Whether the thread's sandbox is on.
     pub(crate) sandbox: bool,
     pub(crate) cancel: &'a Cancel,
+    /// The resolved path the policy judged a write at.
+    pub(crate) checked: Option<&'a Path>,
 }
 
 fn spec(name: &str, description: &str, schema: Value) -> ToolSpec {
@@ -267,28 +271,45 @@ pub(crate) fn card(name: &str, input: &Value, workspace: &Workspace) -> (ToolKin
 
 /// What a call does, for the policy; an error when its input is unusable.
 pub(crate) fn action(name: &str, input: &Value, workspace: &Workspace) -> Result<Action, ToolNote> {
-    let place = |field: &str, default_root: bool| -> Result<(String, bool), ToolNote> {
-        let path = match text(input, field) {
+    checked(name, input, workspace).map(|(action, _)| action)
+}
+
+/// [`action`], with the resolved path a write was judged at, which [`run`] then writes to.
+pub(crate) fn checked(name: &str, input: &Value, workspace: &Workspace) -> Result<(Action, Option<PathBuf>), ToolNote> {
+    let place = |default_root: bool| -> Result<(String, bool, PathBuf), ToolNote> {
+        let path = match text(input, "path") {
             Some(path) => workspace.resolve(path),
             None if default_root => workspace.root().to_path_buf(),
-            None => return Err(ToolNote::MissingField(field.to_string())),
+            None => return Err(ToolNote::MissingField("path".to_string())),
         };
-        Ok((workspace.display(&path), workspace.reaches(&path)))
+        Ok((workspace.display(&path), workspace.reaches(&path), path))
     };
+    let read = |default_root| place(default_root).map(|(path, inside, _)| (Action::Read { path, inside }, None));
     match name {
-        "read_file" => place("path", false).map(|(path, inside)| Action::Read { path, inside }),
-        "grep" | "glob" | "diagnostics" => place("path", true).map(|(path, inside)| Action::Read { path, inside }),
-        "edit_file" | "write_file" => place("path", false).map(|(path, inside)| Action::Write { path, inside }),
+        "read_file" => read(false),
+        "grep" | "glob" | "diagnostics" => read(true),
+        "edit_file" | "write_file" => {
+            place(false).map(|(path, inside, real)| (Action::Write { path, inside }, Some(real)))
+        }
         "run_command" => required(input, "command").map(|c| {
-            if workspace.is_checkpointed() && crate::policy::discards_only_own_work(c) {
+            let action = if workspace.is_checkpointed() && crate::policy::discards_only_own_work(c) {
                 Action::Discard(c.to_string())
             } else {
                 Action::Command(c.to_string())
-            }
+            };
+            (action, None)
         }),
-        "web_fetch" => fetch::host(required(input, "url")?).map(|host| Action::Fetch { host }),
-        "todo_write" => Ok(Action::Internal),
+        "web_fetch" => fetch::host(required(input, "url")?).map(|host| (Action::Fetch { host }, None)),
+        "todo_write" => Ok((Action::Internal, None)),
         other => Err(ToolNote::UnknownTool(other.to_string())),
+    }
+}
+
+/// Where a write goes: the path the policy judged, so a link swapped in since then leads nowhere else.
+fn target(input: &Value, context: &Context<'_>) -> Result<PathBuf, ToolNote> {
+    match context.checked {
+        Some(path) => Ok(path.to_path_buf()),
+        None => Ok(context.workspace.resolve(required(input, "path")?)),
     }
 }
 
@@ -296,8 +317,8 @@ pub(crate) fn action(name: &str, input: &Value, workspace: &Workspace) -> Result
 pub(crate) fn run(name: &str, input: &Value, context: &Context<'_>) -> Outcome {
     let result = match name {
         "read_file" => files::read(input, context.workspace),
-        "edit_file" => files::edit(input, context.workspace),
-        "write_file" => files::write(input, context.workspace),
+        "edit_file" => target(input, context).and_then(|path| files::edit(input, context.workspace, &path)),
+        "write_file" => target(input, context).and_then(|path| files::write(input, context.workspace, &path)),
         "grep" => search::grep(input, context.workspace),
         "glob" => search::glob(input, context.workspace),
         "run_command" => shell::run(input, context),

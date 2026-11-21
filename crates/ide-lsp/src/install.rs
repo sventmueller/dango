@@ -1,5 +1,6 @@
 //! Installing a missing server into the app's tools folder, after the user agreed: gopls with `go install`,
-//! rust-analyzer from its GitHub releases with a checked digest, vtsls and the other npm servers with `npm install`.
+//! rust-analyzer from a pinned GitHub release with a checked digest, vtsls and the other npm servers with
+//! `npm install`.
 
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -8,18 +9,26 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use ide_process::Supervisor;
-use serde::Deserialize;
 
 use crate::registry::{Install, node_bin, tools_bin};
 pub use ide_net::install::{InstallError, Progress, Step};
 use ide_net::{Cancel, Net};
 use ide_process::tool::{self, Helper, RunError};
 
-/// The latest rust-analyzer release, as GitHub's API describes it.
-const RUST_ANALYZER_RELEASE: &str = "https://api.github.com/repos/rust-lang/rust-analyzer/releases/latest";
+/// The rust-analyzer release the app installs; a new one is pinned by hand after checking its digests.
+const RUST_ANALYZER_TAG: &str = "2026-11-16";
 
-/// The most of the release's description that is read; GitHub's is a few hundred kilobytes.
-const RELEASE_LIMIT: u64 = 8 * 1024 * 1024;
+/// The SHA-256 of the release's file for each processor, in lowercase hex.
+const RUST_ANALYZER_DIGESTS: &[(&str, &str)] = &[
+    (
+        "rust-analyzer-aarch64-apple-darwin.gz",
+        "608b7c7d6bec1fcd6c964578b1f8234888afe6d6c0e7915284f1e2fd36ef1343",
+    ),
+    (
+        "rust-analyzer-x86_64-apple-darwin.gz",
+        "6901d956b4f2b091343eaf3570944098488f3ffec018987145285ed8253c07d2",
+    ),
+];
 
 /// How long `go install` or `npm install` may take.
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(15 * 60);
@@ -52,7 +61,7 @@ impl Installer {
     ) -> Result<PathBuf, InstallError> {
         let path = match what {
             Install::Gopls => self.gopls(cancel, progress)?,
-            Install::RustAnalyzer => self.rust_analyzer(cancel, progress)?,
+            Install::RustAnalyzer => self.rust_analyzer(&pinned_asset(&asset_name())?, cancel, progress)?,
             Install::Npm { package, program } => self.npm(package, program, cancel, progress)?,
             Install::Eslint => self.eslint(cancel, progress)?,
         };
@@ -211,25 +220,25 @@ impl Installer {
         }
     }
 
-    fn rust_analyzer(&self, cancel: &Cancel, progress: &mut dyn FnMut(Progress)) -> Result<PathBuf, InstallError> {
-        progress(Progress::Step(Step::Resolving));
-        let asset = self.release_asset()?;
-        let expected = asset
-            .digest
-            .as_deref()
-            .and_then(|d| d.strip_prefix("sha256:"))
-            .ok_or(InstallError::Unverifiable)?
-            .to_ascii_lowercase();
+    fn rust_analyzer(
+        &self,
+        asset: &Asset,
+        cancel: &Cancel,
+        progress: &mut dyn FnMut(Progress),
+    ) -> Result<PathBuf, InstallError> {
         let bin = self.tools.join("bin");
         fs::create_dir_all(&bin)?;
         let id = std::process::id();
         let packed = Scratch(bin.join(format!(".rust-analyzer-{id}.gz")));
         let unpacked = Scratch(bin.join(format!(".rust-analyzer-{id}")));
         progress(Progress::Step(Step::Downloading));
-        let actual = self.download(&asset.browser_download_url, &packed.0, cancel, progress)?;
+        let actual = self.download(&asset.url, &packed.0, cancel, progress)?;
         progress(Progress::Step(Step::Verifying));
-        if actual != expected {
-            return Err(InstallError::Checksum { expected, actual });
+        if actual != asset.sha256 {
+            return Err(InstallError::Checksum {
+                expected: asset.sha256.clone(),
+                actual,
+            });
         }
         progress(Progress::Step(Step::Unpacking));
         gunzip(&packed.0, &unpacked.0, cancel)?;
@@ -238,26 +247,6 @@ impl Installer {
         let target = tools_bin(&self.tools, "rust-analyzer");
         fs::rename(&unpacked.0, &target)?;
         Ok(target)
-    }
-
-    fn release_asset(&self) -> Result<Asset, InstallError> {
-        let download = self
-            .net
-            .get(RUST_ANALYZER_RELEASE, "application/vnd.github+json")
-            .map_err(|e| InstallError::Network(e.to_string()))?;
-        let mut json = Vec::new();
-        download
-            .body
-            .take(RELEASE_LIMIT)
-            .read_to_end(&mut json)
-            .map_err(|e| InstallError::Network(e.to_string()))?;
-        let release: Release = serde_json::from_slice(&json).map_err(|e| InstallError::Network(e.to_string()))?;
-        let name = asset_name();
-        release
-            .assets
-            .into_iter()
-            .find(|asset| asset.name == name)
-            .ok_or_else(|| InstallError::Network(format!("release {} has no {name}", release.tag_name)))
     }
 
     /// Downloads `url` into `path` and returns the SHA-256 of what arrived, in lowercase hex.
@@ -295,17 +284,22 @@ impl Installer {
     }
 }
 
-#[derive(Deserialize)]
-struct Release {
-    tag_name: String,
-    assets: Vec<Asset>,
+/// A release file to download and the SHA-256 it must have, in lowercase hex.
+struct Asset {
+    url: String,
+    sha256: String,
 }
 
-#[derive(Deserialize)]
-struct Asset {
-    name: String,
-    browser_download_url: String,
-    digest: Option<String>,
+/// The pinned release's file `name`.
+fn pinned_asset(name: &str) -> Result<Asset, InstallError> {
+    let (_, sha256) = RUST_ANALYZER_DIGESTS
+        .iter()
+        .find(|(asset, _)| *asset == name)
+        .ok_or_else(|| InstallError::Network(format!("release {RUST_ANALYZER_TAG} has no {name}")))?;
+    Ok(Asset {
+        url: format!("https://github.com/rust-lang/rust-analyzer/releases/download/{RUST_ANALYZER_TAG}/{name}"),
+        sha256: (*sha256).to_string(),
+    })
 }
 
 /// The release file for this machine, such as `rust-analyzer-aarch64-apple-darwin.gz`.
@@ -400,21 +394,23 @@ mod tests {
         Sha256::digest(bytes).iter().map(|b| format!("{b:02x}")).collect()
     }
 
-    fn release(digest: Option<&str>) -> Canned {
-        let program = gzip(b"#!/bin/sh\necho rust-analyzer 0.0.0-test\n");
+    /// A server answering a test release and its asset, which has the SHA-256 `digest` or the right one.
+    fn release(digest: Option<&str>) -> (Canned, Asset) {
+        served(b"#!/bin/sh\necho rust-analyzer 0.0.0-test\n", digest)
+    }
+
+    fn served(script: &[u8], digest: Option<&str>) -> (Canned, Asset) {
+        let program = gzip(script);
         let url = "https://example.invalid/ra.gz";
-        let digest = digest.map_or_else(|| format!("sha256:{}", sha256(&program)), str::to_string);
-        let json = serde_json::json!({
-            "tag_name": "test",
-            "assets": [{"name": asset_name(), "browser_download_url": url, "digest": digest}],
-        });
-        Canned {
-            files: HashMap::from([
-                (RUST_ANALYZER_RELEASE.to_string(), serde_json::to_vec(&json).unwrap()),
-                (url.to_string(), program),
-            ]),
+        let asset = Asset {
+            url: url.to_string(),
+            sha256: digest.map_or_else(|| sha256(&program), str::to_string),
+        };
+        let canned = Canned {
+            files: HashMap::from([(url.to_string(), program)]),
             asked: Mutex::default(),
-        }
+        };
+        (canned, asset)
     }
 
     fn tools(name: &str) -> ide_core::testing::Scratch {
@@ -428,10 +424,11 @@ mod tests {
     #[test]
     fn rust_analyzer_is_downloaded_checked_unpacked_and_made_runnable() {
         let dir = tools("ok");
-        let installer = Installer::new(&Supervisor::new(), env(), dir.to_path_buf(), Arc::new(release(None)));
+        let (canned, asset) = release(None);
+        let installer = Installer::new(&Supervisor::new(), env(), dir.to_path_buf(), Arc::new(canned));
         let mut steps = vec![];
         let path = installer
-            .install(Install::RustAnalyzer, &Cancel::new(), &mut |p| {
+            .rust_analyzer(&asset, &Cancel::new(), &mut |p| {
                 if let Progress::Step(step) = p {
                     steps.push(step);
                 }
@@ -439,16 +436,7 @@ mod tests {
             .unwrap();
         assert_eq!(path, dir.join("bin/rust-analyzer"));
         assert!(tool::is_executable(&path));
-        assert_eq!(
-            steps,
-            [
-                Step::Resolving,
-                Step::Downloading,
-                Step::Verifying,
-                Step::Unpacking,
-                Step::Done
-            ]
-        );
+        assert_eq!(steps, [Step::Downloading, Step::Verifying, Step::Unpacking]);
         let left: Vec<_> = fs::read_dir(dir.join("bin"))
             .unwrap()
             .map(|e| e.unwrap().file_name())
@@ -459,39 +447,49 @@ mod tests {
     #[test]
     fn a_download_that_does_not_match_its_digest_is_thrown_away() {
         let dir = tools("bad");
-        let wrong = format!("sha256:{}", "0".repeat(64));
-        let installer = Installer::new(
-            &Supervisor::new(),
-            env(),
-            dir.to_path_buf(),
-            Arc::new(release(Some(&wrong))),
-        );
-        let result = installer.install(Install::RustAnalyzer, &Cancel::new(), &mut |_| {});
+        let wrong = "0".repeat(64);
+        let (canned, asset) = release(Some(&wrong));
+        let installer = Installer::new(&Supervisor::new(), env(), dir.to_path_buf(), Arc::new(canned));
+        let result = installer.rust_analyzer(&asset, &Cancel::new(), &mut |_| {});
         assert!(matches!(result, Err(InstallError::Checksum { .. })));
         assert!(!dir.join("bin/rust-analyzer").exists());
         assert_eq!(fs::read_dir(dir.join("bin")).unwrap().count(), 0);
     }
 
     #[test]
-    fn a_release_without_a_digest_is_not_installed() {
-        let dir = tools("nodigest");
-        let mut canned = release(None);
-        let json =
-            serde_json::json!({"tag_name": "t", "assets": [{"name": asset_name(), "browser_download_url": "x"}]});
-        canned
-            .files
-            .insert(RUST_ANALYZER_RELEASE.to_string(), serde_json::to_vec(&json).unwrap());
-        let installer = Installer::new(&Supervisor::new(), env(), dir.to_path_buf(), Arc::new(canned));
-        let result = installer.install(Install::RustAnalyzer, &Cancel::new(), &mut |_| {});
-        assert!(matches!(result, Err(InstallError::Unverifiable)));
+    fn rust_analyzer_comes_from_the_pinned_tag_with_a_digest_in_the_code() {
+        for name in [
+            "rust-analyzer-aarch64-apple-darwin.gz",
+            "rust-analyzer-x86_64-apple-darwin.gz",
+        ] {
+            let asset = pinned_asset(name).unwrap();
+            assert_eq!(
+                asset.url,
+                format!("https://github.com/rust-lang/rust-analyzer/releases/download/{RUST_ANALYZER_TAG}/{name}")
+            );
+            assert_eq!(asset.sha256.len(), 64);
+            assert!(asset.sha256.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')));
+        }
+        let dir = tools("pinned");
+        let canned = Arc::new(Canned::default());
+        let installer = Installer::new(&Supervisor::new(), env(), dir.to_path_buf(), canned.clone());
+        let Err(InstallError::Network(why)) = outputs(&installer, Install::RustAnalyzer).0 else {
+            panic!("an unreachable release is a network error");
+        };
+        assert_eq!(why, "404");
+        assert_eq!(
+            *canned.asked.lock().unwrap(),
+            [pinned_asset(&asset_name()).unwrap().url]
+        );
     }
 
     #[test]
     fn a_cancelled_installation_stops_and_leaves_nothing() {
         let dir = tools("cancel");
-        let installer = Installer::new(&Supervisor::new(), env(), dir.to_path_buf(), Arc::new(release(None)));
+        let (canned, asset) = release(None);
+        let installer = Installer::new(&Supervisor::new(), env(), dir.to_path_buf(), Arc::new(canned));
         let cancel = Cancel::new();
-        let result = installer.install(Install::RustAnalyzer, &cancel, &mut |p| {
+        let result = installer.rust_analyzer(&asset, &cancel, &mut |p| {
             if p == Progress::Step(Step::Downloading) {
                 cancel.cancel();
             }
@@ -623,56 +621,31 @@ mod tests {
     }
 
     #[test]
-    fn a_release_without_a_download_for_this_mac_or_no_network_is_a_network_error() {
-        let dir = tools("noasset");
-        let mut canned = release(None);
-        let json = serde_json::json!({"tag_name": "2099-01-01", "assets": [{"name": "rust-analyzer-sparc.gz", "browser_download_url": "x"}]});
-        canned
-            .files
-            .insert(RUST_ANALYZER_RELEASE.to_string(), serde_json::to_vec(&json).unwrap());
-        let installer = Installer::new(&Supervisor::new(), env(), dir.to_path_buf(), Arc::new(canned));
-        let Err(InstallError::Network(why)) = outputs(&installer, Install::RustAnalyzer).0 else {
+    fn a_processor_without_a_pinned_download_is_a_network_error() {
+        let Err(InstallError::Network(why)) = pinned_asset("rust-analyzer-sparc.gz") else {
             panic!("no asset is a network error");
         };
-        assert_eq!(why, format!("release 2099-01-01 has no {}", asset_name()));
-        let offline = Installer::new(
-            &Supervisor::new(),
-            env(),
-            dir.to_path_buf(),
-            Arc::new(Canned::default()),
+        assert_eq!(
+            why,
+            format!("release {RUST_ANALYZER_TAG} has no rust-analyzer-sparc.gz")
         );
-        let Err(InstallError::Network(why)) = outputs(&offline, Install::RustAnalyzer).0 else {
-            panic!("an unreachable release is a network error");
-        };
-        assert_eq!(why, "404");
     }
 
     #[test]
     fn a_downloaded_server_that_does_not_start_is_not_installed() {
         let dir = tools("unusable");
-        let program = gzip(b"#!/bin/sh\necho 'dyld: missing symbol' >&2\nexit 3\n");
-        let url = "https://example.invalid/broken.gz";
-        let json = serde_json::json!({
-            "tag_name": "t",
-            "assets": [{"name": asset_name(), "browser_download_url": url, "digest": format!("sha256:{}", sha256(&program))}],
-        });
-        let canned = Canned {
-            files: HashMap::from([
-                (RUST_ANALYZER_RELEASE.to_string(), serde_json::to_vec(&json).unwrap()),
-                (url.to_string(), program.clone()),
-            ]),
-            asked: Mutex::default(),
-        };
+        let (canned, asset) = served(b"#!/bin/sh\necho 'dyld: missing symbol' >&2\nexit 3\n", None);
+        let size = canned.files[&asset.url].len() as u64;
         let installer = Installer::new(&Supervisor::new(), env(), dir.to_path_buf(), Arc::new(canned));
-        let (result, seen) = outputs(&installer, Install::RustAnalyzer);
+        let mut seen = vec![];
+        let result = installer.rust_analyzer(&asset, &Cancel::new(), &mut |p| seen.push(p));
         let Err(InstallError::Unusable(why)) = result else {
             panic!("a broken download is unusable: {result:?}");
         };
         assert_eq!(why.trim(), "dyld: missing symbol");
-        let total = Some(program.len() as u64);
         assert!(seen.contains(&Progress::Bytes {
-            done: program.len() as u64,
-            total
+            done: size,
+            total: Some(size)
         }));
         assert_eq!(
             fs::read_dir(dir.join("bin")).unwrap().count(),

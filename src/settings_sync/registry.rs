@@ -21,6 +21,7 @@ const SETTINGS: &[&[Declared]] = &[
         crate::editor::predict::model::OLLAMA.declared(),
         crate::editor::predict::model::LM_STUDIO.declared(),
         crate::editor::predict::model::CONSENT.declared(),
+        crate::editor::predict::model::UNCHECKED.declared(),
         crate::leitstand::DEFAULTS.declared(),
     ],
 ];
@@ -94,6 +95,7 @@ mod tests {
         "editPredictionConsent",
         "editPredictionLmStudio",
         "editPredictionOllama",
+        "editPredictionUnchecked",
         "factoryDefaults",
         "languageServers",
         "settingsSync",

@@ -122,19 +122,27 @@ pub(crate) fn run(root: PathBuf, then: fn(PathBuf)) {
         release(&pasteboard);
         taken
     });
-    let tiles = tab.thumbnails();
-    check(
-        "a pasted picture shows as a tile with the picture in it, as in Claude's app",
-        pasted
-            && tiles.len() == 1
-            && tiles
-                .iter()
-                .all(|(size, width)| size.width > 60.0 && size.width == size.height && *width > 100.0),
-        format!("pasted {pasted}, tiles {tiles:?}"),
-    );
     let key = tab.key;
-    // The new tab holds its sidebar until it is laid out; the user enlarges a picture in a tab whose sidebar is free.
-    helpers::after(SETTLE, move || sent(root, key, shot, then));
+    let tiles = move || tab_of(key).map(|tab| tab.thumbnails()).unwrap_or_default();
+    // The decoding service fills the tile after the paste.
+    helpers::wait_until(
+        move || !tiles().is_empty(),
+        move |_| {
+            let tiles = tiles();
+            check(
+                "a pasted picture shows as a tile with the picture in it, as in Claude's app",
+                pasted
+                    && tiles.len() == 1
+                    && tiles
+                        .iter()
+                        .all(|(size, width)| size.width > 60.0 && size.width == size.height && *width > 100.0),
+                format!("pasted {pasted}, tiles {tiles:?}"),
+            );
+            // The new tab holds its sidebar until it is laid out; the user enlarges a picture in a tab whose sidebar
+            // is free.
+            helpers::after(SETTLE, move || sent(root, key, shot, then));
+        },
+    );
 }
 
 /// The pasted picture opens large; then the picture goes to the agent.
@@ -160,21 +168,32 @@ fn sent(root: PathBuf, key: AgentKey, shot: Option<Vec<u8>>, then: fn(PathBuf)) 
     helpers::after(SETTLE, move || pictures(root, key, then));
 }
 
-/// The composer with the marked chips, in light and dark; then the tab closes.
+/// Waits for the sent picture to show in the conversation.
 fn pictures(root: PathBuf, key: AgentKey, then: fn(PathBuf)) {
+    let sent = move || {
+        tab_of(key).map(|tab| {
+            let timeline = tab.timeline();
+            (0..timeline.count())
+                .filter_map(|row| timeline.cell(row))
+                .flat_map(|cell| {
+                    cell.layoutSubtreeIfNeeded();
+                    shown_pictures(&cell)
+                })
+                .collect::<Vec<_>>()
+        })
+    };
+    // The decoding service fills the tile after the card is built.
+    helpers::wait_until(
+        move || sent().is_some_and(|tiles| !tiles.is_empty()),
+        move |_| sent_pictures(root, key, sent(), then),
+    );
+}
+
+/// Checks the sent picture, then the composer with the marked chips in light and dark; then the tab closes.
+fn sent_pictures(root: PathBuf, key: AgentKey, sent: Option<Vec<(f64, f64)>>, then: fn(PathBuf)) {
     let Some(controller) = controller_of(&root) else {
         return give_up(NAME, "the folder's window is open");
     };
-    let sent = tab_of(key).map(|tab| {
-        let timeline = tab.timeline();
-        (0..timeline.count())
-            .filter_map(|row| timeline.cell(row))
-            .flat_map(|cell| {
-                cell.layoutSubtreeIfNeeded();
-                shown_pictures(&cell)
-            })
-            .collect::<Vec<_>>()
-    });
     check(
         "a sent picture stays in the conversation as a tile showing it",
         sent.as_ref().is_some_and(|tiles| {

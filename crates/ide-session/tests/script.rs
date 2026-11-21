@@ -2,6 +2,8 @@
 //! rule, every kind of turn end, background work, the fan-out to a slow subscriber at a high event rate (C71),
 //! steering, stopping before a prompt went out, and the end of a session nobody follows.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod support;
 
 use std::time::Duration;

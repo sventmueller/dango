@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Installazione: download…";
 "Installation: lade herunter … {} %" = "Installazione: download… {}%";
 "Installation: prüfe die Prüfsumme …" = "Installazione: verifica del checksum…";
-"Installation: suche die neueste Version …" = "Installazione: ricerca dell’ultima versione…";
 "Installiere …" = "Installazione…";
 "Installiere … {}" = "Installazione… {}";
 "Installieren" = "Installa";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Simboli corrispondenti";
 "Wird indexiert …" = "Indicizzazione in corso…";
 "Nichts gefunden" = "Nessun risultato";
+"Keine Dateien gefunden" = "Nessun file trovato";
+"Wird gesucht …" = "Ricerca in corso…";
+"Symbole im Projekt" = "Simboli nel progetto";
+"Symbol im Projekt suchen" = "Trova simbolo nel progetto";
+"Abhängigkeit · {}" = "Dipendenza · {}";
 "Aufrufer" = "Chiamanti";
 "Aufgerufene" = "Chiamati";
 "Obertypen" = "Supertipi";
@@ -2382,5 +2386,15 @@
 "Funktion vorschlagen …" = "Suggerisci una funzionalità…";
 "Problem melden …" = "Segnala un problema…";
 "{} auf GitHub" = "{} su GitHub";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "Non puoi fidarti di “{}” nel suo insieme";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "La fiducia vale per tutte le cartelle al suo interno, anche per quelle create in seguito. Per la cartella Inizio, la radice di un volume, Scrivania, Documenti, Download e Libreria significherebbe ogni download e ogni repository clonato. Apri direttamente la cartella del progetto per fidarti di essa; qui puoi leggere e modificare, ma non si avvia nulla.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "La fiducia vale anche per tutte le cartelle al suo interno, comprese quelle create in seguito.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} si avvia solo nelle cartelle di cui ti fidi. Non puoi fidarti di questa cartella nel suo insieme, perché contiene molto più di un progetto; apri direttamente la cartella del progetto.";
+"Vorschläge pausiert: gitleaks fehlt" = "Proposte in pausa: manca gitleaks";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Senza gitleaks nulla controlla se il codice contiene segreti. Installalo con “{}” o invia senza controllo.";
+"Ungeprüft an {} senden?" = "Inviare a {} senza controllo?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Senza gitleaks nulla controlla se il codice inviato a {} contiene segreti. Installalo con “{}”, oppure invia senza controllo; la scelta vale su questo Mac e puoi revocarla in Impostazioni, sotto “Previsione”.";
+"Ungeprüft senden" = "Invia senza controllo";
+"Zwischenablage durch Programm ersetzt" = "Appunti sostituiti da un programma";
 "„{}“ hat nichts ausgegeben." = "“{}” non ha prodotto alcun output.";
 "„{}“ hat noch nichts ausgegeben." = "“{}” non ha ancora prodotto alcun output.";

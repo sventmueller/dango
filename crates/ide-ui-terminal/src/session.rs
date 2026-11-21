@@ -57,7 +57,7 @@ impl TerminalView {
             Event::ClipboardStore {
                 clipboard: Clipboard::Clipboard,
                 text,
-            } => super::clip::store(&text),
+            } => self.program_copied(&text),
             // A Mac has no primary selection, and copying into it on every selection would overwrite the pasteboard.
             Event::ClipboardStore { .. } => {}
             Event::ClipboardLoad(_) => {
@@ -77,6 +77,16 @@ impl TerminalView {
             Event::DevServer(url) => self.show_dev_server(url),
             Event::Exited(_) => self.exited(),
         }
+    }
+
+    /// A program copied `text` with OSC 52: it replaces the pasteboard only while the user types in this terminal, and
+    /// says so, as `cat` of a file could otherwise swap what the user copied for a command (B105).
+    fn program_copied(&self, text: &str) {
+        if !self.ivars().state.focused.get() {
+            return;
+        }
+        super::clip::store(text);
+        self.notify(t("Zwischenablage durch Programm ersetzt"));
     }
 
     fn set_title(&self, title: Option<String>) {
@@ -124,6 +134,7 @@ impl TerminalView {
         }
     }
 
+    /// The name VoiceOver reads for the view, with the shell's title once it set one.
     pub fn label(&self) -> String {
         model::label(self.ivars().title.borrow().as_deref())
     }

@@ -79,10 +79,13 @@ serde_json = "1"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 publish = false
+# The minor version of the pin in rust-toolchain.toml; `cargo xtask toolchain` holds the two together.
+rust-version = "1.100"
 
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "deny"
 unreachable_pub = "warn"
+missing_docs = "warn"
 
 [workspace.lints.clippy]
 undocumented_unsafe_blocks = "deny"
@@ -94,6 +97,7 @@ allow_attributes_without_reason = "warn"
 cast_possible_truncation = "warn"
 cast_possible_wrap = "warn"
 cast_sign_loss = "warn"
+unwrap_used = "warn"
 
 # The workspace-hack is a dependency no code uses by design (E194), and cargo cannot exempt a single dependency.
 [workspace.lints.cargo]
@@ -105,7 +109,9 @@ name = "ide-app"
 version = "0.0.0"
 description = "Native macOS editor for working with coding agents"
 edition.workspace = true
+license.workspace = true
 publish.workspace = true
+rust-version.workspace = true
 
 [[bin]]
 name = "ide"
@@ -212,3 +218,6 @@ inherits = "release"
 lto = "fat"
 codegen-units = 1
 strip = "symbols"
+# dsymutil writes the line tables into a dSYM beside each program before the strip; the release keeps it in dist/.
+debug = "line-tables-only"
+split-debuginfo = "packed"

@@ -2,7 +2,6 @@
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::Deserialize;
 
@@ -101,33 +100,14 @@ pub struct FrozenRules {
     pub ignore: Option<PathBuf>,
 }
 
-/// A folder of one check's own with nothing in it, removed when dropped, where gitleaks finds no configuration.
-struct EmptyFolder(PathBuf);
-
-impl EmptyFolder {
-    fn new() -> std::io::Result<EmptyFolder> {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-        let n = NEXT.fetch_add(1, Ordering::Relaxed);
-        let path = std::env::temp_dir().join(format!("ide-git-scan-{}-{n}", std::process::id()));
-        std::fs::create_dir_all(&path)?;
-        Ok(EmptyFolder(path))
-    }
-}
-
-impl Drop for EmptyFolder {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir(&self.0);
-    }
-}
-
 impl Git {
     /// Checks `text`, such as a work order's diff, with the `rules` frozen from the user's working copy (C52):
     /// gitleaks runs in an empty folder of its own with `--config` and `--gitleaks-ignore-path` pointing at the frozen
     /// files, and with `--ignore-gitleaks-allow`, so nothing in the scanned text or its folder can allow a finding.
     /// Without gitleaks the answer is `SecretScan::NotInstalled`, which a proof lists first (F75).
     pub fn scan_text_frozen(&self, text: &str, rules: &FrozenRules) -> Result<SecretScan> {
-        let empty = EmptyFolder::new()?;
-        let ignore = rules.ignore.as_deref().unwrap_or(&empty.0);
+        let empty = ide_process::private_dir::PrivateDir::new("ide-git-scan")?;
+        let ignore = rules.ignore.as_deref().unwrap_or(empty.path());
         let mut args = vec![
             "stdin".to_string(),
             "--ignore-gitleaks-allow".to_string(),
@@ -138,7 +118,7 @@ impl Git {
         }
         let args: Vec<&str> = args.iter().map(String::as_str).collect();
         Ok(
-            match gitleaks(self, &empty.0, &[], &args, Some(text.as_bytes().to_vec()))? {
+            match gitleaks(self, empty.path(), &[], &args, Some(text.as_bytes().to_vec()))? {
                 None => SecretScan::NotInstalled,
                 Some(findings) if findings.is_empty() => SecretScan::Clean,
                 Some(findings) => SecretScan::Found(findings),
@@ -146,16 +126,11 @@ impl Git {
         )
     }
 
-    /// Checks `text` as gitleaks reads standard input, run in the folder `dir`, which needs no repository: for text
-    /// that is about to leave the Mac outside a commit.
-    pub fn scan_text(&self, dir: &Path, text: &str) -> Result<SecretScan> {
-        Ok(
-            match gitleaks(self, dir, &[], &["stdin"], Some(text.as_bytes().to_vec()))? {
-                None => SecretScan::NotInstalled,
-                Some(findings) if findings.is_empty() => SecretScan::Clean,
-                Some(findings) => SecretScan::Found(findings),
-            },
-        )
+    /// Checks `text` that is about to leave the Mac outside a commit, such as an editor's file for a prediction, with
+    /// gitleaks' own rules or those `GITLEAKS_CONFIG` names: nothing of the file's repository, neither its
+    /// `.gitleaks.toml` and `.gitleaksignore` nor a `gitleaks:allow` in the text, lets a finding through (B103).
+    pub fn scan_text(&self, text: &str) -> Result<SecretScan> {
+        self.scan_text_frozen(text, &FrozenRules::default())
     }
 }
 

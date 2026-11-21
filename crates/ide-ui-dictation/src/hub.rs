@@ -682,6 +682,7 @@ pub fn take_over_key(provider: ApiProvider) {
     }
 }
 
+/// Deletes the app's key for `provider` from the keychain.
 pub fn remove_key(provider: ApiProvider) -> Result<(), keys::KeyError> {
     with_hub(|hub| hub.keys.remove(provider)).unwrap_or(Err(keys::KeyError::Busy))
 }

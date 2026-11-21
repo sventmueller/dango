@@ -3,6 +3,7 @@ name = "ide-session"
 version = "0.0.0"
 description = "One driver over every agent session, with or without a tab: start, send, answer requests by a rule, checkpoint before each prompt, fan events out to any number of views, and a typed end of each turn"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 

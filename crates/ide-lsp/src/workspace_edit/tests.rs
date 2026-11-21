@@ -295,3 +295,37 @@ fn a_create_that_exists_fails_unless_asked_to_ignore_or_overwrite() {
     assert_eq!(apply(&dir, &operations(vec![ignoring]), &mut Mock::default()), Ok(()));
     assert_eq!(read(&file), "kept\n");
 }
+
+#[test]
+fn renaming_or_deleting_a_symlink_acts_on_the_link_and_keeps_its_target() {
+    let dir = scratch("link-itself");
+    let outside = scratch("link-itself-outside");
+    std::fs::write(dir.join("target.rs"), "target\n").unwrap();
+    std::fs::write(outside.join("away.rs"), "away\n").unwrap();
+    for (link, target) in [
+        ("gone.rs", dir.join("target.rs")),
+        ("moved.rs", dir.join("target.rs")),
+        ("out.rs", outside.join("away.rs")),
+    ] {
+        std::os::unix::fs::symlink(target, dir.join(link)).unwrap();
+    }
+    let delete = |path: &Path| {
+        DocumentChangeOperation::Op(ResourceOp::Delete(lsp_types::DeleteFile {
+            uri: uri(path),
+            options: None,
+        }))
+    };
+    let all = vec![
+        delete(&dir.join("gone.rs")),
+        rename(&dir.join("moved.rs"), &dir.join("renamed.rs")),
+        delete(&dir.join("out.rs")),
+    ];
+    assert_eq!(apply(&dir, &operations(all), &mut Mock::default()), Ok(()));
+    for gone in ["gone.rs", "moved.rs", "out.rs"] {
+        assert!(dir.join(gone).symlink_metadata().is_err(), "{gone} is gone");
+    }
+    let renamed = dir.join("renamed.rs").symlink_metadata().unwrap();
+    assert!(renamed.file_type().is_symlink(), "the link moved, not its target");
+    assert_eq!(read(&dir.join("target.rs")), "target\n");
+    assert_eq!(read(&outside.join("away.rs")), "away\n");
+}

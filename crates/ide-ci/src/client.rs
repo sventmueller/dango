@@ -231,6 +231,11 @@ impl Client {
             Kind::GitLab => vec![("Accept".to_string(), "application/json".to_string())],
         };
         if let Some(token) = &self.token {
+            if !crate::forge::may_carry_secrets(url) {
+                return Err(Error::Network(format!(
+                    "{url} is not an HTTPS address, so it gets no token"
+                )));
+            }
             headers.push(("Authorization".to_string(), format!("Bearer {token}")));
         }
         if body.is_some() {
@@ -371,6 +376,30 @@ mod tests {
             asked(&recorded),
             [first, second],
             "the page number keeps the request on HTTPS"
+        );
+    }
+
+    #[test]
+    fn a_token_never_goes_to_a_plain_address_off_this_mac() {
+        let mut forge = crate::forge::candidates("git@gitlab.com:group/app.git", &[]).remove(0);
+        forge.api = "http://gitlab.com/api/v4".into();
+        let recorded = Arc::new(crate::http::Recorded::new().answer(
+            Method::Get,
+            "http://gitlab.com/api/v4/user",
+            200,
+            r#"{"username": "someone"}"#,
+            &[],
+        ));
+        let client = Client::new(forge.clone(), Some("secret".into()), recorded.clone());
+        assert!(matches!(client.account(), Err(Error::Network(_))));
+        assert!(recorded.asked().is_empty());
+        let anonymous = Client::new(forge, None, recorded.clone());
+        assert_eq!(anonymous.account().unwrap(), "someone");
+        assert!(
+            recorded.asked()[0]
+                .headers
+                .iter()
+                .all(|(name, _)| name != "Authorization")
         );
     }
 

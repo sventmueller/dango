@@ -1,6 +1,8 @@
 //! The session against stand-ins for `claude` that misbehave: one that never answers, one that stops reading what the
 //! app writes, and one whose last frame lacks its newline or is cut off.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use std::path::Path;
 use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};

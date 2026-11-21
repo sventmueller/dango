@@ -1,6 +1,8 @@
 //! The register read from a copy of the ACP registry, what installing an entry would do, and installing, checking,
 //! updating and going back with a stand-in for the network.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use ide_core::testing::scratch;
 use std::collections::HashMap;
 use std::io;

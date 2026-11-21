@@ -261,12 +261,22 @@ impl Plan {
 fn inside(folder: &Path, path: &Path, index: usize) -> Result<PathBuf, Failure> {
     resolve(path)
         .filter(|resolved| resolved.starts_with(folder))
-        .ok_or_else(|| {
-            Failure::at(
-                index,
-                tf("{} liegt außerhalb des Ordners", &[&path.display().to_string()]),
-            )
-        })
+        .ok_or_else(|| outside(path, index))
+}
+
+/// `path` with its folder resolved but not the last part, so that renaming or deleting a symlink acts on the link.
+fn link_inside(folder: &Path, path: &Path, index: usize) -> Result<PathBuf, Failure> {
+    path.file_name()
+        .and_then(|name| Some(resolve(path.parent()?)?.join(name)))
+        .filter(|resolved| resolved.starts_with(folder))
+        .ok_or_else(|| outside(path, index))
+}
+
+fn outside(path: &Path, index: usize) -> Failure {
+    Failure::at(
+        index,
+        tf("{} liegt außerhalb des Ordners", &[&path.display().to_string()]),
+    )
 }
 
 fn missing(path: &Path, index: usize) -> Failure {
@@ -327,7 +337,7 @@ fn check(folder: &Path, steps: Vec<Step>, editors: &impl Editors) -> Result<Vec<
                 overwrite,
                 ignore,
             } => {
-                let (from, to) = (inside(folder, &from, index)?, inside(folder, &to, index)?);
+                let (from, to) = (link_inside(folder, &from, index)?, link_inside(folder, &to, index)?);
                 if !plan.exists(&from) {
                     return Err(missing(&from, index));
                 }
@@ -349,7 +359,7 @@ fn check(folder: &Path, steps: Vec<Step>, editors: &impl Editors) -> Result<Vec<
                 }
             }
             Step::Delete { path, ignore } => {
-                let path = inside(folder, &path, index)?;
+                let path = link_inside(folder, &path, index)?;
                 if !plan.exists(&path) {
                     if ignore {
                         continue;

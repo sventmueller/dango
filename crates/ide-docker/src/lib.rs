@@ -12,7 +12,7 @@
 //! assert_eq!(containers[0].ports[0].host_port, 5432);
 //! ```
 
-#![warn(missing_docs)]
+#![forbid(unsafe_code)]
 
 pub mod board;
 

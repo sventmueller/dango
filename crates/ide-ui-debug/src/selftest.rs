@@ -36,6 +36,7 @@ pub struct Seen {
     pub watches: Vec<(String, Option<String>)>,
     /// Each console's title, text, and whether it takes input.
     pub consoles: Vec<(String, String, bool)>,
+    /// The titles the configurations' popup offers.
     pub configurations: Vec<String>,
 }
 
@@ -43,6 +44,7 @@ pub(crate) fn of(controller: &(impl AsWindow + ?Sized)) -> Option<Retained<Debug
     panel::of(&controller.as_window())
 }
 
+/// What the self-test reads from the debugger panel of `controller`'s window.
 pub fn seen(controller: &(impl AsWindow + ?Sized)) -> Option<Seen> {
     let panel = of(controller)?;
     let ui = panel.ui();
@@ -122,18 +124,21 @@ pub fn start_fake(controller: &(impl AsWindow + ?Sized), script: ide_dap::fake::
     panel.adapter_asked();
 }
 
+/// Runs `command` in the debugger panel as its button or menu item would.
 pub fn run(controller: &(impl AsWindow + ?Sized), command: Command) {
     if let Some(panel) = of(controller) {
         panel.run_command(command);
     }
 }
 
+/// Sets a breakpoint at `line` of `path`, or removes the one there.
 pub fn toggle_breakpoint(controller: &(impl AsWindow + ?Sized), path: &Path, line: usize) {
     if let Some(panel) = of(controller) {
         panel.toggle_breakpoint(path, line);
     }
 }
 
+/// Enables or disables the breakpoint at `line` of `path`.
 pub fn switch_breakpoint(controller: &(impl AsWindow + ?Sized), path: &Path, line: usize, on: bool) {
     if let Some(panel) = of(controller) {
         panel.change_breakpoint(path, line, super::model::breakpoints::Edit::Enable(on));
@@ -199,6 +204,7 @@ pub fn evaluate(controller: &(impl AsWindow + ?Sized), expression: &str) {
     }
 }
 
+/// The outline view of the debugger panel.
 pub fn outline(controller: &(impl AsWindow + ?Sized)) -> Option<Retained<NSOutlineView>> {
     Some(of(controller)?.ui().outline.clone())
 }
@@ -212,8 +218,9 @@ pub struct Layout {
     pub section_title: f64,
     /// Where the text of the note below the first section begins.
     pub note: f64,
-    /// The top of the configurations' popup and of the list.
+    /// The top of the configurations' popup.
     pub start_top: f64,
+    /// The top of the list.
     pub list_top: f64,
 }
 
@@ -254,6 +261,7 @@ pub fn layout(controller: &(impl AsWindow + ?Sized)) -> Option<Layout> {
     })
 }
 
+/// The debugger's page in the window's inspector.
 pub fn inspector_page(controller: &(impl AsWindow + ?Sized)) -> Option<Retained<NSView>> {
     Some(of(controller)?.ui().inspector.page.clone())
 }

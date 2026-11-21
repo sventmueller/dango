@@ -13,6 +13,7 @@ use crate::window::Window;
 pub struct Serial(Cell<u64>);
 
 impl Serial {
+    /// The next number, one above the last.
     pub fn next(&self) -> u64 {
         self.0.set(self.0.get() + 1);
         self.0.get()
@@ -42,10 +43,12 @@ impl<T: Clone> Registry<T> {
         id
     }
 
+    /// Keeps `object` under `id`, which [`Registry::next_id`] handed out.
     pub fn insert(&self, id: u64, object: T) {
         self.entries.borrow_mut().push((id, object));
     }
 
+    /// The object with `id`, which the registry forgets.
     pub fn remove(&self, id: u64) -> Option<T> {
         let mut entries = self.entries.borrow_mut();
         let index = entries.iter().position(|(other, _)| *other == id)?;
@@ -66,6 +69,7 @@ impl<T: Clone> Registry<T> {
         self.entries.borrow().iter().map(|(_, object)| object.clone()).collect()
     }
 
+    /// The first open object that `f` accepts.
     pub fn find(&self, mut f: impl FnMut(&T) -> bool) -> Option<T> {
         self.entries
             .borrow()
@@ -74,6 +78,7 @@ impl<T: Clone> Registry<T> {
             .map(|(_, object)| object.clone())
     }
 
+    /// Forgets every object that `f` rejects.
     pub fn retain(&self, mut f: impl FnMut(&T) -> bool) {
         self.entries.borrow_mut().retain(|(_, object)| f(object));
     }

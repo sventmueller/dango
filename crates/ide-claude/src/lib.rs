@@ -3,7 +3,6 @@
 //! ignored, never fatal. `docs/claude-mapping.md` lays down how each frame changes the thread.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
 
 pub mod capabilities;
 pub mod cli;

@@ -31,7 +31,9 @@ const CONTENT_MODIFIED: i64 = -32801;
 /// A symbol a search found, with the server that knows more about it.
 #[derive(Clone)]
 pub struct FoundSymbol {
+    /// The symbol as the server described it.
     pub symbol: ProjectSymbol,
+    /// The file it is in.
     pub path: PathBuf,
     /// Whether it belongs to other people's code, such as a standard library or an installed package.
     pub dependency: bool,
@@ -40,6 +42,7 @@ pub struct FoundSymbol {
 
 /// What a search has found so far.
 pub struct SymbolAnswer {
+    /// The symbols found so far.
     pub symbols: Vec<FoundSymbol>,
     /// Whether a server still starts or indexes, so that finding nothing may change.
     pub indexing: bool,

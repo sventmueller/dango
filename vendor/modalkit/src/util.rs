@@ -8,18 +8,18 @@ use unicode_segmentation::UnicodeSegmentation;
 use crate::{key::TerminalKey, prelude::MoveDir1D};
 
 #[allow(unused)]
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crate::key::event::{KeyCode, KeyEvent, KeyModifiers};
 
 #[allow(unused_macros)]
 macro_rules! key_event {
     ($ch: literal) => {
         KeyEvent::new(KeyCode::Char($ch), match $ch.is_ascii_uppercase() {
-            true => crossterm::event::KeyModifiers::SHIFT,
-            false => crossterm::event::KeyModifiers::NONE,
+            true => crate::key::event::KeyModifiers::SHIFT,
+            false => crate::key::event::KeyModifiers::NONE,
         })
     };
     ($kc: expr) => {
-        KeyEvent::new($kc, crossterm::event::KeyModifiers::NONE)
+        KeyEvent::new($kc, crate::key::event::KeyModifiers::NONE)
     };
     ($kc: literal, $km: expr) => {
         KeyEvent::new(KeyCode::Char($kc), $km)

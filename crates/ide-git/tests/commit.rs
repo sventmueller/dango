@@ -1,5 +1,7 @@
 //! Commits with hooks that pass and fail.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod common;
 
 use std::os::unix::fs::PermissionsExt;

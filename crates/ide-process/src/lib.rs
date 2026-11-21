@@ -6,14 +6,13 @@
 //! confirms the end of its whole process group; [`sandbox`] builds the `sandbox-exec` profiles of the own agent's shell
 //! tool and of gates; [`order_env`] narrows the login shell's environment to what an order may see.
 
-#![warn(missing_docs)]
-
 mod agent_tree;
 pub mod framing;
 pub mod gate;
 pub mod order_env;
 pub mod pipes;
 pub mod priority;
+pub mod private_dir;
 pub mod reaper;
 pub mod sandbox;
 pub mod shell_env;

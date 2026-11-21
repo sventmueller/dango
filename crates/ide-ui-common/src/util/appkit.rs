@@ -17,6 +17,7 @@ macro_rules! constant {
     };
 }
 
+/// The `NSString` with the text of `s`.
 pub fn ns(s: &str) -> Retained<NSString> {
     NSString::from_str(s)
 }
@@ -277,6 +278,7 @@ pub fn tagged(mtm: MainThreadMarker, title: &str, action: Sel, key: &str, tag: i
     item
 }
 
+/// A menu item titled `title` that opens a menu of `items`, and that menu.
 pub fn submenu(
     mtm: MainThreadMarker,
     title: &str,
@@ -291,6 +293,7 @@ pub fn submenu(
     (parent, menu)
 }
 
+/// A menu's separator line.
 pub fn separator(mtm: MainThreadMarker) -> Retained<NSMenuItem> {
     NSMenuItem::separatorItem(mtm)
 }

@@ -1,6 +1,8 @@
 //! Build tasks in the language of the project: the app bundle, its signature, the selftest and the release with its
 //! disk image, update feed and Homebrew Cask. The Makefile names the entry points.
 
+#![forbid(unsafe_code)]
+
 mod baseline;
 mod bundle;
 mod cask;
@@ -23,6 +25,7 @@ mod source;
 mod structure;
 mod sweep;
 mod thread_locals;
+mod toolchain;
 mod universal;
 mod updates;
 
@@ -73,15 +76,19 @@ pub(crate) const USAGE: &str = "usage: cargo xtask <task>
                                    alone and the self-test alone beside it per crate, folder and file; --check fails below
                                    90 % in total or 50 % in any file, or when cargo test alone covers the app crate other
                                    than its floor; --strict when a test or scenario failed
-  ci                               cargo fmt, then check, coverage --check --strict and perf, fail-fast; a complete run
-                                   seals the working tree's content in the local ref refs/ci-seals/<green|red>/<fp>;
-                                   refuses while the screen is locked
-  seal fingerprint [--head]        the fingerprint of the working tree's content (or HEAD's): its git tree without VERSION
+  ci                               cargo fmt, then cargo deny's advisories, check, coverage --check --strict, perf and
+                                   fuzz for 20 s per target, fail-fast; a complete run seals the working tree's content
+                                   in the local ref refs/ci-seals/<green|red>/<fp>; refuses while the screen is locked
+  seal fingerprint [--head]        the fingerprint of the working tree's content (or HEAD's): its git tree without
+                                   VERSION, with the commits and changes of ../splat and ../lowspeak
   seal explain                     the seals of HEAD's content here and on origin, and the paths that separate it from
                                    the nearest green seal
-  deploy                           on clean main: notarize the next version, commit VERSION, upload the draft, push
-                                   main, its green seal if any and the version tag, then publish the release
+  deploy                           on clean main with clean, pushed siblings: notarize the next version, commit VERSION,
+                                   upload the draft, push main, its green seal if any and the version tag, then publish
+                                   the release
   thread-locals                    fail for a thread-local that docs/thread-locals.md does not allow to stay
+  toolchain                        fail when rustc is not the version rust-toolchain.toml pins or a package's
+                                   rust-version is not its minor version
   structure                        fail for a Rust file over 1000 lines or a model.rs that uses objc2 (E98)
   sweep [--dry-run]                remove from the build folders cargo's build-dir shares between all workspaces what no
                                    build read lately: every unit of a worktree that is gone, a unit its workspace's
@@ -177,6 +184,10 @@ fn task(args: &[String]) -> Result<(), String> {
         "rules" => {
             flags(rest, [])?;
             rules::check()
+        }
+        "toolchain" => {
+            flags(rest, [])?;
+            toolchain::check()
         }
         "sweep" => sweep::sweep(rest),
         "seed" => seed::seed(rest),

@@ -116,6 +116,7 @@ impl TerminalView {
         }
     }
 
+    /// The lines of the screen as the view shows them.
     pub fn visible_lines(&self) -> Vec<String> {
         self.with_session(ide_terminal::Session::visible_text)
             .unwrap_or_default()
@@ -126,6 +127,7 @@ impl TerminalView {
         self.ivars().state.prompts.get()
     }
 
+    /// Pastes what `pasteboard` holds as ⌘V would, and what it did with an image.
     pub fn paste_image_from(&self, pasteboard: &NSPasteboard) -> Option<PasteAction> {
         self.paste_from(pasteboard)
     }
@@ -298,6 +300,7 @@ pub fn latest() -> Option<(u64, Retained<TerminalView>)> {
     super::find(id).map(|view| (id, view))
 }
 
+/// The terminal view with the number `id`, if it is open.
 pub fn view(id: u64) -> Option<Retained<TerminalView>> {
     super::find(id)
 }

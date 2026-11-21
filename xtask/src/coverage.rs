@@ -309,7 +309,7 @@ struct Run {
 }
 
 /// The channel `rust-toolchain.toml` names.
-fn toolchain(file: &str) -> Result<String, String> {
+pub(crate) fn toolchain(file: &str) -> Result<String, String> {
     file.lines()
         .filter_map(|line| line.trim().strip_prefix("channel"))
         .filter_map(|rest| rest.trim().strip_prefix('='))

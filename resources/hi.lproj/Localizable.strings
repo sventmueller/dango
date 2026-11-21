@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "इंस्टॉलेशन : डाउनलोड हो रहा है…";
 "Installation: lade herunter … {} %" = "इंस्टॉलेशन : डाउनलोड हो रहा है… {}%";
 "Installation: prüfe die Prüfsumme …" = "इंस्टॉलेशन : चेकसम की जाँच हो रही है…";
-"Installation: suche die neueste Version …" = "इंस्टॉलेशन : नवीनतम संस्करण खोजा जा रहा है…";
 "Installiere …" = "इंस्टॉल हो रहा है…";
 "Installiere … {}" = "इंस्टॉल हो रहा है… {}";
 "Installieren" = "इंस्टॉल करें";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "मिलते सिंबल";
 "Wird indexiert …" = "इंडेक्स हो रहा है…";
 "Nichts gefunden" = "कुछ नहीं मिला";
+"Keine Dateien gefunden" = "कोई फ़ाइल नहीं मिली";
+"Wird gesucht …" = "खोज जारी है…";
+"Symbole im Projekt" = "प्रोजेक्ट में सिंबल";
+"Symbol im Projekt suchen" = "प्रोजेक्ट में सिंबल ढूँढें";
+"Abhängigkeit · {}" = "डिपेंडेंसी · {}";
 "Aufrufer" = "कॉल करने वाले";
 "Aufgerufene" = "कॉल किए गए";
 "Obertypen" = "सुपरटाइप";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "GitHub पर {}";
 "„{}“ hat nichts ausgegeben." = "“{}” ने कोई आउटपुट नहीं दिया।";
 "„{}“ hat noch nichts ausgegeben." = "“{}” ने अभी तक कोई आउटपुट नहीं दिया।";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "“{}” पर पूरी तरह भरोसा नहीं किया जा सकता";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "भरोसा इसके अंदर के सभी फ़ोल्डरों पर लागू होता है, बाद में बनाए गए फ़ोल्डरों पर भी। होम फ़ोल्डर, किसी वॉल्यूम के रूट, डेस्कटॉप, दस्तावेज़, डाउनलोड और लाइब्रेरी के लिए इसका मतलब होगा हर डाउनलोड और हर क्लोन की गई रिपॉज़िटरी। भरोसा करने के लिए प्रोजेक्ट फ़ोल्डर को ही खोलें; यहाँ आप पढ़ और संपादित कर सकते हैं, लेकिन कुछ भी शुरू नहीं होता।";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "भरोसा इसके अंदर के सभी फ़ोल्डरों पर भी लागू होता है, बाद में बनाए गए फ़ोल्डरों पर भी।";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} केवल उन फ़ोल्डरों में शुरू होता है जिन पर आप भरोसा करते हैं। इस फ़ोल्डर पर पूरी तरह भरोसा नहीं किया जा सकता, क्योंकि इसमें एक प्रोजेक्ट से कहीं अधिक है; प्रोजेक्ट फ़ोल्डर को ही खोलें।";
+"Vorschläge pausiert: gitleaks fehlt" = "सुझाव रुके हुए हैं : gitleaks मौजूद नहीं";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "gitleaks के बिना कोड में सीक्रेट की कोई जाँच नहीं होती। इसे “{}” से इंस्टॉल करें या बिना जाँच भेजें।";
+"Ungeprüft an {} senden?" = "{} को बिना जाँच भेजें?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "gitleaks के बिना कुछ भी नहीं जाँचता कि {} को जाने वाले कोड में सीक्रेट हैं या नहीं। इसे “{}” से इंस्टॉल करें, या बिना जाँच भेजें; यह विकल्प इस Mac पर लागू होता है और सेटिंग में “पूर्वानुमान” के अंतर्गत वापस लिया जा सकता है।";
+"Ungeprüft senden" = "बिना जाँच भेजें";
+"Zwischenablage durch Programm ersetzt" = "किसी प्रोग्राम ने क्लिपबोर्ड बदल दिया";

@@ -33,11 +33,14 @@ pub(crate) const DENY: u8 = 3;
 
 /// What a plan's answer buttons send in their tag beside the entry.
 pub(crate) const PLAN_APPROVE: u8 = 1;
+/// The tag of the button that sends the plan back with the user's comments.
 pub const PLAN_REVISE: u8 = 2;
+/// The tag of the button that rejects the plan.
 pub const PLAN_REJECT: u8 = 3;
 
 /// Where "Kommentieren" takes the marked passage from, as its tag says beside the entry.
 pub const PLAN_IN_CARD: u8 = 0;
+/// The tag of "Kommentieren" in the plan's document tab.
 pub const PLAN_IN_DOC: u8 = 1;
 
 /// The text the user edits before allowing: a command as such, other input as JSON.

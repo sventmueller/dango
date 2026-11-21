@@ -9,8 +9,12 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-/// The name of the cookie a request must carry.
-pub const COOKIE: &str = "dango_preview";
+/// The name of the cookie a request to the server on `port` must carry: 127.0.0.1 shares its cookies across ports, so
+/// each server takes only its own.
+pub fn cookie_name(port: u16) -> String {
+    format!("site_preview_{port}")
+}
+
 const LONGEST_HEAD: usize = 16 * 1024;
 /// How long a connection may take to send its request.
 const HEAD_TIME: Duration = Duration::from_secs(2);
@@ -24,7 +28,7 @@ pub struct Site {
 }
 
 impl Site {
-    /// Serves `root` on a free port of 127.0.0.1 to requests that carry `secret` as the cookie [`COOKIE`].
+    /// Serves `root` on a free port of 127.0.0.1 to requests that carry `secret` as the cookie [`cookie_name`] names.
     pub fn start(root: &Path, secret: String) -> io::Result<Site> {
         let root = root.canonicalize()?;
         let listener = TcpListener::bind(("127.0.0.1", 0))?;
@@ -34,6 +38,7 @@ impl Site {
         let rules = Arc::new(Rules {
             root: root.clone(),
             hosts: [format!("127.0.0.1:{port}"), format!("localhost:{port}")],
+            cookie: cookie_name(port),
             secret: secret.clone(),
             ignore: ignore_matcher(&root),
         });
@@ -54,9 +59,8 @@ impl Site {
         &self.root
     }
 
-    /// The port it listens on.
-    #[cfg(test)]
-    pub(crate) fn port(&self) -> u16 {
+    /// The port it listens on, which names its cookie.
+    pub fn port(&self) -> u16 {
         self.port
     }
 
@@ -98,6 +102,7 @@ impl Drop for Site {
 struct Rules {
     root: PathBuf,
     hosts: [String; 2],
+    cookie: String,
     secret: String,
     ignore: Option<ignore::gitignore::Gitignore>,
 }
@@ -187,7 +192,7 @@ fn answer(rules: &Rules, request: &Request) -> Answer {
     if !request
         .cookies
         .iter()
-        .any(|(name, value)| name == COOKIE && *value == rules.secret)
+        .any(|(name, value)| *name == rules.cookie && *value == rules.secret)
     {
         return Answer::Status(403, "Forbidden");
     }
@@ -358,8 +363,9 @@ mod tests {
     fn get(site: &Site, path: &str, cookie: Option<&str>, host: Option<String>) -> (u16, String) {
         let mut stream = TcpStream::connect(("127.0.0.1", site.port())).unwrap();
         let host = host.unwrap_or_else(|| format!("127.0.0.1:{}", site.port()));
+        let name = cookie_name(site.port());
         let cookie = cookie
-            .map(|c| format!("Cookie: other=1; {COOKIE}={c}\r\n"))
+            .map(|c| format!("Cookie: other=1; {name}={c}\r\n"))
             .unwrap_or_default();
         write!(stream, "GET {path} HTTP/1.1\r\nHost: {host}\r\n{cookie}\r\n").unwrap();
         let mut text = String::new();
@@ -422,7 +428,7 @@ mod tests {
         let port = site.port();
         write!(
             stream,
-            "HEAD /index.html HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nCookie: {COOKIE}=k\r\n\r\n"
+            "HEAD /index.html HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nCookie: site_preview_{port}=k\r\n\r\n"
         )
         .unwrap();
         let mut text = String::new();
@@ -458,6 +464,7 @@ mod tests {
         let rules = Rules {
             root: PathBuf::from("/"),
             hosts: ["h:1".into(), "l:1".into()],
+            cookie: cookie_name(1),
             secret: "k".into(),
             ignore: None,
         };
@@ -465,8 +472,28 @@ mod tests {
             method: "POST".into(),
             target: "/".into(),
             host: Some("h:1".into()),
-            cookies: vec![(COOKIE.into(), "k".into())],
+            cookies: vec![(cookie_name(1), "k".into())],
         };
         assert_eq!(answer(&rules, &request), Answer::Status(405, "Method Not Allowed"));
+    }
+
+    #[test]
+    fn each_server_takes_only_the_cookie_named_after_its_port() {
+        assert_eq!(cookie_name(52011), "site_preview_52011");
+        assert_ne!(cookie_name(52011), cookie_name(52012));
+        let dir = folder();
+        let site = Site::start(&dir, "k".into()).unwrap();
+        let other = site.port().wrapping_add(1);
+        let mut stream = TcpStream::connect(("127.0.0.1", site.port())).unwrap();
+        let port = site.port();
+        write!(
+            stream,
+            "GET / HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nCookie: site_preview_{other}=k; site_preview=k\r\n\r\n"
+        )
+        .unwrap();
+        let mut text = String::new();
+        stream.read_to_string(&mut text).unwrap();
+        assert!(text.starts_with("HTTP/1.1 403"), "{text}");
+        assert_eq!(get(&site, "/", Some("k"), None).0, 200);
     }
 }

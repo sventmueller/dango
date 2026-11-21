@@ -12,24 +12,39 @@ pub use crate::model::HISTORY_PAGE;
 
 /// The panel's phase, its sections, the branch and what is running.
 pub struct Seen {
+    /// The panel's phase, by its name in the code.
     pub phase: String,
+    /// The paths of the conflicts section.
     pub conflicts: Vec<PathBuf>,
+    /// The paths of the staged section.
     pub staged: Vec<PathBuf>,
+    /// The paths of the changes section.
     pub changes: Vec<PathBuf>,
+    /// How many commits the history lists.
     pub commits: usize,
     /// The subject and the number of parents of the commit HEAD is at.
     pub top: Option<(String, usize)>,
+    /// How many rows the outline view has.
     pub rows: isize,
+    /// The message of the problem the panel shows.
     pub problem: Option<String>,
+    /// The branch HEAD is on.
     pub branch: Option<String>,
+    /// The branch's upstream.
     pub upstream: Option<String>,
+    /// How many commits the branch is ahead of its upstream and behind it.
     pub ahead_behind: Option<(u32, u32)>,
+    /// The merge, rebase or other operation in progress, by its name in the code.
     pub operation: Option<String>,
+    /// Whether the banner of an operation in progress shows.
     pub banner: bool,
+    /// Whether the banner's button to continue is enabled.
     pub can_resume: bool,
+    /// Whether a git command of the panel runs.
     pub busy: bool,
 }
 
+/// What the self-test reads from the Git panel of `controller`'s window.
 pub fn seen(controller: &(impl AsWindow + ?Sized)) -> Option<Seen> {
     let controller = &controller.as_window();
     let panel = panel::of(controller)?;
@@ -105,6 +120,7 @@ pub fn commit(controller: &(impl AsWindow + ?Sized), message: &str) {
 
 /// A button of the panel.
 #[derive(Debug, Clone, Copy)]
+#[expect(missing_docs, reason = "the names say it")]
 pub enum Control {
     Fetch,
     Pull,
@@ -247,6 +263,7 @@ pub fn tree_rows(controller: &(impl AsWindow + ?Sized), tree: &Path) -> Vec<Path
 
 /// What a worktree row offers.
 #[derive(Debug, Clone, Copy)]
+#[expect(missing_docs, reason = "the names say it")]
 pub enum TreeAction {
     TakeOver,
     OpenThread,

@@ -16,7 +16,7 @@
 //! assert_eq!(reports[0].id.name, "TestA");
 //! ```
 
-#![warn(missing_docs)]
+#![forbid(unsafe_code)]
 
 pub mod board;
 mod bun;

@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "설치 중: 다운로드 중…";
 "Installation: lade herunter … {} %" = "설치 중: 다운로드 중… {}%";
 "Installation: prüfe die Prüfsumme …" = "설치 중: 체크섬 확인 중…";
-"Installation: suche die neueste Version …" = "설치 중: 최신 버전 찾는 중…";
 "Installiere …" = "설치 중…";
 "Installiere … {}" = "설치 중… {}";
 "Installieren" = "설치";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "일치하는 심볼";
 "Wird indexiert …" = "색인 생성 중…";
 "Nichts gefunden" = "찾은 항목 없음";
+"Keine Dateien gefunden" = "찾은 파일 없음";
+"Wird gesucht …" = "검색 중…";
+"Symbole im Projekt" = "프로젝트의 심볼";
+"Symbol im Projekt suchen" = "프로젝트에서 심볼 찾기";
+"Abhängigkeit · {}" = "의존성 · {}";
 "Aufrufer" = "호출자";
 "Aufgerufene" = "호출 대상";
 "Obertypen" = "상위 유형";
@@ -2382,5 +2386,15 @@
 "Funktion vorschlagen …" = "기능 제안…";
 "Problem melden …" = "문제 신고…";
 "{} auf GitHub" = "GitHub의 {}";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "‘{}’ 전체를 신뢰할 수 없음";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "신뢰는 그 안의 모든 폴더에 적용되며, 나중에 생성된 폴더도 포함됩니다. 홈 폴더, 볼륨의 루트, 데스크탑, 문서, 다운로드, 라이브러리의 경우 모든 다운로드와 복제한 모든 저장소가 해당됩니다. 신뢰하려면 프로젝트 폴더 자체를 여십시오. 여기에서는 읽고 편집할 수 있지만 아무것도 시작되지 않습니다.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "신뢰는 그 안의 모든 폴더에도 적용되며, 나중에 생성된 폴더도 포함됩니다.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{}은(는) 신뢰하는 폴더에서만 시작됩니다. 이 폴더는 프로젝트 하나보다 훨씬 많은 것을 포함하므로 전체를 신뢰할 수 없습니다. 프로젝트 폴더 자체를 여십시오.";
+"Vorschläge pausiert: gitleaks fehlt" = "제안 일시 정지: gitleaks 없음";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "gitleaks가 없으면 코드에서 시크릿을 검사하지 않습니다. ‘{}’ 명령으로 설치하거나 검사 없이 보내십시오.";
+"Ungeprüft an {} senden?" = "검사 없이 {}에 보내겠습니까?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "gitleaks가 없으면 {}에 보내는 코드에 시크릿이 있는지 검사하지 않습니다. ‘{}’ 명령으로 설치하거나 검사 없이 보내십시오. 이 선택은 이 Mac에 적용되며 설정의 ‘예측’에서 취소할 수 있습니다.";
+"Ungeprüft senden" = "검사 없이 보내기";
+"Zwischenablage durch Programm ersetzt" = "프로그램이 클립보드를 대체함";
 "„{}“ hat nichts ausgegeben." = "‘{}’에서 출력된 내용이 없습니다.";
 "„{}“ hat noch nichts ausgegeben." = "‘{}’에서 아직 출력된 내용이 없습니다.";

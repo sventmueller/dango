@@ -3,6 +3,7 @@ name = "ide-dap"
 version = "0.0.0"
 description = "Debugging through the Debug Adapter Protocol: sessions, the adapters, launch configurations and who owns which process"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 

@@ -25,7 +25,12 @@ impl AgentTab {
         }
         let Some(controller) = self.controller() else { return };
         if !controller.is_trusted() {
-            self.set_problem(Some(Problem::Untrusted));
+            let problem = if ide_project::TrustStore::open().refuses(&self.cwd) {
+                Problem::TooBroad
+            } else {
+                Problem::Untrusted
+            };
+            self.set_problem(Some(problem));
             return;
         }
         self.parking.process.take();

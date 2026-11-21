@@ -142,7 +142,7 @@ fn run_in_terminal(inner: &Arc<Inner>, arguments: &Value, responder: Responder) 
     if args.is_empty() {
         return responder.fail(Refusal::NoProgram);
     }
-    let env = arguments
+    let env: Vec<(String, Option<String>)> = arguments
         .get("env")
         .and_then(Value::as_object)
         .map(|env| {
@@ -151,6 +151,9 @@ fn run_in_terminal(inner: &Arc<Inner>, arguments: &Value, responder: Responder) 
                 .collect()
         })
         .unwrap_or_default();
+    if let Some(refusal) = unsafe_for_a_shell(&args, &env) {
+        return responder.fail(refusal);
+    }
     let request = TerminalRequest {
         title: arguments.get("title").and_then(Value::as_str).map(str::to_string),
         cwd: PathBuf::from(arguments.get("cwd").and_then(Value::as_str).unwrap_or("/")),
@@ -160,6 +163,26 @@ fn run_in_terminal(inner: &Arc<Inner>, arguments: &Value, responder: Responder) 
     };
     inner.lock().in_terminal = true;
     inner.emit(Event::RunInTerminal(request, TerminalAnswer { responder }));
+}
+
+/// Why `args` and `env` cannot be typed into a shell as one line of quoted words and `export`s, if they cannot.
+fn unsafe_for_a_shell(args: &[String], env: &[(String, Option<String>)]) -> Option<Refusal> {
+    if let Some((name, _)) = env.iter().find(|(name, _)| !is_variable_name(name)) {
+        return Some(Refusal::VariableName(name.clone()));
+    }
+    let values = env.iter().filter_map(|(_, value)| value.as_deref());
+    args.iter()
+        .map(String::as_str)
+        .chain(values)
+        .any(|text| text.chars().any(char::is_control))
+        .then_some(Refusal::ControlCharacter)
+}
+
+/// Whether `name` matches `[A-Za-z_][A-Za-z0-9_]*`, the names POSIX shells take for `export` and `unset`.
+fn is_variable_name(name: &str) -> bool {
+    let mut chars = name.chars();
+    chars.next().is_some_and(|c| c == '_' || c.is_ascii_alphabetic())
+        && chars.all(|c| c == '_' || c.is_ascii_alphanumeric())
 }
 
 /// Starts the session the adapter asks for beneath this one, on a connection of its own to the same adapter.
@@ -218,5 +241,53 @@ impl Request {
             Request::Launch => Request::Launch,
             Request::Attach => child,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn refusal(args: &[&str], env: &[(&str, Option<&str>)]) -> Option<String> {
+        let args: Vec<String> = args.iter().map(|a| (*a).to_string()).collect();
+        let env: Vec<(String, Option<String>)> = env
+            .iter()
+            .map(|(name, value)| ((*name).to_string(), value.map(str::to_string)))
+            .collect();
+        unsafe_for_a_shell(&args, &env).map(|r| r.to_string())
+    }
+
+    #[test]
+    fn only_names_a_shell_can_export_pass() {
+        let fine = [
+            ("A", Some("1")),
+            ("_x9", None),
+            ("NODE_OPTIONS", Some("--inspect 'q' $HOME")),
+        ];
+        assert_eq!(refusal(&["/p/app", "--x"], &fine), None);
+        for name in ["", "9A", "A-B", "A B", "A=B", "A;rm -rf ~;B", "$(id)", "Ä"] {
+            assert_eq!(
+                refusal(&["/p/app"], &[(name, Some("1"))]),
+                Some(format!(
+                    "runInTerminal with the variable name {name:?}, which no shell sets"
+                )),
+                "{name:?}"
+            );
+            assert!(refusal(&["/p/app"], &[(name, None)]).is_some(), "{name:?}");
+        }
+    }
+
+    #[test]
+    fn a_control_character_in_an_argument_or_value_refuses_the_whole_request() {
+        let control = "runInTerminal with a control character in an argument or value";
+        for text in ["a\nb", "a\rb", "\x03", "\x1b[2J", "\t", "\x7f", "\u{9b}"] {
+            assert_eq!(refusal(&["/p/app", text], &[]).as_deref(), Some(control), "{text:?}");
+            assert_eq!(
+                refusal(&["/p/app"], &[("A", Some(text))]).as_deref(),
+                Some(control),
+                "{text:?}"
+            );
+        }
+        assert_eq!(refusal(&["/p/app", "ü 😀 'quoted'"], &[("A", Some("é"))]), None);
     }
 }

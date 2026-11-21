@@ -30,6 +30,7 @@ pub struct Seen {
     pub view: Option<Retained<NSView>>,
 }
 
+/// What the self-test reads of the breakdown popover of the tab with `key`.
 pub fn seen(key: AgentKey) -> Seen {
     let offered = with_gauges(|gauges| {
         gauges

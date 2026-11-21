@@ -9,6 +9,7 @@ unsafe extern "C" {
     fn NSLog(format: *const NSString, ...);
 }
 
+/// Writes to the system log that `what` failed with `detail`.
 pub fn report(what: &str, detail: impl std::fmt::Display) {
     let message = ns(&format!("{}: {what}: {detail}", ide_product::NAME));
     // SAFETY: A valid format with one object placeholder and that one object, so nothing in the message is read as

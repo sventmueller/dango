@@ -34,6 +34,7 @@ pub mod errors;
 pub mod key;
 pub mod ui;
 
+#[cfg(feature = "crossterm")]
 pub use crossterm;
 pub use editor_types::prelude;
 pub use keybindings;

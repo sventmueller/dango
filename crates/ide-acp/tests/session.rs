@@ -2,6 +2,8 @@
 //! signing in, loading a session, modes and options, an agent that speaks another protocol version, and recording a
 //! session for replay.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use ide_core::testing::scratch;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};

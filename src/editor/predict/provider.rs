@@ -25,6 +25,8 @@ pub(crate) struct Chosen {
     pub(crate) ollama: Option<Local>,
     pub(crate) lm_studio: Option<Local>,
     pub(crate) consent: Vec<String>,
+    /// Whether text may go to a provider outside the Mac unchecked while gitleaks is missing.
+    pub(crate) unchecked: bool,
 }
 
 impl Chosen {
@@ -37,6 +39,7 @@ impl Chosen {
             ollama: Some(settings.get(&model::OLLAMA)),
             lm_studio: Some(settings.get(&model::LM_STUDIO)),
             consent: settings.get(&model::CONSENT),
+            unchecked: settings.get(&model::UNCHECKED),
         }
     }
 
@@ -92,7 +95,7 @@ pub(crate) struct Predictions {
     forced_outside: Cell<bool>,
     /// The last secrets check of each file (R15).
     scans: super::guard::Scans,
-    /// Whether this run already said that gitleaks is missing.
+    /// Whether this run already said that gitleaks is missing while text goes out unchecked.
     pub(super) told_missing: Cell<bool>,
 }
 
@@ -122,12 +125,31 @@ pub(crate) fn next_question() -> u64 {
     })
 }
 
-/// Whether requests leave the Mac: the chosen provider needs consent, or the self-test's counts as outside.
-pub(crate) fn outside() -> bool {
-    if forced() {
-        return with(|p| p.forced_outside.get());
+/// Where requests go: outside the Mac when the chosen provider needs consent or the self-test's counts as outside, and
+/// then whether the user chose to send unchecked while gitleaks is missing.
+pub(crate) fn reach() -> super::guard::Reach {
+    let chosen = chosen();
+    let outside = if forced() {
+        with(|p| p.forced_outside.get())
+    } else {
+        chosen.consent_id().is_some()
+    };
+    if outside {
+        super::guard::Reach::Outside {
+            unchecked: chosen.unchecked,
+        }
+    } else {
+        super::guard::Reach::Here
     }
-    chosen().consent_id().is_some()
+}
+
+/// Keeps whether text goes to a provider outside the Mac unchecked while gitleaks is missing.
+pub(crate) fn set_unchecked(unchecked: bool) {
+    let mut settings = Settings::load_user();
+    if let Err(error) = settings.set(&model::UNCHECKED, &unchecked) {
+        crate::diag::report("saving whether edit prediction sends unchecked", error);
+    }
+    settings_changed();
 }
 
 /// The last secrets check of each file.
@@ -138,11 +160,11 @@ pub(crate) fn scans() -> super::guard::Scans {
 /// The secrets check with gitleaks from the login shell's PATH, through the app's git; blocks, for worker threads.
 pub(crate) fn gitleaks() -> super::guard::Scan {
     use super::guard::Verdict;
-    Arc::new(|folder: &Path, text: &str| {
+    Arc::new(|text: &str| {
         let Some(git) = ide_ui_git::git() else {
             return Verdict::Failed(t("Die Umgebung der Login-Shell fehlt.").to_string());
         };
-        match git.scan_text(folder, text) {
+        match git.scan_text(text) {
             Ok(ide_git::SecretScan::Clean) => Verdict::Clean,
             Ok(ide_git::SecretScan::NotInstalled) => Verdict::NotInstalled,
             Ok(ide_git::SecretScan::Found(_)) => Verdict::Found,
@@ -422,11 +444,14 @@ pub(crate) fn consent() {
     settings_changed();
 }
 
-/// Takes back every consent given.
+/// Takes back every consent given, sending unchecked among them.
 pub(crate) fn revoke_all() {
     let mut settings = Settings::load_user();
     if let Err(error) = settings.set(&model::CONSENT, &Vec::new()) {
         crate::diag::report("taking back the consent for edit prediction", error);
+    }
+    if let Err(error) = settings.set(&model::UNCHECKED, &false) {
+        crate::diag::report("taking back sending unchecked", error);
     }
     with(|p| p.asked_consent.set(false));
     settings_changed();

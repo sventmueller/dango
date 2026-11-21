@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Menginstal: mengunduh…";
 "Installation: lade herunter … {} %" = "Menginstal: mengunduh… {}%";
 "Installation: prüfe die Prüfsumme …" = "Menginstal: memverifikasi checksum…";
-"Installation: suche die neueste Version …" = "Menginstal: mencari versi terbaru…";
 "Installiere …" = "Menginstal…";
 "Installiere … {}" = "Menginstal… {}";
 "Installieren" = "Instal";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Simbol yang Cocok";
 "Wird indexiert …" = "Mengindeks…";
 "Nichts gefunden" = "Tidak ada yang ditemukan";
+"Keine Dateien gefunden" = "Tidak ada file yang ditemukan";
+"Wird gesucht …" = "Mencari…";
+"Symbole im Projekt" = "Simbol dalam Proyek";
+"Symbol im Projekt suchen" = "Temukan Simbol dalam Proyek";
+"Abhängigkeit · {}" = "Dependensi · {}";
 "Aufrufer" = "Pemanggil";
 "Aufgerufene" = "Yang Dipanggil";
 "Obertypen" = "Supertipe";
@@ -2382,5 +2386,15 @@
 "Funktion vorschlagen …" = "Sarankan Fitur…";
 "Problem melden …" = "Laporkan Masalah…";
 "{} auf GitHub" = "{} di GitHub";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "“{}” Tidak Dapat Dipercayai Secara Keseluruhan";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "Kepercayaan berlaku untuk semua folder di dalamnya, termasuk yang dibuat kemudian. Untuk folder pengguna, akar volume, Desktop, Dokumen, Unduhan, dan Library, itu berarti setiap unduhan dan setiap repo yang dikloning. Buka folder proyek itu sendiri untuk memercayainya; di sini Anda dapat membaca dan mengedit, tetapi tidak ada yang dimulai.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "Kepercayaan ini juga berlaku untuk semua folder di dalamnya, termasuk yang dibuat kemudian.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} hanya dimulai di folder yang Anda percayai. Folder ini tidak dapat dipercayai secara keseluruhan karena berisi jauh lebih banyak daripada satu proyek; buka folder proyek itu sendiri.";
+"Vorschläge pausiert: gitleaks fehlt" = "Saran dijeda: gitleaks tidak ada";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Tanpa gitleaks, tidak ada yang memeriksa kode untuk mencari rahasia. Instal dengan “{}” atau kirim tanpa diperiksa.";
+"Ungeprüft an {} senden?" = "Kirim ke {} Tanpa Diperiksa?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Tanpa gitleaks, tidak ada yang memeriksa apakah kode yang dikirim ke {} berisi rahasia. Instal dengan “{}”, atau kirim tanpa diperiksa; pilihan ini berlaku di Mac ini dan dapat dicabut di Pengaturan, bagian “Prediksi”.";
+"Ungeprüft senden" = "Kirim Tanpa Diperiksa";
+"Zwischenablage durch Programm ersetzt" = "Papan klip diganti oleh program";
 "„{}“ hat nichts ausgegeben." = "“{}” tidak menghasilkan output.";
 "„{}“ hat noch nichts ausgegeben." = "“{}” belum menghasilkan output.";

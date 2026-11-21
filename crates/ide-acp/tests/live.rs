@@ -6,6 +6,8 @@
 //! `cargo test -p ide-acp --test live -- --ignored --exact <name> --nocapture`. A test that finds no program, runtime
 //! or sign-in prints `integration skip: <why>` and passes, which the runner reports as skipped.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use ide_core::testing::scratch;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};

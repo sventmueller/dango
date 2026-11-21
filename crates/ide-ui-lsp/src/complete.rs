@@ -374,7 +374,7 @@ impl CompletionList {
         let start = completions
             .items
             .iter()
-            .find_map(|item| ide_lsp::insertion(item).insert)
+            .find_map(ide_lsp::insert_range)
             .map(|range| text::offset(view.document().text(), range.start))
             .filter(|start| *start <= cursor)
             .unwrap_or_else(|| word_start(view, cursor));

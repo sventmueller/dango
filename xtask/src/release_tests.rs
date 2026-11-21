@@ -378,3 +378,22 @@ fn finder_lays_out_only_an_image_it_can_see_mounted() {
     assert!(sh.of("hdiutil")[1].starts_with("hdiutil attach -readwrite -noverify -noautoopen"));
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+#[test]
+fn the_debug_symbols_of_every_program_stay_beside_the_release() {
+    let mut sh = Fake::new(|_: &Command, _: &str| (0, String::new()));
+    let kept = keep_dsyms(&mut sh, Path::new("/dist"), "1.2.3").unwrap();
+    assert_eq!(kept, PathBuf::from(format!("/dist/{NAME}-1.2.3-dSYMs")));
+    let names: Vec<&str> = std::iter::once(PROGRAM)
+        .chain(SERVICES.iter().map(|service| service.program))
+        .collect();
+    assert_eq!(sh.commands.len(), names.len());
+    for (line, name) in sh.commands.iter().zip(names) {
+        let copied = format!(
+            "ditto {} {}",
+            universal_dsym(name).display(),
+            kept.join(format!("{name}.dSYM")).display()
+        );
+        assert_eq!(*line, copied);
+    }
+}

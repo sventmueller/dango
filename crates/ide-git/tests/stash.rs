@@ -1,6 +1,8 @@
 //! The stash: parking changes, listing and reading entries, applying them back, and the state an apply that meets
 //! conflicts leaves until it is finished or abandoned (E87).
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod common;
 
 use std::path::{Path, PathBuf};

@@ -17,7 +17,7 @@
 //! assert_eq!(vim.mode(), Mode::Insert);
 //! ```
 
-#![warn(missing_docs)]
+#![forbid(unsafe_code)]
 
 mod diff;
 mod note;
@@ -222,7 +222,7 @@ impl Vim {
 
     /// Feeds the character `c` as typed, `<` and spaces included, which [`Vim::keys`] would read as key names.
     pub fn char(&mut self, c: char) -> Outcome {
-        use modalkit::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+        use modalkit::key::event::{KeyCode, KeyEvent, KeyModifiers};
         self.key(TerminalKey::from(KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE)))
     }
 

@@ -8,6 +8,7 @@ use objc2_foundation::NSUndoManager;
 pub struct FlagGuard<'a>(&'a Cell<bool>);
 
 impl<'a> FlagGuard<'a> {
+    /// Raises `flag` until the guard drops.
     pub fn raise(flag: &'a Cell<bool>) -> Self {
         flag.set(true);
         Self(flag)
@@ -78,6 +79,7 @@ impl Drop for UndoGroupGuard<'_> {
 pub struct OnDrop<F: FnOnce()>(Option<F>);
 
 impl<F: FnOnce()> OnDrop<F> {
+    /// The guard that runs `f` when it drops.
     pub fn new(f: F) -> Self {
         Self(Some(f))
     }

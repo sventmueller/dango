@@ -7,7 +7,6 @@
 //! [`search_panel`] and [`files_panel`] are what the app's search and files panels decide without AppKit.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
 
 pub mod editorconfig;
 pub mod files_panel;

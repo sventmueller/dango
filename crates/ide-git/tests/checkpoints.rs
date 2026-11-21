@@ -1,6 +1,8 @@
 //! Checkpoints in repositories and in folders outside git: taking them without touching the user's state, restoring
 //! them around the user's own edits, diffs, buffers, pruning, and that they stay local.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod common;
 
 use std::path::{Path, PathBuf};

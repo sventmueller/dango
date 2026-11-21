@@ -5,7 +5,6 @@
 //! stamp.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
 
 pub mod atomic_write;
 mod cancel;

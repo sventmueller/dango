@@ -17,7 +17,6 @@ use objc2_web_kit::{
 };
 
 use super::address;
-use ide_ui_common::constant;
 use ide_ui_common::util::{guarded, ns};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
@@ -46,22 +45,23 @@ fn store(mtm: MainThreadMarker) -> Retained<WKWebsiteDataStore> {
     })
 }
 
-/// Sets the cookie `name` with `value` for pages of 127.0.0.1 in the tabs' store, then calls `done`; `None` when
-/// WebKit could not make the cookie.
-pub fn set_local_cookie(mtm: MainThreadMarker, name: &str, value: &str, done: impl FnOnce() + 'static) -> Option<()> {
-    use objc2_foundation::{
-        NSDictionary, NSHTTPCookie, NSHTTPCookieDomain, NSHTTPCookieName, NSHTTPCookiePath, NSHTTPCookieValue,
-    };
-    let keys = [
-        constant!(NSHTTPCookieName),
-        constant!(NSHTTPCookieValue),
-        constant!(NSHTTPCookieDomain),
-        constant!(NSHTTPCookiePath),
-    ];
-    let values = [ns(name), ns(value), ns("127.0.0.1"), ns("/")];
-    let properties = NSDictionary::from_retained_objects(&keys, &values.map(|v| v.into()));
-    // SAFETY: The properties hold the cookie's name, value, domain and path as strings, as the method expects.
-    let cookie = unsafe { NSHTTPCookie::cookieWithProperties(&properties) }?;
+/// Sets the cookie `name` with `value` for pages of 127.0.0.1 in the tabs' store, kept from their scripts, then calls
+/// `done`; `None` when WebKit could not make the cookie.
+pub fn set_local_cookie(
+    mtm: MainThreadMarker,
+    port: u16,
+    name: &str,
+    value: &str,
+    done: impl FnOnce() + 'static,
+) -> Option<()> {
+    use objc2_foundation::{NSDictionary, NSHTTPCookie, NSURL};
+    // The property keys of NSHTTPCookie have none for HttpOnly, the header parser takes it.
+    let header = NSDictionary::from_retained_objects(
+        &[&*ns("Set-Cookie")],
+        &[ns(&format!("{name}={value}; Path=/; HttpOnly"))],
+    );
+    let url = NSURL::URLWithString(&ns(&format!("http://127.0.0.1:{port}/")))?;
+    let cookie = NSHTTPCookie::cookiesWithResponseHeaderFields_forURL(&header, &url).firstObject()?;
     let done = std::cell::Cell::new(Some(done));
     let block = block2::RcBlock::new(move || {
         ide_ui_common::util::guarded((), || {

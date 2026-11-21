@@ -1,5 +1,7 @@
 //! Blame and commit messages on temporary repositories.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod common;
 
 use std::path::Path;

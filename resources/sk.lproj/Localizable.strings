@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Inštalácia: sťahuje sa…";
 "Installation: lade herunter … {} %" = "Inštalácia: sťahuje sa… {} %";
 "Installation: prüfe die Prüfsumme …" = "Inštalácia: overuje sa kontrolný súčet…";
-"Installation: suche die neueste Version …" = "Inštalácia: hľadá sa najnovšia verzia…";
 "Installiere …" = "Inštaluje sa…";
 "Installiere … {}" = "Inštaluje sa… {}";
 "Installieren" = "Inštalovať";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Nájdené symboly";
 "Wird indexiert …" = "Indexovanie…";
 "Nichts gefunden" = "Nič sa nenašlo";
+"Keine Dateien gefunden" = "Nenašli sa žiadne súbory";
+"Wird gesucht …" = "Vyhľadáva sa…";
+"Symbole im Projekt" = "Symboly v projekte";
+"Symbol im Projekt suchen" = "Nájsť symbol v projekte";
+"Abhängigkeit · {}" = "Závislosť · {}";
 "Aufrufer" = "Volajúce";
 "Aufgerufene" = "Volané";
 "Obertypen" = "Nadtypy";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "{} na GitHube";
 "„{}“ hat nichts ausgegeben." = "Z „{}“ neprišiel žiadny výstup.";
 "„{}“ hat noch nichts ausgegeben." = "Z „{}“ zatiaľ neprišiel žiadny výstup.";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "Priečinku „{}“ nemožno dôverovať ako celku";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "Dôvera platí pre všetky priečinky v ňom vrátane neskôr vytvorených. Pre domovský priečinok, koreň zväzku, Plochu, Dokumenty, Stiahnuté súbory a Knižnicu by to bolo každé stiahnutie a každý naklonovaný repozitár. Otvorte samotný priečinok projektu, aby ste mu mohli dôverovať; tu môžete čítať a upravovať, ale nič sa nespustí.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "Dôvera platí aj pre všetky priečinky v ňom vrátane neskôr vytvorených.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} sa spúšťa iba v priečinkoch, ktorým dôverujete. Tomuto priečinku nemožno dôverovať ako celku, pretože obsahuje oveľa viac než jeden projekt; otvorte samotný priečinok projektu.";
+"Vorschläge pausiert: gitleaks fehlt" = "Návrhy pozastavené: chýba gitleaks";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Bez gitleaks nič nekontroluje kód na tajné údaje. Nainštalujte ho pomocou „{}“ alebo odošlite bez kontroly.";
+"Ungeprüft an {} senden?" = "Odoslať poskytovateľovi {} bez kontroly?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Bez gitleaks nič nekontroluje, či kód, ktorý ide poskytovateľovi {}, obsahuje tajné údaje. Nainštalujte ho pomocou „{}“ alebo odošlite bez kontroly; voľba platí na tomto Macu a môžete ju odvolať v Nastaveniach v časti „Predpoveď“.";
+"Ungeprüft senden" = "Odoslať bez kontroly";
+"Zwischenablage durch Programm ersetzt" = "Schránku nahradil program";

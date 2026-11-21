@@ -2,6 +2,8 @@
 //! and run by `make test-integration` where the adapter is installed. `IDE_DAP_RECORD=<file>` keeps the lldb-dap
 //! session as a recording for `tests/replay.rs`.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 #[path = "support/drive.rs"]
 mod drive;
 

@@ -37,7 +37,9 @@ use sheet::Sheet;
 /// How long an export waits for formulas and diagrams; what is not drawn by then goes in as its source.
 const FIGURE_WAIT: Duration = Duration::from_secs(20);
 
+/// The format of an exported file.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub enum Kind {
     Pdf,
     Html,
@@ -64,7 +66,9 @@ impl Kind {
 /// How an export ended.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Outcome {
+    /// The file is written.
     Written,
+    /// The user cancelled the export, in the save panel or its sheet.
     Cancelled,
     /// Why it failed, in words for the user.
     Failed(String),
@@ -72,6 +76,7 @@ pub enum Outcome {
 
 /// What an export makes a file of.
 pub struct Source {
+    /// The Markdown of the document.
     pub text: String,
     /// Where its relative links and pictures start.
     pub doc_dir: Option<PathBuf>,

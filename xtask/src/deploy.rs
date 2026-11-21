@@ -20,6 +20,9 @@ struct Deployment {
     commit: String,
     fingerprint: String,
     files: BTreeMap<String, String>,
+    /// The HEAD commit of each sibling checkout the release was built with.
+    #[serde(default)]
+    siblings: BTreeMap<String, String>,
 }
 
 impl Deployment {
@@ -80,6 +83,7 @@ pub(crate) fn deploy(args: &[String]) -> Result<(), String> {
     let sh: &mut dyn Shell = &mut System;
     let git = Git::at(&root());
     let fp = seal::ready(sh, &git)?;
+    let siblings = seal::siblings_ready(sh, &git)?;
     let origin = git.output(sh, &["remote", "get-url", "origin"])?;
     if !matches!(
         origin.trim(),
@@ -136,6 +140,7 @@ pub(crate) fn deploy(args: &[String]) -> Result<(), String> {
             commit: String::new(),
             fingerprint: fp,
             files: hashes,
+            siblings,
         };
         // Written before the version commit, so an interrupted upload/push can resume without a second bump.
         prepared.save(&dist)?;

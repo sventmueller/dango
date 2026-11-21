@@ -1,5 +1,7 @@
 //! The secrets check with gitleaks missing and, where this Mac has it, present.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod common;
 
 use std::path::{Path, PathBuf};
@@ -83,13 +85,12 @@ fn frozen_rules_find_what_the_scanned_folder_allows() {
         "[extend]\nuseDefault = true\n[allowlist]\nregexes = ['''ghp_''']\n",
     );
     let text = format!("token = \"{FAKE_TOKEN}\" # gitleaks:allow\n");
-    assert_eq!(
-        git.scan_text(&order, &text).unwrap(),
-        SecretScan::Clean,
-        "what the order's own folder allows passes the plain check"
-    );
     let SecretScan::Found(findings) = git.scan_text_frozen(&text, &FrozenRules::default()).unwrap() else {
         panic!("the frozen rules find the token")
+    };
+    assert_eq!(findings[0].rule, "github-pat");
+    let SecretScan::Found(findings) = git.scan_text(&text).unwrap() else {
+        panic!("the check before a prediction ignores the allowlist and the allow comment too")
     };
     assert_eq!(findings[0].rule, "github-pat");
 

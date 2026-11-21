@@ -220,7 +220,6 @@ fn install_progress(folder: &Path, id: u64, progress: &ide_lsp::Progress) {
 fn progress_text(progress: &ide_lsp::Progress) -> Option<String> {
     Some(match progress {
         ide_lsp::Progress::Step(step) => match step {
-            ide_lsp::Step::Resolving => t("Installation: suche die neueste Version …").to_string(),
             ide_lsp::Step::Downloading => t("Installation: lade herunter …").to_string(),
             ide_lsp::Step::Verifying => t("Installation: prüfe die Prüfsumme …").to_string(),
             ide_lsp::Step::Unpacking => t("Installation: entpacke …").to_string(),
@@ -355,13 +354,7 @@ mod tests {
 
     #[test]
     fn every_stage_has_words_of_its_own() {
-        let stages = [
-            Step::Resolving,
-            Step::Downloading,
-            Step::Verifying,
-            Step::Unpacking,
-            Step::Running,
-        ];
+        let stages = [Step::Downloading, Step::Verifying, Step::Unpacking, Step::Running];
         let texts: std::collections::BTreeSet<String> = stages
             .iter()
             .filter_map(|step| progress_text(&Progress::Step(*step)))

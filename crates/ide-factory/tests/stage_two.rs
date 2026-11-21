@@ -1,6 +1,8 @@
 //! Stage 2: the planner and G1 (E178), the reviewer from another vendor (E162, E171), its structured verdict and the
 //! loop back to the builder (E179), and the user's interventions (E184).
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod support;
 
 use ide_factory::effect::Effect;

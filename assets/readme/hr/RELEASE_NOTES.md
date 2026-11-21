@@ -1,25 +1,41 @@
-## Brzina i memorija
-- Sve što agent pokrene, u bilo kojem jeziku, poput buildova, testova, ljuski i MCP poslužitelja, radi u pozadinskom
-  stanju macOS-a: s najnižim prioritetom i usporenim pristupom disku i mreži. Sami agenti, zajedno s Claudeovim
-  podagentima, rade sa srednjim prioritetom. Agenti pod punim opterećenjem više ne usporavaju Dango; to vrijedi i za
-  agente Software Factoryja.
-- Obnovljeni prozori pokreću samo ono što se vidi: AI kartica iza drugih kartica pokreće svoj CLI kad dođe u prvi plan
-  ili dobije prompt, a kartice preglednika, pregleda web-mjesta i terminala učitavaju svoju stranicu ili pokreću svoju
-  ljusku tek kad se prvi put prikažu.
-- Duga pretraga projekta više ne iscrtava iznova sve svoje rezultate dok traje. Software Factory, CI zapisnici i okno
-  Testovi rade manje dok nisu vidljivi; testovi i konfiguracije za otklanjanje pogrešaka čitaju se kad se njihovo okno
-  prvi put prikaže, a skrivena okna CI i Kontejneri ne čitaju ništa dok se ne prikažu.
-- Duge sesije trebaju manje memorije: dovršeni prikaz razlika zadržava samo retke koje pokazuje njegova pločica, zahtjev
-  za dozvolu na koji je odgovoreno otpušta svoj unos, predmemorija glifova terminala više ne raste bez ograničenja, a
-  okna Datoteke i Git otpuštaju retke kojih više nema.
-- Sam program manji je za oko 40 %.
+## Sigurnost
+- Poveznice u odgovorima, planovima i izvješćima agenta, u pregledu Markdowna i u PDF-ovima više ne otvaraju bilo koju
+  aplikaciju jednim klikom. Web-adrese otvaraju se u kartici preglednika, a datoteke u projektu u kartici urednika; sve
+  ostalo, poput datoteke negdje drugdje, mrežnog dijeljenja ili poveznice druge aplikacije, najprije pita i pokazuje
+  kamo vodi.
+- Adrese za prijavu i za Remote Control koje preda agent ili MCP poslužitelj otvaraju se samo ako su web-adrese.
+- Mapama koje sadrže mnogo više od jednog projekta, poput vaše početne mape, Radne površine, Dokumenata, Preuzimanja ili
+  korijena volumena, više se ne može vjerovati u cjelini; vjerujte njihovim projektima jednom po jednom. Pitanje o
+  povjerenju sada kaže da ono vrijedi i za mape unutar mape.
+- CI tokeni i prijave više nikad ne idu nešifriranim http-om na poslužitelj koji nije ovaj Mac; repozitorij čiji
+  udaljeni repozitorij počinje s `http://` ispituje se preko https-a.
+- Bez gitleaksa predviđanja prije slanja koda pružatelju izvan ovog Maca čekaju dok ne odaberete slanje bez provjere.
+  Vlastite postavke gitleaksa u projektu više ne isključuju provjeru.
+- Vlastiti agent više se ne može navesti da piše izvan projekta putem poveznice koja se pojavi nakon što je njegovo
+  pisanje odobreno, a datoteke s dodatnim čvrstim poveznicama dobivaju vlastitu datoteku umjesto da se piše kroz njih.
+- Dovršavanja jezičnog poslužitelja više ne mogu zamrznuti urednik, a njegova preimenovanja i brisanja povezane datoteke
+  djeluju na poveznicu, ne na ono na što pokazuje.
+- Slike koje priložite promptu dekodira izolirana usluga dekodiranja, kao i svugdje drugdje.
+- Program u terminalu može zamijeniti sadržaj memorijskog pretinca samo dok je njegov terminal u prvom planu, a terminal
+  to i kaže.
+- rust-analyzer instalira se iz izdanja koje je fiksirano zajedno s kontrolnim zbrojem, umjesto iz trenutačno
+  najnovijeg.
 
-## Prozori i izbornici
-- Zatvaranje područja premješta njegove kartice u prethodno područje, a ako ga nema, u sljedeće, umjesto da ih zatvori.
-  Samo područje pregleda i posljednje područje zatvaraju se zajedno sa svojim karticama.
-- Izbornik Prikaz navodi okna redoslijedom simbola u rubnom stupcu.
-- “Upravljaj agentima…” više nije u izborniku +; ostaje pod “+ Nova sesija” u oknu Agenti.
+## Pretraga i navigacija
+- Brzo otvaranje kaže kada nijedna datoteka ne odgovara i pokazuje pretražuje li datoteke ili simbole projekta.
+- Simboli projekta obuhvaćaju TypeScript i JavaScript i kad nijedna njihova datoteka nije otvorena. Točni rezultati iz
+  projekta i u jeziku u kojem radite dolaze prvi; simboli iz knjižnica i instaliranih paketa su označeni.
+- Prikaz › Pretraga stavlja fokus u polje za pretragu.
 
-## Ispravci
-- “Uključi i isključi datoteke” u oknu Pretraga više ne prikazuje zalutalo slovo pokraj svoje strelice.
-- Zatvaranje skočnog prozora s komentarima specifikacije više ne uzrokuje rušenje.
+## Urednik
+- Urednik zadržava fokus kad se datoteka Markdowna otvori s pregledom pokraj sebe, pa izbornik Formatiraj odmah radi.
+  Naredbe urednika rade i dok je fokus u rubnom stupcu.
+- Prijedlog na kraju retka ili u okviru ispod njega kaže da ga tipka Tab prihvaća.
+- Istoimene kartice u pregledu kartica mogu se razlikovati, na primjer datoteka i njezin pregled u pregledniku.
+- Izbornik Prikaz više ne nudi macOS-ovu stavku “Sakrij traku s karticama”, koju kartice Danga ne koriste.
+
+## Jezici i otklanjanje pogrešaka
+- JSON poslužitelj sada provjerava datoteke, a poslužitelji koji svoju dijagnostiku registriraju tek nakon pokretanja,
+  poput basedpyright i sourcekit-lsp, sada je prikazuju.
+- Gdje pip odbija instalirati u Python, kao kod Pythona iz Homebrewa, program za otklanjanje pogrešaka nudi instalaciju
+  debugpy u virtualno okruženje projekta.

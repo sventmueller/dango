@@ -1,3 +1,5 @@
+//! Helpers every UI crate shares: AppKit shorthands, guards, the main thread's lanes, layout and threads.
+
 mod appkit;
 mod guard;
 mod lanes;

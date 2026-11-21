@@ -45,7 +45,9 @@ pub struct Forge {
 }
 
 impl Forge {
+    /// Reaches every host but this Mac over https, since an http remote would carry its token in plain text (B99).
     fn new(kind: Kind, scheme: &str, host: &str, prefix: &str, project: &str) -> Forge {
+        let scheme = if loopback(host) { scheme } else { "https" };
         let web = format!("{scheme}://{host}{prefix}");
         let api = match (kind, host) {
             (Kind::GitHub, "github.com") => "https://api.github.com".to_string(),
@@ -166,6 +168,24 @@ impl RemoteUrl {
             path: path.to_string(),
         })
     }
+}
+
+/// Whether `host`, with or without its port, names this Mac: `localhost` or a loopback address.
+fn loopback(host: &str) -> bool {
+    let name = match host.strip_prefix('[') {
+        Some(rest) => rest.split(']').next().unwrap_or(rest),
+        None => host.split(':').next().unwrap_or(host),
+    };
+    name.eq_ignore_ascii_case("localhost") || name.parse::<std::net::IpAddr>().is_ok_and(|ip| ip.is_loopback())
+}
+
+/// Whether a token or refresh token may go to `url`: an https address, or a plain one on this Mac.
+pub(crate) fn may_carry_secrets(url: &str) -> bool {
+    let Some((scheme, rest)) = url.split_once("://") else {
+        return false;
+    };
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or(rest);
+    scheme.eq_ignore_ascii_case("https") || (scheme.eq_ignore_ascii_case("http") && loopback(without_user(authority)))
 }
 
 fn without_user(authority: &str) -> &str {
@@ -295,6 +315,49 @@ mod tests {
             ]
         );
         assert!(forges.iter().all(|f| f.host == "gitlab.example.com:8443"));
+    }
+
+    #[test]
+    fn a_plain_http_remote_reaches_its_api_over_https_unless_it_is_on_this_mac() {
+        let rules = [HostRule::parse("git.example.com:8080=gitlab").unwrap()];
+        let forge = &candidates("http://git.example.com:8080/group/app.git", &rules)[0];
+        assert_eq!(forge.web, "https://git.example.com:8080");
+        assert_eq!(forge.api, "https://git.example.com:8080/api/v4");
+        let named = candidates("http://gitlab.corp.example/group/app.git", &[]);
+        assert!(named.iter().all(|f| f.api.starts_with("https://")), "{named:?}");
+        let github = candidates("http://github.corp.example/acme/widget.git", &[]);
+        assert_eq!(github[0].api, "https://github.corp.example/api/v3");
+        for local in ["localhost:8080", "127.0.0.1:8080", "[::1]:8080"] {
+            let rules = [HostRule {
+                host: local.to_string(),
+                prefix: String::new(),
+                kind: Kind::GitLab,
+            }];
+            let forge = &candidates(&format!("http://{local}/group/app.git"), &rules)[0];
+            assert_eq!(forge.web, format!("http://{local}"), "{local}");
+        }
+    }
+
+    #[test]
+    fn secrets_go_only_to_https_or_to_this_mac() {
+        for url in [
+            "https://gitlab.example.com/oauth/token",
+            "HTTPS://api.github.com/user",
+            "http://127.0.0.1:8080/api/v4/user",
+            "http://localhost/oauth/token",
+            "http://[::1]:9000/api/v3",
+        ] {
+            assert!(may_carry_secrets(url), "{url}");
+        }
+        for url in [
+            "http://gitlab.example.com/oauth/token",
+            "http://127.0.0.1.example.com/api",
+            "http://user@evil.example/?127.0.0.1",
+            "ftp://127.0.0.1/x",
+            "gitlab.example.com/api",
+        ] {
+            assert!(!may_carry_secrets(url), "{url}");
+        }
     }
 
     #[test]

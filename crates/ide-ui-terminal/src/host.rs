@@ -21,6 +21,7 @@ pub enum Opened {
     /// A web address, for a browser tab.
     Url(String),
     /// A file at a line and column, both counted from 1.
+    #[expect(missing_docs, reason = "the variant says it")]
     File { path: PathBuf, line: usize, column: usize },
     /// A new terminal in this folder.
     TerminalHere(PathBuf),

@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "التثبيت: جارٍ التنزيل…";
 "Installation: lade herunter … {} %" = "التثبيت: جارٍ التنزيل… {} %";
 "Installation: prüfe die Prüfsumme …" = "التثبيت: جارٍ التحقق من المجموع الاختباري…";
-"Installation: suche die neueste Version …" = "التثبيت: جارٍ البحث عن أحدث إصدار…";
 "Installiere …" = "جارٍ التثبيت…";
 "Installiere … {}" = "جارٍ التثبيت… {}";
 "Installieren" = "تثبيت";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "الرموز المطابقة";
 "Wird indexiert …" = "تجري الفهرسة…";
 "Nichts gefunden" = "لم يُعثر على شيء";
+"Keine Dateien gefunden" = "لم يُعثر على ملفات";
+"Wird gesucht …" = "يجري البحث…";
+"Symbole im Projekt" = "الرموز في المشروع";
+"Symbol im Projekt suchen" = "البحث عن رمز في المشروع";
+"Abhängigkeit · {}" = "تبعية · {}";
 "Aufrufer" = "الدوال المستدعية";
 "Aufgerufene" = "الدوال المستدعاة";
 "Obertypen" = "الأنواع الأعلى";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "{} على GitHub";
 "„{}“ hat nichts ausgegeben." = "لم يُخرج “{}” أي شيء.";
 "„{}“ hat noch nichts ausgegeben." = "لم يُخرج “{}” أي شيء بعد.";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "لا يمكن الوثوق بـ “{}” ككل";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "تشمل الثقة كل المجلدات الموجودة فيه، بما فيها التي تُنشأ لاحقًا. وبالنسبة إلى مجلد المستخدم الرئيسي وجذر وحدة التخزين وسطح المكتب والمستندات والتنزيلات والمكتبة، سيعني ذلك كل تنزيل وكل مستودع مستنسخ. افتح مجلد المشروع نفسه للوثوق به؛ هنا يمكنك القراءة والتعديل، لكن لا يبدأ شيء.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "تشمل الثقة أيضًا كل المجلدات الموجودة فيه، بما فيها التي تُنشأ لاحقًا.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "لا يبدأ {} إلا في المجلدات التي تثق بها. لا يمكن الوثوق بهذا المجلد ككل لأنه يحتوي على أكثر بكثير من مشروع واحد؛ افتح مجلد المشروع نفسه.";
+"Vorschläge pausiert: gitleaks fehlt" = "الاقتراحات متوقفة مؤقتًا: gitleaks مفقود";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "من دون gitleaks لا يفحص شيء الشيفرة بحثًا عن بيانات سرية. ثبّته باستخدام “{}” أو أرسل دون فحص.";
+"Ungeprüft an {} senden?" = "هل تريد الإرسال إلى {} دون فحص؟";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "من دون gitleaks لا يفحص شيء ما إذا كانت الشيفرة التي تذهب إلى {} تحتوي على بيانات سرية. ثبّته باستخدام “{}”، أو أرسل دون فحص؛ ينطبق الاختيار على جهاز Mac هذا ويمكن التراجع عنه في الإعدادات ضمن “التنبؤ”.";
+"Ungeprüft senden" = "إرسال دون فحص";
+"Zwischenablage durch Programm ersetzt" = "استبدل برنامج محتوى الحافظة";

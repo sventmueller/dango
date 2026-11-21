@@ -1,5 +1,5 @@
 //! The folders the user trusts to run what they control, such as git hooks, language servers from the project and
-//! agent hooks: a folder is trusted when it or a folder above it is.
+//! agent hooks: a folder is trusted when it or a folder above it is, unless that folder is [`too_broad`].
 
 use ide_core::LockIgnoringPoison;
 use ide_core::stamp::ByStamp;
@@ -34,6 +34,7 @@ struct Stored {
 #[derive(Debug, Clone)]
 pub struct TrustStore {
     file: PathBuf,
+    home: PathBuf,
 }
 
 enum Read {
@@ -45,12 +46,15 @@ enum Read {
 impl TrustStore {
     /// The store in the app's data folder.
     pub fn open() -> TrustStore {
-        TrustStore::in_dir(&ide_core::paths::data_dir())
+        TrustStore::in_dir(&ide_core::paths::data_dir(), &ide_core::paths::home())
     }
 
-    /// The store in `dir`, for tests.
-    pub(crate) fn in_dir(dir: &Path) -> TrustStore {
-        TrustStore { file: dir.join(FILE) }
+    /// The store in `dir` for the home folder `home`, for tests.
+    pub(crate) fn in_dir(dir: &Path, home: &Path) -> TrustStore {
+        TrustStore {
+            file: dir.join(FILE),
+            home: canonical(home),
+        }
     }
 
     /// Whether `folder` or a folder above it is trusted; nothing is while the file cannot be read.
@@ -64,15 +68,29 @@ impl TrustStore {
             return false;
         }
         let folder = canonical(folder);
-        roots.iter().any(|root| folder.starts_with(canonical(root)))
+        roots.iter().map(|root| canonical(root)).any(|root| {
+            // Older versions stored such folders; they hold whatever lands in them, so they no longer count.
+            !too_broad(&root, &self.home) && folder.starts_with(root)
+        })
     }
 
-    /// Trusts `folder` and everything below it.
+    /// Whether `folder` holds too much to trust as a whole, so [`TrustStore::trust`] refuses it.
+    pub fn refuses(&self, folder: &Path) -> bool {
+        too_broad(&canonical(folder), &self.home)
+    }
+
+    /// Trusts `folder` and everything below it; refuses a folder that is [`too_broad`].
     pub fn trust(&self, folder: &Path) -> io::Result<()> {
         let folder = canonical(folder);
         folder
             .to_str()
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "the path is not UTF-8"))?;
+        if too_broad(&folder, &self.home) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("{} holds too much to trust as a whole", folder.display()),
+            ));
+        }
         self.change(|roots| {
             if roots.iter().any(|root| canonical(root) == folder) {
                 return false;
@@ -142,6 +160,26 @@ impl TrustStore {
     }
 }
 
+/// The folders in the home folder that collect files from anywhere, such as downloads and mail attachments.
+const COLLECTING: [&str; 4] = ["Desktop", "Documents", "Downloads", "Library"];
+
+/// Whether trusting `path` would trust far more than a project: the root, a folder above `home` or `home` itself, a
+/// volume's root, or a folder in `home` that collects files from anywhere. Both paths are taken as they are spelled.
+pub fn too_broad(path: &Path, home: &Path) -> bool {
+    let Some(parent) = path.parent() else { return true };
+    if home.starts_with(path) || path == Path::new("/Volumes") {
+        return true;
+    }
+    if parent == Path::new("/Volumes") || parent == Path::new("/System/Volumes") {
+        return true;
+    }
+    parent == home
+        && path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| COLLECTING.iter().any(|c| c.eq_ignore_ascii_case(name)))
+}
+
 /// `path` absolute, with links resolved and each name in the case it has on disk, as far as the path exists.
 fn canonical(path: &Path) -> PathBuf {
     let absolute = std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf());
@@ -173,7 +211,11 @@ mod tests {
         let projects = base.join("Projects");
         std::fs::create_dir_all(projects.join("app/src")).unwrap();
         std::fs::create_dir_all(projects.join("other")).unwrap();
-        (TrustStore::in_dir(&base.join("data")), projects, base)
+        (
+            TrustStore::in_dir(&base.join("data"), &base.join("home")),
+            projects,
+            base,
+        )
     }
 
     #[test]
@@ -219,6 +261,57 @@ mod tests {
         assert!(store.revoke(&projects).unwrap());
         assert!(!store.is_trusted(&projects.join("app")));
         assert!(store.list().is_empty());
+    }
+
+    #[test]
+    fn folders_that_hold_far_more_than_a_project_are_too_broad() {
+        let home = Path::new("/Users/someone");
+        for path in [
+            "/",
+            "/Users",
+            "/Users/someone",
+            "/Volumes",
+            "/Volumes/Backup",
+            "/System/Volumes/Data",
+            "/Users/someone/Downloads",
+            "/Users/someone/Desktop",
+            "/Users/someone/Documents",
+            "/Users/someone/Library",
+            "/Users/someone/downloads",
+        ] {
+            assert!(too_broad(Path::new(path), home), "{path}");
+        }
+        for path in [
+            "/Users/someone/Repos",
+            "/Users/someone/Repos/app",
+            "/Users/someone/Documents/app",
+            "/Users/someone/Library/Mobile Documents/app",
+            "/Volumes/Backup/app",
+            "/Users/other/Downloads",
+            "/opt/work",
+        ] {
+            assert!(!too_broad(Path::new(path), home), "{path}");
+        }
+    }
+
+    #[test]
+    fn a_too_broad_folder_is_refused_and_a_stored_one_trusts_nothing() {
+        let (store, projects, base) = setup("trust-broad");
+        let home = base.join("home");
+        std::fs::create_dir_all(home.join("Downloads/repo")).unwrap();
+        assert!(store.refuses(&home));
+        assert!(store.refuses(&home.join("Downloads")));
+        assert!(!store.refuses(&home.join("Downloads/repo")));
+        assert!(store.trust(&home).is_err());
+        assert!(store.trust(&home.join("Downloads")).is_err());
+        assert!(store.list().is_empty());
+        std::fs::create_dir_all(store.file.parent().unwrap()).unwrap();
+        let roots = [base.to_path_buf(), home.join("Downloads"), projects.join("app")];
+        let stored = serde_json::json!({"version": 1, "roots": roots});
+        std::fs::write(&store.file, stored.to_string()).unwrap();
+        assert!(!store.is_trusted(&home.join("Downloads/repo")));
+        assert!(!store.is_trusted(&projects.join("other")));
+        assert!(store.is_trusted(&projects.join("app/src")));
     }
 
     #[test]

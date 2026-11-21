@@ -4,6 +4,8 @@
 //! server and its Remote Control, a rewind at launch, the typed failure of each path, and the own agent continuing a
 //! stored conversation.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod support;
 
 use ide_claude::PermissionAnswer;

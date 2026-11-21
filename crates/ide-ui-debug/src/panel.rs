@@ -42,6 +42,7 @@ pub struct PanelIvars {
 
 define_class!(
     // SAFETY: NSObject has no subclassing requirements and `DebugPanel` does not implement Drop.
+    /// The debugger panel of one window, the data source and delegate of its lists and the inspector's.
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEDebugPanel"]
@@ -304,6 +305,7 @@ impl DebugPanel {
         self.ivars().model.borrow_mut()
     }
 
+    /// The panel's model, to read.
     pub fn read(&self) -> std::cell::Ref<'_, Model> {
         self.ivars().model.borrow()
     }

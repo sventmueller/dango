@@ -1,6 +1,8 @@
 //! Installing npm and uv packages and archives with stand-ins for npm, node, uv and the network: what each helper
 //! must leave behind before the installation counts, and what the user is told when it does not.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use ide_core::testing::scratch;
 use std::io;
 use std::path::{Path, PathBuf};

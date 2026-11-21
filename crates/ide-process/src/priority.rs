@@ -211,8 +211,16 @@ mod tests {
             .process_group(0)
             .spawn()
             .unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(500));
         let pid = agent.id();
+        let started = std::time::Instant::now();
+        while started.elapsed() < std::time::Duration::from_secs(5) {
+            let below = children(pid);
+            let shell = below.iter().copied().find(|&c| name(c).as_deref() == Some("zsh"));
+            if below.len() >= 2 && shell.is_some_and(|shell| !children(shell).is_empty()) {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
         let mut lowered = HashSet::new();
         lower_agent_commands(&[pid], &mut lowered);
         let below = children(pid);

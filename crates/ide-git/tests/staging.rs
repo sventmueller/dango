@@ -1,5 +1,7 @@
 //! Staging, unstaging and discarding files and hunks, checked against what git itself then reports.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod common;
 
 use std::path::{Path, PathBuf};

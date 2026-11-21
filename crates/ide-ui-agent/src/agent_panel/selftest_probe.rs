@@ -71,6 +71,7 @@ pub fn edges(controller: &(impl AsWindow + ?Sized)) -> Option<Vec<(f64, f64)>> {
     Some(rows)
 }
 
+/// What the self-test reads from the agents panel of `controller`'s window.
 pub fn inspect(controller: &(impl AsWindow + ?Sized)) -> Option<Inspection> {
     let controller = &controller.as_window();
     let panel = panel_of(controller)?;

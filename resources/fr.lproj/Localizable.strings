@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Installation : téléchargement…";
 "Installation: lade herunter … {} %" = "Installation : téléchargement… {} %";
 "Installation: prüfe die Prüfsumme …" = "Installation : vérification de la somme de contrôle…";
-"Installation: suche die neueste Version …" = "Installation : recherche de la dernière version…";
 "Installiere …" = "Installation…";
 "Installiere … {}" = "Installation… {}";
 "Installieren" = "Installer";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Symboles correspondants";
 "Wird indexiert …" = "Indexation…";
 "Nichts gefunden" = "Aucun résultat";
+"Keine Dateien gefunden" = "Aucun fichier trouvé";
+"Wird gesucht …" = "Recherche en cours…";
+"Symbole im Projekt" = "Symboles du projet";
+"Symbol im Projekt suchen" = "Rechercher un symbole dans le projet";
+"Abhängigkeit · {}" = "Dépendance · {}";
 "Aufrufer" = "Appelants";
 "Aufgerufene" = "Appelés";
 "Obertypen" = "Supertypes";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "{} sur GitHub";
 "„{}“ hat nichts ausgegeben." = "« {} » n’a rien affiché.";
 "„{}“ hat noch nichts ausgegeben." = "« {} » n’a encore rien affiché.";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "Impossible de faire confiance à « {} » dans son ensemble";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "La confiance s’étend à tous les dossiers qu’il contient, y compris ceux créés plus tard. Pour le dossier de départ, la racine d’un volume, le Bureau, Documents, Téléchargements et Bibliothèque, cela engloberait chaque téléchargement et chaque dépôt cloné. Ouvrez le dossier du projet lui-même pour lui faire confiance ; ici, vous pouvez lire et modifier, mais rien ne démarre.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "La confiance s’étend aussi à tous les dossiers qu’il contient, y compris ceux créés plus tard.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} ne démarre que dans les dossiers auxquels vous faites confiance. Impossible de faire confiance à ce dossier dans son ensemble, car il contient bien plus qu’un projet ; ouvrez le dossier du projet lui-même.";
+"Vorschläge pausiert: gitleaks fehlt" = "Suggestions en pause : gitleaks absent";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Sans gitleaks, rien ne recherche de secrets dans le code. Installez-le avec « {} » ou envoyez sans vérification.";
+"Ungeprüft an {} senden?" = "Envoyer à {} sans vérification ?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Sans gitleaks, rien ne vérifie si le code envoyé à {} contient des secrets. Installez-le avec « {} » ou envoyez sans vérification ; ce choix vaut pour ce Mac et peut être annulé dans les Réglages, sous « Prédiction ».";
+"Ungeprüft senden" = "Envoyer sans vérification";
+"Zwischenablage durch Programm ersetzt" = "Presse-papiers remplacé par un programme";

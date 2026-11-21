@@ -189,7 +189,7 @@ ungesicherten Puffer zurück.
   |---|---|
   | abgleichen (25) | `agentEffort`, `agentModel`, `agentPrices`, `blameAtLineEnd`, `ciHosts`, `ciOAuthClients`, `commitMessageModel`, `dictation` (ohne Mikrofon, siehe unten), `dictationWithFn`, `editPrediction`, `editPredictionExclude`, `editPredictionOffFor`, `fontSize`, `formatOnSave`, `hiddenSidebarPanels`, `inlayHints`, `inlayHintsOffFor`, `interfaceFontSize`, `markdownPreviewBeside`, `optionAsMeta`, `previewTabs`, `reopenProjects`, `searchEngine`, `showIgnoredFiles`, `showWhitespace` |
   | je Mac, Pfade und lokale Adressen (6) | `agentAllowedFolders`, `agentEndpoints`, `agentRules`, `editPredictionLmStudio`, `editPredictionOllama`, `languageServers` |
-  | je Mac, Zustimmungen und Merker (3) | `commitMessageConsent`, `editPredictionConsent`, `dictationLowspeakOffered` |
+  | je Mac, Zustimmungen und Merker (4) | `commitMessageConsent`, `editPredictionConsent`, `editPredictionUnchecked`, `dictationLowspeakOffered` |
   | Zustand, nie (6) | `agentChoices`, `claudeRuleFolders`, `dictationAccessibilityAsked`, `openProjects`, `openWindows`, `recentProjects` |
 
   - Neue Schlüssel dieser Phase werden abgeglichen *(G22)*: `minimap`, `stickyScrollLines`, `emmet`, `vimMode`,
@@ -298,7 +298,8 @@ ungesicherten Puffer zurück.
   - `VimMachine` übersetzt Tasten in Aktionen vom Typ `modalkit::actions::Action` *(C19)*.
   - Neue Crate `ide-vim` ohne AppKit (E99), die einzige Stelle, die `modalkit` kennt. Sie liefert Änderungen als
     `ide_document::Edit` und Cursor-Positionen zurück; das Editor-Modul wendet sie an.
-  - Mit `modalkit` kommt `crossterm` als Abhängigkeit mit, nur übersetzt, nie benutzt.
+  - `crossterm` kommt nicht mit: die Kopie bringt die Tastentypen unter `modalkit::key::event` selbst mit und macht
+    `crossterm` zu einem Feature, das Dango nicht einschaltet (B124); `vendor/modalkit/PATCHES.md` führt jede Änderung.
   - **Zwei Wege, Variante A zuerst:**
     - **A:** `modalkit`s `EditBuffer` führt auf einer Schattenkopie aus und bringt Operatoren, Register, Marken,
       Einfügeformen, Visual-Operationen und Makros mit. Die Ersetzungen gehen als `ide_document::Edit` in die Ansicht.

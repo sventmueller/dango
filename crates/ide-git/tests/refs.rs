@@ -1,6 +1,8 @@
 //! The ref watch's snapshots (E173, C47) on a temporary repository: every kind of ref is in them, and a comparison
 //! names what was added, removed and moved, also by a linked worktree, whose branches live in the same repository.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod common;
 
 use common::{Scratch, write};

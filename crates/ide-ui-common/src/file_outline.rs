@@ -13,6 +13,7 @@ use objc2_foundation::{NSRect, NSSize};
 /// Where a top-level row of the folder tree begins.
 const LEADING: f64 = 12.0;
 
+/// Where the rows of a [`FileOutline`] begin and end.
 pub struct OutlineIvars {
     /// Where a top-level row begins.
     leading: Cell<f64>,
@@ -24,6 +25,7 @@ const CHEVRON_POINTS: f64 = 10.0;
 
 define_class!(
     // SAFETY: NSOutlineView has no subclassing requirements and `FileOutline` does not implement Drop.
+    /// The outline view of the folder tree and the AI panel, with a folder's chevron where a file shows its icon.
     #[unsafe(super(NSOutlineView))]
     #[thread_kind = MainThreadOnly]
     #[name = "IDEFileOutline"]

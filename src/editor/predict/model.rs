@@ -62,6 +62,9 @@ pub(crate) const LM_STUDIO: Key<Local> =
 /// The providers outside the Mac the user allowed to get the text, by [`consent_id`].
 pub(crate) const CONSENT: Key<Vec<String>> =
     Key::user("editPredictionConsent", ide_core::settings::Sharing::PerMac, Vec::new);
+/// Whether the user chose to send text to a provider outside the Mac unchecked while gitleaks is missing (B104).
+pub(crate) const UNCHECKED: Key<bool> =
+    Key::user("editPredictionUnchecked", ide_core::settings::Sharing::PerMac, || false);
 
 /// The patterns no file matching goes to a provider by, unless the user changes them: secrets and keys.
 pub(crate) fn default_exclusions() -> Vec<String> {

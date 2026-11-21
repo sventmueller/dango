@@ -3,6 +3,7 @@ name = "ide-ui-export"
 version = "0.0.0"
 description = "Markdown documents as PDF, HTML and Word files, with the sheet that shows a running export"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 

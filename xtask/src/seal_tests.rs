@@ -51,6 +51,38 @@ fn commit(git: &Git, message: &str) {
         .unwrap();
 }
 
+/// The sibling `name` beside `git`'s repository in `dir`, with one commit of `lib.rs` pushed to a bare origin it tracks.
+fn sibling(dir: &Path, git: &Git, name: &str) -> Git {
+    let sibling = git.sibling(name);
+    let origin = dir.join(format!("{name}-origin.git")).display().to_string();
+    let parent = Git {
+        dir: dir.to_path_buf(),
+        env: git.env.clone(),
+    };
+    parent
+        .output(&mut System, &["init", "--quiet", "--bare", "-b", BRANCH, &origin])
+        .unwrap();
+    parent
+        .output(&mut System, &["init", "--quiet", "-b", BRANCH, name])
+        .unwrap();
+    write(&sibling, "lib.rs", "fn a() {}\n");
+    commit(&sibling, "first");
+    sibling
+        .output(&mut System, &["remote", "add", "origin", &origin])
+        .unwrap();
+    sibling
+        .output(&mut System, &["push", "--quiet", "-u", "origin", BRANCH])
+        .unwrap();
+    sibling
+}
+
+fn head(git: &Git) -> String {
+    git.output(&mut System, &["rev-parse", "HEAD"])
+        .unwrap()
+        .trim()
+        .to_string()
+}
+
 fn fp(git: &Git, content: Content) -> String {
     fingerprint(&mut System, git, content).unwrap()
 }
@@ -111,6 +143,81 @@ fn the_fingerprint_is_the_content_without_version() {
         "no repository, no fingerprint"
     );
     assert!(!is_object_name("abc") && !is_object_name(&"g".repeat(40)) && is_object_name(&"a".repeat(64)));
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn the_fingerprint_follows_the_siblings_commits_and_changes() {
+    let (dir, git) = repository("seal-siblings");
+    let alone = fp(&git, Content::WorkingTree);
+    let splat = sibling(&dir, &git, "splat");
+    let with = fp(&git, Content::WorkingTree);
+    assert_ne!(with, alone, "a sibling is content");
+    assert_eq!(fp(&git, Content::Head), with, "of HEAD's content too");
+    let listed = git.output(&mut System, &["ls-tree", "-r", &with]).unwrap();
+    assert!(
+        listed.contains(&format!("160000 commit {}\t.siblings/splat\n", head(&splat))),
+        "{listed}"
+    );
+
+    write(&splat, "lib.rs", "fn b() {}\n");
+    let changed = fp(&git, Content::WorkingTree);
+    assert_ne!(changed, with, "a change not committed there is content");
+    write(&splat, "lib.rs", "fn c() {}\n");
+    let again = fp(&git, Content::WorkingTree);
+    assert!(
+        again != changed && again != with,
+        "so is a further change of the same file"
+    );
+    assert_eq!(
+        splat.output(&mut System, &["status", "--porcelain"]).unwrap(),
+        " M lib.rs\n",
+        "the sibling's index stays as it was"
+    );
+    write(&splat, "lib.rs", "fn a() {}\n");
+    assert_eq!(
+        fp(&git, Content::WorkingTree),
+        with,
+        "the same state, the same fingerprint"
+    );
+
+    write(&splat, "lib.rs", "fn d() {}\n");
+    commit(&splat, "second");
+    let committed = fp(&git, Content::WorkingTree);
+    assert!(
+        committed != with && committed != alone,
+        "a new commit there needs a new seal"
+    );
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn deploy_needs_clean_siblings_whose_commits_their_upstream_has() {
+    let (dir, git) = repository("seal-siblings-ready");
+    let missing = siblings_ready(&mut System, &git).unwrap_err();
+    assert!(missing.starts_with("../splat is missing"), "{missing}");
+    let splat = sibling(&dir, &git, "splat");
+    let lowspeak = sibling(&dir, &git, "lowspeak");
+    let commits = siblings_ready(&mut System, &git).unwrap();
+    assert_eq!(commits.len(), 2);
+    assert_eq!(commits["splat"], head(&splat));
+    assert_eq!(commits["lowspeak"], head(&lowspeak));
+
+    write(&lowspeak, "new.rs", "\n");
+    let dirty = siblings_ready(&mut System, &git).unwrap_err();
+    assert!(dirty.starts_with("../lowspeak has changes"), "{dirty}");
+    commit(&lowspeak, "local");
+    let ahead = siblings_ready(&mut System, &git).unwrap_err();
+    assert!(
+        ahead.starts_with("../lowspeak has commits that origin/main lacks"),
+        "{ahead}"
+    );
+    lowspeak.output(&mut System, &["push", "--quiet"]).unwrap();
+    assert_eq!(siblings_ready(&mut System, &git).unwrap()["lowspeak"], head(&lowspeak));
+
+    splat.output(&mut System, &["branch", "--unset-upstream"]).unwrap();
+    let untracked = siblings_ready(&mut System, &git).unwrap_err();
+    assert!(untracked.contains("no upstream"), "{untracked}");
     std::fs::remove_dir_all(dir).unwrap();
 }
 

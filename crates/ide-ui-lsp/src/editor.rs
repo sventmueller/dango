@@ -23,7 +23,9 @@ pub trait Editor: Deref<Target = NSTextView> {
     fn serial(&self) -> crate::EditorSerial;
     /// What the language servers keep about this editor.
     fn lsp(&self) -> &RefCell<ViewState>;
+    /// The document the editor shows, to read.
     fn document(&self) -> Ref<'_, Document>;
+    /// The document the editor shows, to change.
     fn document_mut(&self) -> RefMut<'_, Document>;
     /// The folder of the editor's window, if it shows one.
     fn project_root(&self) -> Option<PathBuf>;
@@ -31,6 +33,7 @@ pub trait Editor: Deref<Target = NSTextView> {
     fn window_id(&self) -> Option<WindowId>;
     /// Sends the editor `selector` after `delay` seconds, once however often it is asked meanwhile.
     fn later(&self, selector: Sel, delay: f64);
+    /// The text view's storage, unless the view has none yet.
     fn storage(&self) -> Option<Retained<NSTextStorage>>;
     /// Makes `changes` of the document in the text view, as one undo step.
     fn apply_model_changes(&self, changes: &[Change]);
@@ -86,10 +89,13 @@ pub(crate) fn marker(editor: &dyn Editor) -> objc2::MainThreadMarker {
 pub struct Hint {
     /// The UTF-16 offset it belongs to.
     pub at: usize,
+    /// The words it shows.
     pub text: String,
+    /// What it says while the mouse is over it.
     pub tooltip: Option<String>,
-    /// Room for a space before or after it, as the server asks.
+    /// Room for a space before it, as the server asks.
     pub pad_left: bool,
+    /// Room for a space after it, as the server asks.
     pub pad_right: bool,
     /// Where a click on it goes: a file and a range in it.
     pub target: Option<(PathBuf, ide_lsp::lsp_types::Range)>,

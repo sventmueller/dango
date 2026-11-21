@@ -1,6 +1,8 @@
 //! The request for a commit message (E88): what it holds, and the secrets check over exactly its text, with gitleaks
 //! missing and, where this Mac has it, present.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod common;
 
 use std::path::{Path, PathBuf};

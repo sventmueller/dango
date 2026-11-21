@@ -48,4 +48,5 @@ The API is documented in [`src/lib.rs`](src/lib.rs). Tests run without the netwo
 the answers (`fuzz/`, `cargo xtask fuzz answer`); the real providers run in `make test-integration`.
 
 `guard` is the secrets check before a request leaves the Mac (R15): a provider outside the Mac is asked only after
-gitleaks found nothing in the text of that revision.
+gitleaks found nothing in the text of that revision, or, while gitleaks is missing, once the user chose to send
+unchecked.

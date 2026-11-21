@@ -1,5 +1,7 @@
 //! The client against the fake server in `support/fake_server.rs`, a real process under a real supervisor.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};

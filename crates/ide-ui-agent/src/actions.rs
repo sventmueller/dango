@@ -10,9 +10,7 @@ use ide_ui_common::alert::{Alert, Role, first};
 use objc2::rc::Retained;
 use objc2::runtime::Sel;
 use objc2::{ClassType, MainThreadMarker, sel};
-use objc2_app_kit::{
-    NSBitmapImageFileType, NSBitmapImageRep, NSMenu, NSModalResponseOK, NSOpenPanel, NSPasteboard, NSView, NSWorkspace,
-};
+use objc2_app_kit::{NSMenu, NSModalResponseOK, NSOpenPanel, NSPasteboard, NSView, NSWorkspace};
 use objc2_foundation::{NSArray, NSDictionary, NSPoint, NSURL};
 use splat_i18n::{t, tf};
 
@@ -245,6 +243,7 @@ impl AgentTab {
         self.queue_view.setHidden(queue.is_empty());
     }
 
+    /// Drops the message at `index` from the messages waiting for the running turn to end.
     pub fn remove_queued(&self, index: usize) {
         self.state.borrow_mut().remove_queued(index);
         self.refresh_queue();
@@ -615,6 +614,7 @@ impl AgentTab {
         }
     }
 
+    /// Bookmarks the session in the agents panel, or takes its bookmark away.
     pub fn toggle_bookmark(&self) {
         let on = self.state.borrow_mut().toggle_bookmark();
         crate::agent_panel::set_bookmarked(&self.thread_id, on);
@@ -661,6 +661,7 @@ impl AgentTab {
         }
     }
 
+    /// Opens a new session of the agent in another tab and moves the keyboard focus to its composer.
     pub fn new_session(&self) {
         if let Some(controller) = self.controller()
             && let Some(tab) = super::open_tab(&controller, None)
@@ -692,6 +693,7 @@ impl AgentTab {
         self.start();
     }
 
+    /// Starts the session again after it could not start or ended.
     pub fn retry(&self) {
         self.start();
     }
@@ -868,16 +870,12 @@ pub(super) fn file_attachment(path: &Path) -> Attachment {
     }
 }
 
-/// Pasted picture data as PNG.
+/// Pasted picture data as PNG, converted by the sandboxed decoding service.
 fn as_png(data: &[u8]) -> Option<Vec<u8>> {
     if data.starts_with(&[0x89, b'P', b'N', b'G']) {
         return Some(data.to_vec());
     }
-    let bytes = objc2_foundation::NSData::with_bytes(data);
-    let rep = NSBitmapImageRep::imageRepWithData(&bytes)?;
-    // SAFETY: An empty properties dictionary is valid for PNG.
-    let png = unsafe { rep.representationUsingType_properties(NSBitmapImageFileType::PNG, &NSDictionary::new()) }?;
-    Some(png.to_vec())
+    splat_decoder::png_of_pasted_tiff(data)
 }
 
 /// Asks for a line of text; `None` when the user cancels or leaves it empty.
@@ -905,15 +903,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn pasted_pictures_of_other_formats_become_png_and_other_data_is_refused() {
+    fn pasted_png_stays_as_it_is_and_other_pictures_are_not_decoded_in_the_app() {
+        let png = [0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
+        assert_eq!(as_png(&png), Some(png.to_vec()), "PNG data stays as it is");
         let gif = [
             0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
             0xff, 0x21, 0xf9, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
             0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x3b,
         ];
-        let png = as_png(&gif).expect("a GIF converts");
-        assert!(png.starts_with(&[0x89, b'P', b'N', b'G']));
-        assert_eq!(as_png(&png), Some(png.clone()), "PNG data stays as it is");
+        assert_eq!(
+            as_png(&gif),
+            None,
+            "a test binary has no bundle and so no decoding service, and the app converts nothing itself"
+        );
         assert_eq!(as_png(b"not a picture"), None);
     }
 

@@ -41,7 +41,9 @@ impl Shown {
 /// A field's microphone button and spinner, side by side.
 #[derive(Clone)]
 pub struct Mic {
+    /// The stack that holds both.
     pub view: Retained<NSStackView>,
+    /// The microphone button.
     pub button: Retained<NSButton>,
     pub(crate) spinner: Retained<NSProgressIndicator>,
 }

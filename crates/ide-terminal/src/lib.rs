@@ -5,8 +5,7 @@
 //! The view draws `Session::snapshot` and sends input through the session; events arrive on the session's reader
 //! thread.
 
-#![deny(unsafe_op_in_unsafe_fn)]
-#![warn(missing_docs)]
+#![deny(unsafe_code)]
 
 mod devserver;
 pub mod event;
@@ -21,6 +20,7 @@ pub mod paste;
 mod scan;
 pub mod session;
 pub mod snapshot;
+#[allow(unsafe_code, reason = "libc calls and the poller registration on the PTY")]
 mod sys;
 
 pub use event::{Clipboard, Event, WorkingDirectory};

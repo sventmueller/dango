@@ -9,6 +9,7 @@ use ide_ui_common::window::WindowId;
 
 /// What the self-test reads from a browser tab.
 pub struct Seen {
+    /// The address of the page the tab shows, if any.
     pub url: Option<String>,
     /// The text of the address field.
     pub address: String,
@@ -50,6 +51,7 @@ pub fn address_field(window: WindowId) -> Option<Retained<objc2_app_kit::NSTextF
     front(window).map(|view| view.address_field())
 }
 
+/// What the self-test reads from each browser tab of `window`.
 pub fn inspect(window: WindowId) -> Vec<Seen> {
     tabs_of(window).iter().map(|view| view.seen()).collect()
 }

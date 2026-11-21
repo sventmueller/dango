@@ -1,5 +1,7 @@
 //! Push, pull and fetch against a bare repository on disk, with progress, rejection, conflicts and cancelling.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod common;
 
 use std::os::unix::fs::PermissionsExt;

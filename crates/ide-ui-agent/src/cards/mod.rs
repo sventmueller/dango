@@ -44,11 +44,17 @@ use super::ui;
     expect(unreachable_pub, reason = "the self-test re-exports it")
 )]
 pub enum Part {
+    /// A thought's text.
     Thought = 1,
+    /// A tool call's input.
     Input = 2,
+    /// A tool call's output.
     Output = 3,
+    /// What a subagent did.
     Subagent = 4,
+    /// A plan to approve.
     Plan = 5,
+    /// A notice's details.
     Detail = 6,
 }
 
@@ -93,6 +99,8 @@ pub struct Inputs {
     pub plan_notes: HashMap<u64, Vec<super::plan::PlanNote>>,
     /// The text of a waiting plan's card, where the user marks the passage to comment on.
     pub plan_text: HashMap<u64, Retained<NSTextView>>,
+    /// Pictures the decoding service turned into pixels, by their bytes, so a card built again shows them at once.
+    pub(crate) pictures: ui::Pictures,
 }
 
 impl Inputs {

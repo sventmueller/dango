@@ -80,7 +80,6 @@
 //! subscribers at once, and `Driver::replay_plan` answers its plans.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
 
 mod backend;
 mod checkpoint;

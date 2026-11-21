@@ -3,6 +3,7 @@ name = "ide-ui-dictation"
 version = "0.0.0"
 description = "Dictation into the app's text fields through lowspeak: the microphone controls, fn, the keys and the menu item"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 

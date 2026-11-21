@@ -2,6 +2,8 @@
 //! notification, approvals, questions, cancelling, a crash, a failed turn, resuming, signing in, the version gate,
 //! the settings the next turn carries, the management calls, and the shared server Remote Control reaches.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};

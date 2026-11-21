@@ -83,6 +83,15 @@ pub struct Insertion {
     pub(crate) replace: Option<Range>,
 }
 
+/// The range choosing `item` replaces when inserting, as [`Insertion::insert`], without parsing its snippet.
+pub fn insert_range(item: &CompletionItem) -> Option<Range> {
+    match &item.text_edit {
+        Some(CompletionTextEdit::Edit(edit)) => Some(edit.range),
+        Some(CompletionTextEdit::InsertAndReplace(edit)) => Some(edit.insert),
+        None => None,
+    }
+}
+
 /// What choosing `item` inserts.
 pub fn insertion(item: &CompletionItem) -> Insertion {
     let (text, insert, replace) = match &item.text_edit {
@@ -95,15 +104,7 @@ pub fn insertion(item: &CompletionItem) -> Insertion {
     let snippet = if item.insert_text_format == Some(InsertTextFormat::SNIPPET) {
         snippet::parse(text)
     } else {
-        let end = u32::try_from(text.encode_utf16().count()).unwrap_or(u32::MAX);
-        Snippet {
-            text: text.to_string(),
-            tabstops: vec![snippet::Tabstop {
-                index: 0,
-                spans: vec![snippet::Span::new(end, end)],
-                choices: vec![],
-            }],
-        }
+        snippet::literal(text)
     };
     Insertion {
         snippet,
@@ -789,6 +790,7 @@ mod tests {
         let chosen = insertion(&snippet);
         assert_eq!(chosen.snippet.text, "Println(a)");
         assert_eq!((chosen.insert, chosen.replace), (Some(r(4, 6)), Some(r(4, 9))));
+        assert_eq!(insert_range(&snippet), chosen.insert);
         let plain = CompletionItem {
             label: "len".into(),
             insert_text: Some("len($1)".into()),

@@ -1,6 +1,8 @@
 //! The agent's turn against a stub provider in a scratch project: tools that read, edit and run, the approvals the
 //! policy asks for, the sandbox, retries, cancelling and resuming a stored thread.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod common;
 
 use std::path::{Path, PathBuf};

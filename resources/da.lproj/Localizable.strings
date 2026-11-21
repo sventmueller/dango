@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Installation: henter…";
 "Installation: lade herunter … {} %" = "Installation: henter… {} %";
 "Installation: prüfe die Prüfsumme …" = "Installation: kontrollerer kontrolsummen…";
-"Installation: suche die neueste Version …" = "Installation: søger efter den nyeste version…";
 "Installiere …" = "Installerer…";
 "Installiere … {}" = "Installerer… {}";
 "Installieren" = "Installer";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Fundne symboler";
 "Wird indexiert …" = "Indekserer…";
 "Nichts gefunden" = "Intet fundet";
+"Keine Dateien gefunden" = "Ingen arkiver fundet";
+"Wird gesucht …" = "Søger…";
+"Symbole im Projekt" = "Symboler i projekt";
+"Symbol im Projekt suchen" = "Søg efter symbol i projekt";
+"Abhängigkeit · {}" = "Afhængighed · {}";
 "Aufrufer" = "Kaldere";
 "Aufgerufene" = "Kaldte";
 "Obertypen" = "Supertyper";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "{} på GitHub";
 "„{}“ hat nichts ausgegeben." = "“{}” har ikke skrevet noget ud.";
 "„{}“ hat noch nichts ausgegeben." = "“{}” har endnu ikke skrevet noget ud.";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "“{}” kan ikke betros som helhed";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "Tilliden gælder alle mapper i den, inklusive dem, der oprettes senere. For hjemmemappen, roden af en diskenhed, Skrivebord, Dokumenter, Overførsler og Bibliotek ville det være hver eneste overførsel og hvert eneste klonet repository. Åbn selve projektmappen for at stole på den; her kan du læse og redigere, men intet starter.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "Tilliden gælder også alle mapper i den, inklusive dem, der oprettes senere.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} starter kun i mapper, du stoler på. Denne mappe kan ikke betros som helhed, fordi den indeholder langt mere end ét projekt; åbn selve projektmappen.";
+"Vorschläge pausiert: gitleaks fehlt" = "Forslag sat på pause: gitleaks mangler";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Uden gitleaks tjekker intet koden for secrets. Installer det med “{}”, eller send ukontrolleret.";
+"Ungeprüft an {} senden?" = "Send ukontrolleret til {}?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Uden gitleaks tjekker intet, om koden, der sendes til {}, indeholder secrets. Installer det med “{}”, eller send ukontrolleret; valget gælder på denne Mac og kan trækkes tilbage i Indstillinger under “Forudsigelse”.";
+"Ungeprüft senden" = "Send ukontrolleret";
+"Zwischenablage durch Programm ersetzt" = "Udklipsholderen erstattet af et program";

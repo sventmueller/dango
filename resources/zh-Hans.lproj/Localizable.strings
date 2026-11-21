@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "正在安装：下载中…";
 "Installation: lade herunter … {} %" = "正在安装：下载中… {}%";
 "Installation: prüfe die Prüfsumme …" = "正在安装：验证校验和…";
-"Installation: suche die neueste Version …" = "正在安装：查找最新版本…";
 "Installiere …" = "正在安装…";
 "Installiere … {}" = "正在安装… {}";
 "Installieren" = "安装";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "匹配的符号";
 "Wird indexiert …" = "正在索引…";
 "Nichts gefunden" = "未找到任何内容";
+"Keine Dateien gefunden" = "未找到文件";
+"Wird gesucht …" = "正在搜索…";
+"Symbole im Projekt" = "项目中的符号";
+"Symbol im Projekt suchen" = "在项目中查找符号";
+"Abhängigkeit · {}" = "依赖项 · {}";
 "Aufrufer" = "调用方";
 "Aufgerufene" = "被调用方";
 "Obertypen" = "超类型";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "GitHub 上的 {}";
 "„{}“ hat nichts ausgegeben." = "“{}”没有输出任何内容。";
 "„{}“ hat noch nichts ausgegeben." = "“{}”尚未输出任何内容。";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "无法整体信任“{}”";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "信任适用于其中的所有文件夹，包括以后创建的文件夹。对于个人文件夹、宗卷的根目录、桌面、文稿、下载和资源库，这将涵盖每一个下载的文件和每一个克隆的仓库。请直接打开项目文件夹来信任它；在这里你可以阅读和编辑，但不会启动任何内容。";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "信任也适用于其中的所有文件夹，包括以后创建的文件夹。";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} 只会在你信任的文件夹中启动。此文件夹包含的内容远不止一个项目，因此无法整体信任；请直接打开项目文件夹。";
+"Vorschläge pausiert: gitleaks fehlt" = "建议已暂停：缺少 gitleaks";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "没有 gitleaks，就没有任何东西检查代码中的机密信息。请使用“{}”安装，或不经检查直接发送。";
+"Ungeprüft an {} senden?" = "要不经检查发送给 {} 吗？";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "没有 gitleaks，就没有任何东西检查发送给 {} 的代码是否包含机密信息。请使用“{}”安装，或不经检查直接发送；该选择在此 Mac 上生效，可以在设置的“预测”中撤销。";
+"Ungeprüft senden" = "不经检查发送";
+"Zwischenablage durch Programm ersetzt" = "剪贴板已被程序替换";

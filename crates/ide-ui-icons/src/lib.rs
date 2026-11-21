@@ -13,6 +13,8 @@
 //! assert_eq!(icon_of("noextension").id, "document");
 //! ```
 
+#![forbid(unsafe_code)]
+
 mod kinds;
 mod logo;
 

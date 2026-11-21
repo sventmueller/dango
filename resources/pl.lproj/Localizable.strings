@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Instalowanie: pobieranie…";
 "Installation: lade herunter … {} %" = "Instalowanie: pobieranie… {}%";
 "Installation: prüfe die Prüfsumme …" = "Instalowanie: sprawdzanie sumy kontrolnej…";
-"Installation: suche die neueste Version …" = "Instalowanie: szukanie najnowszej wersji…";
 "Installiere …" = "Instalowanie…";
 "Installiere … {}" = "Instalowanie… {}";
 "Installieren" = "Zainstaluj";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Znalezione symbole";
 "Wird indexiert …" = "Indeksowanie…";
 "Nichts gefunden" = "Nic nie znaleziono";
+"Keine Dateien gefunden" = "Nie znaleziono plików";
+"Wird gesucht …" = "Wyszukiwanie…";
+"Symbole im Projekt" = "Symbole w projekcie";
+"Symbol im Projekt suchen" = "Znajdź symbol w projekcie";
+"Abhängigkeit · {}" = "Zależność · {}";
 "Aufrufer" = "Wywołujące";
 "Aufgerufene" = "Wywoływane";
 "Obertypen" = "Nadtypy";
@@ -2382,5 +2386,15 @@
 "Funktion vorschlagen …" = "Zaproponuj funkcję…";
 "Problem melden …" = "Zgłoś problem…";
 "{} auf GitHub" = "{} w serwisie GitHub";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "Nie można zaufać folderowi „{}” jako całości";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "Zaufanie obejmuje wszystkie foldery wewnątrz, także te utworzone później. W przypadku folderu domowego, katalogu głównego woluminu, Biurka, Dokumentów, Pobranych i Biblioteki oznaczałoby to każdy pobrany plik i każde sklonowane repozytorium. Aby zaufać projektowi, otwórz bezpośrednio jego folder; tutaj możesz czytać i edytować, ale nic się nie uruchamia.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "Zaufanie obejmuje też wszystkie foldery wewnątrz, także te utworzone później.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} uruchamia się tylko w folderach, którym ufasz. Temu folderowi nie można zaufać jako całości, bo zawiera o wiele więcej niż jeden projekt; otwórz bezpośrednio folder projektu.";
+"Vorschläge pausiert: gitleaks fehlt" = "Propozycje wstrzymane: brak gitleaks";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Bez gitleaks nic nie sprawdza kodu pod kątem sekretów. Zainstaluj go poleceniem „{}” lub wyślij bez sprawdzania.";
+"Ungeprüft an {} senden?" = "Wysłać do {} bez sprawdzania?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Bez gitleaks nic nie sprawdza, czy kod wysyłany do {} zawiera sekrety. Zainstaluj go poleceniem „{}” lub wyślij bez sprawdzania; wybór dotyczy tego Maca i można go cofnąć w Ustawieniach w sekcji „Przewidywanie”.";
+"Ungeprüft senden" = "Wyślij bez sprawdzania";
+"Zwischenablage durch Programm ersetzt" = "Schowek zastąpiony przez program";
 "„{}“ hat nichts ausgegeben." = "Brak danych wyjściowych z „{}”.";
 "„{}“ hat noch nichts ausgegeben." = "Na razie brak danych wyjściowych z „{}”.";

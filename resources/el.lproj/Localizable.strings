@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Εγκατάσταση: λήψη…";
 "Installation: lade herunter … {} %" = "Εγκατάσταση: λήψη… {}%";
 "Installation: prüfe die Prüfsumme …" = "Εγκατάσταση: έλεγχος αθροίσματος ελέγχου…";
-"Installation: suche die neueste Version …" = "Εγκατάσταση: αναζήτηση της νεότερης έκδοσης…";
 "Installiere …" = "Εγκατάσταση…";
 "Installiere … {}" = "Εγκατάσταση… {}";
 "Installieren" = "Εγκατάσταση";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Σύμβολα που βρέθηκαν";
 "Wird indexiert …" = "Ευρετηρίαση…";
 "Nichts gefunden" = "Δεν βρέθηκε τίποτα";
+"Keine Dateien gefunden" = "Δεν βρέθηκαν αρχεία";
+"Wird gesucht …" = "Αναζήτηση…";
+"Symbole im Projekt" = "Σύμβολα του έργου";
+"Symbol im Projekt suchen" = "Εύρεση συμβόλου στο έργο";
+"Abhängigkeit · {}" = "Εξάρτηση · {}";
 "Aufrufer" = "Καλούντες";
 "Aufgerufene" = "Καλούμενες";
 "Obertypen" = "Υπερτύποι";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "Το {} στο GitHub";
 "„{}“ hat nichts ausgegeben." = "Δεν υπάρχει έξοδος από το «{}».";
 "„{}“ hat noch nichts ausgegeben." = "Δεν υπάρχει ακόμη έξοδος από το «{}».";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "Δεν είναι δυνατή η εμπιστοσύνη στον φάκελο «{}» στο σύνολό του";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "Η εμπιστοσύνη ισχύει για όλους τους φακέλους μέσα σε αυτόν, ακόμη και για όσους δημιουργηθούν αργότερα. Για τον φάκελο αφετηρίας, τη ρίζα ενός τόμου, το Γραφείο εργασίας, τα Έγγραφα, τις Λήψεις και τη Βιβλιοθήκη, αυτό θα σήμαινε κάθε λήψη και κάθε κλωνοποιημένο αποθετήριο. Ανοίξτε τον ίδιο τον φάκελο του έργου για να τον εμπιστευτείτε· εδώ μπορείτε να διαβάζετε και να επεξεργάζεστε, αλλά τίποτα δεν ξεκινά.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "Η εμπιστοσύνη ισχύει και για όλους τους φακέλους μέσα σε αυτόν, ακόμη και για όσους δημιουργηθούν αργότερα.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "Το {} ξεκινά μόνο σε φακέλους που εμπιστεύεστε. Δεν είναι δυνατή η εμπιστοσύνη σε αυτόν τον φάκελο στο σύνολό του, επειδή περιέχει πολύ περισσότερα από ένα έργο· ανοίξτε τον ίδιο τον φάκελο του έργου.";
+"Vorschläge pausiert: gitleaks fehlt" = "Οι προτάσεις σε παύση: λείπει το gitleaks";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Χωρίς το gitleaks τίποτα δεν ελέγχει τον κώδικα για μυστικά. Εγκαταστήστε το με «{}» ή στείλτε χωρίς έλεγχο.";
+"Ungeprüft an {} senden?" = "Αποστολή στο {} χωρίς έλεγχο;";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Χωρίς το gitleaks τίποτα δεν ελέγχει αν ο κώδικας που πηγαίνει στο {} περιέχει μυστικά. Εγκαταστήστε το με «{}» ή στείλτε χωρίς έλεγχο· η επιλογή ισχύει σε αυτό το Mac και μπορείτε να την αναιρέσετε στις Ρυθμίσεις, στην ενότητα «Πρόβλεψη».";
+"Ungeprüft senden" = "Αποστολή χωρίς έλεγχο";
+"Zwischenablage durch Programm ersetzt" = "Το πρόχειρο αντικαταστάθηκε από πρόγραμμα";

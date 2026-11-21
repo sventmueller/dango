@@ -1,6 +1,8 @@
 //! Recordings under `fixtures/` replayed through the mapper and checked against the thread they produce; the
 //! `recorded_*` ones come from the real CLI, the others are written from the SDK's typings.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use ide_claude::PlanAnswer;

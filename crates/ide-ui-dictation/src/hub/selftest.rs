@@ -16,14 +16,19 @@ use super::{Via, with_hub};
 /// What the controls of a field show.
 #[derive(Debug, Clone, Default)]
 pub struct Seen {
+    /// Whether the field records or waits to.
     pub recording: bool,
+    /// Whether the microphone listens.
     pub listening: bool,
+    /// Whether a transcription of the field runs.
     pub transcribing: bool,
+    /// Whether the spinner turns.
     pub spinning: bool,
     /// The line beside the controls.
     pub line: String,
     /// The button's label for VoiceOver.
     pub label: String,
+    /// The button's value for VoiceOver.
     pub value: String,
 }
 
@@ -42,6 +47,7 @@ pub fn menu(mtm: MainThreadMarker) {
     super::toggle_focused(mtm, Via::Menu);
 }
 
+/// What the controls of `target` show.
 pub fn seen(target: Target) -> Seen {
     with_hub(|hub| {
         let phase = hub.desk.phase(target);

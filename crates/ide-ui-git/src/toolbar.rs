@@ -13,6 +13,7 @@ use super::panel::GitPanel;
 use ide_ui_common::util::{ns, symbol};
 use ide_ui_common::window::{AsWindow, Window};
 
+/// The identifier of the branch's toolbar item.
 pub const TOOLBAR_ID: &str = "ide.branch";
 
 pub(super) struct Shown {

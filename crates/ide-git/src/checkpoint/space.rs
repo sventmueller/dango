@@ -3,7 +3,6 @@
 
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::diff::{FileDiff, diff_args, parse};
 use crate::error::{Error, Result};
@@ -47,21 +46,19 @@ pub(super) struct Parts {
     pub(super) after: Option<String>,
 }
 
-/// An index file of one snapshot's own, removed when dropped.
-struct TemporaryIndex(PathBuf);
-
-impl TemporaryIndex {
-    fn new() -> TemporaryIndex {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-        let n = NEXT.fetch_add(1, Ordering::Relaxed);
-        TemporaryIndex(std::env::temp_dir().join(format!("ide-git-index-{}-{n}", std::process::id())))
-    }
+/// An index file of one snapshot's own, in a folder of its own that goes with its lock file when dropped.
+struct TemporaryIndex {
+    path: PathBuf,
+    _dir: ide_process::private_dir::PrivateDir,
 }
 
-impl Drop for TemporaryIndex {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.0);
-        let _ = std::fs::remove_file(self.0.with_extension("lock"));
+impl TemporaryIndex {
+    fn new() -> Result<TemporaryIndex> {
+        let dir = ide_process::private_dir::PrivateDir::new("ide-git-index")?;
+        Ok(TemporaryIndex {
+            path: dir.path().join("index"),
+            _dir: dir,
+        })
     }
 }
 
@@ -79,7 +76,7 @@ impl Space {
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
     {
-        self.call(args).env("GIT_INDEX_FILE", &index.0)
+        self.call(args).env("GIT_INDEX_FILE", &index.path)
     }
 
     fn ok(&self, call: Call<'_>) -> Result<Output> {
@@ -89,9 +86,9 @@ impl Space {
     /// The working tree as it is: tracked files with their changes and untracked files that are not ignored, except
     /// those larger than `max_file_size`, which are listed as skipped.
     pub(super) fn snapshot(&self, max_file_size: u64) -> Result<Snapshot> {
-        let temporary = TemporaryIndex::new();
+        let temporary = TemporaryIndex::new()?;
         if self.index.exists() {
-            std::fs::copy(&self.index, &temporary.0)?;
+            std::fs::copy(&self.index, &temporary.path)?;
         }
         self.ok(self.indexed(&temporary, ["add", "--update"]))?;
         let others = self.ok(self.indexed(&temporary, ["ls-files", "-z", "--others", "--exclude-standard"]))?;
@@ -120,7 +117,7 @@ impl Space {
         let worktree = self.ok(self.indexed(&temporary, ["write-tree"]))?.text();
         if self.keeps_index {
             let replacement = self.index.with_extension("next");
-            std::fs::copy(&temporary.0, &replacement)?;
+            std::fs::copy(&temporary.path, &replacement)?;
             std::fs::rename(&replacement, &self.index)?;
         }
         let index = if self.repository { self.index_tree()? } else { None };
@@ -133,9 +130,9 @@ impl Space {
 
     /// The user's index as a tree, from a copy; `None` while it holds conflicts, which no tree can.
     fn index_tree(&self) -> Result<Option<String>> {
-        let temporary = TemporaryIndex::new();
+        let temporary = TemporaryIndex::new()?;
         if self.index.exists() {
-            std::fs::copy(&self.index, &temporary.0)?;
+            std::fs::copy(&self.index, &temporary.path)?;
         }
         let output = self.git.run(self.indexed(&temporary, ["write-tree"]))?;
         Ok((output.code == 0).then(|| output.text()))
@@ -157,7 +154,7 @@ impl Space {
             info.extend_from_slice(bytes(&path));
             info.push(0);
         }
-        let temporary = TemporaryIndex::new();
+        let temporary = TemporaryIndex::new()?;
         self.ok(self
             .indexed(&temporary, ["update-index", "-z", "--index-info"])
             .input(info))?;
@@ -297,7 +294,7 @@ impl Space {
         if paths.is_empty() {
             return Ok(());
         }
-        let temporary = TemporaryIndex::new();
+        let temporary = TemporaryIndex::new()?;
         self.ok(self.indexed(&temporary, ["read-tree", tree]))?;
         let mut input = Vec::new();
         for path in paths {

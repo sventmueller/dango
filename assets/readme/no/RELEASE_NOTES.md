@@ -1,25 +1,41 @@
-## Hastighet og minne
-- Alt en agent starter, uansett språk, for eksempel bygg, tester, skall og MCP-servere, kjører i bakgrunnstilstanden til
-  macOS: med lavest prioritet og med strupet disk- og nettverkstilgang. Selve agentene, med underagentene til Claude,
-  kjører med middels prioritet. Agenter under full belastning gjør ikke lenger Dango tregere; det gjelder også agentene
-  i Software Factory.
-- Gjenopprettede vinduer starter bare det som vises: en KI-fane bak andre starter CLI-en sin når den kommer frem eller
-  får en prompt, og nettleser-, nettstedforhåndsvisnings- og terminalfaner laster inn siden sin eller starter skallet
-  sitt første gang de vises.
-- Et langt prosjektsøk tegner ikke lenger alle treffene sine på nytt mens det pågår. Software Factory, CI-logger og
-  panelet Tester gjør mindre mens de ikke er synlige; tester og feilsøkingskonfigurasjoner leses første gang panelet
-  deres vises, og panelene CI og Containere leser ingenting mens de er skjult, før de vises.
-- Lange økter trenger mindre minne: en ferdig diff beholder bare linjene kortet dens viser, en besvart
-  tillatelsesforespørsel slipper inndataene sine, glyfbufferen i terminalen vokser ikke lenger uten grense, og panelene
-  Filer og Git slipper rader som er borte.
-- Selve programmet er rundt 40 % mindre.
+## Sikkerhet
+- Lenker i svarene, planene og rapportene til en agent, i Markdown-forhåndsvisningen og i PDF-er åpner ikke lenger en
+  app med ett klikk. Nettadresser åpnes i en nettleserfane, filer i prosjektet i en redigeringsfane; alt annet, som en
+  fil et annet sted, en nettverksdeling eller lenken til en annen app, spør først og viser hvor den fører.
+- Påloggings- og Remote Control-adresser som en agent eller en MCP-server gir videre, åpnes bare når de er
+  nettadresser.
+- Mapper som inneholder mye mer enn ett prosjekt, som hjemmemappen, Skrivebord, Dokumenter, Nedlastinger eller roten av
+  et volum, kan ikke lenger klareres som en helhet; stol på dem prosjekt for prosjekt. Spørsmålet om tillit sier nå at
+  den også gjelder mappene i den.
+- CI-tokener og pålogginger går aldri over ren http til en annen tjener enn denne Macen; et repository med en remote
+  som begynner med `http://`, blir spurt over https.
+- Uten gitleaks venter redigeringsforutsigelser før koden går til en leverandør utenfor denne Macen, til du velger å
+  sende ukontrollert. Et prosjekts egne gitleaks-innstillinger slår ikke lenger av kontrollen.
+- Den innebygde agenten kan ikke lenger lures til å skrive utenfor prosjektet gjennom en lenke som dukker opp etter at
+  skrivingen ble godkjent, og filer med flere harde lenker får en egen fil i stedet for å bli skrevet gjennom.
+- Fullføringene til en språktjener kan ikke lenger få editoren til å henge, og når den gir nytt navn til eller sletter
+  en lenket fil, gjelder det lenken, ikke det den peker på.
+- Bilder du legger ved en prompt, dekodes av dekodingstjenesten i sandkassen, som overalt ellers.
+- Et program i terminalen kan bare erstatte utklippstavlen mens terminalen er foran, og terminalen sier fra om det.
+- rust-analyzer installeres fra en utgivelse som er festet med sjekksummen sin, i stedet for den som tilfeldigvis var
+  nyest.
 
-## Vinduer og menyer
-- Når du lukker en rute, flyttes fanene dens til ruten foran, ellers til ruten etter, i stedet for å lukkes. Bare ruten
-  til en forhåndsvisning og den siste ruten lukkes sammen med fanene sine.
-- Menyen Vis viser panelene i samme rekkefølge som symbolene i sidepanelet.
-- «Administrer agenter…» er fjernet fra +-menyen; den blir værende under «+ Ny økt» i panelet Agenter.
+## Søk og navigasjon
+- Åpne raskt sier fra når ingen fil passer, og viser om det søker i filer eller i prosjektets symboler.
+- Prosjektets symboler omfatter TypeScript og JavaScript uten at noen av filene deres er åpne. Eksakte treff fra
+  prosjektet og i språket du jobber i, kommer først; symboler fra biblioteker og installerte pakker er merket.
+- Vis › Søk setter fokus i søkefeltet.
 
-## Rettelser
-- «Inkluder og ekskluder filer» i søkepanelet viser ikke lenger en bortkommen bokstav ved siden av pilen.
-- Å lukke kommentarpopoveren til en spesifikasjon fører ikke lenger til krasj.
+## Editor
+- Editoren beholder fokus når en Markdown-fil åpnes med forhåndsvisningen ved siden av, så menyen Format virker med en
+  gang. Editorkommandoer virker også mens fokus er i sidepanelet.
+- Et forslag på slutten av en linje eller i en boks under den sier at Tab tar det.
+- Faner med samme navn i faneoversikten skilles fra hverandre, for eksempel en fil og forhåndsvisningen av den i
+  nettleseren.
+- Menyen Vis tilbyr ikke lenger macOS’ egen «Skjul fanelinje», som fanene i Dango ikke bruker.
+
+## Språk og feilsøking
+- JSON-tjeneren sjekker nå filer, og tjenere som registrerer diagnosene sine etter at de har startet, som basedpyright
+  og sourcekit-lsp, viser dem.
+- Der pip nekter å installere i Python, slik Homebrew sin gjør, tilbyr feilsøkeren å installere debugpy i et virtuelt
+  miljø for prosjektet.

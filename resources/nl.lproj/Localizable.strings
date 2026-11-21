@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Installeren: downloaden…";
 "Installation: lade herunter … {} %" = "Installeren: downloaden… {}%";
 "Installation: prüfe die Prüfsumme …" = "Installeren: checksum controleren…";
-"Installation: suche die neueste Version …" = "Installeren: nieuwste versie zoeken…";
 "Installiere …" = "Installeren…";
 "Installiere … {}" = "Installeren… {}";
 "Installieren" = "Installeer";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Gevonden symbolen";
 "Wird indexiert …" = "Indexeren…";
 "Nichts gefunden" = "Niets gevonden";
+"Keine Dateien gefunden" = "Geen bestanden gevonden";
+"Wird gesucht …" = "Zoeken…";
+"Symbole im Projekt" = "Symbolen in project";
+"Symbol im Projekt suchen" = "Zoek symbool in project";
+"Abhängigkeit · {}" = "Afhankelijkheid · {}";
 "Aufrufer" = "Aanroepers";
 "Aufgerufene" = "Aangeroepen";
 "Obertypen" = "Supertypen";
@@ -2382,5 +2386,15 @@
 "Funktion vorschlagen …" = "Stel een functie voor…";
 "Problem melden …" = "Meld een probleem…";
 "{} auf GitHub" = "{} op GitHub";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "'{}' kan niet als geheel worden vertrouwd";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "Vertrouwen geldt voor alle mappen erin, ook voor mappen die later worden aangemaakt. Voor de thuismap, de hoofdmap van een volume, Bureaublad, Documenten, Downloads en Bibliotheek zou dat elke download en elke gekloonde repository zijn. Open de projectmap zelf om die te vertrouwen; hier kun je lezen en bewerken, maar start er niets.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "Het vertrouwen geldt ook voor alle mappen erin, ook voor mappen die later worden aangemaakt.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} start alleen in mappen die je vertrouwt. Deze map kan niet als geheel worden vertrouwd, omdat hij veel meer dan een project bevat; open de projectmap zelf.";
+"Vorschläge pausiert: gitleaks fehlt" = "Voorstellen gepauzeerd: gitleaks ontbreekt";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Zonder gitleaks controleert niets de code op geheimen. Installeer het met '{}' of verstuur ongecontroleerd.";
+"Ungeprüft an {} senden?" = "Ongecontroleerd naar {} versturen?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Zonder gitleaks controleert niets of de code die naar {} gaat geheimen bevat. Installeer het met '{}', of verstuur ongecontroleerd; de keuze geldt op deze Mac en je kunt hem intrekken in Instellingen onder 'Voorspelling'.";
+"Ungeprüft senden" = "Verstuur ongecontroleerd";
+"Zwischenablage durch Programm ersetzt" = "Klembord vervangen door een programma";
 "„{}“ hat nichts ausgegeben." = "'{}' heeft geen uitvoer gegeven.";
 "„{}“ hat noch nichts ausgegeben." = "'{}' heeft nog geen uitvoer gegeven.";

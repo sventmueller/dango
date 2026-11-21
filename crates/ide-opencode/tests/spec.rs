@@ -1,6 +1,8 @@
 //! The stand-in server answers as the schema of OpenCode 2.2.6 describes: every operation the crate uses, the error
 //! of a request without the password, and every event of the turns it plays.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod support;
 
 use std::io::{BufRead, BufReader, Read, Write};

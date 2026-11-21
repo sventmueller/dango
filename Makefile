@@ -15,21 +15,23 @@ icon: ## Compile the app icon after a change in Icon Composer (assets/AppIcon.ic
 	cargo xtask icon
 
 sweep: ## Remove what no build read lately from the build folders shared by all workspaces; DRY=1 only reports
-	cargo xtask sweep $(if $(DRY),--dry-run)
+	cargo --locked xtask sweep $(if $(DRY),--dry-run)
 
-lint: ## Formatting, the workspace-hack (E194), clippy, also with the selftest feature, the allowed thread-locals and statics, the files' shape (E98) and the AppKit rules; warnings fail
+lint: ## The compiler against its pin, formatting, the workspace-hack (E194), the dependencies' licenses, sources and duplicates, clippy, also with the selftest feature, the allowed thread-locals and statics, the files' shape (E98) and the AppKit rules; warnings fail
+	cargo --locked xtask toolchain
 	cargo fmt --all --check
 	cargo hakari generate --diff --quiet
 	cargo hakari manage-deps --dry-run --quiet
 	cargo xtask thread-locals
 	cargo xtask structure
 	cargo xtask rules
-	cargo clippy --workspace --all-targets -- -D warnings
-	cargo clippy --package ide-app --package ide-ui-agent --package ide-ui-browser --package ide-ui-debug --package ide-ui-export --package ide-ui-factory --package ide-ui-git --package ide-ui-lsp --package ide-ui-terminal --package ide-git --package ide-session --all-targets --features ide-app/selftest,ide-ui-agent/selftest,ide-ui-browser/selftest,ide-ui-debug/selftest,ide-ui-export/selftest,ide-ui-factory/selftest,ide-ui-git/selftest,ide-git/selftest,ide-ui-lsp/selftest,ide-ui-terminal/selftest,ide-session/selftest -- -D warnings
-	cargo clippy --package ide-terminal --package ide-lsp --package ide-git --package ide-agent --package ide-predict --package ide-dap --package ide-thread --all-targets --features ide-terminal/fuzzing,ide-lsp/fuzzing,ide-git/fuzzing,ide-agent/fuzzing,ide-predict/fuzzing,ide-dap/fuzzing,ide-thread/fuzzing -- -D warnings
+	cargo deny --frozen check --hide-inclusion-graph bans licenses sources
+	cargo clippy --locked --workspace --all-targets -- -D warnings
+	cargo clippy --locked --package ide-app --package ide-ui-agent --package ide-ui-browser --package ide-ui-debug --package ide-ui-export --package ide-ui-factory --package ide-ui-git --package ide-ui-lsp --package ide-ui-terminal --package ide-git --package ide-session --all-targets --features ide-app/selftest,ide-ui-agent/selftest,ide-ui-browser/selftest,ide-ui-debug/selftest,ide-ui-export/selftest,ide-ui-factory/selftest,ide-ui-git/selftest,ide-git/selftest,ide-ui-lsp/selftest,ide-ui-terminal/selftest,ide-session/selftest -- -D warnings
+	cargo clippy --locked --package ide-terminal --package ide-lsp --package ide-git --package ide-agent --package ide-predict --package ide-dap --package ide-thread --all-targets --features ide-terminal/fuzzing,ide-lsp/fuzzing,ide-git/fuzzing,ide-agent/fuzzing,ide-predict/fuzzing,ide-dap/fuzzing,ide-thread/fuzzing -- -D warnings
 
 check: sweep lint ## sweep and lint, then all cargo tests; needs no keychain, no window and no network
-	cargo test --workspace
+	cargo test --locked --workspace
 
 check-dictation: ## Clippy and the tests of the app and ide-ui-dictation with dictation, which builds whisper.cpp with cmake; for changes to it
 	cargo clippy --package ide-app --package ide-ui-dictation --all-targets --features ide-app/dictation,ide-ui-dictation/engine -- -D warnings

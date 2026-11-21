@@ -45,7 +45,7 @@ impl AgentTab {
     /// What keeps the session from running, by name.
     pub fn problem_name(&self) -> Option<&'static str> {
         self.state.borrow().problem().map(|p| match p {
-            Problem::Untrusted => "untrusted",
+            Problem::Untrusted | Problem::TooBroad => "untrusted",
             Problem::NotFound => "not found",
             Problem::SignIn(_) | Problem::AcpSignIn => "sign in",
             Problem::Start(_) => "start",

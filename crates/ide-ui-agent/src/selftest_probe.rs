@@ -38,6 +38,7 @@ pub fn answer_text(
     markdown::render_with_figures(mtm, markdown, style::BODY, markdown::Tone::Primary, 500.0)
 }
 
+/// The height an answer's markdown takes in its card at `width`.
 pub fn answer_height(mtm: objc2::MainThreadMarker, markdown: &str, width: f64) -> f64 {
     use objc2_app_kit::NSView;
     let rendered = markdown::render_with_figures(mtm, markdown, style::BODY, markdown::Tone::Primary, width);

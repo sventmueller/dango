@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Memasang: memuat turun…";
 "Installation: lade herunter … {} %" = "Memasang: memuat turun… {}%";
 "Installation: prüfe die Prüfsumme …" = "Memasang: mengesahkan checksum…";
-"Installation: suche die neueste Version …" = "Memasang: mencari versi terkini…";
 "Installiere …" = "Memasang…";
 "Installiere … {}" = "Memasang… {}";
 "Installieren" = "Pasang";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Simbol yang Sepadan";
 "Wird indexiert …" = "Mengindeks…";
 "Nichts gefunden" = "Tiada apa-apa ditemui";
+"Keine Dateien gefunden" = "Tiada fail ditemui";
+"Wird gesucht …" = "Mencari…";
+"Symbole im Projekt" = "Simbol dalam Projek";
+"Symbol im Projekt suchen" = "Cari Simbol dalam Projek";
+"Abhängigkeit · {}" = "Kebergantungan · {}";
 "Aufrufer" = "Pemanggil";
 "Aufgerufene" = "Yang Dipanggil";
 "Obertypen" = "Superjenis";
@@ -2382,5 +2386,15 @@
 "Funktion vorschlagen …" = "Cadangkan Ciri…";
 "Problem melden …" = "Laporkan Masalah…";
 "{} auf GitHub" = "{} di GitHub";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "“{}” Tidak Boleh Dipercayai Secara Keseluruhan";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "Kepercayaan terpakai pada semua folder di dalamnya, termasuk yang dicipta kemudian. Bagi folder pengguna, akar volum, Desktop, Dokumen, Muat Turun dan Library, itu bermakna setiap muat turun dan setiap repo yang diklon. Buka folder projek itu sendiri untuk mempercayainya; di sini anda boleh membaca dan menyunting, tetapi tiada apa-apa dimulakan.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "Kepercayaan ini juga terpakai pada semua folder di dalamnya, termasuk yang dicipta kemudian.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} hanya dimulakan dalam folder yang anda percayai. Folder ini tidak boleh dipercayai secara keseluruhan kerana ia mengandungi jauh lebih banyak daripada satu projek; buka folder projek itu sendiri.";
+"Vorschläge pausiert: gitleaks fehlt" = "Cadangan dijeda: gitleaks tiada";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Tanpa gitleaks, tiada apa-apa yang menyemak kod untuk rahsia. Pasangnya dengan “{}” atau hantar tanpa disemak.";
+"Ungeprüft an {} senden?" = "Hantar kepada {} Tanpa Disemak?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Tanpa gitleaks, tiada apa-apa yang menyemak sama ada kod yang dihantar kepada {} mengandungi rahsia. Pasangnya dengan “{}”, atau hantar tanpa disemak; pilihan ini terpakai pada Mac ini dan boleh ditarik balik dalam Seting, di bawah “Ramalan”.";
+"Ungeprüft senden" = "Hantar Tanpa Disemak";
+"Zwischenablage durch Programm ersetzt" = "Papan klip diganti oleh program";
 "„{}“ hat nichts ausgegeben." = "“{}” tidak menghasilkan sebarang output.";
 "„{}“ hat noch nichts ausgegeben." = "“{}” belum menghasilkan sebarang output.";

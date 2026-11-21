@@ -68,6 +68,10 @@ pub enum Refusal {
     Unanswered,
     /// `runInTerminal` named no program.
     NoProgram,
+    /// `runInTerminal` named an environment variable a shell cannot set.
+    VariableName(String),
+    /// `runInTerminal` had a control character in an argument or a variable's value.
+    ControlCharacter,
     /// The window that would show the terminal is gone.
     WindowClosed,
     /// The terminal did not start the program.
@@ -85,6 +89,10 @@ impl fmt::Display for Refusal {
             Refusal::Unsupported => f.write_str("not supported"),
             Refusal::Unanswered => f.write_str("the request was not answered"),
             Refusal::NoProgram => f.write_str("runInTerminal without a program"),
+            Refusal::VariableName(name) => {
+                write!(f, "runInTerminal with the variable name {name:?}, which no shell sets")
+            }
+            Refusal::ControlCharacter => f.write_str("runInTerminal with a control character in an argument or value"),
             Refusal::WindowClosed => f.write_str("the window closed"),
             Refusal::TerminalNotStarted => f.write_str("the terminal did not start"),
             Refusal::SingleConnection => f.write_str("child sessions need an adapter that takes several connections"),
@@ -135,6 +143,14 @@ mod tests {
     fn a_refusal_tells_the_adapter_why_and_keeps_its_source() {
         assert_eq!(Refusal::Unsupported.to_string(), "not supported");
         assert_eq!(Refusal::Unanswered.to_string(), "the request was not answered");
+        assert_eq!(
+            Refusal::VariableName("A B".into()).to_string(),
+            "runInTerminal with the variable name \"A B\", which no shell sets"
+        );
+        assert_eq!(
+            Refusal::ControlCharacter.to_string(),
+            "runInTerminal with a control character in an argument or value"
+        );
         let child = Refusal::Child(std::io::Error::from(std::io::ErrorKind::ConnectionRefused));
         assert_eq!(
             child.to_string(),

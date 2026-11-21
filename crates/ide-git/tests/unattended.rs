@@ -2,6 +2,8 @@
 //! repository's hooks, also not those a builder points `core.hooksPath` at, and stop at their deadline; the user's own
 //! commits still run them.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod common;
 
 use std::os::unix::fs::PermissionsExt;

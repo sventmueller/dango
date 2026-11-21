@@ -387,7 +387,7 @@ impl AgentTab {
                     sel!(ideAgentRemoveAttachment:),
                     tag,
                 );
-                chips.addArrangedSubview(&ui::picture_tile(self.mtm, picture, name, Some(&remove)));
+                chips.addArrangedSubview(&ui::picture_tile(self.mtm, picture, name, Some(&remove), None));
                 continue;
             }
             let remove = ui::symbol_button(

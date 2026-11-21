@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Asennus: ladataan…";
 "Installation: lade herunter … {} %" = "Asennus: ladataan… {} %";
 "Installation: prüfe die Prüfsumme …" = "Asennus: tarkistetaan tarkistussummaa…";
-"Installation: suche die neueste Version …" = "Asennus: etsitään uusinta versiota…";
 "Installiere …" = "Asennetaan…";
 "Installiere … {}" = "Asennetaan… {}";
 "Installieren" = "Asenna";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Löydetyt symbolit";
 "Wird indexiert …" = "Indeksoidaan…";
 "Nichts gefunden" = "Mitään ei löytynyt";
+"Keine Dateien gefunden" = "Tiedostoja ei löytynyt";
+"Wird gesucht …" = "Etsitään…";
+"Symbole im Projekt" = "Projektin symbolit";
+"Symbol im Projekt suchen" = "Etsi symbolia projektista";
+"Abhängigkeit · {}" = "Riippuvuus · {}";
 "Aufrufer" = "Kutsujat";
 "Aufgerufene" = "Kutsuttavat";
 "Obertypen" = "Ylätyypit";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "{} GitHubissa";
 "„{}“ hat nichts ausgegeben." = "”{}” ei tulostanut mitään.";
 "„{}“ hat noch nichts ausgegeben." = "”{}” ei ole vielä tulostanut mitään.";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "Kansioon ”{}” ei voi luottaa kokonaisuutena";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "Luottamus koskee kaikkia sen sisältämiä kansioita, myös myöhemmin luotuja. Kotikansion, taltion juuren, Työpöydän, Dokumenttien, Latausten ja Kirjaston kohdalla se tarkoittaisi jokaista latausta ja jokaista kloonattua repositoriota. Avaa itse projektikansio, jos haluat luottaa siihen; täällä voit lukea ja muokata, mutta mikään ei käynnisty.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "Luottamus koskee myös kaikkia sen sisältämiä kansioita, myös myöhemmin luotuja.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} käynnistyy vain kansioissa, joihin luotat. Tähän kansioon ei voi luottaa kokonaisuutena, koska se sisältää paljon muutakin kuin yhden projektin; avaa itse projektikansio.";
+"Vorschläge pausiert: gitleaks fehlt" = "Ehdotukset tauolla: gitleaks puuttuu";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Ilman gitleaksia mikään ei tarkista koodia salaisuuksien varalta. Asenna se komennolla ”{}” tai lähetä tarkistamatta.";
+"Ungeprüft an {} senden?" = "Lähetetäänkö palveluun {} tarkistamatta?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Ilman gitleaksia mikään ei tarkista, sisältääkö palveluun {} lähtevä koodi salaisuuksia. Asenna se komennolla ”{}” tai lähetä tarkistamatta; valinta koskee tätä Macia, ja voit perua sen Asetuksissa kohdassa ”Ennustus”.";
+"Ungeprüft senden" = "Lähetä tarkistamatta";
+"Zwischenablage durch Programm ersetzt" = "Ohjelma korvasi leikepöydän";

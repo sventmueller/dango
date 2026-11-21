@@ -308,6 +308,23 @@ pub(crate) fn ask_consent(window: &NSWindow, provider: &str, then: impl FnOnce()
         });
 }
 
+/// Asks whether the text may go to `provider` unchecked while gitleaks is missing (B104); `then` runs when the user
+/// chooses so.
+pub(crate) fn ask_unchecked(window: &NSWindow, provider: &str, then: impl FnOnce() + 'static) {
+    Alert::new(window.mtm(), &tf("Ungeprüft an {} senden?", &[provider]))
+        .informative(&tf(
+            "Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen.",
+            &[provider, ide_ui_git::message::INSTALL_GITLEAKS],
+        ))
+        .button(t("Ungeprüft senden"), Role::Plain)
+        .button(t("Abbrechen"), Role::Plain)
+        .sheet(window, move |response| {
+            if first(response) {
+                then();
+            }
+        });
+}
+
 /// Signs in to Copilot of `root` through GitHub's device flow, with the code in a sheet on the settings window.
 pub(crate) fn sign_in_sheet(root: &Path) {
     let Some(copilot) = super::provider::copilot(root) else {

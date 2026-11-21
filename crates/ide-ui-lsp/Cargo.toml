@@ -3,6 +3,7 @@ name = "ide-ui-lsp"
 version = "0.0.0"
 description = "Language servers for the editors: diagnostics, colours, completion, hover, navigation, code actions, renaming, formatting and inlay hints"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 

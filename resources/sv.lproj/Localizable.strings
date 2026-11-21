@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Installation: hämtar…";
 "Installation: lade herunter … {} %" = "Installation: hämtar… {} %";
 "Installation: prüfe die Prüfsumme …" = "Installation: kontrollerar kontrollsumman…";
-"Installation: suche die neueste Version …" = "Installation: söker efter den senaste versionen…";
 "Installiere …" = "Installerar…";
 "Installiere … {}" = "Installerar… {}";
 "Installieren" = "Installera";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Matchande symboler";
 "Wird indexiert …" = "Indexerar…";
 "Nichts gefunden" = "Inget hittades";
+"Keine Dateien gefunden" = "Inga filer hittades";
+"Wird gesucht …" = "Söker…";
+"Symbole im Projekt" = "Symboler i projektet";
+"Symbol im Projekt suchen" = "Sök efter symbol i projektet";
+"Abhängigkeit · {}" = "Beroende · {}";
 "Aufrufer" = "Anropare";
 "Aufgerufene" = "Anropade";
 "Obertypen" = "Supertyper";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "{} på GitHub";
 "„{}“ hat nichts ausgegeben." = "”{}” skrev inte ut något.";
 "„{}“ hat noch nichts ausgegeben." = "”{}” har inte skrivit ut något ännu.";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "Det går inte att lita på ”{}” som helhet";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "Förtroendet gäller alla mappar i den, också sådana som skapas senare. För hemmappen, roten av en volym, Skrivbord, Dokument, Hämtade filer och Bibliotek skulle det vara varje hämtning och varje klonat repo. Öppna själva projektmappen för att lita på den; här kan du läsa och redigera, men inget startar.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "Förtroendet gäller även alla mappar i den, också sådana som skapas senare.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} startar bara i mappar som du litar på. Den här mappen kan inte betros som helhet eftersom den innehåller mycket mer än ett projekt; öppna själva projektmappen.";
+"Vorschläge pausiert: gitleaks fehlt" = "Förslag pausade: gitleaks saknas";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Utan gitleaks kontrollerar ingenting koden efter hemligheter. Installera det med ”{}” eller skicka okontrollerat.";
+"Ungeprüft an {} senden?" = "Vill du skicka okontrollerat till {}?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Utan gitleaks kontrollerar ingenting om koden som går till {} innehåller hemligheter. Installera det med ”{}” eller skicka okontrollerat; valet gäller på den här Macen och kan tas tillbaka i Inställningar under ”Förutsägelse”.";
+"Ungeprüft senden" = "Skicka okontrollerat";
+"Zwischenablage durch Programm ersetzt" = "Urklippet ersattes av ett program";

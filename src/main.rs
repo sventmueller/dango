@@ -1,3 +1,6 @@
+//! The app on AppKit: its windows with their editors, panels and tabs, and the start that installs the hosts of the
+//! feature crates.
+
 mod about;
 mod activity;
 mod app;

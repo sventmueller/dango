@@ -3,6 +3,7 @@ name = "ide-project"
 version = "0.0.0"
 description = "A project folder without a window: its tree, changes on disk, quick open, search and whether it is trusted"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 

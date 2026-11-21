@@ -1,6 +1,8 @@
 //! The agent's turn against a stub provider: attachments and settings in the request, a busy or stopped session,
 //! the length limit, refusals, failed requests, broken tool input, a model fallback and a store that cannot be written.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod common;
 
 use std::sync::Arc;

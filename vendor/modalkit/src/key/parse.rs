@@ -1,6 +1,6 @@
 use std::ops::BitOr;
 
-use crossterm::event::{KeyCode, KeyModifiers, MediaKeyCode};
+use super::event::{KeyCode, KeyModifiers, MediaKeyCode};
 
 use nom::{
     IResult,

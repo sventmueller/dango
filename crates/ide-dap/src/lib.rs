@@ -26,7 +26,7 @@
 //! breakpoints, the inspector, consoles and which commands can run, with the effects the controller carries out.
 //! [`kept`] is what a project keeps of it between launches, in its layout file beside the window tabs.
 
-#![warn(missing_docs)]
+#![deny(unsafe_code)]
 
 mod adapter;
 mod connection;
@@ -46,8 +46,10 @@ mod jsonc;
 pub mod kept;
 mod launch;
 pub mod model;
+#[allow(unsafe_code, reason = "probes and signals processes through libc")]
 mod ownership;
 mod prepare;
+#[allow(unsafe_code, reason = "reads the user id from the kernel")]
 mod processes;
 pub mod protocol;
 pub mod replay;

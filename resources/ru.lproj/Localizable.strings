@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Установка: загрузка…";
 "Installation: lade herunter … {} %" = "Установка: загрузка… {} %";
 "Installation: prüfe die Prüfsumme …" = "Установка: проверка контрольной суммы…";
-"Installation: suche die neueste Version …" = "Установка: поиск последней версии…";
 "Installiere …" = "Установка…";
 "Installiere … {}" = "Установка… {}";
 "Installieren" = "Установить";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Найденные символы";
 "Wird indexiert …" = "Идет индексация…";
 "Nichts gefunden" = "Ничего не найдено";
+"Keine Dateien gefunden" = "Файлы не найдены";
+"Wird gesucht …" = "Идет поиск…";
+"Symbole im Projekt" = "Символы в проекте";
+"Symbol im Projekt suchen" = "Найти символ в проекте";
+"Abhängigkeit · {}" = "Зависимость · {}";
 "Aufrufer" = "Вызывающие";
 "Aufgerufene" = "Вызываемые";
 "Obertypen" = "Супертипы";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "{} на GitHub";
 "„{}“ hat nichts ausgegeben." = "Вывода от «{}» нет.";
 "„{}“ hat noch nichts ausgegeben." = "Вывода от «{}» пока нет.";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "Папке «{}» нельзя доверять целиком";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "Доверие распространяется на все папки внутри, в том числе созданные позже. Для папки пользователя, корня тома, папок «Рабочий стол», «Документы», «Загрузки» и «Библиотеки» это означало бы доверие к каждой загрузке и каждому клонированному репозиторию. Откройте саму папку проекта, чтобы доверять ей; здесь можно читать и редактировать, но ничего не запускается.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "Доверие распространяется и на все папки внутри, в том числе созданные позже.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} запускается только в папках, которым Вы доверяете. Этой папке нельзя доверять целиком, так как она содержит гораздо больше, чем один проект; откройте саму папку проекта.";
+"Vorschläge pausiert: gitleaks fehlt" = "Предложения приостановлены: нет gitleaks";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Без gitleaks ничто не проверяет код на секреты. Установите его командой «{}» или отправьте без проверки.";
+"Ungeprüft an {} senden?" = "Отправить в {} без проверки?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Без gitleaks ничто не проверяет, содержит ли секреты код, который уходит в {}. Установите его командой «{}» или отправьте без проверки; выбор действует на этом Mac, и его можно отменить в Настройках в разделе «Предсказание».";
+"Ungeprüft senden" = "Отправить без проверки";
+"Zwischenablage durch Programm ersetzt" = "Буфер обмена заменен программой";

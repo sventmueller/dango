@@ -1,6 +1,8 @@
 //! Who owns which process (Review C7), with the fake adapter as a process under the supervisor: a launched program
 //! ends with its session and with a crashed adapter, an attached program and foreign processes keep running.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::{Child, Command};

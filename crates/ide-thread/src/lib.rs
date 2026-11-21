@@ -4,7 +4,6 @@
 //! redraws just what changed.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
 
 pub mod index;
 pub mod model;

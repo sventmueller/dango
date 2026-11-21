@@ -1,6 +1,8 @@
 //! Cherry-picks and reverts that stop at conflicts, a rebase that stops again at its next commit, a hook that refuses
 //! the merge commit, and `git am`, which the app leaves alone.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod common;
 
 use std::os::unix::fs::PermissionsExt;

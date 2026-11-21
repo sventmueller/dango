@@ -2,6 +2,8 @@
 //! every kind of event, permissions, forms, cancelling, steering, a crash, a failed turn, resuming, the version gate,
 //! the settings and the management calls; every request the client sends is checked against the schema.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod support;
 
 use std::path::PathBuf;

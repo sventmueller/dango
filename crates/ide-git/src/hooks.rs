@@ -2,8 +2,6 @@
 //! every hook it starts and how each ended, tells.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::Value;
 
@@ -12,28 +10,11 @@ use crate::run::{Call, Git, Output};
 
 /// Runs `call` with a trace of its hooks; the second value names the first hook that failed.
 pub(crate) fn run(git: &Git, call: Call<'_>) -> Result<(Output, Option<String>)> {
-    let trace = TraceFile::new();
-    let output = git.run(call.env("GIT_TRACE2_EVENT", &trace.0))?;
-    let failed = std::fs::read_to_string(&trace.0)
-        .ok()
-        .and_then(|text| failed_hook(&text));
+    let dir = ide_process::private_dir::PrivateDir::new("ide-git-trace")?;
+    let trace = dir.path().join("trace.json");
+    let output = git.run(call.env("GIT_TRACE2_EVENT", &trace))?;
+    let failed = std::fs::read_to_string(&trace).ok().and_then(|text| failed_hook(&text));
     Ok((output, failed))
-}
-
-struct TraceFile(PathBuf);
-
-impl TraceFile {
-    fn new() -> TraceFile {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-        let n = NEXT.fetch_add(1, Ordering::Relaxed);
-        TraceFile(std::env::temp_dir().join(format!("ide-git-trace-{}-{n}.json", std::process::id())))
-    }
-}
-
-impl Drop for TraceFile {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.0);
-    }
 }
 
 /// The first hook of the top git process that exited with anything but 0.

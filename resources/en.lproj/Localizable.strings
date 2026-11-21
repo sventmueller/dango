@@ -919,7 +919,6 @@
 "Installation: lade herunter …" = "Installing: downloading …";
 "Installation: lade herunter … {} %" = "Installing: downloading … {} %";
 "Installation: prüfe die Prüfsumme …" = "Installing: verifying the checksum …";
-"Installation: suche die neueste Version …" = "Installing: looking up the latest version …";
 "Installiere …" = "Installing …";
 "Installiere … {}" = "Installing … {}";
 "Installieren" = "Install";
@@ -2426,3 +2425,13 @@
 "Funktion vorschlagen …" = "Suggest a Feature…";
 "Problem melden …" = "Report a Problem…";
 "{} auf GitHub" = "{} on GitHub";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "“{}” Can’t Be Trusted as a Whole";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "Trust covers every folder inside, including ones created later. For the home folder, the root of a volume, Desktop, Documents, Downloads and Library, that would be every download and every cloned repo. Open the project folder itself to trust it; here you can read and edit, but nothing starts.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "The trust also covers every folder inside, including ones created later.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} only starts in folders you trust. This folder can’t be trusted as a whole because it holds far more than a project; open the project folder itself.";
+"Vorschläge pausiert: gitleaks fehlt" = "Suggestions paused: gitleaks missing";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Without gitleaks nothing checks the code for secrets. Install it with “{}” or send unchecked.";
+"Ungeprüft an {} senden?" = "Send to {} Unchecked?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Without gitleaks nothing checks whether the code that goes to {} contains secrets. Install it with “{}”, or send unchecked; the choice applies on this Mac and can be taken back in Settings under “Prediction”.";
+"Ungeprüft senden" = "Send Unchecked";
+"Zwischenablage durch Programm ersetzt" = "Clipboard replaced by a program";

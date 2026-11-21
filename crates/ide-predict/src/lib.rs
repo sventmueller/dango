@@ -12,7 +12,7 @@
 //!
 //! [`guard`] holds a request for a provider outside the Mac back until gitleaks found nothing in its text (R15).
 
-#![warn(missing_docs)]
+#![forbid(unsafe_code)]
 
 use std::ops::Range;
 use std::path::PathBuf;

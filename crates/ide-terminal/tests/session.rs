@@ -1,5 +1,7 @@
 //! Sessions with real programs in real PTYs.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod common;
 
 use std::time::{Duration, Instant};

@@ -3,6 +3,7 @@ name = "ide-codex"
 version = "0.0.0"
 description = "OpenAI Codex over its app-server protocol (E147): the connection, its management calls and the mapping onto the thread model"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 

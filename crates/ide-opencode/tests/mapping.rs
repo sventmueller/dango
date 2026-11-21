@@ -2,6 +2,8 @@
 //! the cards know, the streaming of text and reasoning, usage, compaction, retries, the ends of turns and what is
 //! left out.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod support;
 
 use std::time::{Duration, UNIX_EPOCH};

@@ -2,6 +2,8 @@
 //! over when the session opens, a question beside the conversation is answered in a fork that stays out of the thread
 //! and runs no tools, and signing out reaches the agent.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use std::path::Path;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};

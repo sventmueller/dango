@@ -24,7 +24,6 @@
 //! are reached through [`Repository::destructive`], so the app can ask for the user's approval before each (E27).
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
 
 mod blame;
 mod branch;

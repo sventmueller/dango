@@ -1,3 +1,5 @@
+//! The shared sizes, fonts and colours of `ide_ui_common::style`, and those only the AI tab uses.
+
 pub use ide_ui_common::style::*;
 
 use objc2::rc::Retained;

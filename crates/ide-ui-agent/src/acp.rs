@@ -155,6 +155,7 @@ impl Agent {
         matches!(self, Agent::Acp(_))
     }
 
+    /// Whether it is the app's own agent.
     pub fn is_own(&self) -> bool {
         matches!(self, Agent::Own)
     }

@@ -3,6 +3,7 @@ name = "ide-ui-terminal"
 version = "0.0.0"
 description = "A terminal tab's view: keys, mouse, pasteboard, banners, and its drawing with Core Graphics or Metal"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 

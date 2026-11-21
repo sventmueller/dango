@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "התקנה: מוריד…";
 "Installation: lade herunter … {} %" = "התקנה: מוריד… {}%";
 "Installation: prüfe die Prüfsumme …" = "התקנה: בודק את סכום הביקורת…";
-"Installation: suche die neueste Version …" = "התקנה: מחפש את הגירסה העדכנית ביותר…";
 "Installiere …" = "מתקין…";
 "Installiere … {}" = "מתקין… {}";
 "Installieren" = "התקנה";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "סמלים תואמים";
 "Wird indexiert …" = "מתבצע אינדוקס…";
 "Nichts gefunden" = "לא נמצא דבר";
+"Keine Dateien gefunden" = "לא נמצאו קבצים";
+"Wird gesucht …" = "מתבצע חיפוש…";
+"Symbole im Projekt" = "סמלים בפרויקט";
+"Symbol im Projekt suchen" = "חיפוש סמל בפרויקט";
+"Abhängigkeit · {}" = "תלות · {}";
 "Aufrufer" = "קוראים";
 "Aufgerufene" = "נקראים";
 "Obertypen" = "טיפוסי־על";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "{} ב-GitHub";
 "„{}“ hat nichts ausgegeben." = "לא התקבל פלט מ־״{}״.";
 "„{}“ hat noch nichts ausgegeben." = "עדיין לא התקבל פלט מ־״{}״.";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "לא ניתן לתת אמון ב-״{}״ כמכלול";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "האמון חל על כל התיקיות שבתוכה, כולל תיקיות שייווצרו בהמשך. עבור תיקיית הבית, השורש של אמצעי אחסון, שולחן העבודה, מסמכים, הורדות וספריה, משמעות הדבר היא כל הורדה וכל מאגר משוכפל. כדי לתת אמון בפרויקט יש לפתוח את תיקיית הפרויקט עצמה; כאן ניתן לקרוא ולערוך, אבל שום דבר לא מופעל.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "האמון חל גם על כל התיקיות שבתוכה, כולל תיקיות שייווצרו בהמשך.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "‏{} מופעל רק בתיקיות מהימנות. לא ניתן לתת אמון בתיקיה זו כמכלול, כי היא מכילה הרבה יותר מפרויקט אחד; יש לפתוח את תיקיית הפרויקט עצמה.";
+"Vorschläge pausiert: gitleaks fehlt" = "ההצעות מושהות: gitleaks חסר";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "ללא gitleaks שום דבר לא בודק את הקוד לאיתור סודות. יש להתקין אותו באמצעות ״{}״ או לשלוח ללא בדיקה.";
+"Ungeprüft an {} senden?" = "לשלוח אל {} ללא בדיקה?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "ללא gitleaks שום דבר לא בודק אם הקוד שנשלח אל {} מכיל סודות. יש להתקין אותו באמצעות ״{}״ או לשלוח ללא בדיקה; הבחירה חלה על Mac זה וניתן לבטל אותה בהגדרות תחת ״חיזוי״.";
+"Ungeprüft senden" = "שליחה ללא בדיקה";
+"Zwischenablage durch Programm ersetzt" = "תוכנית החליפה את לוח העריכה";

@@ -9,9 +9,10 @@ use std::hash::Hash;
 use std::str::FromStr;
 
 use self::parse::{parse_key_str, parse_macro_str};
+use self::event::{KeyCode, KeyEvent, KeyModifiers, MediaKeyCode};
 use crate::keybindings::InputKey;
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MediaKeyCode};
 
+pub mod event;
 pub(crate) mod parse;
 
 /// Errors that occur while trying to use macros.
@@ -36,9 +37,9 @@ pub enum MacroError {
 /// It's important to remember when setting up keybindings and building a TUI that some terminals
 /// represent several keypresses the same way by default, while others are capable of precisely
 /// representing what keys the user actually pressed, such as when using something like
-/// [crossterm::event::PushKeyboardEnhancementFlags] or when running in Windows terminal.
+/// crossterm's `PushKeyboardEnhancementFlags` or when running in Windows terminal.
 ///
-/// For example, if you're using [crossterm::event::KeyCode] then you'll likely run into the
+/// For example, if you're using crossterm's `KeyCode` then you'll likely run into the
 /// following in a Unix terminal:
 ///
 /// - `<C-M>` will sometimes be represented as `<Enter>`
@@ -63,7 +64,7 @@ pub struct TerminalKey {
 }
 
 impl TerminalKey {
-    /// We internally represent terminal keys using the crossterm types, but we do a little bit of
+    /// We internally represent terminal keys using crossterm's key types, but we do a little bit of
     /// normalization first, since how keys end up getting represented varies based on terminal.
     pub(crate) fn new(mut code: KeyCode, mut modifiers: KeyModifiers) -> Self {
         if let KeyCode::Char(ref mut c) = code {
@@ -302,6 +303,13 @@ impl From<KeyCode> for TerminalKey {
 impl From<KeyEvent> for TerminalKey {
     fn from(ke: KeyEvent) -> Self {
         TerminalKey::new(ke.code, ke.modifiers)
+    }
+}
+
+#[cfg(feature = "crossterm")]
+impl From<crossterm::event::KeyEvent> for TerminalKey {
+    fn from(ke: crossterm::event::KeyEvent) -> Self {
+        TerminalKey::from(KeyEvent::from(ke))
     }
 }
 

@@ -22,6 +22,10 @@ const SIGNED_OUT: &str = "the_cli_without_a_sign_in_keeps_the_recorded_contract"
 /// The test in the same file that has the CLI answer a prompt.
 const SIGNED_IN: &str = "the_real_cli_answers_a_prompt";
 
+/// The sign-in of the nightly workflow. Only the signed-in turn hands it on, after its build, so neither the install
+/// scripts npm runs nor build scripts and procedural macros see it.
+const TOKEN: &str = "CLAUDE_CODE_OAUTH_TOKEN";
+
 /// Installs the newest CLI and runs the contract tests against it; the error names the tests that failed.
 pub(crate) fn claude_latest(args: &[String]) -> Result<(), String> {
     let [signed_in] = flags(args, ["--signed-in"])?;
@@ -50,6 +54,9 @@ fn check_latest(
         "newest CLI: {} (the fixtures were recorded with {RECORDED})",
         version.trim()
     );
+    if signed_in {
+        sh.run(cargo_test(&cli).arg("--no-run").env_remove(TOKEN))?;
+    }
     let mut failed = Vec::new();
     for name in tests(signed_in) {
         println!("-> {name}");
@@ -90,28 +97,31 @@ fn install(prefix: &Path) -> Command {
         "--no-fund",
         CLI_PACKAGE,
     ]);
+    // The CLI's postinstall copies its native program over a placeholder, so the scripts have to run.
+    command.env_remove(TOKEN);
+    command
+}
+
+/// `cargo test` of the contract tests' file, with `cli` as the CLI they start.
+fn cargo_test(cli: &Path) -> Command {
+    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+    let mut command = Command::new(cargo);
+    command
+        .current_dir(root())
+        .args(["test", "-p", "ide-claude", "--test", "session"])
+        .env("CLAUDE_BIN", cli);
     command
 }
 
 /// One ignored test of `ide-claude` alone, with `cli` as the CLI it starts.
 fn contract_test(cli: &Path, test: &str) -> Command {
-    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
-    let mut command = Command::new(cargo);
+    let mut command = cargo_test(cli);
     command
-        .current_dir(root())
-        .args([
-            "test",
-            "-p",
-            "ide-claude",
-            "--test",
-            "session",
-            "--",
-            "--ignored",
-            "--exact",
-            test,
-        ])
-        .args(["--nocapture", "--test-threads", "1"])
-        .env("CLAUDE_BIN", cli);
+        .args(["--", "--ignored", "--exact", test])
+        .args(["--nocapture", "--test-threads", "1"]);
+    if test != SIGNED_IN {
+        command.env_remove(TOKEN);
+    }
     command
 }
 
@@ -171,6 +181,11 @@ mod tests {
         assert_eq!(ran, [cli.clone(), cli.clone()]);
         assert!(sh.commands[0].starts_with(&format!("npm install --prefix {}", prefix.display())));
         assert_eq!(sh.commands[1], format!("{cli} --version"));
+        assert!(
+            sh.commands[2].ends_with(" test -p ide-claude --test session --no-run"),
+            "the signed-in turn is built before the token reaches cargo: {}",
+            sh.commands[2]
+        );
 
         let broken = check_latest(&mut sh, &prefix, false, &mut |_| Ok((true, Vec::new()))).unwrap_err();
         assert_eq!(
@@ -190,6 +205,12 @@ mod tests {
         assert_eq!(&args[..3], ["install", "--prefix", "/tmp/x"]);
         assert_eq!(args.last().copied(), Some(CLI_PACKAGE.as_ref()));
         assert!(!args.iter().any(|a| *a == "-g" || *a == "--global"));
+        let envs: Vec<_> = command.get_envs().collect();
+        assert_eq!(
+            envs,
+            [(TOKEN.as_ref(), None)],
+            "npm's install scripts never see the token"
+        );
     }
 
     #[test]
@@ -198,7 +219,19 @@ mod tests {
         let args: Vec<_> = command.get_args().collect();
         assert!(args.windows(2).any(|w| w == ["--exact", SIGNED_OUT]));
         assert!(args.contains(&"--ignored".as_ref()));
-        let envs: Vec<_> = command.get_envs().collect();
-        assert_eq!(envs, [("CLAUDE_BIN".as_ref(), Some("/tmp/x/claude".as_ref()))]);
+        let mut envs: Vec<_> = command.get_envs().collect();
+        envs.sort();
+        assert_eq!(
+            envs,
+            [
+                ("CLAUDE_BIN".as_ref(), Some("/tmp/x/claude".as_ref())),
+                (TOKEN.as_ref(), None)
+            ]
+        );
+        let signed_in = contract_test(Path::new("/tmp/x/claude"), SIGNED_IN);
+        assert!(
+            !signed_in.get_envs().any(|(key, _)| key == TOKEN),
+            "only the signed-in turn keeps the token"
+        );
     }
 }

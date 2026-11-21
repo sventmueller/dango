@@ -148,7 +148,9 @@ pub(super) mod fake {
 
     /// What one transcription of the self-test brings, after how long.
     pub struct Answer {
+        /// How long the transcription takes.
         pub after: Duration,
+        /// The text it brings, or how it fails.
         pub result: Result<String, TranscriptionError>,
     }
 
@@ -161,7 +163,9 @@ pub(super) mod fake {
 
     /// How the microphone opens for one recording.
     pub enum Opening {
+        /// The microphone opens after the delay.
         After(Duration),
+        /// The microphone does not open, with this error.
         Refused(StartError),
     }
 

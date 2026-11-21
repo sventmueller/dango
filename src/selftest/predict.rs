@@ -545,7 +545,7 @@ fn secrets() {
     let Some(big) = open("big.rs") else {
         return give_up(SCENARIO, "the big file opens");
     };
-    let (text, folder) = (text(&big), root());
+    let text = text(&big);
     let scan = predict::provider::gitleaks();
     let spawned = std::thread::Builder::new()
         .name("selftest-gitleaks".into())
@@ -554,7 +554,7 @@ fn secrets() {
             let mut verdicts = Vec::new();
             for _ in 0..2 {
                 let started = std::time::Instant::now();
-                verdicts.push(scan(&folder, &text));
+                verdicts.push(scan(&text));
                 times.push(started.elapsed());
             }
             crate::util::main_soon(move || secrets_timed(&times, &verdicts));
@@ -583,24 +583,48 @@ fn secrets_timed(times: &[Duration], verdicts: &[predict::guard::Verdict]) {
     predict::provider::force_outside(stub);
     ask(&view);
     if missing {
-        helpers::wait_until(|| counts().0 >= 1, |_| secrets_unchecked());
+        when(status_says_gitleaks, secrets_held);
     } else {
         when(|view| status_says_secret(view, true), secret_found);
     }
 }
 
-/// Without gitleaks the text goes out, and the status bar says so once.
+/// Without gitleaks nothing goes out and the status bar says why, until the user chooses to send unchecked.
+fn secrets_held() {
+    let Some(view) = open("src/secret.rs") else {
+        return give_up(SCENARIO, "src/secret.rs opens in an editor");
+    };
+    let status = predict::status_shown(&view);
+    check(
+        "skipped: gitleaks missing; nothing goes out and the status bar says why",
+        counts().0 == 0
+            && status
+                .as_ref()
+                .is_some_and(|(title, on)| title.contains("gitleaks") && *on),
+        format!("{status:?}"),
+    );
+    predict::provider::set_unchecked(true);
+    ask(&view);
+    when(|view| counts().0 >= 1 && status_says_gitleaks(view), secrets_unchecked);
+}
+
+/// Once the user chose to send unchecked, the text goes out and the status bar says so once.
 fn secrets_unchecked() {
     let Some(view) = open("src/secret.rs") else {
         return give_up(SCENARIO, "src/secret.rs opens in an editor");
     };
     check(
-        "skipped: gitleaks missing; the text goes out unchecked and the status bar says so",
+        "skipped: gitleaks missing; sent unchecked once the user chose so, and the status bar says so",
         counts().0 == 1 && predict::status_shown(&view).is_some_and(|(title, _)| title.contains("gitleaks")),
         format!("{:?}", predict::status_shown(&view)),
     );
+    predict::provider::set_unchecked(false);
     predict::provider::force(None);
     budget();
+}
+
+fn status_says_gitleaks(view: &EditorTextView) -> bool {
+    predict::status_shown(view).is_some_and(|(title, _)| title.contains("gitleaks"))
 }
 
 fn secret_found() {

@@ -40,6 +40,7 @@ pub(crate) fn definition_at(view: &dyn Editor, index: usize) {
 
 /// Where the editor can go from a symbol.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub enum Goto {
     Definition,
     Implementation,

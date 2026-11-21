@@ -55,6 +55,7 @@ fn next_note() -> u64 {
 /// A comment on a passage of the plan, or on the whole plan when it quotes nothing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlanNote {
+    /// The number the tab gave the comment, which its controls carry in their tag.
     pub id: u64,
     /// Where the passage starts in the plan's rendered text, in UTF-16 units, which tells repeated passages apart.
     pub(crate) location: usize,
@@ -364,6 +365,7 @@ impl AgentTab {
         self.plan_changed(id);
     }
 
+    /// Deletes the comment `note` from its plan.
     pub fn plan_remove_note(&self, note: u64) {
         let Some((id, _)) = self.find_note(note) else { return };
         if let Some(notes) = self.timeline().inputs().borrow_mut().plan_notes.get_mut(&id) {

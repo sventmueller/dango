@@ -167,6 +167,11 @@ pub(crate) fn is_trusted(folder: &Path) -> bool {
     TrustStore::open().is_trusted(folder)
 }
 
+/// Whether `folder` holds too much to be trusted as a whole, like the home folder or Downloads (E22).
+pub(crate) fn too_broad(folder: &Path) -> bool {
+    TrustStore::open().refuses(folder)
+}
+
 pub(crate) fn trust(folder: &Path) {
     if let Err(error) = TrustStore::open().trust(folder) {
         crate::diag::report("trusting a folder", error);

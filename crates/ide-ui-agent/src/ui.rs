@@ -9,7 +9,7 @@ use objc2_app_kit::{
     NSLayoutConstraintOrientation, NSLineBreakMode, NSProgressIndicator, NSProgressIndicatorStyle, NSStackView,
     NSStackViewDistribution, NSTextField, NSTitlePosition, NSUserInterfaceLayoutOrientation, NSView,
 };
-use objc2_foundation::{NSData, NSEdgeInsets, NSSize};
+use objc2_foundation::{NSEdgeInsets, NSSize};
 
 use ide_ui_common::constant;
 use ide_ui_common::util::{activate, fixed_size, ns, pin_edges, pin_inset, set_action, symbol};
@@ -115,6 +115,9 @@ pub fn framed(
     frame
 }
 
+/// Decoded pictures by a hash of their bytes.
+pub(crate) type Pictures = std::rc::Rc<std::cell::RefCell<std::collections::HashMap<u64, Retained<NSImage>>>>;
+
 /// The side of a picture's tile, about as large as in Claude's app.
 const TILE: f64 = 76.0;
 const TILE_PADDING: f64 = 6.0;
@@ -127,10 +130,10 @@ pub(crate) fn picture_tile(
     data: &[u8],
     name: &str,
     remove: Option<&NSButton>,
+    pictures: Option<&Pictures>,
 ) -> Retained<NSView> {
-    let image = NSImage::initWithData(objc2::AnyThread::alloc(), &NSData::with_bytes(data));
     let view = NSImageView::new(mtm);
-    view.setImage(image.as_deref());
+    show_decoded(mtm, &view, data, pictures);
     view.setImageScaling(NSImageScaling::ScaleProportionallyUpOrDown);
     view.setAccessibilityElement(false);
     view.setTranslatesAutoresizingMaskIntoConstraints(false);
@@ -164,6 +167,46 @@ pub(crate) fn picture_tile(
     Retained::into_super(tile)
 }
 
+/// Puts the picture `data` into `view` once the sandboxed decoding service has turned it into pixels, as the
+/// previews do, so the app decodes no picture an agent or a pasteboard handed it.
+fn show_decoded(mtm: MainThreadMarker, view: &NSImageView, data: &[u8], pictures: Option<&Pictures>) {
+    let key = {
+        use std::hash::{Hash, Hasher};
+        let mut hasher = std::hash::DefaultHasher::new();
+        data.hash(&mut hasher);
+        hasher.finish()
+    };
+    if let Some(image) = pictures.and_then(|p| p.borrow().get(&key).cloned()) {
+        view.setImage(Some(&image));
+        return;
+    }
+    let view = dispatch2::MainThreadBound::new(objc2::rc::Weak::new(view), mtm);
+    let pictures = dispatch2::MainThreadBound::new(pictures.cloned(), mtm);
+    let started = ide_ui_common::util::spawn_with(
+        "agent-picture",
+        (view, pictures, data.to_vec()),
+        move |(view, pictures, data)| {
+            let decoded = splat_decoder::decode(&data, splat_decoder::SHOWN_SIDE);
+            ide_ui_common::util::main_soon(move || {
+                let Some(mtm) = MainThreadMarker::new() else { return };
+                let Some(image) = decoded.and_then(splat_decoder::image) else {
+                    return;
+                };
+                if let Some(pictures) = pictures.into_inner(mtm) {
+                    pictures.borrow_mut().insert(key, image.clone());
+                }
+                if let Some(view) = view.into_inner(mtm).load() {
+                    view.setImage(Some(&image));
+                }
+            });
+        },
+    );
+    if let Err((_, why)) = started {
+        ide_ui_common::diag::report("showing a picture", why.0);
+    }
+}
+
+/// The edge insets with the given sides.
 pub fn insets(top: f64, left: f64, bottom: f64, right: f64) -> NSEdgeInsets {
     NSEdgeInsets {
         top,

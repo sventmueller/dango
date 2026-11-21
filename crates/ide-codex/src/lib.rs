@@ -8,7 +8,6 @@
 //! the framing, the handshake and how each notification changes a thread.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs, unreachable_pub)]
 
 pub mod capabilities;
 mod diff;

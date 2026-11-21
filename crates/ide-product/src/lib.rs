@@ -4,7 +4,6 @@
 //! users' Macs; changing one of them after a release strands that data.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
 
 /// What users read: menu titles, the About panel, the app bundle and the disk image.
 pub const NAME: &str = "Dango";

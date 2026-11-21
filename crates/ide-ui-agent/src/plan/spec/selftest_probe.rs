@@ -7,6 +7,7 @@ use super::*;
 
 /// A button in the head of a specification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub enum SpecButton {
     Comment,
     Discard,
@@ -16,6 +17,7 @@ pub enum SpecButton {
 
 /// What a comment in the specification's column offers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub enum SpecNoteAction {
     Show,
     Edit,

@@ -4,7 +4,7 @@
 //!
 //! This module contains components for recreating different flavors of editing environments.
 //!
-use crossterm::event::KeyModifiers;
+use crate::key::event::KeyModifiers;
 
 use crate::{
     key::TerminalKey,

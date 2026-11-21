@@ -2,6 +2,8 @@
 //! the playback itself, and `fixtures/lldb_rust.ndjson`, recorded from lldb-dap on `support/rust_program` by
 //! `IDE_DAP_RECORD=… cargo test -p ide-dap --test real_adapters -- --ignored lldb_dap`.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 #[path = "support/drive.rs"]
 mod drive;
 

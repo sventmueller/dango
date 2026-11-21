@@ -101,7 +101,7 @@ pub fn parse(input: &str) -> IResult<&str, CommonEdgePath> {
 mod tests {
     use super::*;
     use crate::key::TerminalKey;
-    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use crate::key::event::{KeyCode, KeyEvent, KeyModifiers};
 
     macro_rules! once {
         ($ev: expr) => {

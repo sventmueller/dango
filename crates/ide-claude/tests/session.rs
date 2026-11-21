@@ -1,6 +1,8 @@
 //! The session against a stand-in for `claude`: a shell script that waits for `initialize`, prints canned frames
 //! and keeps everything the session writes. One ignored test runs the real CLI.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use ide_core::testing::scratch;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, channel};

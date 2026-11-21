@@ -102,7 +102,23 @@ pub(crate) fn release_version(options: Options, version: &str) -> Result<PathBuf
             notes: &notes,
         },
     )?;
+    let symbols = keep_dsyms(sh, &out, version)?;
+    println!("debug symbols in {}", symbols.display());
     Ok(out)
+}
+
+/// Copies the debug symbols of the distributed programs beside the release, outside the image, where crash reports of
+/// this version are symbolicated from: `<out>/<NAME>-<version>-dSYMs/<program>.dSYM`.
+fn keep_dsyms(sh: &mut dyn Shell, out: &Path, version: &str) -> Result<PathBuf, String> {
+    let kept = out.join(format!("{NAME}-{version}-dSYMs"));
+    for name in std::iter::once(PROGRAM).chain(SERVICES.iter().map(|service| service.program)) {
+        sh.run(
+            Command::new("ditto")
+                .arg(universal_dsym(name))
+                .arg(kept.join(format!("{name}.dSYM"))),
+        )?;
+    }
+    Ok(kept)
 }
 
 /// How `package` signs and checks the release.

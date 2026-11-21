@@ -33,6 +33,7 @@ const ASKED: ide_core::settings::StateKey<bool> =
 /// Where fn stands, for the settings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FnState {
+    /// The setting is off.
     Off,
     /// The permission was never asked for; the first dictation does.
     NotAsked,
@@ -40,6 +41,7 @@ pub enum FnState {
     Refused,
     /// Lowspeak runs and has fn.
     LowspeakHasIt,
+    /// fn starts a dictation.
     Ready,
 }
 
@@ -146,6 +148,7 @@ fn lowspeak_changed(notification: &NSNotification, runs: bool) {
     }
 }
 
+/// Where fn stands now.
 pub fn fn_state() -> FnState {
     if !setting() {
         FnState::Off

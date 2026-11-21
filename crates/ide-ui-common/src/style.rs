@@ -58,6 +58,7 @@ pub mod symbol {
 pub const ROW_HEIGHT: f64 = 22.0;
 
 /// The spacing scale for stack views and gaps between controls.
+#[expect(missing_docs, reason = "the steps of a scale, which their names and values say")]
 pub mod space {
     pub const NONE: f64 = 0.0;
     pub const HAIR: f64 = 1.0;
@@ -79,26 +80,32 @@ pub fn small_system() -> Retained<NSFont> {
     NSFont::systemFontOfSize(NSFont::smallSystemFontSize())
 }
 
+/// The system font at the size of running text.
 pub fn body() -> Retained<NSFont> {
     NSFont::systemFontOfSize(BODY)
 }
 
+/// The semibold system font at `size`.
 pub fn bold(size: f64) -> Retained<NSFont> {
     NSFont::systemFontOfSize_weight(size, constant!(NSFontWeightSemibold))
 }
 
+/// The system font of medium weight at `size`.
 pub fn medium(size: f64) -> Retained<NSFont> {
     NSFont::systemFontOfSize_weight(size, constant!(NSFontWeightMedium))
 }
 
+/// The system font at the size of secondary lines.
 pub fn small() -> Retained<NSFont> {
     NSFont::systemFontOfSize(SMALL)
 }
 
+/// The monospaced system font at `size`.
 pub fn mono(size: f64) -> Retained<NSFont> {
     NSFont::monospacedSystemFontOfSize_weight(size, constant!(NSFontWeightRegular))
 }
 
+/// Which of Splat's palettes draws in `appearance`: light or dark, each also in high contrast.
 pub fn appearance_of(appearance: &NSAppearance) -> Appearance {
     let names = NSArray::from_slice(&[
         constant!(NSAppearanceNameAqua),

@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Telepítés: letöltés…";
 "Installation: lade herunter … {} %" = "Telepítés: letöltés… {}%";
 "Installation: prüfe die Prüfsumme …" = "Telepítés: az ellenőrzőösszeg ellenőrzése…";
-"Installation: suche die neueste Version …" = "Telepítés: a legújabb verzió keresése…";
 "Installiere …" = "Telepítés…";
 "Installiere … {}" = "Telepítés… {}";
 "Installieren" = "Telepítés";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Talált szimbólumok";
 "Wird indexiert …" = "Indexelés…";
 "Nichts gefunden" = "Semmi sem található";
+"Keine Dateien gefunden" = "Nem található fájl";
+"Wird gesucht …" = "Keresés…";
+"Symbole im Projekt" = "Szimbólumok a projektben";
+"Symbol im Projekt suchen" = "Szimbólum keresése a projektben";
+"Abhängigkeit · {}" = "Függőség · {}";
 "Aufrufer" = "Hívók";
 "Aufgerufene" = "Hívottak";
 "Obertypen" = "Szupertípusok";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "A {} a GitHubon";
 "„{}“ hat nichts ausgegeben." = "A(z) „{}” nem írt ki semmit.";
 "„{}“ hat noch nichts ausgegeben." = "A(z) „{}” még nem írt ki semmit.";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "A(z) „{}” mappában nem lehet egészében megbízni";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "A bizalom a benne lévő összes mappára kiterjed, a később létrehozottakra is. A saját mappa, egy kötet gyökere, az Íróasztal, a Dokumentumok, a Letöltések és a Könyvtár esetében ez minden letöltést és minden klónozott tárolót jelentene. Nyissa meg magát a projektmappát, ha meg szeretne bízni benne; itt olvashat és szerkeszthet, de semmi sem indul el.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "A bizalom a benne lévő összes mappára is kiterjed, a később létrehozottakra is.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "A(z) {} csak megbízható mappákban indul el. Ebben a mappában nem lehet egészében megbízni, mert sokkal többet tartalmaz egy projektnél; nyissa meg magát a projektmappát.";
+"Vorschläge pausiert: gitleaks fehlt" = "Javaslatok szüneteltetve: hiányzik a gitleaks";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "gitleaks nélkül semmi sem ellenőrzi a kódot titkos adatokra. Telepítse ezzel: „{}”, vagy küldje el ellenőrzés nélkül.";
+"Ungeprüft an {} senden?" = "Elküldi ellenőrzés nélkül ide: {}?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "gitleaks nélkül semmi sem ellenőrzi, hogy a(z) {} felé menő kód tartalmaz-e titkos adatokat. Telepítse ezzel: „{}”, vagy küldje el ellenőrzés nélkül; a választás ezen a Macen érvényes, és a Beállítások „Előrejelzés” lapján visszavonható.";
+"Ungeprüft senden" = "Küldés ellenőrzés nélkül";
+"Zwischenablage durch Programm ersetzt" = "Egy program lecserélte a vágólapot";

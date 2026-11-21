@@ -13,7 +13,6 @@
 //! ```
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
 
 use std::collections::HashMap;
 use std::fmt;

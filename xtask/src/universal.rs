@@ -50,9 +50,30 @@ pub(crate) fn universal_programs(
             }
             let program = dir.join(name);
             sh.run(join.arg("-output").arg(&program))?;
+            join_dsyms(sh, &dir, name)?;
             Ok(program)
         })
         .collect()
+}
+
+/// Where `universal_programs` leaves the debug symbols of the program `name` for both processors.
+pub(crate) fn universal_dsym(name: &str) -> PathBuf {
+    universal_dir().join(format!("{name}.dSYM"))
+}
+
+/// Joins the dSYMs of `name` that the profile's `split-debuginfo` has cargo leave beside each processor's program.
+fn join_dsyms(sh: &mut dyn Shell, dir: &Path, name: &str) -> Result<(), String> {
+    let dsym = universal_dsym(name);
+    let dwarf = |bundle: &Path| bundle.join("Contents/Resources/DWARF").join(name);
+    let mut join = Command::new("lipo");
+    join.arg("-create");
+    for (target, _) in UNIVERSAL {
+        let built = dir.join(target).join(PROFILE).join(format!("{name}.dSYM"));
+        // ditto merges into the bundle of an earlier build; lipo then replaces its one DWARF file.
+        sh.run(Command::new("ditto").arg(&built).arg(&dsym))?;
+        join.arg(dwarf(&built));
+    }
+    sh.run(join.arg("-output").arg(dwarf(&dsym)))
 }
 
 /// The universal programs build in a target folder of their own: whisper-rs-sys, under dictation, hands the `GGML_*`
@@ -194,7 +215,33 @@ mod tests {
                 dir.join("ide").display()
             )
         );
-        assert_eq!(joined.len(), 2);
+        let dwarf = |bundle: &str| format!("{}/Contents/Resources/DWARF/ide", dir.join(bundle).display());
+        assert_eq!(
+            joined[1],
+            format!(
+                "lipo -create {} {} -output {}",
+                dwarf("aarch64-apple-darwin/dist/ide.dSYM"),
+                dwarf("x86_64-apple-darwin/dist/ide.dSYM"),
+                dwarf("ide.dSYM")
+            ),
+            "the debug symbols of both processors in one dSYM"
+        );
+        assert_eq!(joined.len(), 4);
+        assert_eq!(
+            sh.of("ditto")[..2],
+            [
+                format!(
+                    "ditto {} {}",
+                    dir.join("aarch64-apple-darwin/dist/ide.dSYM").display(),
+                    universal_dsym("ide").display()
+                ),
+                format!(
+                    "ditto {} {}",
+                    dir.join("x86_64-apple-darwin/dist/ide.dSYM").display(),
+                    universal_dsym("ide").display()
+                )
+            ]
+        );
         drop(sh);
         let dir = Some(dir.display().to_string());
         let off = Some("OFF".to_string());

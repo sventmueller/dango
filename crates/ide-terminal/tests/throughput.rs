@@ -1,6 +1,8 @@
 //! E25: `cat` of a large file must not freeze the view. The reader keeps up with the PTY whether or not anyone draws,
 //! and however much arrives, the view hears of it once until it draws again.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 #[allow(dead_code, reason = "each test binary uses its own part of the shared helpers")]
 mod common;
 

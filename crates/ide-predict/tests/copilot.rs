@@ -1,6 +1,8 @@
 //! Copilot against a stand-in for its language server: sign-in, document sync, completions, next edits, feedback
 //! and cancelling.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};

@@ -13,7 +13,6 @@
 //! server registered for, and [`symbol_search`] plans and ranks a project-wide symbol search.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
 
 mod capabilities;
 mod convert;
@@ -43,7 +42,7 @@ pub mod workspace_edit;
 pub use documents::Documents;
 pub use encoding::Encoding;
 pub use error::Error;
-pub use features::{Completions, Hover, Insertion, insertion};
+pub use features::{Completions, Hover, Insertion, insert_range, insertion};
 pub use ide_net::{Cancel, Download, Http, Net};
 pub use install::{InstallError, Installer, Progress, Step};
 pub use language::{BUILT_IN, CustomServer, Language, companions, root};

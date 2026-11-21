@@ -187,6 +187,7 @@ mod tests {
             workspace: &workspace,
             sandbox: false,
             cancel,
+            checked: None,
         };
         run(input, &context).unwrap()
     }

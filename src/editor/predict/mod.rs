@@ -58,6 +58,8 @@ pub(crate) struct State {
     note: Option<String>,
     /// What the secrets check said once, shown until the next edit.
     warning: Option<String>,
+    /// The provider outside the Mac requests wait for while gitleaks is missing, as the status bar last said.
+    held: Option<&'static str>,
     parts: shown::Parts,
 }
 
@@ -260,18 +262,18 @@ pub(crate) fn request(view: &EditorTextView) {
     let reply: ide_predict::Reply = Box::new(move |answer| {
         main_soon(move || arrived(serial, id, revision, asked, from, answer));
     });
-    let outside = provider::outside();
+    let reach = provider::reach();
     let (scans, scan) = (provider::scans(), provider::gitleaks());
     let checking = crate::util::spawn("prediction-request", move || {
         let request = Request {
             text: snapshot.to_string(),
             ..request
         };
-        if !outside {
+        let guard::Reach::Outside { unchecked } = reach else {
             return provider.predict(request, cancel, reply);
-        }
-        if let Some(verdict) = guard::send(request, true, &scans, &scan, &*provider, cancel, reply) {
-            main_soon(move || checked(serial, &verdict));
+        };
+        if let Some(verdict) = guard::send(request, reach, &scans, &scan, &*provider, cancel, reply) {
+            main_soon(move || checked(serial, &verdict, unchecked));
         }
     });
     if let Err(error) = checking {
@@ -279,15 +281,19 @@ pub(crate) fn request(view: &EditorTextView) {
     }
 }
 
-/// The secrets check of a request of the editor `serial` said `verdict`: a missing gitleaks or a failed check shows in
-/// the status bar, a finding pauses the file there.
-fn checked(serial: ide_ui_lsp::EditorSerial, verdict: &guard::Verdict) {
+/// The secrets check of a request of the editor `serial` said `verdict`: a missing gitleaks holds requests back or, once
+/// the user chose to send `unchecked`, shows in the status bar, as a failed check does; a finding pauses the file there.
+fn checked(serial: ide_ui_lsp::EditorSerial, verdict: &guard::Verdict, unchecked: bool) {
     let Some(view) = super::find_editor(serial) else { return };
     let warning = match verdict {
-        guard::Verdict::NotInstalled if !crate::context::app().predictions().told_missing.replace(true) => Some(tf(
-            "Ohne gitleaks geht der Code ungeprüft hinaus. Installiere es mit „{}“.",
-            &[ide_ui_git::message::INSTALL_GITLEAKS],
-        )),
+        guard::Verdict::NotInstalled
+            if unchecked && !crate::context::app().predictions().told_missing.replace(true) =>
+        {
+            Some(tf(
+                "Ohne gitleaks geht der Code ungeprüft hinaus. Installiere es mit „{}“.",
+                &[ide_ui_git::message::INSTALL_GITLEAKS],
+            ))
+        }
         guard::Verdict::Failed(problem) => Some(tf("Die Secrets-Prüfung ist fehlgeschlagen: {}", &[problem])),
         _ => None,
     };
@@ -456,6 +462,17 @@ fn ask_from_editor(view: &EditorTextView) {
     });
 }
 
+/// Asks whether the text may go to the provider `name` unchecked while gitleaks is missing; the answer holds on this
+/// Mac.
+fn ask_unchecked(view: &EditorTextView, name: &str) {
+    let Some(window) = view.window() else { return };
+    let view = objc2::Message::retain(view);
+    shown::ask_unchecked(&window, name, move || {
+        provider::set_unchecked(true);
+        view.later(sel!(idePredict), PAUSE);
+    });
+}
+
 /// The settings or a provider's state changed: proposals that may no longer show go, and the status bars follow.
 pub(crate) fn follow_settings() {
     for view in super::all_editors() {
@@ -517,7 +534,9 @@ pub(crate) fn perform(view: &EditorTextView, sender: Option<&AnyObject>) {
 
 /// The status bar's button: switches the language on or off where proposals can come, else leads to what is missing.
 fn status_pressed(view: &EditorTextView) {
+    let held = view.ivars().predict.borrow().held;
     match gate(view) {
+        Gate::Ready(..) if held.is_some() => ask_unchecked(view, held.unwrap_or_default()),
         Gate::Ready(..) | Gate::LanguageOff => toggle_language(&language(view).0),
         Gate::Blocked(Blocked::Consent, _) => {
             crate::context::app().predictions().asked_consent.set(false);
@@ -590,12 +609,23 @@ fn status(view: &EditorTextView) -> (String, String, bool) {
         let state = view.ivars().predict.borrow();
         (state.note.clone(), state.warning.clone())
     };
-    let paused = provider::outside() && view.document().path().is_some_and(|p| provider::scans().paused(p));
+    let (reach, scans) = (provider::reach(), provider::scans());
+    let paused = reach != guard::Reach::Here && view.document().path().is_some_and(|p| scans.paused(p));
+    let held = reach == (guard::Reach::Outside { unchecked: false }) && scans.missing();
+    view.ivars().predict.borrow_mut().held = held.then_some(provider);
     match gate(view) {
         Gate::Ready(..) if paused => {
             let why = t("Vorschläge pausiert: Die Datei enthält ein Secret");
             (why.to_string(), why.to_string(), false)
         }
+        Gate::Ready(..) if held => (
+            t("Vorschläge pausiert: gitleaks fehlt").to_string(),
+            tf(
+                "Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft.",
+                &[ide_ui_git::message::INSTALL_GITLEAKS],
+            ),
+            true,
+        ),
         Gate::Ready(..) => match note.or(warning) {
             Some(note) => (note.clone(), note, true),
             None => (

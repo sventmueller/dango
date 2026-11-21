@@ -1,6 +1,8 @@
 //! Both services' APIs answered from recordings: runs, jobs with paging, steps, logs, re-running, cancelling, finding a
 //! self-managed GitLab under a path, rate limits and tokens.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use std::sync::Arc;
 
 use ide_ci::log::{self, LineKind};

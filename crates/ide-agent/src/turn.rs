@@ -4,6 +4,7 @@
 //! the context window is compacted first (E42).
 
 use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{RecvTimeoutError, channel};
 use std::time::{Duration, Instant, SystemTime};
 
@@ -601,8 +602,8 @@ fn read_group(shared: &Shared, cancel: &Cancel, calls: &[Call]) -> Vec<Block> {
             .map(|(Call { id, name, input, .. }, prepared)| {
                 scope.spawn(move || match prepared {
                     Err(note) => rejected(shared, id, note),
-                    Ok(()) if cancel.is_cancelled() => rejected(shared, id, ToolNote::Cancelled),
-                    Ok(()) => execute(shared, cancel, id, name, input),
+                    Ok(_) if cancel.is_cancelled() => rejected(shared, id, ToolNote::Cancelled),
+                    Ok(checked) => execute(shared, cancel, id, name, input, checked.as_deref()),
                 })
             })
             .collect();
@@ -623,12 +624,13 @@ fn read_group(shared: &Shared, cancel: &Cancel, calls: &[Call]) -> Vec<Block> {
 fn call(shared: &Shared, cancel: &Cancel, id: &str, name: &str, input: &Value) -> Outcome {
     match prepare(shared, cancel, id, name, input) {
         Err(note) => rejected(shared, id, note),
-        Ok(()) if cancel.is_cancelled() => rejected(shared, id, ToolNote::Cancelled),
-        Ok(()) => execute(shared, cancel, id, name, input),
+        Ok(_) if cancel.is_cancelled() => rejected(shared, id, ToolNote::Cancelled),
+        Ok(checked) => execute(shared, cancel, id, name, input, checked.as_deref()),
     }
 }
 
-fn prepare(shared: &Shared, cancel: &Cancel, id: &str, name: &str, input: &Value) -> Result<(), ToolNote> {
+/// The call's card and the policy's verdict; `Ok` with the resolved path of a write, which it must write to.
+fn prepare(shared: &Shared, cancel: &Cancel, id: &str, name: &str, input: &Value) -> Result<Option<PathBuf>, ToolNote> {
     let (kind, title, view) = tools::card(name, input, &shared.workspace);
     let known = shared.lock().thread.entry_by_key(id).is_some();
     if !known {
@@ -650,10 +652,10 @@ fn prepare(shared: &Shared, cancel: &Cancel, id: &str, name: &str, input: &Value
             ..ToolPatch::default()
         },
     }]);
-    let action = tools::action(name, input, &shared.workspace)?;
+    let (action, checked) = tools::checked(name, input, &shared.workspace)?;
     let verdict = shared.lock().policy.decide(&action);
     match verdict {
-        Verdict::Allow => Ok(()),
+        Verdict::Allow => Ok(checked),
         Verdict::Deny(refusal) => Err(ToolNote::Refused(refusal)),
         verdict @ Verdict::Ask { .. } => ask(
             shared,
@@ -665,11 +667,12 @@ fn prepare(shared: &Shared, cancel: &Cancel, id: &str, name: &str, input: &Value
                 input,
             },
             verdict,
-        ),
+        )
+        .map(|()| checked),
     }
 }
 
-fn execute(shared: &Shared, cancel: &Cancel, id: &str, name: &str, input: &Value) -> Outcome {
+fn execute(shared: &Shared, cancel: &Cancel, id: &str, name: &str, input: &Value, checked: Option<&Path>) -> Outcome {
     shared.apply(vec![Update::Tool {
         key: id.to_string(),
         patch: ToolPatch {
@@ -683,6 +686,7 @@ fn execute(shared: &Shared, cancel: &Cancel, id: &str, name: &str, input: &Value
         workspace: &shared.workspace,
         sandbox,
         cancel,
+        checked,
     };
     let outcome = tools::run(name, input, &context);
     let mut updates = vec![Update::Tool {

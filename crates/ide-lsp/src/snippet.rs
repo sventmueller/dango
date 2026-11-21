@@ -38,18 +38,48 @@ pub struct Snippet {
     pub tabstops: Vec<Tabstop>,
 }
 
-/// The text and tab stops of `snippet`; what is not valid snippet syntax is taken literally.
+/// Snippets longer than this, in bytes, are inserted as plain text.
+const MAX_LEN: usize = 64 * 1024;
+
+/// Placeholders nested deeper than this make the whole snippet plain text.
+const MAX_DEPTH: usize = 32;
+
+/// The text and tab stops of `snippet`; what is not valid snippet syntax is taken literally, and a snippet longer than
+/// [`MAX_LEN`] or nested deeper than [`MAX_DEPTH`] is taken literally as a whole.
 pub(crate) fn parse(snippet: &str) -> Snippet {
+    if snippet.len() > MAX_LEN {
+        return literal(snippet);
+    }
+    let chars: Vec<char> = snippet.chars().collect();
     let mut parser = Parser {
-        chars: snippet.chars().collect(),
+        failed: vec![false; chars.len() + 1],
+        chars,
         at: 0,
         text: String::new(),
         len: 0,
-        stops: BTreeMap::new(),
+        stops: vec![],
+        depth: 0,
+        too_deep: false,
+        choices_fail_from: usize::MAX,
+        transform_fail_from: usize::MAX,
     };
     parser.any(None);
+    if parser.too_deep {
+        return literal(snippet);
+    }
     let end = parser.len;
-    let mut stops = parser.stops;
+    let mut stops: BTreeMap<u32, Tabstop> = BTreeMap::new();
+    for (index, span, choices) in parser.stops {
+        let stop = stops.entry(index).or_insert_with(|| Tabstop {
+            index,
+            spans: vec![],
+            choices: vec![],
+        });
+        stop.spans.push(span);
+        if stop.choices.is_empty() {
+            stop.choices = choices;
+        }
+    }
     let last = stops.remove(&0).unwrap_or(Tabstop {
         index: 0,
         spans: vec![Span::new(end, end)],
@@ -63,13 +93,35 @@ pub(crate) fn parse(snippet: &str) -> Snippet {
     }
 }
 
+/// `text` as it is, with the cursor after it.
+pub(crate) fn literal(text: &str) -> Snippet {
+    let end = u32::try_from(text.encode_utf16().count()).unwrap_or(u32::MAX);
+    Snippet {
+        text: text.to_string(),
+        tabstops: vec![Tabstop {
+            index: 0,
+            spans: vec![Span::new(end, end)],
+            choices: vec![],
+        }],
+    }
+}
+
 struct Parser {
     chars: Vec<char>,
     at: usize,
     text: String,
     /// The text's length in UTF-16 code units.
     len: u32,
-    stops: BTreeMap<u32, Tabstop>,
+    /// Every tab stop span in the order found, so that undoing a failed element is a truncation.
+    stops: Vec<(u32, Span, Vec<String>)>,
+    /// By position after a `$`: whether the element there failed, which it does again from any context.
+    failed: Vec<bool>,
+    depth: usize,
+    too_deep: bool,
+    /// The earliest choice list known to run unclosed to the end; every later one does too.
+    choices_fail_from: usize,
+    /// The earliest `${name/…` known to run unclosed to the end; every later one does too.
+    transform_fail_from: usize,
 }
 
 impl Parser {
@@ -85,7 +137,7 @@ impl Parser {
     /// Text and snippet elements up to `close`, which is left unread.
     fn any(&mut self, close: Option<char>) {
         while let Some(c) = self.peek() {
-            if Some(c) == close {
+            if Some(c) == close || self.too_deep {
                 return;
             }
             self.at += 1;
@@ -98,19 +150,35 @@ impl Parser {
                     _ => self.push('\\'),
                 },
                 '$' => {
-                    let (at, text_len, len) = (self.at, self.text.len(), self.len);
-                    let stops = self.stops.clone();
-                    if !self.element() {
+                    let (at, text_len, len, stops) = (self.at, self.text.len(), self.len, self.stops.len());
+                    if self.failed[at] || !self.element() {
+                        self.failed[at] = true;
                         self.at = at;
                         self.text.truncate(text_len);
                         self.len = len;
-                        self.stops = stops;
+                        self.stops.truncate(stops);
                         self.push('$');
                     }
                 }
                 _ => self.push(c),
             }
         }
+    }
+
+    /// The body of a placeholder or default and its closing `}`; false if it is not closed.
+    fn body(&mut self) -> bool {
+        if self.depth == MAX_DEPTH {
+            self.too_deep = true;
+            return false;
+        }
+        self.depth += 1;
+        self.any(Some('}'));
+        self.depth -= 1;
+        if self.too_deep || self.peek() != Some('}') {
+            return false;
+        }
+        self.at += 1;
+        true
     }
 
     /// One element after a `$`; false if what follows is not one.
@@ -146,11 +214,9 @@ impl Parser {
             }
             Some(':') => {
                 self.at += 1;
-                self.any(Some('}'));
-                if self.peek() != Some('}') {
+                if !self.body() {
                     return false;
                 }
-                self.at += 1;
                 self.stop(index, Span::new(start, self.len), vec![]);
                 true
             }
@@ -179,14 +245,13 @@ impl Parser {
             }
             Some(':') => {
                 self.at += 1;
-                self.any(Some('}'));
-                if self.peek() != Some('}') {
-                    return false;
-                }
-                self.at += 1;
-                true
+                self.body()
             }
             Some('/') => {
+                let from = self.at;
+                if from >= self.transform_fail_from {
+                    return false;
+                }
                 let mut escaped = false;
                 while let Some(c) = self.peek() {
                     self.at += 1;
@@ -196,6 +261,7 @@ impl Parser {
                         _ => escaped = false,
                     }
                 }
+                self.transform_fail_from = from;
                 false
             }
             _ => false,
@@ -204,6 +270,10 @@ impl Parser {
 
     /// The choices of `${n|a,b|}` up to and including `|}`.
     fn choices(&mut self) -> Option<Vec<String>> {
+        let from = self.at;
+        if from >= self.choices_fail_from {
+            return None;
+        }
         let mut choices = vec![String::new()];
         while let Some(c) = self.peek() {
             self.at += 1;
@@ -223,6 +293,7 @@ impl Parser {
                 _ => choices.last_mut()?.push(c),
             }
         }
+        self.choices_fail_from = from;
         None
     }
 
@@ -251,15 +322,7 @@ impl Parser {
     }
 
     fn stop(&mut self, index: u32, span: Span, choices: Vec<String>) {
-        let stop = self.stops.entry(index).or_insert_with(|| Tabstop {
-            index,
-            spans: vec![],
-            choices: vec![],
-        });
-        stop.spans.push(span);
-        if stop.choices.is_empty() {
-            stop.choices = choices;
-        }
+        self.stops.push((index, span, choices));
     }
 }
 
@@ -317,5 +380,49 @@ mod tests {
         let broken = parse("price: $ and ${1:open");
         assert_eq!(broken.text, "price: $ and ${1:open");
         assert_eq!(broken.tabstops.len(), 1);
+    }
+
+    fn assert_literal(snippet: &str) {
+        let parsed = parse(snippet);
+        assert_eq!(parsed.text, snippet);
+        assert_eq!(parsed.tabstops, literal(snippet).tabstops);
+    }
+
+    #[test]
+    fn unclosed_elements_are_not_retried_from_every_dollar() {
+        let started = std::time::Instant::now();
+        assert_literal(&"${1:".repeat(10_000));
+        assert_literal(&"${1|a,".repeat(10_000));
+        assert_literal(&"${X/a/".repeat(10_000));
+        let open = "${1:".repeat(MAX_DEPTH - 1);
+        let s = parse(&format!("{open}{}", "a${2:b}".repeat(5_000)));
+        assert_eq!(s.text, format!("{open}{}", "ab".repeat(5_000)));
+        assert_eq!(s.tabstops[0].spans.len(), 5_000);
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(1),
+            "{:?}",
+            started.elapsed()
+        );
+    }
+
+    #[test]
+    fn nesting_up_to_the_limit_parses_and_deeper_is_taken_literally() {
+        let nested = |depth: usize| format!("{}x{}", "${1:".repeat(depth), "}".repeat(depth));
+        let s = parse(&nested(MAX_DEPTH));
+        assert_eq!(s.text, "x");
+        assert_eq!(s.tabstops[0].spans.len(), MAX_DEPTH);
+        assert_literal(&nested(MAX_DEPTH + 1));
+        assert_literal(&format!("${{X:{}}}", nested(MAX_DEPTH)));
+        assert_literal(&nested(10_000));
+        assert_literal(&nested(100_000));
+    }
+
+    #[test]
+    fn snippets_over_the_length_limit_are_taken_literally() {
+        assert_literal(&format!("${{1:a}}{}", "b".repeat(MAX_LEN)));
+        assert_eq!(
+            parse(&format!("${{1:a}}{}", "b".repeat(MAX_LEN - 6))).text.len(),
+            MAX_LEN - 5
+        );
     }
 }

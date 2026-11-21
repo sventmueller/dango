@@ -3,6 +3,7 @@ name = "ide-agent"
 version = "0.0.0"
 description = "The app's own agent (E6): language model providers, their keys and prices, and the agent's tools and loop"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
@@ -27,6 +28,7 @@ ide-product = { path = "../ide-product" }
 ide-project = { path = "../ide-project" }
 ide-thread = { path = "../ide-thread" }
 ignore = "0.4.34"
+rustix = { version = "1.1.6", features = ["fs"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 similar = "3.2.1"

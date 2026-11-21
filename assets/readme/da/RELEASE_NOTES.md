@@ -1,25 +1,40 @@
-## Hastighed og hukommelse
-- Alt, hvad en agent starter, i ethvert sprog, f.eks. builds, tests, shells og MCP-servere, kører i macOS’
-  baggrundstilstand: med den laveste prioritet og med begrænset adgang til disk og netværk. Selve agenterne, med Claudes
-  subagenter, kører med middel prioritet. Agenter under fuld belastning gør ikke længere Dango langsommere; det gælder
-  også for agenterne i Software Factory.
-- Gendannede vinduer starter kun det, der vises: en AI-fane bag andre starter sin CLI, når den kommer frem eller får en
-  prompt, og browser-, webstedseksempel- og terminalfaner indlæser deres side eller starter deres shell, første gang de
-  vises.
-- En lang søgning i projektet tegner ikke længere alle sine resultater igen, mens den kører. Software Factory, CI-logs
-  og panelet Tests laver mindre, mens de ikke er synlige; tests og startkonfigurationer indlæses, første gang deres
-  panel vises, og skjulte paneler CI og Containere læser intet, før de vises.
-- Lange sessioner bruger mindre hukommelse: en færdig diff beholder de linjer, dens kort viser, en besvaret anmodning om
-  tilladelse giver slip på sit input, terminalens glyf-cache vokser ikke længere ubegrænset, og panelerne Arkiver og Git
-  giver slip på rækker, der ikke længere findes.
-- Selve programmet er omkring 40 % mindre.
+## Sikkerhed
+- Links i en agents svar, planer og rapporter, i Markdown-eksemplet og i PDF’er åbner ikke længere en vilkårlig app med
+  et enkelt klik. Webadresser åbnes i en browserfane, arkiver i projektet i en editorfane; alt andet, f.eks. et arkiv et
+  andet sted, en netværksdeling eller en anden apps link, spørger først og viser, hvor det fører hen.
+- Login- og Remote Control-adresser, som en agent eller en MCP-server videregiver, åbnes kun, når de er webadresser.
+- Mapper, der indeholder langt mere end ét projekt, f.eks. din hjemmemappe, Skrivebord, Dokumenter, Overførsler eller
+  roden af en diskenhed, kan ikke længere betros som helhed; stol på dem projekt for projekt. Spørgsmålet om tillid
+  siger nu, at tilliden også gælder mapperne i den.
+- CI-tokens og logins sendes aldrig længere over ukrypteret http til en anden server end denne Mac; et repository, hvis
+  remote begynder med `http://`, bliver spurgt over https.
+- Uden gitleaks venter forudsigelser, før kode sendes til en udbyder uden for denne Mac, indtil du vælger at sende
+  ukontrolleret. Et projekts egne gitleaks-indstillinger slår ikke længere kontrollen fra.
+- Appens egen agent kan ikke længere lokkes til at skrive uden for projektet via et link, der dukker op, efter at dens
+  skrivning er godkendt, og arkiver med yderligere hårde links får deres eget arkiv i stedet for at blive skrevet
+  igennem.
+- En sprogservers fuldførelser kan ikke længere få editoren til at hænge, og dens omdøbninger og sletninger af et linket
+  arkiv virker på linket, ikke på det, det peger på.
+- Billeder, du vedhæfter en prompt, afkodes af den isolerede afkodningstjeneste, som alle andre steder.
+- Et program i terminalen kan kun erstatte udklipsholderen, mens dets terminal er forrest, og terminalen siger det.
+- rust-analyzer installeres fra en udgivelse, der er fastlåst med sin kontrolsum, i stedet for den, der tilfældigvis var
+  nyest.
 
-## Vinduer og menuer
-- Når en rude lukkes, lukkes dens faner ikke længere; de flyttes til ruden før, ellers til ruden efter. Kun ruden med et
-  eksempel og den sidste rude lukkes sammen med deres faner.
-- Menuen Oversigt viser panelerne i samme rækkefølge som symbolerne i indholdsoversigten.
-- “Administrer agenter…” er fjernet fra menuen +; det findes stadig under “+ Ny session” i panelet Agenter.
+## Søgning og navigation
+- Åbn hurtigt siger, når intet arkiv passer, og viser, om det søger i arkiver eller i projektets symboler.
+- Projektets symboler omfatter TypeScript og JavaScript, uden at et af deres arkiver er åbent. Præcise resultater fra
+  projektet og i det sprog, du arbejder i, kommer først; symboler fra biblioteker og installerede pakker er markeret.
+- Oversigt › Søgning flytter fokus til søgefeltet.
 
-## Rettelser
-- “Medtag og udelad arkiver” i panelet Søgning viser ikke længere et forvildet bogstav ved siden af sin pil.
-- Når du lukker kommentarvinduet til en specifikation, går appen ikke længere ned.
+## Editor
+- Editoren beholder fokus, når et Markdown-arkiv åbnes med sit eksempel ved siden af, så menuen Format virker med det
+  samme. Editorkommandoer virker også, mens fokus er i indholdsoversigten.
+- Et forslag ved linjeslut eller i en boks under linjen siger, at Tab accepterer det.
+- Faner med samme navn i faneoversigten kan skelnes fra hinanden, f.eks. et arkiv og dets eksempel i browseren.
+- Menuen Oversigt tilbyder ikke længere macOS’ egen “Skjul fanelinje”, som Dangos faner ikke bruger.
+
+## Sprog og fejlfinding
+- JSON-serveren tjekker nu arkiver, og servere, der først registrerer deres diagnoser efter start, f.eks. basedpyright
+  og sourcekit-lsp, viser dem.
+- Hvor pip nægter at installere i Python, som i Homebrews, tilbyder fejlfinderen at installere debugpy i et virtuelt
+  miljø i projektet.

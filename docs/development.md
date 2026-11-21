@@ -6,10 +6,19 @@ How the app is built, run and tested. What it is made of, the decisions (E1–E2
 ## Requirements
 - macOS 14 or later with the Xcode Command Line Tools (`xcode-select --install`): the SDK, the linker, `codesign`
   and `plutil`. Xcode itself is needed only by `make icon` (below).
-- Rust 1.99.1, as `rust-toolchain.toml` names it. Homebrew's `rust` builds everything here; rustup becomes necessary
+- Rust 1.100.0, as `rust-toolchain.toml` names it. Homebrew's `rust` builds everything here; rustup becomes necessary
   only for the universal release build, since Homebrew ships the standard library for this Mac's processor alone.
+  Homebrew's Rust ignores the pin, so `make lint` begins with `cargo xtask toolchain`, which fails when `rustc -V` is
+  another version ("bump the pin or the compiler") or a package's `rust-version` is not the pin's minor version; every
+  member takes it from `[workspace.package]` with `rust-version.workspace = true`. After `brew upgrade rust`, move the
+  pin, `rust-version` and `rustup toolchain install` together.
 - The sibling checkouts `../splat` and `../lowspeak`, which the workspace takes crates from by path (E14).
 - `cargo install --locked cargo-hakari`, which `make lint` uses to check the workspace-hack (below).
+- `brew install cargo-deny`, the supply-chain gate of `deny.toml` (B113): `make lint` runs
+  `cargo deny --frozen check bans licenses sources` without the network, so only permissive licenses on its
+  allow-list, only crates.io and path dependencies, duplicate versions as warnings; `make ci` adds
+  `cargo deny check advisories`, which fetches the RustSec database, with each ignored advisory's reason in
+  `deny.toml`. The acknowledgements (`xtask/src/licenses.rs`) refuse a license outside the same list.
 
 ## App icon
 The icon is the Icon Composer document `assets/AppIcon.icon` (the layer `Assets/dango.svg` on a white background, dark
@@ -26,14 +35,14 @@ in Dark Mode). Only Xcode's `actool` compiles it, so its output `assets/Assets.c
 | `make run` | `cargo xtask run`: the debug app, opened |
 | `make icon` | `cargo xtask icon`: compiles the app icon, see [App icon](#app-icon); needs Xcode |
 | `make sweep` | `cargo xtask sweep`: removes what no build read lately from the shared build folders, see [Build folders](#build-folders); `DRY=1` only reports |
-| `make lint` | `cargo fmt --check`, the workspace-hack, clippy on the workspace and on the app with `--features selftest`; warnings fail |
-| `make check` | `sweep` and `lint`, then `cargo test --workspace`; needs no keychain, no window and no network |
+| `make lint` | `cargo xtask toolchain`, `cargo fmt --check`, the workspace-hack, `cargo deny` without advisories, clippy with `--locked` on the workspace and on the app with `--features selftest`; warnings fail |
+| `make check` | `sweep` and `lint`, then `cargo test --locked --workspace`; needs no keychain, no window and no network |
 | `make check-dictation` | clippy and the app's tests with the feature `dictation`, for changes that touch it |
 | `make test` | `check`, then `cargo xtask selftest probe` |
 | `make perf` | the timing and memory budgets of E25 in a release build; wall-clock bounds, so only on an otherwise idle Mac |
 | `make fuzz` | `cargo xtask fuzz`: the crates' fuzz targets, see [Fuzzing](#fuzzing); outside `make check` |
 | `make coverage` | `cargo xtask coverage`: line coverage of the tests and the offline self-tests, see [Coverage](#coverage) |
-| `make ci` | `cargo xtask ci`: formatter, `check`, coverage with every test and self-test, `perf`; seals the content, see [CI and deploy](#ci-and-deploy) |
+| `make ci` | `cargo xtask ci`: formatter, `cargo deny check advisories`, `check`, coverage with every test and self-test, `perf`, 20 s of each fuzz target; seals the content, see [CI and deploy](#ci-and-deploy) |
 | `make seal-explain` | `cargo xtask seal explain`: the seal of HEAD's content here and on GitHub |
 | `make deploy` | notarizes the next version, commits VERSION, stages the assets, pushes `main` and its tag, a green seal along, and publishes the release |
 | `make release` | `cargo xtask release`: a dry run of the release, see [Release](#release); sends nothing anywhere |
@@ -151,7 +160,7 @@ scenarios that need no network, account, real agent CLI or person: `cargo xtask 
 the table in `src/selftest/scenarios.rs` marks offline. The scenarios run in one selftest bundle built with
 dictation, so `dictation` is measured too; a failed test or check is reported and the run goes on. Homebrew's Rust has
 no llvm-tools, so it builds with rustup's toolchain of `rust-toolchain.toml` (`rustup component add llvm-tools
---toolchain 1.99.1`) and `cargo-llvm-cov` (`brew install cargo-llvm-cov`), instrumented by `cargo llvm-cov show-env` in
+--toolchain 1.100.0`) and `cargo-llvm-cov` (`brew install cargo-llvm-cov`), instrumented by `cargo llvm-cov show-env` in
 `target/llvm-cov-target` with a build folder of its own, so it never touches the normal build. A run takes 17 to 20
 minutes, about 15 of them the self-tests. A launch that is killed, such as the first one of `recovery`, writes no
 coverage data.
@@ -176,8 +185,9 @@ fails the run when a test or a selftest scenario failed.
 ## CI and deploy
 `make ci` (`cargo xtask ci`, `xtask/src/ci.rs`) is the whole pipeline. It refuses while the screen is locked (the
 self-tests cannot capture windows then), runs `cargo fmt --all`, takes the fingerprint of the working tree and then,
-stopping at the first failure, `make check`, `cargo xtask coverage --check --strict` and `make perf`, printing each
-stage's duration. The stages run under `caffeinate -di`, so the display does not sleep and lock the screen; a stage
+stopping at the first failure, `cargo deny --locked check advisories`, `make check`,
+`cargo xtask coverage --check --strict`, `make perf` and `cargo xtask fuzz` with `FUZZ_SECONDS=20` (every target and
+the property tests, see [Fuzzing](#fuzzing)), printing each stage's duration. The stages run under `caffeinate -di`, so the display does not sleep and lock the screen; a stage
 that fails while the screen is locked seals nothing. A complete run seals the content in a local ref: `refs/ci-seals/green/<fingerprint>` when every stage
 passed, `refs/ci-seals/red/<fingerprint>` when one failed. A red seal outweighs a green one for the same fingerprint.
 Content that changed during the run seals nothing.
@@ -185,12 +195,15 @@ Content that changed during the run seals nothing.
 The fingerprint (`xtask/src/seal.rs`) is the git tree of the content without `VERSION`, which only `make deploy` raises: for
 the working tree through a temporary index (`read-tree HEAD`, `add --all`), so untracked files count unless they are
 ignored; for `--head` `HEAD`'s tree. Committing the whole sealed working tree with `git add -A` therefore gives
-`HEAD` the sealed fingerprint. `cargo xtask seal fingerprint [--head]` prints it, and `make seal-explain` says which
+`HEAD` the sealed fingerprint. The tree also holds the state of `../splat` and `../lowspeak` as gitlinks below
+`.siblings/`: each one's HEAD commit, and as `<name>-changes` the tree of its working tree when that has changes, written
+through a temporary index of the sibling's own, so a commit or edit there needs a new seal. `cargo xtask seal fingerprint [--head]` prints it, and `make seal-explain` says which
 seals HEAD's content has here and on origin and which paths separate it from the nearest green seal. A seal ref points
 at a commit of the sealed tree without parents.
 
-`make deploy` (`cargo xtask deploy`) refuses unless `main` is checked out and everything is committed; it does not
-ask for a seal. It notarizes the next version, commits only VERSION, creates its tag and uploads all assets and their
+`make deploy` (`cargo xtask deploy`) refuses unless `main` is checked out and everything is committed, and unless
+`../splat` and `../lowspeak` have no changes and, after a fetch, their HEAD is on their upstream; `dist/deployment.json`
+records both commits under `siblings`, so the release can be built again. It does not ask for a seal. It notarizes the next version, commits only VERSION, creates its tag and uploads all assets and their
 SHA-256 manifest to a draft release, after checking that the update feed offers the signed image of that version.
 Only after the complete upload does it push `main` and the version tag atomically, with the green seal ref when
 HEAD's content has one here. Then it publishes the draft as latest itself, once origin's `main` is the release commit
@@ -261,7 +274,9 @@ keychain with memory, so it needs no microphone, model, key or network.
 1. The universal program (`cargo xtask universal`): the release with `dictation` (E46) for `aarch64-apple-darwin` and
    `x86_64-apple-darwin` through rustup, each in `target/universal/<target>` with `GGML_NATIVE=OFF` and, for Intel, the
    instruction sets every Intel Mac with macOS 14 has, as Lowspeak builds it; joined with `lipo` into
-   `target/universal/ide`. It needs `../lowspeak` on its `main`, which holds the `dictation` module, and cmake.
+   `target/universal/ide`. It needs `../lowspeak` on its `main`, which holds the `dictation` module, and cmake. The
+   profile `dist` strips the programs but has `dsymutil` write their line tables first (`split-debuginfo = "packed"`);
+   both processors' dSYMs are joined into `target/universal/<program>.dSYM`.
 2. The distribution bundle in `target/distribution/`: the universal program, Sparkle 2.10.1 without its XPC services
    (only a sandboxed app needs them), `SUFeedURL` and `SUPublicEDKey` in `Info.plist`, and
    `NSMicrophoneUsageDescription`, the audio-input entitlement, and
@@ -277,7 +292,8 @@ keychain with memory, so it needs no microphone, model, key or network.
 5. The image mounted out of sight (`-nobrowse`) and checked: intact, the app signed and universal, the link in place.
 6. Into the release folder: `Dango-<version>.dmg`, `Dango-<version>.md` with the English notes,
    `appcast.xml` (checked with `xmllint`) and the Homebrew Cask `dango.rb` with the image's checksum (checked with
-   `ruby -c`).
+   `ruby -c`), and beside them, not in the image and not uploaded, `Dango-<version>-dSYMs/` with the dSYM of every
+   program, which crash reports of that version are symbolicated with (`atos`, or Spotlight finds them by UUID).
 
 Without `--notarize` it is a dry run into `target/release-dry-run/`: signed with the local certificate and without the
 secure timestamp, no notarization, no stapling, the feed's EdDSA signature a placeholder with the image's real length,
@@ -493,7 +509,10 @@ secret. It is off until the owner enables it:
   Actions › Variables); "Run workflow" on the Actions page starts one at any time. macOS minutes of a private
   repository count against the account's Actions quota.
 - The paid turn runs only with the secret `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) and either the
-  workflow's input ticked or the variable `CLAUDE_NIGHTLY_SIGNED_IN` set to `true`.
+  workflow's input ticked or the variable `CLAUDE_NIGHTLY_SIGNED_IN` set to `true`. Only that step gets the secret
+  (B117), and `cargo xtask claude-latest` removes it from npm, whose install scripts the CLI needs to put its native
+  program in place, from the signed-out test, and from cargo while it builds the tests (`--no-run` first); only the
+  run of the signed-in test keeps it. The actions are pinned to commit SHAs, their tags beside them.
 - The checkouts of `splat` and `lowspeak` take what is pushed; local commits there that this repository needs must be
   pushed first.
 

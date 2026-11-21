@@ -3,6 +3,7 @@ name = "ide-test"
 version = "0.0.0"
 description = "Finding, running and debugging tests: an adapter per tool for cargo test, cargo-nextest, Go, pytest, Vitest, Jest and bun test"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 

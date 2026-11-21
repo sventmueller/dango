@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Instal·lació: descarregant…";
 "Installation: lade herunter … {} %" = "Instal·lació: descarregant… {} %";
 "Installation: prüfe die Prüfsumme …" = "Instal·lació: comprovant la suma de verificació…";
-"Installation: suche die neueste Version …" = "Instal·lació: cercant la versió més recent…";
 "Installiere …" = "Instal·lant…";
 "Installiere … {}" = "Instal·lant… {}";
 "Installieren" = "Instal·la";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Símbols coincidents";
 "Wird indexiert …" = "Indexant…";
 "Nichts gefunden" = "No s’ha trobat res";
+"Keine Dateien gefunden" = "No s’ha trobat cap fitxer";
+"Wird gesucht …" = "Cercant…";
+"Symbole im Projekt" = "Símbols del projecte";
+"Symbol im Projekt suchen" = "Cerca un símbol al projecte";
+"Abhängigkeit · {}" = "Dependència · {}";
 "Aufrufer" = "Cridadors";
 "Aufgerufene" = "Cridats";
 "Obertypen" = "Supertipus";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "{} a GitHub";
 "„{}“ hat nichts ausgegeben." = "“{}” no ha generat cap sortida.";
 "„{}“ hat noch nichts ausgegeben." = "“{}” encara no ha generat cap sortida.";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "No es pot confiar en “{}” en conjunt";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "La confiança inclou totes les carpetes que conté, fins i tot les que es creïn més endavant. Per a la carpeta d’inici, l’arrel d’un volum, l’Escriptori, Documents, Baixades i Biblioteca, això seria cada baixada i cada repositori clonat. Obre la carpeta del projecte mateixa per confiar‑hi; aquí pots llegir i editar, però no s’inicia res.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "La confiança també inclou totes les carpetes que conté, fins i tot les que es creïn més endavant.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} només s’inicia en carpetes de confiança. No es pot confiar en aquesta carpeta en conjunt perquè conté molt més que un projecte; obre la carpeta del projecte mateixa.";
+"Vorschläge pausiert: gitleaks fehlt" = "Suggeriments en pausa: falta gitleaks";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Sense gitleaks, res no comprova si el codi conté secrets. Instal·la’l amb “{}” o envia sense comprovar.";
+"Ungeprüft an {} senden?" = "Vols enviar a {} sense comprovar?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Sense gitleaks, res no comprova si el codi que va a {} conté secrets. Instal·la’l amb “{}” o envia sense comprovar; l’elecció s’aplica en aquest Mac i es pot desfer a Configuració, a “Predicció”.";
+"Ungeprüft senden" = "Envia sense comprovar";
+"Zwischenablage durch Programm ersetzt" = "Un programa ha substituït el porta-retalls";

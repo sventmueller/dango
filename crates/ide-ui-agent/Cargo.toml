@@ -3,6 +3,7 @@ name = "ide-ui-agent"
 version = "0.0.0"
 description = "The AI tab with its timeline, composer and status, the Agents panel, and the own agent's settings"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
@@ -28,6 +29,7 @@ ide-ui-common.workspace = true
 ide-ui-dictation = { workspace = true, optional = true }
 splat-file-state.workspace = true
 splat-i18n.workspace = true
+splat-decoder.workspace = true
 splat-markdown.workspace = true
 splat-preview.workspace = true
 splat-render.workspace = true

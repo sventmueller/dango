@@ -1,8 +1,10 @@
 //! The CI seal (docs/development.md, "CI and deploy"): a git ref `refs/ci-seals/<green|red>/<fingerprint>` saying that
 //! a complete `cargo xtask ci` run of one content state passed or failed. `deploy` requires none and pushes a green
 //! one along when HEAD's content has it. The fingerprint is the git tree of the content without `VERSION`, which only
-//! deploy raises, so a commit of the sealed working tree inherits the seal. Red beats green for the same fingerprint.
+//! deploy raises, so a commit of the sealed working tree inherits the seal, and with the commits and changes of
+//! `../splat` and `../lowspeak`, so a change there needs a new seal. Red beats green for the same fingerprint.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -20,6 +22,13 @@ const BRANCH: &str = "main";
 
 /// The most differing paths `explain` lists.
 const LISTED: usize = 20;
+
+/// The checkouts beside the repository that the workspace builds crates from by path (E14).
+pub(crate) const SIBLINGS: [&str; 2] = ["splat", "lowspeak"];
+
+/// The folder of the fingerprint's tree that records the siblings as gitlinks, which a tree holds without the
+/// objects they name.
+const SIBLINGS_DIR: &str = ".siblings";
 
 /// A repository and the environment its git commands get.
 pub(crate) struct Git {
@@ -51,6 +60,25 @@ impl Git {
     pub(crate) fn output(&self, sh: &mut dyn Shell, args: &[&str]) -> Result<String, String> {
         sh.stdout(&mut self.command(args))
     }
+
+    /// The checkout `name` beside this one, with the same environment.
+    pub(crate) fn sibling(&self, name: &str) -> Git {
+        Git {
+            dir: self.dir.join("..").join(name),
+            env: self.env.clone(),
+        }
+    }
+
+    /// The object `args` name, such as `HEAD`.
+    fn object(&self, sh: &mut dyn Shell, args: &[&str]) -> Result<String, String> {
+        let name = self.output(sh, args)?;
+        let name = name.trim();
+        if is_object_name(name) {
+            Ok(name.to_string())
+        } else {
+            Err(format!("git {} printed {name:?}, not an object name", args.join(" ")))
+        }
+    }
 }
 
 /// Which content a fingerprint describes.
@@ -62,37 +90,91 @@ pub(crate) enum Content {
     Head,
 }
 
-/// The fingerprint of `content`: the name of its git tree without `VERSION`, written to the repository's objects.
+/// The fingerprint of `content`: the name of its git tree without `VERSION` and with the state of the siblings,
+/// written to the repository's objects.
 pub(crate) fn fingerprint(sh: &mut dyn Shell, git: &Git, content: Content) -> Result<String, String> {
-    static NEXT: AtomicU64 = AtomicU64::new(0);
-    let index = std::env::temp_dir().join(format!(
-        "xtask-seal-{}-{}.index",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    ));
-    let tree = tree_without_version(sh, git, content, &index);
+    let index = scratch_index();
+    let tree = sibling_entries(sh, git).and_then(|siblings| tree_without_version(sh, git, content, &siblings, &index));
     let _ = std::fs::remove_file(&index);
     tree
 }
 
-fn tree_without_version(sh: &mut dyn Shell, git: &Git, content: Content, index: &Path) -> Result<String, String> {
-    let mut indexed = |args: &[&str]| {
-        let mut cmd = git.command(args);
-        cmd.env("GIT_INDEX_FILE", index);
-        sh.stdout(&mut cmd)
-    };
-    indexed(&["read-tree", "HEAD"])?;
+/// A path for an index file of its own, which git creates on first use.
+fn scratch_index() -> PathBuf {
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+    std::env::temp_dir().join(format!(
+        "xtask-seal-{}-{}.index",
+        std::process::id(),
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    ))
+}
+
+/// `git` with the index file `index` in place of the repository's own.
+fn indexed(sh: &mut dyn Shell, git: &Git, index: &Path, args: &[&str]) -> Result<String, String> {
+    let mut cmd = git.command(args);
+    cmd.env("GIT_INDEX_FILE", index);
+    sh.stdout(&mut cmd)
+}
+
+fn tree_without_version(
+    sh: &mut dyn Shell,
+    git: &Git,
+    content: Content,
+    siblings: &[(String, String)],
+    index: &Path,
+) -> Result<String, String> {
+    indexed(sh, git, index, &["read-tree", "HEAD"])?;
     if content == Content::WorkingTree {
-        indexed(&["add", "--all"])?;
+        indexed(sh, git, index, &["add", "--all"])?;
     }
-    indexed(&["rm", "--cached", "--quiet", "--ignore-unmatch", "--", VERSION_FILE])?;
-    let tree = indexed(&["write-tree"])?;
+    indexed(
+        sh,
+        git,
+        index,
+        &["rm", "--cached", "--quiet", "--ignore-unmatch", "--", VERSION_FILE],
+    )?;
+    for (path, object) in siblings {
+        let entry = format!("160000,{object},{path}");
+        indexed(sh, git, index, &["update-index", "--add", "--cacheinfo", &entry])?;
+    }
+    let tree = indexed(sh, git, index, &["write-tree"])?;
     let tree = tree.trim();
     if is_object_name(tree) {
         Ok(tree.to_string())
     } else {
         Err(format!("git write-tree printed {tree:?}, not an object name"))
     }
+}
+
+/// What the fingerprint records of each sibling there is, as a path below `SIBLINGS_DIR` and the object it names: its
+/// HEAD commit, and the tree of its working tree when that holds changes. Writing that tree stores the changed files
+/// in the sibling's objects, as `git add` would, and leaves its index alone.
+fn sibling_entries(sh: &mut dyn Shell, git: &Git) -> Result<Vec<(String, String)>, String> {
+    let mut entries = Vec::new();
+    for name in SIBLINGS {
+        let sibling = git.sibling(name);
+        if !sibling.dir.exists() {
+            continue;
+        }
+        let head = sibling.object(sh, &["rev-parse", "HEAD"])?;
+        let committed = sibling.object(sh, &["rev-parse", "HEAD^{tree}"])?;
+        let index = scratch_index();
+        let working = indexed(sh, &sibling, &index, &["read-tree", "HEAD"])
+            .and_then(|_| indexed(sh, &sibling, &index, &["add", "--all"]))
+            .and_then(|_| indexed(sh, &sibling, &index, &["write-tree"]));
+        let _ = std::fs::remove_file(&index);
+        let working = working?.trim().to_string();
+        if !is_object_name(&working) {
+            return Err(format!(
+                "git write-tree printed {working:?} in ../{name}, not an object name"
+            ));
+        }
+        entries.push((format!("{SIBLINGS_DIR}/{name}"), head));
+        if working != committed {
+            entries.push((format!("{SIBLINGS_DIR}/{name}-changes"), working));
+        }
+    }
+    Ok(entries)
 }
 
 /// A full SHA-1 or SHA-256 object name.
@@ -264,6 +346,42 @@ pub(crate) fn ready(sh: &mut dyn Shell, git: &Git) -> Result<String, String> {
         ));
     }
     fingerprint(sh, git, Content::Head)
+}
+
+/// Refuses unless each sibling is there, without changes and with its HEAD on its upstream, so the release can be built
+/// again from what others can fetch; returns each sibling's HEAD commit.
+pub(crate) fn siblings_ready(sh: &mut dyn Shell, git: &Git) -> Result<BTreeMap<String, String>, String> {
+    let mut commits = BTreeMap::new();
+    for name in SIBLINGS {
+        let sibling = git.sibling(name);
+        if !sibling.dir.exists() {
+            return Err(format!("../{name} is missing, which the release builds crates from"));
+        }
+        let status = sibling.output(sh, &["status", "--porcelain"])?;
+        if !status.trim().is_empty() {
+            return Err(format!(
+                "../{name} has changes that are not committed, which no one could build the release from again:\n{status}"
+            ));
+        }
+        sibling.output(sh, &["fetch", "--quiet"])?;
+        let upstream = sibling
+            .output(
+                sh,
+                &["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
+            )
+            .map_err(|_| format!("../{name}'s branch has no upstream to fetch the release's sources from"))?;
+        if sibling
+            .output(sh, &["merge-base", "--is-ancestor", "HEAD", "@{upstream}"])
+            .is_err()
+        {
+            return Err(format!(
+                "../{name} has commits that {} lacks; push them first",
+                upstream.trim()
+            ));
+        }
+        commits.insert(name.to_string(), sibling.object(sh, &["rev-parse", "HEAD"])?);
+    }
+    Ok(commits)
 }
 
 /// Pushes the release commit and version tag atomically, after all draft assets have been uploaded, with the green

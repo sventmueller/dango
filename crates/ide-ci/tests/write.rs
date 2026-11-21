@@ -1,6 +1,8 @@
 //! What the app writes on the user's click (E177), answered from recordings: merge requests and pull requests opened
 //! and found again by their marker, comments on issues, where a branch points, and tokens without write rights.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 use std::sync::Arc;
 
 use ide_ci::{Client, Error, Method, Recorded, candidates};

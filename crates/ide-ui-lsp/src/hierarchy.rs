@@ -13,6 +13,7 @@ use ide_ui_common::util::main_soon;
 
 /// Which hierarchy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub enum HierarchyKind {
     Calls,
     Types,
@@ -20,6 +21,7 @@ pub enum HierarchyKind {
 
 /// Which way a hierarchy goes from its root.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub enum Direction {
     Callers,
     Callees,
@@ -40,7 +42,9 @@ impl HierarchyKind {
 /// The hierarchy around a symbol: the items the server prepared and the server that knows their neighbours.
 #[derive(Clone)]
 pub struct Hierarchy {
+    /// Whether it is the hierarchy of calls or of types.
     pub kind: HierarchyKind,
+    /// The items the server prepared for the symbol.
     pub roots: Vec<HierarchyItem>,
     /// The window folder whose editors open the places.
     pub folder: PathBuf,

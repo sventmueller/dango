@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Інсталяція: завантаження…";
 "Installation: lade herunter … {} %" = "Інсталяція: завантаження… {} %";
 "Installation: prüfe die Prüfsumme …" = "Інсталяція: перевірка контрольної суми…";
-"Installation: suche die neueste Version …" = "Інсталяція: пошук найновішої версії…";
 "Installiere …" = "Інсталяція…";
 "Installiere … {}" = "Інсталяція… {}";
 "Installieren" = "Інсталювати";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Знайдені символи";
 "Wird indexiert …" = "Триває індексування…";
 "Nichts gefunden" = "Нічого не знайдено";
+"Keine Dateien gefunden" = "Файлів не знайдено";
+"Wird gesucht …" = "Триває пошук…";
+"Symbole im Projekt" = "Символи в проєкті";
+"Symbol im Projekt suchen" = "Знайти символ у проєкті";
+"Abhängigkeit · {}" = "Залежність · {}";
 "Aufrufer" = "Викликають";
 "Aufgerufene" = "Викликані";
 "Obertypen" = "Супертипи";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "{} на GitHub";
 "„{}“ hat nichts ausgegeben." = "Від «{}» немає виводу.";
 "„{}“ hat noch nichts ausgegeben." = "Від «{}» поки немає виводу.";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "Папці «{}» не можна довіряти цілком";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "Довіра поширюється на всі папки всередині, зокрема створені пізніше. Для домашньої папки, кореня тому, папок «Робочий стіл», «Документи», «Завантаження» і «Бібліотеки» це означало б довіру до кожного завантаження й кожного клонованого репозиторію. Відкрийте саму папку проєкту, щоб довіряти їй; тут ви можете читати й редагувати, але нічого не запускається.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "Довіра поширюється й на всі папки всередині, зокрема створені пізніше.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} запускається лише в папках, яким ви довіряєте. Цій папці не можна довіряти цілком, бо вона містить набагато більше, ніж один проєкт; відкрийте саму папку проєкту.";
+"Vorschläge pausiert: gitleaks fehlt" = "Пропозиції призупинено: немає gitleaks";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Без gitleaks ніщо не перевіряє код на секрети. Інсталюйте його командою «{}» або надішліть без перевірки.";
+"Ungeprüft an {} senden?" = "Надіслати до {} без перевірки?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Без gitleaks ніщо не перевіряє, чи містить секрети код, що йде до {}. Інсталюйте його командою «{}» або надішліть без перевірки; вибір діє на цьому Mac, і його можна скасувати в Параметрах у розділі «Передбачення».";
+"Ungeprüft senden" = "Надіслати без перевірки";
+"Zwischenablage durch Programm ersetzt" = "Програма замінила буфер обміну";

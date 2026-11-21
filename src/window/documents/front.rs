@@ -282,7 +282,7 @@ impl WindowController {
             .collect();
         for ((tab, _), title) in shown.iter().zip(tab_titles::distinct(&named)) {
             let is_own = own.is_some_and(|own| std::ptr::eq(&**tab, own));
-            if is_own || tab.window.tab().title().to_string() != title {
+            if is_own || tab.shown_title() != title {
                 tab.show_title(&title);
             }
         }

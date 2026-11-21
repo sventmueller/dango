@@ -2,6 +2,8 @@
 //! `claude`: every kind of turn end, requests answered by the user and by an order's rule, the order's launch on the
 //! wire, a lost completion event of OpenCode (C62), and the paths that take no role in orders (C48, C72).
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod support;
 
 use std::path::{Path, PathBuf};

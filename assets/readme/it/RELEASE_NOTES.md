@@ -1,26 +1,45 @@
-## Velocità e memoria
-- Tutto ciò che un agente avvia, in qualsiasi linguaggio, come build, test, shell e server MCP, viene eseguito nello
-  stato in background di macOS: con la priorità più bassa e con l’accesso a disco e rete limitato. Gli agenti stessi,
-  insieme ai subagenti di Claude, vengono eseguiti con priorità media. Gli agenti a pieno carico non rallentano più
-  Dango; questo vale anche per gli agenti della Software Factory.
-- Le finestre ripristinate avviano solo ciò che si vede: un pannello AI dietro ad altri avvia la sua CLI quando passa in
-  primo piano o riceve un prompt, e i pannelli del browser, dell’anteprima del sito e del terminale caricano la loro
-  pagina o avviano la loro shell la prima volta che vengono mostrati.
-- Una lunga ricerca nel progetto non ridisegna più tutti i suoi risultati mentre è in corso. La Software Factory, i log
-  della CI e il riquadro Test lavorano meno quando non sono visibili; test e configurazioni di debug vengono letti la
-  prima volta che il loro riquadro viene mostrato, e i riquadri CI e Container nascosti non leggono nulla finché non
-  vengono mostrati.
-- Le sessioni lunghe richiedono meno memoria: una scheda delle differenze conclusa conserva solo le righe che mostra,
-  una richiesta di permesso a cui hai risposto rilascia il suo input, la cache dei glifi del terminale non cresce più
-  senza limiti, e i riquadri File e Git rilasciano le righe che non esistono più.
-- Il programma stesso è più piccolo di circa il 40%.
+## Sicurezza
+- I link nelle risposte, nei piani e nei resoconti di un agente, nell’anteprima Markdown e nei PDF non aprono più
+  alcuna app con un solo clic. Gli indirizzi web si aprono in un pannello del browser, i file all’interno del progetto
+  in un pannello dell’editor; tutto il resto, come un file altrove, una condivisione di rete o il link di un’altra app,
+  chiede prima conferma e mostra dove porta.
+- Gli indirizzi di accesso e di Remote Control che un agente o un server MCP consegna si aprono solo se sono indirizzi
+  web.
+- Le cartelle che contengono molto più di un progetto, come la cartella Inizio, la Scrivania, Documenti, Download o la
+  radice di un volume, non possono più essere considerate attendibili nel loro insieme; fidati dei progetti uno per
+  uno. La domanda sulla fiducia ora dice che questa vale anche per le cartelle al suo interno.
+- I token della CI e gli accessi non passano mai in semplice http verso un server diverso da questo Mac; a un
+  repository il cui remote inizia con `http://` la richiesta arriva via https.
+- Senza gitleaks, le previsioni di modifica aspettano prima che il codice vada a un provider esterno a questo Mac,
+  finché non scegli di inviarlo senza controllo. Le impostazioni di gitleaks di un progetto non disattivano più il
+  controllo.
+- L’agente integrato non può più essere indotto a scrivere fuori dal progetto tramite un link che compare dopo che la
+  sua scrittura è stata approvata, e i file con altri hard link ricevono un file tutto loro invece di essere scritti
+  attraverso il link.
+- I completamenti di un server di linguaggio non possono più bloccare l’editor, e le sue rinomine ed eliminazioni di un
+  file collegato agiscono sul link, non su ciò a cui punta.
+- Le immagini che alleghi a un prompt vengono decodificate dal servizio di decodifica in sandbox, come ovunque.
+- Un programma nel terminale può sostituire gli appunti solo mentre il suo terminale è in primo piano, e il terminale
+  lo segnala.
+- rust-analyzer si installa da una release fissata con il suo checksum, invece che dall’ultima disponibile.
 
-## Finestre e menu
-- Chiudere un’area sposta i suoi pannelli nell’area precedente, o altrimenti in quella successiva, invece di chiuderli.
-  Solo l’area di un’anteprima e l’ultima area si chiudono insieme ai loro pannelli.
-- Il menu Vista elenca i riquadri nell’ordine dei simboli della barra laterale.
-- “Gestisci agenti…” non è più nel menu +; resta sotto “+ Nuova sessione” nel riquadro Agenti.
+## Ricerca e navigazione
+- Apertura rapida dice quando nessun file corrisponde e mostra se cerca tra i file o tra i simboli del progetto.
+- I simboli del progetto includono TypeScript e JavaScript senza che uno dei loro file sia aperto. Le corrispondenze
+  esatte del progetto e del linguaggio in cui lavori vengono per prime; i simboli delle librerie e dei pacchetti
+  installati sono contrassegnati.
+- Vista › Ricerca porta il focus nel campo di ricerca.
 
-## Correzioni
-- “Includi ed escludi file” nel riquadro Ricerca non mostra più una lettera di troppo accanto alla sua freccia.
-- Chiudere il popover dei commenti di una specifica non causa più un arresto anomalo.
+## Editor
+- L’editor mantiene il focus quando un file Markdown si apre con l’anteprima accanto, così il menu Formato funziona
+  subito. I comandi dell’editor funzionano anche mentre il focus è nella barra laterale.
+- Una proposta alla fine di una riga o in un riquadro sotto di essa indica che Tab la accetta.
+- I pannelli con lo stesso nome nella panoramica dei pannelli si distinguono, per esempio un file e la sua anteprima
+  nel browser.
+- Il menu Vista non offre più “Nascondi barra dei pannelli” di macOS, che i pannelli di Dango non usano.
+
+## Linguaggi e debug
+- Il server JSON ora controlla i file, e i server che registrano la loro diagnostica dopo l’avvio, come basedpyright e
+  sourcekit-lsp, la mostrano.
+- Dove pip si rifiuta di installare in Python, come fa quello di Homebrew, il debugger propone di installare debugpy
+  in un ambiente virtuale del progetto.

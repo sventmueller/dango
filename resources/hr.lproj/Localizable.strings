@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Instalacija: preuzimanje…";
 "Installation: lade herunter … {} %" = "Instalacija: preuzimanje… {} %";
 "Installation: prüfe die Prüfsumme …" = "Instalacija: provjera kontrolnog zbroja…";
-"Installation: suche die neueste Version …" = "Instalacija: traženje najnovije verzije…";
 "Installiere …" = "Instaliranje…";
 "Installiere … {}" = "Instaliranje… {}";
 "Installieren" = "Instaliraj";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Pronađeni simboli";
 "Wird indexiert …" = "Indeksiranje…";
 "Nichts gefunden" = "Ništa nije pronađeno";
+"Keine Dateien gefunden" = "Nije pronađena nijedna datoteka";
+"Wird gesucht …" = "Traženje…";
+"Symbole im Projekt" = "Simboli u projektu";
+"Symbol im Projekt suchen" = "Pronađi simbol u projektu";
+"Abhängigkeit · {}" = "Ovisnost · {}";
 "Aufrufer" = "Pozivatelji";
 "Aufgerufene" = "Pozvani";
 "Obertypen" = "Nadtipovi";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "{} na GitHubu";
 "„{}“ hat nichts ausgegeben." = "Od “{}” nema izlaza.";
 "„{}“ hat noch nichts ausgegeben." = "Od “{}” još nema izlaza.";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "Mapi “{}” ne može se vjerovati u cjelini";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "Povjerenje vrijedi za sve mape u njoj, uključujući one stvorene kasnije. Za početnu mapu, korijen volumena, Radnu površinu, Dokumente, Preuzimanja i Knjižnicu to bi bilo svako preuzimanje i svaki klonirani repozitorij. Otvorite samu mapu projekta da biste joj vjerovali; ovdje možete čitati i uređivati, ali ništa se ne pokreće.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "Povjerenje vrijedi i za sve mape u njoj, uključujući one stvorene kasnije.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} se pokreće samo u mapama kojima vjerujete. Ovoj mapi ne može se vjerovati u cjelini jer sadrži mnogo više od jednog projekta; otvorite samu mapu projekta.";
+"Vorschläge pausiert: gitleaks fehlt" = "Prijedlozi pauzirani: nedostaje gitleaks";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Bez gitleaksa ništa ne provjerava sadrži li kod tajne podatke. Instalirajte ga naredbom “{}” ili pošaljite neprovjereno.";
+"Ungeprüft an {} senden?" = "Poslati pružatelju {} neprovjereno?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Bez gitleaksa ništa ne provjerava sadrži li kod koji odlazi pružatelju {} tajne podatke. Instalirajte ga naredbom “{}” ili pošaljite neprovjereno; izbor vrijedi na ovom Macu i možete ga povući u Postavkama pod “Predviđanje”.";
+"Ungeprüft senden" = "Pošalji neprovjereno";
+"Zwischenablage durch Programm ersetzt" = "Program je zamijenio sadržaj memorijskog pretinca";

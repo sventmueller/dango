@@ -15,7 +15,6 @@
 //! resuming.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
 
 mod anthropic;
 pub mod chat;

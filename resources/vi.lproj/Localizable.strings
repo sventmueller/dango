@@ -884,7 +884,6 @@
 "Installation: lade herunter …" = "Cài đặt: đang tải về…";
 "Installation: lade herunter … {} %" = "Cài đặt: đang tải về… {}%";
 "Installation: prüfe die Prüfsumme …" = "Cài đặt: đang xác minh tổng kiểm tra…";
-"Installation: suche die neueste Version …" = "Cài đặt: đang tìm phiên bản mới nhất…";
 "Installiere …" = "Đang cài đặt…";
 "Installiere … {}" = "Đang cài đặt… {}";
 "Installieren" = "Cài đặt";
@@ -1306,6 +1305,11 @@
 "Gefundene Symbole" = "Ký hiệu phù hợp";
 "Wird indexiert …" = "Đang lập chỉ mục…";
 "Nichts gefunden" = "Không tìm thấy gì";
+"Keine Dateien gefunden" = "Không tìm thấy tệp nào";
+"Wird gesucht …" = "Đang tìm kiếm…";
+"Symbole im Projekt" = "Ký hiệu trong dự án";
+"Symbol im Projekt suchen" = "Tìm ký hiệu trong dự án";
+"Abhängigkeit · {}" = "Phụ thuộc · {}";
 "Aufrufer" = "Nơi gọi";
 "Aufgerufene" = "Được gọi";
 "Obertypen" = "Kiểu cha";
@@ -2384,3 +2388,13 @@
 "{} auf GitHub" = "{} trên GitHub";
 "„{}“ hat nichts ausgegeben." = "“{}” không xuất ra gì.";
 "„{}“ hat noch nichts ausgegeben." = "“{}” chưa xuất ra gì.";
+"„{}“ lässt sich nicht als Ganzes vertrauen" = "Không thể tin cậy toàn bộ “{}”";
+"Vertrauen gilt für alle Ordner darin, auch für später angelegte. Für den Benutzerordner, die Wurzel eines Volumes, Schreibtisch, Dokumente, Downloads und Library wäre das jeder Download und jedes geklonte Repo. Öffne den Projektordner selbst, um ihm zu vertrauen; hier kannst du lesen und bearbeiten, aber nichts startet." = "Sự tin cậy áp dụng cho mọi thư mục bên trong, kể cả những thư mục được tạo sau này. Với thư mục người dùng, thư mục gốc của một ổ đĩa, Màn hình nền, Tài liệu, Tải về và Thư viện, điều đó có nghĩa là mọi tệp tải về và mọi kho lưu trữ được clone. Hãy mở chính thư mục dự án để tin cậy nó; ở đây bạn có thể đọc và chỉnh sửa, nhưng không có gì khởi động.";
+"Das Vertrauen gilt auch für alle Ordner darin, auch für später angelegte." = "Sự tin cậy cũng áp dụng cho mọi thư mục bên trong, kể cả những thư mục được tạo sau này.";
+"{} startet nur in Ordnern, denen du vertraust. Diesem Ordner lässt sich nicht als Ganzes vertrauen, weil er weit mehr als ein Projekt enthält; öffne den Projektordner selbst." = "{} chỉ khởi động trong thư mục bạn tin cậy. Không thể tin cậy toàn bộ thư mục này vì nó chứa nhiều thứ hơn hẳn một dự án; hãy mở chính thư mục dự án.";
+"Vorschläge pausiert: gitleaks fehlt" = "Đề xuất tạm dừng: thiếu gitleaks";
+"Ohne gitleaks prüft nichts den Code auf Secrets. Installiere es mit „{}“ oder sende ungeprüft." = "Không có gitleaks thì không gì kiểm tra mã để tìm thông tin bí mật. Hãy cài đặt bằng “{}” hoặc gửi mà không kiểm tra.";
+"Ungeprüft an {} senden?" = "Gửi đến {} mà không kiểm tra?";
+"Ohne gitleaks prüft nichts, ob der Code, der an {} geht, Secrets enthält. Installiere es mit „{}“, oder sende ungeprüft; die Wahl gilt auf diesem Mac und lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Không có gitleaks thì không gì kiểm tra xem mã được gửi đến {} có chứa thông tin bí mật hay không. Hãy cài đặt bằng “{}”, hoặc gửi mà không kiểm tra; lựa chọn này áp dụng trên máy Mac này và có thể thu hồi trong Cài đặt, mục “Dự đoán”.";
+"Ungeprüft senden" = "Gửi mà không kiểm tra";
+"Zwischenablage durch Programm ersetzt" = "Bảng nhớ tạm đã bị một chương trình thay thế";

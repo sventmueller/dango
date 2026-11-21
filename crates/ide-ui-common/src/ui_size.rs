@@ -72,6 +72,7 @@ fn valid(size: f64) -> f64 {
 
 /// What of a view follows the interface size; each owner keeps one follower per aspect, the last one set.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the names say it")]
 pub enum Aspect {
     Font,
     Symbol,

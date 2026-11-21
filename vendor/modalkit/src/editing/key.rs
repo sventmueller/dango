@@ -219,7 +219,7 @@ where
 #[macro_use]
 mod tests {
     use super::*;
-    use crossterm::event::{KeyCode, KeyEvent};
+    use crate::key::event::{KeyCode, KeyEvent};
 
     use crate::{
         editing::application::EmptyInfo,

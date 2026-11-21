@@ -1,6 +1,8 @@
 //! Finding repositories, reading their status, branches, history, remotes and worktrees, and the destructive
 //! operations, on temporary repositories.
 
+#![allow(clippy::unwrap_used, reason = "test helpers, which allow-unwrap-in-tests misses")]
+
 mod common;
 
 use std::path::{Path, PathBuf};

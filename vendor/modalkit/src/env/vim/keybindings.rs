@@ -18,7 +18,7 @@
 //! use modalkit::keybindings::BindingMachine;
 //! use modalkit::key::TerminalKey;
 //!
-//! use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+//! use modalkit::key::event::{KeyCode, KeyEvent, KeyModifiers};
 //!
 //! const fn key(code: KeyCode, modifiers: KeyModifiers) -> KeyEvent {
 //!     KeyEvent::new(code, modifiers)
@@ -2207,7 +2207,7 @@ mod tests {
     use super::*;
     use crate::editing::context::EditContext;
     use crate::keybindings::BindingMachine;
-    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use crate::key::event::{KeyCode, KeyEvent, KeyModifiers};
 
     macro_rules! assert_insert_exit {
         ($mm: expr, $ctx: expr) => {

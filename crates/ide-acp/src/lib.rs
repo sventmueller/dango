@@ -5,7 +5,6 @@
 //! its version touches nothing else. `docs/acp.md` lays down the version choice and how each update changes a thread.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
 
 pub mod capabilities;
 mod diff;
