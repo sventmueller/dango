@@ -227,7 +227,7 @@ define_class!(
 
         #[unsafe(method(ideCiOpenSettings:))]
         fn open_settings_action(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::settings::show_ci(self.mtm()));
+            guarded((), || crate::settings::show_ci(&crate::context::app(), self.mtm()));
         }
 
         #[unsafe(method(ideCiSignOut:))]
@@ -263,16 +263,6 @@ pub(crate) struct CiPanels {
 /// Runs `f` with the panel `id`, if its window is still open.
 pub(crate) fn with_panel(id: u64, f: impl FnOnce(&CiPanel)) {
     crate::context::app().ci_panels().panels.with(id, f);
-}
-
-/// The panels of windows that show `root`.
-pub(crate) fn for_root(root: &Path) -> Vec<Retained<CiPanel>> {
-    crate::context::app().ci_panels().panels.for_root(root)
-}
-
-/// The panels of all open windows.
-pub(crate) fn all() -> Vec<Retained<CiPanel>> {
-    crate::context::app().ci_panels().panels.live()
 }
 
 /// The panel of `controller`'s window.

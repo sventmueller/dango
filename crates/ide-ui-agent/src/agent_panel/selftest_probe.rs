@@ -14,8 +14,9 @@ pub fn claude_config_dir() -> std::path::PathBuf {
 /// The quiet texts of the session rows of `controller`'s panel, for the self-test.
 pub fn session_details(controller: &(impl AsWindow + ?Sized)) -> Vec<String> {
     let controller = &controller.as_window();
-    panel_of(controller).map_or_else(Vec::new, |panel| {
-        panel.reload();
+    let state = crate::host::state();
+    panel_of(&state, controller).map_or_else(Vec::new, |panel| {
+        panel.reload(&state);
         panel.sessions_source.session_details()
     })
 }
@@ -23,17 +24,19 @@ pub fn session_details(controller: &(impl AsWindow + ?Sized)) -> Vec<String> {
 /// The context menu of row `row` of the session list of `controller`'s panel, for the self-test.
 pub fn session_menu(controller: &(impl AsWindow + ?Sized), row: isize) -> Option<Retained<objc2_app_kit::NSMenu>> {
     let controller = &controller.as_window();
-    let panel = panel_of(controller)?;
-    panel.reload();
-    panel.sessions_source.context_menu(row)
+    let state = crate::host::state();
+    let panel = panel_of(&state, controller)?;
+    panel.reload(&state);
+    panel.sessions_source.context_menu(&state, row)
 }
 
 /// Opens the session of row `row` of `controller`'s panel, as a click does, for the self-test.
 pub fn open_session_row(controller: &(impl AsWindow + ?Sized), row: usize) {
     let controller = &controller.as_window();
-    if let Some(panel) = panel_of(controller) {
-        panel.reload();
-        panel.sessions_source.open_row(row);
+    let state = crate::host::state();
+    if let Some(panel) = panel_of(&state, controller) {
+        panel.reload(&state);
+        panel.sessions_source.open_row(&state, row);
     }
 }
 
@@ -48,8 +51,9 @@ pub struct Inspection {
 /// In the panel's coordinates, where the content of each row of the list begins and where it ends.
 pub fn edges(controller: &(impl AsWindow + ?Sized)) -> Option<Vec<(f64, f64)>> {
     let controller = &controller.as_window();
-    let panel = panel_of(controller)?;
-    panel.reload();
+    let state = crate::host::state();
+    let panel = panel_of(&state, controller)?;
+    panel.reload(&state);
     panel.view.layoutSubtreeIfNeeded();
     let frame = |view: &NSView| view.convertRect_toView(view.bounds(), Some(&panel.view));
     let mut rows = Vec::new();
@@ -74,8 +78,9 @@ pub fn edges(controller: &(impl AsWindow + ?Sized)) -> Option<Vec<(f64, f64)>> {
 /// What the self-test reads from the agents panel of `controller`'s window.
 pub fn inspect(controller: &(impl AsWindow + ?Sized)) -> Option<Inspection> {
     let controller = &controller.as_window();
-    let panel = panel_of(controller)?;
-    panel.reload();
+    let state = crate::host::state();
+    let panel = panel_of(&state, controller)?;
+    panel.reload(&state);
     Some(Inspection {
         rows: panel.sessions_source.rows(),
         new_session: panel.agents.menu_titles(),

@@ -104,7 +104,8 @@ pub(crate) struct StatusLine {
 }
 
 impl StatusLine {
-    pub(crate) fn new(mtm: MainThreadMarker, key: AgentKey) -> StatusLine {
+    /// The status line of the AI tab with `key`, whose context gauge joins the tabs' `gauges`.
+    pub(crate) fn new(mtm: MainThreadMarker, key: AgentKey, gauges: &super::context_view::ContextGauges) -> StatusLine {
         let ring = ContextRing::new(mtm);
         let small = |color: Retained<NSColor>| {
             let label = ui::label(mtm, "", &style::chat_small(), &color);
@@ -125,7 +126,7 @@ impl StatusLine {
         view.setAccessibilityElement(true);
         view.setAccessibilityRole(Some(ide_ui_common::constant!(objc2_app_kit::NSAccessibilityGroupRole)));
         view.setAccessibilityLabel(Some(&ns(t("Status"))));
-        let gauge = super::context_view::gauge(mtm, key, &view, &ring, &context);
+        let gauge = super::context_view::gauge(gauges, mtm, key, &view, &ring, &context);
         StatusLine {
             view,
             gauge,
@@ -146,8 +147,8 @@ impl StatusLine {
         }
     }
 
-    /// Shows the state of `thread`.
-    pub(crate) fn show(&self, thread: &Thread) {
+    /// Shows the state of `thread`, with the plan's usage and the breakdown on view that `cx` keeps.
+    pub(crate) fn show(&self, cx: &crate::State, thread: &Thread) {
         let usage = thread.usage();
         match (usage.context_used, usage.context_size) {
             (Some(used), Some(size)) if size > 0 => {
@@ -176,10 +177,10 @@ impl StatusLine {
                 self.context.setToolTip(tip.as_deref().map(ns).as_deref());
             }
         }
-        let (cost, details) = super::context_view::spend_text(thread);
+        let (cost, details) = super::context_view::spend_text(cx, thread);
         self.cost.setStringValue(&ns(&cost));
         self.cost.setToolTip(details.as_deref().map(ns).as_deref());
-        super::context_view::follow(&self.gauge, usage);
+        super::context_view::follow(&cx.context_gauges, &self.gauge, usage);
         let (activity, problem) = turn_notes(thread);
         self.activity.setStringValue(&ns(&activity));
         self.problem.setStringValue(&ns(&problem));

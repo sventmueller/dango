@@ -43,7 +43,7 @@ pub(super) fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let root = project("debug-menus");
     let _ = super::helpers::make_project("debug-menus", &[(".vscode/launch.json", LAUNCH_JSON)]);
-    crate::app::open_project(mtm, root.clone());
+    crate::app::open_project(&crate::context::app(), mtm, root.clone());
     let probe = root.clone();
     wait_until(
         move || front(&probe).is_some_and(|c| !debug::configuration_items(&c).is_empty()),

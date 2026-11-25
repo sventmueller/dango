@@ -11,6 +11,7 @@ use objc2_foundation::NSObjectProtocol;
 use splat_i18n::t;
 
 use super::form::Row;
+use crate::context::AppContext;
 use crate::util::{guarded, ns, set_action};
 
 pub(crate) struct EditorIvars {
@@ -72,10 +73,6 @@ pub(crate) struct EditorSettingsShown {
     tab: RefCell<Option<Retained<EditorSettings>>>,
 }
 
-fn with_tab<R>(f: impl FnOnce(&RefCell<Option<Retained<EditorSettings>>>) -> R) -> R {
-    f(&crate::context::app().settings().editor_settings.tab)
-}
-
 fn state(on: bool) -> isize {
     if on {
         NSControlStateValueOn
@@ -111,7 +108,7 @@ impl EditorSettings {
 }
 
 /// The rows of the General tab for the editor's switches.
-pub(crate) fn rows(mtm: MainThreadMarker) -> Vec<Row> {
+pub(crate) fn rows(cx: &AppContext, mtm: MainThreadMarker) -> Vec<Row> {
     let target = EditorSettings::new(mtm);
     // SAFETY: The checkbox sends its action to the target, which answers it, set right below.
     let hints = unsafe { NSButton::checkboxWithTitle_target_action(&ns(t("Im Editor zeigen")), None, None, mtm) };
@@ -146,17 +143,15 @@ pub(crate) fn rows(mtm: MainThreadMarker) -> Vec<Row> {
         blame: blame.clone(),
     });
     target.reload();
-    with_tab(|tab| *tab.borrow_mut() = Some(target));
+    *cx.settings().editor_settings.tab.borrow_mut() = Some(target);
     rows
 }
 
 /// Shows the editor's switches as the settings are now, when the window comes to the front.
-pub(crate) fn reload() {
-    with_tab(|tab| {
-        if let Some(tab) = tab.borrow().as_ref() {
-            tab.reload();
-        }
-    });
+pub(crate) fn reload(cx: &AppContext) {
+    if let Some(tab) = cx.settings().editor_settings.tab.borrow().as_ref() {
+        tab.reload();
+    }
 }
 
 #[cfg(feature = "selftest")]

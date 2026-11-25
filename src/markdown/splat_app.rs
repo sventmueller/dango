@@ -1,6 +1,7 @@
 //! Opening a Markdown document in Splat, the Markdown editor this app takes its preview from, where it is installed.
 
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
@@ -9,6 +10,7 @@ use objc2_app_kit::{NSMenuItem, NSWorkspace, NSWorkspaceOpenConfiguration};
 use objc2_foundation::{NSArray, NSObjectProtocol, NSString, NSURL};
 use splat_i18n::t;
 
+use crate::context::AppContext;
 use crate::util::{guarded, item, ns, set_target};
 
 #[cfg(feature = "selftest")]
@@ -26,12 +28,13 @@ pub(crate) fn location() -> Option<Retained<NSURL>> {
 
 /// Opens the file at `path` in Splat, after an editor that has it open saved what it holds; a document that does
 /// not save stays here.
-pub(crate) fn open(_mtm: MainThreadMarker, path: &Path) {
+pub(crate) fn open(mtm: MainThreadMarker, path: &Path) {
     if location().is_none() {
         return;
     }
     let kept = path.to_path_buf();
     saved(
+        &AppContext::get(mtm),
         path,
         Box::new(move |all| {
             if all {
@@ -55,22 +58,27 @@ fn open_saved(path: &Path) {
 
 /// Saves every editor of `path` with unsaved changes and calls `then` once the writes are over, with whether none is
 /// left unsaved.
-pub(crate) fn saved(path: &Path, then: Box<dyn FnOnce(bool)>) {
-    let unsaved = crate::editor::all_editors()
+pub(crate) fn saved(cx: &Rc<AppContext>, path: &Path, then: Box<dyn FnOnce(bool)>) {
+    let unsaved = cx
+        .editors()
+        .live()
         .into_iter()
         .filter(|view| view.document().path() == Some(path) && view.document().is_dirty())
         .collect::<Vec<_>>();
     let path = path.to_path_buf();
     let then = std::cell::Cell::new(Some(then));
-    let done: crate::editor::Again = std::rc::Rc::new(move |_| {
-        let left = crate::editor::all_editors()
+    let cx = Rc::clone(cx);
+    let done: crate::editor::Again = Rc::new(move |_| {
+        let left = cx
+            .editors()
+            .live()
             .iter()
             .any(|view| view.document().path() == Some(&path) && view.document().is_dirty());
         if let Some(then) = then.take() {
             then(!left);
         }
     });
-    if crate::editor::save_each(unsaved, std::rc::Rc::clone(&done)) == crate::editor::Answer::Yes {
+    if crate::editor::save_each(unsaved, Rc::clone(&done)) == crate::editor::Answer::Yes {
         done(true);
     }
 }

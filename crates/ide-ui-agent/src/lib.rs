@@ -158,10 +158,21 @@ impl State {
     pub(crate) fn admit(&self) -> (AgentKey, Option<Rc<dyn Sessions>>) {
         (AgentKey(self.agent_tabs.keys.next()), self.sessions.borrow().clone())
     }
-}
 
-fn with_tabs<R>(f: impl FnOnce(&RefCell<Vec<Rc<AgentTab>>>) -> R) -> R {
-    f(&crate::host::state().agent_tabs.tabs)
+    /// The open AI tab with `key`.
+    pub(crate) fn tab(&self, key: AgentKey) -> Option<Rc<AgentTab>> {
+        self.agent_tabs.tabs.borrow().iter().find(|t| t.key == key).cloned()
+    }
+
+    /// Every open AI tab, in the order they were opened.
+    pub(crate) fn tabs(&self) -> Vec<Rc<AgentTab>> {
+        self.agent_tabs.tabs.borrow().clone()
+    }
+
+    /// The open AI tabs of `controller`'s window.
+    pub(crate) fn tabs_of(&self, controller: &Window) -> Vec<Rc<AgentTab>> {
+        self.tabs().into_iter().filter(|t| t.belongs_to(controller)).collect()
+    }
 }
 
 /// Opens an AI tab with a new Claude session in the window's folder, or with the past session `resume`.
@@ -172,34 +183,56 @@ pub fn open_tab(controller: &(impl AsWindow + ?Sized), resume: Option<Resume>) -
 
 /// Opens an AI tab with a new session of `agent` in the window's folder, or with its past session `resume`.
 pub fn open_agent(controller: &(impl AsWindow + ?Sized), agent: Agent, resume: Option<Resume>) -> Option<Rc<AgentTab>> {
-    let controller = &controller.as_window();
+    open_agent_with(&crate::host::state(), &controller.as_window(), agent, resume)
+}
+
+/// `open_agent` among the AI tabs `state` holds.
+pub(crate) fn open_agent_with(
+    state: &State,
+    controller: &Window,
+    agent: Agent,
+    resume: Option<Resume>,
+) -> Option<Rc<AgentTab>> {
     if let Some(resume) = &resume
-        && let Some(open) = find_session(controller, &resume.session)
+        && let Some(open) = find_session_in(state, controller, &resume.session)
     {
         open.select();
         return Some(open);
     }
-    open_new(controller, agent, resume, AgentTab::start)
+    open_new(controller, state, agent, resume, AgentTab::start)
 }
 
 /// Opens the AI tab of `agent`'s past session `resume` again as the window's layout comes back, which opened no tab
 /// of it yet: a Claude session shows its conversation parked, its CLI starting once the tab comes to the front or
 /// gets a prompt.
 pub fn restore_agent(controller: &(impl AsWindow + ?Sized), agent: Agent, resume: Resume) -> Option<Rc<AgentTab>> {
-    open_new(&controller.as_window(), agent, Some(resume), AgentTab::start_parked)
+    let state = crate::host::state();
+    open_new(
+        &controller.as_window(),
+        &state,
+        agent,
+        Some(resume),
+        AgentTab::start_parked,
+    )
 }
 
-fn open_new(controller: &Window, agent: Agent, resume: Option<Resume>, start: fn(&AgentTab)) -> Option<Rc<AgentTab>> {
-    let state = crate::host::state();
-    let tab = AgentTab::open(controller, &state, agent, resume)?;
-    started(controller, &state, &tab, start);
+fn open_new(
+    controller: &Window,
+    state: &State,
+    agent: Agent,
+    resume: Option<Resume>,
+    start: fn(&AgentTab),
+) -> Option<Rc<AgentTab>> {
+    let tab = AgentTab::open(controller, state, agent, resume)?;
+    started(controller, state, &tab, start);
     Some(tab)
 }
 
+/// Keeps `tab` among the AI tabs `state` holds, starts it with `start` and tells the window.
 fn started(controller: &Window, state: &State, tab: &Rc<AgentTab>, start: fn(&AgentTab)) {
     state.agent_tabs.tabs.borrow_mut().push(tab.clone());
     start(tab);
-    changed(controller);
+    changed(state, controller);
 }
 
 /// Opens an AI tab with the app's own agent (E6), talking to `choice` or else to the model new threads start with.
@@ -227,7 +260,7 @@ pub fn open_agent_in(
     let state = crate::host::state();
     let tab = AgentTab::open_in(controller, &state, agent, cwd, None)?;
     if let Some(title) = title {
-        tab.set_custom_title(title);
+        tab.set_custom_title(&state, title);
     }
     started(controller, &state, &tab, AgentTab::start);
     Some(tab)
@@ -235,7 +268,12 @@ pub fn open_agent_in(
 
 /// Whether an open AI tab works in `folder`.
 pub fn working_in(folder: &std::path::Path) -> bool {
-    with_tabs(|tabs| tabs.borrow().iter().any(|tab| tab.cwd() == folder))
+    crate::host::state()
+        .agent_tabs
+        .tabs
+        .borrow()
+        .iter()
+        .any(|tab| tab.cwd() == folder)
 }
 
 pub use own::{fill_menu as fill_own_menu, menu_choice as own_menu_choice};
@@ -295,7 +333,7 @@ pub fn claude_program(env: &[(String, String)]) -> Option<std::path::PathBuf> {
 
 /// The tab with `key`, if it is open.
 fn get(key: AgentKey) -> Option<Rc<AgentTab>> {
-    with_tabs(|tabs| tabs.borrow().iter().find(|t| t.key == key).cloned())
+    crate::host::state().tab(key)
 }
 
 /// The window of the AI tab with `key`, for a dictation whose composer closed.
@@ -306,35 +344,38 @@ pub(crate) fn controller_of(key: AgentKey) -> Option<Window> {
 
 /// Every open AI tab.
 pub fn all() -> Vec<Rc<AgentTab>> {
-    with_tabs(|tabs| tabs.borrow().clone())
+    crate::host::state().tabs()
 }
 
 /// The AI tabs of `controller`'s window.
 pub fn of_window(controller: &(impl AsWindow + ?Sized)) -> Vec<Rc<AgentTab>> {
-    let controller = &controller.as_window();
-    all().into_iter().filter(|t| t.belongs_to(controller)).collect()
+    crate::host::state().tabs_of(&controller.as_window())
 }
 
 /// The open tab that shows the agent session `session`, in `controller`'s window.
-pub(crate) fn find_session(controller: &(impl AsWindow + ?Sized), session: &str) -> Option<Rc<AgentTab>> {
-    let controller = &controller.as_window();
-    of_window(controller)
-        .into_iter()
-        .find(|t| t.session_id().as_deref() == Some(session))
+fn find_session_in(state: &State, controller: &Window, session: &str) -> Option<Rc<AgentTab>> {
+    state
+        .agent_tabs
+        .tabs
+        .borrow()
+        .iter()
+        .find(|t| t.belongs_to(controller) && t.session_id().as_deref() == Some(session))
+        .cloned()
 }
 
-/// Forgets the tab with `key` and ends its session.
-fn remove(key: AgentKey) {
-    let removed = with_tabs(|tabs| {
-        let mut tabs = tabs.borrow_mut();
-        let position = tabs.iter().position(|t| t.key == key)?;
-        Some(tabs.remove(position))
-    });
+/// Forgets the tab with `key` among the AI tabs `state` holds and ends its session.
+fn remove(state: &State, key: AgentKey) {
+    let removed = {
+        let mut tabs = state.agent_tabs.tabs.borrow_mut();
+        tabs.iter()
+            .position(|t| t.key == key)
+            .map(|position| tabs.remove(position))
+    };
     if let Some(tab) = removed {
         tab.close();
         if let Some(controller) = tab.controller() {
-            plan::close_docs(&controller, key);
-            changed(&controller);
+            plan::close_docs(state, &controller, key);
+            changed(state, &controller);
         }
         ide_ui_common::util::give_back_memory_soon();
     }
@@ -371,15 +412,15 @@ fn works(tab: &AgentTab) -> bool {
 
 /// Ends the sessions of a window that closes.
 pub fn window_closed(controller: &(impl AsWindow + ?Sized)) {
-    let controller = &controller.as_window();
-    for tab in of_window(controller) {
-        remove(tab.key);
+    let state = crate::host::state();
+    for tab in state.tabs_of(&controller.as_window()) {
+        remove(&state, tab.key);
     }
 }
 
-/// Tells the AI panel and the activity view of `controller`'s window that sessions changed.
-fn changed(controller: &Window) {
-    crate::agent_panel::refresh(controller);
+/// Tells the AI panel among those `state` holds and the activity view of `controller`'s window that sessions changed.
+fn changed(state: &State, controller: &Window) {
+    crate::agent_panel::refresh(state, controller);
     controller.refresh_activity();
 }
 
@@ -412,7 +453,8 @@ pub fn can_show_work(controller: &(impl AsWindow + ?Sized), part: crate::work::P
 /// window has none.
 pub fn toggle_focus(controller: &(impl AsWindow + ?Sized)) {
     let controller = &controller.as_window();
-    let tabs = of_window(controller);
+    let state = crate::host::state();
+    let tabs = state.tabs_of(controller);
     if let Some(focused) = tabs.iter().find(|t| t.composer_has_focus()) {
         focused.leave_focus();
         return;
@@ -424,7 +466,7 @@ pub fn toggle_focus(controller: &(impl AsWindow + ?Sized)) {
             tab.focus_composer();
         }
         None => {
-            if let Some(tab) = open_tab(controller, None) {
+            if let Some(tab) = open_agent_with(&state, controller, Agent::Claude, None) {
                 tab.focus_composer();
             }
         }

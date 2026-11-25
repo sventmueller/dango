@@ -20,7 +20,7 @@ pub(crate) fn run() {
     let Some(open) = window::open_windows().first().cloned() else {
         return give_up_saying("app-context", "a window opens", "none");
     };
-    let closing = WindowController::open_new(mtm, None);
+    let closing = WindowController::open_new(&crate::context::app(), mtm, None);
     let closed_id = closing.id();
     let reached_open = answer_later(open.id());
     let reached_closed = answer_later(closed_id);

@@ -25,14 +25,6 @@ pub(crate) struct Certificates {
     accepted: RefCell<HashMap<Server, CFRetained<CFData>>>,
 }
 
-fn with_refused<R>(f: impl FnOnce(&RefCell<HashMap<Server, CFRetained<CFData>>>) -> R) -> R {
-    f(&super::host::state().certificates.refused)
-}
-
-fn with_accepted<R>(f: impl FnOnce(&RefCell<HashMap<Server, CFRetained<CFData>>>) -> R) -> R {
-    f(&super::host::state().certificates.accepted)
-}
-
 /// Whether the user may accept an untrusted certificate of `host`: this Mac, `.localhost`, and the domains reserved
 /// for local networks and tests (`.local`, `.test`), never a public name.
 ///
@@ -66,16 +58,18 @@ fn normal_host(host: &str) -> String {
 
 /// Whether the certificate `url`'s server showed last can be accepted.
 pub(crate) fn can_accept(url: &str) -> bool {
-    server_of(url).is_some_and(|server| with_refused(|refused| refused.borrow().contains_key(&server)))
+    server_of(url).is_some_and(|server| super::host::state().certificates.refused.borrow().contains_key(&server))
 }
 
 /// Accepts the certificate `url`'s server showed last; whether there was one.
 pub(crate) fn accept(url: &str) -> bool {
     let Some(server) = server_of(url) else { return false };
-    let Some(exceptions) = with_refused(|refused| refused.borrow_mut().remove(&server)) else {
+    let state = super::host::state();
+    let removed = state.certificates.refused.borrow_mut().remove(&server);
+    let Some(exceptions) = removed else {
         return false;
     };
-    with_accepted(|accepted| accepted.borrow_mut().insert(server, exceptions));
+    state.certificates.accepted.borrow_mut().insert(server, exceptions);
     true
 }
 
@@ -100,7 +94,8 @@ pub(crate) fn answer(
         return default;
     };
     let server = (normal_host(&host), port);
-    let accepted = with_accepted(|accepted| accepted.borrow().get(&server).cloned());
+    let state = super::host::state();
+    let accepted = state.certificates.accepted.borrow().get(&server).cloned();
     if let Some(exceptions) = accepted {
         // SAFETY: The trust is valid during the challenge, the exceptions are Security's own for this server; a
         // changed certificate does not match them.
@@ -117,7 +112,7 @@ pub(crate) fn answer(
     if !unsafe { trust.evaluate_with_error(std::ptr::null_mut()) } {
         // SAFETY: Exceptions exist for a trust once evaluated.
         if let Some(exceptions) = unsafe { trust.exceptions() } {
-            with_refused(|refused| refused.borrow_mut().insert(server, exceptions));
+            state.certificates.refused.borrow_mut().insert(server, exceptions);
         }
     }
     default

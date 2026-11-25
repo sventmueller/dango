@@ -27,27 +27,21 @@ pub(crate) struct BrowserTabs {
     serial: Cell<u64>,
 }
 
-fn with_tabs<R>(f: impl FnOnce(&RefCell<Vec<Weak<BrowserView>>>) -> R) -> R {
-    f(&state().tabs.tabs)
-}
-
-fn with_serial<R>(f: impl FnOnce(&Cell<u64>) -> R) -> R {
-    f(&state().tabs.serial)
-}
-
 /// Opens a browser tab at `url`, or empty, in `window`. A URL whose tab is open selects that tab instead; a tab of a
 /// local server reloads, since a dev server that called it has new content.
 pub fn open_tab(mtm: MainThreadMarker, window: WindowId, url: Option<&str>) {
+    let state = state();
+    let tabs = &state.tabs;
     let engine = Settings::load_user().get(&keys::SEARCH_ENGINE);
     let Some(address) = url.and_then(|url| address::resolve(url, engine)) else {
-        let view = BrowserView::new(mtm, window, None, unique_key());
-        if attach(&view, t("Browser")) {
+        let view = BrowserView::new(mtm, window, None, unique_key(tabs));
+        if attach(tabs, &view, t("Browser")) {
             view.start_empty();
         }
         return;
     };
     let key = address.key();
-    let open = tabs_of(window)
+    let open = tabs_of(tabs, window)
         .into_iter()
         .find(|view| view.key() == key || view.current_url().is_some_and(|url| address::key_of(&url) == key));
     if let Some(view) = open {
@@ -56,7 +50,7 @@ pub fn open_tab(mtm: MainThreadMarker, window: WindowId, url: Option<&str>) {
         return;
     }
     let view = BrowserView::new(mtm, window, None, key);
-    if attach(&view, t("Browser")) {
+    if attach(tabs, &view, t("Browser")) {
         view.go(address);
     }
 }
@@ -70,7 +64,7 @@ pub fn open_restored_tab(mtm: MainThreadMarker, window: WindowId, url: &str) {
     };
     let title = address::title_before_load(&address, TITLE_LIMIT).unwrap_or_else(|| t("Browser").to_string());
     let view = BrowserView::waiting(mtm, window, address.key(), address.clone(), Wake::Go(address));
-    attach(&view, &title);
+    attach(&state().tabs, &view, &title);
 }
 
 /// Opens a browser tab titled `title` in `window` that keeps `url` as its address until it first shows; `shown` then
@@ -82,16 +76,18 @@ pub fn open_restored_page(
     url: &str,
     shown: impl FnOnce(Loader) + 'static,
 ) {
+    let state = state();
     let asked = Address::Url(url.to_string());
-    let view = BrowserView::waiting(mtm, window, unique_key(), asked, Wake::Run(Box::new(shown)));
-    attach(&view, title);
+    let view = BrowserView::waiting(mtm, window, unique_key(&state.tabs), asked, Wake::Run(Box::new(shown)));
+    attach(&state.tabs, &view, title);
 }
 
 /// Reloads the open tabs of `window` that show a page of `origin`, such as `http://localhost:5173`, for a dev server
 /// that does not reload by itself after a file was saved (I7).
 pub fn reload_matching(window: WindowId, origin: &str) {
     let Some(origin) = address::origin(origin) else { return };
-    for view in tabs_of(window) {
+    let views = tabs_of(&state().tabs, window);
+    for view in views {
         if view.current_url().and_then(|url| address::origin(&url)).as_deref() == Some(origin.as_str()) {
             view.reload_page();
         }
@@ -100,7 +96,7 @@ pub fn reload_matching(window: WindowId, origin: &str) {
 
 /// The addresses the browser tabs of `window` show.
 pub fn urls(window: WindowId) -> Vec<String> {
-    tabs_of(window)
+    tabs_of(&state().tabs, window)
         .into_iter()
         .filter_map(|view| view.current_url())
         .collect()
@@ -108,7 +104,7 @@ pub fn urls(window: WindowId) -> Vec<String> {
 
 /// The address the browser tab `tab` of `window` shows, for opening it again.
 pub fn url_of_tab(window: WindowId, tab: TabId) -> Option<String> {
-    tabs_of(window)
+    tabs_of(&state().tabs, window)
         .into_iter()
         .find(|view| view.tab() == Some(tab))
         .and_then(|view| view.current_url())
@@ -116,8 +112,9 @@ pub fn url_of_tab(window: WindowId, tab: TabId) -> Option<String> {
 
 /// Opens `url` from a link of `opener`'s page in a new tab beside it.
 pub(super) fn open_tab_beside(opener: &BrowserView, url: &str) {
-    let view = BrowserView::new(opener.mtm(), opener.window_id(), None, unique_key());
-    if attach(&view, t("Browser")) {
+    let state = state();
+    let view = BrowserView::new(opener.mtm(), opener.window_id(), None, unique_key(&state.tabs));
+    if attach(&state.tabs, &view, t("Browser")) {
         view.go(Address::Url(url.to_string()));
     }
 }
@@ -125,28 +122,35 @@ pub(super) fn open_tab_beside(opener: &BrowserView, url: &str) {
 /// A tab for a page that `opener`'s page opens with `window.open` or `target=_blank`; WebKit loads it into the web
 /// view this returns, which keeps the page's link to its opener.
 pub(super) fn open_popup(opener: &BrowserView, configuration: &WKWebViewConfiguration) -> Option<Retained<WKWebView>> {
-    let view = BrowserView::new(opener.mtm(), opener.window_id(), Some(configuration), unique_key());
-    attach(&view, t("Browser")).then(|| view.web_view())
+    let state = state();
+    let view = BrowserView::new(
+        opener.mtm(),
+        opener.window_id(),
+        Some(configuration),
+        unique_key(&state.tabs),
+    );
+    attach(&state.tabs, &view, t("Browser")).then(|| view.web_view())
 }
 
 /// Closes the tab of `view` once WebKit is done with the call that asked for it.
 pub(super) fn close_later(view: &BrowserView) {
     let address = std::ptr::from_ref(view) as usize;
     main_soon(move || {
-        let view = with_tabs(|tabs| {
-            tabs.borrow()
-                .iter()
-                .filter_map(Weak::load)
-                .find(|view| std::ptr::from_ref::<BrowserView>(view) as usize == address)
-        });
+        let view = state()
+            .tabs
+            .tabs
+            .borrow()
+            .iter()
+            .filter_map(Weak::load)
+            .find(|view| std::ptr::from_ref::<BrowserView>(view) as usize == address);
         if let Some((view, tab)) = view.and_then(|view| view.tab().map(|tab| (view, tab))) {
             Window::new(view.window_id()).close_tab(tab);
         }
     });
 }
 
-/// Adds `view` as a tab titled `title` of its window; whether the window was still open.
-fn attach(view: &Retained<BrowserView>, title: &str) -> bool {
+/// Adds `view` as a tab titled `title` of its window to `tabs`; whether the window was still open.
+fn attach(tabs: &BrowserTabs, view: &Retained<BrowserView>, title: &str) -> bool {
     let added = Window::new(view.window_id()).add_tab(
         TabKind::Browser,
         Some(view.key().to_string()),
@@ -155,55 +159,51 @@ fn attach(view: &Retained<BrowserView>, title: &str) -> bool {
     );
     let Some(id) = added else { return false };
     view.set_tab(id);
-    with_tabs(|tabs| tabs.borrow_mut().push(Weak::from_retained(view)));
+    tabs.tabs.borrow_mut().push(Weak::from_retained(view));
     true
 }
 
-/// The tab whose page is `web`.
-pub(super) fn tab_of(web: &WKWebView) -> Option<Retained<BrowserView>> {
-    with_tabs(|tabs| {
-        tabs.borrow()
-            .iter()
-            .filter_map(Weak::load)
-            .find(|view| view.shows_web(web))
-    })
+/// The tab of `tabs` whose page is `web`.
+pub(super) fn tab_of(tabs: &BrowserTabs, web: &WKWebView) -> Option<Retained<BrowserView>> {
+    tabs.tabs
+        .borrow()
+        .iter()
+        .filter_map(Weak::load)
+        .find(|view| view.shows_web(web))
 }
 
-/// The browser tab in front in `window`.
-fn front(window: WindowId) -> Option<Retained<BrowserView>> {
+/// The browser tab of `tabs` in front in `window`.
+fn front(tabs: &BrowserTabs, window: WindowId) -> Option<Retained<BrowserView>> {
     let selected = Window::new(window).selected_tab()?;
-    tabs_of(window).into_iter().find(|view| view.tab() == Some(selected))
+    tabs_of(tabs, window)
+        .into_iter()
+        .find(|view| view.tab() == Some(selected))
 }
 
 /// Runs a browser command of the menu bar on the browser tab in front of `window`, wherever the focus is.
 pub fn perform(window: WindowId, action: objc2::runtime::Sel) {
-    if let Some(view) = front(window) {
+    if let Some(view) = front(&state().tabs, window) {
         view.perform(action);
     }
 }
 
 /// Whether the browser command `action` of the menu bar applies to the tab in front of `window`.
 pub fn validate(window: WindowId, action: objc2::runtime::Sel) -> bool {
-    front(window).is_some_and(|view| view.validate(Some(action)))
+    front(&state().tabs, window).is_some_and(|view| view.validate(Some(action)))
 }
 
-/// The open browser tabs of `window`; forgets closed ones.
-fn tabs_of(window: WindowId) -> Vec<Retained<BrowserView>> {
-    with_tabs(|tabs| {
-        let mut tabs = tabs.borrow_mut();
-        tabs.retain(|tab| tab.load().is_some());
-        tabs.iter()
-            .filter_map(Weak::load)
-            .filter(|view| view.window_id() == window)
-            .collect()
-    })
+/// The open browser tabs of `window` among `tabs`; forgets closed ones.
+fn tabs_of(tabs: &BrowserTabs, window: WindowId) -> Vec<Retained<BrowserView>> {
+    let mut tabs = tabs.tabs.borrow_mut();
+    tabs.retain(|tab| tab.load().is_some());
+    tabs.iter()
+        .filter_map(Weak::load)
+        .filter(|view| view.window_id() == window)
+        .collect()
 }
 
-/// A key for a tab that shows no particular address, which no address ever has.
-fn unique_key() -> String {
-    let serial = with_serial(|serial| {
-        serial.set(serial.get() + 1);
-        serial.get()
-    });
-    format!("browser:{serial}")
+/// A key for a tab of `tabs` that shows no particular address, which no address ever has.
+fn unique_key(tabs: &BrowserTabs) -> String {
+    tabs.serial.set(tabs.serial.get() + 1);
+    format!("browser:{}", tabs.serial.get())
 }

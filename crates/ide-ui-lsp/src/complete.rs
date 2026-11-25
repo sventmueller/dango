@@ -19,7 +19,7 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSIndexSet, NSNotification, NSObjectProtocol, NSPoint, NSRect, NSSize};
 
-use super::{ViewState, server_by_id, server_of, servers_of, text};
+use super::{LspState, ViewState, server_by_id, server_of, servers_of, text};
 use crate::editor::Editor;
 use crate::host as editor;
 use ide_ui_common::util::{activate, label, main_soon, ns};
@@ -108,40 +108,37 @@ pub(crate) struct Completion {
     list: RefCell<Option<Retained<CompletionList>>>,
 }
 
-fn with_list<R>(f: impl FnOnce(&RefCell<Option<Retained<CompletionList>>>) -> R) -> R {
-    f(&crate::host::state().completion.list)
+/// The list of `completion`, made when there is none yet.
+fn list(completion: &Completion, mtm: MainThreadMarker) -> Retained<CompletionList> {
+    completion
+        .list
+        .borrow_mut()
+        .get_or_insert_with(|| {
+            let ivars = ListIvars {
+                panel: RefCell::new(None),
+                table: RefCell::new(None),
+                view: Cell::new(None),
+                items: RefCell::new(vec![]),
+                origins: RefCell::new(vec![]),
+                filled: Cell::new(0),
+                shown: RefCell::new(vec![]),
+                start: Cell::new(0),
+                incomplete: Cell::new(false),
+                asked: Cell::new(0),
+                resolved: RefCell::new(HashMap::new()),
+                resolving: RefCell::new(None),
+                keys: RefCell::new(vec![]),
+                matched: RefCell::new((String::new(), 0, vec![])),
+            };
+            // SAFETY: NSObject's initializer, called once on the newly allocated object.
+            unsafe { msg_send![super(CompletionList::alloc(mtm).set_ivars(ivars)), init] }
+        })
+        .clone()
 }
 
-fn list(mtm: MainThreadMarker) -> Retained<CompletionList> {
-    with_list(|cell| {
-        cell.borrow_mut()
-            .get_or_insert_with(|| {
-                let ivars = ListIvars {
-                    panel: RefCell::new(None),
-                    table: RefCell::new(None),
-                    view: Cell::new(None),
-                    items: RefCell::new(vec![]),
-                    origins: RefCell::new(vec![]),
-                    filled: Cell::new(0),
-                    shown: RefCell::new(vec![]),
-                    start: Cell::new(0),
-                    incomplete: Cell::new(false),
-                    asked: Cell::new(0),
-                    resolved: RefCell::new(HashMap::new()),
-                    resolving: RefCell::new(None),
-                    keys: RefCell::new(vec![]),
-                    matched: RefCell::new((String::new(), 0, vec![])),
-                };
-                // SAFETY: NSObject's initializer, called once on the newly allocated object.
-                unsafe { msg_send![super(CompletionList::alloc(mtm).set_ivars(ivars)), init] }
-            })
-            .clone()
-    })
-}
-
-/// The list, if it is shown for `view`.
-fn open_for(view: &dyn Editor) -> Option<Retained<CompletionList>> {
-    let list = with_list(|cell| cell.borrow().clone())?;
+/// The list of `completion`, if it is shown for `view`.
+fn open_for(completion: &Completion, view: &dyn Editor) -> Option<Retained<CompletionList>> {
+    let list = completion.list.borrow().clone()?;
     let showing = list.ivars().view.get() == Some(view.serial())
         && list.ivars().panel.borrow().as_ref().is_some_and(|p| p.isVisible());
     showing.then_some(list)
@@ -166,8 +163,8 @@ fn word_start(view: &dyn Editor, at: usize) -> usize {
 }
 
 /// Asks the server for completions at the cursor, as the menu command and trigger characters do.
-pub(crate) fn complete(view: &dyn Editor) {
-    request(view, None);
+pub(crate) fn complete(state: &LspState, view: &dyn Editor) {
+    request(state, view, None);
 }
 
 /// The servers, by slot, that a request with `trigger` goes to: all for an invoked completion, else those that
@@ -180,8 +177,9 @@ fn addressed(trigger: Option<&str>, servers: &[(u64, Vec<String>)]) -> Vec<u64> 
         .collect()
 }
 
-fn request(view: &dyn Editor, trigger: Option<String>) {
-    let all = servers_of(view);
+/// Asks the servers of `view` that `trigger` addresses for completions at the cursor; the list shows their answers.
+fn request(state: &LspState, view: &dyn Editor, trigger: Option<String>) {
+    let all = servers_of(state, view);
     let registered: Vec<(u64, Vec<String>)> = all
         .iter()
         .map(|(id, server, _)| {
@@ -202,7 +200,7 @@ fn request(view: &dyn Editor, trigger: Option<String>) {
     let Some(position) = text::position(view.document().text(), cursor) else {
         return;
     };
-    let shared = list(view.mtm());
+    let shared = list(&state.completion, view.mtm());
     let asked = shared.ivars().asked.get() + 1;
     shared.ivars().asked.set(asked);
     let serial = view.lsp().borrow().serial;
@@ -221,7 +219,7 @@ fn request(view: &dyn Editor, trigger: Option<String>) {
                 let Some(view) = editor::find_editor(serial) else {
                     return;
                 };
-                let list = list(view.mtm());
+                let list = list(&editor::state().completion, view.mtm());
                 if list.ivars().asked.get() == asked {
                     list.show_from(&*view, origin, asked, completions);
                 }
@@ -231,11 +229,11 @@ fn request(view: &dyn Editor, trigger: Option<String>) {
 }
 
 /// The user typed `typed` into `view`: the list filters or closes, a trigger character asks anew.
-pub(crate) fn typed(view: &dyn Editor, typed: &str) {
-    if let Some(list) = open_for(view) {
+pub(crate) fn typed(state: &LspState, view: &dyn Editor, typed: &str) {
+    if let Some(list) = open_for(&state.completion, view) {
         if typed.chars().all(is_word) {
             if list.ivars().incomplete.get() {
-                request(view, None);
+                request(state, view, None);
             } else {
                 list.refilter();
             }
@@ -243,7 +241,7 @@ pub(crate) fn typed(view: &dyn Editor, typed: &str) {
         }
         list.close();
     }
-    let capabilities: Vec<_> = servers_of(view)
+    let capabilities: Vec<_> = servers_of(state, view)
         .iter()
         .filter_map(|(_, server, _)| server.shared_capabilities())
         .collect();
@@ -262,13 +260,13 @@ pub(crate) fn typed(view: &dyn Editor, typed: &str) {
         .substringWithRange(objc2_foundation::NSRange::new(from, cursor - from))
         .to_string();
     if let Some(trigger) = triggers.find(|t| before.ends_with(t.as_str())) {
-        request(view, Some(trigger.clone()));
+        request(state, view, Some(trigger.clone()));
     }
 }
 
-/// A command of the keyboard reached `view`; whether the list or a snippet took it.
-pub(crate) fn command(view: &dyn Editor, command: Sel) -> bool {
-    if let Some(list) = open_for(view) {
+/// A command of the keyboard reached `view`; whether the list of `completion` or a snippet took it.
+pub(crate) fn command(completion: &Completion, view: &dyn Editor, command: Sel) -> bool {
+    if let Some(list) = open_for(completion, view) {
         let step = |by: isize| list.step(by);
         match command {
             c if c == sel!(moveDown:) => step(1),
@@ -294,9 +292,9 @@ pub(crate) fn command(view: &dyn Editor, command: Sel) -> bool {
     false
 }
 
-/// After a command the editor ran itself, such as deleting backwards: the list follows or closes.
-pub(crate) fn after_command(view: &dyn Editor, command: Sel) {
-    if let Some(list) = open_for(view)
+/// After a command the editor ran itself, such as deleting backwards: the list of `completion` follows or closes.
+pub(crate) fn after_command(completion: &Completion, view: &dyn Editor, command: Sel) {
+    if let Some(list) = open_for(completion, view)
         && command == sel!(deleteBackward:)
     {
         if view.selectedRange().location < list.ivars().start.get() {
@@ -307,9 +305,9 @@ pub(crate) fn after_command(view: &dyn Editor, command: Sel) {
     }
 }
 
-/// Closes the list if it belongs to `view`.
-pub(crate) fn dismiss_for(view: &dyn Editor) {
-    if let Some(list) = open_for(view) {
+/// Closes the list of `completion` if it belongs to `view`.
+pub(crate) fn dismiss_for(completion: &Completion, view: &dyn Editor) {
+    if let Some(list) = open_for(completion, view) {
         list.close();
     }
 }
@@ -551,9 +549,10 @@ impl CompletionList {
             return;
         }
         let origin = self.ivars().origins.borrow().get(index).copied();
+        let state = editor::state();
         let found = match origin {
-            Some(origin) => server_by_id(&*view, origin),
-            None => server_of(&*view),
+            Some(origin) => server_by_id(&state, &*view, origin),
+            None => server_of(&state, &*view),
         };
         let Some((server, uri)) = found else { return };
         let Some(item) = self.ivars().items.borrow().get(index).cloned() else {
@@ -567,7 +566,7 @@ impl CompletionList {
             let Ok(item) = answer else { return };
             main_soon(move || {
                 let Some(mtm) = MainThreadMarker::new() else { return };
-                let list = list(mtm);
+                let list = list(&editor::state().completion, mtm);
                 if list.ivars().asked.get() == asked {
                     list.ivars().resolved.borrow_mut().insert(index, item);
                 }
@@ -706,7 +705,7 @@ pub mod selftest {
 
     /// The labels the list shows for `view`, best first; empty when it is closed.
     pub fn shown(view: &dyn Editor) -> Vec<String> {
-        let Some(list) = super::open_for(view) else {
+        let Some(list) = super::open_for(&crate::host::state().completion, view) else {
             return vec![];
         };
         let items = list.ivars().items.borrow();
@@ -720,7 +719,8 @@ pub mod selftest {
 
     /// Selects the first item whose label starts with `label` and accepts it as Return does.
     pub fn accept(view: &dyn Editor, label: &str) -> bool {
-        let Some(list) = super::open_for(view) else {
+        let state = crate::host::state();
+        let Some(list) = super::open_for(&state.completion, view) else {
             return false;
         };
         let row = {
@@ -735,7 +735,7 @@ pub mod selftest {
         if let Some(table) = list.ivars().table.borrow().as_ref() {
             table.selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::indexSetWithIndex(row), false);
         }
-        super::command(view, objc2::sel!(insertNewline:))
+        super::command(&state.completion, view, objc2::sel!(insertNewline:))
     }
 
     /// Opens the list for `view` with items of `labels`, as an answer of its server would.
@@ -747,7 +747,7 @@ pub mod selftest {
                 ..Default::default()
             })
             .collect();
-        super::list(view.mtm()).show(
+        super::list(&crate::host::state().completion, view.mtm()).show(
             view,
             ide_lsp::Completions {
                 incomplete: false,
@@ -763,7 +763,12 @@ pub mod selftest {
 
     /// The completion panel, for a picture.
     pub fn panel() -> Option<objc2::rc::Retained<objc2_app_kit::NSPanel>> {
-        super::with_list(|cell| cell.borrow().as_ref().and_then(|l| l.ivars().panel.borrow().clone()))
+        crate::host::state()
+            .completion
+            .list
+            .borrow()
+            .as_ref()
+            .and_then(|l| l.ivars().panel.borrow().clone())
     }
 }
 

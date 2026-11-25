@@ -350,7 +350,7 @@ fn reopen(root: PathBuf, expected: Vec<Vec<String>>, share: Option<f64>) {
         format!("{saved:?}"),
     );
     let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::app::open_project(mtm, root.clone());
+    crate::app::open_project(&crate::context::app(), mtm, root.clone());
     let (probe, wanted) = (root.clone(), expected.clone());
     helpers::wait_until(
         move || helpers::window_of(&probe).is_some_and(|c| c.window_tabs() == wanted && has_session(&c, SESSION)),

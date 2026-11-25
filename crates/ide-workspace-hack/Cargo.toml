@@ -17,26 +17,22 @@ workspace = true
 aho-corasick = { version = "1" }
 base64 = { version = "0.23" }
 bitflags = { version = "2", default-features = false, features = ["std"] }
-block2 = { version = "0.6" }
 bstr = { version = "1" }
 crc32fast = { version = "1" }
 crossbeam-utils = { version = "0.8", default-features = false, features = ["std"] }
 derive_more = { version = "2", features = ["add", "display", "from", "into"] }
-dispatch2 = { version = "0.3" }
 fastrand = { version = "2" }
+hashbrown = { version = "0.17", default-features = false, features = ["default-hasher"] }
 indexmap = { version = "2", features = ["serde"] }
 libc = { version = "0.2" }
 memchr = { version = "2" }
 miniz_oxide = { version = "0.9", features = ["simd"] }
 num-traits = { version = "0.2", features = ["i128"] }
-objc2 = { version = "0.6", features = ["catch-all"] }
-objc2-core-foundation = { version = "0.3" }
 objc2-core-graphics = { version = "0.3" }
 objc2-core-video = { version = "0.3", default-features = false, features = ["CVBase", "CVBuffer", "CVImageBuffer", "CVPixelBuffer", "CVPixelBufferPool", "objc2"] }
-objc2-foundation = { version = "0.3" }
 objc2-image-io = { version = "0.3", default-features = false, features = ["CGImageProperties", "CGImageSource", "objc2"] }
 objc2-metal = { version = "0.3" }
-objc2-security = { version = "0.3", default-features = false, features = ["Authorization", "SecBase", "SecTrust", "objc2", "std"] }
+objc2-security = { version = "0.3", default-features = false, features = ["Authorization", "SecBase", "SecItem", "SecTrust", "objc2", "std"] }
 objc2-user-notifications = { version = "0.3" }
 once_cell = { version = "1" }
 phf_shared = { version = "0.14" }
@@ -57,27 +53,23 @@ ureq = { version = "3", features = ["platform-verifier"] }
 aho-corasick = { version = "1" }
 base64 = { version = "0.23" }
 bitflags = { version = "2", default-features = false, features = ["std"] }
-block2 = { version = "0.6" }
 bstr = { version = "1" }
 crc32fast = { version = "1" }
 crossbeam-utils = { version = "0.8", default-features = false, features = ["std"] }
 derive_more = { version = "2", features = ["add", "display", "from", "into"] }
 derive_more-impl = { version = "2", features = ["add", "display", "from", "into"] }
-dispatch2 = { version = "0.3" }
 fastrand = { version = "2" }
+hashbrown = { version = "0.17", default-features = false, features = ["default-hasher"] }
 indexmap = { version = "2", features = ["serde"] }
 libc = { version = "0.2" }
 memchr = { version = "2" }
 miniz_oxide = { version = "0.9", features = ["simd"] }
 num-traits = { version = "0.2", features = ["i128"] }
-objc2 = { version = "0.6", features = ["catch-all"] }
-objc2-core-foundation = { version = "0.3" }
 objc2-core-graphics = { version = "0.3" }
 objc2-core-video = { version = "0.3", default-features = false, features = ["CVBase", "CVBuffer", "CVImageBuffer", "CVPixelBuffer", "CVPixelBufferPool", "objc2"] }
-objc2-foundation = { version = "0.3" }
 objc2-image-io = { version = "0.3", default-features = false, features = ["CGImageProperties", "CGImageSource", "objc2"] }
 objc2-metal = { version = "0.3" }
-objc2-security = { version = "0.3", default-features = false, features = ["Authorization", "SecBase", "SecTrust", "objc2", "std"] }
+objc2-security = { version = "0.3", default-features = false, features = ["Authorization", "SecBase", "SecItem", "SecTrust", "objc2", "std"] }
 objc2-user-notifications = { version = "0.3" }
 once_cell = { version = "1" }
 phf_shared = { version = "0.14" }
@@ -99,10 +91,9 @@ term-vt = { path = "../../../tapa/crates/term-vt", default-features = false, fea
 ureq = { version = "3", features = ["platform-verifier"] }
 
 [target.aarch64-apple-darwin.dependencies]
-bytemuck = { version = "1", default-features = false, features = ["aarch64_simd", "derive", "extern_crate_alloc", "min_const_generics"] }
 getrandom = { version = "0.4", default-features = false, features = ["std", "sys_rng"] }
-image = { version = "0.25", default-features = false, features = ["bmp", "gif", "jpeg", "png", "webp"] }
 log = { version = "0.4", default-features = false, features = ["std"] }
+objc2-core-foundation = { version = "0.3" }
 objc2-core-image = { version = "0.3" }
 objc2-core-services = { version = "0.3", default-features = false, features = ["AE", "AEDataModel", "FSEvents", "IconStorage", "IconsCore", "LaunchServices", "OSServices", "libc", "objc2", "std"] }
 objc2-core-text = { version = "0.3" }
@@ -114,10 +105,9 @@ thiserror = { version = "2" }
 yoke = { version = "0.8", features = ["derive"] }
 
 [target.aarch64-apple-darwin.build-dependencies]
-bytemuck = { version = "1", default-features = false, features = ["aarch64_simd", "derive", "extern_crate_alloc", "min_const_generics"] }
 getrandom = { version = "0.4", default-features = false, features = ["std", "sys_rng"] }
-image = { version = "0.25", default-features = false, features = ["bmp", "gif", "jpeg", "png", "webp"] }
 log = { version = "0.4", default-features = false, features = ["std"] }
+objc2-core-foundation = { version = "0.3" }
 objc2-core-image = { version = "0.3" }
 objc2-core-services = { version = "0.3", default-features = false, features = ["AE", "AEDataModel", "FSEvents", "IconStorage", "IconsCore", "LaunchServices", "OSServices", "libc", "objc2", "std"] }
 objc2-core-text = { version = "0.3" }
@@ -129,10 +119,9 @@ thiserror = { version = "2" }
 yoke = { version = "0.8", features = ["derive"] }
 
 [target.x86_64-apple-darwin.dependencies]
-bytemuck = { version = "1", default-features = false, features = ["aarch64_simd", "derive", "extern_crate_alloc", "min_const_generics"] }
 getrandom = { version = "0.4", default-features = false, features = ["std", "sys_rng"] }
-image = { version = "0.25", default-features = false, features = ["bmp", "gif", "jpeg", "png", "webp"] }
 log = { version = "0.4", default-features = false, features = ["std"] }
+objc2-core-foundation = { version = "0.3" }
 objc2-core-image = { version = "0.3" }
 objc2-core-services = { version = "0.3", default-features = false, features = ["AE", "AEDataModel", "FSEvents", "IconStorage", "IconsCore", "LaunchServices", "OSServices", "libc", "objc2", "std"] }
 objc2-core-text = { version = "0.3" }
@@ -144,10 +133,9 @@ thiserror = { version = "2" }
 yoke = { version = "0.8", features = ["derive"] }
 
 [target.x86_64-apple-darwin.build-dependencies]
-bytemuck = { version = "1", default-features = false, features = ["aarch64_simd", "derive", "extern_crate_alloc", "min_const_generics"] }
 getrandom = { version = "0.4", default-features = false, features = ["std", "sys_rng"] }
-image = { version = "0.25", default-features = false, features = ["bmp", "gif", "jpeg", "png", "webp"] }
 log = { version = "0.4", default-features = false, features = ["std"] }
+objc2-core-foundation = { version = "0.3" }
 objc2-core-image = { version = "0.3" }
 objc2-core-services = { version = "0.3", default-features = false, features = ["AE", "AEDataModel", "FSEvents", "IconStorage", "IconsCore", "LaunchServices", "OSServices", "libc", "objc2", "std"] }
 objc2-core-text = { version = "0.3" }

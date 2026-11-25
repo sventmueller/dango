@@ -178,17 +178,17 @@ fn with_tab(id: u64, f: impl FnOnce(&DiffTab)) {
     crate::host::state().diff_tabs.with(id, f);
 }
 
-fn live_tabs() -> Vec<Retained<DiffTab>> {
-    crate::host::state().diff_tabs.live()
-}
-
 /// Keeps the worktree diff tabs of `controller`'s window in step with `trees` as the Git panel read them: a tab whose
 /// worktree is gone or whose file it no longer changes, as after taking its work over, closes; the others compare
 /// against where the branch and the base meet now.
-pub(crate) fn follow_trees(controller: &(impl AsWindow + ?Sized), trees: &[crate::worktrees::TreeState]) {
+pub(crate) fn follow_trees(
+    state: &crate::host::State,
+    controller: &(impl AsWindow + ?Sized),
+    trees: &[crate::worktrees::TreeState],
+) {
     let controller = &controller.as_window();
     let mut gone = Vec::new();
-    for tab in live_tabs() {
+    for tab in state.diff_tabs.live() {
         let ivars = tab.ivars();
         let Some((base, _)) = &ivars.since else { continue };
         if ivars.controller != *controller {
@@ -208,8 +208,8 @@ pub(crate) fn follow_trees(controller: &(impl AsWindow + ?Sized), trees: &[crate
 }
 
 /// Reads the diffs of the tabs of the window that shows `window_root` again.
-pub(crate) fn refresh_for(window_root: &Path) {
-    for tab in live_tabs() {
+pub(crate) fn refresh_for(state: &crate::host::State, window_root: &Path) {
+    for tab in state.diff_tabs.live() {
         if tab.ivars().window_root == window_root {
             tab.reload();
         }
@@ -385,7 +385,6 @@ pub(crate) fn show_stash(
 }
 
 fn place(controller: &Window, tab: Retained<DiffTab>, key: String, title: &str, preview: bool) {
-    crate::host::state().diff_tabs.insert(tab.ivars().id, Weak::from(&*tab));
     tab.reload();
     if preview {
         let _ = controller.add_preview_tab(TabKind::Diff, Some(key), title, tab.into_super());
@@ -395,6 +394,7 @@ fn place(controller: &Window, tab: Retained<DiffTab>, key: String, title: &str, 
 }
 
 impl DiffTab {
+    /// A diff tab of `controller`'s window with its views built, among the open ones from now on.
     fn new(
         controller: &Window,
         window_root: PathBuf,
@@ -405,8 +405,9 @@ impl DiffTab {
         commit: Option<Fixed>,
     ) -> Retained<DiffTab> {
         let mtm: MainThreadMarker = controller.mtm();
+        let open = crate::host::state();
         let ivars = DiffIvars {
-            id: crate::host::state().diff_tabs.next_id(),
+            id: open.diff_tabs.next_id(),
             controller: *controller,
             window_root,
             repo_root,
@@ -430,6 +431,7 @@ impl DiffTab {
             (None, None) => t("Nicht vorgemerkte Änderungen").to_string(),
         };
         let _ = ivars.ui.set(Ui::new(mtm, &tab, &ivars.path, &side));
+        open.diff_tabs.insert(ivars.id, Weak::from(&*tab));
         tab
     }
 

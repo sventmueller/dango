@@ -69,16 +69,10 @@ impl Default for PageSelections {
     }
 }
 
-fn with_waiting<R>(f: impl FnOnce(&RefCell<HashMap<u64, Waiting>>) -> R) -> R {
-    f(&crate::host::state().page_selections.waiting)
-}
-
-fn with_next<R>(f: impl FnOnce(&std::cell::Cell<u64>) -> R) -> R {
-    f(&crate::host::state().page_selections.next)
-}
-
+/// Hands `selection` to what waits for the answer `key`, once.
 fn settle(key: u64, selection: Option<String>) {
-    if let Some(done) = with_waiting(|w| w.borrow_mut().remove(&key)) {
+    let done = crate::host::state().page_selections.waiting.borrow_mut().remove(&key);
+    if let Some(done) = done {
         done(selection);
     }
 }
@@ -107,18 +101,15 @@ pub(crate) fn browser(controller: &(impl AsWindow + ?Sized), done: impl FnOnce(O
         .map(|s| s.to_string())
         .unwrap_or_default();
     let title = title.map(|t| t.to_string()).unwrap_or_default();
-    let key = with_next(|n| {
-        let key = n.get();
-        n.set(key + 1);
-        key
-    });
+    let state = crate::host::state();
+    let selections = &state.page_selections;
+    let key = selections.next.get();
+    selections.next.set(key + 1);
     let page = (url, title);
-    with_waiting(|w| {
-        w.borrow_mut().insert(
-            key,
-            Box::new(move |selection: Option<String>| done(Some(page_attachment(&page.0, &page.1, selection)))),
-        );
-    });
+    selections.waiting.borrow_mut().insert(
+        key,
+        Box::new(move |selection: Option<String>| done(Some(page_attachment(&page.0, &page.1, selection)))),
+    );
     let answered = RcBlock::new(move |result: *mut AnyObject, _error: *mut NSError| {
         ide_ui_common::util::guarded((), || {
             // SAFETY: WebKit hands over the script's result, a string for this script, or null; it stays alive for the

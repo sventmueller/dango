@@ -16,7 +16,7 @@ use ide_lsp::symbol_search::Planned;
 use ide_lsp::{Language, ProjectSymbol, Server, Status, Ticket, uri};
 
 use super::lease::IDLE_STOP;
-use super::{State, custom_servers, end_later, slot, slot_at, workspace, workspace_or_new};
+use super::{LspState, State, custom_servers, end_later, slot, slot_at, workspace, workspace_or_new};
 use ide_ui_common::util::main_soon;
 
 /// Servers that may start at the same time for a search.
@@ -83,10 +83,6 @@ pub(crate) struct Leases {
     leases: RefCell<HashMap<PathBuf, Lease>>,
 }
 
-fn with_leases<R>(f: impl FnOnce(&RefCell<HashMap<PathBuf, Lease>>) -> R) -> R {
-    f(&crate::host::state().server_leases.leases)
-}
-
 /// Searches the symbols of the window folder `folder` for `query`, those in the language of `active` first among
 /// equal matches; `answer` hears what was found each time a server answers, on the main thread, until the next search
 /// of the folder.
@@ -100,8 +96,9 @@ pub fn search_symbols(folder: &Path, query: &str, active: Option<&Path>, answer:
         return;
     }
     let now = Instant::now();
-    let survey = with_leases(|leases| {
-        let mut leases = leases.borrow_mut();
+    let state = crate::host::state();
+    let survey = {
+        let mut leases = state.server_leases.leases.borrow_mut();
         let fresh = leases.get(folder).is_some_and(|lease| now < lease.last + IDLE_STOP);
         let lease = leases.entry(folder.to_path_buf()).or_insert_with(|| Lease {
             plan: Plan::Surveying,
@@ -130,114 +127,112 @@ pub fn search_symbols(folder: &Path, query: &str, active: Option<&Path>, answer:
         lease.prefer = active.and_then(super::language_of).map(|(language, _)| language);
         lease.answer = Some(Rc::new(answer));
         if fresh {
-            return false;
+            false
+        } else {
+            lease.plan = Plan::Surveying;
+            true
         }
-        lease.plan = Plan::Surveying;
-        true
-    });
+    };
     if survey {
-        start_survey(folder);
+        start_survey(&state, folder);
     }
-    renew(folder, now);
-    pump(folder);
-    ask(folder);
+    renew(&state, folder, now);
+    pump(&state, folder);
+    ask(&state, folder);
 }
 
 /// Surveys `folder` off the main thread and queues the servers it needs.
-fn start_survey(folder: &Path) {
+fn start_survey(state: &LspState, folder: &Path) {
     let custom = custom_servers();
     let folder = folder.to_path_buf();
     let failed = folder.clone();
     if let Err(why) = ide_ui_common::util::spawn("lsp-symbol-survey", move || {
         let plan = ide_lsp::symbol_search::survey(&folder, &custom);
-        main_soon(move || surveyed(&folder, plan));
+        main_soon(move || surveyed(&crate::host::state(), &folder, plan));
     }) {
         ide_ui_common::diag::report("surveying a folder for symbol search", why);
-        surveyed(&failed, Vec::new());
+        surveyed(state, &failed, Vec::new());
     }
 }
 
-fn surveyed(folder: &Path, plan: Vec<Planned>) {
-    with_leases(|leases| {
-        if let Some(lease) = leases.borrow_mut().get_mut(folder) {
-            lease.plan = Plan::Ready(plan);
-        }
-    });
-    renew(folder, Instant::now());
-    pump(folder);
-    ask(folder);
+/// The survey of `folder` found `plan`: the search starts its servers and asks them.
+fn surveyed(state: &LspState, folder: &Path, plan: Vec<Planned>) {
+    if let Some(lease) = state.server_leases.leases.borrow_mut().get_mut(folder) {
+        lease.plan = Plan::Ready(plan);
+    }
+    renew(state, folder, Instant::now());
+    pump(state, folder);
+    ask(state, folder);
 }
 
 /// Renews the lease of every slot the search of `folder` holds and queues the planned servers that do not run.
-fn renew(folder: &Path, now: Instant) {
-    with_leases(|leases| {
-        let mut leases = leases.borrow_mut();
-        let Some(lease) = leases.get_mut(folder) else { return };
-        lease.slots.retain(|id| slot(folder, *id).is_some());
-        for id in &lease.slots {
-            if let Some(slot) = slot(folder, *id) {
-                let mut hold = slot.hold.get();
-                hold.lease(now);
-                slot.hold.set(hold);
-                end_later(folder, &slot);
-            }
+fn renew(state: &LspState, folder: &Path, now: Instant) {
+    let mut leases = state.server_leases.leases.borrow_mut();
+    let Some(lease) = leases.get_mut(folder) else { return };
+    lease.slots.retain(|id| slot(state, folder, *id).is_some());
+    for id in &lease.slots {
+        if let Some(slot) = slot(state, folder, *id) {
+            let mut hold = slot.hold.get();
+            hold.lease(now);
+            slot.hold.set(hold);
+            end_later(folder, &slot);
         }
-        let Plan::Ready(plan) = &lease.plan else { return };
-        let running: Vec<(Language, PathBuf)> = workspace(folder)
-            .map(|w| {
-                w.slots
-                    .borrow()
-                    .iter()
-                    .map(|s| (s.language.clone(), s.root.clone()))
-                    .collect()
-            })
-            .unwrap_or_default();
-        for planned in plan {
-            let wanted = (planned.language.clone(), planned.root.clone());
-            if !running.contains(&wanted) && !lease.queue.contains(&wanted) {
-                lease.queue.push_back(wanted);
-            }
+    }
+    let Plan::Ready(plan) = &lease.plan else { return };
+    let running: Vec<(Language, PathBuf)> = workspace(state, folder)
+        .map(|w| {
+            w.slots
+                .borrow()
+                .iter()
+                .map(|s| (s.language.clone(), s.root.clone()))
+                .collect()
+        })
+        .unwrap_or_default();
+    for planned in plan {
+        let wanted = (planned.language.clone(), planned.root.clone());
+        if !running.contains(&wanted) && !lease.queue.contains(&wanted) {
+            lease.queue.push_back(wanted);
         }
-    });
+    }
 }
 
 /// Starts queued servers while fewer than two start, and lets go of servers that cannot search symbols.
-pub(super) fn pump(folder: &Path) {
-    with_leases(|leases| {
-        let mut leases = leases.borrow_mut();
-        let Some(lease) = leases.get_mut(folder) else { return };
-        lease
-            .starting
-            .retain(|id| slot(folder, *id).is_some_and(|s| starting(&s.state.borrow())));
-        lease.slots.retain(|id| {
-            let Some(slot) = slot(folder, *id) else { return false };
-            let useless = matches!(&*slot.state.borrow(), State::Running(server)
-                if server.status() == Status::Running && !server.offers("workspaceSymbolProvider", "workspace/symbol"));
-            if useless {
-                let mut hold = slot.hold.get();
-                hold.end_lease();
-                slot.hold.set(hold);
-                end_later(folder, &slot);
-            }
-            !useless
-        });
-        while lease.starting.len() < STARTING_AT_ONCE
-            && let Some((language, root)) = lease.queue.pop_front()
-        {
-            let workspace = workspace_or_new(folder);
-            let (slot, new) = slot_at(&workspace, &language, root);
+pub(super) fn pump(state: &LspState, folder: &Path) {
+    let mut leases = state.server_leases.leases.borrow_mut();
+    let Some(lease) = leases.get_mut(folder) else { return };
+    lease
+        .starting
+        .retain(|id| slot(state, folder, *id).is_some_and(|s| starting(&s.state.borrow())));
+    lease.slots.retain(|id| {
+        let Some(slot) = slot(state, folder, *id) else {
+            return false;
+        };
+        let useless = matches!(&*slot.state.borrow(), State::Running(server)
+            if server.status() == Status::Running && !server.offers("workspaceSymbolProvider", "workspace/symbol"));
+        if useless {
             let mut hold = slot.hold.get();
-            hold.lease(lease.last);
+            hold.end_lease();
             slot.hold.set(hold);
             end_later(folder, &slot);
-            if !lease.slots.contains(&slot.id) {
-                lease.slots.push(slot.id);
-            }
-            if new {
-                lease.starting.push(slot.id);
-            }
         }
+        !useless
     });
+    while lease.starting.len() < STARTING_AT_ONCE
+        && let Some((language, root)) = lease.queue.pop_front()
+    {
+        let workspace = workspace_or_new(state, folder);
+        let (slot, new) = slot_at(state, &workspace, &language, root);
+        let mut hold = slot.hold.get();
+        hold.lease(lease.last);
+        slot.hold.set(hold);
+        end_later(folder, &slot);
+        if !lease.slots.contains(&slot.id) {
+            lease.slots.push(slot.id);
+        }
+        if new {
+            lease.starting.push(slot.id);
+        }
+    }
 }
 
 /// Whether a slot in `state` is still on its way to answering requests.
@@ -250,14 +245,18 @@ fn starting(state: &State) -> bool {
 }
 
 /// Whether a server of the search of `folder` still starts or indexes, or the survey is not done.
-fn indexing(lease: &Lease, folder: &Path) -> bool {
+fn indexing(state: &LspState, lease: &Lease, folder: &Path) -> bool {
     if matches!(lease.plan, Plan::Surveying) || !lease.queue.is_empty() || !lease.seeding.is_empty() {
         return true;
     }
-    lease.slots.iter().filter_map(|id| slot(folder, *id)).any(|slot| {
-        starting(&slot.state.borrow())
-            || matches!(&*slot.state.borrow(), State::Running(_)) && !slot.progress.borrow().is_empty()
-    })
+    lease
+        .slots
+        .iter()
+        .filter_map(|id| slot(state, folder, *id))
+        .any(|slot| {
+            starting(&slot.state.borrow())
+                || matches!(&*slot.state.borrow(), State::Running(_)) && !slot.progress.borrow().is_empty()
+        })
 }
 
 /// Files a search opened on the server of slot `slot`.
@@ -271,16 +270,16 @@ struct Opened {
 type Seeds = Vec<(PathBuf, String)>;
 
 /// Sends the query of the search of `folder` to every running server it holds, or answers at once without any.
-fn ask(folder: &Path) {
-    ask_after(folder, None);
+fn ask(state: &LspState, folder: &Path) {
+    ask_after(state, folder, None);
 }
 
 /// Asks as `ask` does, once the files in `opened` were opened for the search.
-fn ask_after(folder: &Path, opened: Option<Opened>) {
-    let (query, generation, servers, wanted, late) = with_leases(|leases| {
-        let mut leases = leases.borrow_mut();
+fn ask_after(state: &LspState, folder: &Path, opened: Option<Opened>) {
+    let (query, generation, servers, wanted, late) = 'taken: {
+        let mut leases = state.server_leases.leases.borrow_mut();
         let Some(lease) = leases.get_mut(folder) else {
-            return (String::new(), 0, vec![], vec![], opened);
+            break 'taken (String::new(), 0, vec![], vec![], opened);
         };
         let mut late = None;
         if let Some(opened) = opened {
@@ -294,7 +293,7 @@ fn ask_after(folder: &Path, opened: Option<Opened>) {
         let running: Vec<(u64, Server, Seeds)> = lease
             .slots
             .iter()
-            .filter_map(|id| slot(folder, *id))
+            .filter_map(|id| slot(state, folder, *id))
             .filter_map(|slot| match &*slot.state.borrow() {
                 State::Running(server) if server.status() == Status::Running => Some((
                     slot.id,
@@ -320,16 +319,16 @@ fn ask_after(folder: &Path, opened: Option<Opened>) {
         lease.seeding.extend(wanted.iter().map(|(id, ..)| *id));
         let servers = running.into_iter().map(|(_, server, _)| server).collect();
         (lease.query.clone(), lease.generation, servers, wanted, late)
-    });
+    };
     if let Some(late) = late {
         close_opened(late);
     }
     if query.is_empty() {
-        deliver(folder);
+        deliver(state, folder);
         return;
     }
     for (slot, server, seeds) in wanted {
-        seed(folder, slot, server, seeds);
+        seed(state, folder, slot, server, seeds);
     }
     let mut tickets = vec![];
     for server in servers {
@@ -341,15 +340,13 @@ fn ask_after(folder: &Path, opened: Option<Opened>) {
             tickets.push(ticket);
         }
     }
-    with_leases(|leases| {
-        if let Some(lease) = leases.borrow_mut().get_mut(folder)
-            && lease.generation == generation
-        {
-            lease.waiting = tickets.len();
-            lease.tickets = tickets;
-        }
-    });
-    deliver(folder);
+    if let Some(lease) = state.server_leases.leases.borrow_mut().get_mut(folder)
+        && lease.generation == generation
+    {
+        lease.waiting = tickets.len();
+        lease.tickets = tickets;
+    }
+    deliver(state, folder);
 }
 
 /// The files the survey `plan` wants open on the server of `language` for `root`.
@@ -362,7 +359,7 @@ fn planned_seeds(plan: &Plan, language: &Language, root: &Path) -> Seeds {
 }
 
 /// Reads `seeds` off the main thread and opens them on `server`, the server of slot `slot`, then asks again.
-fn seed(folder: &Path, slot: u64, server: Server, seeds: Seeds) {
+fn seed(state: &LspState, folder: &Path, slot: u64, server: Server, seeds: Seeds) {
     let folder = folder.to_path_buf();
     let failed = (folder.clone(), server.clone());
     if let Err(why) = ide_ui_common::util::spawn("lsp-symbol-seed", move || {
@@ -379,12 +376,13 @@ fn seed(folder: &Path, slot: u64, server: Server, seeds: Seeds) {
                 .filter(|(path, language_id, text)| server.open_borrowed(&uri::from_path(path), language_id, text))
                 .map(|(path, ..)| path)
                 .collect();
-            ask_after(&folder, Some(Opened { slot, server, paths }));
+            ask_after(&crate::host::state(), &folder, Some(Opened { slot, server, paths }));
         });
     }) {
         ide_ui_common::diag::report("reading files for the symbol search", why);
         let (folder, server) = failed;
         ask_after(
+            state,
             &folder,
             Some(Opened {
                 slot,
@@ -401,11 +399,13 @@ fn close_opened(opened: Opened) {
     }
 }
 
+/// The answer of `server` to the query of generation `generation` of the search of `folder` joins what it found.
 fn arrived(folder: &Path, generation: u64, server: &Server, answer: Result<Vec<ProjectSymbol>, ide_lsp::Error>) {
-    let current = with_leases(|leases| {
-        let mut leases = leases.borrow_mut();
+    let state = crate::host::state();
+    let current = 'current: {
+        let mut leases = state.server_leases.leases.borrow_mut();
         let Some(lease) = leases.get_mut(folder).filter(|l| l.generation == generation) else {
-            return false;
+            break 'current false;
         };
         lease.waiting = lease.waiting.saturating_sub(1);
         match answer {
@@ -423,17 +423,19 @@ fn arrived(folder: &Path, generation: u64, server: &Server, answer: Result<Vec<P
             Err(error) => ide_ui_common::diag::report("searching the project's symbols", error),
         }
         true
-    });
+    };
     if current {
-        deliver(folder);
+        deliver(&state, folder);
     }
 }
 
 /// Hands what the search of `folder` found so far, best matches first, to its listener.
-fn deliver(folder: &Path) {
-    let delivered = with_leases(|leases| {
-        let leases = leases.borrow();
-        let lease = leases.get(folder)?;
+fn deliver(state: &LspState, folder: &Path) {
+    let delivered = 'found: {
+        let leases = state.server_leases.leases.borrow();
+        let Some(lease) = leases.get(folder) else {
+            break 'found None;
+        };
         let mut symbols = lease.found.clone();
         let query = lease.query.to_lowercase();
         symbols.sort_by_cached_key(|found| {
@@ -452,11 +454,11 @@ fn deliver(folder: &Path) {
         let waiting = lease.waiting > 0 && symbols.is_empty();
         let answer = SymbolAnswer {
             symbols,
-            indexing: waiting || indexing(lease, folder),
+            indexing: waiting || indexing(state, lease, folder),
             untrusted: false,
         };
-        Some((lease.answer.clone()?, answer))
-    });
+        lease.answer.clone().map(|listener| (listener, answer))
+    };
     if let Some((listener, answer)) = delivered {
         listener(answer);
     }
@@ -485,29 +487,31 @@ pub fn open_symbol(folder: &Path, found: &FoundSymbol) {
 
 /// The search of `folder` is over for now: it closes the files it opened that no editor took over.
 pub fn end_symbol_search(folder: &Path) {
-    let_go(folder, false);
+    let_go(&crate::host::state().server_leases, folder, false);
 }
 
-/// The window of `folder` closed: its search lets go of everything.
-pub(super) fn forget(folder: &Path) {
-    let_go(folder, true);
+/// The window of `folder` closed: its search lets go of everything in `leases`.
+pub(super) fn forget(leases: &Leases, folder: &Path) {
+    let_go(leases, folder, true);
 }
 
-fn let_go(folder: &Path, closed: bool) {
-    let (tickets, seeded) = with_leases(|leases| {
-        let mut leases = leases.borrow_mut();
+/// The search of `folder` in `leases` ends: it stops listening and closes the files it opened, and also cancels what
+/// it waits for and drops its lease once the window `closed`.
+fn let_go(leases: &Leases, folder: &Path, closed: bool) {
+    let (tickets, seeded) = 'taken: {
+        let mut leases = leases.leases.borrow_mut();
         if closed {
-            return leases
+            break 'taken leases
                 .remove(folder)
                 .map(|lease| (lease.tickets, lease.seeded))
                 .unwrap_or_default();
         }
         let Some(lease) = leases.get_mut(folder) else {
-            return (vec![], vec![]);
+            break 'taken (vec![], vec![]);
         };
         lease.answer = None;
         (vec![], std::mem::take(&mut lease.seeded))
-    });
+    };
     for ticket in tickets {
         ticket.cancel();
     }

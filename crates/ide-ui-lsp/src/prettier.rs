@@ -14,6 +14,7 @@ use ide_process::{Ending, Kind, Supervisor};
 use ide_project::prettier::{self, Formatter, Outcome};
 use splat_i18n::{t, tf};
 
+use super::LspState;
 use super::rename::Then;
 use crate::editor::Editor;
 use crate::host as editor;
@@ -60,20 +61,20 @@ pub(crate) fn formats(view: &dyn Editor) -> bool {
 
 /// Formats `view` with Prettier and calls `then` afterwards, also when it failed, took too long or the text changed
 /// meanwhile; `false` when Prettier does not format this document, and `then` was not called.
-pub(crate) fn format(view: &dyn Editor, then: Option<Then>) -> Result<(), Option<Then>> {
+pub(crate) fn format(state: &LspState, view: &dyn Editor, then: Option<Then>) -> Result<(), Option<Then>> {
     let Some(run) = run_for(view) else { return Err(then) };
     let serial = view.lsp().borrow().serial;
     let revision = view.document().revision();
     let text = view.document().text().to_string();
-    let id = super::next_id();
-    crate::host::state().formatting.wait(serial, id, then);
+    let id = super::next_id(state);
+    state.formatting.wait(serial, id, then);
     let spawned = ide_ui_common::util::spawn("prettier", move || {
         let env = ide_ui_common::window::environment(Duration::from_secs(10));
         let outcome = format_text(&run, &text, &env);
-        main_soon(move || finished(serial, id, revision, outcome));
+        main_soon(move || finished(&editor::state(), serial, id, revision, outcome));
     });
     if let Err(error) = spawned {
-        finished(serial, id, revision, Outcome::Failed(error.to_string()));
+        finished(state, serial, id, revision, Outcome::Failed(error.to_string()));
     }
     Ok(())
 }
@@ -132,11 +133,11 @@ fn format_text(run: &Run, text: &str, env: &[(String, String)]) -> Outcome {
 
 /// Applies what Prettier answered to the editor `serial`, if its text is still the one of `revision`, then runs what
 /// waited for the formatting.
-fn finished(serial: EditorSerial, id: u64, revision: Revision, outcome: Outcome) {
+fn finished(state: &LspState, serial: EditorSerial, id: u64, revision: Revision, outcome: Outcome) {
     let Some(view) = editor::find_editor(serial) else {
         return;
     };
-    let then = crate::host::state().formatting.take(serial, id);
+    let then = state.formatting.take(serial, id);
     let Some(then) = then else { return };
     match outcome {
         Outcome::Formatted(text) if view.document().revision() == revision => {

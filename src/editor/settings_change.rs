@@ -41,7 +41,7 @@ pub(super) fn apply(cx: &crate::context::AppContext, names: &[String]) {
             Change::Minimap => cx.editor().minimap.forget(),
             Change::StickyLines => cx.editor().sticky.forget(),
             Change::LineDiagnostics => cx.editor().line_diagnostics.forget(),
-            Change::Whitespace => whitespace::forget(),
+            Change::Whitespace => whitespace::forget(cx),
             Change::Blame => blame::forget(),
             Change::Vim => {
                 cx.editor().vim.forget();
@@ -53,7 +53,7 @@ pub(super) fn apply(cx: &crate::context::AppContext, names: &[String]) {
     }
     for view in cx.editors().live() {
         if let Some(map) = view.ivars().around.minimap.borrow().as_ref().and_then(Weak::load) {
-            map.fit();
+            map.fit_to(cx.editor().minimap.get());
         }
         sticky::refresh(&view);
         line_diagnostics::refresh(&view);

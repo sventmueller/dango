@@ -23,7 +23,7 @@ fn name() -> &'static str {
 
 pub(crate) fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::settings::show(mtm);
+    crate::settings::show(&crate::context::app(), mtm);
     after(SETTLE, || step(0, Vec::new()));
 }
 

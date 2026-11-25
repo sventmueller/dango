@@ -34,25 +34,24 @@ pub(crate) struct Figures {
     collect: RefCell<Option<Vec<Key>>>,
 }
 
-fn with_asked<R>(f: impl FnOnce(&RefCell<Option<Asked>>) -> R) -> R {
-    f(&crate::host::state().figures.asked)
-}
-
-fn with_collect<R>(f: impl FnOnce(&RefCell<Option<Vec<Key>>>) -> R) -> R {
-    f(&crate::host::state().figures.collect)
-}
-
 /// Records the figures a card uses, including those it finds in the renderer's cache.
 pub(crate) fn collect<R>(build: impl FnOnce() -> R) -> (R, Vec<Key>) {
-    struct Capture(Option<Vec<Key>>);
-    impl Drop for Capture {
+    let state = crate::host::state();
+    struct Capture<'a> {
+        collect: &'a RefCell<Option<Vec<Key>>>,
+        previous: Option<Vec<Key>>,
+    }
+    impl Drop for Capture<'_> {
         fn drop(&mut self) {
-            with_collect(|slot| *slot.borrow_mut() = self.0.take());
+            *self.collect.borrow_mut() = self.previous.take();
         }
     }
-    let capture = Capture(with_collect(|slot| slot.replace(Some(Vec::new()))));
+    let capture = Capture {
+        collect: &state.figures.collect,
+        previous: state.figures.collect.replace(Some(Vec::new())),
+    };
     let result = build();
-    let keys = with_collect(|slot| slot.borrow_mut().take().unwrap_or_default());
+    let keys = state.figures.collect.borrow_mut().take().unwrap_or_default();
     drop(capture);
     (result, keys)
 }
@@ -72,20 +71,20 @@ pub fn is_dark(mtm: MainThreadMarker) -> bool {
 
 /// Records `all` as what a card uses and asks for `new` on a later turn, as a card is built while the table lays out.
 pub(crate) fn want_among(all: &[Key], new: Vec<Key>) {
-    with_collect(|slot| {
-        if let Some(collected) = slot.borrow_mut().as_mut() {
-            collected.extend(all.iter().cloned());
-        }
-    });
-    ask_for(new);
+    let state = crate::host::state();
+    if let Some(collected) = state.figures.collect.borrow_mut().as_mut() {
+        collected.extend(all.iter().cloned());
+    }
+    ask_for(&state.figures, new);
 }
 
-fn ask_for(keys: Vec<Key>) {
+/// Asks for `keys` on a later turn among the figures the answers asked for in `figures`.
+fn ask_for(figures: &Figures, keys: Vec<Key>) {
     if keys.is_empty() {
         return;
     }
-    let added = with_asked(|asked| {
-        let mut asked = asked.borrow_mut();
+    let added = {
+        let mut asked = figures.asked.borrow_mut();
         let asked = asked.get_or_insert_with(|| Asked {
             viewer: Rc::new(Answers),
             owner: None,
@@ -103,48 +102,54 @@ fn ask_for(keys: Vec<Key>) {
         let kept: HashSet<_> = asked.keys.iter().collect();
         asked.ready.retain(|key| kept.contains(key));
         asked.keys.len() != before || excess > 0
-    });
-    if added && !crate::host::state().figures.asking.replace(true) {
+    };
+    if added && !figures.asking.replace(true) {
         main_soon(move || {
-            crate::host::state().figures.asking.set(false);
+            let state = crate::host::state();
+            state.figures.asking.set(false);
             if let Some(mtm) = MainThreadMarker::new() {
-                ask(mtm);
+                ask(&state.figures, mtm);
             }
         });
     }
 }
 
-fn ask(mtm: MainThreadMarker) {
-    let Some((viewer, owner, keys)) = with_asked(|asked| {
-        let asked = asked.borrow();
-        let asked = asked.as_ref()?;
-        Some((asked.viewer.clone(), asked.owner, asked.keys.clone()))
+/// Has the renderer draw the figures `figures` holds as asked for.
+fn ask(figures: &Figures, mtm: MainThreadMarker) {
+    let Some((viewer, owner, keys)) = ({
+        let asked = figures.asked.borrow();
+        asked
+            .as_ref()
+            .map(|asked| (asked.viewer.clone(), asked.owner, asked.keys.clone()))
     }) else {
         return;
     };
     let renderer = js::renderer(mtm);
     let owner = owner.unwrap_or_else(|| renderer.listen(&viewer));
-    with_asked(|asked| {
-        if let Some(asked) = asked.borrow_mut().as_mut() {
-            asked.owner = Some(owner);
-        }
-    });
+    if let Some(asked) = figures.asked.borrow_mut().as_mut() {
+        asked.owner = Some(owner);
+    }
     renderer.request(owner, keys);
 }
 
 /// Builds the cards anew when more of the answers' figures are drawn than when they were last built; the renderer
 /// tells every document when it has run empty, also when it drew only for a preview.
 fn arrived() {
-    let changed = with_asked(|asked| {
-        let mut asked = asked.borrow_mut();
-        let Some(asked) = asked.as_mut() else { return Vec::new() };
-        let ready: HashSet<_> = asked.keys.iter().filter(|key| js::ready(key)).cloned().collect();
-        let changed = ready.symmetric_difference(&asked.ready).cloned().collect();
-        asked.ready = ready;
-        changed
-    });
+    let state = crate::host::state();
+    let changed: Vec<Key> = {
+        let mut asked = state.figures.asked.borrow_mut();
+        match asked.as_mut() {
+            Some(asked) => {
+                let ready: HashSet<_> = asked.keys.iter().filter(|key| js::ready(key)).cloned().collect();
+                let changed = ready.symmetric_difference(&asked.ready).cloned().collect();
+                asked.ready = ready;
+                changed
+            }
+            None => Vec::new(),
+        }
+    };
     if !changed.is_empty() {
-        for tab in super::all() {
+        for tab in state.tabs() {
             tab.timeline().figures_arrived(&changed);
         }
     }

@@ -13,6 +13,7 @@ use objc2_app_kit::{NSModalResponseOK, NSSavePanel};
 use splat_i18n::{t, tf};
 
 use super::{EditorTextView, display_name, indent};
+use crate::context::AppContext;
 use crate::util::{after_frame, main_on_run_loop, ns};
 
 #[cfg(feature = "selftest")]
@@ -116,7 +117,7 @@ fn write_soon(view: &EditorTextView, job: SaveJob, target: Option<PathBuf>) {
     match queued {
         Ok(()) => view.ivars().file.writing.set(Writing::Running),
         Err(_) => {
-            let done = finish(view, kept, Some(pending.run()));
+            let done = finish(&crate::context::app(), view, kept, Some(pending.run()));
             ended(view, done);
         }
     }
@@ -124,9 +125,12 @@ fn write_soon(view: &EditorTextView, job: SaveJob, target: Option<PathBuf>) {
 
 /// The write started for the editor `serial` is done; `None` if it panicked.
 fn written_soon(serial: ide_ui_lsp::EditorSerial, target: Option<PathBuf>, written: Option<Result<Saved, SaveError>>) {
-    let Some(view) = super::find_editor(serial) else { return };
+    let cx = crate::context::app();
+    let Some(view) = super::find_editor_in(&cx, serial) else {
+        return;
+    };
     let again = view.ivars().file.writing.replace(Writing::Idle) == Writing::Again;
-    let done = finish(&view, target, written);
+    let done = finish(&cx, &view, target, written);
     ended(&view, done);
     if again && view.document().is_dirty() {
         save_soon(&view, false);
@@ -150,13 +154,18 @@ fn ended(view: &EditorTextView, done: bool) {
     }
 }
 
-/// Takes what the write of `view` to `target` brought; whether the file is written, which the write that overwrites a
-/// file changed on disk is not yet.
-fn finish(view: &EditorTextView, target: Option<PathBuf>, written: Option<Result<Saved, SaveError>>) -> bool {
+/// Takes what the write of `view`, an editor of `cx`, to `target` brought; whether the file is written, which the write
+/// that overwrites a file changed on disk is not yet.
+fn finish(
+    cx: &AppContext,
+    view: &EditorTextView,
+    target: Option<PathBuf>,
+    written: Option<Result<Saved, SaveError>>,
+) -> bool {
     match written {
         Some(Ok(done)) => {
             view.document_mut().end_save(done);
-            saved(view, target.as_deref());
+            saved(cx, view, target.as_deref());
             true
         }
         Some(Err(SaveError::ChangedOnDisk)) => {
@@ -195,9 +204,9 @@ fn failed(view: &EditorTextView, error: &SaveError) {
     warn(view.mtm(), t("Sichern fehlgeschlagen"), &error.explain());
 }
 
-fn saved(view: &EditorTextView, new_path: Option<&Path>) {
+fn saved(cx: &AppContext, view: &EditorTextView, new_path: Option<&Path>) {
     super::update_dirty(view);
-    super::recovery::discard(view);
+    super::recovery::discard(cx, view);
     super::conflict::saved(view);
     if new_path.is_some() {
         crate::session::changed();

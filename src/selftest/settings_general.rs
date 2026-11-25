@@ -30,7 +30,7 @@ pub(crate) fn run() {
     let before = std::fs::read(&file).ok();
     let _ = std::fs::create_dir_all(ide_core::paths::data_dir());
     let _ = std::fs::write(&file, DAMAGED);
-    crate::settings::show(mtm);
+    crate::settings::show(&crate::context::app(), mtm);
     damaged(before);
     wait_until(|| general_view().is_some(), |_| general());
 }
@@ -235,7 +235,7 @@ fn fits() -> (bool, String) {
 fn agents() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::settings::show_agents(mtm);
-    crate::settings::agents_changed();
+    crate::settings::agents_changed(&crate::context::app());
     let listed = || fits().0 && !crate::settings::agents_lines().is_empty();
     wait_until(listed, |_| {
         let (same, detail) = fits();
@@ -249,7 +249,7 @@ fn agents() {
         let mut hosts = settings.get(&crate::ci_panel::CI_HOSTS);
         hosts.push(entry.to_string());
         let stored = settings.set(&crate::ci_panel::CI_HOSTS, &hosts).is_ok();
-        crate::settings::ci_changed();
+        crate::settings::ci_changed(&crate::context::app());
         let rows = crate::settings::ci_tab()
             .map(|owner| crate::settings::ci_selftest::rows(&owner, crate::settings::CiList::Hosts))
             .unwrap_or_default();

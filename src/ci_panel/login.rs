@@ -18,6 +18,7 @@ use splat_i18n::{t, tf};
 
 use super::panel::{CiPanel, with_panel};
 use super::{text, work};
+use crate::context::AppContext;
 use crate::util::{constant, ns};
 
 /// OAuth apps the user registered on hosts other than github.com and gitlab.com, as `host=id`. Only the user sets
@@ -40,9 +41,10 @@ pub(crate) struct Ticket {
 }
 
 impl Ticket {
-    fn new() -> Ticket {
+    /// A ticket for a login that starts now.
+    fn new(cx: &AppContext) -> Ticket {
         Ticket {
-            serial: crate::context::app().ci_panels().logins.next(),
+            serial: cx.ci_panels().logins.next(),
             cancel: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -91,7 +93,7 @@ fn remember_client(host: &str, id: &str) {
     if let Err(error) = settings.set(&CI_OAUTH_CLIENTS, &entries) {
         crate::diag::report("saving the OAuth app of a host", error);
     }
-    crate::settings::ci_changed();
+    crate::settings::ci_changed(&crate::context::app());
 }
 
 /// What a failed login says; nothing for one the user stopped.
@@ -206,8 +208,8 @@ impl CiPanel {
     }
 
     /// Stops the logins that wait in other windows: only one can own the callback port and the browser's attention.
-    fn stop_others(&self) {
-        for other in super::panel::all() {
+    fn stop_others(&self, cx: &AppContext) {
+        for other in cx.ci_panels().panels.live() {
             if other.id() != self.id() && other.read().login.is_some() {
                 other.cancel_login();
                 other.set_problem(Some(
@@ -252,8 +254,9 @@ impl CiPanel {
     }
 
     fn start_login(&self, forge: Forge, client: String) {
-        self.stop_others();
-        let ticket = Ticket::new();
+        let cx = crate::context::app();
+        self.stop_others(&cx);
+        let ticket = Ticket::new(&cx);
         self.state().login = Some(Login {
             ticket: ticket.clone(),
             code: None,

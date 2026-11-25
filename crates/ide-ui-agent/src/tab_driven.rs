@@ -43,10 +43,10 @@ pub fn attach(controller: &(impl AsWindow + ?Sized), state: &crate::State, attac
         }
     }
     tab.header.set_badge(Some(&badge));
-    tab.add_to_window(controller);
+    tab.add_to_window(state, controller);
     state.agent_tabs.tabs.borrow_mut().push(tab.clone());
     tab.take_feed();
-    super::changed(controller);
+    super::changed(state, controller);
     tab.select();
     Some(tab)
 }

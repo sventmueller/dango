@@ -270,13 +270,13 @@ impl DebugPanel {
     /// The debugger of `controller`'s window for the folder `root`, with what the project kept of debugging.
     pub(crate) fn attach(controller: &Window, root: PathBuf) -> Retained<DebugPanel> {
         let mtm = controller.mtm();
-        if let Some(old) = of(controller) {
-            old.end_all();
-        }
         let state = crate::host::state();
         let panels = &state.panels;
+        if let Some(old) = panels.of(*controller) {
+            old.end_all();
+        }
         panels.detach(*controller);
-        let panel = DebugPanel::new(mtm, controller, root);
+        let panel = DebugPanel::new(mtm, controller, root, panels.next_id());
         panels.insert(panel.id(), panel.clone());
         controller.set_panel_page(ide_ui_common::window::Panel::Debug, &panel.ui().page);
         controller.set_panel_accessory(ide_ui_common::window::Panel::Debug, &panel.ui().header);
@@ -285,11 +285,11 @@ impl DebugPanel {
         panel
     }
 
-    fn new(mtm: MainThreadMarker, controller: &Window, root: PathBuf) -> Retained<DebugPanel> {
+    fn new(mtm: MainThreadMarker, controller: &Window, root: PathBuf, id: u64) -> Retained<DebugPanel> {
         let mut model = Model::new(ide_dap::kept::load(&root));
         model.fit_filters(ide_dap::Languages::of(&root));
         let ivars = PanelIvars {
-            id: crate::host::state().panels.next_id(),
+            id,
             window: *controller,
             root,
             ui: OnceCell::new(),

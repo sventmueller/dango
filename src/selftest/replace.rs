@@ -53,7 +53,7 @@ pub(super) fn run() {
         untrusted: folder("replace-untrusted", "d.rs", false),
     };
     let _ = std::fs::write(folders.b.join("more.rs"), "// more.rs\n");
-    crate::app::open_project(mtm, folders.a.clone());
+    crate::app::open_project(&crate::context::app(), mtm, folders.a.clone());
     if let Some(controller) = window_of(&folders.a) {
         controller.open_file(&folders.a.join("a.rs"));
     }
@@ -65,7 +65,7 @@ pub(super) fn run() {
 }
 
 fn projects() -> String {
-    format!("{:?}", window::open_projects())
+    format!("{:?}", window::open_projects(&crate::context::app()))
 }
 
 fn frame_of(controller: &WindowController) -> String {
@@ -86,7 +86,7 @@ fn replace_clean(f: Folders) {
     let windows = window::open_windows().len();
     let before = frame_of(&controller);
     controller.quick_open_with("a.rs");
-    crate::app::open_project(mtm, f.b.clone());
+    crate::app::open_project(&crate::context::app(), mtm, f.b.clone());
     let same = window_of(&f.b).is_some_and(|w| std::ptr::eq(&*w, &*controller));
     let titles = controller.tab_titles();
     check(
@@ -141,7 +141,7 @@ fn edit_b(f: Folders) {
 /// the sheet has laid out its buttons.
 fn ask(f: Folders, then: fn(Folders, bool)) {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::app::open_project(mtm, f.c.clone());
+    crate::app::open_project(&crate::context::app(), mtm, f.c.clone());
     let b = f.b.clone();
     wait_until(move || sheet_buttons(&b).len() == 3, move |ok| then(f, ok));
 }
@@ -268,7 +268,7 @@ fn opened_beside(f: Folders, asked: bool, windows: usize) {
         format!("{}, unsaved {unsaved:?}", projects()),
     );
     let count = window::open_windows().len();
-    crate::app::open_project(mtm, f.b.clone());
+    crate::app::open_project(&crate::context::app(), mtm, f.b.clone());
     check(
         "a folder open in another window comes to the front there instead",
         window_of(&f.c).is_some() && window_of(&f.b).is_some() && window::open_windows().len() == count,
@@ -327,7 +327,7 @@ fn tab_group(f: Folders) {
                 .is_some_and(|tabbed| tabbed.count() == tabs.len()),
         format!("{:?}", controller.window_tabs()),
     );
-    crate::app::open_project_from(mtm, f.c.clone(), Some(controller));
+    crate::app::open_project_from(&crate::context::app(), mtm, f.c.clone(), Some(controller));
     let b = f.b.clone();
     wait_until(move || sheet_buttons(&b).len() == 3, move |ok| close_all(f, ok));
 }
@@ -376,9 +376,9 @@ fn closed_all(f: Folders, asked: bool, before: String) {
 /// A window whose trust sheet waits for an answer keeps its folder; the next folder gets a window of its own.
 fn waiting_window(f: Folders) {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::app::open_project(mtm, f.untrusted.clone());
+    crate::app::open_project(&crate::context::app(), mtm, f.untrusted.clone());
     let asks = sheet_of(&f.untrusted).is_some();
-    crate::app::open_project(mtm, f.a.clone());
+    crate::app::open_project(&crate::context::app(), mtm, f.a.clone());
     let kept = window_of(&f.untrusted).is_some_and(|c| c.window().is_some_and(|w| w.attachedSheet().is_some()));
     let apart = match (window_of(&f.untrusted), window_of(&f.a)) {
         (Some(waiting), Some(opened)) => !std::ptr::eq(&*waiting, &*opened),
@@ -428,7 +428,7 @@ fn running_terminal(f: Folders) {
 fn ask_running(f: Folders, id: u64, sleeping: bool) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let shell = inspect::view(id).and_then(|view| view.shell()).unwrap_or(0);
-    crate::app::open_project(mtm, f.c.clone());
+    crate::app::open_project(&crate::context::app(), mtm, f.c.clone());
     let a = f.a.clone();
     wait_until(
         move || sheet_buttons(&a).len() == 3,

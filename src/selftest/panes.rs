@@ -355,7 +355,7 @@ fn saving(root: PathBuf) {
         },
         move |_| {
             let Some(mtm) = MainThreadMarker::new() else { return };
-            crate::app::open_project(mtm, root.clone());
+            crate::app::open_project(&crate::context::app(), mtm, root.clone());
             let probe = root.clone();
             helpers::wait_until(
                 move || {

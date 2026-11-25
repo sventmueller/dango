@@ -35,7 +35,7 @@ pub(crate) type Opener<'a> = dyn FnMut(&WindowController, Document) -> bool + 'a
 /// Saves the window tabs of `controller`'s window for its folder; a window without a folder keeps nothing.
 pub(crate) fn save(controller: &WindowController) {
     let Some(root) = controller.project_root() else { return };
-    if controller.ivars().closing.get() || crate::session::is_quitting() {
+    if controller.ivars().closing.get() || controller.context().session().is_quitting() {
         return;
     }
     let selected = controller.selected_tab();
@@ -87,7 +87,7 @@ fn reopenable(controller: &WindowController, id: TabId, kind: TabKind, key: Opti
             .and_then(|folder| Tab::new(&crate::terminal::KeptTerminal { folder })),
         TabKind::Browser => {
             crate::browser::url_of_tab(controller, id).and_then(|url| {
-                match crate::site_preview::page_of(objc2::MainThreadOnly::mtm(controller), &url) {
+                match crate::site_preview::page_of(controller.context(), &url) {
                     Some(path) => Tab::new(&crate::site_preview::KeptSite { path }),
                     None => Tab::new(&crate::browser::KeptPage { url }),
                 }

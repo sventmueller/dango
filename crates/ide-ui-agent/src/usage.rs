@@ -27,10 +27,9 @@ pub(crate) struct Window {
     pub(crate) resets: Option<String>,
 }
 
-/// The plan's weekly and five-hour window, in that order and where known: from the latest report, else from what
-/// `thread`'s session reported.
-pub(crate) fn windows(thread: &Thread) -> Vec<Window> {
-    let cx = crate::host::state();
+/// The plan's weekly and five-hour window, in that order and where known: from the latest report `cx` keeps, else
+/// from what `thread`'s session reported.
+pub(crate) fn windows(cx: &crate::State, thread: &Thread) -> Vec<Window> {
     let report = cx.usage.report.borrow().as_ref().and_then(|(_, r)| r.clone());
     windows_of(thread, report)
 }
@@ -63,9 +62,9 @@ fn windows_of(thread: &Thread, report: Option<UsageReport>) -> Vec<Window> {
     windows
 }
 
-/// Asks `session` for the plan's usage when the last answer is old; the answer redraws the status line of every tab.
-pub(crate) fn fetch(session: &Session) {
-    let cx = crate::host::state();
+/// Asks `session` for the plan's usage when the last answer `cx` keeps is old; the answer redraws the status line of
+/// every tab.
+pub(crate) fn fetch(cx: &crate::State, session: &Session) {
     let usage = &cx.usage;
     let stale = usage
         .report
@@ -83,7 +82,7 @@ pub(crate) fn fetch(session: &Session) {
             cx.usage.asking.set(false);
             let tabs = cx.agent_tabs.tabs.borrow().clone();
             for tab in tabs {
-                tab.refresh();
+                tab.refresh_in(&cx);
             }
         });
     });

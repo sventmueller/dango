@@ -8,7 +8,7 @@ use objc2::rc::{Retained, Weak};
 use objc2_app_kit::{NSColor, NSFontAttributeName};
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 
-use super::super::{EditorTextView, changes, compare, conflict, editing, editor_for, open_editors, save, style};
+use super::super::{EditorTextView, changes, compare, conflict, editing, editor_for, save, style};
 use crate::util::{constant, ns};
 use crate::window::{TabId, WindowController};
 
@@ -39,7 +39,10 @@ pub(crate) fn visible_line_range(view: &EditorTextView) -> std::ops::Range<usize
 
 /// The editors of `controller` with their tab ids, for the self-test.
 pub(crate) fn editors_of(controller: &WindowController) -> Vec<(TabId, Retained<EditorTextView>)> {
-    open_editors()
+    controller
+        .context()
+        .editors()
+        .live()
         .into_iter()
         .filter(|v| v.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
         .filter_map(|v| Some((v.ivars().tab.get()?, v)))

@@ -35,7 +35,7 @@ pub fn server_running(view: &dyn Editor) -> Result<bool, String> {
     let Some(id) = view.lsp().borrow().slot else {
         return Err("no server for the document".into());
     };
-    let Some(slot) = slot(&root, id) else {
+    let Some(slot) = slot(&crate::host::state(), &root, id) else {
         return Err("no slot".into());
     };
     match &*slot.state.borrow() {
@@ -51,7 +51,7 @@ pub fn server_running(view: &dyn Editor) -> Result<bool, String> {
 pub fn quiet_for(view: &dyn Editor) -> Option<std::time::Duration> {
     let root = view.project_root()?;
     let id = view.lsp().borrow().slot?;
-    let slot = slot(&root, id)?;
+    let slot = slot(&crate::host::state(), &root, id)?;
     if !matches!(&*slot.state.borrow(), State::Running(server) if server.status() == Status::Running)
         || !slot.progress.borrow().is_empty()
     {
@@ -64,9 +64,10 @@ pub fn quiet_for(view: &dyn Editor) -> Option<std::time::Duration> {
 pub fn companion_running(view: &dyn Editor, name: &str) -> Result<bool, String> {
     let root = view.project_root().ok_or("no folder")?;
     let ids: Vec<u64> = view.lsp().borrow().companions.iter().map(|(id, _)| *id).collect();
+    let lsp = crate::host::state();
     let slot = ids
         .into_iter()
-        .filter_map(|id| slot(&root, id))
+        .filter_map(|id| slot(&lsp, &root, id))
         .find(|slot| slot.language.name() == name)
         .ok_or_else(|| format!("no {name} beside the file"))?;
     let state = slot.state.borrow();
@@ -84,8 +85,9 @@ pub fn install_companions(view: &dyn Editor) {
         return;
     };
     let ids: Vec<u64> = view.lsp().borrow().companions.iter().map(|(id, _)| *id).collect();
+    let state = crate::host::state();
     for id in ids {
-        if let Some(slot) = slot(&root, id)
+        if let Some(slot) = slot(&state, &root, id)
             && matches!(&*slot.state.borrow(), State::Missing(_))
         {
             crate::install::install_now(&root, &slot);

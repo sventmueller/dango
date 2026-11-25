@@ -32,7 +32,7 @@ pub(super) fn start(root: PathBuf, ok: bool) {
         return give_up_saying(SCENARIO, "an OAuth app is set up", error.to_string());
     }
     let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::settings::show_ci(mtm);
+    crate::settings::show_ci(&crate::context::app(), mtm);
     helpers::wait_until(|| crate::settings::ci_tab().is_some(), move |_| listed(root));
 }
 

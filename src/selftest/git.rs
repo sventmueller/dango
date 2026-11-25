@@ -160,7 +160,7 @@ pub(super) fn open_repository(folder: &Path, scenario: &'static str) -> Option<(
         give_up_saying(
             scenario,
             "the repository opens in a window",
-            format!("{:?}", window::open_projects()),
+            format!("{:?}", window::open_projects(&crate::context::app())),
         );
         return None;
     };
@@ -638,7 +638,7 @@ pub(super) fn open_plain_folder() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let plain = crate::selftest::helpers::folder("plain-folder");
     let _ = std::fs::create_dir_all(&plain);
-    crate::app::open_project(mtm, plain.clone());
+    crate::app::open_project(&crate::context::app(), mtm, plain.clone());
     let plain = plain.canonicalize().unwrap_or(plain);
     wait_for(plain, |c| phase_is(c, "Untrusted"), untrusted);
 }

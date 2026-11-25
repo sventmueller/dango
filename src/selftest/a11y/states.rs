@@ -49,7 +49,7 @@ fn settled(root: PathBuf, then: impl FnOnce(PathBuf) + 'static) {
 
 pub(crate) fn start(root: PathBuf) {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::app::open_project(mtm, root.clone());
+    crate::app::open_project(&crate::context::app(), mtm, root.clone());
     when(root, sheet_ready, trust_sheet);
 }
 
@@ -328,7 +328,7 @@ fn beside(root: PathBuf, ok: bool) {
         );
     }
     let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::settings::show(mtm);
+    crate::settings::show(&crate::context::app(), mtm);
     settled(root, settings_general);
 }
 

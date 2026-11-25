@@ -27,7 +27,8 @@ use ide_ui_common::window::{AsWindow, Panel, Panels, Window};
 pub use rows::{flipped, section_label, small_label, spacer};
 use sessions::Source;
 pub(crate) use store::{
-    agent_id_of, past_sessions_cached, read_past, record, remove, rename, set_archived, set_bookmarked, upsert,
+    agent_id_of, is_bookmarked_in, past_sessions_cached, read_past, record, remove, rename, set_archived,
+    set_bookmarked, upsert,
 };
 pub use store::{is_bookmarked, past_session, wait_for_writes};
 #[cfg(feature = "selftest")]
@@ -65,64 +66,56 @@ pub(crate) struct AgentPanels {
     store: store::Store,
 }
 
-fn with_state<R>(f: impl FnOnce(&AgentPanels) -> R) -> R {
-    f(&crate::host::state().agent_panels)
-}
-
-fn with_panels<R>(f: impl FnOnce(&RefCell<Vec<Rc<AgentPanel>>>) -> R) -> R {
-    with_state(|state| f(&state.panels))
-}
-
-/// Reads every panel's lists again in the background.
-fn reload_all() {
-    for panel in with_panels(|panels| panels.borrow().clone()) {
+/// Reads the lists of every panel `state` holds again in the background.
+fn reload_all(state: &crate::State) {
+    let panels = state.agent_panels.panels.borrow().clone();
+    for panel in panels {
         if panel.controller.is_open() {
-            panel.reload_soon();
+            panel.reload_soon(state);
         }
     }
 }
 
-/// The panel of `controller`'s window; the panels of closed windows are let go on the way.
-fn panel_of(controller: &Window) -> Option<Rc<AgentPanel>> {
-    with_panels(|panels| {
-        let mut panels = panels.borrow_mut();
-        panels.retain(|p| p.controller.is_open());
-        panels.iter().find(|p| p.controller == *controller).cloned()
-    })
+/// The panel of `controller`'s window among those `state` holds; the panels of closed windows are let go on the way.
+fn panel_of(state: &crate::State, controller: &Window) -> Option<Rc<AgentPanel>> {
+    let mut panels = state.agent_panels.panels.borrow_mut();
+    panels.retain(|p| p.controller.is_open());
+    panels.iter().find(|p| p.controller == *controller).cloned()
 }
 
-fn panel_by_key(key: usize) -> Option<Rc<AgentPanel>> {
-    with_panels(|panels| panels.borrow().iter().find(|p| p.id == key).cloned())
+/// The panel with the id `key` among those `state` holds.
+fn panel_by_key(state: &crate::State, key: usize) -> Option<Rc<AgentPanel>> {
+    state.agent_panels.panels.borrow().iter().find(|p| p.id == key).cloned()
 }
 
 /// Puts the AI panel of the window's folder in place of the Agents page.
 pub fn attach(controller: &(impl AsWindow + ?Sized)) {
     let controller = &controller.as_window();
-    with_panels(|panels| {
-        panels
-            .borrow_mut()
-            .retain(|p| p.controller.is_open() && p.controller != *controller)
-    });
+    let state = crate::host::state();
+    (state.agent_panels.panels.borrow_mut()).retain(|p| p.controller.is_open() && p.controller != *controller);
     let Some(root) = controller.project_root() else { return };
-    let panel = AgentPanel::new(controller, root);
+    let panel = AgentPanel::new(&state, controller, root);
     controller.set_panel_page(Panel::Agents, &panel.view);
-    with_panels(|panels| panels.borrow_mut().push(panel.clone()));
-    store::read_bookmarks();
-    panel.reload_soon();
+    state.agent_panels.panels.borrow_mut().push(panel.clone());
+    store::read_bookmarks(&state);
+    panel.reload_soon(&state);
 }
 
-/// Shows what changed in the window's sessions, at most a few times a second.
-pub(crate) fn refresh(controller: &(impl AsWindow + ?Sized)) {
-    let controller = &controller.as_window();
-    let Some(panel) = panel_of(controller) else { return };
+/// Shows what changed in the sessions of `controller`'s window in its panel among those `state` holds, at most a few
+/// times a second.
+pub(crate) fn refresh(state: &crate::State, controller: &Window) {
+    let Some(panel) = panel_of(state, controller) else {
+        return;
+    };
     if panel.held.holds(&panel.sessions) || panel.scheduled.replace(true) {
         return;
     }
     let key = panel.id;
     main_after(Duration::from_millis(400), move || {
-        if let Some(panel) = panel_by_key(key) {
+        let state = crate::host::state();
+        if let Some(panel) = panel_by_key(&state, key) {
             panel.scheduled.set(false);
-            panel.reload_soon();
+            panel.reload_soon(&state);
         }
     });
 }
@@ -258,7 +251,8 @@ fn transcript_in(config: &Path, cwd: &Path, session: &str) -> Option<std::path::
 }
 
 impl AgentPanel {
-    fn new(controller: &Window, root: std::path::PathBuf) -> Rc<AgentPanel> {
+    /// The panel of `controller`'s window on the folder `root`, under an id `state` never gave out before.
+    fn new(state: &crate::State, controller: &Window, root: std::path::PathBuf) -> Rc<AgentPanel> {
         let mtm = controller.mtm();
         let agents = agents::Agents::new(controller);
         let (sessions, sessions_source) = sessions::outline(mtm);
@@ -273,7 +267,6 @@ impl AgentPanel {
                 right: ACCESSORY_INSET,
             });
         });
-        let state = crate::host::state();
         let ids = &state.agent_panels.last_id;
         ids.set(ids.get() + 1);
         let panel = Rc::new(AgentPanel {
@@ -294,7 +287,7 @@ impl AgentPanel {
             if let Some(panel) = weak.upgrade()
                 && panel.held.catch_up(&panel.sessions)
             {
-                panel.reload_soon();
+                panel.reload_soon(&crate::host::state());
             }
         });
         panel.sessions_source.set_panel(panel.id);
@@ -310,41 +303,43 @@ impl AgentPanel {
         panel
     }
 
-    /// Reads the index and the open tabs again and shows them.
-    fn reload(&self) {
+    /// Reads the index and the open tabs `state` holds again and shows them.
+    fn reload(&self, state: &crate::State) {
         self.reading.set(self.reading.get() + 1);
-        self.show(Lists::read(&self.root, self.show_archived.get()));
+        self.show(state, Lists::read(&self.root, self.show_archived.get()));
     }
 
     /// `reload` with the files read on a worker thread, as the transcripts of a folder take long to read; the newest
     /// reading wins.
-    fn reload_soon(&self) {
+    fn reload_soon(&self, state: &crate::State) {
         let reading = self.reading.get() + 1;
         self.reading.set(reading);
         let (key, root, archived) = (self.id, self.root.clone(), self.show_archived.get());
         let spawned = ide_ui_common::util::spawn("agent-panel", move || {
             let lists = Lists::read(&root, archived);
             main_soon(move || {
-                if let Some(panel) = panel_by_key(key)
+                let state = crate::host::state();
+                if let Some(panel) = panel_by_key(&state, key)
                     && panel.reading.get() == reading
                 {
-                    panel.show(lists);
+                    panel.show(&state, lists);
                 }
             });
         });
         if spawned.is_err() {
-            self.reload();
+            self.reload(state);
         }
     }
 
-    fn show(&self, lists: Lists) {
+    /// Shows `lists` with the open tabs `state` holds.
+    fn show(&self, state: &crate::State, lists: Lists) {
         let Some(controller) = self.controller.load() else {
             return;
         };
         if self.held.holds(&self.sessions) {
             return;
         }
-        let tabs = crate::of_window(&controller);
+        let tabs = state.tabs_of(&controller);
         let model = sessions::Model::build(&sessions::Inputs {
             index: &lists.index,
             root: &self.root,

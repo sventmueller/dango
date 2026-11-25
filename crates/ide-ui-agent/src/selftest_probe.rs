@@ -86,9 +86,9 @@ pub fn open_replay_in(controller: &(impl AsWindow + ?Sized), cwd: std::path::Pat
     let controller = &controller.as_window();
     let state = crate::host::state();
     let tab = AgentTab::open_replay_in(controller, &state, cwd);
-    tab.set_custom_title(title);
+    tab.set_custom_title(&state, title);
     state.agent_tabs.tabs.borrow_mut().push(tab.clone());
-    changed(controller);
+    changed(&state, controller);
     tab
 }
 
@@ -98,6 +98,6 @@ pub fn open_replay(controller: &(impl AsWindow + ?Sized)) -> Option<Rc<AgentTab>
     let state = crate::host::state();
     let tab = AgentTab::open_replay(controller, &state)?;
     state.agent_tabs.tabs.borrow_mut().push(tab.clone());
-    changed(controller);
+    changed(&state, controller);
     Some(tab)
 }

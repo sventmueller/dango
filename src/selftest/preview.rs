@@ -412,7 +412,7 @@ fn untrusted() {
     let root = folder("preview-untrusted");
     let path = root.join("fremd.md");
     let _ = std::fs::write(&path, format!("# Fremd\n\n![netz]({WEB_PICTURE})\n"));
-    crate::app::open_project(mtm, root.clone());
+    crate::app::open_project(&crate::context::app(), mtm, root.clone());
     let Some(controller) = window_of(&root) else {
         return give_up(SCENARIO, "the untrusted folder gets its window");
     };

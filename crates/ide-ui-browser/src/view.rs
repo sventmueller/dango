@@ -28,7 +28,7 @@ use super::address::{self, Address};
 use super::controls::Controls;
 use super::failure::{Failure, FailurePage};
 use super::notice::Notice;
-use super::{autofill, dialogs, downloads, tabs, trust, web};
+use super::{autofill, dialogs, downloads, host, tabs, trust, web};
 use ide_ui_common::constant;
 use ide_ui_common::util::{activate, guarded, item, ns, pin_sides, set_target};
 use ide_ui_common::window::{TabId, Tabs, Window, WindowId};
@@ -139,7 +139,7 @@ define_class!(
 
         #[unsafe(method(webView:navigationAction:didBecomeDownload:))]
         fn action_became_download(&self, _web: &WKWebView, _action: &WKNavigationAction, download: &WKDownload) {
-            guarded((), || web::adopt_download(download, &downloads::delegate(self.mtm())));
+            guarded((), || web::adopt_download(download, &downloads::delegate(&host::state().downloads, self.mtm())));
         }
 
         #[unsafe(method(webView:navigationResponse:didBecomeDownload:))]
@@ -149,7 +149,7 @@ define_class!(
             _response: &WKNavigationResponse,
             download: &WKDownload,
         ) {
-            guarded((), || web::adopt_download(download, &downloads::delegate(self.mtm())));
+            guarded((), || web::adopt_download(download, &downloads::delegate(&host::state().downloads, self.mtm())));
         }
 
         #[unsafe(method(webView:didCommitNavigation:))]

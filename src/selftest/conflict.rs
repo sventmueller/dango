@@ -406,8 +406,11 @@ fn cancelled_quit() {
         tf("{} Dateien haben ungesicherte Änderungen.", &["2"]),
         NSAlertThirdButtonReturn,
     );
-    let quits = crate::editor::confirm_quit(mtm, &(std::rc::Rc::new(|_| {}) as crate::editor::Again))
-        == crate::editor::Answer::Yes;
+    let quits = crate::editor::confirm_quit(
+        &crate::context::app(),
+        mtm,
+        &(std::rc::Rc::new(|_| {}) as crate::editor::Again),
+    ) == crate::editor::Answer::Yes;
     let asked = (gone.get(), others.get());
     let copies = copies_of(&[MERGED, KEPT, GONE]);
     wait_until(copies_kept(copies.clone()), move |ok| {

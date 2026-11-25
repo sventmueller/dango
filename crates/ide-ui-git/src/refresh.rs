@@ -24,12 +24,13 @@ impl GitPanel {
     pub(crate) fn attach(controller: &Window) {
         let Some(root) = controller.project_root() else { return };
         let root = root.canonicalize().unwrap_or(root);
-        crate::host::state().panels.detach(*controller);
-        let panel = GitPanel::new(controller.mtm(), controller, root);
+        let state = crate::host::state();
+        state.panels.detach(*controller);
+        let panel = GitPanel::new(controller.mtm(), controller, root, state.panels.next_id());
         controller.set_panel_page(Panel::Git, &panel.ui().page);
         controller.set_panel_accessory(Panel::Git, &panel.ui().header);
         panel.update_placeholder();
-        crate::host::state().panels.insert(panel.id(), panel.clone());
+        state.panels.insert(panel.id(), panel.clone());
         panel.start_refresh();
         panel.schedule_ages();
     }
@@ -97,13 +98,14 @@ impl GitPanel {
         if again {
             self.schedule_refresh();
         }
+        let state = crate::host::state();
         if let Some(controller) = self.controller()
             && self.read().phase == Phase::Ready
         {
             let trees = self.read().model.worktrees.clone();
-            super::diff::follow_trees(&controller, &trees);
+            super::diff::follow_trees(&state, &controller, &trees);
         }
-        super::diff::refresh_for(self.root());
+        super::diff::refresh_for(&state, self.root());
     }
 
     /// Puts every view in line with the state.

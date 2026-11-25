@@ -7,6 +7,16 @@ use super::*;
 )]
 use crate::AgentKey;
 
+/// Runs `f` with the gauges of the AI tabs.
+fn with_gauges<R>(f: impl FnOnce(&RefCell<HashMap<AgentKey, Weak<NSButton>>>) -> R) -> R {
+    f(&crate::host::state().context_gauges.gauges)
+}
+
+/// Runs `f` with the breakdown on view.
+fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Shown>>) -> R) -> R {
+    f(&crate::host::state().context_gauges.shown)
+}
+
 /// Clicks the gauge of the tab with `key`, as the mouse would; whether it was there to click.
 pub fn click(key: AgentKey) -> bool {
     let gauge = with_gauges(|gauges| gauges.borrow().get(&key).and_then(Weak::load));

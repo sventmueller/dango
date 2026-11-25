@@ -36,7 +36,7 @@ const PARTS: &[Part] = &[
     },
     Part {
         attached: crate::ci_panel::attach,
-        trust_changed: |_, root| crate::ci_panel::trust_changed(root),
+        trust_changed: |cx, root| crate::ci_panel::trust_changed(cx, root),
         closed: crate::ci_panel::window_closed,
     },
     Part {

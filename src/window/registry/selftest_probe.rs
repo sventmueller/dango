@@ -4,5 +4,5 @@ use super::*;
 
 /// The open windows, for the self-test.
 pub(crate) fn open_windows() -> Vec<Retained<WindowController>> {
-    windows()
+    crate::context::app().windows().all()
 }

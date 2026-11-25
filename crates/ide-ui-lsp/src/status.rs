@@ -120,14 +120,19 @@ pub fn bar(mtm: MainThreadMarker, view: &dyn Editor) -> Retained<NSView> {
 
 /// Shows the current problem counts and the state of the server.
 pub fn refresh(view: &dyn Editor) {
-    let counts = super::problem_counts(view);
-    let (mut text, action) = super::server_status(view);
+    refresh_in(&crate::host::state(), view);
+}
+
+/// Shows the problem counts and the server's state, as `refresh` does, with the crate's `state` at hand.
+pub(crate) fn refresh_in(state: &crate::LspState, view: &dyn Editor) {
+    let counts = super::problem_counts(state, view);
+    let (mut text, action) = super::server_status(state, view);
     if let Some(note) = view.lsp().borrow().note.clone() {
         text = note;
     }
     let crumbs = super::outline::breadcrumbs(view).join(" › ");
-    let state = view.lsp().borrow();
-    let Some(bar) = state.status.as_ref() else { return };
+    let view_state = view.lsp().borrow();
+    let Some(bar) = view_state.status.as_ref() else { return };
     match counts {
         None => bar.problems.setHidden(true),
         Some((errors, warnings)) => {

@@ -72,7 +72,7 @@ pub(crate) fn run(root: PathBuf, then: fn(PathBuf)) {
 /// A window without a folder shows the same in every panel, the way to open one, and no title row.
 fn no_folder() {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    let controller = WindowController::open_new(mtm, None);
+    let controller = WindowController::open_new(&crate::context::app(), mtm, None);
     let seen: Vec<Option<(bool, Vec<String>)>> = window::Panel::ALL
         .into_iter()
         .map(|panel| {

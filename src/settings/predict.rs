@@ -18,6 +18,7 @@ use objc2_foundation::NSObjectProtocol;
 use splat_i18n::{t, tf};
 
 use super::form::{self, Row};
+use crate::context::AppContext;
 use crate::editor::predict::model::{self, Choice, Local};
 use crate::editor::predict::provider::{self, CopilotState};
 use crate::util::{guarded, ns, set_action};
@@ -103,10 +104,6 @@ pub(crate) struct PredictionShown {
     shown: RefCell<Option<Retained<PredictionSettings>>>,
 }
 
-fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Retained<PredictionSettings>>>) -> R) -> R {
-    f(&crate::context::app().settings().prediction.shown)
-}
-
 fn small(mtm: MainThreadMarker, text: &str) -> Retained<NSTextField> {
     form::note_field(mtm, text, form::CONTROLS)
 }
@@ -124,7 +121,7 @@ fn button(
 }
 
 /// The tab's view.
-pub(crate) fn view(mtm: MainThreadMarker) -> Retained<NSView> {
+pub(crate) fn view(cx: &AppContext, mtm: MainThreadMarker) -> Retained<NSView> {
     let this = PredictionSettings::alloc(mtm).set_ivars(Ivars {
         views: OnceCell::new(),
         models: RefCell::new(Vec::new()),
@@ -166,7 +163,7 @@ pub(crate) fn view(mtm: MainThreadMarker) -> Retained<NSView> {
     let _ = this.ivars().views.set(views);
     this.fill();
     this.load_models();
-    with_shown(|shown| *shown.borrow_mut() = Some(this));
+    *cx.settings().prediction.shown.borrow_mut() = Some(this);
     form::page(mtm, &grid)
 }
 
@@ -396,7 +393,7 @@ impl PredictionSettings {
                 _ => ide_predict::fim::LmStudio::models(&local.url),
             };
             crate::util::main_soon(move || {
-                let Some(this) = with_shown(|shown| shown.borrow().clone()) else {
+                let Some(this) = crate::context::app().settings().prediction.shown.borrow().clone() else {
                     return;
                 };
                 let Some(views) = this.ivars().views.get() else { return };
@@ -432,7 +429,8 @@ fn set_choice(choice: Choice) {
 
 /// Shows the tab as the settings and the providers are now.
 pub(crate) fn prediction_changed() {
-    if let Some(this) = with_shown(|shown| shown.borrow().clone()) {
+    let shown = crate::context::app().settings().prediction.shown.borrow().clone();
+    if let Some(this) = shown {
         this.fill();
     }
 }

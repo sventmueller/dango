@@ -47,20 +47,11 @@ impl Default for HierarchyPanels {
     }
 }
 
-fn with_panels<R>(f: impl FnOnce(&RefCell<Vec<Weak<HierarchyPanel>>>) -> R) -> R {
-    f(&crate::context::app().hierarchy_panels().panels)
-}
-
-fn with_next_id<R>(f: impl FnOnce(&Cell<u64>) -> R) -> R {
-    f(&crate::context::app().hierarchy_panels().next_id)
-}
-
-fn next_id() -> u64 {
-    with_next_id(|next| {
-        let id = next.get();
-        next.set(id + 1);
-        id
-    })
+/// The id the next panel or entry of `panels` gets.
+fn next_id(panels: &HierarchyPanels) -> u64 {
+    let id = panels.next_id.get();
+    panels.next_id.set(id + 1);
+    id
 }
 
 struct Node {
@@ -94,9 +85,10 @@ struct Entry {
 }
 
 impl Entry {
-    fn new(hierarchy: Hierarchy) -> Entry {
+    /// The entry of `hierarchy`, with an id of `panels`, its tree started.
+    fn new(panels: &HierarchyPanels, hierarchy: Hierarchy) -> Entry {
         let mut entry = Entry {
-            id: next_id(),
+            id: next_id(panels),
             direction: hierarchy.kind.directions()[0],
             hierarchy,
             nodes: vec![],
@@ -281,18 +273,21 @@ fn index_of(item: &AnyObject) -> Option<usize> {
     RowItems::<NodeKey>::key_of(item).map(|key| key.index)
 }
 
-fn panel(id: u64) -> Option<Retained<HierarchyPanel>> {
-    with_panels(|panels| {
-        let mut panels = panels.borrow_mut();
-        panels.retain(|p| p.load().is_some());
-        panels.iter().filter_map(Weak::load).find(|p| p.ivars().id == id)
-    })
+/// The panel of `panels` with `id`, if its window is still open.
+fn panel(panels: &HierarchyPanels, id: u64) -> Option<Retained<HierarchyPanel>> {
+    let mut open = panels.panels.borrow_mut();
+    open.retain(|p| p.load().is_some());
+    open.iter().filter_map(Weak::load).find(|p| p.ivars().id == id)
 }
 
 impl HierarchyPanel {
-    pub(super) fn new(mtm: MainThreadMarker, search: &SearchPanel) -> Retained<HierarchyPanel> {
+    pub(super) fn new(
+        mtm: MainThreadMarker,
+        panels: &HierarchyPanels,
+        search: &SearchPanel,
+    ) -> Retained<HierarchyPanel> {
         let ivars = HierarchyIvars {
-            id: next_id(),
+            id: next_id(panels),
             search: Weak::from(search),
             entries: RefCell::new(vec![]),
             current: Cell::new(None),
@@ -304,7 +299,7 @@ impl HierarchyPanel {
         let this: Retained<HierarchyPanel> =
             unsafe { msg_send![super(HierarchyPanel::alloc(mtm).set_ivars(ivars)), init] };
         let _ = this.ivars().views.set(build(mtm, &this));
-        with_panels(|panels| panels.borrow_mut().push(Weak::from(&*this)));
+        panels.panels.borrow_mut().push(Weak::from(&*this));
         this
     }
 
@@ -314,10 +309,10 @@ impl HierarchyPanel {
     }
 
     /// Shows `hierarchy` as the newest entry of the menu, its roots open and their first neighbours asked for.
-    pub(super) fn show(&self, hierarchy: Hierarchy) {
+    pub(super) fn show(&self, panels: &HierarchyPanels, hierarchy: Hierarchy) {
         {
             let mut entries = self.ivars().entries.borrow_mut();
-            entries.push(Entry::new(hierarchy));
+            entries.push(Entry::new(panels, hierarchy));
             while entries.len() > HISTORY {
                 let mut gone = entries.remove(0);
                 gone.start_over();
@@ -488,7 +483,7 @@ impl HierarchyPanel {
         };
         let id = self.ivars().id;
         let ticket = hierarchy.neighbours(&item, direction, move |found| {
-            if let Some(panel) = panel(id) {
+            if let Some(panel) = panel(crate::context::app().hierarchy_panels(), id) {
                 panel.answered(entry_id, epoch, index, found);
             }
         });

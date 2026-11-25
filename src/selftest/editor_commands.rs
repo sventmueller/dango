@@ -102,7 +102,7 @@ pub(crate) fn run() {
         }
     };
     let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::app::open_project(mtm, folder);
+    crate::app::open_project(&crate::context::app(), mtm, folder);
     let Some(window) = controller().and_then(|c| c.window()) else {
         return give_up(SCENARIO, "the folder opens in a window");
     };

@@ -263,11 +263,12 @@ fn acp_problem_of(name: &str, ready: bool, error: &ide_acp::SessionError) -> Opt
 
 /// One second of running time for the tab `key`, again while anything runs.
 fn tick(key: AgentKey) {
-    let Some(tab) = super::get(key) else { return };
+    let state = crate::host::state();
+    let Some(tab) = state.tab(key) else { return };
     let live = tab.timeline.tick(SystemTime::now());
     let running = tab.status() != Status::Idle;
     if running && let Some(session) = tab.session() {
-        super::usage::fetch(&session);
+        super::usage::fetch(&state, &session);
     }
     if live || running {
         main_after(Duration::from_secs(1), move || tick(key));

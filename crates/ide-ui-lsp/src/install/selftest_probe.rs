@@ -4,5 +4,5 @@ use super::*;
 
 /// Installs the slot's missing server, as the status bar's button does, for the self-test.
 pub(crate) fn install_now(folder: &Path, slot: &Slot) {
-    install(folder, slot);
+    install(&crate::host::state(), folder, slot);
 }

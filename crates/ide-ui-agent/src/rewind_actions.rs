@@ -110,14 +110,22 @@ impl AgentTab {
         let again = checkpoint.clone();
         self.store.restore(checkpoint, options, move |outcome| {
             main_soon(move || {
-                if let Some(tab) = super::get(key) {
-                    tab.restored(again, outcome);
+                let state = crate::host::state();
+                if let Some(tab) = state.tab(key) {
+                    tab.restored(&state, again, outcome);
                 }
             });
         });
     }
 
-    fn restored(&self, checkpoint: ide_git::Checkpoint, outcome: Result<Restore, super::checkpoint::RestoreError>) {
+    /// Tells how restoring `checkpoint` went and asks what to do with files the user changed since; `state` holds the
+    /// answers the self-test gives.
+    fn restored(
+        &self,
+        state: &crate::State,
+        checkpoint: ide_git::Checkpoint,
+        outcome: Result<Restore, super::checkpoint::RestoreError>,
+    ) {
         let alert = match outcome {
             Ok(Restore::UserChanges(files)) => {
                 let names: Vec<String> = files.iter().take(12).map(|f| f.display().to_string()).collect();
@@ -132,7 +140,7 @@ impl AgentTab {
                 .button(t("Deine Änderungen behalten"), Role::Plain)
                 .button(t("Trotzdem überschreiben"), Role::Plain)
                 .button(t("Abbrechen"), Role::Plain);
-                let response = run_alert(alert);
+                let response = run_alert(state, alert);
                 if response == NSAlertFirstButtonReturn {
                     let options = RestoreOptions {
                         keep: files,
@@ -160,7 +168,7 @@ impl AgentTab {
             Err(error) => Alert::new(self.mtm, t("Zurückspulen fehlgeschlagen"))
                 .informative(&ide_core::explain::Explain::explain(&error)),
         };
-        run_alert(alert);
+        run_alert(state, alert);
     }
 
     /// Without a checkpoint of the app, as for a resumed session: the CLI's own file history (experimental).
@@ -190,21 +198,15 @@ impl AgentTab {
     }
 }
 
-/// Shows `alert` and waits for the answer; in the self-test, the answer it set up, if any.
-fn run_alert(alert: Alert) -> objc2_app_kit::NSModalResponse {
+/// Shows `alert` and waits for the answer; in the self-test, the answer it set up in `state`, if any.
+#[cfg_attr(
+    not(feature = "selftest"),
+    expect(unused_variables, reason = "only the self-test answers from the state")
+)]
+fn run_alert(state: &crate::State, alert: Alert) -> objc2_app_kit::NSModalResponse {
     #[cfg(feature = "selftest")]
-    {
-        let answer = with_alerts(|a| {
-            let mut alerts = a.borrow_mut();
-            let answer = alerts.0.pop_front();
-            if answer.is_some() {
-                alerts.1.push(alert.ns().messageText().to_string());
-            }
-            answer
-        });
-        if let Some(answer) = answer {
-            return answer;
-        }
+    if let Some(answer) = answer_from(&state.rewind_alerts, &alert) {
+        return answer;
     }
     alert.run_modal()
 }

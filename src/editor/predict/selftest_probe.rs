@@ -6,6 +6,11 @@
 )]
 use super::*;
 
+/// Turns proposals on or off for the language with id `id`, for the self-test.
+pub(crate) fn toggle_language(id: &str) {
+    toggle_language_in(&crate::context::app(), id);
+}
+
 /// The proposal `view` shows, as the range it replaces in bytes and its text, for the self-test.
 pub(crate) fn shown_proposal(view: &EditorTextView) -> Option<(Range<usize>, String, Kind)> {
     let state = view.ivars().predict.borrow();

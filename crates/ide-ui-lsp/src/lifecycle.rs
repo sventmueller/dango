@@ -1,9 +1,9 @@
 //! Opening documents on their servers, watching changes, and releasing idle servers.
 
 use super::{
-    Editor, REFRESH_DELAY, Slot, State, Workspace, actions, agent, complete, decorate, events, host, hover,
+    Editor, LspState, REFRESH_DELAY, Slot, State, Workspace, actions, complete, decorate, events, host, hover,
     language_of, lease, next_id, outline, project_symbols, registry, servers_of, signature, slot, status, text,
-    trusted_root, version, with_workspaces, workspace, workspace_or_new,
+    trusted_root, version, workspace, workspace_or_new,
 };
 use ide_core::settings::Settings;
 use ide_document::Change;
@@ -20,52 +20,57 @@ use std::rc::Rc;
 
 /// An editor opened, or its file got a new name: it is opened on the server of its language.
 pub fn opened(view: &dyn Editor) {
+    opened_in(&host::state(), view);
+}
+
+/// Opens `view` on its server, as `opened` does, with the crate's `state` at hand.
+pub(crate) fn opened_in(state: &LspState, view: &dyn Editor) {
     let path = view.document().path().map(Path::to_path_buf);
-    let servers = servers_of(view);
+    let servers = servers_of(state, view);
     let previous = view.lsp().borrow_mut().uri.take();
     if let Some(previous) = previous {
         for (_, server, _) in &servers {
             server.close(&previous);
         }
     }
-    release(view);
+    release(state, view);
     view.lsp().borrow_mut().slot = None;
     view.lsp().borrow_mut().companions.clear();
     let Some((path, (language, language_id))) = path.and_then(|p| language_of(&p).map(|l| (p, l))) else {
-        status::refresh(view);
+        status::refresh_in(state, view);
         return;
     };
     let Some(root) = trusted_root(view) else {
-        status::refresh(view);
+        status::refresh_in(state, view);
         return;
     };
-    let workspace = workspace_or_new(&root);
-    let Some(slot) = slot_for(&workspace, &language, &path) else {
-        status::refresh(view);
+    let workspace = workspace_or_new(state, &root);
+    let Some(slot) = slot_for(state, &workspace, &language, &path) else {
+        status::refresh_in(state, view);
         return;
     };
     {
-        let mut state = view.lsp().borrow_mut();
-        state.slot = Some(slot.id);
-        state.uri = Some(uri::from_path(&path));
+        let mut view_state = view.lsp().borrow_mut();
+        view_state.slot = Some(slot.id);
+        view_state.uri = Some(uri::from_path(&path));
     }
     if let State::Running(server) = &*slot.state.borrow() {
         let text = view.document().text().to_string();
         server.open(&uri::from_path(&path), &language_id, version(view), &text);
     }
-    open_companions(view, &workspace, &path, &language_id);
-    status::refresh(view);
+    open_companions(state, view, &workspace, &path, &language_id);
+    status::refresh_in(state, view);
     view.later(sel!(ideLspRefresh), REFRESH_DELAY);
 }
 
 /// Opens `view` on the second servers its file has beside the main one (E140), started if new.
-fn open_companions(view: &dyn Editor, workspace: &Rc<Workspace>, path: &Path, language_id: &str) {
+fn open_companions(state: &LspState, view: &dyn Editor, workspace: &Rc<Workspace>, path: &Path, language_id: &str) {
     if !path.starts_with(&workspace.root) {
         return;
     }
     for companion in ide_lsp::companions(path, &workspace.root, emmet_on()) {
         let root = ide_lsp::root(&companion, path, &workspace.root);
-        let (slot, _) = slot_at(workspace, &companion, root);
+        let (slot, _) = slot_at(state, workspace, &companion, root);
         view.lsp()
             .borrow_mut()
             .companions
@@ -84,7 +89,7 @@ fn emmet_on() -> bool {
 
 /// The slot that serves `path`: within the folder the one of its project root, started if new; outside, as for a
 /// library's source a definition led to, an existing one of the language, since nothing starts outside the folder.
-fn slot_for(workspace: &Rc<Workspace>, language: &Language, path: &Path) -> Option<Rc<Slot>> {
+fn slot_for(state: &LspState, workspace: &Rc<Workspace>, language: &Language, path: &Path) -> Option<Rc<Slot>> {
     if !path.starts_with(&workspace.root) {
         return workspace
             .slots
@@ -94,11 +99,16 @@ fn slot_for(workspace: &Rc<Workspace>, language: &Language, path: &Path) -> Opti
             .cloned();
     }
     let root = ide_lsp::root(language, path, &workspace.root);
-    Some(slot_at(workspace, language, root).0)
+    Some(slot_at(state, workspace, language, root).0)
 }
 
 /// The slot of `language` for the project root `root`, and whether it is new: started then, unless it was there.
-pub(super) fn slot_at(workspace: &Rc<Workspace>, language: &Language, root: PathBuf) -> (Rc<Slot>, bool) {
+pub(super) fn slot_at(
+    state: &LspState,
+    workspace: &Rc<Workspace>,
+    language: &Language,
+    root: PathBuf,
+) -> (Rc<Slot>, bool) {
     if let Some(found) = workspace
         .slots
         .borrow()
@@ -108,7 +118,7 @@ pub(super) fn slot_at(workspace: &Rc<Workspace>, language: &Language, root: Path
         return (found.clone(), false);
     }
     let slot = Rc::new(Slot {
-        id: next_id(),
+        id: next_id(state),
         language: language.clone(),
         root,
         state: RefCell::new(State::Finding),
@@ -138,8 +148,11 @@ pub(super) fn find(folder: &Path, slot: &Slot) {
     }
 }
 
+/// The search for the server of slot `id` of the window of `folder` ended: the slot starts what was `found`, or keeps
+/// what is missing, and its editors open on a running server.
 fn found_server(folder: &Path, id: u64, found: Result<ServerConfig, NotFound>) {
-    let Some(slot) = slot(folder, id) else { return };
+    let lsp = host::state();
+    let Some(slot) = slot(&lsp, folder, id) else { return };
     let state = match found {
         Err(missing) => State::Missing(missing),
         Ok(mut config) => {
@@ -158,7 +171,7 @@ fn found_server(folder: &Path, id: u64, found: Result<ServerConfig, NotFound>) {
     };
     *slot.state.borrow_mut() = state;
     if let State::Running(server) = &*slot.state.borrow() {
-        agent::started(&slot.root, slot.language.clone());
+        lsp.lsp_diagnostics.started(&slot.root, slot.language.clone());
         for view in views_of(folder, id) {
             let Some(uri) = view.lsp().borrow().uri.clone() else {
                 continue;
@@ -179,7 +192,7 @@ fn found_server(folder: &Path, id: u64, found: Result<ServerConfig, NotFound>) {
             server.open(&uri, &language_id, version(&*view), &text);
         }
     }
-    refresh_slot(folder, id);
+    refresh_slot(&lsp, folder, id);
 }
 
 /// The open editors of the window of `folder` that belong to slot `id`.
@@ -194,11 +207,12 @@ pub(super) fn views_of(folder: &Path, id: u64) -> Vec<Box<dyn Editor>> {
         .collect()
 }
 
-pub(super) fn refresh_slot(folder: &Path, id: u64) {
+/// The status bars of the editors of slot `id` in the window of `folder` follow it, and the symbol search there.
+pub(super) fn refresh_slot(state: &LspState, folder: &Path, id: u64) {
     for view in views_of(folder, id) {
-        status::refresh(&*view);
+        status::refresh_in(state, &*view);
     }
-    project_symbols::pump(folder);
+    project_symbols::pump(state, folder);
 }
 
 /// An edit of `view`'s document: passed on to its server at once, as the protocol's incremental change.
@@ -209,7 +223,8 @@ pub fn changed(view: &dyn Editor, change: &Change) {
         complete::shift(&mut state, change);
         outline::shift(&mut state, change);
     }
-    let servers = servers_of(view);
+    let state = host::state();
+    let servers = servers_of(&state, view);
     for (_, server, uri) in &servers {
         let event = TextDocumentContentChangeEvent {
             range: Some(text::change_range(change)),
@@ -223,7 +238,7 @@ pub fn changed(view: &dyn Editor, change: &Change) {
     if !servers.is_empty() {
         view.later(sel!(ideLspRefresh), REFRESH_DELAY);
     }
-    actions::moved(view);
+    actions::moved(&state, view);
     if !view.lsp().borrow().marks.is_empty() || !view.lsp().borrow().tokens.is_empty() {
         view.later(sel!(ideDecorate), 0.0);
     }
@@ -235,7 +250,9 @@ pub fn files_changed(
     folder: &Path,
     files: &std::sync::Arc<std::collections::BTreeMap<PathBuf, ide_project::FileChange>>,
 ) {
-    let Some(workspace) = workspace(folder) else { return };
+    let Some(workspace) = workspace(&host::state(), folder) else {
+        return;
+    };
     for slot in workspace.slots.borrow().iter() {
         if let State::Running(server) = &*slot.state.borrow() {
             match server.files_changed(files.clone()) {
@@ -248,47 +265,52 @@ pub fn files_changed(
 
 /// The document was saved.
 pub fn saved(view: &dyn Editor) {
-    for (_, server, uri) in servers_of(view) {
+    for (_, server, uri) in servers_of(&host::state(), view) {
         server.save(&uri);
     }
 }
 
 /// The editor closes.
 pub fn closed(view: &dyn Editor) {
-    for (_, server, uri) in servers_of(view) {
+    let state = host::state();
+    for (_, server, uri) in servers_of(&state, view) {
         server.close(&uri);
     }
-    release(view);
-    complete::dismiss_for(view);
+    release(&state, view);
+    complete::dismiss_for(&state.completion, view);
     hover::dismiss(view);
-    signature::dismiss_for(view);
+    signature::dismiss_for(&state.signature_help, view);
 }
 
 /// The user trusts `root` now: its editors get their servers.
 pub fn trust_changed(root: &Path) {
+    let state = host::state();
     for view in host::all_editors() {
         if view.project_root().as_deref() == Some(root) {
-            opened(&*view);
+            opened_in(&state, &*view);
         }
     }
 }
 
 /// The window of `root` closed: its servers stop and installations into it end.
 pub fn window_closed(root: &Path) {
-    let Some(workspace) = workspace(root) else { return };
+    let state = host::state();
+    let Some(workspace) = workspace(&state, root) else {
+        return;
+    };
     for slot in workspace.slots.borrow().iter() {
-        end(slot);
+        end(&state, slot);
     }
-    with_workspaces(|all| all.borrow_mut().retain(|w| w.root != root));
-    project_symbols::forget(root);
+    state.lsp_workspaces.workspaces.borrow_mut().retain(|w| w.root != root);
+    project_symbols::forget(&state.server_leases, root);
 }
 
-/// Stops the slot's server or ends its installation.
-fn end(slot: &Slot) {
+/// Stops the slot's server, whose diagnostics then leave `state`, or ends its installation.
+fn end(state: &LspState, slot: &Slot) {
     match &*slot.state.borrow() {
         State::Running(server) => {
             server.stop();
-            agent::stopped(&slot.root, &slot.language);
+            state.lsp_diagnostics.stopped(&slot.root, &slot.language);
         }
         State::Installing(cancel, _) => cancel.cancel(),
         _ => {}
@@ -296,20 +318,20 @@ fn end(slot: &Slot) {
 }
 
 /// `view` no longer uses its slot: the slot goes once no editor has used it for `IDLE_STOP` and no lease holds it.
-fn release(view: &dyn Editor) {
+fn release(state: &LspState, view: &dyn Editor) {
     let Some(root) = view.project_root() else {
         return;
     };
     let ids: Vec<u64> = {
-        let state = view.lsp().borrow();
-        state
+        let view_state = view.lsp().borrow();
+        view_state
             .slot
             .into_iter()
-            .chain(state.companions.iter().map(|(id, _)| *id))
+            .chain(view_state.companions.iter().map(|(id, _)| *id))
             .collect()
     };
     for id in ids {
-        let Some(slot) = slot(&root, id) else { continue };
+        let Some(slot) = slot(state, &root, id) else { continue };
         let mut hold = slot.hold.get();
         hold.release(std::time::Instant::now());
         slot.hold.set(hold);
@@ -330,7 +352,8 @@ pub(super) fn end_later(folder: &Path, slot: &Slot) {
 
 /// Ends slot `id` of the window of `folder` unless an editor or a lease holds it, or it installs.
 fn end_if_unused(folder: &Path, id: u64) {
-    let (Some(workspace), Some(slot)) = (workspace(folder), slot(folder, id)) else {
+    let state = host::state();
+    let (Some(workspace), Some(slot)) = (workspace(&state, folder), slot(&state, folder, id)) else {
         return;
     };
     slot.timer.set(false);
@@ -343,6 +366,6 @@ fn end_if_unused(folder: &Path, id: u64) {
         end_later(folder, &slot);
         return;
     }
-    end(&slot);
+    end(&state, &slot);
     workspace.slots.borrow_mut().retain(|s| s.id != id);
 }

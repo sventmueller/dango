@@ -62,7 +62,7 @@ pub(crate) fn run() {
     let Some(mtm) = objc2::MainThreadMarker::new() else {
         return;
     };
-    crate::app::open_project(mtm, root());
+    crate::app::open_project(&crate::context::app(), mtm, root());
     helpers::wait_for_window(&root(), |controller| {
         let Some(controller) = controller else {
             return give_up(SCENARIO, "the project's window opens");

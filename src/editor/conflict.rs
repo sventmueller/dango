@@ -315,14 +315,18 @@ pub(crate) fn is_gone(view: &EditorTextView) -> bool {
     matches!(*view.ivars().file.conflict.borrow(), Some(State::Removed))
 }
 
-/// Whether the editor of a gone file may close, asked every time, saved or not, since its text may be the file's last
-/// copy: the user let the text go, or saved it, after which `again` hears whether it was written.
-pub(crate) fn may_close(view: &EditorTextView, again: &super::closing::Again) -> super::closing::Answer {
+/// Whether `view`, an editor of `cx` whose file is gone, may close, asked every time, saved or not, since its text may
+/// be the file's last copy: the user let the text go, or saved it, after which `again` hears whether it was written.
+pub(crate) fn may_close(
+    cx: &crate::context::AppContext,
+    view: &EditorTextView,
+    again: &super::closing::Again,
+) -> super::closing::Answer {
     let answer = discard_question(view).run_modal();
     if answer == NSAlertFirstButtonReturn {
         super::closing::save_for(view, again)
     } else if answer == NSAlertSecondButtonReturn {
-        super::closing::give_up(view);
+        super::closing::give_up(cx, view);
         super::closing::Answer::Yes
     } else {
         super::closing::Answer::No

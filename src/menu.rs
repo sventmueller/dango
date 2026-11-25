@@ -23,7 +23,8 @@ pub(crate) fn install(app: &NSApplication, delegate: &AppDelegate, mtm: MainThre
     for problem in problems {
         crate::diag::report("keybindings", problem);
     }
-    *delegate.context().keymap().borrow_mut() = keymap.clone();
+    let cx = delegate.context();
+    *cx.keymap().borrow_mut() = keymap.clone();
     let keys = Keys(keymap);
     let main = NSMenu::initWithTitle(NSMenu::alloc(mtm), &ns(""));
     let (window_item, window_menu) = window_menu(mtm, &keys);
@@ -38,7 +39,7 @@ pub(crate) fn install(app: &NSApplication, delegate: &AppDelegate, mtm: MainThre
         edit_menu(mtm, &keys),
         crate::markdown::format_menu(mtm, &|command| keys.get(command)),
         view_item,
-        go_menu(mtm, &keys),
+        go_menu(mtm, &keys, cx.navigation()),
         crate::editor::predict::with_menu_items(mtm, code_menu(mtm, &keys)),
         ide_ui_git::menu(mtm),
         crate::tests_panel::with_menu_items(mtm, crate::debug::menu(mtm, &|command| keys.get(command)), &|command| {
@@ -321,9 +322,9 @@ fn view_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
 }
 
 /// Places in the code, which the language server of the editor in front knows.
-fn go_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
+fn go_menu(mtm: MainThreadMarker, keys: &Keys, navigation: &crate::navigation::Navigation) -> Retained<NSMenuItem> {
     let entry = |title: &str, action: Sel, command: &str| item(mtm, title, Some(action), &keys.get(command));
-    let navigator = crate::navigation::navigator(mtm);
+    let navigator = crate::navigation::navigator(navigation, mtm);
     let [back, forward] = crate::navigation::actions().map(|(title, action, command)| {
         let entry = entry(title, action, command);
         crate::util::set_target(&entry, &navigator);

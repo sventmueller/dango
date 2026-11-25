@@ -120,12 +120,12 @@ pub(crate) fn run() {
 
 fn open(folder: PathBuf) {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::app::open_project(mtm, folder);
+    crate::app::open_project(&crate::context::app(), mtm, folder);
     let Some(controller) = project_window() else {
         return give_up_saying(
             SCENARIO,
             "the folder opens in a window",
-            format!("{:?}", window::open_projects()),
+            format!("{:?}", window::open_projects(&crate::context::app())),
         );
     };
     let untrusted = !crate::project::is_trusted(&root());

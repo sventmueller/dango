@@ -30,18 +30,6 @@ pub(crate) struct NewTabMenu {
     below_plus: Cell<Option<bool>>,
 }
 
-fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Retained<NSMenu>>>) -> R) -> R {
-    f(&crate::context::app().new_tab_menu().shown)
-}
-
-fn with_record_only<R>(f: impl FnOnce(&Cell<bool>) -> R) -> R {
-    f(&crate::context::app().new_tab_menu().record_only)
-}
-
-fn with_below_plus<R>(f: impl FnOnce(&Cell<Option<bool>>) -> R) -> R {
-    f(&crate::context::app().new_tab_menu().below_plus)
-}
-
 /// Starts watching the presses on the "+" of the app's tab bars; once.
 pub(crate) fn install() {
     if MONITOR.with(|monitor| monitor.borrow().is_some()) {
@@ -69,7 +57,7 @@ fn pressed(event: &NSEvent) -> bool {
     if point.y < window.contentLayoutRect().size.height {
         return false;
     }
-    let Some(controller) = controller_of(&window) else {
+    let Some(controller) = controller_of(&crate::context::AppContext::get(mtm), &window) else {
         return false;
     };
     let Some(button) = plus_button(&window) else {
@@ -105,9 +93,10 @@ pub(super) fn open_below(controller: &WindowController, button: &NSView) {
 /// Opens the menu below `view`; a press still held drags through it, a click leaves it open.
 fn show_menu(controller: &WindowController, view: &NSView, below_plus: bool) {
     let menu = menu_for(controller);
-    with_shown(|shown| *shown.borrow_mut() = Some(menu.clone()));
-    with_below_plus(|below| below.set(Some(below_plus)));
-    if with_record_only(Cell::get) {
+    let menu_state = controller.context().new_tab_menu();
+    *menu_state.shown.borrow_mut() = Some(menu.clone());
+    menu_state.below_plus.set(Some(below_plus));
+    if menu_state.record_only.get() {
         return;
     }
     let size = view.bounds().size;
@@ -142,9 +131,9 @@ fn aim(menu: &NSMenu, controller: &WindowController) {
     }
 }
 
-fn controller_of(window: &NSWindow) -> Option<Retained<WindowController>> {
-    crate::context::app()
-        .windows()
+/// The controller of the open window that has `window` among its tabs.
+fn controller_of(cx: &crate::context::AppContext, window: &NSWindow) -> Option<Retained<WindowController>> {
+    cx.windows()
         .find(|controller| controller.tab_of_window(window).is_some())
 }
 

@@ -9,7 +9,7 @@ use super::*;
 
 /// Settings, texts, opening a folder and the login shell's environment, which ends the run.
 pub(super) fn run(mtm: MainThreadMarker) {
-    crate::settings::show(mtm);
+    crate::settings::show(&crate::context::app(), mtm);
     let visible = crate::settings::window().is_some_and(|w| w.isVisible());
     check("the settings window opens", visible, "");
     // A window just shown still moves its toolbar's items into place, which a picture taken at once catches midway.
@@ -39,12 +39,12 @@ fn probe_texts_and_folder(mtm: MainThreadMarker) {
         let _ = std::fs::create_dir_all(file.parent().unwrap_or(&folder));
         let _ = std::fs::write(file, text);
     }
-    crate::app::open_project(mtm, folder.clone());
+    crate::app::open_project(&crate::context::app(), mtm, folder.clone());
     let canonical = folder.canonicalize().unwrap_or(folder);
     check(
         "an opened folder gets its window",
-        window::open_projects().contains(&canonical),
-        format!("{:?}", window::open_projects()),
+        window::open_projects(&crate::context::app()).contains(&canonical),
+        format!("{:?}", window::open_projects(&crate::context::app())),
     );
     let Some(controller) = window::open_windows()
         .into_iter()

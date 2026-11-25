@@ -38,13 +38,14 @@ pub fn toolbar_item(controller: &(impl AsWindow + ?Sized)) -> Retained<NSToolbar
     item.setView(Some(&popup));
     item.setLabel(&ns(t("Branch")));
     item.setToolTip(Some(&ns(t("Branch wechseln oder anlegen"))));
-    crate::host::state().toolbar_items.borrow_mut().push(Shown {
+    let state = crate::host::state();
+    state.toolbar_items.borrow_mut().push(Shown {
         item: Weak::from(&*item),
         popup: Weak::from(&*popup),
         controller: *controller,
     });
-    match super::panel::of(controller) {
-        Some(panel) => panel.refresh_toolbar(),
+    match state.panels.of(*controller) {
+        Some(panel) => panel.refresh_toolbar_in(&state),
         None => set_hidden(&item, true),
     }
     item
@@ -62,9 +63,13 @@ fn set_hidden(item: &NSToolbarItem, hidden: bool) {
 impl GitPanel {
     /// Puts the branch and the branch popup's choices into the toolbar items of the panel's window.
     pub(crate) fn refresh_toolbar(&self) {
+        self.refresh_toolbar_in(&crate::host::state());
+    }
+
+    /// Puts the branch and the branch popup's choices into the toolbar items of the panel's window that `state` keeps.
+    fn refresh_toolbar_in(&self, state: &crate::host::State) {
         let Some(controller) = self.controller() else { return };
         let shown: Vec<(Retained<NSToolbarItem>, Retained<NSPopUpButton>)> = {
-            let state = crate::host::state();
             let mut shown = state.toolbar_items.borrow_mut();
             shown.retain(|s| s.item.load().is_some() && s.controller.is_open());
             shown

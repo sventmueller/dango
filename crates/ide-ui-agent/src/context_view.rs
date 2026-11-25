@@ -45,14 +45,6 @@ pub(crate) struct ContextGauges {
     shown: RefCell<Option<Shown>>,
 }
 
-fn with_gauges<R>(f: impl FnOnce(&RefCell<HashMap<AgentKey, Weak<NSButton>>>) -> R) -> R {
-    f(&crate::host::state().context_gauges.gauges)
-}
-
-fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Shown>>) -> R) -> R {
-    f(&crate::host::state().context_gauges.shown)
-}
-
 /// The popover on show, the tab it belongs to and the breakdown it shows.
 struct Shown {
     key: AgentKey,
@@ -94,8 +86,9 @@ fn opener(mtm: MainThreadMarker) -> Retained<Opener> {
 }
 
 /// A button without a look of its own over the gauge, from `ring` to `text` in the status line `row`, that opens the
-/// breakdown of the tab with `key`; hidden until there is one.
+/// breakdown of the tab with `key`; hidden until there is one, and kept among the tabs' `gauges`.
 pub(crate) fn gauge(
+    gauges: &ContextGauges,
     mtm: MainThreadMarker,
     key: AgentKey,
     row: &NSStackView,
@@ -119,7 +112,7 @@ pub(crate) fn gauge(
         button.topAnchor().constraintEqualToAnchor(&row.topAnchor()),
         button.bottomAnchor().constraintEqualToAnchor(&row.bottomAnchor()),
     ]);
-    with_gauges(|gauges| gauges.borrow_mut().insert(key, Weak::from(&*button)));
+    gauges.gauges.borrow_mut().insert(key, Weak::from(&*button));
     button
 }
 
@@ -128,20 +121,23 @@ fn key_of(gauge: &NSButton) -> AgentKey {
     AgentKey(u64::try_from(gauge.tag()).unwrap_or(0))
 }
 
-/// Lets `gauge` open the breakdown once `usage` has one, and shows a new one in the popover if it is open.
-pub(crate) fn follow(gauge: &NSButton, usage: &Usage) {
+/// Lets `gauge` open the breakdown once `usage` has one, and shows a new one in the popover among the `gauges` if it
+/// is open.
+pub(crate) fn follow(gauges: &ContextGauges, gauge: &NSButton, usage: &Usage) {
     gauge.setHidden(usage.breakdown.is_none());
     let Some(breakdown) = &usage.breakdown else { return };
     let key = key_of(gauge);
     let answered = (breakdown.at, breakdown.exact);
-    let open = with_shown(|shown| {
-        let mut shown = shown.borrow_mut();
+    let open = {
+        let mut shown = gauges.shown.borrow_mut();
         let open = shown
             .as_mut()
-            .filter(|s| s.key == key && s.popover.isShown() && s.answered != answered)?;
-        open.answered = answered;
-        Some((open.popover.clone(), open.controller.clone()))
-    });
+            .filter(|s| s.key == key && s.popover.isShown() && s.answered != answered);
+        open.map(|open| {
+            open.answered = answered;
+            (open.popover.clone(), open.controller.clone())
+        })
+    };
     if let Some((popover, controller)) = open {
         let view = content(gauge.mtm(), breakdown);
         popover.setContentSize(view.fittingSize());
@@ -151,13 +147,16 @@ pub(crate) fn follow(gauge: &NSButton, usage: &Usage) {
 
 /// Opens the breakdown of the tab with `key` at `anchor`, and has the CLI count every row exactly.
 fn show(key: AgentKey, anchor: &NSView) {
-    let Some(tab) = super::get(key) else { return };
+    let state = crate::host::state();
+    let Some(tab) = state.tab(key) else { return };
     let thread = tab.snapshot();
     let Some(breakdown) = &thread.usage().breakdown else {
         return;
     };
-    if let Some(shown) = with_shown(|shown| shown.borrow_mut().take()) {
-        shown.popover.close();
+    let shown = &state.context_gauges.shown;
+    let before = shown.borrow_mut().take();
+    if let Some(before) = before {
+        before.popover.close();
     }
     let mtm = anchor.mtm();
     let view = content(mtm, breakdown);
@@ -169,13 +168,11 @@ fn show(key: AgentKey, anchor: &NSView) {
     popover.setContentViewController(Some(&controller));
     popover.setContentSize(view.fittingSize());
     popover.showRelativeToRect_ofView_preferredEdge(anchor.bounds(), anchor, NSRectEdge::MaxY);
-    with_shown(|shown| {
-        *shown.borrow_mut() = Some(Shown {
-            key,
-            popover,
-            controller,
-            answered: (breakdown.at, breakdown.exact),
-        });
+    *shown.borrow_mut() = Some(Shown {
+        key,
+        popover,
+        controller,
+        answered: (breakdown.at, breakdown.exact),
     });
     if !breakdown.exact
         && let Some(session) = tab.session()
@@ -607,14 +604,14 @@ pub fn cost_text(usage: &Usage) -> (String, Option<String>) {
     (text, Some(tip.join("\n")))
 }
 
-/// What the status line says about spending: on a subscription the plan's usage windows instead of dollars, else
-/// the cost (E57).
-pub(crate) fn spend_text(thread: &ide_thread::Thread) -> (String, Option<String>) {
+/// What the status line says about spending: on a subscription the plan's usage windows `cx` knows instead of
+/// dollars, else the cost (E57).
+pub(crate) fn spend_text(cx: &crate::State, thread: &ide_thread::Thread) -> (String, Option<String>) {
     let usage = thread.usage();
     if !usage.subscription {
         return cost_text(usage);
     }
-    let windows = super::usage::windows(thread);
+    let windows = super::usage::windows(cx, thread);
     let mut text = vec![t("Abo").to_string()];
     text.extend(
         windows

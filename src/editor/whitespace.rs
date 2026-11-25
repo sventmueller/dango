@@ -31,10 +31,10 @@ pub(crate) fn shown() -> bool {
     })
 }
 
-/// Reads the setting again on next use, after it changed elsewhere, and redraws every editor.
-pub(crate) fn forget() {
+/// Reads the setting again on next use, after it changed elsewhere, and redraws every editor of `cx`.
+pub(crate) fn forget(cx: &crate::context::AppContext) {
     SHOWN.with(|shown| shown.set(None));
-    for view in super::open_editors() {
+    for view in cx.editors().live() {
         redraw(&view);
     }
 }
@@ -47,7 +47,7 @@ pub(crate) fn toggle() {
     if let Err(error) = settings.set(&keys::SHOW_WHITESPACE, &value) {
         crate::diag::report("saving the whitespace setting", error);
     }
-    for view in super::open_editors() {
+    for view in super::all_editors() {
         redraw(&view);
     }
 }

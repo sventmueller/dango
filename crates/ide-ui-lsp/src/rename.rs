@@ -15,7 +15,7 @@ use objc2_app_kit::NSTextField;
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 use splat_i18n::{t, tf};
 
-use super::{server_of, text};
+use super::{LspState, server_of, text};
 use crate::editor::Editor;
 use crate::host as editor;
 use ide_ui_common::util::{main_after, main_soon, ns};
@@ -40,7 +40,9 @@ fn word_at(text: &str, index: usize) -> String {
 
 /// Asks for a new name for the symbol at the cursor, after the server said it can be renamed.
 pub fn rename(view: &dyn Editor) {
-    let Some((server, uri)) = server_of(view) else { return };
+    let Some((server, uri)) = server_of(&editor::state(), view) else {
+        return;
+    };
     let index = view.selectedRange().location;
     let Some(position) = text::position(view.document().text(), index) else {
         return;
@@ -102,7 +104,9 @@ fn ask_name(view: &dyn Editor, index: usize, current: &str) {
     expect(unreachable_pub, reason = "the self-test re-exports it")
 )]
 pub fn rename_to(view: &dyn Editor, index: usize, name: &str) {
-    let Some((server, uri)) = server_of(view) else { return };
+    let Some((server, uri)) = server_of(&editor::state(), view) else {
+        return;
+    };
     let Some(position) = text::position(view.document().text(), index) else {
         return;
     };
@@ -168,27 +172,39 @@ impl Formatting {
             None
         }
     }
-}
 
-fn with_formatting<R>(f: impl FnOnce(&RefCell<HashMap<crate::EditorSerial, Pending>>) -> R) -> R {
-    f(&crate::host::state().formatting.formatting)
+    /// Keeps `pending` for the editor `serial` until its answer comes; the request it takes the place of comes back.
+    fn hold(&self, serial: EditorSerial, pending: Pending) -> Option<Pending> {
+        self.formatting.borrow_mut().insert(serial, pending)
+    }
+
+    /// The request `id` of the editor `serial`, taken out; `None` once a later request took its place.
+    fn finish(&self, serial: EditorSerial, id: u64) -> Option<Pending> {
+        let mut all = self.formatting.borrow_mut();
+        if all.get(&serial).is_some_and(|p| p.id == id) {
+            all.remove(&serial)
+        } else {
+            None
+        }
+    }
 }
 
 /// Formats the document with its server, as one undoable step; `then`, such as saving, runs afterwards, also when
 /// nothing changed or the server did not answer within `FORMAT_WAIT`.
 pub fn format(view: &dyn Editor, then: Option<Then>) {
-    let then = match super::prettier::format(view, then) {
+    let state = editor::state();
+    let then = match super::prettier::format(&state, view, then) {
         Ok(()) => return,
         Err(then) => then,
     };
-    let Some((server, uri)) = server_of(view) else {
+    let Some((server, uri)) = server_of(&state, view) else {
         if let Some(then) = then {
             then(view);
         }
         return;
     };
     let serial = view.lsp().borrow().serial;
-    let id = super::next_id();
+    let id = super::next_id(&state);
     let started = server.format(&uri, options(view), move |answer| {
         main_soon(move || finished(serial, id, Some(answer)));
     });
@@ -196,7 +212,7 @@ pub fn format(view: &dyn Editor, then: Option<Then>) {
         Ok(_) => {
             let revision = view.document().revision();
             let waits = then.is_some();
-            with_formatting(|all| all.borrow_mut().insert(serial, Pending { id, revision, then }));
+            state.formatting.hold(serial, Pending { id, revision, then });
             if waits {
                 main_after(FORMAT_WAIT, move || finished(serial, id, None));
             }
@@ -210,14 +226,7 @@ pub fn format(view: &dyn Editor, then: Option<Then>) {
 
 /// The answer to formatting request `id`, or `None` when the wait ran out first.
 fn finished(serial: EditorSerial, id: u64, answer: Option<Result<Vec<TextEdit>, Error>>) {
-    let pending = with_formatting(|all| {
-        let mut all = all.borrow_mut();
-        if all.get(&serial).is_some_and(|p| p.id == id) {
-            all.remove(&serial)
-        } else {
-            None
-        }
-    });
+    let pending = editor::state().formatting.finish(serial, id);
     let (Some(pending), Some(view)) = (pending, editor::find_editor(serial)) else {
         return;
     };
@@ -240,7 +249,8 @@ pub fn save(view: &dyn Editor, write: Then) {
     let wanted = view
         .project_root()
         .is_some_and(|root| Settings::load_user().in_project(&root).get(&keys::FORMAT_ON_SAVE));
-    let can = server_of(view).is_some_and(|(server, _)| {
+    let state = editor::state();
+    let can = server_of(&state, view).is_some_and(|(server, _)| {
         server
             .capabilities()
             .is_some_and(|c| c.document_formatting_provider.is_some())
@@ -253,22 +263,15 @@ pub fn save(view: &dyn Editor, write: Then) {
         }
     };
     let fixes = ide_core::settings::Settings::load_user().get(&keys::ESLINT_FIX_ON_SAVE);
-    match eslint_of(view).filter(|_| fixes) {
-        Some((server, uri)) => fix_all(view, &server, &uri, Box::new(format_then_save)),
+    match eslint_of(&state, view).filter(|_| fixes) {
+        Some((server, uri)) => fix_all(&state, view, &server, &uri, Box::new(format_then_save)),
         None => format_then_save(view),
     }
 }
 
 /// Runs what waited for the fixes of request `id` of the editor `serial`, unless a later request took its place.
 fn resume(serial: EditorSerial, id: u64) {
-    let pending = with_formatting(|all| {
-        let mut all = all.borrow_mut();
-        if all.get(&serial).is_some_and(|p| p.id == id) {
-            all.remove(&serial)
-        } else {
-            None
-        }
-    });
+    let pending = editor::state().formatting.finish(serial, id);
     if let (Some(pending), Some(view)) = (pending, editor::find_editor(serial))
         && let Some(then) = pending.then
     {
@@ -277,44 +280,36 @@ fn resume(serial: EditorSerial, id: u64) {
 }
 
 /// The running ESLint server of `view`, if one serves its file.
-fn eslint_of(view: &dyn Editor) -> Option<(ide_lsp::Server, ide_lsp::lsp_types::Uri)> {
+fn eslint_of(state: &LspState, view: &dyn Editor) -> Option<(ide_lsp::Server, ide_lsp::lsp_types::Uri)> {
     let root = view.project_root()?;
     let ids: Vec<u64> = view.lsp().borrow().companions.iter().map(|(id, _)| *id).collect();
     ids.into_iter()
-        .find(|id| super::slot(&root, *id).is_some_and(|slot| slot.language == ide_lsp::Language::Eslint))
-        .and_then(|id| super::server_by_id(view, id))
+        .find(|id| super::slot(state, &root, *id).is_some_and(|slot| slot.language == ide_lsp::Language::Eslint))
+        .and_then(|id| super::server_by_id(state, view, id))
 }
 
 /// Runs ESLint's `source.fixAll.eslint` on the whole document, applied only to the revision it was asked for, then
 /// `then`; also when it fails or takes longer than `FORMAT_WAIT` (E132).
-fn fix_all(view: &dyn Editor, server: &ide_lsp::Server, uri: &ide_lsp::lsp_types::Uri, then: Then) {
+fn fix_all(state: &LspState, view: &dyn Editor, server: &ide_lsp::Server, uri: &ide_lsp::lsp_types::Uri, then: Then) {
     use ide_lsp::lsp_types::{CodeActionKind, CodeActionOrCommand, Position, Range};
     let serial = view.lsp().borrow().serial;
     let revision = view.document().revision();
-    let id = super::next_id();
+    let id = super::next_id(state);
     let lines = u32::try_from(view.document().text().line_count()).unwrap_or(u32::MAX);
     let whole = Range::new(Position::new(0, 0), Position::new(lines, 0));
-    with_formatting(|all| {
-        all.borrow_mut().insert(
-            serial,
-            Pending {
-                id,
-                revision,
-                then: Some(then),
-            },
-        )
-    });
+    state.formatting.hold(
+        serial,
+        Pending {
+            id,
+            revision,
+            then: Some(then),
+        },
+    );
     let only = Some(vec![CodeActionKind::new("source.fixAll.eslint")]);
     let started = server.code_actions(uri, whole, Vec::new(), only, move |answer| {
         main_soon(move || {
-            let pending = with_formatting(|all| {
-                let mut all = all.borrow_mut();
-                if all.get(&serial).is_some_and(|p| p.id == id) {
-                    all.remove(&serial)
-                } else {
-                    None
-                }
-            });
+            let state = editor::state();
+            let pending = state.formatting.finish(serial, id);
             let (Some(pending), Some(view)) = (pending, editor::find_editor(serial)) else {
                 return;
             };
@@ -328,7 +323,7 @@ fn fix_all(view: &dyn Editor, server: &ide_lsp::Server, uri: &ide_lsp::lsp_types
             match (edit, folder) {
                 (Some(edit), Some(folder)) if view.document().revision() == pending.revision => {
                     // What waits stays here on the main thread until the edit is applied.
-                    with_formatting(|all| all.borrow_mut().insert(serial, pending));
+                    state.formatting.hold(serial, pending);
                     super::edits::apply_workspace_edit(&folder, &edit, move |_| {
                         main_soon(move || resume(serial, id));
                     });
@@ -342,7 +337,8 @@ fn fix_all(view: &dyn Editor, server: &ide_lsp::Server, uri: &ide_lsp::lsp_types
         });
     });
     if started.is_err() {
-        if let Some(pending) = with_formatting(|all| all.borrow_mut().remove(&serial))
+        let pending = state.formatting.formatting.borrow_mut().remove(&serial);
+        if let Some(pending) = pending
             && let Some(then) = pending.then
         {
             then(view);

@@ -18,7 +18,7 @@ use objc2_foundation::{NSIndexSet, NSObjectProtocol, NSPoint, NSRange, NSRect, N
 use splat_i18n::{t, tf};
 
 use super::decorate::Severity;
-use super::{server_of, text};
+use super::{LspState, server_of, text};
 use crate::editor::Editor;
 use crate::host as editor;
 use ide_ui_common::util::{activate, guarded, item, label, main_soon, ns, set_action};
@@ -30,12 +30,12 @@ pub use selftest_probe::*;
 
 /// Goes to the definition of the symbol at the cursor.
 pub fn definition(view: &dyn Editor) {
-    definition_at(view, view.selectedRange().location);
+    go_to(view, Goto::Definition);
 }
 
 /// Goes to the definition of the symbol at UTF-16 offset `index`, or lists them when there are several.
-pub(crate) fn definition_at(view: &dyn Editor, index: usize) {
-    go_to_at(view, index, Goto::Definition);
+pub(crate) fn definition_at(state: &LspState, view: &dyn Editor, index: usize) {
+    go_to_at(state, view, index, Goto::Definition);
 }
 
 /// Where the editor can go from a symbol.
@@ -83,7 +83,7 @@ impl Goto {
 
 /// Whether the server of `view` offers what the menu command `action` asks for; `None` for the commands this module
 /// does not check.
-pub(super) fn offered(view: &dyn Editor, action: objc2::runtime::Sel) -> Option<bool> {
+pub(super) fn offered(state: &LspState, view: &dyn Editor, action: objc2::runtime::Sel) -> Option<bool> {
     let goto = [Goto::Implementation, Goto::TypeDefinition, Goto::Declaration];
     let (capability, method) = match goto.into_iter().find(|g| g.action() == action) {
         Some(goto) => goto.capability(),
@@ -91,16 +91,19 @@ pub(super) fn offered(view: &dyn Editor, action: objc2::runtime::Sel) -> Option<
         None if action == sel!(ideTypeHierarchy:) => ("typeHierarchyProvider", "textDocument/prepareTypeHierarchy"),
         None => return None,
     };
-    Some(server_of(view).is_some_and(|(server, _)| server.offers(capability, method)))
+    Some(server_of(state, view).is_some_and(|(server, _)| server.offers(capability, method)))
 }
 
 /// Goes to where `goto` leads from the symbol at the cursor.
 pub fn go_to(view: &dyn Editor, goto: Goto) {
-    go_to_at(view, view.selectedRange().location, goto);
+    go_to_at(&editor::state(), view, view.selectedRange().location, goto);
 }
 
-fn go_to_at(view: &dyn Editor, index: usize, goto: Goto) {
-    let Some((server, uri)) = server_of(view) else { return };
+/// Goes to where `goto` leads from the symbol at UTF-16 offset `index`, or lists the places when there are several.
+fn go_to_at(state: &LspState, view: &dyn Editor, index: usize, goto: Goto) {
+    let Some((server, uri)) = server_of(state, view) else {
+        return;
+    };
     let Some(position) = text::position(view.document().text(), index) else {
         return;
     };
@@ -135,7 +138,9 @@ fn go_to_at(view: &dyn Editor, index: usize, goto: Goto) {
 
 /// Lists the uses of the symbol at the cursor.
 pub fn references(view: &dyn Editor) {
-    let Some((server, uri)) = server_of(view) else { return };
+    let Some((server, uri)) = server_of(&editor::state(), view) else {
+        return;
+    };
     let index = view.selectedRange().location;
     let Some(position) = text::position(view.document().text(), index) else {
         return;
@@ -224,7 +229,9 @@ pub fn next_problem(view: &dyn Editor, forward: bool) {
 
 /// The symbols of the file in a menu at the cursor; choosing one goes there.
 pub fn symbols(view: &dyn Editor) {
-    let Some((server, uri)) = server_of(view) else { return };
+    let Some((server, uri)) = server_of(&editor::state(), view) else {
+        return;
+    };
     let serial = view.lsp().borrow().serial;
     let _ = server.document_symbols(&uri, move |answer| {
         let symbols = answer.unwrap_or_default();

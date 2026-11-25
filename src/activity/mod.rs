@@ -103,22 +103,21 @@ pub(crate) struct Activities {
     activities: RefCell<Vec<Retained<Activity>>>,
 }
 
-fn with_activities<R>(f: impl FnOnce(&RefCell<Vec<Retained<Activity>>>) -> R) -> R {
-    f(&crate::context::app().activities().activities)
-}
-
+/// The activity object of `controller`'s window, once its toolbar made one.
 fn of(controller: &WindowController) -> Option<Retained<Activity>> {
-    with_activities(|all| {
-        all.borrow()
-            .iter()
-            .find(|a| {
-                a.ivars()
-                    .controller
-                    .load()
-                    .is_some_and(|c| std::ptr::eq(&*c, controller))
-            })
-            .cloned()
-    })
+    controller
+        .context()
+        .activities()
+        .activities
+        .borrow()
+        .iter()
+        .find(|a| {
+            a.ivars()
+                .controller
+                .load()
+                .is_some_and(|c| std::ptr::eq(&*c, controller))
+        })
+        .cloned()
 }
 
 /// The toolbar item of `controller`'s window.
@@ -137,11 +136,11 @@ pub(crate) fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarI
         };
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         let activity: Retained<Activity> = unsafe { msg_send![super(Activity::alloc(mtm).set_ivars(ivars)), init] };
-        with_activities(|all| {
-            let mut all = all.borrow_mut();
+        {
+            let mut all = controller.context().activities().activities.borrow_mut();
             all.retain(|a| a.ivars().controller.load().is_some());
             all.push(activity.clone());
-        });
+        }
         activity
     });
     let item = NSToolbarItem::initWithItemIdentifier(NSToolbarItem::alloc(mtm), &ns(ID));
@@ -173,11 +172,12 @@ fn watch_supervisor() {
                 let pending = pending.clone();
                 main_soon(move || {
                     pending.store(false, Ordering::Release);
-                    let all: Vec<Retained<Activity>> = with_activities(|all| {
-                        let mut all = all.borrow_mut();
+                    let all: Vec<Retained<Activity>> = {
+                        let cx = crate::context::app();
+                        let mut all = cx.activities().activities.borrow_mut();
                         all.retain(|a| a.ivars().controller.load().is_some());
                         all.clone()
-                    });
+                    };
                     for activity in all {
                         activity.changed();
                     }

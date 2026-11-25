@@ -108,7 +108,7 @@ pub(crate) fn set_line_end(on: bool) {
     if let Err(error) = settings.set(&keys::BLAME_AT_LINE_END, &on) {
         crate::diag::report("saving the blame setting", error);
     }
-    for view in super::open_editors() {
+    for view in super::all_editors() {
         if on {
             rest(&view);
         } else {
@@ -226,18 +226,19 @@ fn blame_of(path: &Path, head: &str) -> Result<Loaded, BlameError> {
 }
 
 fn arrived(serial: ide_ui_lsp::EditorSerial, path: PathBuf, head: String, loaded: Result<Loaded, BlameError>) {
+    let cx = crate::context::app();
     let loaded = match loaded {
         Ok(loaded) => Rc::new(loaded),
         Err(error) => {
             crate::diag::report("reading blame", error);
-            if let Some(view) = super::find_editor(serial) {
+            if let Some(view) = super::find_editor_in(&cx, serial) {
                 view.ivars().blame.borrow_mut().reading = None;
             }
             return;
         }
     };
     remember((path.clone(), head.clone()), loaded.clone());
-    for view in super::open_editors() {
+    for view in cx.editors().live() {
         if view.document().path() != Some(path.as_path()) {
             continue;
         }

@@ -50,7 +50,7 @@ fn folders() -> Vec<PathBuf> {
         state
             .get(&FOLDERS)
             .into_iter()
-            .chain(crate::window::open_projects())
+            .chain(crate::window::open_projects(&crate::context::app()))
             .chain(state.get(&remembered::RECENT_PROJECTS)),
     )
 }

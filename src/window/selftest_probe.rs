@@ -183,12 +183,12 @@ impl WindowController {
 
     /// Makes the menu of new tabs only recorded from now on, never shown, so the self-test can ask for it.
     pub(crate) fn record_new_tab_menu(&self) {
-        new_tab_button::record_only();
+        new_tab_button::record_only(self.context().new_tab_menu());
     }
 
     /// Whether the menu of new tabs was asked for since the last call, and whether below the "+".
     pub(crate) fn new_tab_menu_recorded(&self) -> Option<bool> {
-        new_tab_button::take_recorded()
+        new_tab_button::take_recorded(self.context().new_tab_menu())
     }
 
     /// Moves the keyboard focus to the other document of the tab in front, as the menu command does.

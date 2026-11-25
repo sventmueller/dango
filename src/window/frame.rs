@@ -61,7 +61,7 @@ impl WindowController {
         let name = self.frame_name();
         if !window.setFrameUsingName(&ns(&name)) {
             if window.setFrameUsingName(&ns(LAST)) {
-                step_aside(window);
+                step_aside(self.context(), window);
             } else {
                 window.setContentSize(tabs::default_size());
                 window.center();
@@ -122,8 +122,10 @@ impl WindowController {
 }
 
 /// Moves `window` down and right while another window of the app has its top left corner.
-fn step_aside(window: &NSWindow) {
-    let others: Vec<NSPoint> = super::windows()
+fn step_aside(cx: &crate::context::AppContext, window: &NSWindow) {
+    let others: Vec<NSPoint> = cx
+        .windows()
+        .all()
         .iter()
         .filter_map(|controller| controller.window())
         .filter(|other| !std::ptr::eq(&**other, window))

@@ -20,7 +20,7 @@ pub(super) fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let root = project("debug-restore");
     if std::env::var("IDE_SELFTEST_LAUNCH").as_deref() == Ok("quit") {
-        crate::app::open_project(mtm, root.clone());
+        crate::app::open_project(&crate::context::app(), mtm, root.clone());
         let probe = root.clone();
         wait_until(
             move || window_of(&probe).and_then(|c| debug::seen(&c)).is_some(),

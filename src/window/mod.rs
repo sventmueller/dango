@@ -278,7 +278,7 @@ define_class!(
         fn toggle_activity_symbol_action(&self, sender: Option<&AnyObject>) {
             guarded((), || {
                 if let Some(panel) = Panel::from_tag(tag_of(sender)) {
-                    toggle_activity_symbol(panel);
+                    toggle_activity_symbol(self.context(), panel);
                 }
             });
         }
@@ -444,7 +444,12 @@ define_class!(
                 let recent = welcome::recent_folders();
                 let index = usize::try_from(tag_of(sender)).ok();
                 if let Some(folder) = index.and_then(|i| recent.get(i)) {
-                    crate::app::open_project_from(self.mtm(), folder.clone(), Some(objc2::Message::retain(self)));
+                    crate::app::open_project_from(
+                        self.context(),
+                        self.mtm(),
+                        folder.clone(),
+                        Some(objc2::Message::retain(self)),
+                    );
                 }
             });
         }
@@ -563,11 +568,6 @@ impl WindowController {
     }
 }
 
-/// The open windows, in the order they opened.
-fn windows() -> Vec<Retained<WindowController>> {
-    crate::context::app().windows().all()
-}
-
 /// The tag of the control or menu item that sent an action.
 fn tag_of(sender: Option<&AnyObject>) -> isize {
     let Some(sender) = sender else { return -1 };
@@ -589,8 +589,11 @@ fn browser_commands() -> [Sel; 4] {
 
 impl WindowController {
     /// Brings the window of `project` to the front, or puts it into an empty window, or opens a new one.
-    pub(crate) fn open(mtm: MainThreadMarker, project: Option<PathBuf>) -> Retained<WindowController> {
-        let cx = AppContext::get(mtm);
+    pub(crate) fn open(
+        cx: &Rc<AppContext>,
+        mtm: MainThreadMarker,
+        project: Option<PathBuf>,
+    ) -> Retained<WindowController> {
         let open = cx.windows();
         let existing = match &project {
             Some(path) => open
@@ -606,15 +609,19 @@ impl WindowController {
             controller.bring_to_front();
             return controller;
         }
-        let controller = WindowController::open_new(mtm, project);
+        let controller = WindowController::open_new(cx, mtm, project);
         controller.restore_layout();
         controller
     }
 
     /// A new window for `project`, even if another shows it, as a launch puts back the windows of the last run.
-    pub(crate) fn open_new(mtm: MainThreadMarker, project: Option<PathBuf>) -> Retained<WindowController> {
+    pub(crate) fn open_new(
+        cx: &Rc<AppContext>,
+        mtm: MainThreadMarker,
+        project: Option<PathBuf>,
+    ) -> Retained<WindowController> {
         new_tab_button::install();
-        let controller = WindowController::new(mtm, project);
+        let controller = WindowController::new(cx, mtm, project);
         agent_choices::refresh(controller.context());
         controller.bring_to_front();
         if let Some(tab) = controller.current_tab() {
@@ -625,11 +632,11 @@ impl WindowController {
         controller
     }
 
-    fn new(mtm: MainThreadMarker, project: Option<PathBuf>) -> Retained<WindowController> {
-        let context = AppContext::get(mtm);
+    /// A window for `project` with its first tab, among the open ones before its folder loads.
+    fn new(cx: &Rc<AppContext>, mtm: MainThreadMarker, project: Option<PathBuf>) -> Retained<WindowController> {
         let ivars = Ivars {
-            id: WindowId::new(context.windows().next_id()),
-            context,
+            id: WindowId::new(cx.windows().next_id()),
+            context: Rc::clone(cx),
             folder: folder::State::new(project),
             sidebar: sidebar::State::default(),
             inspector: inspector::State::default(),

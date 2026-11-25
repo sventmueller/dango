@@ -29,7 +29,7 @@ use splat_render::remote;
 use splat_render::render::{Drawn, RenderCtx};
 
 use super::pictures::{PRINT_SCALE, may_carry_along};
-use super::{Job, Outcome, find, finish};
+use super::{Job, Outcome, find, finish, state};
 use ide_ui_common::constant;
 use ide_ui_common::util::{main_after, main_soon};
 
@@ -87,7 +87,7 @@ fn failed() -> Outcome {
 
 /// Asks for the pictures of the document's folder, which arrive through the export's viewer.
 fn laid_out(number: u64, job: Job, laid: Layout, macros: Arc<str>) {
-    let Some(run) = find(number) else { return };
+    let Some(run) = find(&state(), number) else { return };
     // SAFETY: An empty dictionary, which gives the defaults of the user's paper.
     let info = unsafe { NSPrintInfo::initWithDictionary(NSPrintInfo::alloc(), &NSDictionary::new()) };
     let work = Work {
@@ -136,7 +136,7 @@ fn local_pictures(laid: &Layout) -> Vec<String> {
 }
 
 fn wait_for_pictures(number: u64, until: Instant) {
-    let Some(run) = find(number) else { return };
+    let Some(run) = find(&state(), number) else { return };
     let loading = run
         .pdf
         .borrow()
@@ -151,7 +151,7 @@ fn wait_for_pictures(number: u64, until: Instant) {
 
 /// Sets the next few blocks as text; once all are set, the pages are drawn on the export's thread.
 fn set_text(number: u64) {
-    let Some(run) = find(number) else { return };
+    let Some(run) = find(&state(), number) else { return };
     let Some(mtm) = MainThreadMarker::new() else { return };
     let done = {
         let work = run.pdf.borrow();

@@ -2,6 +2,11 @@
 
 use super::*;
 
+/// Runs `f` with the question on view.
+fn with_ask<R>(f: impl FnOnce(&RefCell<Option<Ask>>) -> R) -> R {
+    f(&crate::host::state().plan.ask.ask)
+}
+
 /// Types `text` into the open popover, for the self-test; whether one is open.
 pub fn type_comment(text: &str) -> bool {
     with_ask(|a| {

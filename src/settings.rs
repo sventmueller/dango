@@ -31,6 +31,7 @@ use objc2_foundation::{NSDictionary, NSObjectProtocol, NSString};
 use splat_i18n::{t, tf};
 
 use self::form::Row;
+use crate::context::AppContext;
 use crate::util::{activate, guarded, label, ns, set_action, symbol};
 
 pub(crate) use stored_rules::remember as remember_claude_rules;
@@ -107,7 +108,7 @@ define_class!(
                     .and_then(|s| s.downcast_ref::<NSButton>())
                     .is_some_and(|b| b.state() == NSControlStateValueOn);
                 self.store(|settings| settings.set(&keys::SHOW_IGNORED_FILES, &on));
-                crate::window::show_ignored_files(on);
+                crate::window::show_ignored_files(&crate::context::app(), on);
             });
         }
 
@@ -221,10 +222,6 @@ pub(crate) struct SettingsWindow {
     window: RefCell<Option<(Retained<NSWindow>, Retained<SettingsController>)>>,
 }
 
-fn with_window<R>(f: impl FnOnce(&RefCell<Option<(Retained<NSWindow>, Retained<SettingsController>)>>) -> R) -> R {
-    f(&crate::context::app().settings().settings_window.window)
-}
-
 impl SettingsController {
     fn new(mtm: MainThreadMarker) -> Retained<SettingsController> {
         let this = Self::alloc(mtm).set_ivars(Ivars {
@@ -255,20 +252,20 @@ impl SettingsController {
 }
 
 /// Brings the settings window to the front, building it the first time.
-pub(crate) fn show(mtm: MainThreadMarker) {
-    with_window(|cell| {
-        let mut cell = cell.borrow_mut();
-        let (window, controller) = cell.get_or_insert_with(|| build(mtm));
+pub(crate) fn show(cx: &AppContext, mtm: MainThreadMarker) {
+    {
+        let mut cell = cx.settings().settings_window.window.borrow_mut();
+        let (window, controller) = cell.get_or_insert_with(|| build(cx, mtm));
         controller.ivars().ci.reload();
-        controller.ivars().agents.reload();
+        controller.ivars().agents.reload(cx);
         controller.ivars().orders.reload();
         controller.ivars().agent.reload();
         controller.ivars().servers.reload();
         #[cfg(feature = "dictation")]
         controller.ivars().dictation.reload();
-        editor::reload();
+        editor::reload(cx);
         window.makeKeyAndOrderFront(None);
-    });
+    }
     fit(AGENTS_TAB);
     #[cfg(feature = "dictation")]
     fit(DICTATION_TAB);
@@ -279,7 +276,7 @@ const PREDICTION_TAB: isize = if cfg!(feature = "dictation") { 7 } else { 6 };
 
 /// Brings the settings window to the front on the tab of edit prediction.
 pub(crate) fn show_prediction(mtm: MainThreadMarker) {
-    show_tab(mtm, PREDICTION_TAB);
+    show_tab(&AppContext::get(mtm), mtm, PREDICTION_TAB);
 }
 
 pub(crate) use predict::prediction_changed;
@@ -289,43 +286,42 @@ mod selftest_probe;
 pub(crate) use selftest_probe::*;
 
 /// Brings the settings window to the front on its CI tab.
-pub(crate) fn show_ci(mtm: MainThreadMarker) {
-    show_tab(mtm, CI_TAB);
+pub(crate) fn show_ci(cx: &AppContext, mtm: MainThreadMarker) {
+    show_tab(cx, mtm, CI_TAB);
 }
 
 /// Brings the settings window to the front on its own agent's tab.
 pub(crate) fn show_agent(mtm: MainThreadMarker) {
-    show_tab(mtm, AGENT_TAB);
+    show_tab(&AppContext::get(mtm), mtm, AGENT_TAB);
 }
 
 /// Where the built-in languages' servers are, as a survey found them; an open settings window shows it.
 fn servers_found(lines: Vec<(String, String)>) {
-    if let Some(servers) = servers_tab() {
+    if let Some(servers) = servers_tab(&crate::context::app()) {
         servers.found(lines);
     }
 }
 
 /// The language servers tab of the settings window, once it was built.
-pub(crate) fn servers_tab() -> Option<Retained<servers::ServersSettings>> {
-    with_window(|cell| {
-        cell.borrow()
-            .as_ref()
-            .map(|(_, controller)| controller.ivars().servers.clone())
-    })
+pub(crate) fn servers_tab(cx: &AppContext) -> Option<Retained<servers::ServersSettings>> {
+    cx.settings()
+        .settings_window
+        .window
+        .borrow()
+        .as_ref()
+        .map(|(_, controller)| controller.ivars().servers.clone())
 }
 
 /// Brings the settings window to the front on its Agents tab.
 pub(crate) fn show_agents(mtm: MainThreadMarker) {
-    show_tab(mtm, AGENTS_TAB);
+    show_tab(&AppContext::get(mtm), mtm, AGENTS_TAB);
 }
 
 /// The agents changed, such as an installation that finished; an open settings window shows them again.
-pub(crate) fn agents_changed() {
-    if let Some(mtm) = MainThreadMarker::new() {
-        crate::window::refresh_agent_choices(&crate::context::AppContext::get(mtm));
-    }
-    if let Some(agents) = agents_tab_now() {
-        agents.reload();
+pub(crate) fn agents_changed(cx: &AppContext) {
+    crate::window::refresh_agent_choices(cx);
+    if let Some(agents) = agents_tab_now(cx) {
+        agents.reload(cx);
         fit(AGENTS_TAB);
     }
 }
@@ -333,103 +329,113 @@ pub(crate) fn agents_changed() {
 /// Sizes the tab at `tab` to what it shows now, and the window with it while that tab is open; does nothing while
 /// the window is being built or shown, which measures every tab anyway.
 fn fit(tab: isize) {
-    with_window(|cell| {
-        let Ok(cell) = cell.try_borrow() else { return };
-        let Some((window, _)) = cell.as_ref() else { return };
-        let Some(tabs) = window
-            .contentViewController()
-            .and_then(|c| c.downcast::<NSTabViewController>().ok())
-        else {
-            return;
-        };
-        let page = usize::try_from(tab)
-            .ok()
-            .and_then(|n| tabs.tabViewItems().iter().nth(n))
-            .and_then(|item| item.viewController(window.mtm()));
-        let Some(page) = page else { return };
-        let size = page.view().fittingSize();
-        page.setPreferredContentSize(size);
-        let Some(content) = window.contentView() else { return };
-        let now = content.frame().size;
-        if tabs.selectedTabViewItemIndex() != tab || (now.width == size.width && now.height == size.height) {
-            return;
-        }
-        let mut frame = window.frame();
-        frame.size.width += size.width - now.width;
-        frame.size.height += size.height - now.height;
-        frame.origin.y -= size.height - now.height;
-        if !window.isVisible() || NSWorkspace::sharedWorkspace().accessibilityDisplayShouldReduceMotion() {
-            window.setFrame_display(frame, true);
-            return;
-        }
-        // AppKit's own resize takes longer with the distance; the app's animations stay within 150 ms.
-        let window = window.clone();
-        NSAnimationContext::runAnimationGroup(&block2::RcBlock::new(
-            move |context: std::ptr::NonNull<NSAnimationContext>| {
-                crate::util::guarded((), || {
-                    // SAFETY: AppKit hands the block the group's context, alive while the block runs.
-                    unsafe { context.as_ref() }.setDuration(0.15);
-                    window.animator().setFrame_display(frame, true);
-                })
-            },
-        ));
-    });
+    let cx = crate::context::app();
+    let Ok(cell) = cx.settings().settings_window.window.try_borrow() else {
+        return;
+    };
+    let Some((window, _)) = cell.as_ref() else { return };
+    let Some(tabs) = window
+        .contentViewController()
+        .and_then(|c| c.downcast::<NSTabViewController>().ok())
+    else {
+        return;
+    };
+    let page = usize::try_from(tab)
+        .ok()
+        .and_then(|n| tabs.tabViewItems().iter().nth(n))
+        .and_then(|item| item.viewController(window.mtm()));
+    let Some(page) = page else { return };
+    let size = page.view().fittingSize();
+    page.setPreferredContentSize(size);
+    let Some(content) = window.contentView() else { return };
+    let now = content.frame().size;
+    if tabs.selectedTabViewItemIndex() != tab || (now.width == size.width && now.height == size.height) {
+        return;
+    }
+    let mut frame = window.frame();
+    frame.size.width += size.width - now.width;
+    frame.size.height += size.height - now.height;
+    frame.origin.y -= size.height - now.height;
+    if !window.isVisible() || NSWorkspace::sharedWorkspace().accessibilityDisplayShouldReduceMotion() {
+        window.setFrame_display(frame, true);
+        return;
+    }
+    // AppKit's own resize takes longer with the distance; the app's animations stay within 150 ms.
+    let window = window.clone();
+    NSAnimationContext::runAnimationGroup(&block2::RcBlock::new(
+        move |context: std::ptr::NonNull<NSAnimationContext>| {
+            crate::util::guarded((), || {
+                // SAFETY: AppKit hands the block the group's context, alive while the block runs.
+                unsafe { context.as_ref() }.setDuration(0.15);
+                window.animator().setFrame_display(frame, true);
+            })
+        },
+    ));
 }
 
 /// The Agents tab of the settings window, once it was built.
-fn agents_tab_now() -> Option<Retained<agents::AgentsSettings>> {
-    with_window(|cell| {
-        cell.borrow()
-            .as_ref()
-            .map(|(_, controller)| controller.ivars().agents.clone())
-    })
+fn agents_tab_now(cx: &AppContext) -> Option<Retained<agents::AgentsSettings>> {
+    cx.settings()
+        .settings_window
+        .window
+        .borrow()
+        .as_ref()
+        .map(|(_, controller)| controller.ivars().agents.clone())
 }
 
-fn show_tab(mtm: MainThreadMarker, tab: isize) {
-    show(mtm);
-    with_window(|cell| {
-        let tabs = cell
-            .borrow()
-            .as_ref()
-            .and_then(|(window, _)| window.contentViewController())
-            .and_then(|c| c.downcast::<NSTabViewController>().ok());
-        if let Some(tabs) = tabs {
-            tabs.setSelectedTabViewItemIndex(tab);
-        }
-    });
+/// Brings the settings window to the front on the tab at `tab`.
+fn show_tab(cx: &AppContext, mtm: MainThreadMarker, tab: isize) {
+    show(cx, mtm);
+    let tabs = cx
+        .settings()
+        .settings_window
+        .window
+        .borrow()
+        .as_ref()
+        .and_then(|(window, _)| window.contentViewController())
+        .and_then(|c| c.downcast::<NSTabViewController>().ok());
+    if let Some(tabs) = tabs {
+        tabs.setSelectedTabViewItemIndex(tab);
+    }
 }
 
 /// Something else changed the CI settings; an open settings window shows them again.
-pub(crate) fn ci_changed() {
-    with_window(|cell| {
-        if let Some((_, controller)) = cell.borrow().as_ref() {
-            controller.ivars().ci.reload();
-        }
-    });
+pub(crate) fn ci_changed(cx: &AppContext) {
+    if let Some((_, controller)) = cx.settings().settings_window.window.borrow().as_ref() {
+        controller.ivars().ci.reload();
+    }
 }
 
 /// The settings window, if it was opened.
 pub(crate) fn window() -> Option<Retained<NSWindow>> {
-    with_window(|cell| cell.borrow().as_ref().map(|(window, _)| window.clone()))
+    crate::context::app()
+        .settings()
+        .settings_window
+        .window
+        .borrow()
+        .as_ref()
+        .map(|(window, _)| window.clone())
 }
 
 /// The Agent tab of the settings window, once it was built.
-fn agent_tab_now() -> Option<Retained<agent::AgentSettings>> {
-    with_window(|cell| {
-        cell.borrow()
-            .as_ref()
-            .map(|(_, controller)| controller.ivars().agent.clone())
-    })
+fn agent_tab_now(cx: &AppContext) -> Option<Retained<agent::AgentSettings>> {
+    cx.settings()
+        .settings_window
+        .window
+        .borrow()
+        .as_ref()
+        .map(|(_, controller)| controller.ivars().agent.clone())
 }
 
-fn build(mtm: MainThreadMarker) -> (Retained<NSWindow>, Retained<SettingsController>) {
+/// The settings window and its controller, built with every tab.
+fn build(cx: &AppContext, mtm: MainThreadMarker) -> (Retained<NSWindow>, Retained<SettingsController>) {
     let controller = SettingsController::new(mtm);
     let tabs = NSTabViewController::new(mtm);
     tabs.setTabStyle(NSTabViewControllerTabStyle::Toolbar);
     let mut pages = vec![
-        Page::of(general_view(mtm, &controller), t("Allgemein"), "gearshape"),
+        Page::of(general_view(cx, mtm, &controller), t("Allgemein"), "gearshape"),
         Page::of(controller.ivars().ci.view(), t("CI"), "checkmark.seal"),
-        Page::of(controller.ivars().agents.view(), t("Agenten"), "person.2"),
+        Page::of(controller.ivars().agents.view(cx), t("Agenten"), "person.2"),
         Page::of(
             controller.ivars().orders.view(),
             t("Software Factory"),
@@ -437,13 +443,13 @@ fn build(mtm: MainThreadMarker) -> (Retained<NSWindow>, Retained<SettingsControl
         ),
         Page {
             sized: true,
-            ..Page::of(controller.ivars().agent.view(), t("Eigener Agent"), "sparkles")
+            ..Page::of(controller.ivars().agent.view(cx), t("Eigener Agent"), "sparkles")
         },
         Page::of(controller.ivars().servers.view(), t("Sprachserver"), "curlybraces"),
     ];
     #[cfg(feature = "dictation")]
     pages.push(Page::of(controller.ivars().dictation.view(), t("Diktat"), "mic"));
-    pages.push(Page::of(predict::view(mtm), t("Vorhersage"), "text.cursor"));
+    pages.push(Page::of(predict::view(cx, mtm), t("Vorhersage"), "text.cursor"));
     let width = toolbar_width(&pages.iter().map(|page| page.title).collect::<Vec<_>>());
     for page in &pages {
         add_tab(&tabs, page, width);
@@ -534,42 +540,37 @@ fn add_tab(tabs: &NSTabViewController, page: &Page, width: f64) {
 /// The dictation tab of the open settings window, for the self-test.
 #[cfg(all(feature = "selftest", feature = "dictation"))]
 pub(crate) fn dictation_keys() -> Vec<String> {
-    with_window(|cell| {
-        cell.borrow()
-            .as_ref()
-            .map(|(_, controller)| dictation::key_lines(&controller.ivars().dictation))
-            .unwrap_or_default()
-    })
+    crate::context::app()
+        .settings()
+        .settings_window
+        .window
+        .borrow()
+        .as_ref()
+        .map(|(_, controller)| dictation::key_lines(&controller.ivars().dictation))
+        .unwrap_or_default()
 }
 
 /// Whether the open dictation tab offers Lowspeak's choices and shows a missing model's download, for the self-test.
 #[cfg(all(feature = "selftest", feature = "dictation"))]
 pub(crate) fn dictation_rows() -> (bool, bool) {
-    with_window(|cell| {
-        cell.borrow()
-            .as_ref()
-            .map(|(_, controller)| dictation::rows_shown(&controller.ivars().dictation))
-            .unwrap_or_default()
-    })
+    crate::context::app()
+        .settings()
+        .settings_window
+        .window
+        .borrow()
+        .as_ref()
+        .map(|(_, controller)| dictation::rows_shown(&controller.ivars().dictation))
+        .unwrap_or_default()
 }
 
 /// Brings the settings window to the front on its dictation tab, for the self-test.
 #[cfg(all(feature = "selftest", feature = "dictation"))]
 pub(crate) fn show_dictation(mtm: MainThreadMarker) {
-    show(mtm);
-    with_window(|cell| {
-        let tabs = cell
-            .borrow()
-            .as_ref()
-            .and_then(|(window, _)| window.contentViewController())
-            .and_then(|c| c.downcast::<NSTabViewController>().ok());
-        if let Some(tabs) = tabs {
-            tabs.setSelectedTabViewItemIndex(DICTATION_TAB);
-        }
-    });
+    show_tab(&AppContext::get(mtm), mtm, DICTATION_TAB);
 }
 
-fn general_view(mtm: MainThreadMarker, controller: &SettingsController) -> Retained<NSView> {
+/// The General tab: the app's own switches, the editor's and the sync's.
+fn general_view(cx: &AppContext, mtm: MainThreadMarker, controller: &SettingsController) -> Retained<NSView> {
     let settings = controller.ivars().settings.borrow();
     let toggle = |title: &str, action: objc2::runtime::Sel, on: bool| checkbox(controller, title, action, on);
     let reopen = toggle(
@@ -633,11 +634,8 @@ fn general_view(mtm: MainThreadMarker, controller: &SettingsController) -> Retai
         Row::new(mtm, t("Terminal:"), &meta),
         Row::new(mtm, t("Suchmaschine:"), &engine),
     ];
-    rows.extend(editor::rows(mtm));
-    rows.extend(sync::rows(
-        mtm,
-        &crate::context::AppContext::get(mtm).settings().sync_target,
-    ));
+    rows.extend(editor::rows(cx, mtm));
+    rows.extend(sync::rows(cx, mtm, &cx.settings().sync_target));
     for (path, locked) in settings.problems() {
         let reason = match locked {
             Locked::Damaged => t("Die Datei ist beschädigt und bleibt unverändert, bis du sie reparierst."),

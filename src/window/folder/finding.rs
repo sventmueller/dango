@@ -46,7 +46,7 @@ impl WindowController {
             return;
         };
         self.activate_panel(Panel::Search);
-        search.show_hierarchy(hierarchy);
+        search.show_hierarchy(self.context().hierarchy_panels(), hierarchy);
     }
 
     /// Asks the folder's index for up to `limit` files matching `query`; `answer` runs on another thread.

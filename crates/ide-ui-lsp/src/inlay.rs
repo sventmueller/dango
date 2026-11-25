@@ -15,7 +15,7 @@ use objc2::sel;
 use objc2_app_kit::{NSControlStateValueOff, NSControlStateValueOn, NSMenuItem};
 use splat_i18n::tf;
 
-use super::{CONTENT_MODIFIED, language_of, server_of, text};
+use super::{CONTENT_MODIFIED, LspState, language_of, server_of, text};
 use crate::editor::Editor;
 use crate::editor::Hint;
 use crate::host as editor;
@@ -38,18 +38,6 @@ pub(crate) struct InlayRequests {
     /// The document revision the hints of each editor by serial belong to. While it holds, an answer for the lines on
     /// screen keeps the hints elsewhere, so scrolling back neither waits for them nor moves the text again.
     shown: RefCell<HashMap<crate::EditorSerial, Revision>>,
-}
-
-fn with_asked<R>(f: impl FnOnce(&RefCell<HashMap<crate::EditorSerial, u64>>) -> R) -> R {
-    f(&crate::host::state().inlay_requests.asked)
-}
-
-fn with_next<R>(f: impl FnOnce(&Cell<u64>) -> R) -> R {
-    f(&crate::host::state().inlay_requests.next)
-}
-
-fn with_shown<R>(f: impl FnOnce(&RefCell<HashMap<crate::EditorSerial, Revision>>) -> R) -> R {
-    f(&crate::host::state().inlay_requests.shown)
 }
 
 fn chosen() -> (bool, Vec<String>) {
@@ -77,8 +65,9 @@ pub fn enabled_for(language: &str) -> bool {
 /// The settings changed elsewhere, as in the settings window: every editor follows them.
 pub(crate) fn settings_changed() {
     CHOSEN.with(|chosen| chosen.borrow_mut().take());
+    let state = editor::state();
     for view in editor::all_editors() {
-        request(&*view);
+        request_in(&state, &*view);
     }
 }
 
@@ -146,11 +135,16 @@ pub fn validate(view: &dyn Editor, item: &NSMenuItem) -> Option<bool> {
 
 /// Asks the server of `view` for the hints of the lines on screen, or takes them away where they are off.
 pub fn request(view: &dyn Editor) {
+    request_in(&editor::state(), view);
+}
+
+/// Asks for the hints of the lines on screen, as `request` does, with the crate's `state` at hand.
+pub(crate) fn request_in(state: &LspState, view: &dyn Editor) {
     if !shows(view) {
         view.clear_inlay_hints();
         return;
     }
-    let Some((server, uri)) = server_of(view) else {
+    let Some((server, uri)) = server_of(state, view) else {
         return;
     };
     let visible = view.visible_utf16();
@@ -164,11 +158,9 @@ pub fn request(view: &dyn Editor) {
     };
     let serial = view.lsp().borrow().serial;
     let revision = view.document().revision();
-    let asked = with_next(|next| {
-        next.set(next.get() + 1);
-        next.get()
-    });
-    with_asked(|all| all.borrow_mut().insert(serial, asked));
+    let asked = state.inlay_requests.next.get() + 1;
+    state.inlay_requests.next.set(asked);
+    state.inlay_requests.asked.borrow_mut().insert(serial, asked);
     let sent = server.inlay_hints(&uri, range, move |answer| {
         main_soon(move || arrived(serial, revision, asked, visible, answer));
     });
@@ -185,9 +177,9 @@ pub(crate) fn scrolled(view: &dyn Editor) {
 }
 
 /// The server's hints of `view` may have changed everywhere: the next answer replaces them all.
-pub(crate) fn forget(view: &dyn Editor) {
+pub(crate) fn forget(requests: &InlayRequests, view: &dyn Editor) {
     let serial = view.lsp().borrow().serial;
-    with_shown(|shown| shown.borrow_mut().remove(&serial));
+    requests.shown.borrow_mut().remove(&serial);
 }
 
 fn arrived(
@@ -197,11 +189,12 @@ fn arrived(
     lines: std::ops::Range<usize>,
     answer: Result<Vec<InlayHint>, ide_lsp::Error>,
 ) {
-    if with_asked(|all| all.borrow().get(&serial).copied()) != Some(asked) {
+    let state = crate::host::state();
+    if state.inlay_requests.asked.borrow().get(&serial).copied() != Some(asked) {
         return;
     }
     let Some(view) = editor::find_editor(serial) else {
-        with_asked(|all| all.borrow_mut().remove(&serial));
+        state.inlay_requests.asked.borrow_mut().remove(&serial);
         return;
     };
     match answer {
@@ -210,7 +203,7 @@ fn arrived(
                 let document = view.document();
                 hints.into_iter().map(|hint| hint_of(document.text(), hint)).collect()
             };
-            let same = with_shown(|shown| shown.borrow_mut().insert(serial, revision)) == Some(revision);
+            let same = state.inlay_requests.shown.borrow_mut().insert(serial, revision) == Some(revision);
             view.set_inlay_hints(hints, same.then_some(lines));
         }
         Ok(_) => view.later(sel!(ideInlayHints), SCROLL_DELAY),

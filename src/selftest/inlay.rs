@@ -355,7 +355,7 @@ fn switches() {
         format!("{on:?}, {language:?}"),
     );
     ide_ui_lsp::inlay::toggle();
-    crate::settings::show(mtm);
+    crate::settings::show(&crate::context::app(), mtm);
     let settings = crate::settings::editor_switches();
     let off = menu_state(&view, objc2::sel!(ideToggleInlayHints:));
     check(
@@ -368,7 +368,7 @@ fn switches() {
     );
     ide_ui_lsp::inlay::toggle();
     ide_ui_lsp::inlay::toggle_language("Rust");
-    crate::settings::show(mtm);
+    crate::settings::show(&crate::context::app(), mtm);
     let settings = crate::settings::editor_switches();
     let language = menu_state(&view, objc2::sel!(ideToggleInlayHintsLanguage:));
     check(

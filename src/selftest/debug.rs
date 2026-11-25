@@ -51,7 +51,7 @@ pub(crate) fn script(root: &Path) -> ide_dap::fake::Script {
 pub(super) fn run() {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let root = project("debug-project");
-    crate::app::open_project(mtm, root.clone());
+    crate::app::open_project(&crate::context::app(), mtm, root.clone());
     super::helpers::wait_for_window(&root.clone(), move |_| focus(root));
 }
 

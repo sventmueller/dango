@@ -9,7 +9,11 @@ use std::time::Duration;
 pub(crate) fn saved_now(path: &Path) -> bool {
     let all = Rc::new(Cell::new(None));
     let heard = Rc::clone(&all);
-    super::saved(path, Box::new(move |done| heard.set(Some(done))));
+    super::saved(
+        &crate::context::app(),
+        path,
+        Box::new(move |done| heard.set(Some(done))),
+    );
     crate::editor::run_until(|| all.get().is_some(), Duration::from_secs(10));
     all.get() == Some(true)
 }

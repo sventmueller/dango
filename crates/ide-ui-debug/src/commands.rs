@@ -116,7 +116,7 @@ fn validate(item: &NSMenuItem) -> bool {
         return panel.can(command);
     }
     if action == sel!(ideDebugMenuBreakpoint:) {
-        return caret_line().is_some_and(|(window, _, _)| panel::of(&window).is_some());
+        return caret_line().is_some() && panel.is_some();
     }
     if action == sel!(ideDebugMenuConsole:) {
         return panel.is_some_and(|p| p.has_console());

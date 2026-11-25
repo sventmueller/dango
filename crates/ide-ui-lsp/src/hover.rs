@@ -92,7 +92,7 @@ pub fn mouse_moved(view: &dyn Editor, event: &NSEvent) {
     if leave {
         dismiss(view);
     }
-    if server_of(view).is_some() || view.debugger().is_paused() {
+    if server_of(&editor::state(), view).is_some() || view.debugger().is_paused() {
         view.later(sel!(ideHoverRest), REST);
     }
 }
@@ -120,8 +120,11 @@ pub fn hover_at_cursor(view: &dyn Editor) {
     ask(view, index);
 }
 
+/// Asks the server of `view` about the symbol at UTF-16 offset `index`; its answer shows in a popover.
 fn ask(view: &dyn Editor, index: usize) {
-    let Some((server, uri)) = server_of(view) else { return };
+    let Some((server, uri)) = server_of(&editor::state(), view) else {
+        return;
+    };
     let Some(position) = text::position(view.document().text(), index) else {
         return;
     };

@@ -27,10 +27,6 @@ pub(crate) struct Comparisons {
     shown: RefCell<Vec<(String, Weak<NSTextView>)>>,
 }
 
-fn with_shown<R>(f: impl FnOnce(&RefCell<Vec<(String, Weak<NSTextView>)>>) -> R) -> R {
-    f(&crate::context::app().editor().comparisons.shown)
-}
-
 /// Shows the differences between `disk`, the file's version, and `buffer`, the editor's text, in a tab of
 /// `controller`, the one it showed before for `path` if there is one.
 pub(crate) fn show(controller: &WindowController, path: &Path, disk: &str, buffer: &str) {
@@ -59,11 +55,11 @@ pub(crate) fn show(controller: &WindowController, path: &Path, disk: &str, buffe
     if let Some(storage) = unsafe { text_view.textStorage() } {
         storage.setAttributedString(&styled(&merge::compare(disk, buffer, CONTEXT)));
     }
-    with_shown(|shown| {
-        let mut shown = shown.borrow_mut();
+    {
+        let mut shown = controller.context().editor().comparisons.shown.borrow_mut();
         shown.retain(|(k, view)| *k != key && view.load().is_some());
         shown.push((key.clone(), Weak::from(&*text_view)));
-    });
+    }
     let title = tf("{} (Platte ↔ Editor)", &[&name]);
     controller.add_tab(TabKind::Diff, Some(key), &title, scroll.into_super());
 }

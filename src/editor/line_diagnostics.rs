@@ -27,6 +27,15 @@ impl Shown {
     pub(crate) fn forget(&self) {
         self.0.set(None);
     }
+
+    /// Whether editors show diagnostics at the end of their lines, read from the settings on first use.
+    fn get(&self) -> bool {
+        self.0.get().unwrap_or_else(|| {
+            let value = Settings::load_user().get(&keys::DIAGNOSTICS_AT_LINE_END);
+            self.0.set(Some(value));
+            value
+        })
+    }
 }
 
 /// The lines of an editor edited lately, with when.
@@ -40,35 +49,30 @@ fn context() -> Option<std::rc::Rc<crate::context::AppContext>> {
 /// Whether editors show diagnostics at the end of their lines.
 pub(crate) fn shown() -> bool {
     let Some(cx) = context() else { return false };
-    let cell = &cx.editor().line_diagnostics.0;
-    cell.get().unwrap_or_else(|| {
-        let value = Settings::load_user().get(&keys::DIAGNOSTICS_AT_LINE_END);
-        cell.set(Some(value));
-        value
-    })
+    cx.editor().line_diagnostics.get()
 }
 
 /// Turns diagnostics at the line's end on or off in every editor and remembers the choice.
 pub(crate) fn toggle() {
-    let value = !shown();
-    if let Some(cx) = context() {
-        cx.editor().line_diagnostics.0.set(Some(value));
-    }
+    let cx = crate::context::app();
+    let shown = &cx.editor().line_diagnostics;
+    let value = !shown.get();
+    shown.0.set(Some(value));
     let mut settings = Settings::load_user();
     if let Err(error) = settings.set(&keys::DIAGNOSTICS_AT_LINE_END, &value) {
         crate::diag::report("saving the setting of diagnostics at the line's end", error);
     }
-    for view in super::open_editors() {
+    for view in cx.editors().live() {
         refresh(&view);
     }
 }
 
 /// Whether `item` is the menu item of diagnostics at the line's end, which then gets its check mark.
-pub(crate) fn validate(item: &NSMenuItem) -> Option<bool> {
+pub(crate) fn validate(cx: &crate::context::AppContext, item: &NSMenuItem) -> Option<bool> {
     if item.action() != Some(objc2::sel!(ideToggleDiagnosticsAtLineEnd:)) {
         return None;
     }
-    item.setState(if shown() {
+    item.setState(if cx.editor().line_diagnostics.get() {
         objc2_app_kit::NSControlStateValueOn
     } else {
         objc2_app_kit::NSControlStateValueOff

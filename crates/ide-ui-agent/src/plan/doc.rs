@@ -18,7 +18,7 @@ use super::super::{style, ui};
 use super::{PLAN_IN_DOC, PLAN_REJECT, PLAN_REVISE, PlanNote, locate};
 use crate::AgentKey;
 use ide_ui_common::util::{activate, guarded, main_soon, ns, pin_inset};
-use ide_ui_common::window::{AsWindow, TabDecor, TabKind, Tabs, Window};
+use ide_ui_common::window::{TabDecor, TabKind, Tabs, Window};
 
 /// The width of the comments' column.
 const COLUMN: f64 = 320.0;
@@ -48,10 +48,8 @@ define_class!(
                 }
                 let (agent, entry) = (self.ivars().agent, self.ivars().entry);
                 main_soon(move || {
-                    with_docs(|docs| {
-                        docs.borrow_mut()
-                            .retain(|d| !(d.agent == agent && d.entry == entry && d.root.window().is_none()));
-                    });
+                    (crate::host::state().plan.docs.docs.borrow_mut())
+                        .retain(|d| !(d.agent == agent && d.entry == entry && d.root.window().is_none()));
                 });
             });
         }
@@ -77,17 +75,11 @@ pub(super) struct PlanDocs {
     docs: RefCell<Vec<Rc<PlanDoc>>>,
 }
 
-fn with_docs<R>(f: impl FnOnce(&RefCell<Vec<Rc<PlanDoc>>>) -> R) -> R {
-    f(&crate::host::state().plan.docs.docs)
-}
-
-fn doc(agent: AgentKey, entry: u64) -> Option<Rc<PlanDoc>> {
-    with_docs(|docs| {
-        docs.borrow()
-            .iter()
-            .find(|d| d.agent == agent && d.entry == entry)
-            .cloned()
-    })
+/// The document of plan `entry` of the AI tab `agent` among the open `docs`.
+fn doc(docs: &PlanDocs, agent: AgentKey, entry: u64) -> Option<Rc<PlanDoc>> {
+    (docs.docs.borrow().iter())
+        .find(|d| d.agent == agent && d.entry == entry)
+        .cloned()
 }
 
 /// The text of `view`.
@@ -357,27 +349,27 @@ fn tab_key(agent: AgentKey, id: u64) -> String {
     format!("plan:{}:{id}", agent.get())
 }
 
-/// Closes the document tabs of the AI tab `agent`, which closed, as their answers would go nowhere.
-pub(crate) fn close_all(controller: &(impl AsWindow + ?Sized), agent: AgentKey) {
-    let controller = &controller.as_window();
-    for id in open_entries(agent) {
+/// Closes the document tabs of the AI tab `agent` among those `state` holds, which closed, as their answers would go
+/// nowhere.
+pub(crate) fn close_all(state: &crate::State, controller: &Window, agent: AgentKey) {
+    for id in open_entries(&state.plan.docs, agent) {
         if let Some(tab) = controller.tab_with_key(&tab_key(agent, id)) {
             controller.close_tab(tab);
         }
     }
 }
 
-/// Opens plan `id` of `tab` as a document in a tab of its own, or selects the one already open.
-pub(super) fn open(tab: &AgentTab, id: u64) {
+/// Opens plan `id` of `tab` as a document in a tab of its own among the open `docs`, or selects the one already open.
+pub(super) fn open(docs: &PlanDocs, tab: &AgentTab, id: u64) {
     let (Some(controller), Some(plan)) = (tab.controller(), tab.plan_of(id)) else {
         return;
     };
     let key = tab_key(tab.key, id);
     if controller.select_tab(&key) {
-        return focus(&controller, tab.key, id);
+        return focus(docs, &controller, tab.key, id);
     }
     let doc = PlanDoc::build(tab, id, &plan.plan);
-    with_docs(|docs| docs.borrow_mut().push(doc.clone()));
+    docs.docs.borrow_mut().push(doc.clone());
     doc.show(tab, &plan, &tab.plan_notes(id));
     let view: Retained<NSView> = Retained::into_super(doc.root.clone());
     let title = tf("Plan · {}", &[&super::super::format::first_line(&tab.title(), 32)]);
@@ -388,46 +380,39 @@ pub(super) fn open(tab: &AgentTab, id: u64) {
     if let Some(colors) = tab.agent.four_colours() {
         controller.set_tab_four_colours(tab_id, colors);
     }
-    focus(&controller, tab.key, id);
+    focus(docs, &controller, tab.key, id);
 }
 
-/// Puts the keyboard focus on the plan, where the keyboard marks passages to comment on.
-fn focus(controller: &Window, agent: AgentKey, id: u64) {
-    if let (Some(window), Some(text)) = (controller.window(), text_of(agent, id)) {
+/// Puts the keyboard focus on the plan among the open `docs`, where the keyboard marks passages to comment on.
+fn focus(docs: &PlanDocs, controller: &Window, agent: AgentKey, id: u64) {
+    if let (Some(window), Some(text)) = (controller.window(), text_in(docs, agent, id)) {
         window.makeFirstResponder(Some(&text));
     }
 }
 
-/// Shows plan `id`'s document, if it is open, as `plan` and `notes` now are.
-pub(super) fn show(tab: &AgentTab, id: u64, plan: &PlanApproval, notes: &[PlanNote]) {
-    if let Some(doc) = doc(tab.key, id) {
+/// Shows plan `id`'s document, if it is among the open `docs`, as `plan` and `notes` now are.
+pub(super) fn show(docs: &PlanDocs, tab: &AgentTab, id: u64, plan: &PlanApproval, notes: &[PlanNote]) {
+    if let Some(doc) = doc(docs, tab.key, id) {
         doc.show(tab, plan, notes);
     }
 }
 
-/// The plans of the AI tab `agent` that are open as documents.
-pub(super) fn open_entries(agent: AgentKey) -> Vec<u64> {
-    with_docs(|docs| {
-        docs.borrow()
-            .iter()
-            .filter(|d| d.agent == agent)
-            .map(|d| d.entry)
-            .collect()
-    })
+/// The plans of the AI tab `agent` that are open as documents among `docs`.
+pub(super) fn open_entries(docs: &PlanDocs, agent: AgentKey) -> Vec<u64> {
+    (docs.docs.borrow().iter())
+        .filter(|d| d.agent == agent)
+        .map(|d| d.entry)
+        .collect()
 }
 
-/// The text view of plan `id`'s document.
-#[cfg_attr(
-    not(feature = "selftest"),
-    expect(unreachable_pub, reason = "the self-test re-exports it")
-)]
-pub fn text_of(agent: AgentKey, id: u64) -> Option<Retained<NSTextView>> {
-    doc(agent, id).map(|d| d.text.clone())
+/// The text view of plan `id`'s document among the open `docs`.
+pub(super) fn text_in(docs: &PlanDocs, agent: AgentKey, id: u64) -> Option<Retained<NSTextView>> {
+    doc(docs, agent, id).map(|d| d.text.clone())
 }
 
-/// Selects the passage of `note` in plan `id`'s document and points at it.
-pub(super) fn reveal(agent: AgentKey, id: u64, note: &PlanNote) {
-    let Some(doc) = doc(agent, id) else { return };
+/// Selects the passage of `note` in plan `id`'s document among the open `docs` and points at it.
+pub(super) fn reveal(docs: &PlanDocs, agent: AgentKey, id: u64, note: &PlanNote) {
+    let Some(doc) = doc(docs, agent, id) else { return };
     let units: Vec<u16> = doc.text.string().to_string().encode_utf16().collect();
     if let Some((at, length)) = locate(&units, note) {
         let range = NSRange::new(at, length);

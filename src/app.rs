@@ -67,12 +67,12 @@ define_class!(
                         }
                     });
                 });
-                crate::settings_sync::launched(mtm);
+                let cx = self.context();
+                crate::settings_sync::launched(&cx, mtm);
                 let settings = ide_core::settings::Settings::load_user();
                 ide_ui_agent::set_text_size(settings.get(&ide_ui_agent::CHAT_FONT_SIZE));
                 ide_ui_common::ui_size::set(settings.get(&ide_core::settings::keys::INTERFACE_FONT_SIZE));
-                open_initial_windows(mtm);
-                let cx = self.context();
+                open_initial_windows(&cx, mtm);
                 cx.early_opens().launched.set(true);
                 let early = std::mem::take(&mut *cx.early_opens().paths.borrow_mut());
                 open_paths(&cx, mtm, early);
@@ -92,7 +92,7 @@ define_class!(
                 if !crate::quit::agents_may_stop(&cx, self.mtm()) {
                     return NSApplicationTerminateReply::TerminateCancel;
                 }
-                match crate::editor::confirm_quit(self.mtm(), &quit_again(&cx)) {
+                match crate::editor::confirm_quit(&cx, self.mtm(), &quit_again(&cx)) {
                     Answer::Yes => quit(&cx),
                     Answer::No => NSApplicationTerminateReply::TerminateCancel,
                     Answer::Later => NSApplicationTerminateReply::TerminateLater,
@@ -104,7 +104,7 @@ define_class!(
         fn should_reopen(&self, _app: &NSApplication, visible: bool) -> bool {
             guarded(true, || {
                 if !visible {
-                    WindowController::open(self.mtm(), None);
+                    WindowController::open(&self.context(), self.mtm(), None);
                 }
                 true
             })
@@ -168,13 +168,13 @@ define_class!(
 
         #[unsafe(method(ideOpenFolder:))]
         fn open_folder(&self, _sender: Option<&AnyObject>) {
-            guarded((), || ask_for_folder(self.mtm()));
+            guarded((), || ask_for_folder(&self.context(), self.mtm()));
         }
 
         #[unsafe(method(ideNewWindow:))]
         fn new_window(&self, _sender: Option<&AnyObject>) {
             guarded((), || {
-                WindowController::open(self.mtm(), None);
+                WindowController::open(&self.context(), self.mtm(), None);
             });
         }
 
@@ -185,7 +185,7 @@ define_class!(
                 let Some(path) = item.representedObject().and_then(|o| o.downcast::<NSString>().ok()) else {
                     return;
                 };
-                open_project(self.mtm(), PathBuf::from(path.to_string()));
+                open_project(&self.context(), self.mtm(), PathBuf::from(path.to_string()));
             });
         }
 
@@ -203,7 +203,7 @@ define_class!(
 
         #[unsafe(method(ideShowSettings:))]
         fn show_settings(&self, _sender: Option<&AnyObject>) {
-            guarded((), || crate::settings::show(self.mtm()));
+            guarded((), || crate::settings::show(&self.context(), self.mtm()));
         }
     }
 );
@@ -232,9 +232,9 @@ impl AppDelegate {
 
 /// The windows of the last run with their tabs, if the user wants them back, and what a crash left unsaved; else one
 /// empty window.
-fn open_initial_windows(mtm: MainThreadMarker) {
-    if crate::session::restore(mtm) == 0 {
-        WindowController::open(mtm, None);
+fn open_initial_windows(cx: &Rc<AppContext>, mtm: MainThreadMarker) {
+    if crate::session::restore(cx, mtm) == 0 {
+        WindowController::open(cx, mtm, None);
     }
 }
 
@@ -261,10 +261,10 @@ fn quit_again(cx: &Rc<AppContext>) -> crate::editor::Again {
     Rc::new(move |written| {
         let Some(mtm) = MainThreadMarker::new() else { return };
         if !written {
-            crate::editor::keep_copies();
+            crate::editor::keep_copies(&cx);
             return reply_to_quit(false);
         }
-        match crate::editor::confirm_quit(mtm, &quit_again(&cx)) {
+        match crate::editor::confirm_quit(&cx, mtm, &quit_again(&cx)) {
             Answer::Yes => {
                 if quit(&cx) == NSApplicationTerminateReply::TerminateNow {
                     reply_to_quit(true);
@@ -333,33 +333,38 @@ impl Quit {
     }
 }
 
-fn remember_open_projects(cx: &crate::context::AppContext) {
-    let open: Vec<PathBuf> = window::open_projects();
+fn remember_open_projects(cx: &AppContext) {
+    let open: Vec<PathBuf> = window::open_projects(cx);
     let _ = State::load_user().set(&remembered::OPEN_PROJECTS, &open);
     crate::session::remember(cx);
-    crate::session::quitting();
+    crate::session::quitting(cx);
     // Hands the changes the agent panel holds back to the disk lane, which the quit's thread waits for.
     ide_ui_agent::agent_panel::wait_for_writes(Duration::ZERO);
 }
 
 /// Shows `folder` in its window if one has it open, else in place of the folder of the window in front (E56), else in
 /// an empty window or a new one.
-pub(crate) fn open_project(mtm: MainThreadMarker, folder: PathBuf) {
-    open_project_from(mtm, folder, window::frontmost(mtm));
+pub(crate) fn open_project(cx: &Rc<AppContext>, mtm: MainThreadMarker, folder: PathBuf) {
+    open_project_from(cx, mtm, folder, window::frontmost(mtm));
 }
 
 /// `open_project` with `target` in place of the window in front, such as the window whose welcome tab was clicked.
-pub(crate) fn open_project_from(mtm: MainThreadMarker, folder: PathBuf, target: Option<Retained<WindowController>>) {
+pub(crate) fn open_project_from(
+    cx: &Rc<AppContext>,
+    mtm: MainThreadMarker,
+    folder: PathBuf,
+    target: Option<Retained<WindowController>>,
+) {
     if !folder.is_dir() {
         return;
     }
     let folder = folder.canonicalize().unwrap_or(folder);
     let _ = State::load_user().note_recent(&folder);
-    let shown = window::open_projects().contains(&folder);
+    let shown = window::open_projects(cx).contains(&folder);
     match target {
         Some(target) if !shown && target.project().is_some() => target.open_in_place(folder),
         _ => {
-            WindowController::open(mtm, Some(folder));
+            WindowController::open(cx, mtm, Some(folder));
         }
     }
 }
@@ -373,20 +378,20 @@ pub(crate) struct EarlyOpens {
 
 /// Opens `paths` handed to the app: a file where its folder shows or in a window of its own, the first folder in place
 /// of the one in front and the others in windows of their own.
-fn open_paths(cx: &AppContext, mtm: MainThreadMarker, paths: Vec<PathBuf>) {
+fn open_paths(cx: &Rc<AppContext>, mtm: MainThreadMarker, paths: Vec<PathBuf>) {
     let mut target = window::frontmost(mtm);
     for path in paths {
         if path.is_file() {
             open_file_from(cx, mtm, &path);
         } else {
-            open_project_from(mtm, path, target.take());
+            open_project_from(cx, mtm, path, target.take());
         }
     }
 }
 
 /// Opens the file `file` handed to the app, as by Finder or `open`: in the window whose folder holds it, else in a new
 /// window of its repository or, outside one, of its folder.
-fn open_file_from(cx: &AppContext, mtm: MainThreadMarker, file: &std::path::Path) {
+fn open_file_from(cx: &Rc<AppContext>, mtm: MainThreadMarker, file: &std::path::Path) {
     let file = file.canonicalize().unwrap_or_else(|_| file.to_path_buf());
     let shown = cx
         .windows()
@@ -399,7 +404,7 @@ fn open_file_from(cx: &AppContext, mtm: MainThreadMarker, file: &std::path::Path
             .or_else(|| file.parent().map(std::path::Path::to_path_buf))
             .unwrap_or_else(|| home.clone());
         let _ = State::load_user().note_recent(&folder);
-        WindowController::open(mtm, Some(folder))
+        WindowController::open(cx, mtm, Some(folder))
     });
     controller.open_file(&file);
     controller.bring_to_front();
@@ -411,7 +416,8 @@ fn open_file_from(cx: &AppContext, mtm: MainThreadMarker, file: &std::path::Path
     });
 }
 
-fn ask_for_folder(mtm: MainThreadMarker) {
+/// Lets the user pick a folder in an open panel and opens it.
+fn ask_for_folder(cx: &Rc<AppContext>, mtm: MainThreadMarker) {
     let panel = NSOpenPanel::openPanel(mtm);
     panel.setCanChooseDirectories(true);
     panel.setCanChooseFiles(false);
@@ -421,7 +427,7 @@ fn ask_for_folder(mtm: MainThreadMarker) {
         return;
     }
     if let Some(path) = panel.URL().and_then(|url| url.path()) {
-        open_project(mtm, PathBuf::from(path.to_string()));
+        open_project(cx, mtm, PathBuf::from(path.to_string()));
     }
 }
 

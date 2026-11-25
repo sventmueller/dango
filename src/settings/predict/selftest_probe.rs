@@ -8,7 +8,7 @@ use super::*;
 
 /// What the tab shows, for the self-test: the provider's title, the Copilot line and the consent line.
 pub(crate) fn shown() -> Option<(String, String, String, bool)> {
-    let this = with_shown(|shown| shown.borrow().clone())?;
+    let this = crate::context::app().settings().prediction.shown.borrow().clone()?;
     let views = this.ivars().views.get()?;
     Some((
         views.provider.titleOfSelectedItem()?.to_string(),
@@ -31,7 +31,7 @@ pub(crate) struct LocalShown {
 
 /// What the tab shows of the local server, for the self-test.
 pub(crate) fn local_shown() -> Option<LocalShown> {
-    let this = with_shown(|shown| shown.borrow().clone())?;
+    let this = crate::context::app().settings().prediction.shown.borrow().clone()?;
     let views = this.ivars().views.get()?;
     let offered = (0..views.model.numberOfItems())
         .filter_map(|index| {

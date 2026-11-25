@@ -21,7 +21,7 @@ use super::attrs::{Attribute, add_attribute};
 pub use super::cards::request::{PLAN_IN_CARD, PLAN_IN_DOC, PLAN_REJECT, PLAN_REVISE};
 use super::tab::AgentTab;
 use super::{style, ui};
-use ide_ui_common::window::AsWindow;
+use ide_ui_common::window::{AsWindow, Window};
 
 /// The longest passage a comment quotes back to the agent, in characters.
 const MAX_QUOTE: usize = 400;
@@ -40,16 +40,11 @@ pub(crate) struct PlanNotes {
     last_note: std::cell::Cell<u64>,
 }
 
-fn with_last_note<R>(f: impl FnOnce(&std::cell::Cell<u64>) -> R) -> R {
-    f(&crate::host::state().plan.notes.last_note)
-}
-
-/// A new comment's id, which its controls carry as their tag.
-fn next_note() -> u64 {
-    with_last_note(|last| {
-        last.set(last.get() + 1);
-        last.get()
-    })
+/// A new comment's id after the last one `notes` gave, which its controls carry as their tag.
+fn next_note(notes: &PlanNotes) -> u64 {
+    let last = &notes.last_note;
+    last.set(last.get() + 1);
+    last.get()
 }
 
 /// A comment on a passage of the plan, or on the whole plan when it quotes nothing.
@@ -252,14 +247,19 @@ impl AgentTab {
 
     /// Opens plan `id` as a document in a tab of its own, or selects the one already open.
     pub fn open_plan(&self, id: u64) {
-        doc::open(self, id);
+        doc::open(&crate::host::state().plan.docs, self, id);
     }
 
     /// Asks for a comment on what is marked in plan `id`'s card or document (`place`), or on the whole plan when
     /// nothing is.
     pub fn plan_comment(&self, id: u64, place: u8) {
+        self.plan_comment_in(&crate::host::state(), id, place);
+    }
+
+    /// `plan_comment` with the plans' documents and question `state` holds.
+    fn plan_comment_in(&self, state: &crate::State, id: u64, place: u8) {
         let text = match place {
-            PLAN_IN_DOC => doc::text_of(self.key, id),
+            PLAN_IN_DOC => doc::text_in(&state.plan.docs, self.key, id),
             PLAN_IN_CARD => self.timeline().inputs().borrow().plan_text.get(&id).cloned(),
             _ => None,
         };
@@ -271,11 +271,11 @@ impl AgentTab {
             if !quote.trim().is_empty() {
                 let rect = rect_of(&text, selected);
                 let asking = self.asking(id, None, selected.location, quote, "");
-                return ask::open(self.mtm, self.key, asking, &text, rect);
+                return ask::open(&state.plan.ask, self.mtm, self.key, asking, &text, rect);
             }
         }
         let asking = self.asking(id, None, 0, String::new(), "");
-        ask::open(self.mtm, self.key, asking, &text, text.visibleRect());
+        ask::open(&state.plan.ask, self.mtm, self.key, asking, &text, text.visibleRect());
     }
 
     /// What the comment popover on plan `id` asks: comment `note` or a new one on `quote` at `location`.
@@ -313,21 +313,25 @@ impl AgentTab {
             return;
         };
         let asking = self.asking(id, Some(note.id), note.location, note.quote, &note.comment);
-        ask::open(self.mtm, self.key, asking, anchor, anchor.bounds());
+        let state = crate::host::state();
+        ask::open(&state.plan.ask, self.mtm, self.key, asking, anchor, anchor.bounds());
     }
 
     /// Takes what was typed into the comment popover of plan `id`.
     pub fn plan_commit(&self, id: u64) {
-        let Some(asked) = ask::take(self.key, id) else { return };
+        let state = crate::host::state();
+        let Some(asked) = ask::take(&state.plan.ask, self.key, id) else {
+            return;
+        };
         match asked.note {
-            Some(note) => self.edit_plan_note(note, &asked.comment),
-            None => self.add_plan_note(id, asked.location, &asked.quote, &asked.comment),
+            Some(note) => self.edit_plan_note(&state, note, &asked.comment),
+            None => self.add_plan_note(&state, id, asked.location, &asked.quote, &asked.comment),
         }
     }
 
     /// Comments `comment` on the passage `quote` at `location` of plan `id`, or on the whole plan when `quote` is
-    /// empty.
-    pub(crate) fn add_plan_note(&self, id: u64, location: usize, quote: &str, comment: &str) {
+    /// empty; `state` holds the plans' documents and gives the comment its id.
+    fn add_plan_note(&self, state: &crate::State, id: u64, location: usize, quote: &str, comment: &str) {
         if comment.trim().is_empty() || self.plan_of(id).is_none() {
             return;
         }
@@ -336,20 +340,20 @@ impl AgentTab {
             let mut inputs = inputs.borrow_mut();
             let notes = inputs.plan_notes.entry(id).or_default();
             notes.push(PlanNote {
-                id: next_note(),
+                id: next_note(&state.plan.notes),
                 location,
                 quote: quote.to_string(),
                 comment: comment.trim().to_string(),
             });
             sort(notes);
         }
-        self.plan_changed(id);
+        self.plan_changed(state, id);
     }
 
-    /// Gives the comment `note` the text `comment`; an empty one removes it.
-    pub(crate) fn edit_plan_note(&self, note: u64, comment: &str) {
+    /// Gives the comment `note` the text `comment`; an empty one removes it. `state` holds the plans' documents.
+    fn edit_plan_note(&self, state: &crate::State, note: u64, comment: &str) {
         if comment.trim().is_empty() {
-            return self.plan_remove_note(note);
+            return self.plan_remove_note_in(state, note);
         }
         let Some((id, _)) = self.find_note(note) else { return };
         if let Some(found) = self
@@ -362,22 +366,27 @@ impl AgentTab {
         {
             found.comment = comment.trim().to_string();
         }
-        self.plan_changed(id);
+        self.plan_changed(state, id);
     }
 
     /// Deletes the comment `note` from its plan.
     pub fn plan_remove_note(&self, note: u64) {
+        self.plan_remove_note_in(&crate::host::state(), note);
+    }
+
+    /// `plan_remove_note` with the plans' documents `state` holds.
+    fn plan_remove_note_in(&self, state: &crate::State, note: u64) {
         let Some((id, _)) = self.find_note(note) else { return };
         if let Some(notes) = self.timeline().inputs().borrow_mut().plan_notes.get_mut(&id) {
             notes.retain(|n| n.id != note);
         }
-        self.plan_changed(id);
+        self.plan_changed(state, id);
     }
 
-    /// Selects and shows the passage of the comment `note` in its plan's document.
-    pub(crate) fn plan_show_note(&self, note: u64) {
+    /// Selects and shows the passage of the comment `note` in its plan's document among those `state` holds.
+    pub(crate) fn plan_show_note(&self, state: &crate::State, note: u64) {
         if let Some((id, note)) = self.find_note(note) {
-            doc::reveal(self.key, id, &note);
+            doc::reveal(&state.plan.docs, self.key, id, &note);
         }
     }
 
@@ -387,19 +396,20 @@ impl AgentTab {
         feedback(&self.plan_notes(id), general.as_deref())
     }
 
-    /// Shows plan `id`'s comments again in its card and its document.
-    fn plan_changed(&self, id: u64) {
+    /// Shows plan `id`'s comments again in its card and its document among those `state` holds.
+    fn plan_changed(&self, state: &crate::State, id: u64) {
         self.timeline().reload_entry(id);
         if let Some(plan) = self.plan_of(id) {
-            doc::show(self, id, &plan, &self.plan_notes(id));
+            doc::show(&state.plan.docs, self, id, &plan, &self.plan_notes(id));
         }
     }
 
-    /// Brings the open plan documents of this tab up to date with the thread.
-    pub(super) fn refresh_plan_docs(&self) {
-        for id in doc::open_entries(self.key) {
+    /// Brings the open plan documents of this tab among those `state` holds up to date with the thread.
+    pub(super) fn refresh_plan_docs(&self, state: &crate::State) {
+        let docs = &state.plan.docs;
+        for id in doc::open_entries(docs, self.key) {
             if let Some(plan) = self.plan_of(id) {
-                doc::show(self, id, &plan, &self.plan_notes(id));
+                doc::show(docs, self, id, &plan, &self.plan_notes(id));
             }
         }
     }
@@ -408,17 +418,22 @@ impl AgentTab {
 /// The plan a comment from the keyboard goes to, and where: the plan whose text has the keyboard focus, in its card
 /// or its document, else the latest plan that waits in the AI tab with the focus.
 pub fn keyboard_target(controller: &(impl AsWindow + ?Sized)) -> Option<(Rc<AgentTab>, u64, u8)> {
-    let controller = &controller.as_window();
+    keyboard_target_in(&crate::host::state(), &controller.as_window())
+}
+
+/// `keyboard_target` among the AI tabs and plan documents `state` holds.
+fn keyboard_target_in(state: &crate::State, controller: &Window) -> Option<(Rc<AgentTab>, u64, u8)> {
     let focus = controller.window()?.firstResponder()?.downcast::<NSView>().ok()?;
     let is_focus = |text: &NSTextView| {
         let view: &NSView = text;
         std::ptr::eq(view, &*focus)
     };
-    let tabs = crate::of_window(controller);
+    let docs = &state.plan.docs;
+    let tabs = state.tabs_of(controller);
     for tab in &tabs {
-        if let Some(id) = doc::open_entries(tab.key)
+        if let Some(id) = doc::open_entries(docs, tab.key)
             .into_iter()
-            .find(|id| doc::text_of(tab.key, *id).is_some_and(|text| is_focus(&text)))
+            .find(|id| doc::text_in(docs, tab.key, *id).is_some_and(|text| is_focus(&text)))
         {
             return Some((tab.clone(), id, PLAN_IN_DOC));
         }
@@ -448,9 +463,9 @@ pub fn keyboard_target(controller: &(impl AsWindow + ?Sized)) -> Option<(Rc<Agen
 
 /// Asks for a comment on what is marked in the plan the keyboard is at, as the plan's "Kommentieren" does.
 pub fn comment_from_keyboard(controller: &(impl AsWindow + ?Sized)) {
-    let controller = &controller.as_window();
-    if let Some((tab, id, place)) = keyboard_target(controller) {
-        tab.plan_comment(id, place);
+    let state = crate::host::state();
+    if let Some((tab, id, place)) = keyboard_target_in(&state, &controller.as_window()) {
+        tab.plan_comment_in(&state, id, place);
     }
 }
 

@@ -32,6 +32,7 @@ pub(crate) use text::problem;
 pub(crate) use work::run as on_lane;
 pub(crate) use work::{CI_HOSTS, use_secrets};
 
+use crate::context::AppContext;
 use crate::window::WindowController;
 
 /// Puts the CI panel of the window's folder in place.
@@ -53,7 +54,7 @@ pub(crate) fn shown(controller: &WindowController) {
 
 /// Something changed below `root`; the panel reads again when HEAD moved.
 pub(crate) fn changed(root: &Path) {
-    for panel in panel::for_root(root) {
+    for panel in crate::context::app().ci_panels().panels.for_root(root) {
         panel.changed();
     }
 }
@@ -68,14 +69,14 @@ pub(crate) fn window_closed(controller: &WindowController) {
 
 /// The user changed the CI settings, so every panel reads again.
 pub(crate) fn settings_changed() {
-    for panel in panel::all() {
+    for panel in crate::context::app().ci_panels().panels.live() {
         panel.refresh(true);
     }
 }
 
 /// The user trusts `root` now, so the panel may talk to its service.
-pub(crate) fn trust_changed(root: &Path) {
-    for panel in panel::for_root(root) {
+pub(crate) fn trust_changed(cx: &AppContext, root: &Path) {
+    for panel in cx.ci_panels().panels.for_root(root) {
         panel.refresh(true);
     }
 }

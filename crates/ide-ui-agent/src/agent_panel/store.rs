@@ -62,10 +62,6 @@ pub(super) struct Store {
     again: RefCell<HashSet<PathBuf>>,
 }
 
-fn store<R>(f: impl FnOnce(&Store) -> R) -> R {
-    super::with_state(|state| f(&state.store))
-}
-
 /// Records `entry` of a thread, on a subscription or not, with the title the user gave it.
 pub(crate) fn record(entry: IndexEntry, subscription: bool, title: Option<String>) {
     change(Change::Record {
@@ -97,47 +93,47 @@ pub(crate) fn remove(id: &ThreadId) {
 
 /// Whether the user bookmarked the thread `id`, as far as the bookmarks were read; they are read on first asking.
 pub fn is_bookmarked(id: &ThreadId) -> bool {
-    let known = store(|s| s.bookmarks.borrow().as_ref().map(|marks| marks.contains(id.as_str())));
+    is_bookmarked_in(&crate::host::state(), id)
+}
+
+/// `is_bookmarked` with the bookmarks `state` keeps.
+pub(crate) fn is_bookmarked_in(state: &crate::State, id: &ThreadId) -> bool {
+    let known = (state.agent_panels.store.bookmarks.borrow().as_ref()).map(|marks| marks.contains(id.as_str()));
     known.unwrap_or_else(|| {
-        read_bookmarks();
+        read_bookmarks(state);
         false
     })
 }
 
-/// Reads the bookmarks on the disk lane unless they were read.
-pub(super) fn read_bookmarks() {
-    let unread = store(|s| {
-        s.bookmarks.borrow().is_none() && !s.waiting.borrow().iter().any(|c| matches!(c, Change::ReadBookmarks))
-    });
+/// Reads the bookmarks `state` keeps on the disk lane unless they were read.
+pub(super) fn read_bookmarks(state: &crate::State) {
+    let s = &state.agent_panels.store;
+    let unread =
+        s.bookmarks.borrow().is_none() && !s.waiting.borrow().iter().any(|c| matches!(c, Change::ReadBookmarks));
     if unread {
-        change(Change::ReadBookmarks);
+        change_in(state, Change::ReadBookmarks);
     }
 }
 
-/// Bookmarks the thread `id` or takes the bookmark away.
-pub(crate) fn set_bookmarked(id: &ThreadId, on: bool) {
-    store(|s| {
-        if let Some(marks) = s.bookmarks.borrow_mut().as_mut() {
-            if on {
-                marks.insert(id.as_str().to_string());
-            } else {
-                marks.remove(id.as_str());
-            }
+/// Bookmarks the thread `id` among the bookmarks `state` keeps or takes the bookmark away.
+pub(crate) fn set_bookmarked(state: &crate::State, id: &ThreadId, on: bool) {
+    if let Some(marks) = state.agent_panels.store.bookmarks.borrow_mut().as_mut() {
+        if on {
+            marks.insert(id.as_str().to_string());
+        } else {
+            marks.remove(id.as_str());
         }
-    });
-    change(Change::Bookmark(id.clone(), on));
+    }
+    change_in(state, Change::Bookmark(id.clone(), on));
 }
 
-/// The sessions of `cwd` that can be resumed, newest first, as read last; reads them again in the background.
-pub(crate) fn past_sessions_cached(cwd: &Path, limit: usize) -> Vec<(Resume, SystemTime)> {
-    read_past(cwd);
-    store(|s| {
-        s.past
-            .borrow()
-            .get(cwd)
-            .map(|past| past.iter().take(limit).cloned().collect())
-            .unwrap_or_default()
-    })
+/// The sessions of `cwd` that can be resumed, newest first, as `state` read them last; reads them again in the
+/// background.
+pub(crate) fn past_sessions_cached(state: &crate::State, cwd: &Path, limit: usize) -> Vec<(Resume, SystemTime)> {
+    read_past(state, cwd);
+    (state.agent_panels.store.past.borrow().get(cwd))
+        .map(|past| past.iter().take(limit).cloned().collect())
+        .unwrap_or_default()
 }
 
 /// The session `session` of the folder `root` and the agent that ran it: the agent its thread names, else Claude, whose
@@ -161,52 +157,54 @@ pub(crate) fn agent_id_of(index: &ThreadIndex, resume: &Resume) -> String {
         .unwrap_or_else(|| ide_claude::AGENT.to_string())
 }
 
-/// Reads the past sessions of `cwd` in the background, or once more after the reading under way.
-pub(crate) fn read_past(cwd: &Path) {
-    let busy = store(|s| {
-        if s.reading.borrow().contains(cwd) {
-            s.again.borrow_mut().insert(cwd.to_path_buf());
-            return true;
-        }
-        s.reading.borrow_mut().insert(cwd.to_path_buf());
-        false
-    });
-    if busy {
+/// Reads the past sessions of `cwd` into `state` in the background, or once more after the reading under way.
+pub(crate) fn read_past(state: &crate::State, cwd: &Path) {
+    let s = &state.agent_panels.store;
+    if s.reading.borrow().contains(cwd) {
+        s.again.borrow_mut().insert(cwd.to_path_buf());
         return;
     }
+    s.reading.borrow_mut().insert(cwd.to_path_buf());
     let folder = cwd.to_path_buf();
     let read = move || {
         let past = super::past_sessions(&folder, KEPT);
         main_soon(move || {
-            let again = store(|s| {
-                s.reading.borrow_mut().remove(&folder);
-                s.past.borrow_mut().insert(folder.clone(), past);
-                s.again.borrow_mut().remove(&folder)
-            });
+            let state = crate::host::state();
+            let s = &state.agent_panels.store;
+            s.reading.borrow_mut().remove(&folder);
+            s.past.borrow_mut().insert(folder.clone(), past);
+            let again = s.again.borrow_mut().remove(&folder);
             if again {
-                read_past(&folder);
+                read_past(&state, &folder);
             }
         });
     };
     if ide_ui_common::util::spawn("agent-past", read).is_err() {
-        store(|s| s.reading.borrow_mut().remove(cwd));
+        s.reading.borrow_mut().remove(cwd);
     }
 }
 
 /// Waits until the changes made so far are on disk, or `limit` passed, as the app quits.
 pub fn wait_for_writes(limit: Duration) {
-    store(|s| s.writing.set(false));
-    send();
-    let unwritten = store(|s| s.unwritten.clone());
+    let state = crate::host::state();
+    state.agent_panels.store.writing.set(false);
+    send(&state);
+    let unwritten = state.agent_panels.store.unwritten.clone();
     let until = Instant::now() + limit;
     while unwritten.load(Ordering::SeqCst) > 0 && Instant::now() < until {
         std::thread::sleep(Duration::from_millis(2));
     }
 }
 
+/// Adds `change` to those waiting to be written and sends them.
 fn change(change: Change) {
-    store(|s| {
-        let mut waiting = s.waiting.borrow_mut();
+    change_in(&crate::host::state(), change);
+}
+
+/// `change` with the changes `state` waits to write.
+fn change_in(state: &crate::State, change: Change) {
+    {
+        let mut waiting = state.agent_panels.store.waiting.borrow_mut();
         let replaces = match &change {
             Change::Record { entry, .. } => waiting
                 .iter()
@@ -218,22 +216,20 @@ fn change(change: Change) {
             Some(n) => waiting[n] = change,
             None => waiting.push(change),
         }
-    });
-    send();
+    }
+    send(state);
 }
 
-/// Sends the waiting changes to the disk lane unless a batch is being written, which sends them once it is done.
-fn send() {
-    let Some((changes, unwritten)) = store(|s| {
-        if s.writing.get() || s.waiting.borrow().is_empty() {
-            return None;
-        }
-        s.writing.set(true);
-        s.unwritten.fetch_add(1, Ordering::SeqCst);
-        Some((std::mem::take(&mut *s.waiting.borrow_mut()), s.unwritten.clone()))
-    }) else {
+/// Sends the changes `state` waits to write to the disk lane unless a batch is being written, which sends them once
+/// it is done.
+fn send(state: &crate::State) {
+    let s = &state.agent_panels.store;
+    if s.writing.get() || s.waiting.borrow().is_empty() {
         return;
-    };
+    }
+    s.writing.set(true);
+    s.unwritten.fetch_add(1, Ordering::SeqCst);
+    let (changes, unwritten) = (std::mem::take(&mut *s.waiting.borrow_mut()), s.unwritten.clone());
     // The lane drops a job it has no room for, so the changes stay reachable to write them here then.
     let job = Arc::new(Mutex::new(Some(changes)));
     let queued = job.clone();
@@ -242,37 +238,37 @@ fn send() {
         let changes = queued.lock_ignoring_poison().take().unwrap_or_default();
         let marks = ide_core::lane::contained(|| apply(changes)).flatten();
         counted.fetch_sub(1, Ordering::SeqCst);
-        main_soon(move || written(marks));
+        main_soon(move || written(&crate::host::state(), marks));
     });
     if sent.is_err() {
         let changes = job.lock_ignoring_poison().take().unwrap_or_default();
         let marks = apply(changes);
         unwritten.fetch_sub(1, Ordering::SeqCst);
-        written(marks);
+        written(state, marks);
     }
 }
 
-/// Takes in a written batch and the bookmarks it read: the panels and the folders' sessions are read again.
-fn written(marks: Option<BTreeSet<String>>) {
-    let (first, folders) = store(|s| {
-        s.writing.set(false);
-        let mut first = false;
-        let marked_since = s.waiting.borrow().iter().any(|c| matches!(c, Change::Bookmark(..)));
-        if let Some(marks) = marks.filter(|_| !marked_since) {
-            first = s.bookmarks.replace(Some(marks)).is_none();
-        }
-        (first, s.past.borrow().keys().cloned().collect::<Vec<_>>())
-    });
+/// Takes in a written batch and the bookmarks it read: the panels and the folders' sessions `state` keeps are read
+/// again.
+fn written(state: &crate::State, marks: Option<BTreeSet<String>>) {
+    let s = &state.agent_panels.store;
+    s.writing.set(false);
+    let mut first = false;
+    let marked_since = s.waiting.borrow().iter().any(|c| matches!(c, Change::Bookmark(..)));
+    if let Some(marks) = marks.filter(|_| !marked_since) {
+        first = s.bookmarks.replace(Some(marks)).is_none();
+    }
+    let folders: Vec<PathBuf> = s.past.borrow().keys().cloned().collect();
     if first {
-        for tab in crate::all() {
-            tab.bookmarks_read();
+        for tab in state.tabs() {
+            tab.bookmarks_read(state);
         }
     }
-    super::reload_all();
+    super::reload_all(state);
     for folder in folders {
-        read_past(&folder);
+        read_past(state, &folder);
     }
-    send();
+    send(state);
 }
 
 /// Writes `changes` in their order; the bookmarks after them, if any of them read or wrote those.

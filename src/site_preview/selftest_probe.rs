@@ -4,7 +4,7 @@ use super::*;
 
 /// The running servers' folders, for the self-test.
 pub(crate) fn running(mtm: MainThreadMarker) -> Vec<(PathBuf, String, String)> {
-    previews(mtm)
+    AppContext::get(mtm)
         .site_previews()
         .sites
         .borrow()

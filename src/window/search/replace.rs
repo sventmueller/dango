@@ -58,8 +58,10 @@ impl Explain for Failure {
     }
 }
 
-/// Replaces in `files` the matches of `options` with `with`; `done` runs on the main thread once every file is done.
+/// Replaces in `files` the matches of `options` with `with`, in the editors of `cx` where one shows a file; `done` runs
+/// on the main thread once every file is done.
 pub(super) fn replace(
+    cx: &crate::context::AppContext,
     files: Vec<PathBuf>,
     options: SearchOptions,
     with: String,
@@ -68,7 +70,7 @@ pub(super) fn replace(
 ) {
     let mut result = Done::default();
     let mut closed = Vec::new();
-    let editors = open_editors();
+    let editors = with_files(cx.editors().live());
     for path in files {
         match editor_of(&editors, &path) {
             Some(view) => result.count(&path, in_editor(view, &options, &with, &only)),
@@ -91,9 +93,10 @@ pub(super) fn replace(
     }
 }
 
-/// The open editors of files, each with the resolved path of its file, read once for all the files of a replacement.
-fn open_editors() -> Vec<(PathBuf, Retained<EditorTextView>)> {
-    crate::editor::all_editors()
+/// The editors of files among `editors`, each with the resolved path of its file, read once for all the files of a
+/// replacement.
+fn with_files(editors: Vec<Retained<EditorTextView>>) -> Vec<(PathBuf, Retained<EditorTextView>)> {
+    editors
         .into_iter()
         .filter_map(|view| {
             let path = view

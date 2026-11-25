@@ -118,23 +118,6 @@ pub fn agent_diagnostics(root: &Path) -> Arc<dyn ide_agent::Diagnostics> {
     below(&crate::host::state().lsp_diagnostics, root)
 }
 
-/// The diagnostics the servers of the running app published.
-fn shared() -> Arc<AgentDiagnostics> {
-    crate::host::state().lsp_diagnostics.clone()
-}
-
-pub(super) fn started(root: &Path, language: Language) {
-    shared().started(root, language);
-}
-
-pub(super) fn stopped(root: &Path, language: &Language) {
-    shared().stopped(root, language);
-}
-
-pub(super) fn publish(path: &Path, diagnostics: &[Diagnostic]) {
-    shared().publish(path, diagnostics);
-}
-
 #[cfg(test)]
 mod tests {
     use ide_lsp::lsp_types::{Position, Range};

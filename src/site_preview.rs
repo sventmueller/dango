@@ -29,10 +29,6 @@ pub(crate) struct SitePreviews {
     sweeping: Cell<bool>,
 }
 
-fn previews(mtm: MainThreadMarker) -> std::rc::Rc<AppContext> {
-    AppContext::get(mtm)
-}
-
 /// A live preview as the layout keeps it, which opens again with a server on a new port.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub(crate) struct KeptSite {
@@ -74,13 +70,13 @@ pub(crate) fn open(controller: &WindowController, page: &Path) {
             .map_or_else(|| t("Browser").to_string(), |name| name.to_string_lossy().into_owned());
         let page = page.to_path_buf();
         ide_ui_browser::open_restored_page(mtm, window, &title, &waiting_url(&page), move |load| {
-            if let Some((url, port, secret)) = serve(mtm, &root, &page) {
+            if let Some((url, port, secret)) = serve(&AppContext::get(mtm), &root, &page) {
                 with_cookie(mtm, port, &secret, move || load(&url));
             }
         });
         return;
     }
-    let Some((url, port, secret)) = serve(mtm, &root, page) else {
+    let Some((url, port, secret)) = serve(controller.context(), &root, page) else {
         return;
     };
     with_cookie(mtm, port, &secret, move || {
@@ -89,8 +85,7 @@ pub(crate) fn open(controller: &WindowController, page: &Path) {
 }
 
 /// The address of `page` on the server of `root`, which starts unless it runs, and the server's port and secret.
-fn serve(mtm: MainThreadMarker, root: &Path, page: &Path) -> Option<(String, u16, String)> {
-    let cx = previews(mtm);
+fn serve(cx: &AppContext, root: &Path, page: &Path) -> Option<(String, u16, String)> {
     let started = {
         let mut sites = cx.site_previews().sites.borrow_mut();
         match sites
@@ -119,7 +114,7 @@ fn serve(mtm: MainThreadMarker, root: &Path, page: &Path) -> Option<(String, u16
         let site = &sites[index];
         (site.url_of(page), site.port(), site.secret().to_string())
     };
-    sweep_later(mtm);
+    sweep_later(cx);
     Some((url?, port, secret))
 }
 
@@ -131,12 +126,11 @@ fn with_cookie(mtm: MainThreadMarker, port: u16, secret: &str, then: impl FnOnce
 }
 
 /// The page file a preview tab at `url` shows, for opening it again after a restart.
-pub(crate) fn page_of(mtm: MainThreadMarker, url: &str) -> Option<PathBuf> {
+pub(crate) fn page_of(cx: &AppContext, url: &str) -> Option<PathBuf> {
     if let Some(page) = waiting_page(url) {
         return Some(page);
     }
-    previews(mtm)
-        .site_previews()
+    cx.site_previews()
         .sites
         .borrow()
         .iter()
@@ -153,7 +147,7 @@ fn waiting_page(url: &str) -> Option<PathBuf> {
 
 /// Files below `root` changed on disk: the previews of that folder reload once they rest.
 pub(crate) fn files_changed(mtm: MainThreadMarker, root: &Path, files: &[PathBuf]) {
-    let cx = previews(mtm);
+    let cx = AppContext::get(mtm);
     let origins: Vec<String> = {
         let sites = cx.site_previews().sites.borrow();
         if sites.is_empty() {
@@ -182,10 +176,11 @@ pub(crate) fn files_changed(mtm: MainThreadMarker, root: &Path, files: &[PathBuf
     cx.site_previews().changes.set(generation);
     crate::util::main_after(QUIET, move || {
         let Some(mtm) = MainThreadMarker::new() else { return };
-        if previews(mtm).site_previews().changes.get() != generation {
+        let cx = AppContext::get(mtm);
+        if cx.site_previews().changes.get() != generation {
             return;
         }
-        for controller in previews(mtm).windows().all() {
+        for controller in cx.windows().all() {
             for origin in &origins {
                 ide_ui_browser::reload_matching(controller.id(), origin);
             }
@@ -194,16 +189,15 @@ pub(crate) fn files_changed(mtm: MainThreadMarker, root: &Path, files: &[PathBuf
 }
 
 /// Ends the servers whose pages no tab shows, and looks again later while any runs.
-fn sweep_later(mtm: MainThreadMarker) {
-    let cx = previews(mtm);
+fn sweep_later(cx: &AppContext) {
     if cx.site_previews().sweeping.replace(true) {
         return;
     }
     crate::util::main_after(SWEEP, || {
         let Some(mtm) = MainThreadMarker::new() else { return };
-        let cx = previews(mtm);
+        let cx = AppContext::get(mtm);
         cx.site_previews().sweeping.set(false);
-        let shown: Vec<String> = previews(mtm)
+        let shown: Vec<String> = cx
             .windows()
             .all()
             .iter()
@@ -214,7 +208,7 @@ fn sweep_later(mtm: MainThreadMarker) {
             .borrow_mut()
             .retain(|site| shown.iter().any(|url| url.starts_with(&site.origin())));
         if !cx.site_previews().sites.borrow().is_empty() {
-            sweep_later(mtm);
+            sweep_later(&cx);
         }
     });
 }

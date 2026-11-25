@@ -110,7 +110,7 @@ pub(crate) fn run() {
         return give_up_saying(
             SCENARIO,
             "the repository opens in a window",
-            format!("{:?}", window::open_projects()),
+            format!("{:?}", window::open_projects(&crate::context::app())),
         );
     };
     menus(mtm);

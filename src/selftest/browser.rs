@@ -287,7 +287,7 @@ fn browser_project_file() {
     let Ok(root) = made else {
         return give_up("browser", "the folder is made");
     };
-    crate::app::open_project(mtm, root.clone());
+    crate::app::open_project(&crate::context::app(), mtm, root.clone());
     helpers::wait_for_window(&root.clone(), move |controller| {
         let Some(controller) = controller else {
             return give_up("browser", "the folder gets its window");

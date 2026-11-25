@@ -644,7 +644,9 @@ impl AgentSettings {
         self.set_status(Some(&tf("Lade die Modelle von {} …", &[&endpoint.name])), false);
         let name = endpoint.name.clone();
         own_agent::load_models(endpoint, move |result| {
-            let Some(this) = super::agent_tab_now() else { return };
+            let Some(this) = super::agent_tab_now(&crate::context::app()) else {
+                return;
+            };
             match result {
                 Ok(models) => {
                     if let Some(views) = this.ivars().views.get() {
@@ -697,7 +699,7 @@ impl AgentSettings {
 
 /// The tab's view.
 impl AgentSettings {
-    pub(crate) fn view(&self) -> Retained<NSView> {
+    pub(crate) fn view(&self, cx: &crate::context::AppContext) -> Retained<NSView> {
         let mtm = self.mtm();
         let (endpoints, endpoints_scroll) = form::table(
             mtm,
@@ -765,7 +767,7 @@ impl AgentSettings {
             t("Mit eingeschalteter Sandbox erreichen die Datei- und Webwerkzeuge des eigenen Agenten nur das Projekt, den temporären Ordner und diese Ordner; Befehle schreiben nirgends sonst hin, und es gibt kein Netzwerk. Gilt für Threads, die danach starten."),
         ));
         views.extend([folders_scroll, list_bar::bar(mtm, &[&add_folder, &remove_folder], &[])]);
-        views.extend(super::commit_message::views(mtm));
+        views.extend(super::commit_message::views(cx, mtm));
         let _ = self.ivars().views.set(Views {
             endpoints,
             prices,

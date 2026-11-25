@@ -7,10 +7,12 @@
 use super::*;
 use ide_lsp::Event;
 
+/// What the server of slot `id` of the window of `folder` reported, taken in on the main thread.
 pub(super) fn event_arrived(folder: &Path, id: u64, event: Event) {
-    let Some(slot) = slot(folder, id) else { return };
+    let state = host::state();
+    let Some(slot) = slot(&state, folder, id) else { return };
     match event {
-        Event::Diagnostics { uri, diagnostics, .. } => diagnostics_arrived(folder, id, &uri, &diagnostics),
+        Event::Diagnostics { uri, diagnostics, .. } => diagnostics_arrived(&state, folder, id, &uri, &diagnostics),
         #[cfg(feature = "selftest")]
         Event::Log { message, .. } if std::env::var_os("IDE_SELFTEST_SERVER_LOG").is_some() => {
             eprintln!("server log [{}]: {message}", slot.language.name());
@@ -20,12 +22,12 @@ pub(super) fn event_arrived(folder: &Path, id: u64, event: Event) {
             ide_ui_common::diag::report("language server notice", &method);
             *slot.message.borrow_mut() = Some(text);
             for view in views_of(folder, id) {
-                status::refresh(&*view);
+                status::refresh_in(&state, &*view);
             }
         }
         Event::Status(Status::Running) => {
             for view in views_of(folder, id) {
-                refresh(&*view);
+                refresh_in(&state, &*view);
             }
         }
         Event::Progress { token, progress } => {
@@ -63,13 +65,13 @@ pub(super) fn event_arrived(folder: &Path, id: u64, event: Event) {
         }
         Event::Refresh(Refresh::SemanticTokens | Refresh::Diagnostics) => {
             for view in views_of(folder, id) {
-                refresh(&*view);
+                refresh_in(&state, &*view);
             }
         }
         Event::Refresh(Refresh::InlayHints) => {
             for view in views_of(folder, id) {
-                inlay::forget(&*view);
-                inlay::request(&*view);
+                inlay::forget(&state.inlay_requests, &*view);
+                inlay::request_in(&state, &*view);
             }
         }
         Event::ApplyEdit { edit, reply, .. } => edits::apply_workspace_edit(folder, &edit, move |applied| {
@@ -100,13 +102,15 @@ pub(super) fn event_arrived(folder: &Path, id: u64, event: Event) {
         }
         Event::Status(_) | Event::Log { .. } | Event::CapabilitiesChanged | Event::Refresh(_) => {}
     }
-    refresh_slot(folder, id);
+    refresh_slot(&state, folder, id);
 }
 
-fn diagnostics_arrived(folder: &Path, source: u64, uri: &Uri, diagnostics: &[Diagnostic]) {
+/// The server of slot `source` of the window of `folder` published `diagnostics` for `uri`: the own agent keeps them in
+/// `state`, and the editors of the file show them.
+fn diagnostics_arrived(state: &LspState, folder: &Path, source: u64, uri: &Uri, diagnostics: &[Diagnostic]) {
     let _interval = ide_process::signpost::begin(ide_process::signpost::name!("diagnostics"));
     let Some(path) = uri::to_path(uri) else { return };
-    agent::publish(&path, diagnostics);
+    state.lsp_diagnostics.publish(&path, diagnostics);
     for view in super::host::all_editors() {
         if view.document().path() == Some(&path) && view.project_root().as_deref() == Some(folder) {
             decorate::set_diagnostics_from(&*view, source, diagnostics);

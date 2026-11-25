@@ -119,7 +119,8 @@ pub fn start(
     window: Option<&NSWindow>,
     done: impl FnOnce(Outcome) + 'static,
 ) -> u64 {
-    let number = state().next.replace(state().next.get() + 1);
+    let state = state();
+    let number = next_number(&state);
     let what = match kind {
         Kind::Pdf => tf("„{}“ wird als PDF exportiert …", &[&source.title]),
         Kind::Html => tf("„{}“ wird als HTML exportiert …", &[&source.title]),
@@ -141,7 +142,7 @@ pub fn start(
     });
     let viewer: Rc<dyn Viewer> = Rc::new(Drawing(Rc::downgrade(&run)));
     let _ = run.viewer.set(viewer.clone());
-    with_runs(|runs| runs.borrow_mut().push(run));
+    state.runs.borrow_mut().push(run);
     if keys.iter().all(drawn) {
         main_soon(move || go(number));
         return number;
@@ -157,7 +158,7 @@ pub fn start(
 
 /// Stops the export `number`: what it built so far is dropped and no file is written.
 pub fn cancel(number: u64) {
-    let Some(run) = take(number) else { return };
+    let Some(run) = take(&state(), number) else { return };
     run.cancelled.store(true, Ordering::SeqCst);
     if let Some(sheet) = run.sheet.borrow_mut().take() {
         sheet.close();
@@ -168,12 +169,11 @@ pub fn cancel(number: u64) {
 /// The button of the sheet of the export `number`: it cancels a running export and closes a failed one's sheet.
 fn sheet_button(number: u64, failed: bool) {
     if failed {
-        with_failed(|failed| {
-            let mut failed = failed.borrow_mut();
-            if let Some(at) = failed.iter().position(|(n, _)| *n == number) {
-                failed.remove(at).1.close();
-            }
-        });
+        let state = state();
+        let mut failed = state.failed.borrow_mut();
+        if let Some(at) = failed.iter().position(|(n, _)| *n == number) {
+            failed.remove(at).1.close();
+        }
     } else {
         cancel(number);
     }
@@ -216,12 +216,9 @@ impl Default for State {
     }
 }
 
-fn with_runs<R>(f: impl FnOnce(&RefCell<Vec<Rc<Run>>>) -> R) -> R {
-    f(&state().runs)
-}
-
-fn with_failed<R>(f: impl FnOnce(&RefCell<Vec<(u64, Sheet)>>) -> R) -> R {
-    f(&state().failed)
+/// The number of a new export of `state`, counting on from the last.
+fn next_number(state: &State) -> u64 {
+    state.next.replace(state.next.get() + 1)
 }
 
 /// Who hears how an export ended.
@@ -256,27 +253,28 @@ impl Run {
     }
 }
 
-fn find(number: u64) -> Option<Rc<Run>> {
-    with_runs(|runs| runs.borrow().iter().find(|run| run.number == number).cloned())
+/// The export `number` of `state`, while it runs.
+fn find(state: &State, number: u64) -> Option<Rc<Run>> {
+    state.runs.borrow().iter().find(|run| run.number == number).cloned()
 }
 
-fn take(number: u64) -> Option<Rc<Run>> {
-    with_runs(|runs| {
-        let mut runs = runs.borrow_mut();
-        let at = runs.iter().position(|run| run.number == number)?;
-        Some(runs.remove(at))
-    })
+/// The export `number` of `state`, which no longer runs from then on.
+fn take(state: &State, number: u64) -> Option<Rc<Run>> {
+    let mut runs = state.runs.borrow_mut();
+    let at = runs.iter().position(|run| run.number == number)?;
+    Some(runs.remove(at))
 }
 
 /// The export `number` ended as `outcome`, if it still runs.
 fn finish(number: u64, outcome: Outcome) {
-    let Some(run) = take(number) else { return };
+    let state = state();
+    let Some(run) = take(&state, number) else { return };
     let sheet = run.sheet.borrow_mut().take();
     if let Some(sheet) = sheet {
         match &outcome {
             Outcome::Failed(reason) => {
                 sheet.failed(reason);
-                with_failed(|failed| failed.borrow_mut().push((number, sheet)));
+                state.failed.borrow_mut().push((number, sheet));
             }
             _ => sheet.close(),
         }
@@ -286,7 +284,7 @@ fn finish(number: u64, outcome: Outcome) {
 
 /// Starts building the file of the export `number`, once.
 fn go(number: u64) {
-    let Some(run) = find(number) else { return };
+    let Some(run) = find(&state(), number) else { return };
     if run.started.replace(true) {
         return;
     }
@@ -483,26 +481,28 @@ fn word(job: &Job) -> Result<Vec<u8>, Explained> {
 pub mod seen {
     /// Whether the export `number` still runs.
     pub fn running(number: u64) -> bool {
-        super::find(number).is_some()
+        super::find(&super::state(), number).is_some()
     }
 
     /// What the sheet of the export `number` says, while it runs or after it failed.
     pub fn sheet_text(number: u64) -> Option<String> {
-        if let Some(text) = super::find(number).and_then(|run| run.sheet.borrow().as_ref().map(super::Sheet::text)) {
+        let state = super::state();
+        if let Some(text) =
+            super::find(&state, number).and_then(|run| run.sheet.borrow().as_ref().map(super::Sheet::text))
+        {
             return Some(text);
         }
-        super::with_failed(|failed| {
-            failed
-                .borrow()
-                .iter()
-                .find(|(n, _)| *n == number)
-                .map(|(_, sheet)| sheet.text())
-        })
+        state
+            .failed
+            .borrow()
+            .iter()
+            .find(|(n, _)| *n == number)
+            .map(|(_, sheet)| sheet.text())
     }
 
     /// Presses the button of the sheet of the export `number`.
     pub fn press_sheet_button(number: u64) {
-        let failed = super::with_failed(|failed| failed.borrow().iter().any(|(n, _)| *n == number));
+        let failed = super::state().failed.borrow().iter().any(|(n, _)| *n == number);
         super::sheet_button(number, failed);
     }
 }

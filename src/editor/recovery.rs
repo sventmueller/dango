@@ -10,6 +10,7 @@ use ide_document::recovery::{Debounce, Recovery, RecoveryId};
 use objc2::DefinedClass;
 
 use super::view::EditorTextView;
+use crate::context::AppContext;
 use crate::util::main_after;
 
 /// Writes the copies into the app's own data folder, apart from the disk lane, where a volume that stopped answering
@@ -37,51 +38,48 @@ impl Default for RecoveryCopies {
     }
 }
 
-fn with_due<R>(f: impl FnOnce(&RefCell<Debounce>) -> R) -> R {
-    f(&crate::context::app().editor().recovery_copies.due)
-}
-
-/// The view's text changed; its copy is written once the change is due.
-pub(crate) fn changed(view: &EditorTextView) {
+/// The text of `view`, an editor of `cx`, changed; its copy is written once the change is due.
+pub(crate) fn changed(cx: &AppContext, view: &EditorTextView) {
     let now = Instant::now();
-    with_due(|due| due.borrow_mut().changed(&view.ivars().file.recovery, now));
-    arm();
+    let copies = &cx.editor().recovery_copies;
+    copies.due.borrow_mut().changed(&view.ivars().file.recovery, now);
+    arm(copies);
 }
 
-fn arm() {
-    let Some(next) = with_due(|due| due.borrow().next_due()) else {
+fn arm(copies: &RecoveryCopies) {
+    let Some(next) = copies.due.borrow().next_due() else {
         return;
     };
-    let cx = crate::context::app();
-    let timer = &cx.editor().recovery_copies.timer;
-    if timer.get().is_some_and(|set| set <= next) {
+    if copies.timer.get().is_some_and(|set| set <= next) {
         return;
     }
-    timer.set(Some(next));
+    copies.timer.set(Some(next));
     main_after(next.saturating_duration_since(Instant::now()), fire);
 }
 
 fn fire() {
-    crate::context::app().editor().recovery_copies.timer.set(None);
-    let due = with_due(|due| due.borrow_mut().due(Instant::now()));
+    let cx = crate::context::app();
+    let copies = &cx.editor().recovery_copies;
+    copies.timer.set(None);
+    let due = copies.due.borrow_mut().due(Instant::now());
     if !due.is_empty() {
-        for view in super::open_editors() {
+        for view in cx.editors().live() {
             if due.contains(&view.ivars().file.recovery) {
-                store(&view);
+                store(&cx, &view);
             }
         }
     }
-    arm();
+    arm(copies);
 }
 
-/// Writes a copy of the view's text if it has unsaved changes, else drops the copy; the writing happens on the copies'
-/// lane, in the order asked for.
-pub(crate) fn store(view: &EditorTextView) {
+/// Writes a copy of the text of `view`, an editor of `cx`, if it has unsaved changes, else drops the copy; the writing
+/// happens on the copies' lane, in the order asked for.
+pub(crate) fn store(cx: &AppContext, view: &EditorTextView) {
     let id = view.ivars().file.recovery.clone();
     let document = view.document();
     if !document.is_dirty() {
         drop(document);
-        drop_copy(id);
+        drop_copy(&cx.editor().recovery_copies, id);
         return;
     }
     let snapshot = document.snapshot();
@@ -98,18 +96,19 @@ pub(crate) fn store(view: &EditorTextView) {
         }
     };
     if COPIES.try_run(job).is_err() {
-        with_due(|due| due.borrow_mut().changed(&id, Instant::now()));
-        arm();
+        let copies = &cx.editor().recovery_copies;
+        copies.due.borrow_mut().changed(&id, Instant::now());
+        arm(copies);
     }
 }
 
-/// Drops the copy of a view that was saved or closed.
-pub(crate) fn discard(view: &EditorTextView) {
-    drop_copy(view.ivars().file.recovery.clone());
+/// Drops the copy of `view`, an editor of `cx` that was saved or closed.
+pub(crate) fn discard(cx: &AppContext, view: &EditorTextView) {
+    drop_copy(&cx.editor().recovery_copies, view.ivars().file.recovery.clone());
 }
 
-fn drop_copy(id: RecoveryId) {
-    with_due(|due| due.borrow_mut().forget(&id));
+fn drop_copy(copies: &RecoveryCopies, id: RecoveryId) {
+    copies.due.borrow_mut().forget(&id);
     let job = {
         let id = id.clone();
         move || {
@@ -141,7 +140,7 @@ pub(crate) fn quit(cx: &crate::context::AppContext) -> QuitCopies {
         .map(|view| view.ivars().file.recovery.clone())
         .collect();
     for id in &ids {
-        drop_copy(id.clone());
+        drop_copy(&cx.editor().recovery_copies, id.clone());
     }
     let (done, finished) = mpsc::channel();
     let queued = COPIES.try_run(move || {

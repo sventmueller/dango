@@ -19,13 +19,16 @@ pub(crate) fn run() {
     crate::settings::show_servers(mtm);
     let count = isize::try_from(ide_lsp::BUILT_IN.len()).unwrap_or(0);
     wait_until(
-        move || crate::settings::servers_tab().is_some_and(|owner| tab::rows(&owner, false).1 == count),
+        move || {
+            crate::settings::servers_tab(&crate::context::app())
+                .is_some_and(|owner| tab::rows(&owner, false).1 == count)
+        },
         listed,
     );
 }
 
 fn listed(ok: bool) {
-    let Some(owner) = crate::settings::servers_tab() else {
+    let Some(owner) = crate::settings::servers_tab(&crate::context::app()) else {
         return give_up(NAME, "the settings show a language servers tab");
     };
     let (rows, _) = tab::rows(&owner, false);
@@ -44,7 +47,7 @@ fn listed(ok: bool) {
 }
 
 fn refuse() {
-    let Some(owner) = crate::settings::servers_tab() else {
+    let Some(owner) = crate::settings::servers_tab(&crate::context::app()) else {
         return give_up(NAME, "the settings show the servers page");
     };
     let answered = tab::answer_add(&owner, ["Elixir", "ex", "  "], NSAlertFirstButtonReturn);
@@ -59,7 +62,7 @@ fn refuse() {
 }
 
 fn add() {
-    let Some(owner) = crate::settings::servers_tab() else {
+    let Some(owner) = crate::settings::servers_tab(&crate::context::app()) else {
         return give_up(NAME, "the settings show the servers page");
     };
     let answered = tab::answer_add(
@@ -96,7 +99,7 @@ fn sheet_shown() -> bool {
 }
 
 fn shown_custom() -> isize {
-    crate::settings::servers_tab().map_or(-1, |owner| tab::rows(&owner, true).1)
+    crate::settings::servers_tab(&crate::context::app()).map_or(-1, |owner| tab::rows(&owner, true).1)
 }
 
 fn given_back() -> bool {

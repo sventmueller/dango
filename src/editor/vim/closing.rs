@@ -69,7 +69,7 @@ fn close(view: &EditorTextView, ask: bool) {
     if ask {
         controller.close_tab(tab);
     } else {
-        crate::editor::recovery::discard(view);
+        crate::editor::recovery::discard(controller.context(), view);
         controller.close_tab_now(tab);
     }
 }

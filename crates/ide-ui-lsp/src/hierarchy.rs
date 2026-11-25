@@ -93,8 +93,11 @@ pub fn type_hierarchy(view: &dyn Editor) {
     prepare(view, HierarchyKind::Types);
 }
 
+/// Asks the server of `view` for the hierarchy of `kind` around the symbol at the cursor; the search panel shows it.
 fn prepare(view: &dyn Editor, kind: HierarchyKind) {
-    let Some((server, uri)) = server_of(view) else { return };
+    let Some((server, uri)) = server_of(&editor::state(), view) else {
+        return;
+    };
     let Some(folder) = view.project_root() else {
         return;
     };

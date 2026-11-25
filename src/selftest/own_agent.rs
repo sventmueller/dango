@@ -303,7 +303,7 @@ fn plus_menu() {
 
 fn open(root: PathBuf) {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::app::open_project(mtm, root.clone());
+    crate::app::open_project(&crate::context::app(), mtm, root.clone());
     helpers::wait_for_window(&root.clone(), move |controller| {
         let Some(controller) = controller else {
             return give_up(NAME, "the folder's window is open");

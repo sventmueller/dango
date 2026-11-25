@@ -5,10 +5,15 @@ use std::path::Path;
 use std::rc::Rc;
 use std::time::Duration;
 
-use super::{Again, Answer, dirty_count, save_each, unsaved};
+use super::{Again, Answer, save_each, unsaved};
 
 /// How long a self-test waits for its saves.
 const SAVE_WAIT: Duration = Duration::from_secs(10);
+
+/// How many open editors have unsaved changes, those of gone files aside, which get a question of their own.
+pub(crate) fn dirty_count() -> usize {
+    unsaved(&crate::context::app()).len()
+}
 
 /// Saves every editor with unsaved changes, those of gone files aside, and waits for the writes; whether all of them
 /// were saved.
@@ -16,7 +21,7 @@ pub(crate) fn save_all() -> bool {
     let over = Rc::new(Cell::new(false));
     let heard = Rc::clone(&over);
     let then: Again = Rc::new(move |_| heard.set(true));
-    if save_each(unsaved(), then) == Answer::Later {
+    if save_each(unsaved(&crate::context::app()), then) == Answer::Later {
         crate::editor::saving::run_until(|| over.get(), SAVE_WAIT);
     }
     dirty_count() == 0

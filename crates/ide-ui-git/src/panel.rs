@@ -449,9 +449,10 @@ impl WindowPart for GitPanel {
 }
 
 impl GitPanel {
-    pub(super) fn new(mtm: MainThreadMarker, controller: &Window, root: PathBuf) -> Retained<GitPanel> {
+    /// The Git panel `id` of `controller`'s window for the folder `root`, with its views built.
+    pub(super) fn new(mtm: MainThreadMarker, controller: &Window, root: PathBuf, id: u64) -> Retained<GitPanel> {
         let ivars = PanelIvars {
-            id: crate::host::state().panels.next_id(),
+            id,
             controller: *controller,
             root,
             ui: OnceCell::new(),

@@ -12,6 +12,7 @@ use objc2_foundation::NSObjectProtocol;
 use splat_i18n::{t, tf};
 
 use super::form::{self, Row};
+use crate::context::AppContext;
 use crate::settings_sync::{self, Status};
 use crate::util::{guarded, ns, set_action};
 
@@ -37,8 +38,9 @@ define_class!(
                 let on = sender
                     .and_then(|s| s.downcast_ref::<NSButton>())
                     .is_some_and(|b| b.state() == NSControlStateValueOn);
-                settings_sync::set_enabled(self.mtm(), on);
-                self.reload();
+                let cx = crate::context::app();
+                settings_sync::set_enabled(&cx, self.mtm(), on);
+                self.reload(&cx);
             });
         }
 
@@ -57,10 +59,11 @@ define_class!(
                     return;
                 }
                 let picked = panel.URL().and_then(|url| url.path()).map(|p| p.to_string());
+                let cx = crate::context::app();
                 if let Some(picked) = picked {
-                    settings_sync::use_folder(mtm, std::path::Path::new(&picked));
+                    settings_sync::use_folder(&cx, mtm, std::path::Path::new(&picked));
                 }
-                self.reload();
+                self.reload(&cx);
             });
         }
     }
@@ -77,8 +80,7 @@ impl SyncSettings {
     }
 
     /// Shows the switch and the note as the sync is now.
-    fn reload(&self) {
-        let mtm = self.mtm();
+    fn reload(&self, cx: &AppContext) {
         let (Some(switch), Some(note)) = (self.ivars().switch.borrow().clone(), self.ivars().note.borrow().clone())
         else {
             return;
@@ -91,7 +93,7 @@ impl SyncSettings {
             NSControlStateValueOff
         });
         switch.setEnabled(available || on);
-        let (text, warn) = match settings_sync::status(mtm) {
+        let (text, warn) = match settings_sync::status(cx) {
             _ if !available => (t("iCloud Drive ist auf diesem Mac aus. Schalte es in den Systemeinstellungen ein, oder wähle einen Ordner.").to_string(), false),
             Status::Off => (String::new(), false),
             Status::NoICloud => (t("iCloud Drive ist auf diesem Mac aus.").to_string(), true),
@@ -110,7 +112,7 @@ impl SyncSettings {
 }
 
 /// The rows of the General tab for the settings sync; `keep` holds the object their controls send their actions to.
-pub(crate) fn rows(mtm: MainThreadMarker, keep: &RefCell<Option<Retained<NSObject>>>) -> Vec<Row> {
+pub(crate) fn rows(cx: &AppContext, mtm: MainThreadMarker, keep: &RefCell<Option<Retained<NSObject>>>) -> Vec<Row> {
     let target = SyncSettings::new(mtm);
     // SAFETY: The checkbox sends its action to the target, which answers it, set right below.
     let switch = unsafe {
@@ -128,7 +130,7 @@ pub(crate) fn rows(mtm: MainThreadMarker, keep: &RefCell<Option<Retained<NSObjec
     let note = form::value(mtm, "");
     *target.ivars().switch.borrow_mut() = Some(switch.clone());
     *target.ivars().note.borrow_mut() = Some(note.clone());
-    target.reload();
+    target.reload(cx);
     let line = form::line(mtm, &[&switch, &choose]);
     let rows = vec![Row::group(mtm, t("Abgleich:"), &line, &switch), Row::under(&note)];
     *keep.borrow_mut() = Some(Retained::into_super(target));

@@ -12,7 +12,8 @@ use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{NSAlertFirstButtonReturn, NSAlertSecondButtonReturn};
 use splat_i18n::{t, tf};
 
-use super::{EditorTextView, conflict, display_name, editor_of_tab, editors_in, open_editors, recovery, saving};
+use super::{EditorTextView, conflict, display_name, editor_of_tab, editors_in, recovery, saving};
+use crate::context::AppContext;
 use crate::window::{TabId, WindowController};
 
 #[cfg(feature = "selftest")]
@@ -42,7 +43,7 @@ pub(crate) fn tab_document(controller: &WindowController, id: TabId) -> Option<(
 pub(crate) fn store_copies(controller: &WindowController) {
     for view in editors_in(controller) {
         view.ivars().file.given_up.set(false);
-        recovery::store(&view);
+        recovery::store(controller.context(), &view);
     }
 }
 
@@ -55,11 +56,12 @@ pub(crate) fn may_close(controller: &WindowController, id: TabId, again: &Again)
     if view.ivars().file.given_up.get() {
         return Answer::Yes;
     }
+    let cx = controller.context();
     if conflict::is_gone(&view) {
-        return conflict::may_close(&view, again);
+        return conflict::may_close(cx, &view, again);
     }
     if !view.document().is_dirty() {
-        recovery::discard(&view);
+        recovery::discard(cx, &view);
         return Answer::Yes;
     }
     let name = view
@@ -75,7 +77,7 @@ pub(crate) fn may_close(controller: &WindowController, id: TabId, again: &Again)
     if response == NSAlertFirstButtonReturn {
         save_for(&view, again)
     } else if response == NSAlertSecondButtonReturn {
-        give_up(&view);
+        give_up(cx, &view);
         Answer::Yes
     } else {
         Answer::No
@@ -93,45 +95,46 @@ pub(super) fn save_for(view: &EditorTextView, again: &Again) -> Answer {
     Answer::Later
 }
 
-/// The user let the text of `view` go: a close that asks again once another editor saved lets it close at once.
-pub(super) fn give_up(view: &EditorTextView) {
-    recovery::discard(view);
+/// The user let the text of `view`, an editor of `cx`, go: a close that asks again once another editor saved lets it
+/// close at once.
+pub(super) fn give_up(cx: &AppContext, view: &EditorTextView) {
+    recovery::discard(cx, view);
     view.ivars().file.given_up.set(true);
 }
 
 /// Whether the app may quit: the user saved or gave up the text of each editor whose file is gone, one question each,
 /// then saved or dropped the other unsaved changes; `Later` while saves run, which `again` hears of. When the user
 /// cancels, every editor keeps its copy.
-pub(crate) fn confirm_quit(mtm: MainThreadMarker, again: &Again) -> Answer {
+pub(crate) fn confirm_quit(cx: &AppContext, mtm: MainThreadMarker, again: &Again) -> Answer {
     let mut answer = Answer::Yes;
-    for view in open_editors().iter().filter(|view| conflict::is_gone(view)) {
+    for view in cx.editors().live().iter().filter(|view| conflict::is_gone(view)) {
         if view.ivars().file.given_up.get() {
             continue;
         }
-        answer = conflict::may_close(view, again);
+        answer = conflict::may_close(cx, view, again);
         if answer != Answer::Yes {
             break;
         }
     }
     if answer == Answer::Yes {
-        answer = unsaved_may_go(mtm, again);
+        answer = unsaved_may_go(cx, mtm, again);
     }
     if answer == Answer::No {
-        keep_copies();
+        keep_copies(cx);
     }
     answer
 }
 
-/// Every editor keeps its copy and is asked again next time, as after a quit the user cancelled.
-pub(crate) fn keep_copies() {
-    for view in open_editors() {
+/// Every editor of `cx` keeps its copy and is asked again next time, as after a quit the user cancelled.
+pub(crate) fn keep_copies(cx: &AppContext) {
+    for view in cx.editors().live() {
         view.ivars().file.given_up.set(false);
-        recovery::store(&view);
+        recovery::store(cx, &view);
     }
 }
 
-fn unsaved_may_go(mtm: MainThreadMarker, again: &Again) -> Answer {
-    let count = dirty_count();
+fn unsaved_may_go(cx: &AppContext, mtm: MainThreadMarker, again: &Again) -> Answer {
+    let count = unsaved(cx).len();
     if count == 0 {
         return Answer::Yes;
     }
@@ -145,10 +148,10 @@ fn unsaved_may_go(mtm: MainThreadMarker, again: &Again) -> Answer {
     .button(t("Abbrechen"), Role::Plain)
     .run_modal();
     if response == NSAlertFirstButtonReturn {
-        save_each(unsaved(), Rc::clone(again))
+        save_each(unsaved(cx), Rc::clone(again))
     } else if response == NSAlertSecondButtonReturn {
-        for view in open_editors() {
-            recovery::discard(&view);
+        for view in cx.editors().live() {
+            recovery::discard(cx, &view);
         }
         Answer::Yes
     } else {
@@ -173,18 +176,13 @@ pub(crate) fn unsaved_in(controller: &WindowController) -> Vec<String> {
 /// Gives up the changes in the editors of `controller`'s window and their crash copies, as "Nicht sichern" does.
 pub(crate) fn discard_changes(controller: &WindowController) {
     for view in editors_in(controller) {
-        recovery::discard(&view);
+        recovery::discard(controller.context(), &view);
     }
-}
-
-/// How many open editors have unsaved changes, those of gone files aside, which get a question of their own.
-pub(crate) fn dirty_count() -> usize {
-    unsaved().len()
 }
 
 /// The files below `root` whose open editors have unsaved changes, those of gone files aside.
 pub(crate) fn unsaved_below(root: &Path) -> Vec<PathBuf> {
-    let mut paths: Vec<PathBuf> = unsaved()
+    let mut paths: Vec<PathBuf> = unsaved(&crate::context::app())
         .iter()
         .filter_map(|view| {
             view.document()
@@ -202,11 +200,11 @@ pub(crate) fn unsaved_below(root: &Path) -> Vec<PathBuf> {
 /// none is left unsaved.
 pub(crate) fn save_below(root: &Path, then: Box<dyn FnOnce(bool)>) {
     let below = |view: &Retained<EditorTextView>| view.document().path().is_some_and(|p| p.starts_with(root));
-    let views: Vec<_> = unsaved().into_iter().filter(below).collect();
+    let views: Vec<_> = unsaved(&crate::context::app()).into_iter().filter(below).collect();
     let then = Cell::new(Some(then));
     let root = root.to_path_buf();
     let done: Again = Rc::new(move |_| {
-        let left = unsaved()
+        let left = unsaved(&crate::context::app())
             .iter()
             .any(|view| view.document().path().is_some_and(|p| p.starts_with(&root)));
         if let Some(then) = then.take() {
@@ -243,8 +241,10 @@ pub(crate) fn save_each(views: Vec<Retained<EditorTextView>>, then: Again) -> An
     Answer::Later
 }
 
-pub(super) fn unsaved() -> Vec<Retained<EditorTextView>> {
-    open_editors()
+/// The editors of `cx` with unsaved changes, those of gone files aside.
+pub(super) fn unsaved(cx: &AppContext) -> Vec<Retained<EditorTextView>> {
+    cx.editors()
+        .live()
         .into_iter()
         .filter(|view| view.document().is_dirty() && !conflict::is_gone(view))
         .collect()

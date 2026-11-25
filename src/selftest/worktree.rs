@@ -69,7 +69,7 @@ pub(crate) fn run() {
     });
     ide_ui_agent::set_test_launch(launch);
     // As an installation does, so the menus read the agents again.
-    crate::settings::agents_changed();
+    crate::settings::agents_changed(&crate::context::app());
     std::thread::spawn(move || {
         let made = make_repository(&folder);
         main_soon(move || match made {

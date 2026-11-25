@@ -15,29 +15,27 @@ use splat_i18n::t;
 
 use super::model::{MenuCommand, Model, Outcome, Query, Started, Taken, Toggle, replaced_note};
 use super::panel::{SearchIvars, SearchPanel, spot_of};
-use super::{DEBOUNCE, FLUSH, REFRESH_DELAY, hierarchy, panel, replace, views, with_next_id, with_panels};
+use super::{DEBOUNCE, FLUSH, REFRESH_DELAY, hierarchy, panel, replace, views};
 use crate::util::{main_after, main_soon, ns};
 use crate::window::WindowController;
 
 impl SearchPanel {
     /// The search of `controller`'s folder at `root`.
     pub(crate) fn new(mtm: MainThreadMarker, controller: &WindowController, root: &Path) -> Retained<Self> {
-        let id = with_next_id(|next| {
-            let id = next.get();
-            next.set(id + 1);
-            id
-        });
+        let search_panels = controller.context().search_panels();
+        let id = search_panels.next_id.get();
+        search_panels.next_id.set(id + 1);
         let ivars = SearchIvars::new(id, Weak::from(controller), Model::new(root.to_path_buf()));
         // SAFETY: NSObject's initializer, called once on the newly allocated object.
         let this: Retained<Self> = unsafe { msg_send![super(SearchPanel::alloc(mtm).set_ivars(ivars)), init] };
         let _ = this.ivars().views.set(views::Views::new(mtm, &this));
-        let hierarchy = hierarchy::HierarchyPanel::new(mtm, &this);
+        let hierarchy = hierarchy::HierarchyPanel::new(mtm, controller.context().hierarchy_panels(), &this);
         if let (Some(page), Some(tree)) = (this.page(), hierarchy.page()) {
             page.addSubview(tree);
             crate::util::pin_edges(tree, page);
         }
         let _ = this.ivars().hierarchy.set(hierarchy);
-        with_panels(|panels| panels.borrow_mut().push(Weak::from(&*this)));
+        search_panels.panels.borrow_mut().push(Weak::from(&*this));
         if let Some(views) = this.ivars().views.get() {
             let came = Weak::from(&*this);
             let went = came.clone();
@@ -84,12 +82,12 @@ impl SearchPanel {
     }
 
     /// Shows `hierarchy` in place of the text search, which keeps what it holds.
-    pub(crate) fn show_hierarchy(&self, hierarchy: ide_ui_lsp::Hierarchy) {
+    pub(crate) fn show_hierarchy(&self, panels: &super::HierarchyPanels, hierarchy: ide_ui_lsp::Hierarchy) {
         if let Some(views) = self.ivars().views.get() {
             views.set_text_shown(false);
         }
         if let Some(panel) = self.ivars().hierarchy.get() {
-            panel.show(hierarchy);
+            panel.show(panels, hierarchy);
         }
     }
 
@@ -165,7 +163,7 @@ impl SearchPanel {
         }
         let id = self.ivars().id;
         main_after(DEBOUNCE, move || {
-            if let Some(panel) = panel(id) {
+            if let Some(panel) = panel(crate::context::app().search_panels(), id) {
                 panel.start(pending);
             }
         });
@@ -196,7 +194,12 @@ impl SearchPanel {
         let job = Job {
             id: self.ivars().id,
             generation,
-            buffers: crate::editor::unsaved_texts(&root),
+            buffers: self
+                .ivars()
+                .controller
+                .load()
+                .map(|controller| crate::editor::unsaved_texts(controller.context(), &root))
+                .unwrap_or_default(),
             root,
             options,
             progressive,
@@ -223,7 +226,7 @@ impl SearchPanel {
         }
         let id = self.ivars().id;
         main_after(REFRESH_DELAY, move || {
-            if let Some(panel) = panel(id) {
+            if let Some(panel) = panel(crate::context::app().search_panels(), id) {
                 panel.refresh(refresh);
             }
         });
@@ -415,7 +418,7 @@ impl SearchPanel {
             .button(t("Abbrechen"), Role::Plain)
             .sheet(&window, move |response| {
                 if first(response)
-                    && let Some(panel) = panel(id)
+                    && let Some(panel) = panel(crate::context::app().search_panels(), id)
                 {
                     let files = panel.read().files();
                     panel.replace(files, super::model::Only::All);
@@ -438,10 +441,13 @@ impl SearchPanel {
     /// Replaces in `files` with what the replace field holds, then searches again and says what it did.
     fn replace(&self, files: Vec<PathBuf>, only: super::model::Only) {
         let Some(views) = self.ivars().views.get() else { return };
+        let Some(controller) = self.ivars().controller.load() else {
+            return;
+        };
         let with = views.replace.stringValue().to_string();
         let id = self.ivars().id;
-        replace::replace(files, self.options(), with, only, move |done| {
-            if let Some(panel) = panel(id) {
+        replace::replace(controller.context(), files, self.options(), with, only, move |done| {
+            if let Some(panel) = panel(crate::context::app().search_panels(), id) {
                 panel.replaced(&done);
             }
         });
@@ -541,7 +547,7 @@ fn run(job: Job, cancel: Cancel) {
 }
 
 fn deliver(id: u64, generation: u64, files: Vec<FileResult>, outcome: Option<Outcome>) {
-    if let Some(panel) = panel(id) {
+    if let Some(panel) = panel(crate::context::app().search_panels(), id) {
         panel.take(generation, files, outcome);
     }
 }

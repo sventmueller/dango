@@ -111,7 +111,7 @@ pub(crate) fn run() {
         return give_up(NAME, "the stand-in is written");
     };
     ide_ui_agent::set_test_claude(prepared.program());
-    crate::app::open_project(mtm, root.clone());
+    crate::app::open_project(&crate::context::app(), mtm, root.clone());
     helpers::wait_for_window(&root.clone(), move |controller| {
         let Some(controller) = controller else {
             return give_up(NAME, "the folder's window is open");

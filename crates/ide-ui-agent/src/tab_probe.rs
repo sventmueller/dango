@@ -67,7 +67,7 @@ impl AgentTab {
             let replaced = tab.state.borrow_mut().started(source);
             replaced.end();
         }
-        tab.add_to_window(controller);
+        tab.add_to_window(state, controller);
         tab
     }
 
@@ -337,7 +337,7 @@ impl AgentTab {
             TabMenu::Slash => self.slash_items(),
             TabMenu::Model => self.model_items(),
             TabMenu::Mode => self.mode_items(),
-            TabMenu::History => self.history_items(),
+            TabMenu::History => self.history_items(&crate::host::state()),
             TabMenu::Remote => self.remote_items(),
         }
     }

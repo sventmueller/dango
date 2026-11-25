@@ -34,6 +34,15 @@ impl Enabled {
     pub(crate) fn forget(&self) {
         self.0.set(None);
     }
+
+    /// Whether editors use Vim's keys, read from the settings on first use.
+    fn get(&self) -> bool {
+        self.0.get().unwrap_or_else(|| {
+            let value = Settings::load_user().get(&keys::VIM_MODE);
+            self.0.set(Some(value));
+            value
+        })
+    }
 }
 
 /// What Vim holds for one editor.
@@ -67,35 +76,30 @@ fn context() -> Option<std::rc::Rc<crate::context::AppContext>> {
 /// Whether editors use Vim's keys.
 pub(crate) fn enabled() -> bool {
     let Some(cx) = context() else { return false };
-    let cell = &cx.editor().vim.0;
-    cell.get().unwrap_or_else(|| {
-        let value = Settings::load_user().get(&keys::VIM_MODE);
-        cell.set(Some(value));
-        value
-    })
+    cx.editor().vim.get()
 }
 
 /// Turns the Vim mode on or off in every editor and remembers the choice.
 pub(crate) fn toggle() {
-    let value = !enabled();
-    if let Some(cx) = context() {
-        cx.editor().vim.0.set(Some(value));
-    }
+    let cx = crate::context::app();
+    let enabled = &cx.editor().vim;
+    let value = !enabled.get();
+    enabled.0.set(Some(value));
     let mut settings = Settings::load_user();
     if let Err(error) = settings.set(&keys::VIM_MODE, &value) {
         crate::diag::report("saving the Vim mode", error);
     }
-    for view in super::open_editors() {
+    for view in cx.editors().live() {
         attach(&view);
     }
 }
 
 /// Whether `item` is the menu item of the Vim mode, which then gets its check mark.
-pub(crate) fn validate(item: &NSMenuItem) -> Option<bool> {
+pub(crate) fn validate(cx: &crate::context::AppContext, item: &NSMenuItem) -> Option<bool> {
     if item.action() != Some(sel!(ideToggleVimMode:)) {
         return None;
     }
-    item.setState(if enabled() {
+    item.setState(if cx.editor().vim.get() {
         objc2_app_kit::NSControlStateValueOn
     } else {
         objc2_app_kit::NSControlStateValueOff

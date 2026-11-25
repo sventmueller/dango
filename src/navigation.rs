@@ -115,34 +115,20 @@ pub(crate) struct Navigation {
     groups: RefCell<Vec<(Weak<NSToolbarItemGroup>, Weak<WindowController>)>>,
 }
 
-fn with_histories<R>(f: impl FnOnce(&RefCell<Vec<(Weak<WindowController>, History)>>) -> R) -> R {
-    f(&crate::context::app().navigation().histories)
-}
-
-fn with_navigator<R>(f: impl FnOnce(&OnceCell<Retained<Navigator>>) -> R) -> R {
-    f(&crate::context::app().navigation().navigator)
-}
-
-fn with_groups<R>(f: impl FnOnce(&RefCell<Vec<(Weak<NSToolbarItemGroup>, Weak<WindowController>)>>) -> R) -> R {
-    f(&crate::context::app().navigation().groups)
-}
-
 fn with_history<R>(controller: &WindowController, f: impl FnOnce(&mut History) -> R) -> R {
-    with_histories(|all| {
-        let mut all = all.borrow_mut();
-        all.retain(|(owner, _)| owner.load().is_some());
-        let index = match all
-            .iter()
-            .position(|(owner, _)| owner.load().is_some_and(|o| std::ptr::eq(&*o, controller)))
-        {
-            Some(index) => index,
-            None => {
-                all.push((Weak::from(controller), History::default()));
-                all.len() - 1
-            }
-        };
-        f(&mut all[index].1)
-    })
+    let mut all = controller.context().navigation().histories.borrow_mut();
+    all.retain(|(owner, _)| owner.load().is_some());
+    let index = match all
+        .iter()
+        .position(|(owner, _)| owner.load().is_some_and(|o| std::ptr::eq(&*o, controller)))
+    {
+        Some(index) => index,
+        None => {
+            all.push((Weak::from(controller), History::default()));
+            all.len() - 1
+        }
+    };
+    f(&mut all[index].1)
 }
 
 /// The editor `view` shows its cursor where it is now, after a move or as it got the focus.
@@ -259,15 +245,15 @@ define_class!(
     }
 );
 
-/// The object that menu items and the toolbar send back and forward to.
-pub(crate) fn navigator(mtm: MainThreadMarker) -> Retained<Navigator> {
-    with_navigator(|cell| {
-        cell.get_or_init(|| {
+/// The object that menu items and the toolbar send back and forward to, made the first time it is asked for.
+pub(crate) fn navigator(navigation: &Navigation, mtm: MainThreadMarker) -> Retained<Navigator> {
+    navigation
+        .navigator
+        .get_or_init(|| {
             // SAFETY: NSObject's initializer, called once on the newly allocated object.
             unsafe { msg_send![Navigator::alloc(mtm), init] }
         })
         .clone()
-    })
 }
 
 fn front(f: impl FnOnce(&WindowController)) {
@@ -291,7 +277,8 @@ pub(crate) fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarI
         .filter_map(|(name, label)| symbol(name, label))
         .collect();
     let labels = NSArray::from_retained_slice(&[ns(t("Zurück")), ns(t("Vorwärts"))]);
-    let navigator = navigator(mtm);
+    let navigation = controller.context().navigation();
+    let navigator = navigator(navigation, mtm);
     // SAFETY: The navigator answers the action with a method that takes the sender; the group holds its target
     // weakly and the navigator lives as long as the app.
     let group = unsafe {
@@ -311,7 +298,10 @@ pub(crate) fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarI
     for item in group.subitems().iter() {
         item.setAutovalidates(false);
     }
-    with_groups(|groups| groups.borrow_mut().push((Weak::from(&*group), Weak::from(controller))));
+    navigation
+        .groups
+        .borrow_mut()
+        .push((Weak::from(&*group), Weak::from(controller)));
     refresh(controller);
     Retained::into_super(group)
 }
@@ -319,15 +309,15 @@ pub(crate) fn toolbar_item(controller: &WindowController) -> Retained<NSToolbarI
 /// Enables the toolbar's buttons of `controller`'s window as it has places to go to; only the window whose history
 /// changed, and only the buttons whose state changes, as a move of the cursor asks at every keystroke (SN-T6).
 fn refresh(controller: &WindowController) {
-    let groups: Vec<Retained<NSToolbarItemGroup>> = with_groups(|groups| {
-        let mut groups = groups.borrow_mut();
+    let groups: Vec<Retained<NSToolbarItemGroup>> = {
+        let mut groups = controller.context().navigation().groups.borrow_mut();
         groups.retain(|(group, owner)| group.load().is_some() && owner.load().is_some());
         groups
             .iter()
             .filter(|(_, owner)| owner.load().is_some_and(|owner| std::ptr::eq(&*owner, controller)))
             .filter_map(|(group, _)| group.load())
             .collect()
-    });
+    };
     if groups.is_empty() {
         return;
     }

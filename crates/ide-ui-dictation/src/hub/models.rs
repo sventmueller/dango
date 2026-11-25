@@ -29,16 +29,14 @@ enum Step {
     Done(Result<(), engine::EngineError>),
 }
 
-fn with<R>(f: impl FnOnce(&mut Downloads) -> R) -> R {
-    f(&mut super::state().models.borrow_mut())
-}
-
 /// Starts downloading `model` unless a download runs; `changed` is called on the main thread at each step.
 pub fn download(model: LocalModel, changed: impl Fn() + 'static) {
     let cancel = Arc::new(AtomicBool::new(false));
-    let started = with(|downloads| {
+    let state = super::state();
+    {
+        let mut downloads = state.models.borrow_mut();
         if downloads.running.is_some() {
-            return false;
+            return;
         }
         downloads.running = Some(Running {
             model,
@@ -47,10 +45,6 @@ pub fn download(model: LocalModel, changed: impl Fn() + 'static) {
         });
         downloads.failed = None;
         downloads.changed = Some(Rc::new(changed));
-        true
-    });
-    if !started {
-        return;
     }
     let spawned = ide_ui_common::util::spawn("ide.dictation-model", move || {
         let mut shown = 0.0;
@@ -67,9 +61,15 @@ pub fn download(model: LocalModel, changed: impl Fn() + 'static) {
     }
 }
 
+/// Takes in a step of the download of `model` on the main thread and tells whoever started it.
 fn step(model: LocalModel, step: Step) {
-    let changed = with(|downloads| {
-        let running = downloads.running.as_mut().filter(|r| r.model == model)?;
+    let state = super::state();
+    let changed = {
+        let mut downloads = state.models.borrow_mut();
+        let downloads = &mut *downloads;
+        let Some(running) = downloads.running.as_mut().filter(|r| r.model == model) else {
+            return;
+        };
         match step {
             Step::Progress(fraction) => running.fraction = fraction,
             Step::Done(result) => {
@@ -84,7 +84,7 @@ fn step(model: LocalModel, step: Step) {
             }
         }
         downloads.changed.clone()
-    });
+    };
     if let Some(changed) = changed {
         changed();
     }
@@ -92,21 +92,22 @@ fn step(model: LocalModel, step: Step) {
 
 /// Stops the download that runs; the model stays missing.
 pub fn cancel_download() {
-    with(|downloads| {
-        if let Some(running) = &downloads.running {
-            running.cancel.store(true, Ordering::SeqCst);
-        }
-    });
+    let state = super::state();
+    if let Some(running) = &state.models.borrow().running {
+        running.cancel.store(true, Ordering::SeqCst);
+    }
 }
 
 /// The model being downloaded and how far, from 0 to 1.
 pub fn downloading() -> Option<(LocalModel, f64)> {
-    with(|downloads| downloads.running.as_ref().map(|r| (r.model, r.fraction)))
+    let state = super::state();
+    let downloads = state.models.borrow();
+    downloads.running.as_ref().map(|r| (r.model, r.fraction))
 }
 
 /// The model whose last download failed.
 pub fn download_failed() -> Option<LocalModel> {
-    with(|downloads| downloads.failed)
+    super::state().models.borrow().failed
 }
 
 /// Whether `model` is on this Mac.

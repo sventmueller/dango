@@ -34,6 +34,15 @@ impl Lines {
     pub(crate) fn forget(&self) {
         self.0.set(None);
     }
+
+    /// How many header lines editors hold at most, 0 while Sticky Scroll is off; read from the settings on first use.
+    fn get(&self) -> usize {
+        self.0.get().unwrap_or_else(|| {
+            let value = Settings::load_user().get(&keys::STICKY_SCROLL_LINES).min(MOST_LINES);
+            self.0.set(Some(value));
+            value
+        })
+    }
 }
 
 fn context() -> Option<std::rc::Rc<crate::context::AppContext>> {
@@ -43,35 +52,30 @@ fn context() -> Option<std::rc::Rc<crate::context::AppContext>> {
 /// How many header lines editors hold at most, 0 while Sticky Scroll is off.
 pub(crate) fn lines() -> usize {
     let Some(cx) = context() else { return 0 };
-    let cell = &cx.editor().sticky.0;
-    cell.get().unwrap_or_else(|| {
-        let value = Settings::load_user().get(&keys::STICKY_SCROLL_LINES).min(MOST_LINES);
-        cell.set(Some(value));
-        value
-    })
+    cx.editor().sticky.get()
 }
 
 /// Turns Sticky Scroll off, or on with five lines, in every editor and remembers the choice.
 pub(crate) fn toggle() {
-    let value = if lines() > 0 { 0 } else { DEFAULT_LINES };
-    if let Some(cx) = context() {
-        cx.editor().sticky.0.set(Some(value));
-    }
+    let cx = crate::context::app();
+    let lines = &cx.editor().sticky;
+    let value = if lines.get() > 0 { 0 } else { DEFAULT_LINES };
+    lines.0.set(Some(value));
     let mut settings = Settings::load_user();
     if let Err(error) = settings.set(&keys::STICKY_SCROLL_LINES, &value) {
         crate::diag::report("saving the sticky scroll setting", error);
     }
-    for view in super::open_editors() {
+    for view in cx.editors().live() {
         refresh(&view);
     }
 }
 
 /// Whether `item` is the menu item of Sticky Scroll, which then gets its check mark.
-pub(crate) fn validate(item: &NSMenuItem) -> Option<bool> {
+pub(crate) fn validate(cx: &crate::context::AppContext, item: &NSMenuItem) -> Option<bool> {
     if item.action() != Some(objc2::sel!(ideToggleStickyScroll:)) {
         return None;
     }
-    item.setState(if lines() > 0 {
+    item.setState(if cx.editor().sticky.get() > 0 {
         objc2_app_kit::NSControlStateValueOn
     } else {
         objc2_app_kit::NSControlStateValueOff

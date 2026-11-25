@@ -36,45 +36,40 @@ impl Shown {
     pub(crate) fn forget(&self) {
         self.0.set(None);
     }
-}
 
-/// Whether editors show the minimap.
-pub(crate) fn shown() -> bool {
-    let Some(mtm) = MainThreadMarker::new() else {
-        return false;
-    };
-    let cx = crate::context::AppContext::get(mtm);
-    let cell = &cx.editor().minimap.0;
-    cell.get().unwrap_or_else(|| {
-        let value = Settings::load_user().get(&keys::MINIMAP);
-        cell.set(Some(value));
-        value
-    })
+    /// Whether editors show the minimap, read from the settings on first use.
+    pub(crate) fn get(&self) -> bool {
+        self.0.get().unwrap_or_else(|| {
+            let value = Settings::load_user().get(&keys::MINIMAP);
+            self.0.set(Some(value));
+            value
+        })
+    }
 }
 
 /// Shows the minimap in every editor, or hides it, and remembers the choice.
 pub(crate) fn toggle() {
-    let value = !shown();
-    if let Some(mtm) = MainThreadMarker::new() {
-        crate::context::AppContext::get(mtm).editor().minimap.0.set(Some(value));
-    }
+    let cx = crate::context::app();
+    let shown = &cx.editor().minimap;
+    let value = !shown.get();
+    shown.0.set(Some(value));
     let mut settings = Settings::load_user();
     if let Err(error) = settings.set(&keys::MINIMAP, &value) {
         crate::diag::report("saving the minimap setting", error);
     }
-    for view in super::open_editors() {
+    for view in cx.editors().live() {
         if let Some(map) = of(&view) {
-            map.fit();
+            map.fit_to(value);
         }
     }
 }
 
 /// Whether `item` is the menu item of the minimap, which then gets its check mark.
-pub(crate) fn validate(item: &NSMenuItem) -> Option<bool> {
+pub(crate) fn validate(cx: &crate::context::AppContext, item: &NSMenuItem) -> Option<bool> {
     if item.action() != Some(objc2::sel!(ideToggleMinimap:)) {
         return None;
     }
-    item.setState(if shown() {
+    item.setState(if cx.editor().minimap.get() {
         objc2_app_kit::NSControlStateValueOn
     } else {
         objc2_app_kit::NSControlStateValueOff
@@ -235,6 +230,11 @@ impl Minimap {
 
     /// Shows the column when the user wants it and the editor is wide enough, else makes it zero wide.
     pub(crate) fn fit(&self) {
+        self.fit_to(crate::context::AppContext::get(self.mtm()).editor().minimap.get());
+    }
+
+    /// Shows the column when `shown`, the user's choice, and the editor is wide enough, else makes it zero wide.
+    pub(crate) fn fit_to(&self, shown: bool) {
         let Some(constraint) = self.ivars().width.borrow().clone() else {
             return;
         };
@@ -243,7 +243,7 @@ impl Minimap {
             .scroll
             .load()
             .map_or(0.0, |scroll| scroll.frame().size.width + self.frame().size.width);
-        let width = if shown() && editor_width >= NARROWEST_EDITOR {
+        let width = if shown && editor_width >= NARROWEST_EDITOR {
             WIDTH
         } else {
             0.0

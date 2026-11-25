@@ -13,6 +13,7 @@ use objc2::sel;
 
 use super::EditorTextView;
 use super::system::step;
+use crate::context::AppContext;
 use crate::editor::insets::Layer;
 use crate::editor::resync::Step;
 use crate::editor::{
@@ -34,26 +35,27 @@ impl EditorTextView {
 
     /// Puts the view, its document and everything that follows them back in step, if a panic asked for it.
     pub(super) fn resync_due(&self) {
-        if crate::editor::find_editor(self.ivars().serial).is_none() {
+        let cx = crate::context::app();
+        if crate::editor::find_editor_in(&cx, self.ivars().serial).is_none() {
             return;
         }
         let failed = self.ivars().recovering.resync(
             || self.string().to_string() != self.document().text().to_string(),
-            |step| self.resync_step(step),
+            |step| self.resync_step(&cx, step),
         );
         if !failed.is_empty() {
             crate::diag::report("putting an editor back in step", format!("{failed:?} panicked"));
         }
     }
 
-    fn resync_step(&self, step: Step) {
+    fn resync_step(&self, cx: &AppContext, step: Step) {
         match step {
             Step::ShowDocument => self.show_document(),
             Step::ResendText => ide_ui_lsp::opened(self),
             Step::Recolor => highlight::recolor_all(self),
             Step::DropInsets => self.drop_insets(),
             Step::ShowDirty => file::show_dirty_anew(self),
-            Step::Follow => self.follow_anew(),
+            Step::Follow => self.follow_anew(cx),
         }
     }
 
@@ -79,8 +81,8 @@ impl EditorTextView {
 
     /// What follows the text takes it from the start: the crash copy, the conflict count, the change marks, Vim, the
     /// previews, a project search and the views beside the text.
-    fn follow_anew(&self) {
-        recovery::changed(self);
+    fn follow_anew(&self, cx: &AppContext) {
+        recovery::changed(cx, self);
         conflict::text_changed(self);
         changes::schedule(self);
         vim::changed(self);
@@ -124,17 +126,18 @@ impl EditorTextView {
         if changes.is_empty() {
             return;
         }
+        let cx = crate::context::app();
         let mut lines = false;
         for change in changes {
             step(name!("edit: highlight"), || highlight::edited(self, change));
             step(name!("edit: folds"), || fold::shift(self, change));
             step(name!("edit: carets"), || multi::shift(self, change));
             step(name!("edit: insets"), || insets::shift(self, change));
-            step(name!("edit: notify"), || notify_change(self, change));
+            step(name!("edit: notify"), || notify_change(&cx, self, change));
             lines |= change.start.line != change.new_end.line || change.start.line != change.old_end.line;
         }
         step(name!("edit: schedule highlight"), || highlight::schedule(self));
-        step(name!("edit: recovery"), || recovery::changed(self));
+        step(name!("edit: recovery"), || recovery::changed(&cx, self));
         step(name!("edit: conflict"), || conflict::text_changed(self));
         step(name!("edit: dirty"), || file::update_dirty(self));
         step(name!("edit: change marks"), || changes::schedule(self));

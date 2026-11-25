@@ -131,9 +131,9 @@ fn state() -> Rc<State> {
         .state()
 }
 
-/// `f` with the hub, made on first use; `None` while the hub is in use further up, which a modal session can cause.
-fn with_hub<R>(f: impl FnOnce(&mut Hub) -> R) -> Option<R> {
-    let state = state();
+/// `f` with the hub of `state`, made on first use; `None` while the hub is in use further up, which a modal session
+/// can cause.
+fn with_hub<R>(state: &State, f: impl FnOnce(&mut Hub) -> R) -> Option<R> {
     let mut hub = state.hub.try_borrow_mut().ok()?;
     Some(f(hub.get_or_insert_with(Hub::new)))
 }
@@ -225,7 +225,7 @@ define_class!(
             guarded((), || {
                 let tag = sender.and_then(|s| s.downcast_ref::<NSButton>()).map(|b| b.tag());
                 if let Some(target) = tag.and_then(|tag| Target::try_from(tag).ok()) {
-                    press(target, Via::Button);
+                    press(&state(), target, Via::Button);
                 }
             });
         }
@@ -266,8 +266,10 @@ pub fn prepare() {
 
 /// After launch: the fn key, and releasing the local model when the app quits.
 pub fn launched() {
-    fn_key::launched();
+    let state = state();
+    fn_key::launched(&state);
     fn_key::observe(
+        &state,
         constant!(objc2_app_kit::NSApplicationWillTerminateNotification),
         None,
         |_| will_terminate(),
@@ -276,7 +278,10 @@ pub fn launched() {
 
 /// whisper.cpp fails in its exit-time destructors while a model is loaded; what lowspeak's own app does on quit.
 fn will_terminate() {
-    let released = with_hub(|hub| hub.dictation.as_ref().is_none_or(|d| d.shutdown(SHUTDOWN))).unwrap_or(true);
+    let released = with_hub(&state(), |hub| {
+        hub.dictation.as_ref().is_none_or(|d| d.shutdown(SHUTDOWN))
+    })
+    .unwrap_or(true);
     lowspeak::util::filelog::flush_all();
     if !released {
         // SAFETY: Everything the app keeps is written by now; skipping the remaining exit handlers is the point.
@@ -296,7 +301,8 @@ pub fn line(mtm: MainThreadMarker) -> Retained<NSTextField> {
 
 /// Makes `text` a field that dictation can go into, with its controls.
 pub fn register(field: Rc<dyn DictationField>, text: &NSTextView, mic: &Mic, line: &NSTextField) {
-    let target = with_hub(|hub| {
+    let state = state();
+    let target = with_hub(&state, |hub| {
         hub.prune();
         let target = hub.next;
         hub.next += 1;
@@ -318,7 +324,7 @@ pub fn register(field: Rc<dyn DictationField>, text: &NSTextView, mic: &Mic, lin
         target
     });
     if let Some(target) = target {
-        show(target);
+        show(&state, target);
     }
 }
 
@@ -346,7 +352,8 @@ fn shortcut() -> String {
 
 /// Esc in `view`: ends its recording without text and drops its transcriptions; whether it had any.
 pub fn cancel_in(view: &NSTextView) -> bool {
-    let cancelled = with_hub(|hub| {
+    let state = state();
+    let cancelled = with_hub(&state, |hub| {
         let target = hub.target_of(view)?;
         if !hub.desk.cancel(target) {
             return None;
@@ -359,14 +366,14 @@ pub fn cancel_in(view: &NSTextView) -> bool {
     })
     .flatten();
     if let Some(target) = cancelled {
-        fn_key::ended(target);
-        show(target);
+        fn_key::ended(&state, target);
+        show(&state, target);
     }
     cancelled.is_some()
 }
 
 /// The field with the keyboard focus in the key window, if dictation can go there.
-fn focused(mtm: MainThreadMarker) -> Option<Target> {
+fn focused(state: &State, mtm: MainThreadMarker) -> Option<Target> {
     let app = NSApplication::sharedApplication(mtm);
     // An app in the background has no key window, as in the self-test; its front window stands in.
     let window = app
@@ -375,15 +382,16 @@ fn focused(mtm: MainThreadMarker) -> Option<Target> {
         .or_else(|| app.orderedWindows().iter().find(|w| w.isVisible()))?;
     let responder = window.firstResponder()?;
     let view = responder.downcast_ref::<NSTextView>()?;
-    with_hub(|hub| hub.target_of(view)).flatten()
+    with_hub(state, |hub| hub.target_of(view)).flatten()
 }
 
 /// The menu item and the shortcut: the field with the focus starts or ends; without one, a recording elsewhere ends.
 fn toggle_focused(mtm: MainThreadMarker, via: Via) {
-    let recording = with_hub(|hub| hub.desk.recording()).flatten();
-    match (focused(mtm), recording) {
-        (Some(field), _) => press(field, via),
-        (None, Some(running)) => press(running, via),
+    let state = state();
+    let recording = with_hub(&state, |hub| hub.desk.recording()).flatten();
+    match (focused(&state, mtm), recording) {
+        (Some(field), _) => press(&state, field, via),
+        (None, Some(running)) => press(&state, running, via),
         (None, None) => NSBeep(),
     }
 }
@@ -392,44 +400,45 @@ fn validate(mtm: MainThreadMarker, item: &NSMenuItem) -> bool {
     if item.action() != Some(sel!(ideToggleDictation:)) {
         return true;
     }
-    let recording = with_hub(|hub| hub.desk.recording()).flatten();
+    let state = state();
+    let recording = with_hub(&state, |hub| hub.desk.recording()).flatten();
     item.setTitle(&ns(if recording.is_some() {
         t("Diktat beenden")
     } else {
         t("Diktat starten")
     }));
-    recording.is_some() || focused(mtm).is_some()
+    recording.is_some() || focused(&state, mtm).is_some()
 }
 
 /// A start or a stop for the field `target`.
-fn press(target: Target, via: Via) {
-    let running = with_hub(|hub| hub.desk.recording() == Some(target)).unwrap_or(false);
+fn press(state: &State, target: Target, via: Via) {
+    let running = with_hub(state, |hub| hub.desk.recording() == Some(target)).unwrap_or(false);
     if running {
-        let acts = with_hub(|hub| hub.desk.toggle(target)).unwrap_or_default();
-        return run(acts);
+        let acts = with_hub(state, |hub| hub.desk.toggle(target)).unwrap_or_default();
+        return run(state, acts);
     }
-    begin(target, via);
+    begin(state, target, via);
 }
 
 /// fn pressed with the focus in `target`: a recording of its own there is kept rather than ended.
-fn begin_with_fn(target: Target) -> bool {
-    let running = with_hub(|hub| hub.desk.recording() == Some(target)).unwrap_or(false);
+fn begin_with_fn(state: &State, target: Target) -> bool {
+    let running = with_hub(state, |hub| hub.desk.recording() == Some(target)).unwrap_or(false);
     if !running {
-        begin(target, Via::Fn);
+        begin(state, target, Via::Fn);
     }
-    with_hub(|hub| hub.desk.recording() == Some(target)).unwrap_or(false)
+    with_hub(state, |hub| hub.desk.recording() == Some(target)).unwrap_or(false)
 }
 
 /// fn released: ends the recording of `target` if it still runs.
-fn end_with_fn(target: Target) {
-    if with_hub(|hub| hub.desk.recording() == Some(target)).unwrap_or(false) {
-        press(target, Via::Fn);
+fn end_with_fn(state: &State, target: Target) {
+    if with_hub(state, |hub| hub.desk.recording() == Some(target)).unwrap_or(false) {
+        press(state, target, Via::Fn);
     }
 }
 
 /// Starts a dictation into `target`, after asking for a missing key once.
-fn begin(target: Target, via: Via) {
-    let Some(view) = with_hub(|hub| hub.text_of(target)).flatten() else {
+fn begin(state: &State, target: Target, via: Via) {
+    let Some(view) = with_hub(state, |hub| hub.text_of(target)).flatten() else {
         return;
     };
     let Some(window) = view.window().filter(|_| view.isEditable()) else {
@@ -440,18 +449,18 @@ fn begin(target: Target, via: Via) {
         microphone::ask(move |granted| {
             // fn came up while macOS asked, so the recording it asked for is over.
             if granted && via != Via::Fn {
-                begin(target, via);
+                begin(&self::state(), target, via);
             }
         });
         return;
     }
-    let question = with_hub(|hub| {
+    let question = with_hub(state, |hub| {
         let missing = hub.engine().missing_key();
         keys::question(missing, &mut hub.asked, engine::lowspeak_has_key)
     })
     .flatten();
     if let Some(question) = question {
-        let keys = with_hub(|hub| Arc::clone(&hub.keys));
+        let keys = with_hub(state, |hub| Arc::clone(&hub.keys));
         if let Some(keys) = keys {
             ask::ask(question, &keys);
         }
@@ -463,51 +472,54 @@ fn begin(target: Target, via: Via) {
     if via == Via::Button {
         window.makeFirstResponder(Some(&view));
     }
-    let acts = with_hub(|hub| hub.desk.toggle(target)).unwrap_or_default();
-    run(acts);
+    let acts = with_hub(state, |hub| hub.desk.toggle(target)).unwrap_or_default();
+    run(state, acts);
 }
 
-fn run(acts: Vec<Act>) {
+/// Carries out the acts of the desk, and the acts they lead to.
+fn run(state: &State, acts: Vec<Act>) {
     for act in acts {
         match act {
             Act::Start(target) => {
-                let taken = with_hub(|hub| hub.engine().start(target).is_ok()).unwrap_or(false);
-                let more = with_hub(|hub| {
+                let taken = with_hub(state, |hub| hub.engine().start(target).is_ok()).unwrap_or(false);
+                let more = with_hub(state, |hub| {
                     if taken {
                         hub.retries.remove(&target);
                     }
                     hub.desk.started(target, taken)
                 });
-                run(more.unwrap_or_default());
+                run(state, more.unwrap_or_default());
             }
             Act::Stop(target) => {
-                with_hub(|hub| hub.engine().stop(target));
-                fn_key::ended(target);
+                with_hub(state, |hub| hub.engine().stop(target));
+                fn_key::ended(state, target);
             }
             Act::Retry(target) => main_after(RETRY, move || retry(target)),
-            Act::Insert(target, text) => insert(target, &text),
-            Act::Failed(target, failure) => note(target, describe(&failure), true),
-            Act::NoSpeech(target) => note(target, t("Keine Sprache erkannt").to_string(), false),
+            Act::Insert(target, text) => insert(state, target, &text),
+            Act::Failed(target, failure) => note(state, target, describe(&failure), true),
+            Act::NoSpeech(target) => note(state, target, t("Keine Sprache erkannt").to_string(), false),
             Act::LimitReached(target) => {
                 note(
+                    state,
                     target,
                     t("Die Aufnahme hat ihre Höchstdauer erreicht.").to_string(),
                     false,
                 );
-                fn_key::ended(target);
+                fn_key::ended(state, target);
             }
             Act::Ended(target) => {
-                fn_key::ended(target);
-                fn_key::after_dictation();
+                fn_key::ended(state, target);
+                fn_key::after_dictation(state);
             }
-            Act::Show(target) => show(target),
+            Act::Show(target) => show(state, target),
         }
     }
 }
 
 /// Asks lowspeak again for a start the busy microphone refused, a limited number of times.
 fn retry(target: Target) {
-    let again = with_hub(|hub| {
+    let state = state();
+    let again = with_hub(&state, |hub| {
         if !hub.desk.retry_due(target) {
             return false;
         }
@@ -522,20 +534,21 @@ fn retry(target: Target) {
     })
     .unwrap_or(false);
     if again {
-        run(vec![Act::Start(target)]);
+        run(&state, vec![Act::Start(target)]);
     } else {
-        show(target);
+        show(&state, target);
     }
 }
 
 fn on_event(event: Event) {
-    let acts = with_hub(|hub| hub.desk.event(event)).unwrap_or_default();
-    run(acts);
+    let state = state();
+    let acts = with_hub(&state, |hub| hub.desk.event(event)).unwrap_or_default();
+    run(&state, acts);
 }
 
 /// Brings the controls of `target` up to date, and keeps its button pulsing while it listens.
-fn show(target: Target) {
-    let pulse = with_hub(|hub| {
+fn show(state: &State, target: Target) {
+    let pulse = with_hub(state, |hub| {
         let shown = hub.shown(target);
         let place = hub.places.get_mut(&target)?;
         place.mic.show(&shown);
@@ -553,7 +566,7 @@ fn show(target: Target) {
 }
 
 fn pulse_step(target: Target, bright: bool) {
-    let going = with_hub(|hub| {
+    let going = with_hub(&state(), |hub| {
         let listening = hub.desk.phase(target) == Phase::Listening;
         let place = hub.places.get_mut(&target)?;
         place.pulsing = listening;
@@ -571,8 +584,8 @@ fn pulse_step(target: Target, bright: bool) {
 }
 
 /// Shows `text` under the field for a while.
-fn note(target: Target, text: String, error: bool) {
-    let id = with_hub(|hub| {
+fn note(state: &State, target: Target, text: String, error: bool) {
+    let id = with_hub(state, |hub| {
         hub.notes += 1;
         let id = hub.notes;
         if let Some(place) = hub.places.get_mut(&target) {
@@ -580,25 +593,28 @@ fn note(target: Target, text: String, error: bool) {
         }
         id
     });
-    show(target);
+    show(state, target);
     let Some(id) = id else { return };
     main_after(NOTE, move || {
-        with_hub(|hub| {
+        let state = self::state();
+        with_hub(&state, |hub| {
             if let Some(place) = hub.places.get_mut(&target)
                 && place.note.as_ref().is_some_and(|n| n.id == id)
             {
                 place.note = None;
             }
         });
-        show(target);
+        show(&state, target);
     });
 }
 
 /// The text of a dictation goes in at the cursor of its field, as typing would put it; a field that closed meanwhile
 /// leaves it on the clipboard.
-fn insert(target: Target, text: &str) {
-    let (view, field) =
-        with_hub(|hub| (hub.text_of(target), hub.places.get(&target).map(|p| p.field.clone()))).unwrap_or_default();
+fn insert(state: &State, target: Target, text: &str) {
+    let (view, field) = with_hub(state, |hub| {
+        (hub.text_of(target), hub.places.get(&target).map(|p| p.field.clone()))
+    })
+    .unwrap_or_default();
     match view.filter(|v| v.window().is_some() && v.isEditable()) {
         Some(view) => put(&view, text),
         None => {
@@ -660,12 +676,12 @@ fn describe(failure: &Failure) -> String {
 
 /// The app's dictation keys, for the settings.
 pub fn has_key(provider: ApiProvider) -> bool {
-    with_hub(|hub| hub.keys.has(provider)).unwrap_or(false)
+    with_hub(&state(), |hub| hub.keys.has(provider)).unwrap_or(false)
 }
 
 /// Asks for a key for `provider` and keeps it.
 pub fn enter_key(provider: ApiProvider) {
-    if let Some(keys) = with_hub(|hub| Arc::clone(&hub.keys)) {
+    if let Some(keys) = with_hub(&state(), |hub| Arc::clone(&hub.keys)) {
         ask::enter(provider, &keys, None);
     }
 }
@@ -677,14 +693,14 @@ pub fn lowspeak_has_key(provider: ApiProvider) -> bool {
 
 /// Offers to take Lowspeak's key for `provider` over, or to enter one instead.
 pub fn take_over_key(provider: ApiProvider) {
-    if let Some(keys) = with_hub(|hub| Arc::clone(&hub.keys)) {
+    if let Some(keys) = with_hub(&state(), |hub| Arc::clone(&hub.keys)) {
         ask::ask(keys::Question::TakeOver(provider), &keys);
     }
 }
 
 /// Deletes the app's key for `provider` from the keychain.
 pub fn remove_key(provider: ApiProvider) -> Result<(), keys::KeyError> {
-    with_hub(|hub| hub.keys.remove(provider)).unwrap_or(Err(keys::KeyError::Busy))
+    with_hub(&state(), |hub| hub.keys.remove(provider)).unwrap_or(Err(keys::KeyError::Busy))
 }
 
 /// Lowspeak's choices as its menu left them, for the settings to offer taking them over.

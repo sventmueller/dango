@@ -176,14 +176,6 @@ impl Default for Workspaces {
     }
 }
 
-fn with_workspaces<R>(f: impl FnOnce(&RefCell<Vec<Rc<Workspace>>>) -> R) -> R {
-    f(&crate::host::state().lsp_workspaces.workspaces)
-}
-
-fn with_next_id<R>(f: impl FnOnce(&Cell<u64>) -> R) -> R {
-    f(&crate::host::state().lsp_workspaces.next_id)
-}
-
 static REGISTRY: OnceLock<Arc<Registry>> = OnceLock::new();
 
 /// The language servers the user set up, read from the settings once and again after `servers_changed`.
@@ -249,17 +241,18 @@ fn survey_text(found: Result<PathBuf, NotFound>) -> String {
 /// The user changed their language servers: every editor goes to the server that serves its file now.
 pub fn servers_changed() {
     CUSTOM.with(|cell| cell.borrow_mut().take());
+    let state = host::state();
     for view in host::all_editors() {
-        opened(&*view);
+        lifecycle::opened_in(&state, &*view);
     }
 }
 
-pub(crate) fn next_id() -> u64 {
-    with_next_id(|next| {
-        let id = next.get();
-        next.set(id + 1);
-        id
-    })
+/// An id that no slot, editor or request of `state` had before.
+pub(crate) fn next_id(state: &LspState) -> u64 {
+    let next = &state.lsp_workspaces.next_id;
+    let id = next.get();
+    next.set(id + 1);
+    id
 }
 
 /// The number that tells an editor apart from every other one while the app runs, which callbacks from other threads
@@ -269,7 +262,7 @@ pub struct EditorSerial(u64);
 
 /// A serial no editor had before.
 pub fn new_serial() -> EditorSerial {
-    EditorSerial(next_id())
+    EditorSerial(next_id(&host::state()))
 }
 
 impl ViewState {
@@ -295,13 +288,15 @@ pub fn validate(view: &dyn Editor, action: Option<objc2::runtime::Sel>) -> Optio
         sel!(ideRename:),
         sel!(ideFormat:),
     ];
+    let state = host::state();
     if code.contains(&action) {
-        return Some(server_of(view).is_some());
+        return Some(server_of(&state, view).is_some());
     }
-    if let Some(offered) = navigate::offered(view, action) {
+    if let Some(offered) = navigate::offered(&state, view, action) {
         return Some(offered);
     }
-    if let Some(offered) = actions::validate(view, action).or_else(|| signature::validate(view, action)) {
+    if let Some(offered) = actions::validate(&state, view, action).or_else(|| signature::validate(&state, view, action))
+    {
         return Some(offered);
     }
     if action == sel!(ideNextProblem:) || action == sel!(idePreviousProblem:) {
@@ -312,10 +307,11 @@ pub fn validate(view: &dyn Editor, action: Option<objc2::runtime::Sel>) -> Optio
 
 /// Asks for completions at the cursor; false when no server serves the editor, so the system's completion runs.
 pub fn complete(view: &dyn Editor) -> bool {
-    if server_of(view).is_none() {
+    let state = host::state();
+    if server_of(&state, view).is_none() {
         return false;
     }
-    complete::complete(view);
+    complete::complete(&state, view);
     true
 }
 
@@ -329,53 +325,60 @@ pub fn typed(view: &dyn Editor, text: &objc2::runtime::AnyObject) {
         return;
     };
     hover::dismiss(view);
-    complete::typed(view, &typed);
-    signature::typed(view, &typed);
+    let state = host::state();
+    complete::typed(&state, view, &typed);
+    signature::typed(&state, view, &typed);
 }
 
 /// A command of the keyboard reached `view`; whether the completion list, a snippet or the signature window took it.
 pub fn command(view: &dyn Editor, command: objc2::runtime::Sel) -> bool {
-    complete::command(view, command) || signature::command(view, command)
+    let state = host::state();
+    complete::command(&state.completion, view, command) || signature::command(&state.signature_help, view, command)
 }
 
 /// After a command the editor ran itself, such as deleting backwards: the completion list follows or closes.
 pub fn after_command(view: &dyn Editor, command: objc2::runtime::Sel) {
-    complete::after_command(view, command);
+    complete::after_command(&host::state().completion, view, command);
 }
 
 /// The cursor moved: the breadcrumbs, the code actions and the signature window follow.
 pub fn selection_moved(view: &dyn Editor) {
     outline::selection_moved(view);
-    actions::moved(view);
-    signature::moved(view);
+    let state = host::state();
+    actions::moved(&state, view);
+    signature::moved(&state, view);
 }
 
 /// The cursor of `view` moved earlier, while its state was in use: the code actions follow now.
 pub fn actions_moved(view: &dyn Editor) {
-    actions::moved(view);
+    actions::moved(&host::state(), view);
 }
 
 /// Lists the code actions of `kind` at the cursor of `view` in a menu there (E82).
 pub fn code_actions(view: &dyn Editor, kind: ActionKind) {
-    actions::open(view, kind);
+    actions::open(&host::state(), view, kind);
 }
 
 /// Shows the signature of the call around the cursor of `view` (E84).
 pub fn signature_help(view: &dyn Editor) {
-    signature::show(view);
+    signature::show(&host::state(), view);
 }
 
 /// A click with ⌘ goes to the definition of what it hit; whether it was one.
 pub fn command_click(view: &dyn Editor, event: &objc2_app_kit::NSEvent) -> bool {
     use objc2_app_kit::NSEventModifierFlags;
     let flags = event.modifierFlags() & NSEventModifierFlags::DeviceIndependentFlagsMask;
-    if flags != NSEventModifierFlags::Command || server_of(view).is_none() {
+    if flags != NSEventModifierFlags::Command {
+        return false;
+    }
+    let state = host::state();
+    if server_of(&state, view).is_none() {
         return false;
     }
     let point = view.convertPoint_fromView(event.locationInWindow(), None);
     let index = view.characterIndexForInsertionAtPoint(point);
     view.setSelectedRange(objc2_foundation::NSRange::new(index, 0));
-    navigate::definition_at(view, index);
+    navigate::definition_at(&state, view, index);
     true
 }
 
@@ -396,7 +399,7 @@ pub fn scrolled(view: &dyn Editor) {
         view.later(sel!(ideDecorate), 0.05);
     }
     hover::dismiss(view);
-    signature::dismiss_for(view);
+    signature::dismiss_for(&host::state().signature_help, view);
     inlay::scrolled(view);
     view.follow_overlay();
 }
@@ -411,23 +414,39 @@ fn registry() -> Arc<Registry> {
         .clone()
 }
 
-fn workspace(root: &Path) -> Option<Rc<Workspace>> {
-    with_workspaces(|all| all.borrow().iter().find(|w| w.root == root).cloned())
+/// The servers of the window folder `root` in `state`, if it has any.
+fn workspace(state: &LspState, root: &Path) -> Option<Rc<Workspace>> {
+    state
+        .lsp_workspaces
+        .workspaces
+        .borrow()
+        .iter()
+        .find(|w| w.root == root)
+        .cloned()
 }
 
-fn workspace_or_new(root: &Path) -> Rc<Workspace> {
-    workspace(root).unwrap_or_else(|| {
-        let created = Rc::new(Workspace {
-            root: root.to_path_buf(),
-            slots: RefCell::new(vec![]),
-        });
-        with_workspaces(|all| all.borrow_mut().push(created.clone()));
-        created
-    })
+/// The servers of the window folder `root` in `state`, made empty when it has none yet.
+fn workspace_or_new(state: &LspState, root: &Path) -> Rc<Workspace> {
+    let mut all = state.lsp_workspaces.workspaces.borrow_mut();
+    if let Some(existing) = all.iter().find(|w| w.root == root) {
+        return existing.clone();
+    }
+    let created = Rc::new(Workspace {
+        root: root.to_path_buf(),
+        slots: RefCell::new(vec![]),
+    });
+    all.push(created.clone());
+    created
 }
 
-fn slot(root: &Path, id: u64) -> Option<Rc<Slot>> {
-    workspace(root)?.slots.borrow().iter().find(|s| s.id == id).cloned()
+/// The slot `id` of the window folder `root` in `state`, while it is there.
+fn slot(state: &LspState, root: &Path, id: u64) -> Option<Rc<Slot>> {
+    workspace(state, root)?
+        .slots
+        .borrow()
+        .iter()
+        .find(|s| s.id == id)
+        .cloned()
 }
 
 /// The window folder of `view`, if the user trusts it.
@@ -437,40 +456,40 @@ fn trusted_root(view: &dyn Editor) -> Option<PathBuf> {
 }
 
 /// The slot `view` belongs to and the running server in it.
-fn server_of(view: &dyn Editor) -> Option<(Server, Uri)> {
+fn server_of(state: &LspState, view: &dyn Editor) -> Option<(Server, Uri)> {
     let root = view.project_root()?;
     let (id, uri) = {
-        let state = view.lsp().borrow();
-        (state.slot?, state.uri.clone()?)
+        let view_state = view.lsp().borrow();
+        (view_state.slot?, view_state.uri.clone()?)
     };
-    let slot = slot(&root, id)?;
-    let state = slot.state.borrow();
-    match &*state {
+    let slot = slot(state, &root, id)?;
+    let running = slot.state.borrow();
+    match &*running {
         State::Running(server) => Some((server.clone(), uri)),
         _ => None,
     }
 }
 
 /// The running servers of `view`, the main one first, each with its slot's id (E140).
-fn servers_of(view: &dyn Editor) -> Vec<(u64, Server, Uri)> {
+fn servers_of(state: &LspState, view: &dyn Editor) -> Vec<(u64, Server, Uri)> {
     let Some(root) = view.project_root() else {
         return Vec::new();
     };
     let (ids, uri) = {
-        let state = view.lsp().borrow();
-        let ids: Vec<u64> = state
+        let view_state = view.lsp().borrow();
+        let ids: Vec<u64> = view_state
             .slot
             .into_iter()
-            .chain(state.companions.iter().map(|(id, _)| *id))
+            .chain(view_state.companions.iter().map(|(id, _)| *id))
             .collect();
-        (ids, state.uri.clone())
+        (ids, view_state.uri.clone())
     };
     let Some(uri) = uri else { return Vec::new() };
     ids.into_iter()
         .filter_map(|id| {
-            let slot = slot(&root, id)?;
-            let state = slot.state.borrow();
-            match &*state {
+            let slot = slot(state, &root, id)?;
+            let running = slot.state.borrow();
+            match &*running {
                 State::Running(server) => Some((id, server.clone(), uri.clone())),
                 _ => None,
             }
@@ -479,8 +498,8 @@ fn servers_of(view: &dyn Editor) -> Vec<(u64, Server, Uri)> {
 }
 
 /// The running server of slot `id` for `view`, main or second.
-fn server_by_id(view: &dyn Editor, id: u64) -> Option<(Server, Uri)> {
-    servers_of(view)
+fn server_by_id(state: &LspState, view: &dyn Editor, id: u64) -> Option<(Server, Uri)> {
+    servers_of(state, view)
         .into_iter()
         .find(|(slot, _, _)| *slot == id)
         .map(|(_, server, uri)| (server, uri))
@@ -492,18 +511,26 @@ fn version(view: &dyn Editor) -> i32 {
 
 /// Asks again, after a pause in typing, for what the server computes over the whole document.
 pub fn refresh(view: &dyn Editor) {
-    if let Some((server, uri)) = server_of(view) {
+    refresh_in(&host::state(), view);
+}
+
+/// Asks again, as `refresh` does, with the crate's `state` at hand.
+fn refresh_in(state: &LspState, view: &dyn Editor) {
+    if let Some((server, uri)) = server_of(state, view) {
         outline::refresh(view, &server, &uri);
     }
     next(view, |view| {
-        if server_of(view).is_some() {
-            inlay::request(view);
+        let state = host::state();
+        if server_of(&state, view).is_some() {
+            inlay::request_in(&state, view);
         }
         next(view, |view| {
-            if let Some((server, uri)) = server_of(view) {
+            if let Some((server, uri)) = server_of(&host::state(), view) {
                 semantic_tokens(view, &server, &uri);
             }
-            next(view, |view| pull_diagnostics(view, view.lsp().borrow().serial));
+            next(view, |view| {
+                pull_diagnostics(&host::state(), view, view.lsp().borrow().serial)
+            });
         });
     });
 }
@@ -543,8 +570,8 @@ fn semantic_tokens(view: &dyn Editor, server: &Server, uri: &Uri) {
 }
 
 /// Asks every server of `view` that offers pulled diagnostics for them (E140); ESLint sends no others (E132).
-fn pull_diagnostics(view: &dyn Editor, serial: EditorSerial) {
-    for (source, server, uri) in servers_of(view) {
+fn pull_diagnostics(state: &LspState, view: &dyn Editor, serial: EditorSerial) {
+    for (source, server, uri) in servers_of(state, view) {
         if !server.offers("diagnosticProvider", "textDocument/diagnostic") {
             continue;
         }
@@ -579,11 +606,19 @@ fn progress_text(title: &str, message: Option<&str>, percentage: Option<u32>) ->
 }
 
 /// Counts of the problems `view` shows, errors first, or `None` when no server watches its document.
-pub(crate) fn problem_counts(view: &dyn Editor) -> Option<(usize, usize)> {
-    server_of(view)?;
-    let state = view.lsp().borrow();
-    let errors = state.marks.iter().filter(|m| m.severity == Severity::Error).count();
-    let warnings = state.marks.iter().filter(|m| m.severity == Severity::Warning).count();
+pub(crate) fn problem_counts(state: &LspState, view: &dyn Editor) -> Option<(usize, usize)> {
+    server_of(state, view)?;
+    let view_state = view.lsp().borrow();
+    let errors = view_state
+        .marks
+        .iter()
+        .filter(|m| m.severity == Severity::Error)
+        .count();
+    let warnings = view_state
+        .marks
+        .iter()
+        .filter(|m| m.severity == Severity::Warning)
+        .count();
     Some((errors, warnings))
 }
 

@@ -94,10 +94,6 @@ fn with_tab(id: u64, f: impl FnOnce(&LogTab)) {
     crate::context::app().ci_log_tabs().tabs.with(id, f);
 }
 
-fn live_tabs() -> Vec<Retained<LogTab>> {
-    crate::context::app().ci_log_tabs().tabs.live()
-}
-
 /// The key of the log tab of `job` on `host`.
 pub(crate) fn key(host: &str, job: &Job) -> String {
     format!("ci-log:{host}:{}", job.id)
@@ -127,7 +123,7 @@ pub(crate) fn show(controller: &WindowController, window_root: &Path, client: Cl
 
 /// Takes the jobs of a read of the window that shows `window_root`; a tab whose job runs reads its log again.
 pub(crate) fn refresh_for(window_root: &Path, runs: &[ide_ci::panel::RunRow]) {
-    for tab in live_tabs() {
+    for tab in crate::context::app().ci_log_tabs().tabs.live() {
         if tab.ivars().window_root != window_root {
             continue;
         }

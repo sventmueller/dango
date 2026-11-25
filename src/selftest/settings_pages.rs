@@ -84,7 +84,7 @@ pub(crate) fn run() {
     let elsewhere = elsewhere.canonicalize().unwrap_or(elsewhere);
     crate::project::trust(&root);
     prepare(&root, &elsewhere, &url);
-    crate::app::open_project(mtm, root.clone());
+    crate::app::open_project(&crate::context::app(), mtm, root.clone());
     let fixture = Fixture { root, url, elsewhere };
     helpers::wait_for_window(&fixture.root.clone(), move |_| {
         if let Some(mtm) = MainThreadMarker::new() {
@@ -888,7 +888,7 @@ fn index_of(choice: Choice) -> isize {
 
 fn plus_sheets(_f: Fixture) {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    crate::settings::show_ci(mtm);
+    crate::settings::show_ci(&crate::context::app(), mtm);
     wait_until(
         || crate::settings::ci_tab().is_some(),
         move |_| {
@@ -902,7 +902,7 @@ fn plus_sheets(_f: Fixture) {
                         crate::settings::show_servers(mtm);
                     }
                     wait_until(
-                        || crate::settings::servers_tab().is_some(),
+                        || crate::settings::servers_tab(&crate::context::app()).is_some(),
                         move |_| {
                             through_sheet(
                                 sel!(ideAddLanguageServer:),

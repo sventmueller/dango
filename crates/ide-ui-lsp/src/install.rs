@@ -9,12 +9,12 @@ use ide_lsp::{Cancel, NotFound, Status};
 use ide_process::Supervisor;
 use splat_i18n::{t, tf};
 
-use super::{Slot, State, find, language_of, refresh_slot, registry, slot, status, trusted_root};
+use super::{LspState, Slot, State, find, language_of, refresh_slot, registry, slot, status, trusted_root};
 use crate::editor::Editor;
 use ide_ui_common::util::main_soon;
 
 /// What the status bar of `view` says about its server, and the action its button offers.
-pub(crate) fn server_status(view: &dyn Editor) -> (String, status::Action) {
+pub(crate) fn server_status(state: &LspState, view: &dyn Editor) -> (String, status::Action) {
     let Some(path) = view.document().path().map(Path::to_path_buf) else {
         return (String::new(), status::Action::None);
     };
@@ -22,7 +22,7 @@ pub(crate) fn server_status(view: &dyn Editor) -> (String, status::Action) {
         return (String::new(), status::Action::None);
     }
     let root = view.project_root();
-    if let Some(slot) = root.as_deref().and_then(|root| shown_slot(view, root)) {
+    if let Some(slot) = root.as_deref().and_then(|root| shown_slot(state, view, root)) {
         return slot_status(&slot);
     }
     let text = match root {
@@ -39,18 +39,18 @@ pub(crate) const DECLINED: ide_core::settings::Key<Vec<String>> =
 
 /// The slot whose state the status bar of `view` shows: a second server that wants attention, such as one missing,
 /// installing, failed or with a notice, else the main one (E140).
-fn shown_slot(view: &dyn Editor, root: &Path) -> Option<std::rc::Rc<Slot>> {
+fn shown_slot(state: &LspState, view: &dyn Editor, root: &Path) -> Option<std::rc::Rc<Slot>> {
     let (main, companions) = {
-        let state = view.lsp().borrow();
+        let view_state = view.lsp().borrow();
         (
-            state.slot,
-            state.companions.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
+            view_state.slot,
+            view_state.companions.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
         )
     };
     let declined = ide_core::settings::Settings::load_user().get(&DECLINED);
     let wanting = companions
         .into_iter()
-        .filter_map(|id| slot(root, id))
+        .filter_map(|id| slot(state, root, id))
         .find(|companion| {
             let notice = companion.message.borrow().is_some();
             match &*companion.state.borrow() {
@@ -60,7 +60,7 @@ fn shown_slot(view: &dyn Editor, root: &Path) -> Option<std::rc::Rc<Slot>> {
                 State::Finding => false,
             }
         });
-    wanting.or_else(|| main.and_then(|id| slot(root, id)))
+    wanting.or_else(|| main.and_then(|id| slot(state, root, id)))
 }
 
 fn slot_status(slot: &Slot) -> (String, status::Action) {
@@ -118,16 +118,19 @@ pub(super) fn missing_text(missing: &NotFound) -> (String, status::Action) {
 /// The button in the status bar of `view` was pressed: install, cancel, or start the server again.
 pub fn status_action(view: &dyn Editor) {
     let Some(root) = trusted_root(view) else { return };
-    let Some(slot) = shown_slot(view, &root) else { return };
+    let state = crate::host::state();
+    let Some(slot) = shown_slot(&state, view, &root) else {
+        return;
+    };
     let id = slot.id;
     let action = slot_status(&slot).1;
     match action {
         status::Action::Install if slot.language.is_companion() => {
             if ask_companion(view, &slot.language) {
-                install(&root, &slot);
+                install(&state, &root, &slot);
             }
         }
-        status::Action::Install => install(&root, &slot),
+        status::Action::Install => install(&state, &root, &slot),
         status::Action::Cancel => {
             if let State::Installing(cancel, _) = &*slot.state.borrow() {
                 cancel.cancel();
@@ -144,7 +147,7 @@ pub fn status_action(view: &dyn Editor) {
         }
         status::Action::None => {}
     }
-    refresh_slot(&root, id);
+    refresh_slot(&state, &root, id);
 }
 
 /// Asks once for the app whether to install the second server `language`: install, never ask again, or not now.
@@ -172,7 +175,7 @@ fn ask_companion(view: &dyn Editor, language: &ide_lsp::Language) -> bool {
 }
 
 /// Installs the slot's missing server into the app's tools folder, after the user asked for it in the status bar.
-fn install(folder: &Path, slot: &Slot) {
+fn install(state: &LspState, folder: &Path, slot: &Slot) {
     let what = match &*slot.state.borrow() {
         State::Missing(NotFound {
             install: Some(what), ..
@@ -201,19 +204,24 @@ fn install(folder: &Path, slot: &Slot) {
         };
         let mut report = report;
         let result = installer.install(what, &cancel, &mut report);
-        main_soon(move || installed(&folder, id, result.map(|_| ()).map_err(|e| Explained::of(&e))));
+        main_soon(move || {
+            let result = result.map(|_| ()).map_err(|e| Explained::of(&e));
+            installed(&crate::host::state(), &folder, id, result);
+        });
     }) {
-        installed(&failed, id, Err(why));
+        installed(state, &failed, id, Err(why));
     }
 }
 
+/// The installation into slot `id` of the window of `folder` reported `progress`, which its status bars show.
 fn install_progress(folder: &Path, id: u64, progress: &ide_lsp::Progress) {
-    let Some(slot) = slot(folder, id) else { return };
+    let state = crate::host::state();
+    let Some(slot) = slot(&state, folder, id) else { return };
     let Some(text) = progress_text(progress) else { return };
     if let State::Installing(_, shown) = &mut *slot.state.borrow_mut() {
         *shown = text;
     }
-    refresh_slot(folder, id);
+    refresh_slot(&state, folder, id);
 }
 
 /// What the status bar says while an installation reports `progress`; `None` for a byte count of unknown size.
@@ -240,8 +248,10 @@ fn progress_text(progress: &ide_lsp::Progress) -> Option<String> {
     })
 }
 
-fn installed(folder: &Path, id: u64, result: Result<(), Explained>) {
-    let Some(slot) = slot(folder, id) else { return };
+/// The installation into slot `id` of the window of `folder` in `state` ended with `result`: the slot looks for its
+/// server again, or says why it failed.
+fn installed(state: &LspState, folder: &Path, id: u64, result: Result<(), Explained>) {
+    let Some(slot) = slot(state, folder, id) else { return };
     match result {
         Ok(()) => {
             *slot.state.borrow_mut() = State::Finding;
@@ -252,7 +262,7 @@ fn installed(folder: &Path, id: u64, result: Result<(), Explained>) {
             *slot.state.borrow_mut() = State::Failed(tf("Installation fehlgeschlagen: {}", &[&error]));
         }
     }
-    refresh_slot(folder, id);
+    refresh_slot(state, folder, id);
 }
 
 #[cfg(test)]

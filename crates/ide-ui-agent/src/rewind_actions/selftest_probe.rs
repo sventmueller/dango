@@ -12,7 +12,18 @@ pub(crate) struct RewindAlerts {
     alerts: std::cell::RefCell<(std::collections::VecDeque<objc2_app_kit::NSModalResponse>, Vec<String>)>,
 }
 
-pub(super) fn with_alerts<R>(
+/// The answer the self-test set up in `answers` for `alert`, which counts as seen then.
+pub(super) fn answer_from(answers: &RewindAlerts, alert: &Alert) -> Option<objc2_app_kit::NSModalResponse> {
+    let mut alerts = answers.alerts.borrow_mut();
+    let answer = alerts.0.pop_front();
+    if answer.is_some() {
+        alerts.1.push(alert.ns().messageText().to_string());
+    }
+    answer
+}
+
+/// Runs `f` with the answers the self-test set up and the questions it saw.
+fn with_alerts<R>(
     f: impl FnOnce(&std::cell::RefCell<(std::collections::VecDeque<objc2_app_kit::NSModalResponse>, Vec<String>)>) -> R,
 ) -> R {
     f(&crate::host::state().rewind_alerts.alerts)

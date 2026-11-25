@@ -243,7 +243,7 @@ fn show() {
         "fn main() {\n    let greeting = \"hello\"; // a comment\n    println!(\"{greeting}\");\n}\n",
     );
     crate::project::trust(&folder);
-    crate::app::open_project(mtm, folder.clone());
+    crate::app::open_project(&crate::context::app(), mtm, folder.clone());
     let canonical = folder.canonicalize().unwrap_or(folder);
     if let Some(controller) = window::open_windows()
         .into_iter()
@@ -439,7 +439,7 @@ fn probe_symbol_menu(controller: &window::WindowController) {
         ticked.join(", "),
     );
     controller.activate_panel(Panel::Git);
-    window::toggle_activity_symbol(Panel::Git);
+    window::toggle_activity_symbol(&crate::context::app(), Panel::Git);
     let stored = ide_core::settings::Settings::load_user().get(&ide_core::settings::keys::HIDDEN_PANELS);
     let after = controller.inspect().panel;
     check(
@@ -456,7 +456,7 @@ fn probe_symbol_menu(controller: &window::WindowController) {
         Panel::Containers,
         Panel::Leitstand,
     ] {
-        window::toggle_activity_symbol(panel);
+        window::toggle_activity_symbol(&crate::context::app(), panel);
     }
     let (ticked, enabled) = symbol_menu_state(controller, Panel::Ci);
     check(
@@ -481,7 +481,7 @@ fn probe_symbol_menu(controller: &window::WindowController) {
         Panel::Containers,
         Panel::Leitstand,
     ] {
-        window::toggle_activity_symbol(panel);
+        window::toggle_activity_symbol(&crate::context::app(), panel);
     }
     controller.activate_panel(Panel::Agents);
     check(
@@ -501,13 +501,13 @@ fn probe_ignored(root: PathBuf) {
         rows == 3,
         format!("{rows} rows"),
     );
-    window::show_ignored_files(true);
+    window::show_ignored_files(&crate::context::app(), true);
     let probe = root.clone();
     helpers::wait_until(
         move || rows_of(&probe) > rows,
         move |_| {
             let shown = rows_of(&root);
-            window::show_ignored_files(false);
+            window::show_ignored_files(&crate::context::app(), false);
             let probe = root.clone();
             helpers::wait_until(
                 move || rows_of(&probe) == rows,
@@ -696,7 +696,7 @@ fn probe_markdown() {
         .unwrap_or_else(|_| helpers::root("markdown-project"));
     let file = root.join("NOTES.md");
     crate::project::trust(&root);
-    crate::app::open_project(mtm, root.clone());
+    crate::app::open_project(&crate::context::app(), mtm, root.clone());
     helpers::wait_for_editor(&root.clone(), &file, move |editor| {
         let styled = move || {
             editor.as_ref().is_some_and(|editor| {

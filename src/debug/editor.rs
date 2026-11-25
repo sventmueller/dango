@@ -32,7 +32,10 @@ pub(crate) fn panel_and_path(editor: &EditorTextView) -> Option<(Retained<DebugP
 
 /// The editors of `controller`'s window.
 fn editors_of(controller: &WindowController) -> Vec<Retained<EditorTextView>> {
-    crate::editor::all_editors()
+    controller
+        .context()
+        .editors()
+        .live()
         .into_iter()
         .filter(|editor| editor.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
         .collect()

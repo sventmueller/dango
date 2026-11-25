@@ -108,6 +108,6 @@ impl WindowController {
 
 /// Opens `folder` in a window of its own beside `controller`'s.
 fn open_beside(controller: &WindowController, folder: PathBuf) {
-    let opened = WindowController::open_new(controller.mtm(), Some(folder));
+    let opened = WindowController::open_new(controller.context(), controller.mtm(), Some(folder));
     opened.restore_layout();
 }

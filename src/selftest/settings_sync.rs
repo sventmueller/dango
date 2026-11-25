@@ -48,8 +48,8 @@ pub(crate) fn run() {
     }
     let mut settings = Settings::load_user();
     let _ = settings.set(&keys::FONT_SIZE, &13.0);
-    settings_sync::use_folder(mtm, &folder);
-    settings_sync::set_enabled(mtm, true);
+    settings_sync::use_folder(&crate::context::app(), mtm, &folder);
+    settings_sync::set_enabled(&crate::context::app(), mtm, true);
     wait_within(
         Duration::from_secs(15),
         || own().is_some_and(|f| f.entries.contains_key("fontSize")),
@@ -139,7 +139,10 @@ fn paused(folder: std::path::PathBuf) {
     );
     wait_within(
         Duration::from_secs(15),
-        || objc2::MainThreadMarker::new().is_some_and(|mtm| settings_sync::status(mtm) == Status::Paused),
+        || {
+            objc2::MainThreadMarker::new()
+                .is_some_and(|mtm| settings_sync::status(&crate::context::AppContext::get(mtm)) == Status::Paused)
+        },
         |is_paused| {
             let size = Settings::load_user().get(&keys::FONT_SIZE);
             check(
@@ -148,7 +151,7 @@ fn paused(folder: std::path::PathBuf) {
                 format!("paused {is_paused}, font size {size}"),
             );
             if let Some(mtm) = objc2::MainThreadMarker::new() {
-                settings_sync::set_enabled(mtm, false);
+                settings_sync::set_enabled(&crate::context::AppContext::get(mtm), mtm, false);
             }
             finish(SCENARIO);
         },

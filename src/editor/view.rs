@@ -273,17 +273,18 @@ define_class!(
         #[unsafe(method(validateMenuItem:))]
         fn validate_menu_item(&self, item: &objc2_app_kit::NSMenuItem) -> bool {
             let answer = self.guarded(None, || {
+                let cx = crate::context::app();
                 super::whitespace::validate(item)
-                    .or_else(|| super::minimap::validate(item))
-                    .or_else(|| super::sticky::validate(item))
-                    .or_else(|| super::line_diagnostics::validate(item))
-                    .or_else(|| super::vim::validate(item))
+                    .or_else(|| super::minimap::validate(&cx, item))
+                    .or_else(|| super::sticky::validate(&cx, item))
+                    .or_else(|| super::line_diagnostics::validate(&cx, item))
+                    .or_else(|| super::vim::validate(&cx, item))
                     .or_else(|| {
                         (item.action() == Some(objc2::sel!(ideOpenPageInBrowserTab:))).then(|| {
                             self.document().path().is_some_and(crate::site_preview::is_page)
                         })
                     })
-                    .or_else(|| super::predict::validate(self, item))
+                    .or_else(|| super::predict::validate(&cx, self, item))
                     .or_else(|| ide_ui_lsp::inlay::validate(self, item))
                     .or_else(|| super::blame::validate(self, item))
                     .or_else(|| crate::preview::validate(self, item.action()))

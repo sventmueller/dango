@@ -107,8 +107,9 @@ define_class!(
                 }
                 let key = self.ivars().key;
                 main_soon(move || {
-                    if super::get(key).is_some_and(|tab| tab.root.window().is_none()) {
-                        super::remove(key);
+                    let state = crate::host::state();
+                    if state.tab(key).is_some_and(|tab| tab.root.window().is_none()) {
+                        super::remove(&state, key);
                     }
                 });
             });
@@ -196,10 +197,10 @@ impl AgentTab {
         let thread_id = resume.as_ref().and_then(|r| r.thread.clone()).unwrap_or_default();
         let thread = Thread::new(thread_id, agent.id(), &cwd);
         let tab = AgentTab::shared(AgentTab::build(controller, state, agent, cwd, thread, Source::Idle));
-        let bookmarked = crate::agent_panel::is_bookmarked(&tab.thread_id);
+        let bookmarked = crate::agent_panel::is_bookmarked_in(state, &tab.thread_id);
         tab.state.borrow_mut().opened(resume, bookmarked);
-        crate::agent_panel::read_past(&tab.cwd);
-        tab.add_to_window(controller);
+        crate::agent_panel::read_past(state, &tab.cwd);
+        tab.add_to_window(state, controller);
         Some(tab)
     }
 
@@ -225,7 +226,7 @@ impl AgentTab {
         let header = Header::new(mtm, &target);
         let timeline = Timeline::new(mtm, key, &target, thread.clone(), cwd.clone());
         let composer = Composer::new(mtm, key, &target);
-        let status = StatusLine::new(mtm, key);
+        let status = StatusLine::new(mtm, key, &agents.context_gauges);
         #[cfg(feature = "dictation")]
         ide_ui_dictation::register(
             Rc::new(ComposerField(key)),
@@ -362,8 +363,8 @@ impl AgentTab {
         activate(constraints.into_iter().chain(input_constraints(&bottom, &column)));
     }
 
-    /// Adds the tab to the window's tab bar.
-    pub(super) fn add_to_window(&self, controller: &Window) {
+    /// Adds the tab to the window's tab bar and shows it as `state` has the app's part of it.
+    pub(super) fn add_to_window(&self, state: &crate::State, controller: &Window) {
         let view: Retained<NSView> = self.root();
         let id = controller.add_tab(TabKind::Agent, Some(self.tab_key()), self.agent.name(), view);
         self.tab_id.set(id);
@@ -374,7 +375,7 @@ impl AgentTab {
             }
         }
         self.composer.set_agent(self.agent.name());
-        self.refresh();
+        self.refresh_in(state);
     }
 
     /// The key the window's document tabs know the tab by.
@@ -424,10 +425,10 @@ impl AgentTab {
         &self.cwd
     }
 
-    /// Names the thread `title`, as the user would rename it.
-    pub(crate) fn set_custom_title(&self, title: &str) {
+    /// Names the thread `title`, as the user would rename it, and shows it as `state` has the app's part of it.
+    pub(crate) fn set_custom_title(&self, state: &crate::State, title: &str) {
         self.state.borrow_mut().set_custom_title(title.to_string());
-        self.refresh();
+        self.refresh_in(state);
     }
 
     /// The title the tab and the session list show.
@@ -492,6 +493,7 @@ impl AgentTab {
     /// Shows the thread as `snapshot` has it and reacts to how its status moved.
     pub(super) fn absorb(&self, snapshot: impl Into<Arc<Thread>>, changes: &[Change]) {
         let _interval = ide_process::signpost::begin(ide_process::signpost::name!("agent update"));
+        let cx = crate::host::state();
         let snapshot: Arc<Thread> = snapshot.into();
         let refresh = super::refresh::Refresh::of(&snapshot, changes);
         let before = self.state.borrow().status();
@@ -512,12 +514,12 @@ impl AgentTab {
             || before != now
             || had_rows != (self.timeline.count() > 0)
         {
-            self.refresh();
+            self.refresh_in(&cx);
         } else if refresh.status {
-            self.status.show(self.state.borrow().thread());
+            self.status.show(&cx, self.state.borrow().thread());
         }
         if refresh.plans {
-            self.refresh_plan_docs();
+            self.refresh_plan_docs(&cx);
         }
         self.plan_plus_moved();
         if before != now {
@@ -540,7 +542,7 @@ impl AgentTab {
             self.refresh_work();
             if let Some(controller) = self.controller() {
                 if refresh.sessions {
-                    super::changed(&controller);
+                    super::changed(&cx, &controller);
                 } else {
                     controller.refresh_activity();
                 }
@@ -564,9 +566,9 @@ impl AgentTab {
         );
     }
 
-    /// Takes in the bookmarks, read after the tab opened.
-    pub(super) fn bookmarks_read(&self) {
-        let on = crate::agent_panel::is_bookmarked(&self.thread_id);
+    /// Takes in the bookmarks `state` read after the tab opened.
+    pub(super) fn bookmarks_read(&self, state: &crate::State) {
+        let on = crate::agent_panel::is_bookmarked_in(state, &self.thread_id);
         self.state.borrow_mut().set_bookmarked(on);
         self.header.set_bookmarked(on);
     }
@@ -585,6 +587,11 @@ impl AgentTab {
 
     /// Brings the head, the composer, the status line and the overlays up to date with the state.
     pub(crate) fn refresh(&self) {
+        self.refresh_in(&crate::host::state());
+    }
+
+    /// `refresh` with the plan's usage and the context breakdown that `cx` keeps.
+    pub(crate) fn refresh_in(&self, cx: &crate::State) {
         let (problem, thread, title) = {
             let state = self.state.borrow();
             (
@@ -603,9 +610,9 @@ impl AgentTab {
         if matches!(self.agent, Agent::Claude)
             && let Some(session) = self.session()
         {
-            super::usage::fetch(&session);
+            super::usage::fetch(cx, &session);
         }
-        self.status.show(&thread);
+        self.status.show(cx, &thread);
         self.refresh_composer();
         for view in self.problem_holder.subviews().iter() {
             view.removeFromSuperview();

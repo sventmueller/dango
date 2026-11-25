@@ -2,7 +2,6 @@
 //! run: Lowspeak owns fn while it runs, and an event tap takes fn from every app, so it lives only while this one is
 //! in front. `Hotkey::stop` is final, so each of those times gets a new one.
 
-use std::cell::RefCell;
 use std::ptr::NonNull;
 use std::time::Instant;
 
@@ -58,10 +57,6 @@ pub(super) struct FnKey {
     observers: Vec<Retained<ProtocolObject<dyn NSObjectProtocol>>>,
 }
 
-fn with_fn<R>(f: impl FnOnce(&RefCell<FnKey>) -> R) -> R {
-    f(&super::state().fn_key)
-}
-
 fn in_selftest() -> bool {
     cfg!(feature = "selftest") && std::env::var_os("IDE_SELFTEST").is_some()
 }
@@ -71,21 +66,29 @@ fn trusted() -> bool {
     unsafe { AXIsProcessTrusted() }
 }
 
-fn setting() -> bool {
-    with_fn(|f| {
-        *f.borrow_mut()
-            .setting
-            .get_or_insert_with(|| Settings::load_user().get(&DICTATE_WITH_FN))
-    })
+/// Whether fn dictates by the settings, read once and then kept in `state`.
+fn setting(state: &super::State) -> bool {
+    *state
+        .fn_key
+        .borrow_mut()
+        .setting
+        .get_or_insert_with(|| Settings::load_user().get(&DICTATE_WITH_FN))
 }
 
-pub(super) fn asked() -> bool {
-    with_fn(|f| f.borrow().asked_now) || State::load_user().get(&ASKED)
+/// Whether the app asked macOS for the Accessibility permission, in this run or an earlier one.
+pub(super) fn asked(state: &super::State) -> bool {
+    let asked_now = state.fn_key.borrow().asked_now;
+    asked_now || State::load_user().get(&ASKED)
 }
 
 /// Calls `then` for each notification `name` of `center`, the app's own by default, for as long as the app runs. AppKit
 /// and NSWorkspace post these on the main thread, and without a queue the call is synchronous, which quitting needs.
-pub(super) fn observe(name: &NSNotificationName, center: Option<&NSNotificationCenter>, then: fn(&NSNotification)) {
+pub(super) fn observe(
+    state: &super::State,
+    name: &NSNotificationName,
+    center: Option<&NSNotificationCenter>,
+    then: fn(&NSNotification),
+) {
     let block = RcBlock::new(move |notification: NonNull<NSNotification>| {
         ide_ui_common::util::guarded((), || {
             // SAFETY: The center passes a valid notification for the duration of the call.
@@ -99,39 +102,46 @@ pub(super) fn observe(name: &NSNotificationName, center: Option<&NSNotificationC
     let center = center.unwrap_or(&default);
     // SAFETY: The block runs on the posting thread and acts only there on the main thread, checked above.
     let observer = unsafe { center.addObserverForName_object_queue_usingBlock(Some(name), None, None, &block) };
-    with_fn(|f| f.borrow_mut().observers.push(observer));
+    state.fn_key.borrow_mut().observers.push(observer);
 }
 
-pub(super) fn launched() {
+/// After launch: whether Lowspeak runs, the notifications that change what fn does, and the event tap.
+pub(super) fn launched(state: &super::State) {
     let lowspeak = NSRunningApplication::runningApplicationsWithBundleIdentifier(&ns(LOWSPEAK_APP));
-    with_fn(|f| f.borrow_mut().lowspeak_runs = lowspeak.iter().any(|app| !app.isTerminated()));
+    state.fn_key.borrow_mut().lowspeak_runs = lowspeak.iter().any(|app| !app.isTerminated());
     let workspace = NSWorkspace::sharedWorkspace().notificationCenter();
     observe(
+        state,
         constant!(objc2_app_kit::NSWorkspaceDidLaunchApplicationNotification),
         Some(&workspace),
         |n| lowspeak_changed(n, true),
     );
     observe(
+        state,
         constant!(objc2_app_kit::NSWorkspaceDidTerminateApplicationNotification),
         Some(&workspace),
         |n| lowspeak_changed(n, false),
     );
     observe(
+        state,
         constant!(objc2_app_kit::NSApplicationDidBecomeActiveNotification),
         None,
-        |_| arm(),
+        |_| arm(&super::state()),
     );
     observe(
+        state,
         constant!(objc2_app_kit::NSApplicationDidResignActiveNotification),
         None,
         |_| {
-            if let Some(target) = with_fn(|f| f.borrow_mut().recording.take()) {
-                super::end_with_fn(target);
+            let state = super::state();
+            let recording = state.fn_key.borrow_mut().recording.take();
+            if let Some(target) = recording {
+                super::end_with_fn(&state, target);
             }
-            arm();
+            arm(&state);
         },
     );
-    arm();
+    arm(state);
 }
 
 fn lowspeak_changed(notification: &NSNotification, runs: bool) {
@@ -143,20 +153,22 @@ fn lowspeak_changed(notification: &NSNotification, runs: bool) {
         .and_then(|app| app.bundleIdentifier())
         .is_some_and(|id| id.to_string() == LOWSPEAK_APP)
     {
-        with_fn(|f| f.borrow_mut().lowspeak_runs = runs);
-        arm();
+        let state = super::state();
+        state.fn_key.borrow_mut().lowspeak_runs = runs;
+        arm(&state);
     }
 }
 
 /// Where fn stands now.
 pub fn fn_state() -> FnState {
-    if !setting() {
+    let state = super::state();
+    if !setting(&state) {
         FnState::Off
-    } else if with_fn(|f| f.borrow().lowspeak_runs) {
+    } else if state.fn_key.borrow().lowspeak_runs {
         FnState::LowspeakHasIt
     } else if trusted() {
         FnState::Ready
-    } else if asked() {
+    } else if asked(&state) {
         FnState::Refused
     } else {
         FnState::NotAsked
@@ -164,15 +176,15 @@ pub fn fn_state() -> FnState {
 }
 
 /// Starts the event tap when fn should dictate and stops it when not.
-fn arm() {
+fn arm(state: &super::State) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let wanted = !in_selftest()
-        && setting()
+        && setting(state)
         && NSApplication::sharedApplication(mtm).isActive()
-        && !with_fn(|f| f.borrow().lowspeak_runs)
-        && (trusted() || with_fn(|f| f.borrow().asked_now));
-    let stopped = with_fn(|f| {
-        let mut f = f.borrow_mut();
+        && !state.fn_key.borrow().lowspeak_runs
+        && (trusted() || state.fn_key.borrow().asked_now);
+    let stopped = {
+        let mut f = state.fn_key.borrow_mut();
         match (&f.hotkey, wanted) {
             (None, true) => {
                 f.gesture.reset();
@@ -185,7 +197,7 @@ fn arm() {
             }
             _ => None,
         }
-    });
+    };
     if let Some(hotkey) = stopped {
         hotkey.stop();
     }
@@ -193,84 +205,87 @@ fn arm() {
 
 /// The user switched fn in the settings.
 pub fn setting_changed(on: bool) {
-    with_fn(|f| f.borrow_mut().setting = Some(on));
-    arm();
+    let state = super::state();
+    state.fn_key.borrow_mut().setting = Some(on);
+    arm(&state);
 }
 
 pub(super) fn pressed(key: Pressed) {
+    let state = super::state();
     let now = Instant::now();
-    let command = with_fn(|f| {
-        let mut f = f.borrow_mut();
+    let command = {
+        let mut f = state.fn_key.borrow_mut();
         match key {
             Pressed::FnDown { shift } => f.gesture.down(now, shift),
             Pressed::FnUp => f.gesture.up(now),
             Pressed::ShiftDown => f.gesture.shift_down(),
         }
-    });
-    obey(command);
+    };
+    obey(&state, command);
 }
 
-fn obey(command: Command) {
+/// Does what the gesture of fn asks for.
+fn obey(state: &super::State, command: Command) {
     match command {
-        Command::Start | Command::StartHandsFree => start(),
+        Command::Start | Command::StartHandsFree => start(state),
         Command::Stop => {
-            if let Some(target) = with_fn(|f| f.borrow_mut().recording.take()) {
-                super::end_with_fn(target);
+            let recording = state.fn_key.borrow_mut().recording.take();
+            if let Some(target) = recording {
+                super::end_with_fn(state, target);
             }
         }
         Command::AwaitSecondTap(tap) => main_after(SECOND_TAP_WINDOW, move || {
-            obey(with_fn(|f| f.borrow_mut().gesture.second_tap_missed(tap)));
+            let state = super::state();
+            let command = state.fn_key.borrow_mut().gesture.second_tap_missed(tap);
+            obey(&state, command);
         }),
         Command::Lock | Command::None => {}
     }
 }
 
 /// fn went down: a dictation into the field with the focus; elsewhere, such as in a terminal, fn does nothing.
-fn start() {
+fn start(state: &super::State) {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    let started = super::focused(mtm).filter(|target| super::begin_with_fn(*target));
-    with_fn(|f| {
-        let mut f = f.borrow_mut();
-        f.recording = started;
-        if started.is_none() {
-            f.gesture.reset();
-            if let Some(hotkey) = &f.hotkey {
-                hotkey.reset_fn_state();
-            }
+    let started = super::focused(state, mtm).filter(|target| super::begin_with_fn(state, *target));
+    let mut f = state.fn_key.borrow_mut();
+    f.recording = started;
+    if started.is_none() {
+        f.gesture.reset();
+        if let Some(hotkey) = &f.hotkey {
+            hotkey.reset_fn_state();
         }
-    });
+    }
 }
 
 /// The recording of `target` ended some other way, such as its limit or a click on its button.
-pub(super) fn ended(target: Target) {
-    with_fn(|f| {
-        let mut f = f.borrow_mut();
-        if f.recording == Some(target) {
-            f.recording = None;
-            f.gesture.reset();
-        }
-    });
+pub(super) fn ended(state: &super::State, target: Target) {
+    let mut f = state.fn_key.borrow_mut();
+    if f.recording == Some(target) {
+        f.recording = None;
+        f.gesture.reset();
+    }
 }
 
 /// After the first dictation the app asks for the Accessibility permission that fn needs (E13), once.
-pub(super) fn after_dictation() {
-    if in_selftest() || !setting() || trusted() || asked() {
+pub(super) fn after_dictation(state: &super::State) {
+    if in_selftest() || !setting(state) || trusted() || asked(state) {
         return;
     }
-    request(false);
+    request(state, false);
 }
 
 /// The settings ask again: macOS may not show its question a second time, so its pane opens as well.
 pub fn ask_permission() {
-    request(true);
+    request(&super::state(), true);
 }
 
-fn request(open_pane: bool) {
-    let mut state = State::load_user();
-    if let Err(error) = state.set(&ASKED, &true) {
+/// Asks macOS for the Accessibility permission and keeps that it asked, opening its pane with `open_pane`.
+fn request(state: &super::State, open_pane: bool) {
+    let mut stored = State::load_user();
+    if let Err(error) = stored.set(&ASKED, &true) {
         ide_ui_common::diag::report("dictation", error);
     }
-    with_fn(|f| f.borrow_mut().asked_now = true);
+    state.fn_key.borrow_mut().asked_now = true;
     if in_selftest() {
         return;
     }
@@ -282,7 +297,7 @@ fn request(open_pane: bool) {
     {
         NSWorkspace::sharedWorkspace().openURL(&url);
     }
-    arm();
+    arm(state);
 }
 
 fn prompt() {

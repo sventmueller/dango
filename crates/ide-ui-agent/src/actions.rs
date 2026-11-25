@@ -624,23 +624,24 @@ impl AgentTab {
     /// Bookmarks the session in the agents panel, or takes its bookmark away.
     pub fn toggle_bookmark(&self) {
         let on = self.state.borrow_mut().toggle_bookmark();
-        crate::agent_panel::set_bookmarked(&self.thread_id, on);
-        self.refresh();
+        let state = crate::host::state();
+        crate::agent_panel::set_bookmarked(&state, &self.thread_id, on);
+        self.refresh_in(&state);
         if let Some(controller) = self.controller() {
-            super::changed(&controller);
+            super::changed(&state, &controller);
         }
     }
 
     /// The clock: sessions of this folder from the index and, experimentally, from the CLI's own transcripts.
-    pub(crate) fn history_menu(&self, view: &NSView) {
-        pop_up(&self.history_items(), view);
+    pub(crate) fn history_menu(&self, state: &crate::State, view: &NSView) {
+        pop_up(&self.history_items(state), view);
     }
 
-    /// The clock's menu, without showing it.
-    pub(super) fn history_items(&self) -> Retained<NSMenu> {
+    /// The clock's menu with the past sessions `state` read, without showing it.
+    pub(super) fn history_items(&self, state: &crate::State) -> Retained<NSMenu> {
         let menu = NSMenu::new(self.mtm);
         menu.setAutoenablesItems(false);
-        let past = crate::agent_panel::past_sessions_cached(&self.cwd, 20);
+        let past = crate::agent_panel::past_sessions_cached(state, &self.cwd, 20);
         if past.is_empty() {
             let none = self.menu_item(&menu, t("Keine früheren Sitzungen"), sel!(ideAgentOpenPast:), -1);
             none.setEnabled(false);
@@ -685,13 +686,15 @@ impl AgentTab {
         self.set_title(&name);
     }
 
+    /// Names the session `name` in the tab and in the index.
     pub(crate) fn set_title(&self, name: &str) {
         self.state.borrow_mut().set_custom_title(name.to_string());
         crate::agent_panel::rename(&self.thread_id, name);
         self.persist();
-        self.refresh();
+        let state = crate::host::state();
+        self.refresh_in(&state);
         if let Some(controller) = self.controller() {
-            super::changed(&controller);
+            super::changed(&state, &controller);
         }
     }
 

@@ -150,7 +150,7 @@ fn authorize_opened(root: PathBuf, ok: bool) {
 fn open_beside(twin: PathBuf) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     crate::project::trust(&twin);
-    WindowController::open(mtm, Some(twin.clone())).activate_panel(Panel::Ci);
+    WindowController::open(&crate::context::app(), mtm, Some(twin.clone())).activate_panel(Panel::Ci);
     wait_for(twin, super::ready, twin_ready);
 }
 

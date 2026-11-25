@@ -35,7 +35,7 @@ pub(crate) fn run() {
         }
         crate::project::trust(folder);
     }
-    crate::app::open_project(mtm, a.clone());
+    crate::app::open_project(&crate::context::app(), mtm, a.clone());
     helpers::wait_for_window(&a.clone(), move |controller| {
         let Some(controller) = controller else {
             return give_up(NAME, "the project's window opens");
@@ -63,7 +63,7 @@ fn navigation(controller: &WindowController, root: &Path) {
         }
     }
     let _ = std::fs::remove_file(root.join("gone.txt"));
-    let navigator = crate::navigation::navigator(mtm);
+    let navigator = crate::navigation::navigator(controller.context().navigation(), mtm);
     let front = crate::window::frontmost(mtm).is_some_and(|c| std::ptr::eq(&*c, controller));
     send(&navigator, sel!(ideGoBack:), None);
     let back = front_file(controller);
@@ -151,7 +151,7 @@ fn recent(mtm: MainThreadMarker) {
     check(
         "a recent folder opens in place of the one in front",
         helpers::window_of(&b).is_some() && helpers::window_of(&a).is_none(),
-        format!("{:?}", crate::window::open_projects()),
+        format!("{:?}", crate::window::open_projects(&crate::context::app())),
     );
     menu.performActionForItemAtIndex(menu.numberOfItems() - 1);
     // SAFETY: As above.
@@ -188,7 +188,7 @@ fn handed(mtm: MainThreadMarker, delegate: &AnyObject, a: &Path, b: &Path) {
         helpers::window_of(a).is_some()
             && helpers::window_of(b).is_none()
             && crate::window::open_windows().len() == windows,
-        format!("{:?}", crate::window::open_projects()),
+        format!("{:?}", crate::window::open_projects(&crate::context::app())),
     );
     // SAFETY: The delegate answers `applicationShouldHandleReopen:hasVisibleWindows:` with a BOOL.
     let handled: Bool = unsafe { msg_send![delegate, applicationShouldHandleReopen: &*app, hasVisibleWindows: false] };

@@ -64,10 +64,6 @@ pub(crate) struct SettingsSync {
     running: Cell<bool>,
 }
 
-fn context(mtm: MainThreadMarker) -> std::rc::Rc<AppContext> {
-    AppContext::get(mtm)
-}
-
 /// The folder in iCloud Drive, named like the app's data folder, so debug and release builds keep apart (E18).
 fn icloud_folder() -> PathBuf {
     let name = ide_core::paths::data_dir()
@@ -115,8 +111,7 @@ fn device_id() -> String {
 }
 
 /// The sync's status now.
-pub(crate) fn status(mtm: MainThreadMarker) -> Status {
-    let cx = context(mtm);
+pub(crate) fn status(cx: &AppContext) -> Status {
     let status = cx.settings_sync().status.borrow().clone();
     if !Settings::load_user().get(&ENABLED) {
         return Status::Off;
@@ -133,21 +128,20 @@ pub(crate) fn available() -> bool {
 }
 
 /// At launch: starts the sync when it is on.
-pub(crate) fn launched(mtm: MainThreadMarker) {
+pub(crate) fn launched(cx: &AppContext, mtm: MainThreadMarker) {
     if Settings::load_user().get(&ENABLED) {
-        start(mtm);
+        start(cx, mtm);
     }
 }
 
 /// Turns the sync on or off and remembers it.
-pub(crate) fn set_enabled(mtm: MainThreadMarker, on: bool) {
+pub(crate) fn set_enabled(cx: &AppContext, mtm: MainThreadMarker, on: bool) {
     let mut settings = Settings::load_user();
     if let Err(error) = settings.set(&ENABLED, &on) {
         crate::diag::report("saving the settings sync's switch", error);
     }
-    let cx = context(mtm);
     if on {
-        start(mtm);
+        start(cx, mtm);
     } else {
         if let Some(presenter) = cx.settings_sync().presenter.borrow_mut().take() {
             NSFileCoordinator::removeFilePresenter(ProtocolObject::from_ref(&*presenter));
@@ -157,18 +151,18 @@ pub(crate) fn set_enabled(mtm: MainThreadMarker, on: bool) {
 }
 
 /// Uses `picked` in place of iCloud Drive's folder, as the way around a refused access.
-pub(crate) fn use_folder(mtm: MainThreadMarker, picked: &Path) {
+pub(crate) fn use_folder(cx: &AppContext, mtm: MainThreadMarker, picked: &Path) {
     let mut settings = Settings::load_user();
     if let Err(error) = settings.set(&FOLDER, &Some(picked.to_path_buf())) {
         crate::diag::report("saving the settings sync's folder", error);
     }
     if settings.get(&ENABLED) {
-        start(mtm);
+        start(cx, mtm);
     }
 }
 
-fn start(mtm: MainThreadMarker) {
-    let cx = context(mtm);
+/// Watches the sync's folder and asks for a round.
+fn start(cx: &AppContext, mtm: MainThreadMarker) {
     if cx.settings_sync().presenter.borrow().is_none() {
         let folder = folder();
         if let Err(error) = std::fs::create_dir_all(&folder) {
@@ -188,12 +182,12 @@ pub(crate) fn request(mtm: MainThreadMarker) {
     if !Settings::load_user().get(&ENABLED) {
         return;
     }
-    let cx = context(mtm);
+    let cx = AppContext::get(mtm);
     let asked = cx.settings_sync().asked.get() + 1;
     cx.settings_sync().asked.set(asked);
     crate::util::main_after(SETTLE, move || {
         let Some(mtm) = MainThreadMarker::new() else { return };
-        let cx = context(mtm);
+        let cx = AppContext::get(mtm);
         if cx.settings_sync().asked.get() != asked {
             return;
         }
@@ -357,7 +351,7 @@ fn coordinated_write(path: &Path, bytes: &[u8]) -> Result<(), SyncError> {
 /// Applies what a round decided, through the settings' writer, which tells the windows.
 fn finished(outcome: Result<Round, SyncError>) {
     let Some(mtm) = MainThreadMarker::new() else { return };
-    let cx = context(mtm);
+    let cx = AppContext::get(mtm);
     cx.settings_sync().running.set(false);
     let round = match outcome {
         Ok(round) => round,

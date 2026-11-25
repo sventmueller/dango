@@ -24,11 +24,14 @@ use objc2_foundation::NSRange;
 use splat_i18n::{t, tf};
 
 use super::EditorTextView;
+use crate::context::AppContext;
 use crate::util::{OnDrop, main_soon, ns};
 use model::{Kind, Proposal};
 use provider::Blocked;
 
-pub(crate) use provider::{Predictions, chosen, settings_changed};
+pub(crate) use provider::Predictions;
+#[cfg(feature = "selftest")]
+pub(crate) use provider::{chosen, settings_changed};
 pub(crate) use shown::{ask_consent, sign_in_sheet};
 #[cfg(feature = "selftest")]
 mod selftest_probe;
@@ -85,7 +88,7 @@ fn language(view: &EditorTextView) -> (String, String) {
     }
 }
 
-fn gate(view: &EditorTextView) -> Gate {
+fn gate(cx: &AppContext, view: &EditorTextView) -> Gate {
     let not_here = t("Vorschläge nur in vertrauten Ordnern");
     let Some(path) = view.document().path().map(Path::to_path_buf) else {
         return Gate::NotHere(not_here);
@@ -97,22 +100,22 @@ fn gate(view: &EditorTextView) -> Gate {
     let Some(root) = root.filter(|_| controller.is_trusted()) else {
         return Gate::NotHere(not_here);
     };
-    let chosen = chosen();
+    let chosen = cx.predictions().chosen();
     if model::excluded(&path, &chosen.exclude) {
         return Gate::NotHere(t("Vorschläge aus: Datei auf der Ausschlussliste"));
     }
     if chosen.off_for.contains(&language(view).0) {
         return Gate::LanguageOff;
     }
-    match provider::provider(&root) {
+    match provider::provider(cx, &root) {
         Ok(provider) => Gate::Ready(provider),
         Err(blocked) => Gate::Blocked(blocked, root),
     }
 }
 
 /// Whether a provider is chosen at all, cheap enough for every keystroke.
-fn active() -> bool {
-    provider::forced() || chosen().choice != model::Choice::Off
+fn active(predictions: &Predictions) -> bool {
+    predictions.forced() || predictions.chosen().choice != model::Choice::Off
 }
 
 /// The selection of `view` in bytes of its text.
@@ -150,8 +153,8 @@ pub(super) fn forget(view: &EditorTextView) {
     }
 }
 
-/// The document of `view` changed: the proposal goes, and once typing pauses the provider is asked.
-pub(crate) fn changed(view: &EditorTextView) {
+/// The document of `view`, an editor of `cx`, changed: the proposal goes, and once typing pauses the provider is asked.
+pub(crate) fn changed(cx: &AppContext, view: &EditorTextView) {
     let (had, asking) = match view.ivars().predict.try_borrow_mut() {
         Ok(mut state) if !state.quiet => {
             state.warning = None;
@@ -173,7 +176,7 @@ pub(crate) fn changed(view: &EditorTextView) {
             }
         });
     }
-    if active() {
+    if active(cx.predictions()) {
         view.later(sel!(idePredict), PAUSE);
     }
 }
@@ -216,6 +219,11 @@ pub(crate) fn moved(view: &EditorTextView) {
 
 /// Asks the provider about `view` once typing paused.
 pub(crate) fn request(view: &EditorTextView) {
+    request_in(&crate::context::app(), view);
+}
+
+/// Asks the provider about `view` once typing paused, as `request` does, with the context at hand.
+fn request_in(cx: &AppContext, view: &EditorTextView) {
     if view.hasMarkedText() {
         view.later(sel!(idePredict), PAUSE);
         return;
@@ -223,13 +231,13 @@ pub(crate) fn request(view: &EditorTextView) {
     if !super::multi::extra(view).is_empty() || view.ivars().predict.borrow().shown.is_some() {
         return;
     }
-    let provider = match gate(view) {
+    let provider = match gate(cx, view) {
         Gate::Ready(provider) => provider,
         Gate::Blocked(Blocked::Consent, _) => {
-            ask_from_editor(view);
-            return refresh_status(view);
+            ask_from_editor(cx, view);
+            return refresh_status(cx, view);
         }
-        Gate::Blocked(..) | Gate::NotHere(_) | Gate::LanguageOff => return refresh_status(view),
+        Gate::Blocked(..) | Gate::NotHere(_) | Gate::LanguageOff => return refresh_status(cx, view),
     };
     let (request, snapshot) = {
         let document = view.document();
@@ -251,7 +259,8 @@ pub(crate) fn request(view: &EditorTextView) {
         };
         (request, document.text().clone())
     };
-    let id = provider::next_question();
+    let predictions = cx.predictions();
+    let id = predictions.next_question();
     let cancel = Cancel::new();
     if let Some((_, old)) = view.ivars().predict.borrow_mut().asking.replace((id, cancel.clone())) {
         old.cancel();
@@ -262,8 +271,8 @@ pub(crate) fn request(view: &EditorTextView) {
     let reply: ide_predict::Reply = Box::new(move |answer| {
         main_soon(move || arrived(serial, id, revision, asked, from, answer));
     });
-    let reach = provider::reach();
-    let (scans, scan) = (provider::scans(), provider::gitleaks());
+    let reach = predictions.reach();
+    let (scans, scan) = (predictions.scans(), provider::gitleaks());
     let checking = crate::util::spawn("prediction-request", move || {
         let request = Request {
             text: snapshot.to_string(),
@@ -284,23 +293,22 @@ pub(crate) fn request(view: &EditorTextView) {
 /// The secrets check of a request of the editor `serial` said `verdict`: a missing gitleaks holds requests back or, once
 /// the user chose to send `unchecked`, shows in the status bar, as a failed check does; a finding pauses the file there.
 fn checked(serial: ide_ui_lsp::EditorSerial, verdict: &guard::Verdict, unchecked: bool) {
-    let Some(view) = super::find_editor(serial) else { return };
+    let cx = crate::context::app();
+    let Some(view) = super::find_editor_in(&cx, serial) else {
+        return;
+    };
     let warning = match verdict {
-        guard::Verdict::NotInstalled
-            if unchecked && !crate::context::app().predictions().told_missing.replace(true) =>
-        {
-            Some(tf(
-                "Ohne gitleaks geht der Code ungeprüft hinaus. Installiere es mit „{}“.",
-                &[ide_ui_git::message::INSTALL_GITLEAKS],
-            ))
-        }
+        guard::Verdict::NotInstalled if unchecked && !cx.predictions().told_missing.replace(true) => Some(tf(
+            "Ohne gitleaks geht der Code ungeprüft hinaus. Installiere es mit „{}“.",
+            &[ide_ui_git::message::INSTALL_GITLEAKS],
+        )),
         guard::Verdict::Failed(problem) => Some(tf("Die Secrets-Prüfung ist fehlgeschlagen: {}", &[problem])),
         _ => None,
     };
     if warning.is_some() {
         view.ivars().predict.borrow_mut().warning = warning;
     }
-    refresh_status(&view);
+    refresh_status(&cx, &view);
 }
 
 fn arrived(
@@ -311,7 +319,10 @@ fn arrived(
     provider: Arc<dyn Provider>,
     answer: Result<Vec<Prediction>, Error>,
 ) {
-    let Some(view) = super::find_editor(serial) else { return };
+    let cx = crate::context::app();
+    let Some(view) = super::find_editor_in(&cx, serial) else {
+        return;
+    };
     {
         let mut state = view.ivars().predict.borrow_mut();
         if state.asking.as_ref().map(|(asking, _)| *asking) != Some(id) {
@@ -335,7 +346,7 @@ fn arrived(
         Err(Error::Unavailable(text)) => view.ivars().predict.borrow_mut().note = Some(text),
         Err(Error::Malformed(text)) => crate::diag::report("an edit prediction", text),
     }
-    refresh_status(&view);
+    refresh_status(&cx, &view);
 }
 
 fn show(view: &EditorTextView, proposal: Proposal, provider: Arc<dyn Provider>) {
@@ -446,18 +457,19 @@ fn take_word(view: &EditorTextView, proposal: &Proposal, provider: &Arc<dyn Prov
 }
 
 /// Asks once per run, from the editor, whether the chosen provider outside the Mac may get text.
-fn ask_from_editor(view: &EditorTextView) {
-    let predictions = crate::context::app();
-    if predictions.predictions().asked_consent.replace(true) {
+fn ask_from_editor(cx: &AppContext, view: &EditorTextView) {
+    let predictions = cx.predictions();
+    if predictions.asked_consent.replace(true) {
         return;
     }
     let Some(window) = view.window() else { return };
-    let name = provider::name(chosen().choice);
+    let name = provider::name(predictions.chosen().choice);
     let serial = view.ivars().serial;
     ask_consent(&window, name, move || {
-        provider::consent();
-        if let Some(view) = super::find_editor(serial) {
-            request(&view);
+        let cx = crate::context::app();
+        provider::consent_in(&cx);
+        if let Some(view) = super::find_editor_in(&cx, serial) {
+            request_in(&cx, &view);
         }
     });
 }
@@ -473,19 +485,20 @@ fn ask_unchecked(view: &EditorTextView, name: &str) {
     });
 }
 
-/// The settings or a provider's state changed: proposals that may no longer show go, and the status bars follow.
-pub(crate) fn follow_settings() {
-    for view in super::all_editors() {
-        if !matches!(gate(&view), Gate::Ready(..)) {
+/// The settings or a provider's state changed: proposals that may no longer show go, and the status bars of the editors
+/// of `cx` follow.
+pub(crate) fn follow_settings(cx: &AppContext) {
+    for view in cx.editors().live() {
+        if !matches!(gate(cx, &view), Gate::Ready(..)) {
             forget(&view);
         }
-        refresh_status(&view);
+        refresh_status(cx, &view);
     }
 }
 
-/// Copilot became ready for `root`: its editors ask once more.
-pub(crate) fn ask_again(root: &Path) {
-    for view in super::all_editors() {
+/// Copilot became ready for `root`: its editors among those of `cx` ask once more.
+pub(crate) fn ask_again(cx: &AppContext, root: &Path) {
+    for view in cx.editors().live() {
         if view.document().path().is_some_and(|p| p.starts_with(root)) {
             view.later(sel!(idePredict), PAUSE);
         }
@@ -493,8 +506,8 @@ pub(crate) fn ask_again(root: &Path) {
 }
 
 /// Turns proposals on or off for the language with id `id`.
-pub(crate) fn toggle_language(id: &str) {
-    let mut off = chosen().off_for;
+fn toggle_language_in(cx: &AppContext, id: &str) {
+    let mut off = cx.predictions().chosen().off_for;
     if off.iter().any(|l| l == id) {
         off.retain(|l| l != id);
     } else {
@@ -505,12 +518,13 @@ pub(crate) fn toggle_language(id: &str) {
     if let Err(error) = settings.set(&model::OFF_FOR, &off) {
         crate::diag::report("saving the languages without edit prediction", error);
     }
-    settings_changed();
+    provider::settings_changed_in(cx);
     crate::settings::prediction_changed();
 }
 
 /// A menu item or the status bar's button with `idePrediction:` was used.
 pub(crate) fn perform(view: &EditorTextView, sender: Option<&AnyObject>) {
+    let cx = crate::context::app();
     let tag = sender
         .and_then(|s| s.downcast_ref::<NSMenuItem>().map(NSMenuItem::tag))
         .or_else(|| sender.and_then(|s| s.downcast_ref::<objc2_app_kit::NSControl>().map(|c| c.tag())))
@@ -526,23 +540,23 @@ pub(crate) fn perform(view: &EditorTextView, sender: Option<&AnyObject>) {
             }
         }
         DROP => forget(view),
-        LANGUAGE => toggle_language(&language(view).0),
-        STATUS => status_pressed(view),
+        LANGUAGE => toggle_language_in(&cx, &language(view).0),
+        STATUS => status_pressed(&cx, view),
         _ => {}
     }
 }
 
 /// The status bar's button: switches the language on or off where proposals can come, else leads to what is missing.
-fn status_pressed(view: &EditorTextView) {
+fn status_pressed(cx: &AppContext, view: &EditorTextView) {
     let held = view.ivars().predict.borrow().held;
-    match gate(view) {
+    match gate(cx, view) {
         Gate::Ready(..) if held.is_some() => ask_unchecked(view, held.unwrap_or_default()),
-        Gate::Ready(..) | Gate::LanguageOff => toggle_language(&language(view).0),
+        Gate::Ready(..) | Gate::LanguageOff => toggle_language_in(cx, &language(view).0),
         Gate::Blocked(Blocked::Consent, _) => {
-            crate::context::app().predictions().asked_consent.set(false);
-            ask_from_editor(view);
+            cx.predictions().asked_consent.set(false);
+            ask_from_editor(cx, view);
         }
-        Gate::Blocked(Blocked::Missing, root) => provider::install(&root),
+        Gate::Blocked(Blocked::Missing, root) => provider::install_in(cx, &root),
         Gate::Blocked(..) => crate::settings::show_prediction(view.mtm()),
         Gate::NotHere(_) => {}
     }
@@ -550,7 +564,7 @@ fn status_pressed(view: &EditorTextView) {
 
 /// The menu items of edit prediction: greyed out without a proposal, the language's named after it and ticked while
 /// proposals come for it; `None` for every other item.
-pub(crate) fn validate(view: &EditorTextView, item: &NSMenuItem) -> Option<bool> {
+pub(crate) fn validate(cx: &AppContext, view: &EditorTextView, item: &NSMenuItem) -> Option<bool> {
     if item.action()? != sel!(idePrediction:) {
         return None;
     }
@@ -561,13 +575,13 @@ pub(crate) fn validate(view: &EditorTextView, item: &NSMenuItem) -> Option<bool>
         LANGUAGE => {
             let (id, name) = language(view);
             item.setTitle(&ns(&tf("Vorschläge für {}", &[&name])));
-            let on = !chosen().off_for.contains(&id);
+            let on = !cx.predictions().chosen().off_for.contains(&id);
             item.setState(if on {
                 NSControlStateValueOn
             } else {
                 NSControlStateValueOff
             });
-            active() && view.document().path().is_some()
+            active(cx.predictions()) && view.document().path().is_some()
         }
         _ => true,
     })
@@ -594,26 +608,27 @@ pub(crate) fn with_menu_items(mtm: MainThreadMarker, code_menu: Retained<NSMenuI
 /// Adds the switch of edit prediction to the status bar's `stack` of `view`.
 pub(crate) fn status_items(mtm: MainThreadMarker, view: &EditorTextView, stack: &objc2_app_kit::NSStackView) {
     shown::status_item(mtm, view, stack, STATUS);
-    refresh_status(view);
+    refresh_status(&crate::context::app(), view);
 }
 
 /// What the status bar of `view` says about edit prediction, and whether its button does something.
-fn status(view: &EditorTextView) -> (String, String, bool) {
+fn status(cx: &AppContext, view: &EditorTextView) -> (String, String, bool) {
+    let predictions = cx.predictions();
     let (_, name) = language(view);
-    let provider = if provider::forced() {
+    let provider = if predictions.forced() {
         "Stub"
     } else {
-        provider::name(chosen().choice)
+        provider::name(predictions.chosen().choice)
     };
     let (note, warning) = {
         let state = view.ivars().predict.borrow();
         (state.note.clone(), state.warning.clone())
     };
-    let (reach, scans) = (provider::reach(), provider::scans());
+    let (reach, scans) = (predictions.reach(), predictions.scans());
     let paused = reach != guard::Reach::Here && view.document().path().is_some_and(|p| scans.paused(p));
     let held = reach == (guard::Reach::Outside { unchecked: false }) && scans.missing();
     view.ivars().predict.borrow_mut().held = held.then_some(provider);
-    match gate(view) {
+    match gate(cx, view) {
         Gate::Ready(..) if paused => {
             let why = t("Vorschläge pausiert: Die Datei enthält ein Secret");
             (why.to_string(), why.to_string(), false)
@@ -653,7 +668,7 @@ fn status(view: &EditorTextView) -> (String, String, bool) {
     }
 }
 
-fn refresh_status(view: &EditorTextView) {
-    let (title, tip, enabled) = status(view);
+fn refresh_status(cx: &AppContext, view: &EditorTextView) {
+    let (title, tip, enabled) = status(cx, view);
     shown::set_status(view, &title, &tip, enabled);
 }

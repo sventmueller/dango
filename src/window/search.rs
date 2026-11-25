@@ -42,8 +42,8 @@ const ESCAPE_KEY: u16 = 53;
 const OUTDENT: f64 = 4.0;
 /// The search panels of every window and the id the next one gets.
 pub(crate) struct SearchPanels {
-    panels: RefCell<Vec<Weak<SearchPanel>>>,
-    next_id: std::cell::Cell<u64>,
+    pub(super) panels: RefCell<Vec<Weak<SearchPanel>>>,
+    pub(super) next_id: std::cell::Cell<u64>,
 }
 
 impl Default for SearchPanels {
@@ -55,17 +55,9 @@ impl Default for SearchPanels {
     }
 }
 
-fn with_panels<R>(f: impl FnOnce(&RefCell<Vec<Weak<SearchPanel>>>) -> R) -> R {
-    f(&crate::context::app().search_panels().panels)
-}
-
-fn with_next_id<R>(f: impl FnOnce(&std::cell::Cell<u64>) -> R) -> R {
-    f(&crate::context::app().search_panels().next_id)
-}
-
 /// Files below `root` changed on disk: the searches of its folder that show matches run again.
 pub(crate) fn files_changed(root: &Path) {
-    for panel in panels() {
+    for panel in open(crate::context::app().search_panels()) {
         if panel.read().root() == root {
             panel.refresh_soon();
         }
@@ -74,22 +66,21 @@ pub(crate) fn files_changed(root: &Path) {
 
 /// The unsaved text of `path` changed: the searches that show matches below its folder run again.
 pub(crate) fn buffer_edited(path: &Path) {
-    for panel in panels() {
+    for panel in open(crate::context::app().search_panels()) {
         if path.starts_with(panel.read().root()) {
             panel.refresh_soon();
         }
     }
 }
 
-fn panels() -> Vec<Retained<SearchPanel>> {
-    with_panels(|panels| panels.borrow().iter().filter_map(Weak::load).collect())
+/// The search panels of `panels` whose windows are still open.
+fn open(panels: &SearchPanels) -> Vec<Retained<SearchPanel>> {
+    panels.panels.borrow().iter().filter_map(Weak::load).collect()
 }
 
-/// The panel with `id`, if its window is still open.
-fn panel(id: u64) -> Option<Retained<SearchPanel>> {
-    with_panels(|panels| {
-        let mut panels = panels.borrow_mut();
-        panels.retain(|p| p.load().is_some());
-        panels.iter().filter_map(Weak::load).find(|p| p.ivars().id == id)
-    })
+/// The panel of `panels` with `id`, if its window is still open.
+fn panel(panels: &SearchPanels, id: u64) -> Option<Retained<SearchPanel>> {
+    let mut open = panels.panels.borrow_mut();
+    open.retain(|p| p.load().is_some());
+    open.iter().filter_map(Weak::load).find(|p| p.ivars().id == id)
 }

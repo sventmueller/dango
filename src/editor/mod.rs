@@ -52,6 +52,7 @@ use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly};
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 use splat_i18n::tf;
 
+use crate::context::AppContext;
 use crate::util::ns;
 use crate::window::{TabId, WindowController};
 pub(crate) use closing::{
@@ -83,19 +84,19 @@ pub(crate) struct EditorState {
     forced_contrast: insets::ForcedContrast,
 }
 
-/// The editors still open.
-fn open_editors() -> Vec<Retained<EditorTextView>> {
-    crate::context::app().editors().live()
-}
-
 /// The editors still open, in every window.
 pub(crate) fn all_editors() -> Vec<Retained<EditorTextView>> {
-    open_editors()
+    crate::context::app().editors().live()
 }
 
 /// The open editor with `serial`, the number that other threads hold instead of the view.
 pub(crate) fn find_editor(serial: ide_ui_lsp::EditorSerial) -> Option<Retained<EditorTextView>> {
-    open_editors().into_iter().find(|v| v.ivars().serial == serial)
+    all_editors().into_iter().find(|v| v.ivars().serial == serial)
+}
+
+/// The open editor of `cx` with `serial`, the number that other threads hold instead of the view.
+pub(crate) fn find_editor_in(cx: &AppContext, serial: ide_ui_lsp::EditorSerial) -> Option<Retained<EditorTextView>> {
+    cx.editors().live().into_iter().find(|v| v.ivars().serial == serial)
 }
 
 /// The editor of `path` in `controller`'s window.
@@ -180,15 +181,17 @@ pub(crate) fn git_changed(root: &Path) {
 /// The texts of the editors with unsaved changes to files below `root`, which a project search reads in place of
 /// the files.
 pub(crate) fn unsaved_buffers(root: &Path) -> Vec<(PathBuf, String)> {
-    unsaved_texts(root)
+    unsaved_texts(&crate::context::app(), root)
         .into_iter()
         .map(|(path, text)| (path, text.to_string()))
         .collect()
 }
 
-/// Shares unsaved text with a worker without materializing the whole buffer on the main thread.
-pub(crate) fn unsaved_texts(root: &Path) -> Vec<(PathBuf, ide_document::Text)> {
-    open_editors()
+/// The unsaved texts of the editors of `cx` below `root`, shared with a worker without materializing the whole buffer
+/// on the main thread.
+pub(crate) fn unsaved_texts(cx: &AppContext, root: &Path) -> Vec<(PathBuf, ide_document::Text)> {
+    cx.editors()
+        .live()
         .iter()
         .filter_map(|view| {
             let document = view.document();
@@ -223,7 +226,10 @@ pub(crate) fn take_back_buffers(controller: &WindowController, buffers: Vec<(Pat
                 update_dirty(view);
             });
         };
-        if let Some(view) = open_editors()
+        if let Some(view) = controller
+            .context()
+            .editors()
+            .live()
             .into_iter()
             .find(|v| v.document().path() == Some(path.as_path()))
         {
@@ -329,10 +335,11 @@ pub(crate) fn tab_title(path: &Path) -> String {
     }
 }
 
-/// What other parts of the app follow: the language server and a project search that shows unsaved text.
-fn notify_change(view: &EditorTextView, change: &Change) {
+/// What other parts of the app follow an edit of `view`, an editor of `cx`: the language server and a project search
+/// that shows unsaved text.
+fn notify_change(cx: &AppContext, view: &EditorTextView, change: &Change) {
     ide_ui_lsp::changed(view, change);
-    predict::changed(view);
+    predict::changed(cx, view);
     crate::preview::edited(view);
     crate::debug::edited(view, change);
     if let Some(path) = view.document().path() {
@@ -342,22 +349,24 @@ fn notify_change(view: &EditorTextView, change: &Change) {
 
 /// Looks at the files of open editors in `dirs` and takes what changed on disk.
 pub(crate) fn files_changed(dirs: &[PathBuf]) {
-    for view in open_editors() {
+    let cx = crate::context::app();
+    for view in cx.editors().live() {
         let path = view.document().path().map(Path::to_path_buf);
         let Some(path) = path else { continue };
         if !path.parent().is_some_and(|parent| dirs.iter().any(|dir| dir == parent)) {
             continue;
         }
-        on_disk::look(&view, on_disk::Look::Changed);
+        on_disk::look(&cx, &view, on_disk::Look::Changed);
     }
 }
 
 /// Looks at the files of every open editor below `root` and takes what changed on disk, after a git operation of the
 /// app's own: the watcher reports only folders the file tree has read.
 pub(crate) fn check_disk_below(root: &Path) {
-    for view in open_editors() {
+    let cx = crate::context::app();
+    for view in cx.editors().live() {
         if view.document().path().is_some_and(|path| path.starts_with(root)) {
-            on_disk::look(&view, on_disk::Look::Changed);
+            on_disk::look(&cx, &view, on_disk::Look::Changed);
         }
     }
 }
@@ -366,9 +375,10 @@ pub(crate) fn check_disk_below(root: &Path) {
 /// since, or holding the same text, leaves the text as it came back; a file changed meanwhile gets the bar, never
 /// merged without a word.
 pub(crate) fn check_recovered(ids: &[RecoveryId]) {
-    for view in open_editors() {
+    let cx = crate::context::app();
+    for view in cx.editors().live() {
         if ids.contains(&view.ivars().file.recovery) {
-            on_disk::look(&view, on_disk::Look::Recovered);
+            on_disk::look(&cx, &view, on_disk::Look::Recovered);
         }
     }
 }
@@ -382,7 +392,10 @@ pub(crate) fn editor_of_tab(controller: &WindowController, tab: TabId) -> Option
 
 /// The editors of `controller`'s window.
 fn editors_in(controller: &WindowController) -> Vec<Retained<EditorTextView>> {
-    open_editors()
+    controller
+        .context()
+        .editors()
+        .live()
         .into_iter()
         .filter(|view| view.controller().is_some_and(|own| std::ptr::eq(&*own, controller)))
         .collect()

@@ -21,7 +21,7 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSMutableAttributedString, NSNumber, NSPoint, NSRange, NSRect, NSSize};
 
-use super::{server_of, text};
+use super::{LspState, server_of, text};
 use crate::editor::Editor;
 use crate::host as editor;
 use ide_ui_common::constant;
@@ -52,16 +52,13 @@ pub(crate) struct ShownSignature {
     help: RefCell<Option<std::rc::Rc<Help>>>,
 }
 
-fn with_help<R>(f: impl FnOnce(&RefCell<Option<std::rc::Rc<Help>>>) -> R) -> R {
-    f(&crate::host::state().signature_help.help)
-}
-
-fn help(mtm: MainThreadMarker) -> std::rc::Rc<Help> {
-    with_help(|cell| {
-        cell.borrow_mut()
-            .get_or_insert_with(|| std::rc::Rc::new(build(mtm)))
-            .clone()
-    })
+/// The window of `shown`, built when there is none yet.
+fn help(shown: &ShownSignature, mtm: MainThreadMarker) -> std::rc::Rc<Help> {
+    shown
+        .help
+        .borrow_mut()
+        .get_or_insert_with(|| std::rc::Rc::new(build(mtm)))
+        .clone()
 }
 
 fn build(mtm: MainThreadMarker) -> Help {
@@ -104,16 +101,16 @@ fn build(mtm: MainThreadMarker) -> Help {
     }
 }
 
-/// The window, if it shows for `view`.
-fn open_for(view: &dyn Editor) -> Option<std::rc::Rc<Help>> {
-    let help = with_help(|cell| cell.borrow().clone())?;
+/// The window of `shown`, if it shows for `view`.
+fn open_for(shown: &ShownSignature, view: &dyn Editor) -> Option<std::rc::Rc<Help>> {
+    let help = shown.help.borrow().clone()?;
     let ours = help.view.get() == Some(view.serial());
     (ours && help.panel.isVisible()).then_some(help)
 }
 
 /// The characters after which the server of `view` offers signatures, and those after which it updates them.
-fn triggers(view: &dyn Editor) -> (Vec<String>, Vec<String>) {
-    let provider = server_of(view)
+fn triggers(state: &LspState, view: &dyn Editor) -> (Vec<String>, Vec<String>) {
+    let provider = server_of(state, view)
         .and_then(|(server, _)| server.capabilities())
         .and_then(|c| c.signature_help_provider);
     provider.map_or_else(Default::default, |p| {
@@ -125,23 +122,23 @@ fn triggers(view: &dyn Editor) -> (Vec<String>, Vec<String>) {
 }
 
 /// Asks for the signatures at the cursor, as the menu item does.
-pub(crate) fn show(view: &dyn Editor) {
+pub(crate) fn show(state: &LspState, view: &dyn Editor) {
     let context = SignatureHelpContext {
         trigger_kind: SignatureHelpTriggerKind::INVOKED,
         trigger_character: None,
-        is_retrigger: open_for(view).is_some(),
+        is_retrigger: open_for(&state.signature_help, view).is_some(),
         active_signature_help: None,
     };
-    request(view, context);
+    request(state, view, context);
 }
 
 /// Text was typed into `view`: a trigger character opens the window, and while it shows, every keystroke updates it.
-pub(crate) fn typed(view: &dyn Editor, typed: &str) {
-    let open = open_for(view);
-    if open.is_none() && server_of(view).is_none() {
+pub(crate) fn typed(state: &LspState, view: &dyn Editor, typed: &str) {
+    let open = open_for(&state.signature_help, view);
+    if open.is_none() && server_of(state, view).is_none() {
         return;
     }
-    let (triggers, retriggers) = triggers(view);
+    let (triggers, retriggers) = triggers(state, view);
     let last = typed.chars().last().map(String::from).unwrap_or_default();
     let trigger = triggers.contains(&last) || (open.is_some() && retriggers.contains(&last));
     let about = (view.document().revision(), view.selectedRange().location);
@@ -158,12 +155,14 @@ pub(crate) fn typed(view: &dyn Editor, typed: &str) {
         is_retrigger: open.is_some(),
         active_signature_help: open.and_then(|help| current(&help)),
     };
-    request(view, context);
+    request(state, view, context);
 }
 
 /// The cursor moved or the text changed while the window shows: it follows, or closes once the cursor left the call.
-pub(crate) fn moved(view: &dyn Editor) {
-    let Some(help) = open_for(view) else { return };
+pub(crate) fn moved(state: &LspState, view: &dyn Editor) {
+    let Some(help) = open_for(&state.signature_help, view) else {
+        return;
+    };
     let about = (view.document().revision(), view.selectedRange().location);
     if help.about.get() == about {
         return;
@@ -174,7 +173,7 @@ pub(crate) fn moved(view: &dyn Editor) {
         is_retrigger: true,
         active_signature_help: current(&help),
     };
-    request(view, context);
+    request(state, view, context);
 }
 
 /// What the window shows, with the overload the user paged to as the active one.
@@ -184,14 +183,17 @@ fn current(help: &Help) -> Option<SignatureHelp> {
     Some(shown)
 }
 
-fn request(view: &dyn Editor, context: SignatureHelpContext) {
-    let Some((server, uri)) = server_of(view) else { return };
+/// Asks the server of `view` for the signatures at the cursor in `context`; the window shows the answer.
+fn request(state: &LspState, view: &dyn Editor, context: SignatureHelpContext) {
+    let Some((server, uri)) = server_of(state, view) else {
+        return;
+    };
     let cursor = view.selectedRange().location;
     let revision = view.document().revision();
     let Some(position) = text::position(view.document().text(), cursor) else {
         return;
     };
-    let shared = help(view.mtm());
+    let shared = help(&state.signature_help, view.mtm());
     let asked = shared.asked.get() + 1;
     shared.asked.set(asked);
     shared.about.set((revision, cursor));
@@ -201,7 +203,7 @@ fn request(view: &dyn Editor, context: SignatureHelpContext) {
             let (Some(view), Some(mtm)) = (editor::find_editor(serial), MainThreadMarker::new()) else {
                 return;
             };
-            let help = help(mtm);
+            let help = help(&editor::state().signature_help, mtm);
             if help.asked.get() != asked || view.document().revision() != revision {
                 return;
             }
@@ -214,9 +216,10 @@ fn request(view: &dyn Editor, context: SignatureHelpContext) {
     });
 }
 
-/// A command of the keyboard reached `view`; whether the window took it: ↑ and ↓ between overloads, Esc to close.
-pub(crate) fn command(view: &dyn Editor, command: Sel) -> bool {
-    let Some(help) = open_for(view) else {
+/// A command of the keyboard reached `view`; whether the window of `shown` took it: ↑ and ↓ between overloads, Esc to
+/// close.
+pub(crate) fn command(shown: &ShownSignature, view: &dyn Editor, command: Sel) -> bool {
+    let Some(help) = open_for(shown, view) else {
         return false;
     };
     if command == sel!(cancelOperation:) {
@@ -237,9 +240,9 @@ pub(crate) fn command(view: &dyn Editor, command: Sel) -> bool {
     true
 }
 
-/// Closes the window if it shows for `view`.
-pub(crate) fn dismiss_for(view: &dyn Editor) {
-    if let Some(help) = open_for(view) {
+/// Closes the window of `shown` if it shows for `view`.
+pub(crate) fn dismiss_for(shown: &ShownSignature, view: &dyn Editor) {
+    if let Some(help) = open_for(shown, view) {
         close(&help);
     }
 }
@@ -448,9 +451,9 @@ fn place(help: &Help, view: &dyn Editor, size: NSSize) {
 }
 
 /// Whether the menu command `action` can run in `view`, for "Parameter zeigen"; `None` for every other one.
-pub(crate) fn validate(view: &dyn Editor, action: Sel) -> Option<bool> {
+pub(crate) fn validate(state: &LspState, view: &dyn Editor, action: Sel) -> Option<bool> {
     (action == sel!(ideSignatureHelp:)).then(|| {
-        server_of(view).is_some_and(|(server, _)| {
+        server_of(state, view).is_some_and(|(server, _)| {
             server
                 .capabilities()
                 .is_some_and(|c| c.signature_help_provider.is_some())
@@ -465,14 +468,19 @@ pub mod selftest {
 
     /// The text the window shows for `view`, and the part set apart as the active parameter; `None` when closed.
     pub fn shown(view: &dyn Editor) -> Option<(String, String)> {
-        let help = super::open_for(view)?;
+        let help = super::open_for(&crate::host::state().signature_help, view)?;
         let text = help.field.stringValue().to_string();
         Some((text, help.announced.borrow().clone()))
     }
 
     /// The window, for a picture.
     pub fn panel() -> Option<objc2::rc::Retained<objc2_app_kit::NSPanel>> {
-        super::with_help(|cell| cell.borrow().as_ref().map(|h| h.panel.clone()))
+        crate::host::state()
+            .signature_help
+            .help
+            .borrow()
+            .as_ref()
+            .map(|h| h.panel.clone())
     }
 }
 

@@ -11,7 +11,7 @@ use objc2_app_kit::{NSAccessibility, NSApplication, NSTextView};
 
 use super::desk::Phase;
 pub use super::engine::fake::{Answer, Opening, answer, lowspeak_key_readable, open, too_short};
-use super::{Via, with_hub};
+use super::{Via, state, with_hub};
 
 /// What the controls of a field show.
 #[derive(Debug, Clone, Default)]
@@ -34,12 +34,12 @@ pub struct Seen {
 
 /// The field number of `view`.
 pub fn target_of(view: &NSTextView) -> Option<Target> {
-    with_hub(|hub| hub.target_of(view)).flatten()
+    with_hub(&state(), |hub| hub.target_of(view)).flatten()
 }
 
 /// A click on the microphone of `target`.
 pub fn click(target: Target) {
-    super::press(target, Via::Button);
+    super::press(&state(), target, Via::Button);
 }
 
 /// The menu item, or its shortcut.
@@ -49,7 +49,7 @@ pub fn menu(mtm: MainThreadMarker) {
 
 /// What the controls of `target` show.
 pub fn seen(target: Target) -> Seen {
-    with_hub(|hub| {
+    with_hub(&state(), |hub| {
         let phase = hub.desk.phase(target);
         let place = hub.places.get(&target)?;
         Some(Seen {
@@ -96,7 +96,10 @@ pub fn failure_text(failure: &lowspeak::dictation::Failure) -> String {
 
 /// A click on the microphone button of `target` itself, which sends its action as AppKit does.
 pub fn click_button(target: Target) {
-    let button = with_hub(|hub| hub.places.get(&target).map(|place| place.mic.button.clone())).flatten();
+    let button = with_hub(&state(), |hub| {
+        hub.places.get(&target).map(|place| place.mic.button.clone())
+    })
+    .flatten();
     if let Some(button) = button {
         // SAFETY: The button is in a window of this app, on the main thread, and its target outlives it.
         unsafe { button.performClick(None) };
@@ -126,18 +129,18 @@ pub fn fn_key(key: Pressed) {
 
 /// Whether the app asked macOS for the Accessibility permission that fn needs.
 pub fn fn_asked() -> bool {
-    super::fn_key::asked()
+    super::fn_key::asked(&state())
 }
 
 /// Dictations from now on stop recording after `limit`.
 pub fn limit(limit: Duration) {
     super::engine::fake::limit(limit);
-    with_hub(|hub| hub.dictation = None);
+    with_hub(&state(), |hub| hub.dictation = None);
 }
 
 /// The text view of `target`.
 pub fn view_of(target: Target) -> Option<Retained<NSTextView>> {
-    with_hub(|hub| hub.text_of(target)).flatten()
+    with_hub(&state(), |hub| hub.text_of(target)).flatten()
 }
 
 /// Whether macOS has an answer about the microphone for this app, whatever the self-test plays.
@@ -161,5 +164,5 @@ pub fn answer_microphone_twice(granted: bool, answered: impl FnOnce(bool) + Send
 
 /// The choices the engine starts its next dictation with.
 pub fn engine_choices() -> lowspeak::dictation::Choices {
-    with_hub(|hub| hub.engine().choices()).unwrap_or_else(super::choices::defaults)
+    with_hub(&state(), |hub| hub.engine().choices()).unwrap_or_else(super::choices::defaults)
 }

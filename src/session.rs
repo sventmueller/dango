@@ -7,6 +7,7 @@
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -18,7 +19,7 @@ use objc2::MainThreadMarker;
 use serde::{Deserialize, Serialize};
 use splat_i18n::{t, tf};
 
-use crate::context::app;
+use crate::context::{AppContext, app};
 use crate::util::{main_after, main_on_run_loop};
 use crate::window::layout::Document;
 use crate::window::{TabId, WindowController};
@@ -61,13 +62,13 @@ pub(crate) struct Saving {
 }
 
 /// The app quits: what it wrote down last stays, as the terminals and agents that end now change their tabs.
-pub(crate) fn quitting() {
-    app().session().quitting.set(true);
+pub(crate) fn quitting(cx: &AppContext) {
+    cx.session().quitting.set(true);
 }
 
 /// Whether the app quits, after which nothing more is written down.
 pub(crate) fn is_quitting() -> bool {
-    app().session().quitting.get()
+    app().session().is_quitting()
 }
 
 /// The windows or their tabs changed; the record follows a moment later.
@@ -84,18 +85,23 @@ pub(crate) fn changed() {
 }
 
 /// Writes down what the windows show now, and each folder's panels.
-pub(crate) fn remember(cx: &crate::context::AppContext) {
+pub(crate) fn remember(cx: &AppContext) {
     if cx.session().quitting.get() {
         return;
     }
-    crate::window::save_layouts();
-    let windows = crate::window::records();
+    crate::window::save_layouts(cx);
+    let windows = crate::window::records(cx);
     cx.session().write_soon("remembering the windows", move || {
         State::load_user().set(&OPEN_WINDOWS, &windows)
     });
 }
 
 impl Saving {
+    /// Whether the app quits, after which nothing more is written down.
+    pub(crate) fn is_quitting(&self) -> bool {
+        self.quitting.get()
+    }
+
     /// Runs `write` on the disk lane after the writes queued before it, or here when the lane is full; a failure is
     /// reported as `what`. A quit waits for the lane to reach a job queued after it.
     pub(crate) fn write_soon(&self, what: &'static str, write: impl FnOnce() -> std::io::Result<()> + Send + 'static) {
@@ -125,7 +131,7 @@ fn written(what: &str, result: Option<std::io::Result<()>>) {
 
 /// Opens the windows of the last run with their tabs if the user wants them back, and in any case every document a
 /// crash left unsaved, each window with a note of how many came back; how many windows opened.
-pub(crate) fn restore(mtm: MainThreadMarker) -> usize {
+pub(crate) fn restore(cx: &Rc<AppContext>, mtm: MainThreadMarker) -> usize {
     let recovery = Recovery::in_data_dir();
     set_aside_damaged(&recovery);
     let pending = recovery.pending().unwrap_or_else(|error| {
@@ -155,7 +161,7 @@ pub(crate) fn restore(mtm: MainThreadMarker) -> usize {
         files: Vec::new(),
     };
     for window in &windows {
-        restore.window(mtm, window);
+        restore.window(cx, mtm, window);
     }
     if !restore.files.is_empty() {
         let files = restore.files;
@@ -192,9 +198,12 @@ struct Restore {
 impl Restore {
     /// Opens the window of `record`: the folder's tabs, an editor's copy in place of its file, then the
     /// record's other editors and copies, such as untitled ones, in tabs of their own.
-    fn window(&mut self, mtm: MainThreadMarker, record: &WindowRecord) {
-        let shown = record.project.as_deref().and_then(crate::window::for_project);
-        let controller = shown.unwrap_or_else(|| WindowController::open_new(mtm, record.project.clone()));
+    fn window(&mut self, cx: &Rc<AppContext>, mtm: MainThreadMarker, record: &WindowRecord) {
+        let shown = record
+            .project
+            .as_deref()
+            .and_then(|root| cx.windows().find(|w| w.project_root().as_deref() == Some(root)));
+        let controller = shown.unwrap_or_else(|| WindowController::open_new(cx, mtm, record.project.clone()));
         let layout = self.reopen && record.project.is_some();
         if record.tabs.is_empty() && !layout {
             return;

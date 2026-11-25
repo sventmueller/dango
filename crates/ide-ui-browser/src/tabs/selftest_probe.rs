@@ -27,7 +27,10 @@ pub struct Seen {
 
 /// Presses "Trotzdem öffnen" on the first tab of `window` that offers it; whether one did.
 pub fn proceed(window: WindowId) -> bool {
-    let Some(view) = tabs_of(window).into_iter().find(|view| view.seen().proceed) else {
+    let Some(view) = tabs_of(&state().tabs, window)
+        .into_iter()
+        .find(|view| view.seen().proceed)
+    else {
         return false;
     };
     view.proceed();
@@ -36,22 +39,22 @@ pub fn proceed(window: WindowId) -> bool {
 
 /// Presses the key button of the browser tab in front of `window`, as the self-test's user.
 pub fn fill_login(window: WindowId) {
-    if let Some(view) = front(window) {
+    if let Some(view) = front(&state().tabs, window) {
         view.fill_login();
     }
 }
 
 /// The browser tab in front of `window`, which takes the actions of its buttons.
 pub fn front_view(window: WindowId) -> Option<Retained<objc2_app_kit::NSView>> {
-    front(window).map(Retained::into_super)
+    front(&state().tabs, window).map(Retained::into_super)
 }
 
 /// The address field of the browser tab in front of `window`.
 pub fn address_field(window: WindowId) -> Option<Retained<objc2_app_kit::NSTextField>> {
-    front(window).map(|view| view.address_field())
+    front(&state().tabs, window).map(|view| view.address_field())
 }
 
 /// What the self-test reads from each browser tab of `window`.
 pub fn inspect(window: WindowId) -> Vec<Seen> {
-    tabs_of(window).iter().map(|view| view.seen()).collect()
+    tabs_of(&state().tabs, window).iter().map(|view| view.seen()).collect()
 }

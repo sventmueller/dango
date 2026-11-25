@@ -508,7 +508,7 @@ fn with_breaks(text: &str, ending: &str) -> String {
 
 /// The editors whose file lies below `root` look at their commit again.
 pub(crate) fn git_changed(root: &Path) {
-    for view in super::open_editors() {
+    for view in super::all_editors() {
         if view.document().path().is_some_and(|p| p.starts_with(root)) {
             schedule_head(&view);
         }

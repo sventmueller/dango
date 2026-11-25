@@ -61,7 +61,8 @@ define_class!(
                 if let Some(file) = self.take(download) {
                     mark_as_downloaded(download, &file);
                     // SAFETY: The download is valid during the delegate call that passed it.
-                    let tab = unsafe { download.webView() }.and_then(|web| super::tabs::tab_of(&web));
+                    let tab = unsafe { download.webView() }
+                        .and_then(|web| super::tabs::tab_of(&super::host::state().tabs, &web));
                     if let Some(tab) = tab {
                         tab.downloaded(&file);
                     }
@@ -88,20 +89,20 @@ pub(crate) struct Downloading {
     downloads: OnceCell<Retained<Downloads>>,
 }
 
-fn with_downloads<R>(f: impl FnOnce(&OnceCell<Retained<Downloads>>) -> R) -> R {
-    f(&super::host::state().downloads.downloads)
-}
-
-/// The delegate of every download, which lives as long as the app, so a download outlives the tab it started in.
-pub(crate) fn delegate(mtm: MainThreadMarker) -> Retained<ProtocolObject<dyn WKDownloadDelegate>> {
-    let downloads = with_downloads(|cell| {
-        cell.get_or_init(|| {
+/// The delegate of every download of `downloading`, which lives as long as the app, so a download outlives the tab it
+/// started in.
+pub(crate) fn delegate(
+    downloading: &Downloading,
+    mtm: MainThreadMarker,
+) -> Retained<ProtocolObject<dyn WKDownloadDelegate>> {
+    let downloads = downloading
+        .downloads
+        .get_or_init(|| {
             let this = Downloads::alloc(mtm).set_ivars(Ivars::default());
             // SAFETY: NSObject's initializer, called once on the newly allocated object.
             unsafe { msg_send![super(this), init] }
         })
-        .clone()
-    });
+        .clone();
     ProtocolObject::from_retained(downloads)
 }
 

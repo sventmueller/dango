@@ -7,19 +7,20 @@
 use super::*;
 
 impl Source {
-    /// The context menu of row `row`, as a right click on it fills it, for the self-test.
-    pub(crate) fn context_menu(&self, row: isize) -> Option<Retained<NSMenu>> {
-        let panel = super::super::panel_by_key(self.ivars().panel.get())?;
+    /// The context menu of row `row`, as a right click on it fills it, with the panels `state` holds, for the
+    /// self-test.
+    pub(crate) fn context_menu(&self, state: &crate::State, row: isize) -> Option<Retained<NSMenu>> {
+        let panel = super::super::panel_by_key(state, self.ivars().panel.get())?;
         let menu = NSMenu::new(self.mtm());
-        self.fill_menu_for(&menu, &panel, row);
+        self.fill_menu_for(state, &menu, &panel, row);
         Some(menu)
     }
 
-    /// Opens the session of row `row`, as a click on it does, for the self-test.
-    pub(crate) fn open_row(&self, row: usize) {
+    /// Opens the session of row `row`, as a click on it does, with the AI tabs `state` holds, for the self-test.
+    pub(crate) fn open_row(&self, state: &crate::State, row: usize) {
         let id = self.ivars().model.borrow().order.get(row).cloned();
         if let Some(id) = id {
-            self.open_id(&id);
+            self.open_id(state, &id);
         }
     }
 

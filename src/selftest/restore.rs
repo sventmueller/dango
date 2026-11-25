@@ -56,7 +56,7 @@ pub(super) fn run() {
         for folder in [&a, &b, &c] {
             crate::project::trust(folder);
         }
-        crate::app::open_project(mtm, a.clone());
+        crate::app::open_project(&crate::context::app(), mtm, a.clone());
         open_beside(mtm, &b);
         let probe = (a.clone(), b.clone());
         wait_until(

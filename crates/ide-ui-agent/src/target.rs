@@ -182,7 +182,11 @@ define_class!(
 
         #[unsafe(method(ideAgentPlanShowNote:))]
         fn plan_show_note(&self, sender: Option<&AnyObject>) {
-            self.on_index(sender, |tab, note| tab.plan_show_note(note as u64));
+            guarded((), || {
+                if let (Some((state, tab)), Ok(note)) = (self.found(), usize::try_from(tag(sender))) {
+                    tab.plan_show_note(&state, note as u64);
+                }
+            });
         }
 
         #[unsafe(method(ideAgentStopTask:))]
@@ -283,7 +287,12 @@ define_class!(
 
         #[unsafe(method(ideAgentHistory:))]
         fn history(&self, sender: Option<&AnyObject>) {
-            self.on_menu(sender, AgentTab::history_menu);
+            guarded((), || {
+                let view = sender.and_then(|s| s.downcast_ref::<NSView>());
+                if let (Some((state, tab)), Some(view)) = (self.found(), view) {
+                    tab.history_menu(&state, view);
+                }
+            });
         }
 
         #[unsafe(method(ideAgentOpenPast:))]
@@ -375,8 +384,16 @@ impl AgentTarget {
         unsafe { msg_send![super(this), init] }
     }
 
+    /// The state of the AI tabs and the tab the target serves, while that is open.
+    fn found(&self) -> Option<(std::rc::Rc<crate::State>, std::rc::Rc<AgentTab>)> {
+        let state = crate::host::state();
+        let tab = state.tab(self.ivars().key)?;
+        Some((state, tab))
+    }
+
+    /// The tab the target serves, while it is open.
     fn tab(&self) -> Option<std::rc::Rc<AgentTab>> {
-        super::get(self.ivars().key)
+        self.found().map(|(_, tab)| tab)
     }
 
     fn on_tab(&self, f: impl FnOnce(&AgentTab)) {

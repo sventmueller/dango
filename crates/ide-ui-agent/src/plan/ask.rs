@@ -81,16 +81,20 @@ pub(super) struct PlanAsk {
     ask: RefCell<Option<Ask>>,
 }
 
-fn with_ask<R>(f: impl FnOnce(&RefCell<Option<Ask>>) -> R) -> R {
-    f(&crate::host::state().plan.ask.ask)
-}
-
-/// Shows the popover on plan `asking.entry` of the AI tab `agent` at `rect` of `anchor`, in place of the one open.
-pub(super) fn open(mtm: MainThreadMarker, agent: AgentKey, asking: Asking<'_>, anchor: &NSView, rect: NSRect) {
-    close();
+/// Shows the popover on plan `asking.entry` of the AI tab `agent` at `rect` of `anchor` as the question `ask` holds,
+/// in place of the one open.
+pub(super) fn open(
+    ask: &PlanAsk,
+    mtm: MainThreadMarker,
+    agent: AgentKey,
+    asking: Asking<'_>,
+    anchor: &NSView,
+    rect: NSRect,
+) {
+    close_in(ask);
     let entry = asking.entry;
     let popover = show(mtm, asking, anchor, rect);
-    with_ask(|a| *a.borrow_mut() = Some(Ask { agent, entry, popover }));
+    *ask.ask.borrow_mut() = Some(Ask { agent, entry, popover });
 }
 
 /// Shows a popover at `rect` of `anchor` for what `asking` names, which the caller keeps.
@@ -153,22 +157,29 @@ pub(super) fn show(mtm: MainThreadMarker, asking: Asking<'_>, anchor: &NSView, r
     }
 }
 
-/// Closes the popover of plan `entry` in the AI tab `agent` and hands over what it holds.
-pub(super) fn take(agent: AgentKey, entry: u64) -> Option<Asked> {
-    let ask = with_ask(|a| {
-        let mut a = a.borrow_mut();
+/// Closes the popover of plan `entry` in the AI tab `agent` that `ask` holds and hands over what it holds.
+pub(super) fn take(ask: &PlanAsk, agent: AgentKey, entry: u64) -> Option<Asked> {
+    let taken = {
+        let mut a = ask.ask.borrow_mut();
         if a.as_ref().is_some_and(|ask| ask.agent == agent && ask.entry == entry) {
             a.take()
         } else {
             None
         }
-    })?;
-    Some(ask.popover.finish())
+    }?;
+    Some(taken.popover.finish())
 }
 
+/// Closes the popover on view, dropping what was typed.
 pub(crate) fn close() {
-    if let Some(ask) = with_ask(|a| a.borrow_mut().take()) {
-        ask.popover.dismiss();
+    close_in(&crate::host::state().plan.ask);
+}
+
+/// Closes the popover `ask` holds, dropping what was typed.
+fn close_in(ask: &PlanAsk) {
+    let open = ask.ask.borrow_mut().take();
+    if let Some(open) = open {
+        open.popover.dismiss();
     }
 }
 

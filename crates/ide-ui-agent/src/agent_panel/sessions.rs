@@ -250,7 +250,7 @@ define_class!(
                 let Some(view) = sender.and_then(|s| s.downcast_ref::<NSOutlineView>()) else { return };
                 let Some(item) = view.itemAtRow(view.clickedRow()) else { return };
                 if let Some(id) = id_of(&item).cloned() {
-                    self.open_id(&id);
+                    self.open_id(&crate::host::state(), &id);
                 }
             });
         }
@@ -258,9 +258,9 @@ define_class!(
         #[unsafe(method(ideAgentPanelArchive:))]
         fn toggle_archive(&self, _sender: Option<&AnyObject>) {
             guarded((), || {
-                self.with_panel(|panel| {
+                self.with_panel(|state, panel| {
                     panel.show_archived.set(!panel.show_archived.get());
-                    panel.reload_soon();
+                    panel.reload_soon(state);
                 });
             });
         }
@@ -280,7 +280,8 @@ define_class!(
             guarded((), || {
                 if let Some(thread) = self.clicked_thread() {
                     let id = ide_thread::ThreadId::from(thread.as_str());
-                    super::set_bookmarked(&id, !super::is_bookmarked(&id));
+                    let state = crate::host::state();
+                    super::set_bookmarked(&state, &id, !super::is_bookmarked_in(&state, &id));
                 }
             });
         }
@@ -374,9 +375,11 @@ impl Source {
         self.ivars().panel.set(key);
     }
 
-    fn with_panel(&self, f: impl FnOnce(&super::AgentPanel)) {
-        if let Some(panel) = super::panel_by_key(self.ivars().panel.get()) {
-            f(&panel);
+    /// Runs `f` with the state of the AI tabs and the panel of the list, if it is still open.
+    fn with_panel(&self, f: impl FnOnce(&crate::State, &super::AgentPanel)) {
+        let state = crate::host::state();
+        if let Some(panel) = super::panel_by_key(&state, self.ivars().panel.get()) {
+            f(&state, &panel);
         }
     }
 
@@ -407,17 +410,18 @@ impl Source {
         )
     }
 
-    fn open_id(&self, id: &str) {
+    /// Opens the session of the row `id` with the AI tabs `state` holds, or selects its open tab.
+    fn open_id(&self, state: &crate::State, id: &str) {
         let Some(node) = self.ivars().model.borrow().nodes.get(id).cloned() else {
             return;
         };
-        let Some(panel) = super::panel_by_key(self.ivars().panel.get()) else {
+        let Some(panel) = super::panel_by_key(state, self.ivars().panel.get()) else {
             return;
         };
         let Some(controller) = panel.controller() else { return };
         match node {
             Node::Thread { tab: Some(key), .. } => {
-                if let Some(tab) = crate::of_window(&controller).into_iter().find(|t| t.key == key) {
+                if let Some(tab) = state.tabs_of(&controller).into_iter().find(|t| t.key == key) {
                     tab.select();
                 }
             }
@@ -430,14 +434,14 @@ impl Source {
                     title: Some(entry.title.clone()).filter(|t| !t.is_empty()),
                     agent: None,
                 };
-                crate::open_agent(&controller, crate::Agent::of_thread(&entry.agent), Some(resume));
+                crate::open_agent_with(state, &controller, crate::Agent::of_thread(&entry.agent), Some(resume));
             }
             Node::Past { resume, .. } => match resume.agent.as_deref().and_then(crate::AcpAgent::find) {
                 Some(agent) => {
-                    crate::open_agent(&controller, crate::Agent::Acp(agent), Some(resume));
+                    crate::open_agent_with(state, &controller, crate::Agent::Acp(agent), Some(resume));
                 }
                 None => {
-                    crate::open_tab(&controller, Some(resume));
+                    crate::open_agent_with(state, &controller, crate::Agent::Claude, Some(resume));
                 }
             },
         }
@@ -452,17 +456,19 @@ impl Source {
             .map(str::to_string)
     }
 
+    /// Fills `menu` as the context menu of the row clicked last.
     fn fill_menu(&self, menu: &NSMenu) {
-        let Some(panel) = super::panel_by_key(self.ivars().panel.get()) else {
+        let state = crate::host::state();
+        let Some(panel) = super::panel_by_key(&state, self.ivars().panel.get()) else {
             menu.removeAllItems();
             return;
         };
         let row = panel.sessions.clickedRow();
-        self.fill_menu_for(menu, &panel, row);
+        self.fill_menu_for(&state, menu, &panel, row);
     }
 
-    /// The context menu of row `row` of the list, `-1` for none.
-    fn fill_menu_for(&self, menu: &NSMenu, panel: &super::AgentPanel, row: isize) {
+    /// The context menu of row `row` of the list, `-1` for none, with the bookmarks `state` keeps.
+    fn fill_menu_for(&self, state: &crate::State, menu: &NSMenu, panel: &super::AgentPanel, row: isize) {
         menu.removeAllItems();
         menu.setAutoenablesItems(false);
         let id = panel.sessions.itemAtRow(row).and_then(|item| id_of(&item).cloned());
@@ -479,7 +485,7 @@ impl Source {
                 Some(Node::Thread { entry, .. }) if entry.archived
             );
             add(t("Umbenennen …"), sel!(ideAgentPanelRename:));
-            let marked = super::is_bookmarked(&ide_thread::ThreadId::from(thread.as_str()));
+            let marked = super::is_bookmarked_in(state, &ide_thread::ThreadId::from(thread.as_str()));
             add(
                 if marked {
                     t("Lesezeichen entfernen")
@@ -508,12 +514,14 @@ impl Source {
         );
     }
 
+    /// Asks for a new name of the session clicked last and gives it that.
     fn rename_clicked(&self) {
         let Some(thread) = self.clicked_thread() else { return };
         let id = ide_thread::ThreadId::from(thread.as_str());
-        let open = super::panel_by_key(self.ivars().panel.get())
+        let state = crate::host::state();
+        let open = super::panel_by_key(&state, self.ivars().panel.get())
             .and_then(|p| p.controller())
-            .and_then(|c| crate::of_window(&c).into_iter().find(|t| t.thread_id() == &id));
+            .and_then(|c| state.tabs_of(&c).into_iter().find(|t| t.thread_id() == &id));
         let current = match &open {
             Some(tab) => tab.title(),
             None => self.listed(&thread).map(|e| e.title).unwrap_or_default(),

@@ -140,7 +140,7 @@ impl Deadline {
 pub(crate) fn open_trusted(folder: &Path) -> PathBuf {
     crate::project::trust(folder);
     if let Some(mtm) = MainThreadMarker::new() {
-        crate::app::open_project(mtm, folder.to_path_buf());
+        crate::app::open_project(&crate::context::app(), mtm, folder.to_path_buf());
     }
     folder.canonicalize().unwrap_or_else(|_| folder.to_path_buf())
 }
@@ -233,7 +233,7 @@ pub(crate) fn window_of(folder: &Path) -> Option<Retained<WindowController>> {
 /// side by side; opening it as the user does would replace the folder of the window in front (E56).
 pub(crate) fn open_beside(mtm: MainThreadMarker, folder: &Path) {
     let root = folder.canonicalize().unwrap_or_else(|_| folder.to_path_buf());
-    WindowController::open_new(mtm, Some(root)).restore_layout();
+    WindowController::open_new(&crate::context::app(), mtm, Some(root)).restore_layout();
 }
 
 /// The editor of the tab titled `title`.

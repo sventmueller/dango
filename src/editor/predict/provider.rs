@@ -14,6 +14,7 @@ use ide_process::Supervisor;
 use splat_i18n::{t, tf};
 
 use super::model::{self, Choice, Local};
+use crate::context::AppContext;
 use crate::util::main_soon;
 
 /// The settings edit prediction follows, as last read.
@@ -99,48 +100,73 @@ pub(crate) struct Predictions {
     pub(super) told_missing: Cell<bool>,
 }
 
-fn with<R>(f: impl FnOnce(&Predictions) -> R) -> R {
-    f(crate::context::app().predictions())
+impl Predictions {
+    /// The settings as last read.
+    pub(crate) fn chosen(&self) -> Chosen {
+        self.chosen.borrow_mut().get_or_insert_with(Chosen::load).clone()
+    }
+
+    /// The id of the next question.
+    pub(super) fn next_question(&self) -> u64 {
+        self.next.set(self.next.get() + 1);
+        self.next.get()
+    }
+
+    /// Where requests go: outside the Mac when the chosen provider needs consent or the self-test's counts as outside,
+    /// and then whether the user chose to send unchecked while gitleaks is missing.
+    pub(super) fn reach(&self) -> super::guard::Reach {
+        let chosen = self.chosen();
+        let outside = if self.forced() {
+            self.forced_outside.get()
+        } else {
+            chosen.consent_id().is_some()
+        };
+        if outside {
+            super::guard::Reach::Outside {
+                unchecked: chosen.unchecked,
+            }
+        } else {
+            super::guard::Reach::Here
+        }
+    }
+
+    /// The last secrets check of each file.
+    pub(super) fn scans(&self) -> super::guard::Scans {
+        self.scans.clone()
+    }
+
+    /// Whether the self-test put a provider in place.
+    pub(super) fn forced(&self) -> bool {
+        self.forced.borrow().is_some()
+    }
+
+    /// Puts `slot` in place for `root`, handing back the slot it replaces once the map is no longer borrowed.
+    fn insert_slot(&self, root: &Path, slot: Slot) -> Option<Slot> {
+        self.copilots.borrow_mut().insert(root.to_path_buf(), slot)
+    }
+
+    /// Takes the slot of `root` out, handing it back once the map is no longer borrowed.
+    fn remove_slot(&self, root: &Path) -> Option<Slot> {
+        self.copilots.borrow_mut().remove(root)
+    }
 }
 
 /// The settings as last read.
 pub(crate) fn chosen() -> Chosen {
-    with(|p| p.chosen.borrow_mut().get_or_insert_with(Chosen::load).clone())
+    crate::context::app().predictions().chosen()
 }
 
 /// Reads the settings again after they changed, and lets the editors follow.
 pub(crate) fn settings_changed() {
-    with(|p| {
-        p.chosen.borrow_mut().take();
-        p.local.borrow_mut().take();
-    });
-    super::follow_settings();
+    settings_changed_in(&crate::context::app());
 }
 
-/// The id of the next question.
-pub(crate) fn next_question() -> u64 {
-    with(|p| {
-        p.next.set(p.next.get() + 1);
-        p.next.get()
-    })
-}
-
-/// Where requests go: outside the Mac when the chosen provider needs consent or the self-test's counts as outside, and
-/// then whether the user chose to send unchecked while gitleaks is missing.
-pub(crate) fn reach() -> super::guard::Reach {
-    let chosen = chosen();
-    let outside = if forced() {
-        with(|p| p.forced_outside.get())
-    } else {
-        chosen.consent_id().is_some()
-    };
-    if outside {
-        super::guard::Reach::Outside {
-            unchecked: chosen.unchecked,
-        }
-    } else {
-        super::guard::Reach::Here
-    }
+/// Reads the settings again after they changed, and lets the editors of `cx` follow.
+pub(super) fn settings_changed_in(cx: &AppContext) {
+    let p = cx.predictions();
+    p.chosen.borrow_mut().take();
+    p.local.borrow_mut().take();
+    super::follow_settings(cx);
 }
 
 /// Keeps whether text goes to a provider outside the Mac unchecked while gitleaks is missing.
@@ -150,11 +176,6 @@ pub(crate) fn set_unchecked(unchecked: bool) {
         crate::diag::report("saving whether edit prediction sends unchecked", error);
     }
     settings_changed();
-}
-
-/// The last secrets check of each file.
-pub(crate) fn scans() -> super::guard::Scans {
-    with(|p| p.scans.clone())
 }
 
 /// The secrets check with gitleaks from the login shell's PATH, through the app's git; blocks, for worker threads.
@@ -173,11 +194,6 @@ pub(crate) fn gitleaks() -> super::guard::Scan {
     })
 }
 
-/// Whether the self-test put a provider in place.
-pub(crate) fn forced() -> bool {
-    with(|p| p.forced.borrow().is_some())
-}
-
 /// What keeps an editor from proposals, for its status bar.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Blocked {
@@ -192,11 +208,13 @@ pub(crate) enum Blocked {
 }
 
 /// The provider for an editor in `root`, or why there is none now.
-pub(crate) fn provider(root: &Path) -> Result<Arc<dyn Provider>, Blocked> {
-    if let Some(forced) = with(|p| p.forced.borrow().clone()) {
+pub(super) fn provider(cx: &AppContext, root: &Path) -> Result<Arc<dyn Provider>, Blocked> {
+    let p = cx.predictions();
+    let forced = p.forced.borrow().clone();
+    if let Some(forced) = forced {
         return Ok(forced);
     }
-    let chosen = chosen();
+    let chosen = p.chosen();
     if chosen.choice == Choice::Off {
         return Err(Blocked::Off);
     }
@@ -204,20 +222,17 @@ pub(crate) fn provider(root: &Path) -> Result<Arc<dyn Provider>, Blocked> {
         return Err(Blocked::Consent);
     }
     match chosen.choice {
-        Choice::Copilot => copilot_for(root),
-        _ => local(&chosen),
+        Choice::Copilot => copilot_for(cx, root),
+        _ => p.local_for(&chosen),
     }
 }
 
-fn local(chosen: &Chosen) -> Result<Arc<dyn Provider>, Blocked> {
-    with(|p| p.local_for(chosen))
-}
-
-fn copilot_for(root: &Path) -> Result<Arc<dyn Provider>, Blocked> {
-    match with(|p| p.copilot_answer(root)) {
+fn copilot_for(cx: &AppContext, root: &Path) -> Result<Arc<dyn Provider>, Blocked> {
+    let answer = cx.predictions().copilot_answer(root);
+    match answer {
         Some(answer) => answer,
         None => {
-            start(root);
+            start(cx, root);
             Err(Blocked::Busy(t("Copilot startet …").to_string()))
         }
     }
@@ -225,10 +240,7 @@ fn copilot_for(root: &Path) -> Result<Arc<dyn Provider>, Blocked> {
 
 /// Copilot of `root`, once it runs.
 pub(crate) fn copilot(root: &Path) -> Option<Arc<Copilot>> {
-    with(|p| match p.copilots.borrow().get(root) {
-        Some(Slot::Running(copilot)) => Some(copilot.clone()),
-        _ => None,
-    })
+    crate::context::app().predictions().copilot(root)
 }
 
 /// Where Copilot stands for a folder, for the settings.
@@ -244,10 +256,23 @@ pub(crate) enum CopilotState {
 
 /// Where Copilot of `root` stands now.
 pub(crate) fn copilot_state(root: &Path) -> CopilotState {
-    with(|p| p.copilot_state(root))
+    crate::context::app().predictions().copilot_state(root)
 }
 
 impl Predictions {
+    /// Copilot of `root`, once it runs.
+    pub(crate) fn copilot(&self, root: &Path) -> Option<Arc<Copilot>> {
+        match self.copilots.borrow().get(root) {
+            Some(Slot::Running(copilot)) => Some(copilot.clone()),
+            _ => None,
+        }
+    }
+
+    /// The folders Copilot runs or starts for.
+    pub(crate) fn copilot_roots(&self) -> Vec<PathBuf> {
+        self.copilots.borrow().keys().cloned().collect()
+    }
+
     /// The local provider `chosen` names, made once for the settings it was made from.
     fn local_for(&self, chosen: &Chosen) -> Result<Arc<dyn Provider>, Blocked> {
         let Some(local) = chosen.local().cloned() else {
@@ -293,7 +318,8 @@ impl Predictions {
         })
     }
 
-    fn copilot_state(&self, root: &Path) -> CopilotState {
+    /// Where Copilot of `root` stands now.
+    pub(crate) fn copilot_state(&self, root: &Path) -> CopilotState {
         let account = self.accounts.borrow().get(root).cloned();
         match self.copilots.borrow().get(root) {
             None => CopilotState::NotStarted,
@@ -308,15 +334,15 @@ impl Predictions {
 
 /// The folders Copilot runs or starts for.
 pub(crate) fn copilot_roots() -> Vec<PathBuf> {
-    with(|p| p.copilots.borrow().keys().cloned().collect())
+    crate::context::app().predictions().copilot_roots()
 }
 
 /// Starts Copilot's server for the trusted folder `root`, off the main thread, unless it is missing.
-fn start(root: &Path) {
+fn start(cx: &AppContext, root: &Path) {
     if !crate::project::is_trusted(root) {
         return;
     }
-    with(|p| p.copilots.borrow_mut().insert(root.to_path_buf(), Slot::Starting));
+    cx.predictions().insert_slot(root, Slot::Starting);
     let root = root.to_path_buf();
     let failed = root.clone();
     if let Err(why) = crate::util::spawn("copilot-start", move || {
@@ -324,48 +350,60 @@ fn start(root: &Path) {
             .map(<[_]>::to_vec)
             .unwrap_or_default();
         let Some(program) = copilot::find(&ide_lsp::default_tools(), &environment) else {
-            main_soon(move || set_slot(&root, Slot::Missing));
+            main_soon(move || set_slot(&crate::context::app(), &root, Slot::Missing));
             return;
         };
         let account_root = root.clone();
         let started = Copilot::start(Supervisor::global(), &program, &root, environment, move |account| {
             let root = account_root.clone();
-            main_soon(move || account_changed(&root, account));
+            main_soon(move || account_changed(&crate::context::app(), &root, account));
         });
-        main_soon(move || match started {
-            Ok(copilot) => set_slot(&root, Slot::Running(Arc::new(copilot))),
-            Err(error) => set_slot(
-                &root,
-                Slot::Failed(tf(
+        main_soon(move || {
+            let slot = match started {
+                Ok(copilot) => Slot::Running(Arc::new(copilot)),
+                Err(error) => Slot::Failed(tf(
                     "Copilot startet nicht: {}",
                     &[&ide_core::explain::Explain::explain(&error)],
                 )),
-            ),
+            };
+            set_slot(&crate::context::app(), &root, slot);
         });
     }) {
-        set_slot(&failed, Slot::Failed(why.0));
+        set_slot(cx, &failed, Slot::Failed(why.0));
     }
 }
 
-fn set_slot(root: &Path, slot: Slot) {
-    with(|p| p.copilots.borrow_mut().insert(root.to_path_buf(), slot));
-    super::follow_settings();
+fn set_slot(cx: &AppContext, root: &Path, slot: Slot) {
+    cx.predictions().insert_slot(root, slot);
+    super::follow_settings(cx);
 }
 
-fn account_changed(root: &Path, account: Account) {
+fn account_changed(cx: &AppContext, root: &Path, account: Account) {
     let signed_in = matches!(account, Account::SignedIn { .. });
-    with(|p| p.accounts.borrow_mut().insert(root.to_path_buf(), account));
-    super::follow_settings();
+    cx.predictions()
+        .accounts
+        .borrow_mut()
+        .insert(root.to_path_buf(), account);
+    super::follow_settings(cx);
     crate::settings::prediction_changed();
     if signed_in {
-        super::ask_again(root);
+        super::ask_again(cx, root);
     }
 }
 
 /// Installs Copilot's server into the app's tools folder, after the user asked for it, then starts it for `root`.
 pub(crate) fn install(root: &Path) {
+    install_in(&crate::context::app(), root);
+}
+
+/// Installs Copilot's server as `install` does, with the context at hand.
+pub(super) fn install_in(cx: &AppContext, root: &Path) {
     let cancel = ide_lsp::Cancel::new();
-    set_slot(root, Slot::Installing(cancel.clone(), t("Installiere …").to_string()));
+    set_slot(
+        cx,
+        root,
+        Slot::Installing(cancel.clone(), t("Installiere …").to_string()),
+    );
     let root = root.to_path_buf();
     let failed = root.clone();
     if let Err(why) = crate::util::spawn("copilot-install", move || {
@@ -382,57 +420,67 @@ pub(crate) fn install(root: &Path) {
                 let root = progress_root.clone();
                 let line: String = line.chars().take(80).collect();
                 main_soon(move || {
-                    with(|p| {
-                        if let Some(Slot::Installing(_, shown)) = p.copilots.borrow_mut().get_mut(&root) {
-                            *shown = tf("Installiere … {}", &[&line]);
-                        }
-                    });
-                    super::follow_settings();
+                    let cx = crate::context::app();
+                    if let Some(Slot::Installing(_, shown)) = cx.predictions().copilots.borrow_mut().get_mut(&root) {
+                        *shown = tf("Installiere … {}", &[&line]);
+                    }
+                    super::follow_settings(&cx);
                 });
             }
         };
         let result = installer.install(copilot::INSTALL, &cancel, &mut report);
-        main_soon(move || match result {
-            Ok(_) => {
-                with(|p| p.copilots.borrow_mut().remove(&root));
-                start(&root);
-                super::follow_settings();
-            }
-            Err(error) => {
-                crate::diag::report("installing Copilot", error.to_string());
-                set_slot(
-                    &root,
-                    Slot::Failed(tf(
-                        "Installation fehlgeschlagen: {}",
-                        &[&ide_core::explain::Explain::explain(&error)],
-                    )),
-                );
+        main_soon(move || {
+            let cx = crate::context::app();
+            match result {
+                Ok(_) => {
+                    cx.predictions().remove_slot(&root);
+                    start(&cx, &root);
+                    super::follow_settings(&cx);
+                }
+                Err(error) => {
+                    crate::diag::report("installing Copilot", error.to_string());
+                    set_slot(
+                        &cx,
+                        &root,
+                        Slot::Failed(tf(
+                            "Installation fehlgeschlagen: {}",
+                            &[&ide_core::explain::Explain::explain(&error)],
+                        )),
+                    );
+                }
             }
         });
     }) {
-        set_slot(&failed, Slot::Failed(why.0));
+        set_slot(cx, &failed, Slot::Failed(why.0));
     }
 }
 
 /// Stops the installation of Copilot for `root`, if one runs.
 pub(crate) fn cancel_install(root: &Path) {
-    with(|p| {
-        if let Some(Slot::Installing(cancel, _)) = p.copilots.borrow().get(root) {
-            cancel.cancel();
-        }
-    });
+    if let Some(Slot::Installing(cancel, _)) = crate::context::app().predictions().copilots.borrow().get(root) {
+        cancel.cancel();
+    }
 }
 
 /// Starts Copilot for `root` if the settings choose it and nothing runs there yet, so its state can show.
 pub(crate) fn wake(root: &Path) {
-    if chosen().choice == Choice::Copilot && with(|p| !p.copilots.borrow().contains_key(root)) {
-        start(root);
+    let cx = crate::context::app();
+    let p = cx.predictions();
+    if p.chosen().choice == Choice::Copilot && !p.copilots.borrow().contains_key(root) {
+        start(&cx, root);
     }
 }
 
 /// Keeps the user's consent for the chosen provider.
 pub(crate) fn consent() {
-    let Some(id) = chosen().consent_id() else { return };
+    consent_in(&crate::context::app());
+}
+
+/// Keeps the user's consent for the provider `cx` has chosen.
+pub(super) fn consent_in(cx: &AppContext) {
+    let Some(id) = cx.predictions().chosen().consent_id() else {
+        return;
+    };
     let mut settings = Settings::load_user();
     let mut all = settings.get(&model::CONSENT);
     if !all.contains(&id) {
@@ -441,7 +489,7 @@ pub(crate) fn consent() {
             crate::diag::report("saving the consent for edit prediction", error);
         }
     }
-    settings_changed();
+    settings_changed_in(cx);
 }
 
 /// Takes back every consent given, sending unchecked among them.
@@ -453,8 +501,9 @@ pub(crate) fn revoke_all() {
     if let Err(error) = settings.set(&model::UNCHECKED, &false) {
         crate::diag::report("taking back sending unchecked", error);
     }
-    with(|p| p.asked_consent.set(false));
-    settings_changed();
+    let cx = crate::context::app();
+    cx.predictions().asked_consent.set(false);
+    settings_changed_in(&cx);
 }
 
 /// The provider's name for the user.

@@ -40,10 +40,6 @@ pub(crate) struct EnlargedPicture {
     shown: RefCell<Option<Retained<Shade>>>,
 }
 
-fn with_shown<R>(f: impl FnOnce(&RefCell<Option<Retained<Shade>>>) -> R) -> R {
-    f(&crate::host::state().enlarged_picture.shown)
-}
-
 define_class!(
     // SAFETY: NSObject has no subclassing requirements and `Opener` does not implement Drop.
     #[unsafe(super(NSObject))]
@@ -180,7 +176,9 @@ fn show(button: &NSButton) {
     };
     let Some(image) = picture_in(&tile) else { return };
     let Some(root) = tab_root(&tile) else { return };
-    close();
+    let state = crate::host::state();
+    let shown = &state.enlarged_picture;
+    close_in(shown);
     let backdrop = blurred(&root);
     let shade = shade(
         button.mtm(),
@@ -194,11 +192,18 @@ fn show(button: &NSButton) {
         *shade.ivars().before.borrow_mut() = window.firstResponder();
         window.makeFirstResponder(Some(&shade));
     }
-    with_shown(|shown| *shown.borrow_mut() = Some(shade));
+    *shown.shown.borrow_mut() = Some(shade);
 }
 
+/// Closes the picture shown large, if one is open.
 fn close() {
-    let Some(shade) = with_shown(|shown| shown.borrow_mut().take()) else {
+    close_in(&crate::host::state().enlarged_picture);
+}
+
+/// `close` with the picture `picture` shows large.
+fn close_in(picture: &EnlargedPicture) {
+    let shade = picture.shown.borrow_mut().take();
+    let Some(shade) = shade else {
         return;
     };
     let before = shade.ivars().before.borrow_mut().take();

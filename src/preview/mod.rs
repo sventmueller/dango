@@ -196,7 +196,14 @@ pub(crate) fn editor_of(controller: &WindowController, tab: TabId) -> Option<Ret
 }
 
 fn shown_for(view: &EditorTextView, controller: &WindowController) -> Option<Rc<Preview>> {
-    find(|p| p.follows(view) && p.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
+    controller
+        .context()
+        .previews()
+        .open
+        .borrow()
+        .iter()
+        .find(|p| p.follows(view) && p.controller().is_some_and(|c| std::ptr::eq(&*c, controller)))
+        .cloned()
 }
 
 fn open_markdown(
@@ -221,7 +228,7 @@ fn open_markdown(
     previews.open.borrow_mut().push(preview.clone());
     sync::attach(&preview, view);
     preview.lay_out();
-    look_at_images_later();
+    look_at_images_later(previews);
 }
 
 /// Opens an HTML file in a browser beside the editor; the browser shows only files of the window's folder.
@@ -296,26 +303,24 @@ fn drag_ended(key: u64) {
 
 /// Runs `f` with the open preview `key`, if there is one.
 fn with(key: u64, f: impl FnOnce(&Rc<Preview>)) {
-    if let Some(preview) = find(|p| p.key == key) {
+    if let Some(preview) = open_preview(crate::context::app().previews(), key) {
         f(&preview);
     }
 }
 
-fn find(matches: impl Fn(&Preview) -> bool) -> Option<Rc<Preview>> {
-    crate::context::app()
-        .previews()
-        .open
-        .borrow()
-        .iter()
-        .find(|p| matches(p))
-        .cloned()
+/// The preview `key` among the open `previews`.
+fn open_preview(previews: &Previews, key: u64) -> Option<Rc<Preview>> {
+    previews.open.borrow().iter().find(|p| p.key == key).cloned()
 }
 
 /// The open previews; those whose window closed leave on the way.
 fn all() -> Vec<Rc<Preview>> {
-    let cx = crate::context::app();
+    all_in(crate::context::app().previews())
+}
+
+fn all_in(previews: &Previews) -> Vec<Rc<Preview>> {
     let gone: Vec<Rc<Preview>> = {
-        let mut open = cx.previews().open.borrow_mut();
+        let mut open = previews.open.borrow_mut();
         let (gone, kept) = open.drain(..).partition(|p| p.is_closed());
         *open = kept;
         gone
@@ -323,18 +328,20 @@ fn all() -> Vec<Rc<Preview>> {
     for preview in gone {
         preview.close();
     }
-    cx.previews().open.borrow().clone()
+    previews.open.borrow().clone()
 }
 
 /// Compares the picture files of the open previews with what they show, and looks again where their links lead, every
 /// two seconds while any is open.
-fn look_at_images_later() {
-    if crate::context::app().previews().looking.replace(true) {
+fn look_at_images_later(previews: &Previews) {
+    if previews.looking.replace(true) {
         return;
     }
     main_after(LOOK_AT_IMAGES, || {
-        crate::context::app().previews().looking.set(false);
-        let open = all();
+        let cx = crate::context::app();
+        let previews = cx.previews();
+        previews.looking.set(false);
+        let open = all_in(previews);
         if open.is_empty() {
             return;
         }
@@ -342,7 +349,7 @@ fn look_at_images_later() {
         for preview in &open {
             preview.look_at_links_again();
         }
-        look_at_images_later();
+        look_at_images_later(previews);
     });
 }
 
@@ -350,6 +357,17 @@ fn look_at_images_later() {
 #[cfg(feature = "selftest")]
 pub(crate) mod seen {
     use super::*;
+
+    /// The first open preview that `matches` accepts.
+    fn find(matches: impl Fn(&Preview) -> bool) -> Option<Rc<Preview>> {
+        crate::context::app()
+            .previews()
+            .open
+            .borrow()
+            .iter()
+            .find(|p| matches(p))
+            .cloned()
+    }
 
     /// The text the Markdown preview of `path` shows, its attachments as U+FFFC, and how many attachments it has.
     pub(crate) fn text(path: &Path) -> Option<(String, usize)> {
