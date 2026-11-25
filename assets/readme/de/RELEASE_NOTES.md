@@ -1,9 +1,2 @@
-## AI-Tab
-- `/resume` öffnet eine Übersicht mit den früheren Sitzungen des Agenten in diesem Ordner; die gewählte läuft in einem eigenen Tab weiter.
-- Agenten und Copilot erfahren jetzt Dangos echte Version statt 0.0.0.
-
-## Terminal
-- Das Terminal läuft auf einer neuen Bildschirm-Engine: Es zeichnet nur noch die geänderten Zeilen neu, und sein Verlauf braucht weniger Speicher, solange das Programm darin ruht.
-
-## Tabs
-- Ein Tab aus dem +-Menü oder mit ⌘T erscheint am Ende der Tab-Leiste statt neben dem vorderen.
+## Behoben
+- Vollbildprogramme wie htop lassen im hellen Erscheinungsbild keine weißen Zeilen mehr aufblitzen: Dango zeigt ihren Bildschirm, sobald das Programm ihn fertig geschrieben hat, und nicht schon halb. Tippen an einem Prompt zeigt jede Taste so schnell wie zuvor.

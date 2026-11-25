@@ -37,6 +37,12 @@ const MAX_LOCKED_READ: usize = u16::MAX as usize;
 /// The longest a synchronized update (mode 2026) holds the screen back.
 const SYNC_TIMEOUT: Duration = Duration::from_millis(150);
 
+/// How long a full-screen program's redraw may pause between two pieces and still show as one.
+const BRIDGE_WAIT_MS: i32 = 1;
+
+/// The longest a batch waits for further pieces of a redraw, well under a display frame.
+const BRIDGE_BUDGET: Duration = Duration::from_millis(3);
+
 /// How long the program has to be quiet before the history is packed.
 const IDLE: Duration = Duration::from_secs(1);
 
@@ -182,6 +188,7 @@ impl Reader {
         let mut unprocessed = 0;
         let mut processed = 0;
         let mut output = Output::Open;
+        let mut bridging = None;
         loop {
             let mut caught_up = false;
             match self.pty.file().read(&mut buffer[unprocessed..]) {
@@ -193,26 +200,32 @@ impl Reader {
                 Err(_) => output = Output::Closed,
             }
             let stop = caught_up || output == Output::Closed;
-            if unprocessed == 0 {
-                if stop {
-                    break;
-                }
-                continue;
+            if unprocessed > 0 {
+                let screen = match &mut terminal {
+                    Some(screen) => screen,
+                    None => match shared.screen.try_lock_unfair() {
+                        Some(screen) => terminal.insert(screen),
+                        None if stop || unprocessed == buffer.len() => terminal.insert(shared.screen.lock_unfair()),
+                        None => continue,
+                    },
+                };
+                let chunk = &buffer[..unprocessed];
+                screen.terminal.advance(chunk);
+                self.scanner.feed(chunk);
+                processed += unprocessed;
+                unprocessed = 0;
             }
-            let screen = match &mut terminal {
-                Some(screen) => screen,
-                None => match shared.screen.try_lock_unfair() {
-                    Some(screen) => terminal.insert(screen),
-                    None if stop || unprocessed == buffer.len() => terminal.insert(shared.screen.lock_unfair()),
-                    None => continue,
-                },
-            };
-            let chunk = &buffer[..unprocessed];
-            screen.terminal.advance(chunk);
-            self.scanner.feed(chunk);
-            processed += unprocessed;
-            unprocessed = 0;
-            if stop || processed >= MAX_LOCKED_READ {
+            if processed >= MAX_LOCKED_READ {
+                break;
+            }
+            // A program redrawing its screen, as htop does, writes it in dozens of small pieces microseconds apart;
+            // shown between two of them, half the screen flashes, so the lease keeps the view waiting for the rest.
+            let redrawing = caught_up
+                && terminal
+                    .as_ref()
+                    .is_some_and(|screen| screen.terminal.modes().contains(Modes::ALT_SCREEN))
+                && more_within_budget(self.pty.file(), &mut bridging);
+            if stop && !redrawing {
                 break;
             }
         }
@@ -382,6 +395,12 @@ fn coalesce(reported: Vec<TermEvent>) -> Vec<TermEvent> {
     kept
 }
 
+/// Whether more of a redraw came before the batch's budget, counted from its first wait in `started`, ran out.
+fn more_within_budget(pty: &std::fs::File, started: &mut Option<Instant>) -> bool {
+    let started = *started.get_or_insert_with(Instant::now);
+    started.elapsed() < BRIDGE_BUDGET && crate::sys::wait_readable(pty, BRIDGE_WAIT_MS)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -436,6 +455,35 @@ mod tests {
             names(&coalesce(reported)),
             ["store Clipboard a", "load Clipboard", "store Clipboard b"]
         );
+    }
+
+    fn pipe() -> (std::fs::File, std::io::PipeWriter) {
+        let (reader, writer) = std::io::pipe().expect("a pipe");
+        (std::fs::File::from(std::os::fd::OwnedFd::from(reader)), writer)
+    }
+
+    #[test]
+    fn a_redraw_waits_for_its_next_piece_only_within_the_budget() {
+        let (reader, mut writer) = pipe();
+        let mut started = None;
+        let late = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_micros(200));
+            writer.write_all(b"x").expect("the pipe takes the piece");
+            writer
+        });
+        assert!(more_within_budget(&reader, &mut started), "the next piece came in time");
+        let _writer = late.join().expect("the writer ends");
+
+        let (reader, _writer) = pipe();
+        let mut started = None;
+        let asked = Instant::now();
+        assert!(!more_within_budget(&reader, &mut started), "nothing came");
+        assert!(asked.elapsed() < BRIDGE_BUDGET * 10, "{:?}", asked.elapsed());
+
+        let mut spent = Instant::now().checked_sub(BRIDGE_BUDGET);
+        let asked = Instant::now();
+        assert!(!more_within_budget(&reader, &mut spent), "the budget is spent");
+        assert!(asked.elapsed() < Duration::from_millis(1), "{:?}", asked.elapsed());
     }
 
     #[test]

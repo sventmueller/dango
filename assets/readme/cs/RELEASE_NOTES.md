@@ -1,9 +1,2 @@
-## Panel AI
-- `/resume` otevře přehled dřívějších relací agenta v této složce; vybraná relace pokračuje ve vlastním panelu.
-- Agenti a Copilot se nyní dozvědí skutečnou verzi aplikace Dango místo 0.0.0.
-
-## Terminál
-- Terminál běží na novém zobrazovacím jádru: překresluje už jen změněné řádky a jeho historie zabírá méně paměti, dokud program v něm nic nedělá.
-
-## Panely
-- Panel otevřený z nabídky + nebo pomocí ⌘T se objeví na konci řádku panelů místo vedle panelu v popředí.
+## Opraveno
+- Programy na celé obrazovce, například htop, už se světlým vzhledem neblikají bílými řádky: Dango zobrazí jejich obrazovku, až ji program dopíše, a ne v polovině. Psaní na výzvě zobrazuje každou klávesu stejně rychle jako dřív.

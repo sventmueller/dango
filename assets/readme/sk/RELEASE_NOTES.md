@@ -1,9 +1,2 @@
-## AI tab
-- `/resume` otvorí prehľad predchádzajúcich relácií agenta v tomto priečinku; vybraná relácia pokračuje vo vlastnom tabe.
-- Agenti a Copilot sa teraz dozvedia skutočnú verziu aplikácie Dango namiesto 0.0.0.
-
-## Terminál
-- Terminál beží na novom zobrazovacom jadre: prekresľuje už len zmenené riadky a jeho história zaberá menej pamäte, kým program v ňom nič nerobí.
-
-## Taby
-- Tab otvorený z menu + alebo pomocou ⌘T sa zobrazí na konci lišty tabov namiesto vedľa tabu v popredí.
+## Opravené
+- Programy na celej obrazovke, napríklad htop, už so svetlým vzhľadom nebliknú bielymi riadkami: Dango zobrazí ich obrazovku, až keď ju program dopíše, a nie v polovici. Písanie pri výzve zobrazuje každú klávesu rovnako rýchlo ako predtým.

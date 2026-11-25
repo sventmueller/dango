@@ -1,5 +1,5 @@
-//! The calls into the C library: the foreground group, process arguments, signals, the PTY's window size and the host
-//! name; what concerns any process is in `ide_process::system`.
+//! The calls into the C library: the foreground group, process arguments, signals, the PTY's window size, waiting for
+//! output and the host name; what concerns any process is in `ide_process::system`.
 
 use std::ffi::CStr;
 use std::fs::File;
@@ -77,6 +77,18 @@ pub(crate) fn set_window_size(master: &File, size: &libc::winsize) -> io::Result
     } else {
         Err(io::Error::last_os_error())
     }
+}
+
+/// Whether `file` can be read, or is hung up, within `milliseconds`; false when the time ran out.
+pub(crate) fn wait_readable(file: &File, milliseconds: i32) -> bool {
+    let mut wanted = libc::pollfd {
+        fd: file.as_raw_fd(),
+        events: libc::POLLIN,
+        revents: 0,
+    };
+    // SAFETY: poll reads and writes the one pollfd it is given, which lives for the length of the call.
+    let ready = unsafe { libc::poll(&raw mut wanted, 1, milliseconds) };
+    ready > 0 || (ready < 0 && io::Error::last_os_error().kind() != io::ErrorKind::Interrupted)
 }
 
 /// This Mac's host name, as shells report it in OSC 7.

@@ -140,6 +140,40 @@ fn the_end_of_the_program_is_reported_with_its_exit_code_and_the_supervisor_forg
 }
 
 #[test]
+fn a_full_screen_program_redrawing_in_pieces_never_shows_half_its_screen() {
+    const ROWS: usize = 20;
+    let dir = temporary("pieces");
+    let script = format!(
+        "$|=1; usleep(1); for my $i (1..{ROWS}) {{ printf \"%s\\e[%d;1Hrow%d\", $i == 1 ? \"\\e[?1049h\" : \"\", $i, $i; usleep(20) }} sleep 5"
+    );
+    let harness = Harness::start(
+        command("/usr/bin/perl", &["-MTime::HiRes=usleep", "-e", &script], &dir),
+        &dir,
+    );
+    let deadline = Instant::now() + Duration::from_secs(10);
+    let mut seen = Vec::new();
+    loop {
+        let rows = harness
+            .session
+            .visible_text()
+            .iter()
+            .filter(|line| line.starts_with("row"))
+            .count();
+        if seen.last() != Some(&rows) {
+            seen.push(rows);
+        }
+        if rows == ROWS || Instant::now() >= deadline {
+            break;
+        }
+    }
+    assert_eq!(seen.last(), Some(&ROWS), "{seen:?}");
+    assert!(
+        seen.iter().all(|rows| *rows == 0 || *rows == ROWS),
+        "half a screen showed: {seen:?}"
+    );
+}
+
+#[test]
 fn osc_sequences_and_server_announcements_become_events() {
     let dir = temporary("osc");
     let script = r"printf '\033]0;hello\007\007\033]52;c;aGk=\007\033]52;c;?\007'; printf '\033]7;file:///tmp/a%%20b\007'; echo 'Local: http://localhost:5173/'";
