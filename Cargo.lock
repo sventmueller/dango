@@ -1412,7 +1412,7 @@ checksum = "913a7d294ad056474749152107309fdee3ec17d2482d1ab70fdc61a81c64b9a3"
 
 [[package]]
 name = "ide-acp"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "agent-client-protocol",
  "blocking",
@@ -1432,7 +1432,7 @@ dependencies = [
 
 [[package]]
 name = "ide-agent"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "base64 0.23.1",
  "globset",
@@ -1455,7 +1455,7 @@ dependencies = [
 
 [[package]]
 name = "ide-app"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "block2",
  "dispatch2",
@@ -1525,7 +1525,7 @@ dependencies = [
 
 [[package]]
 name = "ide-ci"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "base64 0.23.1",
  "ide-core",
@@ -1542,7 +1542,7 @@ dependencies = [
 
 [[package]]
 name = "ide-claude"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "base64 0.23.1",
  "ide-core",
@@ -1557,7 +1557,7 @@ dependencies = [
 
 [[package]]
 name = "ide-codex"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "base64 0.23.1",
  "ide-process",
@@ -1570,7 +1570,7 @@ dependencies = [
 
 [[package]]
 name = "ide-core"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-product",
  "ide-workspace-hack",
@@ -1582,7 +1582,7 @@ dependencies = [
 
 [[package]]
 name = "ide-dap"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-dap",
@@ -1601,7 +1601,7 @@ dependencies = [
 
 [[package]]
 name = "ide-docker"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-workspace-hack",
@@ -1611,7 +1611,7 @@ dependencies = [
 
 [[package]]
 name = "ide-document"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-workspace-hack",
@@ -1627,7 +1627,7 @@ dependencies = [
 
 [[package]]
 name = "ide-factory"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "globset",
  "ide-product",
@@ -1642,7 +1642,7 @@ dependencies = [
 
 [[package]]
 name = "ide-git"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-process",
@@ -1656,7 +1656,7 @@ dependencies = [
 
 [[package]]
 name = "ide-lsp"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "flate2",
  "ide-core",
@@ -1677,7 +1677,7 @@ dependencies = [
 
 [[package]]
 name = "ide-net"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-process",
@@ -1692,7 +1692,7 @@ dependencies = [
 
 [[package]]
 name = "ide-opencode"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "base64 0.23.1",
  "ide-process",
@@ -1704,7 +1704,7 @@ dependencies = [
 
 [[package]]
 name = "ide-predict"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-lsp",
@@ -1719,7 +1719,7 @@ dependencies = [
 
 [[package]]
 name = "ide-process"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-product",
@@ -1729,14 +1729,14 @@ dependencies = [
 
 [[package]]
 name = "ide-product"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-workspace-hack",
 ]
 
 [[package]]
 name = "ide-project"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "grep-matcher",
  "grep-regex",
@@ -1755,7 +1755,7 @@ dependencies = [
 
 [[package]]
 name = "ide-rpc"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-process",
@@ -1765,7 +1765,7 @@ dependencies = [
 
 [[package]]
 name = "ide-secrets"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-workspace-hack",
@@ -1775,7 +1775,7 @@ dependencies = [
 
 [[package]]
 name = "ide-session"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-acp",
  "ide-agent",
@@ -1793,7 +1793,7 @@ dependencies = [
 
 [[package]]
 name = "ide-terminal"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-process",
@@ -1808,7 +1808,7 @@ dependencies = [
 
 [[package]]
 name = "ide-test"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-workspace-hack",
@@ -1818,7 +1818,7 @@ dependencies = [
 
 [[package]]
 name = "ide-thread"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-workspace-hack",
@@ -1828,7 +1828,7 @@ dependencies = [
 
 [[package]]
 name = "ide-ui-agent"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "block2",
  "dispatch2",
@@ -1867,7 +1867,7 @@ dependencies = [
 
 [[package]]
 name = "ide-ui-browser"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "block2",
  "ide-core",
@@ -1885,7 +1885,7 @@ dependencies = [
 
 [[package]]
 name = "ide-ui-common"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "block2",
  "dispatch2",
@@ -1903,7 +1903,7 @@ dependencies = [
 
 [[package]]
 name = "ide-ui-debug"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "block2",
  "ide-core",
@@ -1922,7 +1922,7 @@ dependencies = [
 
 [[package]]
 name = "ide-ui-dictation"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "block2",
  "ide-core",
@@ -1944,7 +1944,7 @@ dependencies = [
 
 [[package]]
 name = "ide-ui-export"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "block2",
  "ide-core",
@@ -1966,7 +1966,7 @@ dependencies = [
 
 [[package]]
 name = "ide-ui-factory"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "block2",
  "ide-core",
@@ -1986,7 +1986,7 @@ dependencies = [
 
 [[package]]
 name = "ide-ui-git"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "block2",
  "ide-agent",
@@ -2005,7 +2005,7 @@ dependencies = [
 
 [[package]]
 name = "ide-ui-icons"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "block2",
  "ide-ui-common",
@@ -2020,7 +2020,7 @@ dependencies = [
 
 [[package]]
 name = "ide-ui-lsp"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "block2",
  "dispatch2",
@@ -2044,7 +2044,7 @@ dependencies = [
 
 [[package]]
 name = "ide-ui-terminal"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "block2",
  "ide-core",
@@ -2066,7 +2066,7 @@ dependencies = [
 
 [[package]]
 name = "ide-vim"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-workspace-hack",
@@ -2078,7 +2078,7 @@ dependencies = [
 
 [[package]]
 name = "ide-workspace-hack"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "aho-corasick",
  "base64 0.23.1",
@@ -5354,7 +5354,7 @@ checksum = "9440ea3e5aeabb0ac63af70daf835274065238cdd0cec83418f417eae38bacee"
 
 [[package]]
 name = "xtask"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "block2",
  "dispatch2",

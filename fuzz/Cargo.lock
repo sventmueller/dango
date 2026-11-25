@@ -912,7 +912,7 @@ dependencies = [
 
 [[package]]
 name = "ide-acp"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "agent-client-protocol",
  "blocking",
@@ -940,7 +940,7 @@ dependencies = [
 
 [[package]]
 name = "ide-agent"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "base64",
  "globset",
@@ -970,7 +970,7 @@ dependencies = [
 
 [[package]]
 name = "ide-claude"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "base64",
  "ide-core",
@@ -994,7 +994,7 @@ dependencies = [
 
 [[package]]
 name = "ide-core"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-product",
  "ide-workspace-hack",
@@ -1006,7 +1006,7 @@ dependencies = [
 
 [[package]]
 name = "ide-dap"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-document",
@@ -1032,7 +1032,7 @@ dependencies = [
 
 [[package]]
 name = "ide-document"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-workspace-hack",
@@ -1047,7 +1047,7 @@ dependencies = [
 
 [[package]]
 name = "ide-git"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-process",
@@ -1068,7 +1068,7 @@ dependencies = [
 
 [[package]]
 name = "ide-lsp"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "flate2",
  "ide-core",
@@ -1096,7 +1096,7 @@ dependencies = [
 
 [[package]]
 name = "ide-net"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-process",
@@ -1111,7 +1111,7 @@ dependencies = [
 
 [[package]]
 name = "ide-predict"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-lsp",
@@ -1133,7 +1133,7 @@ dependencies = [
 
 [[package]]
 name = "ide-process"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-product",
@@ -1143,14 +1143,14 @@ dependencies = [
 
 [[package]]
 name = "ide-product"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-workspace-hack",
 ]
 
 [[package]]
 name = "ide-project"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "grep-matcher",
  "grep-regex",
@@ -1168,7 +1168,7 @@ dependencies = [
 
 [[package]]
 name = "ide-rpc"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-process",
@@ -1178,7 +1178,7 @@ dependencies = [
 
 [[package]]
 name = "ide-secrets"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-workspace-hack",
@@ -1188,7 +1188,7 @@ dependencies = [
 
 [[package]]
 name = "ide-terminal"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-process",
@@ -1210,7 +1210,7 @@ dependencies = [
 
 [[package]]
 name = "ide-thread"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ide-core",
  "ide-workspace-hack",
@@ -1220,7 +1220,7 @@ dependencies = [
 
 [[package]]
 name = "ide-workspace-hack"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "aho-corasick",
  "base64",

@@ -77,7 +77,7 @@ serde_json = "1"
 
 [workspace.package]
 # The one version of the project; only `cargo xtask deploy` raises it, and `cargo xtask versions` holds every other place to it.
-version = "1.0.0"
+version = "1.0.1"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 publish = false
