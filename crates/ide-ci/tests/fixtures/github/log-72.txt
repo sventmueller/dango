@@ -1,0 +1,12 @@
+2026-11-09T12:02:15.1000000Z ##[group]Run cargo test
+2026-11-09T12:02:15.2000000Z [36;1mcargo test --workspace[0m
+2026-11-09T12:02:15.3000000Z ##[endgroup]
+2026-11-09T12:03:00.0000000Z running 3 tests
+2026-11-09T12:03:01.0000000Z test parser::reads_numbers ... ok
+2026-11-09T12:03:01.1000000Z test parser::reads_strings ... FAILED
+2026-11-09T12:03:01.2000000Z 
+2026-11-09T12:03:01.3000000Z ---- parser::reads_strings stdout ----
+2026-11-09T12:03:01.4000000Z thread 'parser::reads_strings' panicked at src/parser.rs:42:9:
+2026-11-09T12:03:01.5000000Z assertion `left == right` failed
+2026-11-09T12:03:02.0000000Z [31mtest result: FAILED. 2 passed; 1 failed[0m
+2026-11-09T12:04:24.0000000Z ##[error]Process completed with exit code 101.

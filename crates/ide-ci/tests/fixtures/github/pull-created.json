@@ -1,0 +1,12 @@
+{
+  "id": 9900,
+  "number": 32,
+  "title": "Parse nested tables",
+  "body": "Summary\n\n<!-- dango-order: o-1 -->",
+  "user": { "login": "octo" },
+  "html_url": "https://github.com/acme/widget/pull/32",
+  "updated_at": "2026-11-16T09:00:00Z",
+  "draft": false,
+  "head": { "ref": "order/o-1" },
+  "author_association": "OWNER"
+}

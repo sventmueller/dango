@@ -1,0 +1,18 @@
+[
+  {
+    "name": "math > adds",
+    "file": "/private/tmp/dango-samples/vitest/math.test.js",
+    "location": {
+      "line": 2,
+      "column": 3
+    }
+  },
+  {
+    "name": "math > fails",
+    "file": "/private/tmp/dango-samples/vitest/math.test.js",
+    "location": {
+      "line": 5,
+      "column": 3
+    }
+  }
+]

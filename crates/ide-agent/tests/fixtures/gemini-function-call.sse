@@ -1,0 +1,6 @@
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":"I should search first.","thought":true}]}}],"modelVersion":"gemini-3.5-flash"}
+
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":"Searching."}]}}],"modelVersion":"gemini-3.5-flash"}
+
+data: {"candidates":[{"content":{"role":"model","parts":[{"functionCall":{"id":"fc_1","name":"grep","args":{"pattern":"TODO"}},"thoughtSignature":"c2lnLTE="}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":500,"cachedContentTokenCount":100,"candidatesTokenCount":20,"thoughtsTokenCount":30,"totalTokenCount":550},"modelVersion":"gemini-3.5-flash"}
+

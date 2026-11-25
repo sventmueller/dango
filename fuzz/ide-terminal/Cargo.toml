@@ -1,0 +1,26 @@
+[package]
+name = "ide-terminal-fuzz"
+description = "Fuzz targets of ide-terminal (E95); `cargo xtask fuzz` runs them with the nightly cargo-fuzz needs"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4.10"
+ide-terminal = { path = "../../crates/ide-terminal", features = ["fuzzing"] }
+
+[[bin]]
+name = "scan"
+path = "fuzz_targets/scan.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "procargs"
+path = "fuzz_targets/procargs.rs"
+test = false
+doc = false
+bench = false

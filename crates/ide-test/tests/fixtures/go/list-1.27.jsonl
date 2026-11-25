@@ -1,0 +1,7 @@
+{"Time":"2026-11-13T19:48:22.227572+01:00","Action":"start","Package":"example.com/sample"}
+{"Time":"2026-11-13T19:48:22.514194+01:00","Action":"output","Package":"example.com/sample","Output":"TestPass\n"}
+{"Time":"2026-11-13T19:48:22.515615+01:00","Action":"output","Package":"example.com/sample","Output":"TestFail\n"}
+{"Time":"2026-11-13T19:48:22.515681+01:00","Action":"output","Package":"example.com/sample","Output":"TestSkip\n"}
+{"Time":"2026-11-13T19:48:22.515721+01:00","Action":"output","Package":"example.com/sample","Output":"TestTable\n"}
+{"Time":"2026-11-13T19:48:22.515948+01:00","Action":"output","Package":"example.com/sample","Output":"ok  \texample.com/sample\t0.287s\n"}
+{"Time":"2026-11-13T19:48:22.516114+01:00","Action":"pass","Package":"example.com/sample","Elapsed":0.289}

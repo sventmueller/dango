@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "Tính năng đọc chính tả chuyển lời bạn nói thành văn bản trong trình soạn thảo và trong ô soạn tin nhắn của tab AI.";

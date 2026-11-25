@@ -1,0 +1,12 @@
+: OPENROUTER PROCESSING
+
+data: {"id":"gen-1","model":"anthropic/claude-x","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"Thinking about it."},"finish_reason":null}]}
+
+data: {"id":"gen-1","choices":[{"index":0,"delta":{"content":"Hello"},"finish_reason":null}]}
+
+data: {"id":"gen-1","choices":[{"index":0,"delta":{"content":" there"},"finish_reason":"stop","native_finish_reason":"stop"}]}
+
+data: {"id":"gen-1","choices":[{"index":0,"delta":{"content":"","role":"assistant"},"finish_reason":"stop","native_finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":4,"total_tokens":14,"prompt_tokens_details":{"cached_tokens":0},"cost":0.00014}}
+
+data: [DONE]
+

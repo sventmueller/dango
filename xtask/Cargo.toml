@@ -1,0 +1,46 @@
+[package]
+name = "xtask"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ide-process.workspace = true
+ide-product.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+image = { version = "0.25", default-features = false, features = ["png"] }
+# The static checks of the Rust sources; span-locations gives their tokens line numbers outside a proc macro.
+proc-macro2 = { version = "1", features = ["span-locations"] }
+syn = { version = "3", features = ["full", "visit"] }
+
+# `cargo xtask compare` drives other apps through Accessibility, CGEvent and ScreenCaptureKit, which exist only on macOS.
+[target.'cfg(target_os = "macos")'.dependencies]
+block2.workspace = true
+dispatch2.workspace = true
+libc.workspace = true
+objc2.workspace = true
+objc2-app-kit.workspace = true
+objc2-application-services.workspace = true
+objc2-core-foundation.workspace = true
+objc2-core-graphics.workspace = true
+objc2-core-media = { version = "0.3.2", features = ["objc2-core-video"] }
+objc2-core-video = "0.3.2"
+objc2-foundation.workspace = true
+objc2-screen-capture-kit = { version = "0.3.2", default-features = false, features = [
+    "std",
+    "SCError",
+    "SCShareableContent",
+    "SCStream",
+    "block2",
+    "dispatch2",
+    "libc",
+    "objc2-core-foundation",
+    "objc2-core-graphics",
+    "objc2-core-media",
+] }

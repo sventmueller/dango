@@ -1,0 +1,19 @@
+[package]
+name = "ide-predict-fuzz"
+description = "Fuzz targets of ide-predict (E95); `cargo xtask fuzz` runs them with the nightly cargo-fuzz needs"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4.10"
+ide-predict = { path = "../../crates/ide-predict", features = ["fuzzing"] }
+
+[[bin]]
+name = "answer"
+path = "fuzz_targets/answer.rs"
+test = false
+doc = false
+bench = false

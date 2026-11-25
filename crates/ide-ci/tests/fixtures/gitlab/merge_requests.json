@@ -1,0 +1,22 @@
+[
+  {
+    "id": 9101,
+    "iid": 14,
+    "title": "Add the export job",
+    "author": { "username": "lab-selftest" },
+    "web_url": "https://gitlab.example.com/gitlab/group/app/-/merge_requests/14",
+    "updated_at": "2026-11-09T10:00:00.000Z",
+    "draft": false,
+    "source_branch": "export"
+  },
+  {
+    "id": 9100,
+    "iid": 13,
+    "title": "Draft: Move to the new runner",
+    "author": { "username": "ops" },
+    "web_url": "https://gitlab.example.com/gitlab/group/app/-/merge_requests/13",
+    "updated_at": "2026-11-08T10:00:00.000Z",
+    "work_in_progress": true,
+    "source_branch": "runner"
+  }
+]

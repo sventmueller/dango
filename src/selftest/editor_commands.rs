@@ -1,0 +1,875 @@
+//! The `editor-commands` scenario, in a folder the user does not trust, so no language server runs: brackets and
+//! quotes typed in pairs, Return and Tab indenting, commenting lines in and out per language and "Gehe zu Zeile" as the
+//! keyboard and the menu bar send them; folds, extra carets and line wrapping from their commands; saving over a file
+//! changed outside, a save that fails, closing a tab with unsaved changes; a compiler's line and column opened; a
+//! workspace edit that renames an open file; and a server's question with its answers as a sheet.
+
+use std::cell::{Cell, RefCell};
+use std::ops::Range;
+use std::path::{Path, PathBuf};
+use std::rc::Rc;
+use std::time::Duration;
+
+use ide_lsp::lsp_types::{
+    DocumentChangeOperation, DocumentChanges, MessageActionItem, RenameFile, ResourceOp, WorkspaceEdit,
+};
+use objc2::rc::Retained;
+use objc2::runtime::Sel;
+use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, sel};
+use objc2_app_kit::{
+    NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSAlertThirdButtonReturn, NSApplication, NSTextField, NSView,
+};
+use objc2_foundation::NSRange;
+use splat_i18n::{t, tf};
+
+use super::helpers::{
+    alert_texts, answer_alert, answer_alert_saying, in_any_mode_after, text_of, type_at, utf16_len, wait_until,
+    when_alert_shows,
+};
+use super::{check, finish, give_up, give_up_saying, helpers};
+use crate::editor::{self, EditorTextView};
+use crate::util::ns;
+use crate::window::{self, WindowController};
+
+const SCENARIO: &str = "editor-commands";
+/// Time for the answer to a sheet to reach the one who asked; it reports no end.
+const SHEET_ANSWERED: Duration = Duration::from_millis(300);
+const PROJECT: &str = "commands-project";
+
+const MAIN: &str = "fn main() {\n    let total = 1;\n\n    let other = total;\n}\n";
+const FILES: [(&str, &str); 10] = [
+    ("src/main.rs", MAIN),
+    ("pairs.rs", "x\n"),
+    ("brace.rs", "fn f() {}\n"),
+    ("script.py", "def f():\n    return 1\n"),
+    ("query.sql", "select 1;\n"),
+    ("notes.md", "# Notes\n"),
+    ("disk.txt", "first\n"),
+    ("locked/file.txt", "kept\n"),
+    ("moved.txt", "move me\n"),
+    ("list.rs", "let x = a"),
+];
+
+fn root() -> PathBuf {
+    helpers::root(PROJECT)
+}
+
+/// Runs `step` once no alert is up any more, as the step before may have left one.
+fn next(step: impl FnOnce() + 'static) {
+    wait_until(
+        || MainThreadMarker::new().is_some_and(|mtm| NSApplication::sharedApplication(mtm).modalWindow().is_none()),
+        move |_| step(),
+    );
+}
+
+fn controller() -> Option<Retained<WindowController>> {
+    window::for_project(&root())
+}
+
+/// The editor of `file`, opened if it is not yet.
+fn open(file: &str) -> Option<Retained<EditorTextView>> {
+    let controller = controller()?;
+    let path = root().join(file);
+    controller.open_file(&path);
+    editor::editor_for(&controller, &path)
+}
+
+/// Sends `action` to `view` as the menu bar or the keyboard does.
+fn send(view: &EditorTextView, action: Sel) {
+    let app = NSApplication::sharedApplication(view.mtm());
+    // SAFETY: An action the editor answers, sent to it with no sender, as a key equivalent sends it.
+    unsafe { app.sendAction_to_from(action, Some(view), None) };
+}
+
+fn selection(view: &EditorTextView) -> (usize, usize) {
+    let range = view.selectedRange();
+    (range.location, range.length)
+}
+
+fn line_start(view: &EditorTextView, line: usize) -> usize {
+    view.line_start(line).unwrap_or(usize::MAX)
+}
+
+fn unit(view: &EditorTextView) -> String {
+    view.ivars().indent.borrow().clone()
+}
+
+pub(crate) fn run() {
+    let folder = match helpers::make_project(PROJECT, &FILES) {
+        Ok(folder) => folder,
+        Err(error) => {
+            return give_up_saying(SCENARIO, "the files of the folder are made", error.to_string());
+        }
+    };
+    let Some(mtm) = MainThreadMarker::new() else { return };
+    crate::app::open_project(mtm, folder);
+    let Some(window) = controller().and_then(|c| c.window()) else {
+        return give_up(SCENARIO, "the folder opens in a window");
+    };
+    if let Some(sheet) = window.attachedSheet() {
+        window.endSheet_returnCode(&sheet, NSAlertSecondButtonReturn);
+    }
+    wait_until(
+        || open("pairs.rs").is_some(),
+        |ok| {
+            if ok {
+                pairs();
+            } else {
+                give_up(SCENARIO, "the file opens in an editor");
+            }
+        },
+    );
+}
+
+/// Brackets and quotes typed in pairs, a closing one typed over, and a selection wrapped.
+fn pairs() {
+    let Some(view) = open("pairs.rs") else {
+        return give_up(SCENARIO, "pairs.rs opens in an editor");
+    };
+    hears_the_mouse(&view);
+    type_at(&view, NSRange::new(0, 0), "(");
+    check(
+        "a bracket typed in front of a word stays single",
+        text_of(&view) == "(x\n",
+        format!("{:?}", text_of(&view)),
+    );
+    type_at(&view, NSRange::new(2, 0), "(");
+    let paired = (text_of(&view), selection(&view));
+    check(
+        "a bracket typed before a line's end gets its closing one, the caret between them",
+        paired == ("(x()\n".to_string(), (3, 0)),
+        format!("{paired:?}"),
+    );
+    type_at(&view, NSRange::new(3, 0), ")");
+    let over = (text_of(&view), selection(&view));
+    check(
+        "typing the closing bracket steps over it",
+        over == ("(x()\n".to_string(), (4, 0)),
+        format!("{over:?}"),
+    );
+    type_at(&view, NSRange::new(4, 0), "a\"");
+    check(
+        "a quote right after a letter stays single",
+        text_of(&view) == "(x()a\"\n",
+        format!("{:?}", text_of(&view)),
+    );
+    type_at(&view, NSRange::new(1, 1), "[");
+    let wrapped = (text_of(&view), selection(&view));
+    check(
+        "a bracket typed over a selection wraps it and keeps it selected",
+        wrapped == ("([x]()a\"\n".to_string(), (2, 1)),
+        format!("{wrapped:?}"),
+    );
+    next(returns);
+}
+
+/// The editor hears the mouse move over its text for hover texts, through one tracking area however often AppKit
+/// asks it to update them.
+fn hears_the_mouse(view: &EditorTextView) {
+    let ours = || {
+        view.trackingAreas()
+            .iter()
+            .filter(|area| {
+                area.options()
+                    .contains(objc2_app_kit::NSTrackingAreaOptions::MouseMoved)
+                    && area.owner().is_some_and(|owner| std::ptr::eq(&*owner, view.as_ref()))
+            })
+            .count()
+    };
+    view.updateTrackingAreas();
+    let first = ours();
+    view.updateTrackingAreas();
+    check(
+        "the editor hears the mouse move through one tracking area of its own, also after an update",
+        first == 1 && ours() == 1,
+        format!("{first}, {}", ours()),
+    );
+}
+
+/// Return between brackets and after a colon, and Tab over several lines.
+fn returns() {
+    let (Some(brace), Some(script)) = (open("brace.rs"), open("script.py")) else {
+        return give_up(SCENARIO, "brace.rs and script.py open in editors");
+    };
+    brace.setSelectedRange(NSRange::new(8, 0));
+    send(&brace, sel!(insertNewline:));
+    let unit_rs = unit(&brace);
+    let expected = format!("fn f() {{\n{unit_rs}\n}}\n");
+    let split = (text_of(&brace), selection(&brace).0);
+    check(
+        "Return between braces puts the closing one on a line of its own and the caret indented between",
+        split == (expected.clone(), 9 + unit_rs.len()),
+        format!("{split:?}, wanted {expected:?}"),
+    );
+    let unit_py = unit(&script);
+    script.setSelectedRange(NSRange::new(8, 0));
+    send(&script, sel!(insertNewline:));
+    let deeper = text_of(&script);
+    check(
+        "Return after a colon indents the new line one level deeper",
+        deeper == format!("def f():\n{unit_py}\n    return 1\n"),
+        format!("{deeper:?}"),
+    );
+    let all = utf16_len(&deeper);
+    script.setSelectedRange(NSRange::new(0, all));
+    send(&script, sel!(insertTab:));
+    let indented = (text_of(&script), selection(&script));
+    let wanted = format!("{unit_py}def f():\n{unit_py}\n{unit_py}    return 1\n");
+    check(
+        "Tab over several lines indents each of them but the empty one and keeps them selected",
+        indented == (wanted.clone(), (0, utf16_len(&wanted))),
+        format!("{indented:?}"),
+    );
+    next(comments);
+}
+
+/// Commenting lines out and in again, with the marker of each language.
+fn comments() {
+    let Some(main) = open("src/main.rs") else {
+        return give_up(SCENARIO, "src/main.rs opens in an editor");
+    };
+    let end = line_start(&main, 4);
+    main.setSelectedRange(NSRange::new(line_start(&main, 1), end - line_start(&main, 1)));
+    send(&main, sel!(ideToggleComment:));
+    let commented = text_of(&main);
+    check(
+        "the selected lines are commented out at their common indentation, the empty one left alone",
+        commented == "fn main() {\n    // let total = 1;\n\n    // let other = total;\n}\n",
+        format!("{commented:?}"),
+    );
+    send(&main, sel!(ideToggleComment:));
+    check(
+        "commenting lines that all are comments takes the markers out again",
+        text_of(&main) == MAIN,
+        format!("{:?}", text_of(&main)),
+    );
+    let marked = |file: &str| {
+        open(file).map(|view| {
+            view.setSelectedRange(NSRange::new(0, 0));
+            send(&view, sel!(ideToggleComment:));
+            text_of(&view)
+        })
+    };
+    let python = marked("script.py").unwrap_or_default();
+    let (sql, markdown) = (marked("query.sql"), marked("notes.md"));
+    check(
+        "Python comments with #, SQL with -- and Markdown has no line comment",
+        python
+            .split('\n')
+            .next()
+            .is_some_and(|first| first.trim_start() == "# def f():")
+            && sql.as_deref() == Some("-- select 1;\n")
+            && markdown.as_deref() == Some("# Notes\n"),
+        format!("{python:?} {sql:?} {markdown:?}"),
+    );
+    next(|| go_to_line(&["abc", "3", "999"], Vec::new()));
+}
+
+/// The editable field of the alert in front.
+fn alert_field(view: &NSView) -> Option<Retained<NSTextField>> {
+    if let Some(field) = view.downcast_ref::<NSTextField>()
+        && field.isEditable()
+    {
+        return Some(field.retain());
+    }
+    view.subviews().iter().find_map(|child| alert_field(&child))
+}
+
+/// "Gehe zu Zeile" answered with each of `answers` in turn, each time from the cursor at the text's start.
+fn go_to_line(answers: &'static [&'static str], mut reached: Vec<usize>) {
+    let Some(main) = open("src/main.rs") else {
+        return give_up(SCENARIO, "src/main.rs opens in an editor");
+    };
+    let Some((answer, rest)) = answers.split_first() else {
+        let last = main.document().text().line_count().saturating_sub(1);
+        let lines: Vec<usize> = [0, 2, last].iter().map(|line| line_start(&main, *line)).collect();
+        check(
+            "Gehe zu Zeile ignores what is no number, goes to line 3 and stops at the last line",
+            reached == lines,
+            format!("{reached:?}, lines start at {lines:?}"),
+        );
+        return next(cancelled_line);
+    };
+    main.setSelectedRange(NSRange::new(0, 0));
+    when_alert_shows(None, move |alert| {
+        if let Some(field) = alert.contentView().and_then(|v| alert_field(&v)) {
+            field.setStringValue(&ns(answer));
+        }
+        answer_alert(NSAlertFirstButtonReturn);
+    });
+    send(&main, sel!(ideGoToLine:));
+    reached.push(selection(&main).0);
+    next(move || go_to_line(rest, reached));
+}
+
+fn cancelled_line() {
+    let Some(main) = open("src/main.rs") else {
+        return give_up(SCENARIO, "src/main.rs opens in an editor");
+    };
+    main.setSelectedRange(NSRange::new(3, 0));
+    let asked = answer_alert_saying(t("Gehe zu Zeile").to_string(), NSAlertSecondButtonReturn);
+    send(&main, sel!(ideGoToLine:));
+    check(
+        "cancelling Gehe zu Zeile leaves the cursor",
+        asked.get() && selection(&main) == (3, 0),
+        format!("asked {}, {:?}", asked.get(), selection(&main)),
+    );
+    next(folds_and_carets);
+}
+
+/// Folding from the commands, extra carets above, below and at the next occurrence, and line wrapping.
+fn folds_and_carets() {
+    let Some(main) = open("src/main.rs") else {
+        return give_up(SCENARIO, "src/main.rs opens in an editor");
+    };
+    use crate::editor::selftest::{carets, copied, folded, set_carets};
+    send(&main, sel!(ideFoldAll:));
+    let all = folded(&main);
+    send(&main, sel!(ideUnfoldAll:));
+    let none = folded(&main);
+    main.setSelectedRange(NSRange::new(line_start(&main, 1) + 4, 0));
+    send(&main, sel!(ideFold:));
+    let one = folded(&main);
+    send(&main, sel!(ideUnfold:));
+    check(
+        "the fold commands fold everything, nothing, and the block at the cursor",
+        all >= 1 && none == 0 && one == 1 && folded(&main) == 0,
+        format!("all {all}, none {none}, one {one}, after {}", folded(&main)),
+    );
+    main.setSelectedRange(NSRange::new(line_start(&main, 1) + 4, 0));
+    send(&main, sel!(ideAddCaretBelow:));
+    send(&main, sel!(ideAddCaretAbove:));
+    let three = carets(&main).len();
+    let total = line_start(&main, 1) + 8;
+    set_carets(&main, std::iter::once(total..total).collect());
+    main.setSelectedRange(NSRange::new(total, 5));
+    send(&main, sel!(ideAddNextOccurrence:));
+    let both = copied(&main);
+    check(
+        "carets are added below and above, and the next occurrence of the selected word is selected too",
+        three == 3 && both.as_deref() == Some("total\ntotal"),
+        format!("{three} carets, copied {both:?}"),
+    );
+    set_carets(&main, std::iter::once(0..0).collect());
+    let before = editor::wraps(&main);
+    send(&main, sel!(ideToggleWrap:));
+    let toggled = editor::wraps(&main);
+    send(&main, sel!(ideToggleWrap:));
+    check(
+        "Zeilen umbrechen switches wrapping and back",
+        toggled != before && editor::wraps(&main) == before,
+        format!("{before} → {toggled}"),
+    );
+    next(option_mouse);
+}
+
+/// A mouse event of `kind` with `flags` at UTF-16 offset `at` of `view`, `dx` points to its right.
+fn mouse_at(
+    view: &EditorTextView,
+    kind: objc2_app_kit::NSEventType,
+    flags: objc2_app_kit::NSEventModifierFlags,
+    at: usize,
+    dx: f64,
+) -> Option<Retained<objc2_app_kit::NSEvent>> {
+    let rect = ide_ui_lsp::rect_of(view, at..at + 1)?;
+    let point = objc2_foundation::NSPoint::new(rect.origin.x + dx + 1.0, rect.origin.y + rect.size.height / 2.0);
+    objc2_app_kit::NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure(
+        kind,
+        view.convertPoint_toView(point, None),
+        flags,
+        0.0,
+        view.window()?.windowNumber(),
+        None,
+        0,
+        1,
+        0.0,
+    )
+}
+
+/// ⌥-click adds a caret, ⌥-drag selects a column, a command other than a move or an edit leaves one caret, and text
+/// of another number of lines than carets goes in whole at each.
+fn option_mouse() {
+    use objc2_app_kit::{NSEventModifierFlags as Flags, NSEventType as Kind};
+    let Some(main) = open("src/main.rs") else {
+        return give_up(SCENARIO, "src/main.rs opens in an editor");
+    };
+    use crate::editor::selftest::{carets, paste_text, set_carets};
+    let app = NSApplication::sharedApplication(main.mtm());
+    let (one, three) = (line_start(&main, 1) + 4, line_start(&main, 3) + 4);
+    main.setSelectedRange(NSRange::new(one, 0));
+    let click = |down: Option<Retained<objc2_app_kit::NSEvent>>, then: &[Option<Retained<objc2_app_kit::NSEvent>>]| {
+        for event in then.iter().flatten() {
+            app.postEvent_atStart(event, false);
+        }
+        if let Some(down) = down {
+            // SAFETY: The view's handler of a mouse press, given one in its window, as AppKit sends it.
+            let _: () = unsafe { objc2::msg_send![&*main, mouseDown: &*down] };
+        }
+    };
+    click(
+        mouse_at(&main, Kind::LeftMouseDown, Flags::Option, three, 0.0),
+        &[mouse_at(&main, Kind::LeftMouseUp, Flags::Option, three, 0.0)],
+    );
+    let clicked = carets(&main);
+    click(
+        mouse_at(&main, Kind::LeftMouseDown, Flags::Option, one, 0.0),
+        &[
+            mouse_at(&main, Kind::LeftMouseDragged, Flags::Option, three, 24.0),
+            mouse_at(&main, Kind::LeftMouseUp, Flags::Option, three, 24.0),
+        ],
+    );
+    let block = carets(&main);
+    paste_text(&main, "ab");
+    let pasted = text_of(&main);
+    press(&main, sel!(scrollPageDown:));
+    let left = carets(&main).len();
+    check(
+        "⌥-click adds a caret and ⌥-drag selects a block, one range per line, empty on the empty line",
+        clicked.len() == 2
+            && clicked.contains(&(three..three))
+            && block.len() == 3
+            && block.iter().any(Range::is_empty),
+        format!("{clicked:?} {block:?}"),
+    );
+    check(
+        "text of one line goes in at every caret of the block, and a page down leaves one caret",
+        pasted.matches("ab").count() == 3 && left == 1,
+        format!("{pasted:?}, {left} left"),
+    );
+    if let Some(undo) = main.undoManager() {
+        undo.undo();
+    }
+    set_carets(&main, std::iter::once(0..0).collect());
+    next(gutter);
+}
+
+/// Clicks in the line number column: the fold strip folds and unfolds, a number sets and clears a breakpoint, the
+/// change strip of an unchanged line opens nothing, a right click offers the breakpoint's menu, and the column
+/// follows the mouse entering and leaving, for the open folds' triangles.
+fn gutter() {
+    use objc2_app_kit::NSEventType;
+    let (Some(controller), Some(main)) = (controller(), open("src/main.rs")) else {
+        return give_up(
+            SCENARIO,
+            "the folder's window is open and src/main.rs opens in an editor",
+        );
+    };
+    let path = root().join("src/main.rs");
+    let click = |from_right: f64, kind: NSEventType| editor::gutter_mouse(&main, 0, from_right, kind);
+    let fold_strip = 8.0 + 6.0;
+    click(fold_strip, NSEventType::LeftMouseDown);
+    let folded = editor::selftest::folded(&main);
+    click(fold_strip, NSEventType::LeftMouseDown);
+    check(
+        "a click on the fold strip folds the block and a second one unfolds it",
+        folded == 1 && editor::selftest::folded(&main) == 0,
+        format!("{folded} then {}", editor::selftest::folded(&main)),
+    );
+    let number = 8.0 + 12.0 + 8.0;
+    click(number, NSEventType::LeftMouseDown);
+    let set = crate::debug::probe::breakpoint_at(&controller, &path, 0).is_some();
+    click(number, NSEventType::LeftMouseDown);
+    let cleared = crate::debug::probe::breakpoint_at(&controller, &path, 0).is_none();
+    check(
+        "a click on a line number sets a breakpoint there and a second one clears it",
+        set && cleared,
+        format!("set {set}, cleared {cleared}"),
+    );
+    click(1.0, NSEventType::LeftMouseDown);
+    let popover = editor::change_popover(&main).is_some();
+    let menu = click(number, NSEventType::RightMouseDown)
+        .map(|(titles, _)| titles)
+        .unwrap_or_default();
+    check(
+        "the change strip of an unchanged line opens nothing, and a right click offers to set a breakpoint",
+        !popover && menu.first().map(String::as_str) == Some(t("Haltepunkt setzen")),
+        format!("popover {popover}, menu {menu:?}"),
+    );
+    let entered = click(number, NSEventType::MouseEntered).is_some_and(|(_, over)| over);
+    let left = click(number, NSEventType::MouseExited).is_some_and(|(_, over)| !over);
+    check(
+        "the column follows the mouse entering and leaving it, for the open folds' triangles",
+        entered && left,
+        format!("{entered} {left}"),
+    );
+    last_line_number(&main);
+    editor::new_untitled(&controller, 13.0);
+    wait_until(
+        || self::controller().is_some_and(|c| helpers::editor(&c, t("Ohne Titel")).is_some()),
+        |_| empty_line_number(),
+    );
+}
+
+/// An empty document's only line has its number beside the caret.
+fn empty_line_number() {
+    let Some(empty) = controller().and_then(|c| helpers::editor(&c, t("Ohne Titel"))) else {
+        return give_up(SCENARIO, "a new empty document opens in an editor");
+    };
+    let rows = editor::gutter_rows(&empty);
+    let caret = ide_ui_lsp::rect_of(&*empty, 0..0).map(|rect| rect.origin.y);
+    check(
+        "the line number column numbers an empty document's only line beside the caret",
+        matches!(rows.as_slice(), [(1, y, _)] if caret.is_some_and(|c| (c - y).abs() < 1.0)),
+        format!("{rows:?}, caret at {caret:?}"),
+    );
+    next(indentation_menu);
+}
+
+/// The empty line after the final line break has its number, beside the caret placed there and below the line before.
+fn last_line_number(main: &EditorTextView) {
+    use crate::editor::selftest::set_carets;
+    let end = utf16_len(MAIN);
+    set_carets(main, std::iter::once(end..end).collect());
+    let rows = editor::gutter_rows(main);
+    let lines: Vec<usize> = rows.iter().map(|row| row.0).collect();
+    let caret = ide_ui_lsp::rect_of(main, end..end).map(|rect| rect.origin.y);
+    let placed = match rows.as_slice() {
+        [.., before, last] => before.1 + before.2 <= last.1 + 0.5 && caret.is_some_and(|y| (y - last.1).abs() < 1.0),
+        _ => false,
+    };
+    check(
+        "the line number column numbers the empty line after the final line break beside the caret there",
+        lines == (1..=MAIN.lines().count() + 1).collect::<Vec<_>>() && placed,
+        format!("{rows:?}, caret at {caret:?}"),
+    );
+    set_carets(main, std::iter::once(0..0).collect());
+}
+
+/// The status bar's indentation menu ticks what the file uses, and its entries switch to tabs and another width.
+fn indentation_menu() {
+    let Some(script) = open("script.py") else {
+        return give_up(SCENARIO, "script.py opens in an editor");
+    };
+    let menu = editor::indent_menu(&script);
+    let ticked: Vec<String> = menu
+        .itemArray()
+        .iter()
+        .filter(|item| item.state() == objc2_app_kit::NSControlStateValueOn)
+        .map(|item| item.title().to_string())
+        .collect();
+    let choose = |title: String| {
+        let item = menu.itemArray().iter().find(|item| item.title().to_string() == title);
+        if let Some(item) = item {
+            let app = NSApplication::sharedApplication(script.mtm());
+            // SAFETY: The entry's own action, sent to the editor with the entry as the sender, as the menu sends it.
+            unsafe { app.sendAction_to_from(sel!(ideSetIndent:), Some(&script), Some(&item)) };
+        }
+    };
+    choose(t("Mit Tabs einrücken").to_string());
+    choose(tf("Breite: {}", &["2"]));
+    let shown = editor::indent_shown(&script).0;
+    check(
+        "the indentation menu ticks spaces and their width, and its entries switch to tabs two columns wide",
+        ticked == [t("Mit Leerzeichen einrücken").to_string(), tf("Breite: {}", &["4"])]
+            && shown == tf("Tabs: {}", &["2"]),
+        format!("{ticked:?} → {shown}"),
+    );
+    next(completion_keys);
+}
+
+/// Presses `command` in `view` as the keyboard does.
+fn press(view: &EditorTextView, command: Sel) {
+    use objc2_app_kit::NSStandardKeyBindingResponding;
+    let text_view: &objc2_app_kit::NSTextView = view;
+    // SAFETY: A selector of the standard key bindings, which the text view answers, as a key press sends it.
+    unsafe { text_view.doCommandBySelector(command) };
+}
+
+/// The keyboard in the completion list, opened as a server's answer would: arrows choose, Return takes, typing
+/// filters, deleting widens again, Esc and other keys close it; and Tab through a snippet's stops.
+fn completion_keys() {
+    use ide_ui_lsp::completion;
+    let Some(view) = open("list.rs") else {
+        return give_up(SCENARIO, "list.rs opens in an editor");
+    };
+    const LABELS: [&str; 5] = ["alpha", "beta", "abc", "able", "array"];
+    view.setSelectedRange(NSRange::new(9, 0));
+    completion::show(&*view, &LABELS);
+    let ranked = completion::shown(&*view);
+    press(&view, sel!(moveDown:));
+    press(&view, sel!(moveDown:));
+    press(&view, sel!(moveUp:));
+    press(&view, sel!(insertNewline:));
+    check(
+        "the list ranks prefixes first, the arrows choose and Return takes the chosen item",
+        ranked == ["abc", "able", "alpha", "array", "beta"] && text_of(&view) == "let x = able",
+        format!("{ranked:?} → {:?}", text_of(&view)),
+    );
+    type_at(&view, NSRange::new(12, 0), " a");
+    completion::show(&*view, &LABELS);
+    type_at(&view, NSRange::new(14, 0), "b");
+    let narrowed = completion::shown(&*view);
+    press(&view, sel!(deleteBackward:));
+    let widened = completion::shown(&*view).len();
+    press(&view, sel!(pageDown:));
+    press(&view, sel!(pageUp:));
+    press(&view, sel!(cancelOperation:));
+    let closed = completion::shown(&*view).is_empty();
+    check(
+        "typing narrows the list, deleting widens it again, and Esc closes it",
+        narrowed == ["abc", "able"] && widened == 5 && closed,
+        format!("{narrowed:?}, {widened}, closed {closed}"),
+    );
+    completion::show(&*view, &LABELS);
+    press(&view, sel!(moveLeft:));
+    let left = (completion::shown(&*view).is_empty(), selection(&view));
+    completion::show(&*view, &LABELS);
+    type_at(&view, NSRange::new(13, 0), "-");
+    check(
+        "another key closes the list and does what it does, and so does a character that is no part of a word",
+        left == (true, (13, 0)) && completion::shown(&*view).is_empty(),
+        format!("{left:?}"),
+    );
+    completion::snippet(&*view, std::iter::once(4..5).collect());
+    press(&view, sel!(insertTab:));
+    let stop = selection(&view);
+    completion::snippet(&*view, Vec::new());
+    let before = utf16_len(&text_of(&view));
+    view.setSelectedRange(NSRange::new(before, 0));
+    press(&view, sel!(insertTab:));
+    let tabbed = utf16_len(&text_of(&view)) - before;
+    completion::snippet(&*view, std::iter::once(0..1).collect());
+    press(&view, sel!(cancelOperation:));
+    press(&view, sel!(insertTab:));
+    check(
+        "Tab goes to a snippet's next stop, past the last one it indents again, and Esc ends the snippet",
+        stop == (4, 1) && tabbed == unit(&view).len() && utf16_len(&text_of(&view)) == before + 2 * tabbed,
+        format!("{stop:?}, tab {tabbed}"),
+    );
+    next(changed_outside);
+}
+
+/// Saving over a file that changed on disk asks first; a save that fails says so.
+fn changed_outside() {
+    let Some(disk) = open("disk.txt") else {
+        return give_up(SCENARIO, "disk.txt opens in an editor");
+    };
+    type_at(&disk, NSRange::new(0, 0), "mine ");
+    let _ = std::fs::write(root().join("disk.txt"), "theirs\n");
+    let asked = answer_alert_saying(
+        tf("„{}“ wurde inzwischen außerhalb geändert.", &["disk.txt"]),
+        NSAlertFirstButtonReturn,
+    );
+    send(&disk, sel!(ideSave:));
+    after_writing(&disk, move |disk| {
+        let written = std::fs::read_to_string(root().join("disk.txt")).unwrap_or_default();
+        check(
+            "saving over a file changed outside asks, and Überschreiben writes the editor's text",
+            asked.get() && written == "mine first\n" && !disk.document().is_dirty(),
+            format!("asked {}, on disk {written:?}", asked.get()),
+        );
+        next(failed_save);
+    });
+}
+
+/// Runs `then` once ⌘S wrote the file of `view` and no alert about it is up.
+fn after_writing(view: &EditorTextView, then: impl FnOnce(Retained<EditorTextView>) + 'static) {
+    let view = view.retain();
+    let watched = view.clone();
+    wait_until(
+        move || {
+            !editor::writing(&watched)
+                && MainThreadMarker::new()
+                    .is_some_and(|mtm| NSApplication::sharedApplication(mtm).modalWindow().is_none())
+        },
+        move |_| then(view),
+    );
+}
+
+fn set_mode(path: &Path, mode: u32) {
+    let _ = std::fs::set_permissions(path, std::os::unix::fs::PermissionsExt::from_mode(mode));
+}
+
+fn failed_save() {
+    let Some(locked) = open("locked/file.txt") else {
+        return give_up(SCENARIO, "locked/file.txt opens in an editor");
+    };
+    type_at(&locked, NSRange::new(0, 0), "new ");
+    let (dir, file) = (root().join("locked"), root().join("locked/file.txt"));
+    set_mode(&file, 0o444);
+    set_mode(&dir, 0o555);
+    let seen = Rc::new(RefCell::new(Vec::new()));
+    let texts = seen.clone();
+    when_alert_shows(None, move |_| {
+        texts.borrow_mut().extend(alert_texts());
+        answer_alert(NSAlertFirstButtonReturn);
+    });
+    send(&locked, sel!(ideSave:));
+    after_writing(&locked, move |locked| {
+        set_mode(&dir, 0o755);
+        set_mode(&file, 0o644);
+        let said = seen.borrow().iter().any(|text| text == t("Sichern fehlgeschlagen"));
+        check(
+            "a save the folder refuses says so and keeps the changes unsaved",
+            said && locked.document().is_dirty(),
+            format!("{:?}", seen.borrow()),
+        );
+        send(&locked, sel!(ideSave:));
+        after_writing(&locked, |locked| {
+            check(
+                "once the folder may be written again the file saves",
+                !locked.document().is_dirty(),
+                "",
+            );
+            next(close_dirty);
+        });
+    });
+}
+
+/// Closing a tab with unsaved changes asks; Abbrechen keeps it, Nicht sichern closes it and leaves the file.
+fn close_dirty() {
+    let (Some(controller), Some(notes)) = (controller(), open("notes.md")) else {
+        return give_up(SCENARIO, "the folder's window is open and notes.md in an editor");
+    };
+    type_at(&notes, NSRange::new(0, 0), "x");
+    let Some(tab) = editor::editors_of(&controller)
+        .into_iter()
+        .find_map(|(tab, view)| std::ptr::eq(&*view, &*notes).then_some(tab))
+    else {
+        return give_up(SCENARIO, "notes.md has its tab");
+    };
+    let question = tf("Änderungen an „{}“ sichern?", &["notes.md"]);
+    let kept = answer_alert_saying(question.clone(), NSAlertThirdButtonReturn);
+    controller.close_tab(tab);
+    let still = controller.tab_ids().contains(&tab);
+    let gone = answer_alert_saying(question, NSAlertSecondButtonReturn);
+    controller.close_tab(tab);
+    let disk = std::fs::read_to_string(root().join("notes.md")).unwrap_or_default();
+    check(
+        "closing a changed tab asks: Abbrechen keeps it, Nicht sichern closes it without writing",
+        kept.get() && still && gone.get() && !controller.tab_ids().contains(&tab) && disk == "# Notes\n",
+        format!("kept {} {still}, gone {}, disk {disk:?}", kept.get(), gone.get()),
+    );
+    next(positions);
+}
+
+/// A compiler's line and column open the file with the cursor there; the files below the folder save at once; a file
+/// changed by the app's own git is taken.
+fn positions() {
+    let Some(controller) = controller() else {
+        return give_up(SCENARIO, "the folder's window is open");
+    };
+    let main_path = root().join("src/main.rs");
+    editor::reveal_position(&controller, &main_path, 2, 9);
+    let Some(main) = open("src/main.rs") else {
+        return give_up(SCENARIO, "src/main.rs opens in an editor");
+    };
+    let at = selection(&main).0;
+    editor::reveal_position(&controller, &main_path, 2, 999);
+    let end = selection(&main).0;
+    check(
+        "line and column from a compiler put the cursor there, a column past the end at the line's end",
+        at == line_start(&main, 1) + 8 && end == line_start(&main, 2) - 1,
+        format!("{at} {end}"),
+    );
+    let unsaved = editor::unsaved_below(&root());
+    let saved = editor::save_below_now(&root());
+    let names: Vec<String> = unsaved.iter().map(|p| editor::display_name(p)).collect();
+    check(
+        "the changed files below the folder are listed and saved",
+        names.contains(&"pairs.rs".to_string()) && names.contains(&"script.py".to_string()) && saved,
+        format!("{names:?}, saved {saved}"),
+    );
+    let _ = std::fs::write(&main_path, "fn main() {}\n");
+    editor::check_disk_below(&root());
+    let taken = main.clone();
+    wait_until(
+        move || text_of(&taken) == "fn main() {}\n",
+        move |_| {
+            check(
+                "after the app's own git changed a file, its unchanged editor takes the new text",
+                text_of(&main) == "fn main() {}\n",
+                format!("{:?}", text_of(&main)),
+            );
+            next(file_operations);
+        },
+    );
+}
+
+/// A workspace edit renames an open file, and its editor and tab follow.
+fn file_operations() {
+    if open("moved.txt").is_none() {
+        return give_up(SCENARIO, "moved.txt opens in an editor");
+    }
+    let uri = |file: &str| ide_lsp::uri::from_path(&root().join(file));
+    let edit = WorkspaceEdit {
+        changes: None,
+        document_changes: Some(DocumentChanges::Operations(vec![DocumentChangeOperation::Op(
+            ResourceOp::Rename(RenameFile {
+                old_uri: uri("moved.txt"),
+                new_uri: uri("renamed.txt"),
+                options: None,
+                annotation_id: None,
+            }),
+        )])),
+        change_annotations: None,
+    };
+    ide_ui_lsp::apply_workspace_edit(&root(), &edit, |applied| {
+        let titles = controller().map(|c| c.tab_titles()).unwrap_or_default();
+        let renamed = root().join("renamed.txt");
+        let follows = controller().and_then(|c| editor::editor_for(&c, &renamed)).is_some();
+        check(
+            "a workspace edit renames an open file, and its editor and tab follow",
+            applied.is_ok()
+                && follows
+                && titles.contains(&"renamed.txt".to_string())
+                && !root().join("moved.txt").exists(),
+            format!("{applied:?}, tabs {titles:?}"),
+        );
+        next(server_question);
+    });
+}
+
+/// A server's question shows its answers as buttons of a sheet; the chosen one is answered.
+fn server_question() {
+    let Some(window) = controller().and_then(|c| c.window()) else {
+        return give_up(SCENARIO, "the window shows");
+    };
+    let chosen: Rc<Cell<Option<Option<String>>>> = Rc::new(Cell::new(None));
+    let heard = chosen.clone();
+    let actions = ["Retry", "Ignore", "Report", "More"].map(|title| MessageActionItem {
+        title: title.to_string(),
+        properties: Default::default(),
+    });
+    ide_ui_lsp::server_question(&root(), "The build failed.", actions.to_vec(), move |answer| {
+        heard.set(Some(answer.map(|a| a.title)));
+    });
+    let buttons: Vec<String> = window
+        .attachedSheet()
+        .and_then(|sheet| sheet.contentView())
+        .map(|content| button_titles(&content))
+        .unwrap_or_default();
+    if let Some(sheet) = window.attachedSheet() {
+        window.endSheet_returnCode(&sheet, NSAlertSecondButtonReturn);
+    }
+    in_any_mode_after(SHEET_ANSWERED, move || {
+        let answer = chosen.take();
+        check(
+            "a server's question shows three of its answers and a close button, and the chosen one is answered",
+            buttons == ["Retry", "Ignore", "Report", t("Schließen")] && answer == Some(Some("Ignore".to_string())),
+            format!("{buttons:?} → {answer:?}"),
+        );
+        done();
+    });
+}
+
+fn button_titles(view: &NSView) -> Vec<String> {
+    let mut titles = Vec::new();
+    if let Some(button) = view.downcast_ref::<objc2_app_kit::NSButton>() {
+        titles.push(button.title().to_string());
+    }
+    for child in view.subviews().iter() {
+        titles.extend(button_titles(&child));
+    }
+    titles
+}
+
+fn done() {
+    let saved = editor::save_all();
+    check(
+        "every editor is saved before quitting",
+        saved,
+        format!("{} unsaved", editor::dirty_count()),
+    );
+    finish(SCENARIO);
+}

@@ -1,0 +1,2 @@
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":"Found 2 TODOs."}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":600,"candidatesTokenCount":8,"totalTokenCount":608}}
+

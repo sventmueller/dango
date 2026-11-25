@@ -1,0 +1,19 @@
+[package]
+name = "ide-lsp-fuzz"
+description = "Fuzz targets of ide-lsp (E95); `cargo xtask fuzz` runs them with the nightly cargo-fuzz needs"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4.10"
+ide-lsp = { path = "../../crates/ide-lsp", features = ["fuzzing"] }
+
+[[bin]]
+name = "messages"
+path = "fuzz_targets/messages.rs"
+test = false
+doc = false
+bench = false

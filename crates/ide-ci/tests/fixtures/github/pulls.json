@@ -1,0 +1,20 @@
+[
+  {
+    "number": 31,
+    "title": "Parse nested tables",
+    "user": { "login": "octo" },
+    "html_url": "https://github.com/acme/widget/pull/31",
+    "updated_at": "2026-11-09T11:00:00Z",
+    "draft": false,
+    "head": { "ref": "feature/tables" }
+  },
+  {
+    "number": 30,
+    "title": "Try a faster lexer",
+    "user": { "login": "cat" },
+    "html_url": "https://github.com/acme/widget/pull/30",
+    "updated_at": "2026-11-08T09:00:00Z",
+    "draft": true,
+    "head": { "ref": "lexer" }
+  }
+]

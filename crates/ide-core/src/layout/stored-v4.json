@@ -1,0 +1,162 @@
+{
+  "tabs": {
+    "tabs": [
+      {
+        "root": {
+          "split": {
+            "side_by_side": true,
+            "children": [
+              {
+                "pane": {
+                  "documents": [
+                    {
+                      "kind": "editor",
+                      "path": "/p/src/main.rs"
+                    },
+                    {
+                      "kind": "untitled",
+                      "recovery": "a1-2-3"
+                    },
+                    {
+                      "kind": "welcome"
+                    }
+                  ],
+                  "selected": 0
+                }
+              },
+              {
+                "split": {
+                  "side_by_side": false,
+                  "children": [
+                    {
+                      "pane": {
+                        "documents": [
+                          {
+                            "kind": "browser",
+                            "url": "http://localhost:5173/"
+                          },
+                          {
+                            "kind": "sitepreview",
+                            "path": "/p/site/index.html"
+                          }
+                        ],
+                        "selected": 1
+                      }
+                    },
+                    {
+                      "pane": {
+                        "documents": [
+                          {
+                            "kind": "terminal",
+                            "folder": "/p"
+                          },
+                          {
+                            "kind": "agent",
+                            "session": "abc"
+                          }
+                        ],
+                        "selected": 0
+                      }
+                    }
+                  ],
+                  "shares": [
+                    0.25,
+                    0.75
+                  ]
+                }
+              }
+            ],
+            "shares": [
+              0.6,
+              0.4
+            ]
+          }
+        }
+      },
+      {
+        "root": {
+          "pane": {
+            "documents": [
+              {
+                "kind": "debug",
+                "title": "shop",
+                "history": [
+                  {
+                    "kind": "input",
+                    "text": "n"
+                  },
+                  {
+                    "kind": "result",
+                    "text": "3"
+                  },
+                  {
+                    "kind": "output",
+                    "text": "hello\n"
+                  },
+                  {
+                    "kind": "error",
+                    "text": "no symbol m"
+                  },
+                  {
+                    "kind": "note",
+                    "text": "The session ended."
+                  }
+                ]
+              }
+            ],
+            "selected": 0
+          }
+        }
+      },
+      {
+        "root": {
+          "pane": {
+            "documents": [
+              {
+                "kind": "cli",
+                "name": "claude",
+                "session": "s1"
+              },
+              {
+                "kind": "cli",
+                "name": "codex"
+              }
+            ],
+            "selected": 1
+          }
+        }
+      }
+    ],
+    "selected": 1
+  },
+  "version": 4,
+  "debugging": {
+    "breakpoints": [
+      {
+        "path": "/p/src/main.rs",
+        "line": 4,
+        "enabled": true
+      },
+      {
+        "path": "/p/src/lib.rs",
+        "line": 2,
+        "enabled": false,
+        "condition": "n > 3",
+        "log_message": "n = {n}"
+      }
+    ],
+    "active": true,
+    "watches": [
+      "n"
+    ],
+    "exception_filters": [
+      {
+        "id": "rust_panic",
+        "label": "Rust: on panic",
+        "enabled": true
+      }
+    ],
+    "configuration": "Debug shop",
+    "folded": []
+  }
+}

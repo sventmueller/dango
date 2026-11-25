@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Idea
+    url: https://github.com/sventmueller/dango/discussions/new?category=ideas
+    about: Suggest something Dango should do.
+  - name: Question
+    url: https://github.com/sventmueller/dango/discussions
+    about: Ask how to do something in Dango.

@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "Das Diktat macht aus dem Gesprochenen Text im Editor und im Eingabefeld der AI-Tabs.";

@@ -1,0 +1,56 @@
+# R7 in docs/plan.md: every night the newest Claude CLI against the contract the app relies on, see
+# docs/development.md, "Newest Claude CLI". Scheduled runs happen only once the repository variable CLAUDE_NIGHTLY is
+# "true"; "Run workflow" starts one by hand at any time. The paid turn runs only when asked for (the input, or the
+# variable CLAUDE_NIGHTLY_SIGNED_IN set to "true") and the secret CLAUDE_CODE_OAUTH_TOKEN exists.
+name: Newest Claude CLI
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      signed_in:
+        description: "Also a short turn with haiku (needs the CLAUDE_CODE_OAUTH_TOKEN secret, costs a few tokens)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    if: github.event_name == 'workflow_dispatch' || vars.CLAUDE_NIGHTLY == 'true'
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      # The workspace takes crates from the sibling checkouts by path (E14).
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          path: dango
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: sventmueller/splat
+          path: splat
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: sventmueller/lowspeak
+          path: lowspeak
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+      - name: Rust as rust-toolchain.toml names it
+        working-directory: dango
+        run: rustup toolchain install
+      - name: Contract without a sign-in
+        working-directory: dango
+        run: cargo xtask claude-latest
+      - name: A short turn with a sign-in
+        if: (inputs.signed_in || vars.CLAUDE_NIGHTLY_SIGNED_IN == 'true') && env.SIGN_IN_AVAILABLE == 'true'
+        working-directory: dango
+        run: cargo xtask claude-latest --signed-in
+        # Only this step sees the token, and xtask keeps it from npm and from the build.
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    env:
+      # A step's `if` cannot read secrets; this says only whether the token exists.
+      SIGN_IN_AVAILABLE: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}

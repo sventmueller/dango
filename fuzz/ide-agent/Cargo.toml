@@ -1,0 +1,19 @@
+[package]
+name = "ide-agent-fuzz"
+description = "Fuzz targets of ide-agent (E95); `cargo xtask fuzz` runs them with the nightly cargo-fuzz needs"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4.10"
+ide-agent = { path = "../../crates/ide-agent", features = ["fuzzing"] }
+
+[[bin]]
+name = "stream"
+path = "fuzz_targets/stream.rs"
+test = false
+doc = false
+bench = false

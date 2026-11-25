@@ -1,0 +1,4 @@
+lldb-dap starting
+Content-Length: 148
+
+{"seq": 5, "type": "event", "event": "stopped", "body": {"reason": "breakpoint", "threadId": 1, "allThreadsStopped": true, "hitBreakpointIds": [1]}}

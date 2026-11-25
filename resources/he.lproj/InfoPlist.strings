@@ -1,0 +1,2 @@
+/* Why the app asks for the microphone; the English text is in Info.plist. */
+"NSMicrophoneUsageDescription" = "ההכתבה הופכת את מה שנאמר למלל בעורך ובשדה הקלט של כרטיסיות ה-AI.";

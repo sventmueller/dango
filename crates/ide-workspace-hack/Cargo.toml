@@ -1,0 +1,161 @@
+[package]
+name = "ide-workspace-hack"
+version.workspace = true
+description = "One feature set per shared dependency, so building a single crate reuses the workspace's builds (E194)"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# `cargo hakari generate` writes the section below and `make lint` fails when it is stale (E194).
+
+### BEGIN HAKARI SECTION
+[dependencies]
+aho-corasick = { version = "1" }
+base64 = { version = "0.23" }
+bitflags = { version = "2", default-features = false, features = ["std"] }
+block2 = { version = "0.6" }
+bstr = { version = "1" }
+crc32fast = { version = "1" }
+crossbeam-utils = { version = "0.8", default-features = false, features = ["std"] }
+derive_more = { version = "2", features = ["add", "display", "from", "into"] }
+dispatch2 = { version = "0.3" }
+fastrand = { version = "2" }
+indexmap = { version = "2", features = ["serde"] }
+libc = { version = "0.2" }
+memchr = { version = "2" }
+miniz_oxide = { version = "0.9", features = ["simd"] }
+num-traits = { version = "0.2", features = ["i128"] }
+objc2 = { version = "0.6", features = ["catch-all"] }
+objc2-core-foundation = { version = "0.3" }
+objc2-core-graphics = { version = "0.3" }
+objc2-core-video = { version = "0.3", default-features = false, features = ["CVBase", "CVBuffer", "CVImageBuffer", "CVPixelBuffer", "CVPixelBufferPool", "objc2"] }
+objc2-foundation = { version = "0.3" }
+objc2-image-io = { version = "0.3", default-features = false, features = ["CGImageProperties", "CGImageSource", "objc2"] }
+objc2-metal = { version = "0.3" }
+objc2-security = { version = "0.3", default-features = false, features = ["Authorization", "SecBase", "SecTrust", "objc2", "std"] }
+objc2-user-notifications = { version = "0.3" }
+once_cell = { version = "1" }
+phf_shared = { version = "0.14" }
+regex = { version = "1" }
+regex-automata = { version = "0.4" }
+regex-syntax = { version = "0.8" }
+rustix = { version = "1", features = ["fs", "time"] }
+serde = { version = "1", features = ["derive", "rc"] }
+serde_core = { version = "1", features = ["alloc", "rc"] }
+serde_json = { version = "1", features = ["preserve_order", "raw_value"] }
+simd-adler32 = { version = "0.3" }
+similar = { version = "3" }
+smallvec = { version = "1", default-features = false, features = ["const_new"] }
+term-vt = { path = "../../../tapa/crates/term-vt", default-features = false, features = ["fuzzing"] }
+ureq = { version = "3", features = ["platform-verifier"] }
+
+[build-dependencies]
+aho-corasick = { version = "1" }
+base64 = { version = "0.23" }
+bitflags = { version = "2", default-features = false, features = ["std"] }
+block2 = { version = "0.6" }
+bstr = { version = "1" }
+crc32fast = { version = "1" }
+crossbeam-utils = { version = "0.8", default-features = false, features = ["std"] }
+derive_more = { version = "2", features = ["add", "display", "from", "into"] }
+derive_more-impl = { version = "2", features = ["add", "display", "from", "into"] }
+dispatch2 = { version = "0.3" }
+fastrand = { version = "2" }
+indexmap = { version = "2", features = ["serde"] }
+libc = { version = "0.2" }
+memchr = { version = "2" }
+miniz_oxide = { version = "0.9", features = ["simd"] }
+num-traits = { version = "0.2", features = ["i128"] }
+objc2 = { version = "0.6", features = ["catch-all"] }
+objc2-core-foundation = { version = "0.3" }
+objc2-core-graphics = { version = "0.3" }
+objc2-core-video = { version = "0.3", default-features = false, features = ["CVBase", "CVBuffer", "CVImageBuffer", "CVPixelBuffer", "CVPixelBufferPool", "objc2"] }
+objc2-foundation = { version = "0.3" }
+objc2-image-io = { version = "0.3", default-features = false, features = ["CGImageProperties", "CGImageSource", "objc2"] }
+objc2-metal = { version = "0.3" }
+objc2-security = { version = "0.3", default-features = false, features = ["Authorization", "SecBase", "SecTrust", "objc2", "std"] }
+objc2-user-notifications = { version = "0.3" }
+once_cell = { version = "1" }
+phf_shared = { version = "0.14" }
+proc-macro2 = { version = "1" }
+quote = { version = "1" }
+regex = { version = "1" }
+regex-automata = { version = "0.4" }
+regex-syntax = { version = "0.8" }
+rustix = { version = "1", features = ["fs", "time"] }
+serde = { version = "1", features = ["derive", "rc"] }
+serde_core = { version = "1", features = ["alloc", "rc"] }
+serde_json = { version = "1", features = ["preserve_order", "raw_value"] }
+simd-adler32 = { version = "0.3" }
+similar = { version = "3" }
+smallvec = { version = "1", default-features = false, features = ["const_new"] }
+syn-7b89eefb6aaa9bf3 = { package = "syn", version = "3", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }
+syn-f595c2ba2a3f28df = { package = "syn", version = "2", features = ["extra-traits", "full", "visit", "visit-mut"] }
+term-vt = { path = "../../../tapa/crates/term-vt", default-features = false, features = ["fuzzing"] }
+ureq = { version = "3", features = ["platform-verifier"] }
+
+[target.aarch64-apple-darwin.dependencies]
+bytemuck = { version = "1", default-features = false, features = ["aarch64_simd", "derive", "extern_crate_alloc", "min_const_generics"] }
+getrandom = { version = "0.4", default-features = false, features = ["std", "sys_rng"] }
+image = { version = "0.25", default-features = false, features = ["bmp", "gif", "jpeg", "png", "webp"] }
+log = { version = "0.4", default-features = false, features = ["std"] }
+objc2-core-image = { version = "0.3" }
+objc2-core-services = { version = "0.3", default-features = false, features = ["AE", "AEDataModel", "FSEvents", "IconStorage", "IconsCore", "LaunchServices", "OSServices", "libc", "objc2", "std"] }
+objc2-core-text = { version = "0.3" }
+objc2-quartz-core = { version = "0.3" }
+rustix = { version = "1", default-features = false, features = ["event", "pipe", "process"] }
+security-framework-sys = { version = "2" }
+smallvec = { version = "1", default-features = false, features = ["union", "write"] }
+thiserror = { version = "2" }
+yoke = { version = "0.8", features = ["derive"] }
+
+[target.aarch64-apple-darwin.build-dependencies]
+bytemuck = { version = "1", default-features = false, features = ["aarch64_simd", "derive", "extern_crate_alloc", "min_const_generics"] }
+getrandom = { version = "0.4", default-features = false, features = ["std", "sys_rng"] }
+image = { version = "0.25", default-features = false, features = ["bmp", "gif", "jpeg", "png", "webp"] }
+log = { version = "0.4", default-features = false, features = ["std"] }
+objc2-core-image = { version = "0.3" }
+objc2-core-services = { version = "0.3", default-features = false, features = ["AE", "AEDataModel", "FSEvents", "IconStorage", "IconsCore", "LaunchServices", "OSServices", "libc", "objc2", "std"] }
+objc2-core-text = { version = "0.3" }
+objc2-quartz-core = { version = "0.3" }
+rustix = { version = "1", default-features = false, features = ["event", "pipe", "process"] }
+security-framework-sys = { version = "2" }
+smallvec = { version = "1", default-features = false, features = ["union", "write"] }
+thiserror = { version = "2" }
+yoke = { version = "0.8", features = ["derive"] }
+
+[target.x86_64-apple-darwin.dependencies]
+bytemuck = { version = "1", default-features = false, features = ["aarch64_simd", "derive", "extern_crate_alloc", "min_const_generics"] }
+getrandom = { version = "0.4", default-features = false, features = ["std", "sys_rng"] }
+image = { version = "0.25", default-features = false, features = ["bmp", "gif", "jpeg", "png", "webp"] }
+log = { version = "0.4", default-features = false, features = ["std"] }
+objc2-core-image = { version = "0.3" }
+objc2-core-services = { version = "0.3", default-features = false, features = ["AE", "AEDataModel", "FSEvents", "IconStorage", "IconsCore", "LaunchServices", "OSServices", "libc", "objc2", "std"] }
+objc2-core-text = { version = "0.3" }
+objc2-quartz-core = { version = "0.3" }
+rustix = { version = "1", default-features = false, features = ["event", "pipe", "process"] }
+security-framework-sys = { version = "2" }
+smallvec = { version = "1", default-features = false, features = ["union", "write"] }
+thiserror = { version = "2" }
+yoke = { version = "0.8", features = ["derive"] }
+
+[target.x86_64-apple-darwin.build-dependencies]
+bytemuck = { version = "1", default-features = false, features = ["aarch64_simd", "derive", "extern_crate_alloc", "min_const_generics"] }
+getrandom = { version = "0.4", default-features = false, features = ["std", "sys_rng"] }
+image = { version = "0.25", default-features = false, features = ["bmp", "gif", "jpeg", "png", "webp"] }
+log = { version = "0.4", default-features = false, features = ["std"] }
+objc2-core-image = { version = "0.3" }
+objc2-core-services = { version = "0.3", default-features = false, features = ["AE", "AEDataModel", "FSEvents", "IconStorage", "IconsCore", "LaunchServices", "OSServices", "libc", "objc2", "std"] }
+objc2-core-text = { version = "0.3" }
+objc2-quartz-core = { version = "0.3" }
+rustix = { version = "1", default-features = false, features = ["event", "pipe", "process"] }
+security-framework-sys = { version = "2" }
+smallvec = { version = "1", default-features = false, features = ["union", "write"] }
+thiserror = { version = "2" }
+yoke = { version = "0.8", features = ["derive"] }
+
+### END HAKARI SECTION

@@ -1,0 +1,26 @@
+/target/
+/dist/
+/.github/scripts/__pycache__/
+.DS_Store
+.dango
+
+# Signing material: the Developer ID key lives in the keychain.
+*.p12
+*.cer
+*.csr
+*.key
+*.pem
+
+# Local agent instructions and settings; the project's skills are shared.
+CLAUDE.md
+.claude
+!.claude/skills/
+
+# Crash inputs that `cargo xtask fuzz` found; each becomes a regression test before it is deleted.
+/fuzz/*/artifacts/
+
+# Plans and notes stay local; files already tracked there stay tracked, because xtask and CI read some of them.
+/docs/
+
+# Coverage profiles of test children started with a cleared environment, which land in their working folder.
+*.profraw

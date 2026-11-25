@@ -1,0 +1,25 @@
+[package]
+name = "ide-net"
+version.workspace = true
+description = "The one way onto the network: HTTPS against the system's certificates, downloads with digest, progress and cancelling"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ide-core.workspace = true
+ide-process.workspace = true
+ide-product.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+splat-i18n.workspace = true
+sha2 = "0.11.1"
+ureq = { version = "3.5.2", default-features = false, features = ["rustls", "platform-verifier"] }
+ide-workspace-hack.workspace = true
+
+[dev-dependencies]
+ide-core = { path = "../ide-core", features = ["testing"] }

@@ -1,0 +1,41 @@
+# cargo-deny's gates for the dependency graph (B113): `make lint` runs bans, licenses and sources offline,
+# `cargo xtask ci` the advisories, which fetch the RustSec database.
+
+[graph]
+# The release builds with dictation, which brings lowspeak and whisper.cpp.
+all-features = true
+
+[advisories]
+# cargo-deny 0.22 skips unmaintained crates that only path dependencies such as vendor/modalkit and ../splat pull in
+# unless this is spelled out.
+unmaintained = "all"
+ignore = [
+    { id = "RUSTSEC-2026-0543", reason = "chrono is unmaintained, but only an optional dependency of serde_with that no build turns on" },
+    { id = "RUSTSEC-2026-0206", reason = "rustybuzz is unmaintained; krilla-svg in ../splat pins usvg 0.47, which still needs it, until krilla PR #448 ships (B118)" },
+    { id = "RUSTSEC-2026-0192", reason = "ttf-parser is unmaintained; krilla-svg in ../splat pins usvg 0.47 and fontdb 0.23, which still need it, until krilla PR #448 ships (B118)" },
+]
+
+[licenses]
+# Permissive licenses only, each one the graph uses; a crate under any other needs a decision, not an entry here.
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "Unlicense",
+    "Zlib",
+]
+
+[bans]
+multiple-versions = "warn"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

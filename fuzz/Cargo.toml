@@ -1,0 +1,5 @@
+# The fuzz targets of the crates (E95) in one workspace, with one lock file and one build for all of them, apart from
+# the app's because only the nightly that cargo-fuzz needs builds it.
+[workspace]
+resolver = "3"
+members = ["ide-*"]

@@ -1,0 +1,17 @@
+[
+  {
+    "number": 31,
+    "title": "Parse nested tables",
+    "user": { "login": "octo" },
+    "html_url": "https://github.com/acme/widget/pull/31",
+    "updated_at": "2026-11-09T11:00:00Z",
+    "pull_request": { "url": "https://api.github.com/repos/acme/widget/pulls/31" }
+  },
+  {
+    "number": 28,
+    "title": "Crash on an empty file",
+    "user": { "login": "octo" },
+    "html_url": "https://github.com/acme/widget/issues/28",
+    "updated_at": "2026-11-07T15:30:00Z"
+  }
+]

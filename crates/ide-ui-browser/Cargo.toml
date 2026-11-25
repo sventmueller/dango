@@ -1,0 +1,32 @@
+[package]
+name = "ide-ui-browser"
+version.workspace = true
+description = "The browser tab: a WKWebView with its navigation row, downloads, logins and dev server certificates"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ide-core.workspace = true
+ide-product.workspace = true
+ide-ui-common.workspace = true
+splat-i18n.workspace = true
+block2.workspace = true
+objc2 = { workspace = true, features = ["catch-all"] }
+objc2-app-kit.workspace = true
+objc2-core-foundation.workspace = true
+objc2-foundation.workspace = true
+objc2-security.workspace = true
+objc2-web-kit.workspace = true
+ide-workspace-hack.workspace = true
+
+[dev-dependencies]
+ide-core = { workspace = true, features = ["testing"] }
+
+[features]
+# What the self-test reads of a tab, the panels it answers, and a data store and downloads that leave nothing behind.
+selftest = []

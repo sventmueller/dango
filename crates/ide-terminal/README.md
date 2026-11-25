@@ -1,0 +1,23 @@
+# ide-terminal
+
+Terminal sessions without a window: the user's shell in a PTY with its screen kept by `term-vt`, the VT core of the sibling terminal Tapa, keys, mouse and paste turned into bytes, shell integration for prompts and the working directory, the program in front with coding agents recognised, and what pasting an image does. The view draws snapshots and sends input; events arrive on the session's reader thread.
+
+```mermaid
+flowchart TB
+    view["terminal view, main thread"] -->|"Session::spawn(Options)"| spawn["spawn"]
+    spawn -->|"pty::spawn with the login-shell environment"| pty["PTY"]
+    pty --> shell(["login shell with integration scripts, or a command"])
+    spawn -->|"Supervisor::register as Kind::Terminal"| supervisor["Supervisor"]
+    spawn -->|"starts"| reader
+    view -->|"key, mouse, paste, write: bytes over a channel, poller woken"| reader["thread terminal-reader: one poll loop"]
+    reader <-->|"read output, write pending input"| pty
+    reader -->|"Terminal::advance"| term[("term-vt Terminal: grid and history")]
+    reader -->|"scan: OSC 133, OSC 7, dev server URLs"| events["listener(Event) on the reader thread"]
+    events -->|"Redraw, Title, Prompt, DevServer, Exited, ..."| view
+    view -->|"Session::snapshot"| term
+    view -->|"Session::foreground: process group of the PTY"| front["Foreground: agent, remote, shell, program"]
+    supervisor -->|"on_stop: SIGHUP to the shell and the job in front"| shell
+    reader -->|"child exited: Event::Exited, Supervisor::forget"| supervisor
+```
+
+The API is documented in [`src/lib.rs`](src/lib.rs) and its modules.

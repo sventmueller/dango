@@ -1,0 +1,7 @@
+[package]
+name = "dap-sample"
+edition = "2024"
+publish = false
+
+# A program of its own, outside the app's workspace, for the tests against real debug adapters.
+[workspace]

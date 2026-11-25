@@ -1,0 +1,225 @@
+[workspace]
+members = ["crates/*", "xtask"]
+default-members = [".", "crates/*"]
+
+[patch.crates-io]
+# ropey without its default `unicode_lines`, which would make ide-document count U+2028 and others as line breaks (F1).
+modalkit = { path = "vendor/modalkit" }
+
+[workspace.dependencies]
+ide-acp = { path = "crates/ide-acp" }
+ide-agent = { path = "crates/ide-agent" }
+ide-claude = { path = "crates/ide-claude" }
+ide-ci = { path = "crates/ide-ci" }
+ide-codex = { path = "crates/ide-codex" }
+ide-opencode = { path = "crates/ide-opencode" }
+ide-core = { path = "crates/ide-core" }
+ide-dap = { path = "crates/ide-dap" }
+ide-document = { path = "crates/ide-document" }
+ide-factory = { path = "crates/ide-factory" }
+ide-session = { path = "crates/ide-session" }
+ide-git = { path = "crates/ide-git" }
+ide-lsp = { path = "crates/ide-lsp" }
+ide-docker = { path = "crates/ide-docker" }
+ide-test = { path = "crates/ide-test" }
+ide-vim = { path = "crates/ide-vim" }
+ide-workspace-hack = { path = "crates/ide-workspace-hack" }
+ide-net = { path = "crates/ide-net" }
+ide-predict = { path = "crates/ide-predict" }
+ide-process = { path = "crates/ide-process" }
+ide-product = { path = "crates/ide-product" }
+ide-project = { path = "crates/ide-project" }
+ide-secrets = { path = "crates/ide-secrets" }
+ide-terminal = { path = "crates/ide-terminal" }
+ide-thread = { path = "crates/ide-thread" }
+ide-ui-agent = { path = "crates/ide-ui-agent" }
+ide-ui-browser = { path = "crates/ide-ui-browser" }
+ide-ui-common = { path = "crates/ide-ui-common" }
+ide-ui-debug = { path = "crates/ide-ui-debug" }
+ide-ui-dictation = { path = "crates/ide-ui-dictation" }
+ide-ui-export = { path = "crates/ide-ui-export" }
+ide-ui-factory = { path = "crates/ide-ui-factory" }
+ide-ui-git = { path = "crates/ide-ui-git" }
+ide-ui-lsp = { path = "crates/ide-ui-lsp" }
+ide-ui-icons = { path = "crates/ide-ui-icons" }
+ide-ui-terminal = { path = "crates/ide-ui-terminal" }
+splat-decoder = { path = "../splat/crates/splat-decoder" }
+splat-editor-state = { path = "../splat/crates/splat-editor-state" }
+splat-file-state = { path = "../splat/crates/splat-file-state" }
+splat-git = { path = "../splat/crates/splat-git" }
+splat-i18n = { path = "../splat/crates/splat-i18n" }
+splat-import = { path = "../splat/crates/splat-import" }
+splat-markdown = { path = "../splat/crates/splat-markdown" }
+splat-preview = { path = "../splat/crates/splat-preview" }
+lowspeak = { path = "../lowspeak" }
+splat-render = { path = "../splat/crates/splat-render" }
+# The VT core of the sibling terminal Tapa (E8, E14).
+term-vt = { path = "../tapa/crates/term-vt" }
+block2 = "0.6.2"
+dispatch2 = "0.3"
+libc = "0.2"
+objc2 = "0.6.5"
+objc2-app-kit = "0.3.2"
+objc2-core-foundation = "0.3.2"
+objc2-application-services = "0.3.2"
+objc2-av-foundation = "0.3.2"
+objc2-core-graphics = "0.3.2"
+objc2-core-image = "0.3.2"
+objc2-core-text = "0.3.2"
+objc2-foundation = "0.3.2"
+objc2-metal = "0.3.2"
+objc2-quartz-core = { version = "0.3.2", features = ["objc2-core-graphics", "objc2-metal"] }
+objc2-user-notifications = { version = "0.3.2", default-features = false, features = ["std", "block2", "bitflags", "UNUserNotificationCenter", "UNNotificationRequest", "UNNotificationContent", "UNNotificationTrigger", "UNNotificationSound"] }
+objc2-security = { version = "0.3.2", default-features = false, features = ["std", "objc2", "SecBase", "SecTrust"] }
+objc2-web-kit = "0.3.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[workspace.package]
+# The one version of the project; only `cargo xtask deploy` raises it, and `cargo xtask versions` holds every other place to it.
+version = "1.0.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+# The minor version of the pin in rust-toolchain.toml; `cargo xtask toolchain` holds the two together.
+rust-version = "1.100"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+unreachable_pub = "warn"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+undocumented_unsafe_blocks = "deny"
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+too_many_lines = "warn"
+allow_attributes_without_reason = "warn"
+cast_possible_truncation = "warn"
+cast_possible_wrap = "warn"
+cast_sign_loss = "warn"
+unwrap_used = "warn"
+
+# The workspace-hack is a dependency no code uses by design (E194), and cargo cannot exempt a single dependency.
+[workspace.lints.cargo]
+unused_dependencies = "allow"
+
+[package]
+name = "ide-app"
+version.workspace = true
+description = "Native macOS editor for working with coding agents"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "ide"
+path = "src/main.rs"
+
+# The sandboxed service that decodes pictures; it uses splat-decoder alone, so it links no WebKit.
+[[bin]]
+name = "ide-decoder"
+path = "src/decoder_main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+ide-acp.workspace = true
+ide-codex.workspace = true
+ide-opencode.workspace = true
+ide-agent.workspace = true
+ide-claude.workspace = true
+ide-ci.workspace = true
+ide-core.workspace = true
+ide-dap.workspace = true
+ide-document.workspace = true
+ide-factory.workspace = true
+ide-git.workspace = true
+ide-lsp.workspace = true
+ide-docker.workspace = true
+ide-test.workspace = true
+ide-vim.workspace = true
+ide-net.workspace = true
+ide-predict.workspace = true
+ide-process.workspace = true
+ide-product.workspace = true
+ide-project.workspace = true
+ide-session.workspace = true
+ide-terminal.workspace = true
+ide-thread.workspace = true
+ide-ui-agent.workspace = true
+ide-ui-browser.workspace = true
+ide-ui-common.workspace = true
+ide-ui-debug.workspace = true
+ide-ui-dictation = { workspace = true, optional = true }
+ide-ui-export.workspace = true
+ide-ui-factory.workspace = true
+ide-ui-git.workspace = true
+ide-ui-lsp.workspace = true
+ide-ui-icons.workspace = true
+ide-ui-terminal.workspace = true
+splat-decoder.workspace = true
+splat-editor-state.workspace = true
+splat-file-state.workspace = true
+splat-git.workspace = true
+splat-i18n.workspace = true
+splat-import.workspace = true
+splat-markdown.workspace = true
+splat-preview.workspace = true
+lowspeak = { workspace = true, optional = true }
+splat-render.workspace = true
+block2.workspace = true
+dispatch2.workspace = true
+libc.workspace = true
+objc2 = { workspace = true, features = ["catch-all"] }
+objc2-app-kit.workspace = true
+objc2-core-foundation.workspace = true
+objc2-core-graphics.workspace = true
+objc2-core-text.workspace = true
+objc2-core-image.workspace = true
+objc2-foundation.workspace = true
+objc2-quartz-core.workspace = true
+objc2-user-notifications.workspace = true
+objc2-web-kit.workspace = true
+image = { version = "0.25", default-features = false, features = ["png"] }
+serde.workspace = true
+serde_json.workspace = true
+regex = "1"
+sha2 = "0.11.1"
+globset = "0.4.22"
+ide-workspace-hack.workspace = true
+
+[dev-dependencies]
+# The scripted providers the app's own unit tests answer with.
+ide-agent = { workspace = true, features = ["testing"] }
+ide-predict = { workspace = true, features = ["testing"] }
+ide-core = { workspace = true, features = ["testing"] }
+# The scripted session (F61), which the Leitstand's tests drive instead of an agent's CLI.
+ide-session = { workspace = true, features = ["selftest"] }
+splat-i18n.workspace = true
+
+[features]
+selftest = ["ide-acp/testing", "ide-core/testing", "ide-agent/testing", "ide-dap/testing", "ide-predict/testing", "splat-decoder/selftest", "splat-render/selftest", "ide-ui-agent/selftest", "ide-ui-browser/selftest", "ide-ui-debug/selftest", "ide-ui-export/selftest", "ide-ui-factory/selftest", "ide-ui-git/selftest", "ide-ui-lsp/selftest", "ide-ui-terminal/selftest", "ide-ui-dictation?/selftest", "ide-session/selftest"]
+# Speech to text through lowspeak (E13), which builds whisper.cpp with cmake; only release bundles turn it on.
+dictation = ["dep:ide-ui-dictation", "ide-ui-dictation/engine", "dep:lowspeak", "ide-ui-agent/dictation"]
+
+# The terminal emulator, ripgrep's searcher and JSON handling are too slow to judge without optimisation.
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.release]
+lto = "thin"
+overflow-checks = true
+
+# The disk image's programs; the self-tests build `release`, which links in a fraction of the time.
+[profile.dist]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+# dsymutil writes the line tables into a dSYM beside each program before the strip; the release keeps it in dist/.
+debug = "line-tables-only"
+split-debuginfo = "packed"

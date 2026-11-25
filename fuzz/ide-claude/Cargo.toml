@@ -1,0 +1,20 @@
+[package]
+name = "ide-claude-fuzz"
+description = "Fuzz targets of ide-claude (E95); `cargo xtask fuzz` runs them with the nightly cargo-fuzz needs"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4.10"
+ide-claude = { path = "../../crates/ide-claude" }
+ide-thread = { path = "../../crates/ide-thread", features = ["fuzzing"] }
+
+[[bin]]
+name = "stream_json"
+path = "fuzz_targets/stream_json.rs"
+test = false
+doc = false
+bench = false

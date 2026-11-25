@@ -1,0 +1,14 @@
+[package]
+name = "ide-product"
+version.workspace = true
+description = "The product's name and the identifiers its stored data hangs on"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ide-workspace-hack.workspace = true

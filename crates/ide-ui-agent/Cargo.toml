@@ -1,0 +1,58 @@
+[package]
+name = "ide-ui-agent"
+version.workspace = true
+description = "The AI tab with its timeline, composer and status, the Agents panel, and the own agent's settings"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+dispatch2.workspace = true
+ide-acp.workspace = true
+ide-agent.workspace = true
+ide-claude.workspace = true
+ide-codex.workspace = true
+ide-opencode.workspace = true
+ide-core.workspace = true
+ide-git.workspace = true
+ide-net.workspace = true
+ide-process.workspace = true
+ide-project.workspace = true
+ide-session.workspace = true
+ide-product.workspace = true
+ide-thread.workspace = true
+ide-ui-common.workspace = true
+ide-ui-dictation = { workspace = true, optional = true }
+splat-file-state.workspace = true
+splat-i18n.workspace = true
+splat-decoder.workspace = true
+splat-markdown.workspace = true
+splat-preview.workspace = true
+splat-render.workspace = true
+block2.workspace = true
+objc2 = { workspace = true, features = ["catch-all"] }
+objc2-app-kit.workspace = true
+objc2-core-image.workspace = true
+objc2-foundation.workspace = true
+objc2-quartz-core.workspace = true
+objc2-user-notifications.workspace = true
+objc2-web-kit.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ide-workspace-hack.workspace = true
+
+[dev-dependencies]
+ide-agent = { workspace = true, features = ["testing"] }
+ide-core = { workspace = true, features = ["testing"] }
+# The scripted session, so the tests run a tab's session in a real registry.
+ide-session = { workspace = true, features = ["selftest"] }
+
+[features]
+# What the self-test reads of a tab and the panel and does with them, and the recordings and stubs it plays.
+selftest = ["ide-acp/testing", "ide-agent/testing", "ide-session/selftest"]
+# Dictation into the composer (E13).
+dictation = ["dep:ide-ui-dictation", "ide-ui-dictation/engine"]
