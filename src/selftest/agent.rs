@@ -732,7 +732,8 @@ fn requests(root: PathBuf, first: AgentKey) {
     });
 }
 
-/// An Edit permission with its content editable, the hooks of a turn on one line, and the focus view.
+/// An Edit permission with its content editable, the hooks of a turn that ran fine left out (E200), and the focus
+/// view.
 pub(super) fn context(root: PathBuf, key: AgentKey, first: AgentKey) {
     let Some(tab) = tab_of(key) else {
         return give_up(NAME, "the AI tab is open");
@@ -741,21 +742,19 @@ pub(super) fn context(root: PathBuf, key: AgentKey, first: AgentKey) {
     tab.feed(&edit);
     tab.feed(&hook_frames());
     tab.timeline().scroll_to_end();
-    let shown = move || {
-        tab_of(key).is_some_and(|tab| {
-            tab.inspect().visible.iter().any(|v| v == "Hooks: 3 erfolgreich")
-                && tab.timeline().editor_texts().iter().any(|t| t == "hello world\n")
-        })
-    };
+    let shown =
+        move || tab_of(key).is_some_and(|tab| tab.timeline().editor_texts().iter().any(|t| t == "hello world\n"));
     helpers::wait_until(shown, move |_| {
         let Some(tab) = tab_of(key) else {
             return give_up(NAME, "the AI tab is open");
         };
         let seen = tab.inspect();
         check(
-            "the hooks of a turn that ran fine share one line",
-            seen.visible.iter().any(|v| v == "Hooks: 3 erfolgreich")
-                && !seen.visible.iter().any(|v| v.contains("PostToolUse:Write")),
+            "the hooks of a turn that ran fine show nothing",
+            !seen
+                .visible
+                .iter()
+                .any(|v| v.starts_with("Hooks:") || v.contains("PostToolUse:Write")),
             seen.visible.join(" | "),
         );
         let editors = tab.timeline().editor_texts();

@@ -129,7 +129,6 @@
 "Hintergrundprozesse dieser Sitzung" = "此会话的后台进程";
 "Hintergrundprozesse: {} laufend, {} beendet" = "后台进程：{} 个运行中，{} 个已结束";
 "Hinweise" = "提示";
-"Hooks: {} erfolgreich" = "钩子：{} 个成功";
 "Ignorieren" = "忽略";
 "Im Browser-Tab öffnen" = "在浏览器标签页中打开";
 "Im Dock ablegen" = "最小化";

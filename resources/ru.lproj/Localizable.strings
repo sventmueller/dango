@@ -129,7 +129,6 @@
 "Hintergrundprozesse dieser Sitzung" = "Фоновые процессы этого сеанса";
 "Hintergrundprozesse: {} laufend, {} beendet" = "Фоновые процессы: выполняется {}, завершено {}";
 "Hinweise" = "Подсказки";
-"Hooks: {} erfolgreich" = "Успешных хуков: {}";
 "Ignorieren" = "Игнорировать";
 "Im Browser-Tab öffnen" = "Открыть во вкладке браузера";
 "Im Dock ablegen" = "Убрать в Dock";

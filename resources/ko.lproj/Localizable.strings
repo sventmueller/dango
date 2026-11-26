@@ -129,7 +129,6 @@
 "Hintergrundprozesse dieser Sitzung" = "이 세션의 백그라운드 프로세스";
 "Hintergrundprozesse: {} laufend, {} beendet" = "백그라운드 프로세스: 실행 중 {}, 종료 {}";
 "Hinweise" = "힌트";
-"Hooks: {} erfolgreich" = "훅: {}개 성공";
 "Ignorieren" = "무시";
 "Im Browser-Tab öffnen" = "브라우저 탭에서 열기";
 "Im Dock ablegen" = "최소화";
