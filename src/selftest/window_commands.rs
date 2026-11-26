@@ -123,7 +123,7 @@ fn tabs(root: PathBuf) {
         .map(|t| t.selectedTabViewItemIndex());
     check(
         "the agent's settings open on their tab",
-        tab == Some(4),
+        tab == Some(5),
         format!("{tab:?}"),
     );
     if let Some(window) = crate::settings::window() {

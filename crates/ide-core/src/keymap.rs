@@ -15,10 +15,25 @@ pub struct Binding {
     pub command: &'static str,
     /// Its shortcut by default; empty for none.
     pub key: &'static str,
+    /// It acts on the terminal with the keyboard focus, which takes the shortcut before the menus do; elsewhere the
+    /// shortcut keeps its other meaning, such as ⌘I in the editor (phase 14, stage 3).
+    pub in_terminal: bool,
 }
 
 const fn bind(command: &'static str, key: &'static str) -> Binding {
-    Binding { command, key }
+    Binding {
+        command,
+        key,
+        in_terminal: false,
+    }
+}
+
+const fn in_terminal(command: &'static str, key: &'static str) -> Binding {
+    Binding {
+        command,
+        key,
+        in_terminal: true,
+    }
 }
 
 /// Every command with a shortcut.
@@ -76,6 +91,23 @@ pub const DEFAULTS: &[Binding] = &[
     bind("pane.previousTab", "ctrl+alt+cmd+["),
     bind("terminal.new", "ctrl+`"),
     bind("terminal.clear", "cmd+k"),
+    bind("terminal.secureKeyboardEntry", ""),
+    in_terminal("terminal.find", "cmd+f"),
+    in_terminal("terminal.findNext", "cmd+g"),
+    in_terminal("terminal.findPrevious", "shift+cmd+g"),
+    in_terminal("terminal.previousPrompt", "cmd+up"),
+    in_terminal("terminal.nextPrompt", "cmd+down"),
+    in_terminal("terminal.selectBlock", "shift+cmd+a"),
+    in_terminal("terminal.copyOutput", "alt+cmd+c"),
+    in_terminal("terminal.saveOutput", "alt+cmd+s"),
+    in_terminal("terminal.blockToAgent", ""),
+    in_terminal("terminal.toggleBlock", "shift+cmd+return"),
+    in_terminal("terminal.toggleBookmark", "shift+cmd+m"),
+    in_terminal("terminal.previousBookmark", "shift+cmd+up"),
+    in_terminal("terminal.nextBookmark", "shift+cmd+down"),
+    in_terminal("terminal.copyFormatted", "alt+shift+cmd+c"),
+    in_terminal("terminal.copyMode", "shift+cmd+c"),
+    in_terminal("terminal.inputField", "cmd+i"),
     bind("agent.focus", "cmd+escape"),
     bind("plan.comment", "alt+cmd+k"),
     bind("browser.focusAddress", "cmd+l"),
@@ -190,7 +222,15 @@ impl Keymap {
         (!key.is_empty()).then_some(key)
     }
 
-    /// Shortcuts that more than one command claims, each with the commands.
+    /// The commands that act on the terminal with the keyboard focus, each with its shortcut.
+    pub fn terminal_keys(&self) -> impl Iterator<Item = (&'static str, &str)> {
+        DEFAULTS
+            .iter()
+            .filter(|binding| binding.in_terminal)
+            .filter_map(|binding| Some((binding.command, self.key(binding.command)?)))
+    }
+
+    /// Shortcuts that more than one command claims, each with the commands, where they get in each other's way.
     #[cfg(test)]
     pub(crate) fn conflicts(&self) -> Vec<(String, Vec<&'static str>)> {
         let mut by_key: BTreeMap<String, Vec<&'static str>> = BTreeMap::new();
@@ -199,8 +239,20 @@ impl Keymap {
                 by_key.entry(key).or_default().push(binding.command);
             }
         }
-        by_key.into_iter().filter(|(_, commands)| commands.len() > 1).collect()
+        by_key.into_iter().filter(|(_, commands)| clash(commands)).collect()
     }
+}
+
+/// Whether `commands`, which claim one shortcut, get in each other's way. The terminal with the focus takes the
+/// shortcut first, so its command may share it only with commands on an editor's text, which mean nothing there.
+#[cfg(test)]
+fn clash(commands: &[&str]) -> bool {
+    let in_terminal = |command: &str| DEFAULTS.iter().any(|b| b.command == command && b.in_terminal);
+    let of_the_editor = |command: &str| ["format.", "edit.", "code."].iter().any(|p| command.starts_with(p));
+    let terminal = commands.iter().filter(|command| in_terminal(command)).count();
+    let editor = commands.iter().filter(|command| of_the_editor(command)).count();
+    let others = commands.len() - terminal - editor;
+    terminal > 1 || editor + others > 1 || (terminal == 1 && others > 0)
 }
 
 #[cfg(test)]
@@ -251,6 +303,25 @@ mod tests {
         assert_eq!(
             keymap.conflicts(),
             vec![("cmd+1".to_string(), vec!["panel.files", "panel.git"])]
+        );
+    }
+
+    #[test]
+    fn a_terminal_command_shares_a_shortcut_only_with_the_editors() {
+        let keymap = Keymap::default();
+        assert_eq!(keymap.key("format.italic"), keymap.key("terminal.inputField"));
+        assert_eq!(keymap.key("format.code"), keymap.key("terminal.copyFormatted"));
+        let terminal: Vec<_> = keymap.terminal_keys().collect();
+        assert!(terminal.contains(&("terminal.previousPrompt", "cmd+up")));
+        assert!(terminal.iter().all(|(command, _)| *command != "terminal.clear"));
+        assert!(!terminal.iter().any(|(command, _)| *command == "terminal.blockToAgent"));
+        let (taken, _) = Keymap::with(BTreeMap::from([(
+            "terminal.selectBlock".to_string(),
+            "cmd+t".to_string(),
+        )]));
+        assert_eq!(
+            taken.conflicts(),
+            vec![("cmd+t".to_string(), vec!["tab.new", "terminal.selectBlock"])]
         );
     }
 }

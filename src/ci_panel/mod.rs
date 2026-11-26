@@ -26,7 +26,7 @@ use std::path::Path;
 pub(crate) use load::{access, client, default_branch, remote_client};
 pub(crate) use log_tab::{LogTabs, came_to_front};
 pub(crate) use login::CI_OAUTH_CLIENTS;
-pub(crate) use ops::open_url;
+pub(crate) use ops::{open_agent, open_url};
 pub(crate) use panel::CiPanels;
 pub(crate) use text::problem;
 pub(crate) use work::run as on_lane;

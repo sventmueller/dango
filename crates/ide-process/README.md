@@ -11,11 +11,10 @@ flowchart TB
     spawn -->|"reaper::reap: EVFILT_PROC NOTE_EXIT on one kqueue"| waiter["thread reaper: waitpid once the child ended"]
     waiter -->|"Event::Ended to every subscriber, on that thread"| listeners["subscribe listeners, until their Subscription drops"]
     waiter -->|"the end kept for Supervisor::wait, beyond the last 256 for spawn_awaited"| register
-    terminal["ide-terminal"] -->|"Supervisor::register, forget"| register[("register of running processes")]
+    terminal["the app's terminals, as Tapa's term_base::Spawner"] -->|"Supervisor::register, on_stop, stop, forget"| register[("register of running processes")]
     spawn --> register
     caller2["any owner"] -->|"Supervisor::stop: thread stop"| stopping["on_stop step, then kill(-group, SIGTERM), then SIGKILL, until the leader and the rest of its group are gone"]
     stopping -->|"reaper::wait_until: woken when a member of the group ends"| waiter
-    terminal -->|"reaper::group_ends_within for the job in front"| waiter
     quit["app quits"] -->|"Supervisor::shutdown, blocking"| stopping
     stopping --> child
     app["the app at launch"] -->|"shell_env::capture"| env["capture"]
@@ -24,7 +23,7 @@ flowchart TB
     tail["tail::collect: thread tail"] -->|"keeps the last bytes"| output["Tail"]
     protocols["ide-rpc, for ide-lsp and ide-dap"] -->|"framing::read, framing::frame"| framing["Content-Length frames, stray output skipped"]
     lines["ide-claude, ide-agent"] -->|"framing::read_line"| capped["lines up to a limit, a longer one dropped"]
-    helpers["ide-lsp, ide-dap, ide-acp, ide-predict"] -->|"tool::which, tool::var, tool::Helper::run"| tool["helper with timeout and Cancel"]
+    helpers["ide-lsp, ide-dap, ide-acp, ide-predict, the terminal's suggestions"] -->|"tool::which, tool::var, tool::Helper::run"| tool["helper with timeout and Cancel"]
     tool -->|"Supervisor::spawn_awaited, Kind::Tool"| spawn
     tool -->|"pipes::Pipes on the calling thread: stderr lines up to a mebibyte, stdout's tail"| output
     orchestrator["the orchestrator of work orders"] -->|"order_env::for_orders, sandbox::Profile::gate"| gate["gate::Gate::run"]

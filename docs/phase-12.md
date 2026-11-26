@@ -207,7 +207,7 @@ Jede Stufe endet wie die Phasen in plan.md:
   - Fällt er durch, wird neu entschieden, bevor weitergebaut wird.
 - **E105 Wer welche Taste bekommt** *(F3, F4, F12)*.
   - **Alle Modi laufen durch den Eingabekontext.** `keyDown:` reicht jede Taste an `interpretKeyEvents`. Im Normal- und Visual-Modus geben `insertText:` und `doCommandBySelector:` das Ergebnis an die Maschine statt in den Text.
-    - So funktionieren Tottasten der deutschen Tastatur (`^` für den Zeilenanfang, `` ` `` für Marken), wie im Terminal (`crates/ide-ui-terminal/src/input.rs`).
+    - So funktionieren Tottasten der deutschen Tastatur (`^` für den Zeilenanfang, `` ` `` für Marken), wie im Terminal (`crates/ide-ui-terminal/src/input.rs`; *geändert durch E199:* heute Tapas `term-ui`).
     - Bei nicht-lateinischen Belegungen (Russisch, Griechisch, Hebräisch) übersetzt der Normal-Modus über den Tastencode und die ASCII-fähige Belegung des Systems, damit `j` auch dort `j` ist.
   - Der Einfüge-Modus läuft wie heute über `insertText:`, damit Eingabemethoden wie Japanisch funktionieren.
   - **Esc** schließt in dieser Reihenfolge immer nur das Erste, was offen ist:
@@ -445,7 +445,7 @@ Heute kennt Dango `.ipynb` nur als Ziel der Werkzeuge `NotebookRead` und `Notebo
 *(C34, F33)* Für Linux baut heute nur `cargo xtask seal check` im GitHub-Workflow. Bekannte macOS-Bindungen der Crates, die der Dienst braucht:
 - `ide-agent` hängt über `ide-secrets` an `security-framework`.
 - `ide-core::paths` legt alles unter `~/Library/...` ab; jede Crate nutzt es.
-- `ide-terminal` fragt Prozesse über `proc_info` ab (`sys.rs`, `foreground.rs`).
+- `ide-terminal` fragt Prozesse über `proc_info` ab (`sys.rs`, `foreground.rs`). *Geändert durch E199:* heute Tapas `term-session`.
 - Die Beobachtung nutzt nur das FSEvents-Backend von `notify`; dazu `ide-project/src/tree.rs`.
 - `xcrun` in `ide-dap`, `ide-git/src/run.rs` und `ide-lsp/src/registry.rs`.
 - Der eigene Agent startet über `sandbox-exec`.

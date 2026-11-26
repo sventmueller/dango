@@ -12,7 +12,7 @@ Dango zbiera kod, agenty, które go zmieniają, i wszystko wokół nich w jednym
 
 **Znalazłeś błąd?** [Otwórz zgłoszenie](https://github.com/sventmueller/dango/issues/new) i napisz, z jakim agentem i w jakim projekcie wystąpił.
 
-[![Rust, edycja 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 lub nowszy](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Uniwersalna: Apple Silicon i Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit przez objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35 języków interfejsu](https://img.shields.io/badge/languages-35-4C9A2A) ![Bez telemetrii](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Podpisane z Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Licencja: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#licencja)
+[![Rust, edycja 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 lub nowszy](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Uniwersalna: Apple Silicon i Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit przez objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35 języków interfejsu](https://img.shields.io/badge/languages-35-4C9A2A) ![Bez telemetrii](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Podpisane z Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Licencja: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#licencja)
 
 [Bahasa Indonesia](../id/README.md) · [Bahasa Melayu](../ms/README.md) · [Català](../ca/README.md) · [Čeština](../cs/README.md) · [Dansk](../da/README.md) · [Deutsch](../de/README.md) · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · [Magyar](../hu/README.md) · [Nederlands](../nl/README.md) · [Norsk](../no/README.md) · **Polski** · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · [Română](../ro/README.md) · [Slovenčina](../sk/README.md) · [Slovenščina](../sl/README.md) · [Suomi](../fi/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [繁體中文](../zh-Hant/README.md)
 
@@ -55,6 +55,7 @@ Dango zbiera kod, agenty, które go zmieniają, i wszystko wokół nich w jednym
 - **Jedno okno na folder.** Pliki, terminale, strony WWW, wątki AI, różnice i podglądy są kartami macOS tego okna. Pasek boczny zawiera Pliki, Wyszukiwanie, Agenty, Git, Testy, Debugowanie, CI i Kontenery.
 - **Prawdziwy edytor kodu.** Kolorowanie składni, wiele punktów wstawiania, zwijanie, `.editorconfig`, serwery języka dla 17 języków z uzupełnianiem, przejściem do definicji, odwołaniami, zmianą nazwy, szybkimi poprawkami i hierarchiami, a także przewidywanie podczas pisania z GitHub Copilot lub modelu lokalnego.
 - **Wbudowany debuger, Git i CI.** Punkty przerwania i praca krokowa dla Rust, C, C++, Swift, Go, JavaScript, TypeScript i Python; przygotowywanie pojedynczych fragmentów, gałęzie, stashe, konflikty i graf commitów; uruchomienia, joby i logi z GitHub Actions i GitLab CI.
+- **Terminal aplikacji Tapa.** Bloki poleceń, których wynik kopiujesz, zachowujesz lub przekazujesz agentowi, pole wprowadzania z propozycjami z Twojej historii i projektu, wyszukiwanie w całej historii oraz powiadomienia i postęp od programów, które w nim działają.
 - **Ostrożność wobec Twoich folderów.** Folder, któremu nie ufasz, niczego nie uruchamia: żadnych procesów Git, serwerów języka, hooków ani agentów. Destrukcyjne polecenia Git nigdy nie są dozwolone na stałe, a commity są sprawdzane pod kątem sekretów.
 - **Dyktowanie.** Mów do edytora i pola wiadomości, online przez OpenAI lub Groq albo lokalnie z Whisper i Parakeet.
 - **Natywne do szpiku kości.** Okna, karty, menu i paski narzędzi AppKit, TextKit 2 dla edytora, Metal dla terminala, WebKit tylko w karcie przeglądarki. Tryb ciemny, Zwiększ kontrast i VoiceOver działają jak w każdej aplikacji na Maca.
@@ -84,7 +85,7 @@ Dango zbiera kod, agenty, które go zmieniają, i wszystko wokół nich w jednym
 3. **Każdy dokument jest kartą** okna folderu, kartą samego macOS. „+” na końcu paska kart i ⌘T oferują nowy plik, terminal, przeglądarkę i każdego zainstalowanego agenta, także we własnym worktree Git; przytrzymanie „+” pokazuje to samo jako menu.
 4. **Szybko otwórz** za pomocą ⌘P znajduje pliki, a z `#` symbole projektu; ⇧⌘F wyszukuje i zastępuje w projekcie.
 5. **Rozmawiaj z agentem** w karcie AI. ⌘Esc przenosi fokus klawiatury do jego pola wiadomości i z powrotem.
-6. **Ustawienia** za pomocą ⌘, zawierają karty Ogólne, CI, Agenty, Wbudowany agent, Serwer języka, Dyktowanie i Przewidywanie.
+6. **Ustawienia** za pomocą ⌘, zawierają karty Ogólne, Terminal, CI, Agenty, Software Factory, Wbudowany agent, Serwer języka, Dyktowanie i Przewidywanie.
 
 Pasek narzędzi zawiera wstecz i dalej przez edytowane miejsca (⌃- i ⌃⇧-), gałąź, Szybko otwórz i przegląd Aktywność, który pokazuje wszystko, co działa. **Otwórz obok** w menu kontekstowym pliku pokazuje drugi dokument obok pierwszego. Po ponownym uruchomieniu lub awarii każde okno wraca ze swoimi kartami, a edytory z niezachowanym tekstem wracają z tym tekstem. Obrazki, dźwięk, wideo, czcionki i dokumenty Office otwierają się w karcie przez Szybki przegląd, pliki PDF przez PDFKit.
 
@@ -155,7 +156,22 @@ Plik `.vscode/launch.json` projektu jest odczytywany. Menu Debugowanie używa sk
 
 ## Terminal
 
-Terminale w kartach (⌃\`) ze środowiskiem powłoki logowania, rysowane przez Metal. ⌘K czyści ekran. Wklejony lub przeciągnięty obrazek trafia do agenta programistycznego działającego w terminalu albo wkleja ścieżkę zachowanej kopii. ⌘-kliknięcie otwiera łącza i nazwy plików. Serwer deweloperski uruchomiony z terminala można otworzyć w karcie przeglądarki.
+Terminale otwierają się jako karty (**Plik › Nowy terminal**, ⌃\`) z powłoką logowania i jej środowiskiem. Terminal pochodzi z aplikacji [Tapa](https://github.com/sventmueller/tapa), ma własny rdzeń VT i jest rysowany przez Metal: xterm i VT520 z protokołem klawiatury Kitty, łącza OSC 8, synchronizowane wyjście, truecolor i raportowanie myszy, w rozmiarze tekstu edytora i w jasnych oraz ciemnych kolorach aplikacji Tapa. Jego integracja z powłoką dla zsh, bash i fish konfiguruje się sama, nie dotykając Twoich plików konfiguracyjnych, i idzie z Tobą, gdy łączysz się przez `ssh` z innym hostem. Po ponownym uruchomieniu terminal wraca jako nowa powłoka w folderze, w którym był, tylko w zaufanych folderach; to, co pokazywał, nie wraca.
+
+- **Bloki poleceń.** Każde polecenie i jego wynik tworzą blok. ⌘↑ i ⌘↓ przeskakują między znakami zachęty. **Zaznacz blok** (⇧⌘A), **Kopiuj wyjście** (⌥⌘C), **Zachowaj wyjście…** (⌥⌘S) i **Zwiń/rozwiń blok** (⇧⌘↩) działają na bieżący blok; **Dodaj/usuń zakładkę** (⇧⌘M) oznacza wiersz, a ⇧⌘↑ i ⇧⌘↓ przeskakują między zakładkami. Gdy włączone jest **Oznaczaj polecenia jako bloki**, pasek na marginesie pokazuje każdy blok, nieudane polecenia są oznaczane, działające polecenie pozostaje u góry, gdy jego wynik się przewija, a przyciski nad blokiem pod wskaźnikiem pokazują jego stan, czas trwania i te same czynności.
+- **Wyślij blok do agenta** (menu Edycja i menu kontekstowe terminala) otwiera nową kartę AI z wierszem poleceń i wynikiem bieżącego bloku dołączonymi jako Treść zewnętrzna (zobacz [Zaufanie](#zaufanie)) oraz szkicem, który pyta o przyczynę, gdy polecenie się nie powiodło, tak jak robi to log nieudanego joba CI. Nie ma skrótu, dopóki nie nadasz go poleceniu `terminal.blockToAgent` w `keybindings.json`.
+- **Pole wprowadzania.** **Widok › Pokaż/ukryj pole wprowadzania** (⌘I) zamienia wiersz poleceń w pole tekstowe na dole terminala, z folderem i gałęzią Git nad nim; nowe terminale idą za Twoim ostatnim wyborem. Return wysyła całe pole do powłoki. Wymaga integracji z powłoką i ustępuje miejsca programom pełnoekranowym, takim jak vim, htop czy claude.
+- **Propozycje** pojawiają się na szaro tuż za tym, co piszesz, w polu wprowadzania i bez niego: z Twojej historii, wraz z folderem, gałęzią i kodem wyjścia, z jakimi wykonano każde polecenie, ze specyfikacji ponad 700 narzędzi wiersza poleceń oraz z projektu, takie jak gałęzie git, kontenery docker, skrypty `package.json` oraz cele make, just i cargo. → przyjmuje propozycję; Tab uzupełnia, a przy kilku kandydatach otwiera menu, które filtruje się podczas pisania. Zanim zaczniesz pisać, pole może zaproponować polecenie, które zwykle następuje. Polecenia są kolorowane według swoich części, a takie, którego Twoja powłoka nie może uruchomić, dostaje czerwone przerywane podkreślenie. Propozycje nigdy nie korzystają z sieci i uruchamiają programy tylko z `PATH` powłoki logowania.
+- **Znajdź** (⌘F, ⌘G i ⇧⌘G, gdy terminal ma fokus) przeszukuje całą historię, z wyrażeniami regularnymi, uwzględnianiem wielkości liter i całymi słowami, oraz liczy wyniki; pasek przewijania oznacza wyniki, znaki zachęty i nieudane polecenia.
+- **Zaznaczanie i kopiowanie.** Dwukrotne kliknięcie zaznacza w całości URL, ścieżkę, hash lub adres IP, a przeciąganie z ⌥ zaznacza prostokąt. **Zaznaczanie klawiaturą** (⇧⌘C) przesuwa zaznaczenie klawiszami Vima, **Kopiuj z formatowaniem** (⇧⌥⌘C) zachowuje kolory i style. Program może kopiować przez OSC 52 tylko wtedy, gdy jego terminal ma fokus klawiatury, a terminal to sygnalizuje; żaden program nie odczytuje schowka.
+- **Wklejanie.** Tekst, który przy swoim podziale wiersza uruchomiłby polecenie albo zawiera znaki sterujące, najpierw pojawia się w oknie dialogowym, chyba że program odczytuje go jako bracketed paste. Wklejony obrazek trafia do agenta programistycznego działającego w terminalu, który sam odczytuje go ze schowka, a w przeciwnym razie wklejana jest ścieżka kopii zachowanej w pamięci podręcznej; przez `ssh` terminal mówi, dlaczego tego nie robi. Pliki upuszczone na terminal, także obrazki, trafiają do niego jako ścieżki w cudzysłowach; obrazek upuszczony z innego miejsca, na przykład ze strony WWW, idzie tą samą drogą co wklejony.
+- **Łącza.** ⌘-kliknięcie otwiera adres WWW w karcie przeglądarki, łącze `mailto:` w Mailu, a nazwę pliku, także z wierszem i kolumną, w edytorze Dango; łącza są wykrywane nawet bez OSC 8. Łącza innych rodzajów się nie otwierają.
+- **Serwery deweloperskie.** Gdy program w terminalu uruchomi serwer deweloperski, pasek nad terminalem podaje jego adres, a **Otwórz w karcie przeglądarki** otwiera go tam.
+- **Powiadomienia i postęp.** Dzwonek i powiadomienie, o które poprosi program (OSC 9 i OSC 777), umieszczają czerwoną kropkę na karcie terminala, gdy go nie widzisz; gdy z przodu jest inna aplikacja, powiadomienie trafia też do macOS, a kliknięcie go przywraca terminal. Postęp zgłaszany przez program (OSC 9;4) widać jako pierścień na jego karcie i jako pasek na ikonie w Docku.
+- **Bezpieczne wprowadzanie z klawiatury** (**Dango › Bezpieczne wprowadzanie z klawiatury**) nie pozwala innym aplikacjom odczytywać tego, co piszesz w terminalu; włącza się też samo, gdy program prosi o hasło.
+- **Klawisze.** ⌘K czyści terminal (**Edycja › Wyczyść terminal**); ⌃C i Esc trafiają do programu, który w nim działa. Polecenia terminala są w menu Edycja i Widok, a ich skróty działają tylko wtedy, gdy terminal ma fokus klawiatury, więc ⌘I, ⌘↑ czy ⌘F zachowują w edytorze swoje znaczenie. Menu kontekstowe otwiera też **Nowy terminal tutaj** i zamyka terminal poleceniem **Zamknij okienko**.
+
+**Ustawienia › Terminal** przełącza pole wprowadzania dla nowych terminali, jego klawisze Vim, propozycje, kolorowanie poleceń, podkreślanie nieznanych poleceń, bloki poleceń, kopiowanie zaznaczenia od razu, pokazywanie najpierw wklejania wielu wierszy oraz ⌥ jako metaklawisz.
 
 ## Przeglądarka
 
@@ -205,7 +221,7 @@ Folder może sprawić, że programy uruchomią się, gdy tylko coś w nim wystar
 - **Zaufany:** Git, serwery języka, debugery, agenty i CI działają dla tego folderu i wszystkiego, co w nim jest.
 - **Ograniczony:** możesz czytać i edytować; znaczniki zmian w edytorze pochodzą z bezpośredniego odczytu `.git`. Nic, co konfiguruje folder, nie jest uruchamiane. Panele Git, CI i AI informują o tym i proponują zaufanie folderowi.
 
-Tekst, który nie pochodzi od Ciebie, może zawierać polecenia mające sterować agentem (prompt injection). Wynik terminala (`@terminal`), strona WWW (`@browser`), log CI przekazany agentowi, plik spoza projektu i dłuższy tekst wklejony ze strony WWW trafiają więc do agenta oznaczone: etykieta mówi „Treść zewnętrzna”, a agent dostaje tekst z informacją, że to niezaufane dane, których poleceń nie wolno mu wykonywać. Strony WWW wbudowanego agenta przychodzą z tą samą informacją. Wklejony tekst uznaje się za pochodzący ze strony WWW, gdy przeglądarka zaznacza to w schowku, tak jak robią to Safari, Chrome i Firefox; tekst z innych miejsc oraz krótka fraza z kilku słów pozostają Twoje.
+Tekst, który nie pochodzi od Ciebie, może zawierać polecenia mające sterować agentem (prompt injection). Wynik terminala (`@terminal` lub blok polecenia przekazany agentowi), strona WWW (`@browser`), log CI przekazany agentowi, plik spoza projektu i dłuższy tekst wklejony ze strony WWW trafiają więc do agenta oznaczone: etykieta mówi „Treść zewnętrzna”, a agent dostaje tekst z informacją, że to niezaufane dane, których poleceń nie wolno mu wykonywać. Strony WWW wbudowanego agenta przychodzą z tą samą informacją. Wklejony tekst uznaje się za pochodzący ze strony WWW, gdy przeglądarka zaznacza to w schowku, tak jak robią to Safari, Chrome i Firefox; tekst z innych miejsc oraz krótka fraza z kilku słów pozostają Twoje.
 
 ## Piaskownica
 
@@ -221,9 +237,9 @@ Samo Dango działa bez App Sandbox, ponieważ odziedziczyłby ją każdy urucham
 ## Wygląd i dostępność
 
 - **Tryb ciemny** podąża za systemem; **Zwiększ kontrast** i **Ogranicz ruch** są respektowane.
-- **VoiceOver** nazywa pasek boczny, karty, kafelki osi czasu AI, wiersze Git i CI, debuger i tekst terminala. Punkty przerwania nigdy nie różnią się wyłącznie kolorem.
+- **VoiceOver** nazywa pasek boczny, karty, kafelki osi czasu AI, wiersze Git i CI oraz debuger, odczytuje wiersze terminala i ogłasza nowy wynik. Punkty przerwania nigdy nie różnią się wyłącznie kolorem.
 - **Klawiatura.** Każde polecenie ma skrót i każdy można zmienić w `keybindings.json`; ⌥⌘\` przechodzi do następnego panelu.
-- **Od prawej do lewej.** W arabskim i hebrajskim okno jest odbijane lustrzanie, a widoki kodu pozostają od lewej do prawej.
+- **Od prawej do lewej.** W arabskim i hebrajskim okno jest odbijane lustrzanie, a widoki kodu i siatka terminala pozostają od lewej do prawej.
 
 Co Dango dodaje do AppKit, obszar po obszarze, opisuje [ACCESSIBILITY.md](../../../ACCESSIBILITY.md).
 
@@ -257,6 +273,10 @@ Dango podąża za kolejnością języków w **Ustawienia systemowe › Ogólne �
 | Pogrubienie, kursywa, przekreślenie, kod, łącze | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | Nagłówek 1 do 3 | ⌥⌘1 do ⌥⌘3 |
 | Nowy terminal, wyczyść terminal | ⌃\`, ⌘K |
+| W terminalu: znajdź, znajdź następne, znajdź poprzednie | ⌘F, ⌘G, ⇧⌘G |
+| W terminalu: poprzedni i następny znak zachęty, poprzednia i następna zakładka, dodaj lub usuń zakładkę | ⌘↑ i ⌘↓, ⇧⌘↑ i ⇧⌘↓, ⇧⌘M |
+| W terminalu: zaznacz blok, kopiuj wyjście, zachowaj wyjście, zwiń blok | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| W terminalu: pole wprowadzania, zaznaczanie klawiaturą, kopiuj z formatowaniem | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | Fokus na polu wiadomości agenta, skomentuj plan | ⌘Esc, ⌥⌘K |
 | Pole adresu, odśwież, wstecz, dalej (przeglądarka) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Rozpocznij lub zatrzymaj dyktowanie | ⌃⌥D |
@@ -282,7 +302,7 @@ Dango podąża za kolejnością języków w **Ustawienia systemowe › Ogólne �
 
 | Miejsce | Co |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`; `threads/` (lista panelu AI), `agent-threads/` (rozmowy wbudowanego agenta), `layouts/` (karty dla każdego projektu), `recovery/` (niezachowane edytory po awarii), `checkpoints/` (dla folderów bez Git), `worktrees/`, `agents/` i `tools/` (zainstalowane agenty, serwery języka i adaptery debugowania), `task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`, `terminal-history.sqlite` (historia poleceń terminali); `threads/` (lista panelu AI), `agent-threads/` (rozmowy wbudowanego agenta), `layouts/` (karty dla każdego projektu), `recovery/` (niezachowane edytory po awarii), `checkpoints/` (dla folderów bez Git), `worktrees/`, `agents/` i `tools/` (zainstalowane agenty, serwery języka i adaptery debugowania), `task-output/` |
 | `~/Library/Caches/<id>/` | wklejone obrazki, skrypty integracji z powłoką, rejestr ACP; można usunąć |
 | `~/Library/Logs/<id>/dictation/` | pliki dziennika dyktowania |
 | `~/Library/Application Support/Lowspeak` i `FluidAudio` | lokalne modele dyktowania, współdzielone z Lowspeak |
@@ -300,6 +320,7 @@ Claude przechowuje własne sesje w `~/.claude/projects`; Dango je odczytuje, aby
 - **Liczby zużycia i podział kontekstu Claude** opierają się na częściach jego protokołu oznaczonych jako eksperymentalne i są ukrywane, gdy ich brakuje.
 - **Przewijanie rozmowy do tyłu** działa tylko dla Claude; w pozostałych agentach do tyłu przewijany jest tylko kod.
 - **Logowanie do CI przez przeglądarkę** jest wyłączone; użyj `gh`, `glab`, tokena lub środowiska.
+- **Brak obrazków w terminalu:** grafika Kitty, Sixel i obrazki iTerm2 się nie wyświetlają.
 - **Gemini CLI nie jest oferowany:** Google zakończył logowanie kontem osobistym i odsyła do Antigravity. Wcześniejsze wątki Gemini pozostają czytelne.
 
 ## Kompilacja ze źródeł
@@ -308,7 +329,7 @@ Potrzebujesz:
 
 - macOS 14 lub nowszego z Xcode Command Line Tools (`xcode-select --install`); sam Xcode nie jest potrzebny.
 - Rust w wersji podanej w `rust-toolchain.toml`. `rust` z Homebrew kompiluje dla procesora tego Maca; uniwersalna kompilacja wydania wymaga rustup z celami `aarch64-apple-darwin` i `x86_64-apple-darwin`.
-- Kopii [splat](https://github.com/sventmueller/splat) i [lowspeak](https://github.com/sventmueller/lowspeak) obok tej (`../splat`, `../lowspeak`), obu na gałęzi `main`; workspace pobiera z nich crate’y po ścieżce.
+- Kopii [splat](https://github.com/sventmueller/splat), [lowspeak](https://github.com/sventmueller/lowspeak) i [tapa](https://github.com/sventmueller/tapa) obok tej (`../splat`, `../lowspeak`, `../tapa`), każdej na swojej gałęzi `main`; workspace pobiera z nich crate’y po ścieżce, a terminal z aplikacji Tapa.
 - cmake dla każdej kompilacji z dyktowaniem (`make run`, `make build`, `make release`), która kompiluje whisper.cpp. `make check` kompiluje bez niego.
 
 | Polecenie | Co robi |

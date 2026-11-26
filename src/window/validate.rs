@@ -79,6 +79,9 @@ impl WindowController {
         if let Some(answer) = self.validate_pane_command(action) {
             return answer;
         }
+        if let Some(answer) = crate::terminal::validate(self, item) {
+            return answer;
+        }
         true
     }
 }

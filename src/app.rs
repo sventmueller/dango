@@ -11,7 +11,7 @@ use objc2::runtime::{AnyObject, NSObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSApplication, NSApplicationDelegate, NSApplicationTerminateReply, NSMenu, NSMenuDelegate, NSMenuItem,
-    NSModalResponseOK, NSOpenPanel,
+    NSMenuItemValidation, NSModalResponseOK, NSOpenPanel,
 };
 use objc2_foundation::{NSArray, NSBundle, NSNotification, NSObjectProtocol, NSString, NSURL};
 
@@ -58,7 +58,9 @@ define_class!(
                 ide_core::settings::on_change(move |_, names| {
                     leitstand.settings_changed(names);
                     let names = names.to_vec();
+                    let back = leitstand.clone();
                     crate::util::main_soon(move || {
+                        back.with(|cx| crate::terminal::settings_changed(cx, &names));
                         crate::editor::settings_changed(&names);
                         ide_ui_common::ui_size::settings_changed(&names);
                         ide_ui_agent::settings_changed(&names);
@@ -138,14 +140,37 @@ define_class!(
         #[unsafe(method(menuNeedsUpdate:))]
         fn menu_needs_update(&self, menu: &NSMenu) {
             guarded((), || {
-                if !crate::menu::hide_tab_bar_toggle(menu) {
+                let terminal = crate::terminal::show_shortcuts(&self.context(), menu, true);
+                if !crate::menu::hide_tab_bar_toggle(menu) && !terminal {
                     fill_recent_menu(self, menu);
                 }
             });
         }
+
+        #[unsafe(method(menuDidClose:))]
+        fn menu_did_close(&self, menu: &NSMenu) {
+            guarded((), || {
+                crate::terminal::show_shortcuts(&self.context(), menu, false);
+            });
+        }
+    }
+
+    unsafe impl NSMenuItemValidation for AppDelegate {
+        #[unsafe(method(validateMenuItem:))]
+        fn validate_menu_item(&self, item: &NSMenuItem) -> bool {
+            guarded(true, || {
+                crate::terminal::tick_secure_entry(item);
+                true
+            })
+        }
     }
 
     impl AppDelegate {
+        #[unsafe(method(ideSecureKeyboardEntry:))]
+        fn secure_keyboard_entry(&self, _sender: Option<&AnyObject>) {
+            guarded((), crate::terminal::toggle_secure_entry);
+        }
+
         #[unsafe(method(ideShowAbout:))]
         fn show_about(&self, _sender: Option<&AnyObject>) {
             guarded((), || crate::about::show(self.mtm()));
@@ -214,6 +239,8 @@ impl AppDelegate {
         context.leitstand().bind(&context, mtm);
         context.agent().install_sessions(context.leitstand().tab_sessions());
         crate::leitstand_ui::Orders::install(context.leitstand().back());
+        crate::host::TerminalHost::install(context.leitstand().back());
+        crate::terminal::keys::watch(&context);
         let views = context.factory_ui().clone();
         context
             .leitstand()

@@ -7,7 +7,9 @@
 use super::*;
 
 /// Where the language servers tab sits in the toolbar.
-pub(super) const SERVERS_TAB: isize = 5;
+pub(super) const SERVERS_TAB: isize = 6;
+/// Where the Terminal tab sits in the toolbar.
+pub(crate) const TERMINAL_TAB: isize = 1;
 
 pub(crate) use super::predict::shown as prediction_shown;
 
@@ -19,6 +21,19 @@ pub(crate) fn show_servers(mtm: MainThreadMarker) {
 }
 
 pub(crate) use super::servers::selftest as servers_selftest;
+
+/// Brings the settings window to the front on its Terminal tab, for the self-test.
+pub(crate) fn show_terminal(mtm: MainThreadMarker) {
+    show_tab(&AppContext::get(mtm), mtm, TERMINAL_TAB);
+}
+
+/// The Terminal tab's switches by the action each sends, with the setting it stores and its title, for the self-test.
+pub(crate) fn terminal_switches() -> Vec<(objc2::runtime::Sel, ide_core::settings::Key<bool>, &'static str)> {
+    terminal::switches()
+        .into_iter()
+        .map(|switch| (switch.action, switch.key, switch.title))
+        .collect()
+}
 
 pub(crate) use super::editor::shown as editor_switches;
 

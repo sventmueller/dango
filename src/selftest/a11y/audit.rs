@@ -378,7 +378,7 @@ fn directions(view: &NSView, path: &str, found: &mut Vec<Finding>) {
     if view.isHiddenOrHasHiddenAncestor() {
         return;
     }
-    if class == "IDETerminalView" && !left_to_right {
+    if class == "TermSessionView" && !left_to_right {
         found.push(Finding::new("terminal turns right to left", &class, &path));
     }
     if let Some(text) = view.downcast_ref::<NSTextView>()

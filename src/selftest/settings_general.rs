@@ -1,8 +1,8 @@
 //! The `settings-general` scenario: a damaged settings file is named on the General tab and left alone; each switch,
-//! the font size's stepper and the search engine's menu on that tab store what they show at once; the Agents tab
-//! lists the agents again when they change while it is open, in a window as large as the list; a change of the CI
-//! settings from elsewhere reaches the open window; the own agent keeps and forgets its rules, endpoints and keys and
-//! starts on the service that has a key.
+//! the font size's stepper and the search engine's menu on that tab store what they show at once, as do the switches
+//! of the Terminal tab; the Agents tab lists the agents again when they change while it is open, in a window as large
+//! as the list; a change of the CI settings from elsewhere reaches the open window; the own agent keeps and forgets
+//! its rules, endpoints and keys and starts on the service that has a key.
 
 use ide_core::settings::{Key, SearchEngine, Settings, keys};
 use objc2::rc::Retained;
@@ -78,12 +78,17 @@ fn damaged(before: Option<Vec<u8>>) {
 
 /// The General tab's view.
 fn general_view() -> Option<Retained<NSView>> {
+    tab_view(0)
+}
+
+/// The view of the settings window's tab at `index`.
+fn tab_view(index: isize) -> Option<Retained<NSView>> {
     let window = crate::settings::window()?;
     let tabs = window.contentViewController()?.downcast::<NSTabViewController>().ok()?;
     let mtm = window.mtm();
     tabs.tabViewItems()
         .iter()
-        .next()?
+        .nth(usize::try_from(index).ok()?)?
         .viewController(mtm)
         .map(|page| page.view())
 }
@@ -117,7 +122,7 @@ fn general() {
     let Some(view) = general_view() else {
         return give_up(NAME, "the settings window has its General tab");
     };
-    let switches: [(Sel, Key<bool>, &str); 6] = [
+    let switches: [(Sel, Key<bool>, &str); 5] = [
         (sel!(ideToggleReopen:), keys::REOPEN_PROJECTS, "reopen"),
         (sel!(ideTogglePreviewTabs:), keys::PREVIEW_TABS, "preview tabs"),
         (
@@ -131,11 +136,34 @@ fn general() {
             "ignored files",
         ),
         (sel!(ideToggleFormatOnSave:), keys::FORMAT_ON_SAVE, "format on save"),
-        (sel!(ideToggleOptionAsMeta:), keys::OPTION_AS_META, "Option as Meta"),
     ];
+    let wrong = stored_as_shown(&view, switches);
+    check(
+        "each switch of the General tab stores what it shows, on and off",
+        wrong.is_empty(),
+        wrong.join("; "),
+    );
+    let wrong = tab_view(crate::settings::TERMINAL_TAB).map_or_else(
+        || vec!["no Terminal tab".to_string()],
+        |terminal| stored_as_shown(&terminal, crate::settings::terminal_switches()),
+    );
+    check(
+        "each switch of the Terminal tab, ⌥ as Meta among them, stores what it shows, on and off",
+        wrong.is_empty(),
+        wrong.join("; "),
+    );
+    font_and_engine(&view);
+    wait_until(
+        || crate::settings::window().is_some_and(|w| w.isVisible()),
+        |_| agents(),
+    );
+}
+
+/// Flips each of `switches` in `view` on and off; what one stored other than it shows.
+fn stored_as_shown<'a>(view: &NSView, switches: impl IntoIterator<Item = (Sel, Key<bool>, &'a str)>) -> Vec<String> {
     let mut wrong = Vec::new();
     for (action, key, name) in switches {
-        let Some(button) = control_for(&view, action).and_then(|c| c.downcast::<NSButton>().ok()) else {
+        let Some(button) = control_for(view, action).and_then(|c| c.downcast::<NSButton>().ok()) else {
             wrong.push(format!("{name}: no switch"));
             continue;
         };
@@ -153,16 +181,7 @@ fn general() {
             }
         }
     }
-    check(
-        "each switch of the General tab stores what it shows, on and off",
-        wrong.is_empty(),
-        wrong.join("; "),
-    );
-    font_and_engine(&view);
-    wait_until(
-        || crate::settings::window().is_some_and(|w| w.isVisible()),
-        |_| agents(),
-    );
+    wrong
 }
 
 fn font_and_engine(view: &NSView) {

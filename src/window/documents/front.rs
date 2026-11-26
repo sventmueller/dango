@@ -182,10 +182,11 @@ impl WindowController {
     }
 
     /// Another tab may have come to the front or on screen: the Software Factory's tabs and the CI logs that left out
-    /// a change while out of view catch up on it.
+    /// a change while out of view catch up on it, and the terminals now in view lose their red dot.
     pub(crate) fn tabs_came_forward(&self) {
         ide_ui_factory::came_to_front(self.handle(), self.context().factory_ui());
         crate::ci_panel::came_to_front(self);
+        crate::terminal::came_to_front(self);
     }
 
     /// A window tab came on screen or left it: one on screen beside the tab in front shows a picture of the sidebar.

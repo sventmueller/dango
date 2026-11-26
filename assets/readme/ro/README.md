@@ -12,7 +12,7 @@ Dango aduce codul, agenții care îl modifică și tot ce îi înconjoară într
 
 **Ați găsit o eroare?** [Deschideți un issue](https://github.com/sventmueller/dango/issues/new) și spuneți cu ce agent și în ce tip de proiect a apărut.
 
-[![Rust, ediția 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 sau ulterior](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universal: Apple Silicon și Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit prin objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35 de limbi ale interfeței](https://img.shields.io/badge/languages-35-4C9A2A) ![Fără telemetrie](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Semnat cu Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Licență: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#licență)
+[![Rust, ediția 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 sau ulterior](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universal: Apple Silicon și Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit prin objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35 de limbi ale interfeței](https://img.shields.io/badge/languages-35-4C9A2A) ![Fără telemetrie](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Semnat cu Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Licență: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#licență)
 
 [Bahasa Indonesia](../id/README.md) · [Bahasa Melayu](../ms/README.md) · [Català](../ca/README.md) · [Čeština](../cs/README.md) · [Dansk](../da/README.md) · [Deutsch](../de/README.md) · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · [Magyar](../hu/README.md) · [Nederlands](../nl/README.md) · [Norsk](../no/README.md) · [Polski](../pl/README.md) · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · **Română** · [Slovenčina](../sk/README.md) · [Slovenščina](../sl/README.md) · [Suomi](../fi/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [繁體中文](../zh-Hant/README.md)
 
@@ -55,6 +55,7 @@ Dango aduce codul, agenții care îl modifică și tot ce îi înconjoară într
 - **O fereastră pentru fiecare dosar.** Fișierele, terminalele, paginile web, conversațiile IA, diferențele și previzualizările sunt file macOS ale acelei ferestre. Bara laterală conține Fișiere, Căutare, Agenți, Git, Teste, Depanare, CI și Containere.
 - **Un editor de cod adevărat.** Culori de sintaxă, mai multe puncte de inserare, pliere, `.editorconfig`, servere de limbaj pentru 17 limbaje cu completare, salt la definiție, referințe, redenumire, corecturi rapide și ierarhii, plus predicții în timp ce tastați de la GitHub Copilot sau de la un model local.
 - **Depanator, Git și CI integrate.** Puncte de întrerupere și execuție pas cu pas pentru Rust, C, C++, Swift, Go, JavaScript, TypeScript și Python; pregătirea pentru commit a unor fragmente separate, ramuri, stash-uri, conflicte și un graf al commiturilor; rulări, joburi și jurnale din GitHub Actions și GitLab CI.
+- **Terminalul lui Tapa.** Blocuri de comenzi a căror ieșire o copiați, o salvați sau o predați unui agent, un câmp de introducere cu propuneri din istoricul dvs. și din proiect, căutare în tot istoricul, precum și notificări și progres de la programele care rulează în el.
 - **Atent cu dosarele dvs.** Un dosar în care nu aveți încredere nu pornește nimic: niciun proces Git, server de limbaj, hook sau agent. Comenzile Git distructive nu sunt niciodată permise definitiv, iar commiturile sunt verificate pentru secrete.
 - **Dictare.** Vorbiți în editor și în câmpul de mesaj, online prin OpenAI sau Groq ori local cu Whisper și Parakeet.
 - **Nativ până în măduva oaselor.** Ferestre, file, meniuri și bare de instrumente AppKit, TextKit 2 pentru editor, Metal pentru terminal, WebKit doar în fila browserului. Modul întunecat, Măriți contrastul și VoiceOver funcționează ca în orice aplicație Mac.
@@ -84,7 +85,7 @@ Dango aduce codul, agenții care îl modifică și tot ce îi înconjoară într
 3. **Fiecare document este o filă** a ferestrei dosarului, filele proprii ale macOS. „+” de la capătul barei de file și ⌘T oferă un fișier nou, un terminal, browserul și fiecare agent instalat, și într-un worktree Git propriu; dacă țineți apăsat „+”, apare același lucru sub formă de meniu.
 4. **Deschidere rapidă** cu ⌘P găsește fișiere, iar cu `#` simbolurile proiectului; ⇧⌘F caută și înlocuiește în proiect.
 5. **Vorbiți cu un agent** într-o filă IA. ⌘Esc mută focalizarea tastaturii în câmpul său de mesaj și înapoi.
-6. **Configurări** cu ⌘, conține filele General, CI, Agenți, Agent propriu, Server de limbaj, Dictare și Predicție.
+6. **Configurări** cu ⌘, conține filele General, Terminal, CI, Agenți, Software Factory, Agent propriu, Server de limbaj, Dictare și Predicție.
 
 Bara de instrumente conține înapoi și înainte prin locurile pe care le-ați editat (⌃- și ⌃⇧-), ramura, Deschidere rapidă și prezentarea Activitate, care listează tot ce rulează. **Deschideți alături** din meniul contextual al unui fișier afișează un al doilea document lângă primul. După o repornire sau o blocare, fiecare fereastră revine cu filele sale, iar editoarele cu text nesalvat revin cu acel text. Imaginile, sunetul, videoclipurile, fonturile și documentele Office se deschid într-o filă prin Quick Look, fișierele PDF prin PDFKit.
 
@@ -155,7 +156,22 @@ Fișierul `.vscode/launch.json` al unui proiect este citit. Meniul Depanare folo
 
 ## Terminal
 
-Terminale în file (⌃\`) cu mediul shellului de autentificare, desenate cu Metal. ⌘K golește ecranul. O imagine lipită sau trasă ajunge la un agent de programare care rulează în terminal ori lipește calea unei copii salvate. ⌘-clic deschide linkuri și nume de fișiere. Un server de dezvoltare pornit din terminal poate fi deschis în fila browserului.
+Terminalele se deschid ca file (**Fișier › Terminal nou**, ⌃\`) cu shellul de autentificare și mediul său. Terminalul este cel al lui [Tapa](https://github.com/sventmueller/tapa), cu propriul nucleu VT, desenat cu Metal: xterm și VT520 cu protocolul de tastatură Kitty, linkuri OSC 8, ieșire sincronizată, truecolor și raportarea mouse-ului, la dimensiunea textului din editor și în culorile luminoase și întunecate ale lui Tapa. Integrarea sa cu shellul pentru zsh, bash și fish se configurează singură, fără să vă atingă fișierele de configurare, și merge cu dvs. când vă conectați prin `ssh` la o altă gazdă. După o repornire, un terminal revine ca un shell nou în dosarul în care se afla, doar în dosarele de încredere; ce afișa nu revine.
+
+- **Blocuri de comenzi.** Fiecare comandă și ieșirea ei formează un bloc. ⌘↑ și ⌘↓ sar de la un prompt la altul. **Selectați blocul** (⇧⌘A), **Copiați ieșirea** (⌥⌘C), **Salvați ieșirea…** (⌥⌘S) și **Restrângeți/extindeți blocul** (⇧⌘↩) acționează asupra blocului curent; **Adăugați/eliminați marcajul** (⇧⌘M) marchează un rând, iar ⇧⌘↑ și ⇧⌘↓ sar de la un marcaj la altul. Cu **Marcați comenzile ca blocuri** activat, o bară din margine arată fiecare bloc, comenzile eșuate sunt marcate, comanda care rulează rămâne sus în timp ce ieșirea ei derulează, iar butoanele de deasupra blocului de sub cursor îi arată starea, durata și aceleași acțiuni.
+- **Trimiteți blocul agentului** (meniul Editare și meniul contextual al terminalului) deschide o filă IA nouă cu linia de comandă și ieșirea blocului curent atașate ca Conținut extern (consultați [Încredere](#încredere)) și o ciornă care întreabă de cauză când comanda a eșuat, așa cum face jurnalul unui job CI eșuat. Nu are scurtătură până nu îi dați una lui `terminal.blockToAgent` în `keybindings.json`.
+- **Câmpul de introducere.** **Vizualizare › Afișați/ascundeți câmpul de introducere** (⌘I) transformă linia de comandă într-un câmp de text în partea de jos a terminalului, cu dosarul și ramura Git deasupra lui; terminalele noi urmează ultima dvs. alegere. Retur trimite întregul câmp către shell. Are nevoie de integrarea cu shellul și se dă la o parte pentru programele pe ecran complet precum vim, htop sau claude.
+- **Propunerile** apar cu gri imediat după ceea ce tastați, în câmpul de introducere și fără el: din istoricul dvs., cu dosarul, ramura și codul de ieșire cu care a rulat fiecare comandă, din specificațiile a peste 700 de unelte de linie de comandă și din proiect, precum ramuri git, containere docker, scripturi din `package.json` și ținte make, just și cargo. → acceptă o propunere; Tab completează, iar cu mai mulți candidați deschide un meniu pe care tastarea îl filtrează. Înainte să tastați, câmpul poate propune comanda care urmează de obicei. Comenzile sunt colorate pe părți, iar una pe care shellul dvs. nu o poate rula primește o subliniere roșie întreruptă. Propunerile nu folosesc niciodată rețeaua și pornesc programe doar din `PATH`-ul shellului de autentificare.
+- **Găsiți** (⌘F, ⌘G și ⇧⌘G cât timp un terminal este focalizat) caută în tot istoricul, cu expresii regulate, cu respectarea majusculelor și pe cuvinte întregi, și numără rezultatele; bara de derulare marchează rezultatele, prompturile și comenzile eșuate.
+- **Selectare și copiere.** Un dublu clic selectează în întregime un URL, o cale, un hash sau o adresă IP, iar tragerea cu ⌥ selectează un dreptunghi. **Selectare cu tastatura** (⇧⌘C) mută o selecție cu tastele Vim, **Copiați cu formatare** (⇧⌥⌘C) păstrează culorile și stilurile. Un program poate copia prin OSC 52 doar cât timp terminalul său are focalizarea tastaturii, iar terminalul vă anunță; niciun program nu citește clipboardul.
+- **Lipire.** Textul care ar rula o comandă la ruptura de rând sau care conține caractere de control apare întâi într-o casetă de dialog, cu excepția cazului în care programul îl citește ca lipire între paranteze (bracketed paste). Lipirea unei imagini o predă unui agent de programare care rulează în terminal și o citește singur din clipboard, ori lipește calea unei copii salvate printre cache-uri; prin `ssh`, terminalul spune de ce nu o face. Fișierele trase pe un terminal, inclusiv imaginile, ajung ca căi între ghilimele; o imagine trasă din altă parte, de exemplu dintr-o pagină web, urmează drumul uneia lipite.
+- **Linkuri.** ⌘-clic deschide o adresă web în fila browserului, un link `mailto:` în Mail și un nume de fișier, inclusiv cu rândul și coloana, în editorul lui Dango; linkurile sunt găsite chiar și fără OSC 8. Linkurile de alte tipuri nu se deschid.
+- **Servere de dezvoltare.** Când un program din terminal pornește un server de dezvoltare, o bară deasupra terminalului îi afișează adresa, iar **Deschideți într-o filă de browser** îl deschide acolo.
+- **Notificări și progres.** Clopoțelul și o notificare cerută de un program (OSC 9 și OSC 777) pun punctul roșu pe fila terminalului cât timp nu îl vedeți; cât timp altă aplicație este în prim-plan, notificarea ajunge și la macOS, iar un clic pe ea readuce terminalul. Progresul raportat de un program (OSC 9;4) apare ca un inel pe fila sa și ca o bară pe pictograma din Dock.
+- **Introducere securizată de la tastatură** (**Dango › Introducere securizată de la tastatură**) împiedică alte aplicații să citească ce tastați într-un terminal; se activează și singură cât timp un program cere o parolă.
+- **Taste.** ⌘K golește terminalul (**Editare › Goliți terminalul**); ⌃C și Esc ajung la programul din el. Comenzile terminalului se află în meniurile Editare și Vizualizare, iar scurtăturile lor acționează doar cât timp un terminal are focalizarea tastaturii, astfel încât ⌘I, ⌘↑ sau ⌘F își păstrează sensul în editor. Meniul contextual deschide și un **Terminal nou aici** și închide terminalul cu **Închideți zona**.
+
+**Configurări › Terminal** comută câmpul de introducere pentru terminalele noi, tastele sale Vim, propunerile, culorile comenzilor, sublinierea celor necunoscute, blocurile de comenzi, copierea imediată a selecției, afișarea întâi a lipirilor pe mai multe linii și ⌥ ca meta-tastă.
 
 ## Browser
 
@@ -205,7 +221,7 @@ Un dosar poate face să ruleze programe imediat ce ceva este pornit în el: hook
 - **De încredere:** Git, serverele de limbaj, depanatoarele, agenții și CI rulează pentru acest dosar și tot ce conține.
 - **Restricționat:** puteți citi și edita; marcajele de modificare din editor provin din citirea directă a `.git`. Nimic din ce configurează dosarul nu este pornit. Panourile Git, CI și IA spun acest lucru și oferă să aveți încredere în dosar.
 
-Un text care nu provine de la dvs. poate conține instrucțiuni menite să conducă un agent (injectare de prompt). Ieșirea unui terminal (`@terminal`), o pagină web (`@browser`), un jurnal CI transmis unui agent, un fișier din afara proiectului și un text mai lung lipit dintr-o pagină web sunt, prin urmare, trimise marcate: eticheta spune „Conținut extern”, iar agentul primește textul împreună cu avertismentul că sunt date nesigure ale căror instrucțiuni nu trebuie să le urmeze. Paginile web ale agentului propriu vin cu același avertisment. Un text lipit este considerat provenit dintr-o pagină web atunci când browserul indică acest lucru în clipboard, așa cum fac Safari, Chrome și Firefox; textul din alte surse și o frază scurtă de câteva cuvinte rămân ale dvs.
+Un text care nu provine de la dvs. poate conține instrucțiuni menite să conducă un agent (injectare de prompt). Ieșirea unui terminal (`@terminal` sau un bloc de comenzi predat unui agent), o pagină web (`@browser`), un jurnal CI transmis unui agent, un fișier din afara proiectului și un text mai lung lipit dintr-o pagină web sunt, prin urmare, trimise marcate: eticheta spune „Conținut extern”, iar agentul primește textul împreună cu avertismentul că sunt date nesigure ale căror instrucțiuni nu trebuie să le urmeze. Paginile web ale agentului propriu vin cu același avertisment. Un text lipit este considerat provenit dintr-o pagină web atunci când browserul indică acest lucru în clipboard, așa cum fac Safari, Chrome și Firefox; textul din alte surse și o frază scurtă de câteva cuvinte rămân ale dvs.
 
 ## Sandbox
 
@@ -221,9 +237,9 @@ Dango însuși rulează fără App Sandbox, deoarece fiecare program pe care îl
 ## Aspect și accesibilitate
 
 - **Modul întunecat** urmează sistemul; **Măriți contrastul** și **Reduceți mișcarea** sunt respectate.
-- **VoiceOver** denumește bara laterală, filele, cardurile din cronologia IA, rândurile din Git și CI, depanatorul și textul terminalului. Punctele de întrerupere nu se deosebesc niciodată doar prin culoare.
+- **VoiceOver** denumește bara laterală, filele, cardurile din cronologia IA, rândurile din Git și CI și depanatorul, citește rândurile terminalului și anunță ieșirea nouă. Punctele de întrerupere nu se deosebesc niciodată doar prin culoare.
 - **Tastatură.** Fiecare comandă are o scurtătură și toate pot fi modificate în `keybindings.json`; ⌥⌘\` trece la panoul următor.
-- **De la dreapta la stânga.** În arabă și ebraică, fereastra este oglindită, în timp ce vizualizările de cod rămân de la stânga la dreapta.
+- **De la dreapta la stânga.** În arabă și ebraică, fereastra este oglindită, în timp ce vizualizările de cod și grila terminalului rămân de la stânga la dreapta.
 
 Ce adaugă Dango peste AppKit, zonă cu zonă, se află în [ACCESSIBILITY.md](../../../ACCESSIBILITY.md).
 
@@ -257,6 +273,10 @@ Dango urmează ordinea limbilor din **Configurări sistem › General › Limbă
 | Aldin, cursiv, tăiat, cod, link | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | Titlu 1 până la 3 | ⌥⌘1 până la ⌥⌘3 |
 | Terminal nou, golirea terminalului | ⌃\`, ⌘K |
+| Într-un terminal: căutare, găsirea următorului, găsirea anteriorului | ⌘F, ⌘G, ⇧⌘G |
+| Într-un terminal: promptul anterior și următor, marcajul anterior și următor, adăugarea sau eliminarea unui marcaj | ⌘↑ și ⌘↓, ⇧⌘↑ și ⇧⌘↓, ⇧⌘M |
+| Într-un terminal: selectarea blocului, copierea ieșirii, salvarea ieșirii, restrângerea blocului | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| Într-un terminal: câmpul de introducere, selectare cu tastatura, copiere cu formatare | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | Focalizare pe câmpul de mesaj al agentului, comentarea unui plan | ⌘Esc, ⌥⌘K |
 | Câmp de adresă, reîncărcare, înapoi, înainte (browser) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Pornirea sau oprirea dictării | ⌃⌥D |
@@ -282,7 +302,7 @@ Dango urmează ordinea limbilor din **Configurări sistem › General › Limbă
 
 | Loc | Ce |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`; `threads/` (lista panoului IA), `agent-threads/` (conversațiile agentului propriu), `layouts/` (file pentru fiecare proiect), `recovery/` (editoare nesalvate după o blocare), `checkpoints/` (pentru dosare fără Git), `worktrees/`, `agents/` și `tools/` (agenți, servere de limbaj și adaptoare de depanare instalate), `task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`, `terminal-history.sqlite` (istoricul comenzilor din terminale); `threads/` (lista panoului IA), `agent-threads/` (conversațiile agentului propriu), `layouts/` (file pentru fiecare proiect), `recovery/` (editoare nesalvate după o blocare), `checkpoints/` (pentru dosare fără Git), `worktrees/`, `agents/` și `tools/` (agenți, servere de limbaj și adaptoare de depanare instalate), `task-output/` |
 | `~/Library/Caches/<id>/` | imagini lipite, scripturi de integrare cu shellul, registrul ACP; poate fi șters |
 | `~/Library/Logs/<id>/dictation/` | fișierele jurnal ale dictării |
 | `~/Library/Application Support/Lowspeak` și `FluidAudio` | modele locale de dictare, partajate cu Lowspeak |
@@ -300,6 +320,7 @@ Claude își păstrează propriile sesiuni în `~/.claude/projects`; Dango le ci
 - **Cifrele de consum și defalcarea contextului lui Claude** se bazează pe părți ale protocolului său marcate ca experimentale și sunt ascunse când acestea lipsesc.
 - **Derularea înapoi a discuției** funcționează doar pentru Claude; la ceilalți agenți se derulează înapoi doar codul.
 - **Autentificarea la CI prin browser** este dezactivată; folosiți `gh`, `glab`, un token sau mediul.
+- **Fără imagini în terminal:** grafica Kitty, Sixel și imaginile iTerm2 nu se afișează.
 - **Gemini CLI nu este oferit:** Google a încheiat autentificarea cu un cont personal și trimite la Antigravity. Conversațiile Gemini anterioare rămân lizibile.
 
 ## Compilare din codul sursă
@@ -308,7 +329,7 @@ Aveți nevoie de:
 
 - macOS 14 sau o versiune ulterioară cu Xcode Command Line Tools (`xcode-select --install`); Xcode în sine nu este necesar.
 - Rust așa cum îl indică `rust-toolchain.toml`. `rust` din Homebrew compilează pentru procesorul acestui Mac; compilarea universală a unei versiuni necesită rustup cu țintele `aarch64-apple-darwin` și `x86_64-apple-darwin`.
-- Copii ale [splat](https://github.com/sventmueller/splat) și [lowspeak](https://github.com/sventmueller/lowspeak) lângă aceasta (`../splat`, `../lowspeak`), ambele pe ramura `main`; workspace-ul preia crate-uri din ele prin cale.
+- Copii ale [splat](https://github.com/sventmueller/splat), [lowspeak](https://github.com/sventmueller/lowspeak) și [tapa](https://github.com/sventmueller/tapa) lângă aceasta (`../splat`, `../lowspeak`, `../tapa`), fiecare pe ramura sa `main`; workspace-ul preia crate-uri din ele prin cale, iar terminalul din Tapa.
 - cmake, pentru fiecare compilare cu dictare (`make run`, `make build`, `make release`), care compilează whisper.cpp. `make check` compilează fără.
 
 | Comandă | Ce face |

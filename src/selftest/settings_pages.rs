@@ -695,7 +695,7 @@ fn own_agent_tab(f: Fixture) {
     let led = press(sel!(ideAgentsOwnSettings:));
     check(
         "the Agents tab leads to the own agent's tab",
-        led && tabs().is_some_and(|t| t.selectedTabViewItemIndex() == 4),
+        led && tabs().is_some_and(|t| t.selectedTabViewItemIndex() == 5),
         "",
     );
     sheet_gone(move || general(f));

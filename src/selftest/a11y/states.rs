@@ -337,13 +337,25 @@ fn settings_general(root: PathBuf) {
     if let Some(window) = crate::settings::window() {
         crate::selftest::snapshot(&window, &format!("{}-settings", name()));
     }
+    if let Some(mtm) = MainThreadMarker::new() {
+        crate::settings::show_terminal(mtm);
+    }
+    settled(root, settings_terminal);
+}
+
+fn settings_terminal(root: PathBuf) {
+    walk("the terminal settings miss nothing");
+    select_settings_tab(2);
+    settled(root, settings_ci);
+}
+
+fn select_settings_tab(index: isize) {
     let tabs = crate::settings::window()
         .and_then(|w| w.contentViewController())
         .and_then(|c| c.downcast::<NSTabViewController>().ok());
     if let Some(tabs) = tabs {
-        tabs.setSelectedTabViewItemIndex(1);
+        tabs.setSelectedTabViewItemIndex(index);
     }
-    settled(root, settings_ci);
 }
 
 fn settings_ci(root: PathBuf) {

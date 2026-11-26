@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use ide_process::Supervisor;
-use ide_terminal::PasteAction;
 use objc2::msg_send;
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
@@ -16,6 +15,7 @@ use objc2_app_kit::{
     NSAppearanceNameDarkAqua, NSBitmapImageRep, NSEventModifierFlags, NSEventType, NSPasteboard, NSPasteboardTypeTIFF,
 };
 use objc2_foundation::{NSData, NSPoint, NSString};
+use term_session::PasteAction;
 
 use super::{check, finish, give_up, helpers, snapshot};
 use crate::terminal::{TerminalView, inspect};
@@ -30,7 +30,10 @@ const APPEARANCE_REDRAW: Duration = Duration::from_millis(400);
 const SAMPLE: Duration = Duration::from_millis(10);
 /// How long the button stays down above the lines, during which the view keeps scrolling back.
 const HELD_DRAG: Duration = Duration::from_millis(600);
-/// How long the view must stay put after the button came up.
+/// How long the last step of the scroll takes to reach the view after the button came up, as Tapa's view takes its
+/// frames from the session's reader thread.
+const LAST_FRAME: Duration = Duration::from_millis(100);
+/// How long the view must stay put after that.
 const AFTER_RELEASE: Duration = Duration::from_millis(300);
 
 /// A PNG of two by two orange pixels.
@@ -90,6 +93,11 @@ fn screen(id: u64) -> String {
         .filter(|line| !line.trim().is_empty())
         .collect::<Vec<_>>()
         .join(" ⏎ ")
+}
+
+/// What the dev server banner above the terminal view `id` says while it shows.
+fn dev_server_banner(id: u64) -> Option<String> {
+    crate::terminal::dev_server_banner(id)?.shown()
 }
 
 /// Waits up to `limit` for something about the terminal view `id`.
@@ -185,24 +193,37 @@ fn open_file_link(id: u64, root: PathBuf) {
         let terminal_tab = controller.selected_tab();
         let line = view.visible_lines().iter().position(|line| line == "README.md:1:3");
         if let Some(line) = line {
-            let at = view.cell_center(ide_terminal::Point { line, column: 2 });
+            let at = view.cell_center(term_session::Point { line, column: 2 });
             view.mouse(NSEventType::LeftMouseDown, at, NSEventModifierFlags::Command);
             view.mouse(NSEventType::LeftMouseUp, at, NSEventModifierFlags::Command);
         }
-        let editor = crate::editor::editor_of(&controller, &root.join("README.md"));
-        let cursor = editor.as_ref().map(|editor| editor.selectedRange().location);
-        if editor.is_some()
-            && let Some(tab) = controller.selected_tab()
-        {
-            controller.close_tab(tab);
-        }
-        check(
-            "⌘-click on file:line:column opens the file there and the terminal comes back after",
-            cursor == Some(2) && controller.selected_tab() == terminal_tab,
-            format!("line {line:?}, cursor at {cursor:?}"),
-        );
-        pointer(id, root);
+        // The view looks for the file off the main thread, so the editor opens a moment after the click.
+        let window = root.clone();
+        let placed = move || readme_cursor(&window) == Some(2);
+        helpers::wait_within(Duration::from_secs(5), placed, move |_| {
+            let Some(controller) = controller_of(&root) else {
+                return give_up(NAME, "the folder's window is open");
+            };
+            let editor = crate::editor::editor_of(&controller, &root.join("README.md"));
+            let cursor = editor.as_ref().map(|editor| editor.selectedRange().location);
+            if let Some(tab) = editor.as_deref().and_then(crate::editor::tab_of) {
+                controller.close_tab(tab);
+            }
+            check(
+                "⌘-click on file:line:column opens the file there and the terminal comes back after",
+                cursor == Some(2) && controller.selected_tab() == terminal_tab,
+                format!("line {line:?}, cursor at {cursor:?}"),
+            );
+            pointer(id, root);
+        });
     });
+}
+
+/// Where the cursor of the editor of the folder's README stands, while one is open.
+fn readme_cursor(root: &Path) -> Option<usize> {
+    let controller = controller_of(root)?;
+    let editor = crate::editor::editor_of(&controller, &root.join("README.md"))?;
+    Some(editor.selectedRange().location)
 }
 
 /// With ⌘ held over a link the pointer is the pointing hand; without ⌘ or off the link it is the I-beam.
@@ -226,8 +247,8 @@ fn pointer(id: u64, root: PathBuf) {
             .position(|line| line == "https://example.com/docs");
         let (none, command) = (NSEventModifierFlags::empty(), NSEventModifierFlags::Command);
         let seen = line.map(|line| {
-            let on_link = view.cell_center(ide_terminal::Point { line, column: 10 });
-            let off_link = view.cell_center(ide_terminal::Point { line, column: 60 });
+            let on_link = view.cell_center(term_session::Point { line, column: 10 });
+            let off_link = view.cell_center(term_session::Point { line, column: 60 });
             view.mouse(NSEventType::MouseMoved, on_link, none);
             let plain = view.hand();
             view.modifiers(0x37, command);
@@ -291,12 +312,11 @@ fn show_styles(id: u64, root: PathBuf) {
     view.press(0x20, "\u{15}", "u", NSEventModifierFlags::Control);
     view.type_text(STYLES);
     let printed = |view: &TerminalView| {
-        view.visible_lines().iter().any(|line| line.starts_with("bold italic")) && view.dev_server_banner().is_some()
+        view.visible_lines().iter().any(|line| line.starts_with("bold italic"))
+            && dev_server_banner(view.id()).is_some()
     };
     wait(id, Duration::from_secs(10), printed, move |printed| {
-        let banner = inspect::view(id)
-            .and_then(|view| view.dev_server_banner())
-            .unwrap_or_default();
+        let banner = dev_server_banner(id).unwrap_or_default();
         check(
             "styled output prints and a dev server's address raises the banner",
             printed && banner.contains("http://localhost:5173/"),
@@ -328,7 +348,7 @@ fn pictures(id: u64, root: PathBuf) {
             move || background() != light,
             move |_| {
                 let dark = picture("terminal-dark");
-                let brightness = |rgb: Option<ide_terminal::Rgb>| {
+                let brightness = |rgb: Option<term_session::Rgb>| {
                     rgb.map_or(0, |c| u32::from(c.r) + u32::from(c.g) + u32::from(c.b))
                 };
                 check(
@@ -449,7 +469,7 @@ fn autoscroll(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
         return give_up(NAME, "the terminal is open");
     };
-    let start = view.cell_center(ide_terminal::Point { line: 3, column: 2 });
+    let start = view.cell_center(term_session::Point { line: 3, column: 2 });
     let above = NSPoint::new(start.x, -60.0);
     view.mouse(NSEventType::LeftMouseDown, start, NSEventModifierFlags::empty());
     view.mouse(NSEventType::LeftMouseDragged, above, NSEventModifierFlags::empty());
@@ -457,16 +477,18 @@ fn autoscroll(id: u64, root: PathBuf) {
         let Some(view) = inspect::view(id) else {
             return give_up(NAME, "the terminal is open");
         };
-        let back = view.scrolled_back();
         view.mouse(NSEventType::LeftMouseUp, above, NSEventModifierFlags::empty());
-        helpers::after(AFTER_RELEASE, move || {
-            let still = inspect::view(id).map_or(0, |view| view.scrolled_back());
-            check(
-                "a selection dragged above the lines scrolls back until the button comes up",
-                back > 2 && still == back,
-                format!("{back} lines back, {still} after release"),
-            );
-            font_size(id, root);
+        helpers::after(LAST_FRAME, move || {
+            let back = inspect::view(id).map_or(0, |view| view.scrolled_back());
+            helpers::after(AFTER_RELEASE, move || {
+                let still = inspect::view(id).map_or(0, |view| view.scrolled_back());
+                check(
+                    "a selection dragged above the lines scrolls back until the button comes up",
+                    back > 2 && still == back,
+                    format!("{back} lines back, {still} after release"),
+                );
+                font_size(id, root);
+            });
         });
     });
 }

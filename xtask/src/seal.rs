@@ -3,7 +3,7 @@
 //! one along when HEAD's content has it. The fingerprint is the git tree of the content without the version, which only
 //! deploy raises, so a commit of the sealed working tree and its release commit inherit the seal, and with the commits
 //! and changes of
-//! `../splat` and `../lowspeak`, so a change there needs a new seal. Red beats green for the same fingerprint.
+//! `../splat`, `../lowspeak` and `../tapa`, so a change there needs a new seal. Red beats green for the same fingerprint.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -22,7 +22,7 @@ const BRANCH: &str = "main";
 const LISTED: usize = 20;
 
 /// The checkouts beside the repository that the workspace builds crates from by path (E14).
-pub(crate) const SIBLINGS: [&str; 2] = ["splat", "lowspeak"];
+pub(crate) const SIBLINGS: [&str; 3] = ["splat", "lowspeak", "tapa"];
 
 /// The folder of the fingerprint's tree that records the siblings as gitlinks, which a tree holds without the
 /// objects they name.

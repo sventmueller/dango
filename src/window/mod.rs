@@ -20,6 +20,7 @@ mod new_tab_button;
 mod notice;
 pub(crate) mod panels;
 pub(crate) mod panes;
+mod progress_ring;
 mod quick_open;
 mod registry;
 mod search;
@@ -54,6 +55,7 @@ pub(crate) use ide_ui_common::window::TabId;
 use ide_ui_common::window::WindowId;
 pub(crate) use new_tab_button::NewTabMenu;
 pub(crate) use notice::announce;
+pub(crate) use progress_ring::tone_color;
 #[cfg(feature = "selftest")]
 pub(crate) use registry::open_windows;
 pub(crate) use registry::{
@@ -254,6 +256,26 @@ define_class!(
         #[unsafe(method(ideContainerCommand:))]
         fn container_command(&self, sender: Option<&AnyObject>) {
             guarded((), || crate::containers_panel::perform(self, tag_of(sender)));
+        }
+
+        #[unsafe(method(ideTerminalCommand:))]
+        fn terminal_command(&self, sender: Option<&AnyObject>) {
+            guarded((), || crate::terminal::perform(self, tag_of(sender)));
+        }
+
+        #[unsafe(method(ideTerminalContextCommand:))]
+        fn terminal_context_command(&self, sender: Option<&AnyObject>) {
+            guarded((), || crate::terminal::perform_on_view(self, tag_of(sender)));
+        }
+
+        #[unsafe(method(performTextFinderAction:))]
+        fn text_finder_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || crate::terminal::text_finder(self, tag_of(sender)));
+        }
+
+        #[unsafe(method(termClear:))]
+        fn clear_terminal_action(&self, _sender: Option<&AnyObject>) {
+            guarded((), || crate::terminal::clear(self));
         }
 
         #[unsafe(method(ideTestRunAll:))]

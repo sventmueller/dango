@@ -12,7 +12,7 @@ Dango menyatukan kode, agen yang mengubahnya, dan semua hal di sekitarnya dalam 
 
 **Menemukan bug?** [Buka issue](https://github.com/sventmueller/dango/issues/new) dan sebutkan dengan agen apa dan di jenis proyek apa bug itu terjadi.
 
-[![Rust edisi 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 atau lebih baru](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universal: Apple Silicon dan Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit melalui objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35 bahasa antarmuka](https://img.shields.io/badge/languages-35-4C9A2A) ![Tanpa telemetri](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Ditandatangani dengan Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Lisensi: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#lisensi)
+[![Rust edisi 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 atau lebih baru](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universal: Apple Silicon dan Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit melalui objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35 bahasa antarmuka](https://img.shields.io/badge/languages-35-4C9A2A) ![Tanpa telemetri](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Ditandatangani dengan Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Lisensi: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#lisensi)
 
 **Bahasa Indonesia** · [Bahasa Melayu](../ms/README.md) · [Català](../ca/README.md) · [Čeština](../cs/README.md) · [Dansk](../da/README.md) · [Deutsch](../de/README.md) · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · [Magyar](../hu/README.md) · [Nederlands](../nl/README.md) · [Norsk](../no/README.md) · [Polski](../pl/README.md) · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · [Română](../ro/README.md) · [Slovenčina](../sk/README.md) · [Slovenščina](../sl/README.md) · [Suomi](../fi/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [繁體中文](../zh-Hant/README.md)
 
@@ -55,6 +55,7 @@ Dango menyatukan kode, agen yang mengubahnya, dan semua hal di sekitarnya dalam 
 - **Satu jendela per folder.** File, terminal, halaman web, utas AI, diff, dan pratinjau adalah tab macOS di jendela itu. Bar samping berisi File, Pencarian, Agen, Git, Tes, Debug, CI, dan Container.
 - **Editor kode sungguhan.** Warna sintaksis, beberapa titik sisip, pelipatan, `.editorconfig`, server bahasa untuk 17 bahasa dengan pelengkapan, buka definisi, referensi, ganti nama, perbaikan cepat, dan hierarki, serta prediksi saat mengetik dari GitHub Copilot atau model lokal.
 - **Debugger, Git, dan CI bawaan.** Breakpoint dan eksekusi langkah demi langkah untuk Rust, C, C++, Swift, Go, JavaScript, TypeScript, dan Python; stage hunk satu per satu, branch, stash, konflik, dan grafik commit; run, job, dan log dari GitHub Actions dan GitLab CI.
+- **Terminal dari Tapa.** Blok perintah yang keluarannya dapat Anda salin, simpan, atau serahkan ke agen, bidang input dengan saran dari riwayat Anda dan proyek, pencarian di seluruh riwayat, serta notifikasi dan kemajuan dari program yang berjalan di dalamnya.
 - **Berhati-hati dengan folder Anda.** Folder yang tidak Anda percayai tidak memulai apa pun: tidak ada proses Git, server bahasa, hook, atau agen. Perintah Git yang merusak tidak pernah diizinkan selamanya, dan commit diperiksa dari rahasia.
 - **Dikte.** Berbicaralah ke editor dan kolom pesan, secara online melalui OpenAI atau Groq, atau secara lokal dengan Whisper dan Parakeet.
 - **Asli sepenuhnya.** Jendela, tab, menu, dan bar alat AppKit, TextKit 2 untuk editor, Metal untuk terminal, WebKit hanya di tab browser. Mode gelap, Tingkatkan Kontras, dan VoiceOver bekerja seperti di setiap app Mac.
@@ -84,7 +85,7 @@ Dango menyatukan kode, agen yang mengubahnya, dan semua hal di sekitarnya dalam 
 3. **Setiap dokumen adalah tab** di jendela folder, tab bawaan macOS. “+” di ujung bar tab dan ⌘T menawarkan file baru, terminal, browser, dan setiap agen yang terinstal, juga di worktree Git tersendiri; menahan “+” menampilkan hal yang sama sebagai menu.
 4. **Buka Cepat** dengan ⌘P menemukan file, dan dengan `#` simbol proyek; ⇧⌘F mencari dan mengganti di proyek.
 5. **Berbicaralah dengan agen** di tab AI. ⌘Esc memindahkan fokus papan ketik ke kolom pesannya dan kembali.
-6. **Pengaturan** dengan ⌘, berisi tab Umum, CI, Agen, Agen Bawaan, Server bahasa, Dikte, dan Prediksi.
+6. **Pengaturan** dengan ⌘, berisi tab Umum, Terminal, CI, Agen, Software Factory, Agen Bawaan, Server bahasa, Dikte, dan Prediksi.
 
 Bar alat berisi mundur dan maju melalui tempat yang Anda edit (⌃- dan ⌃⇧-), branch, Buka Cepat, dan ikhtisar aktivitas, yang mencantumkan semua yang sedang berjalan. **Buka di Samping** di menu konteks file menampilkan dokumen kedua di samping yang pertama. Setelah mulai ulang atau crash, setiap jendela kembali dengan tab-tabnya, dan editor yang berisi teks belum disimpan kembali dengan teks tersebut. Gambar, audio, video, font, dan dokumen Office terbuka di tab melalui Lihat Cepat, PDF melalui PDFKit.
 
@@ -155,7 +156,22 @@ Breakpoint, juga dengan kondisi dan sebagai logpoint, eksekusi langkah demi lang
 
 ## Terminal
 
-Terminal di tab (⌃\`) dengan lingkungan shell login, digambar dengan Metal. ⌘K membersihkan layar. Gambar yang ditempel atau diseret diberikan ke agen pemrograman yang berjalan di terminal, atau menempelkan jalur salinan yang disimpan. ⌘-klik membuka tautan dan nama file. Server pengembangan yang dimulai terminal dapat dibuka di tab browser.
+Terminal terbuka sebagai tab (**File › Terminal Baru**, ⌃\`) dengan shell login dan lingkungannya. Terminalnya adalah milik [Tapa](https://github.com/sventmueller/tapa), dengan inti VT sendiri, digambar dengan Metal: xterm dan VT520 dengan protokol papan ketik Kitty, tautan OSC 8, keluaran tersinkron, truecolor, dan pelaporan mouse, dalam ukuran teks editor serta warna terang dan gelap Tapa. Integrasi shell-nya untuk zsh, bash, dan fish menyiapkan dirinya sendiri tanpa menyentuh file konfigurasi Anda dan ikut serta saat Anda `ssh` ke host lain. Setelah mulai ulang, terminal kembali sebagai shell baru di folder tempatnya berada, hanya di folder tepercaya; apa yang ditampilkannya tidak ikut kembali.
+
+- **Blok perintah.** Setiap perintah dan keluarannya membentuk sebuah blok. ⌘↑ dan ⌘↓ melompat antar-prompt. **Pilih Blok** (⇧⌘A), **Salin Output** (⌥⌘C), **Simpan Output…** (⌥⌘S), dan **Ciutkan/Bentangkan Blok** (⇧⌘↩) bekerja pada blok saat ini; **Tambah/Hapus Markah** (⇧⌘M) menandai sebuah baris, dan ⇧⌘↑ dan ⇧⌘↓ melompat antar-markah. Saat **Tandai perintah sebagai blok** aktif, sebuah bilah di margin menunjukkan setiap blok, perintah yang gagal ditandai, perintah yang sedang berjalan tetap di bagian atas selama keluarannya bergulir, dan tombol di atas blok yang berada di bawah penunjuk menampilkan status, durasi, dan tindakan yang sama.
+- **Kirim Blok ke Agen** (menu Edit dan menu konteks terminal) membuka tab AI baru dengan baris perintah dan keluaran blok saat ini terlampir sebagai Konten Eksternal (lihat [Kepercayaan](#kepercayaan)), serta draf yang menanyakan penyebabnya jika perintah gagal, seperti yang dilakukan log job CI yang gagal. Perintah ini tidak punya pintasan sampai Anda memberikannya untuk `terminal.blockToAgent` di `keybindings.json`.
+- **Bidang input.** **Lihat › Tampilkan/Sembunyikan Bidang Input** (⌘I) mengubah baris perintah menjadi bidang teks di bagian bawah terminal, dengan folder dan branch Git di atasnya; terminal baru mengikuti pilihan terakhir Anda. Return mengirim seluruh isi bidang ke shell. Bidang ini memerlukan integrasi shell dan menyingkir untuk program layar penuh seperti vim, htop, atau claude.
+- **Saran** tampil abu-abu tepat setelah apa yang Anda ketik, di bidang input maupun tanpanya: dari riwayat Anda, dengan folder, branch, dan kode keluar tempat setiap perintah dijalankan, dari spesifikasi untuk lebih dari 700 alat baris perintah, dan dari proyek, seperti branch git, kontainer docker, skrip `package.json`, serta target make, just, dan cargo. → menerima saran; Tab melengkapi, dan bila ada beberapa kandidat membuka menu yang tersaring saat Anda mengetik. Sebelum Anda mengetik, bidang ini dapat menyarankan perintah yang biasanya datang berikutnya. Perintah diwarnai menurut bagian-bagiannya, dan perintah yang tidak dapat dijalankan shell Anda mendapat garis bawah merah putus-putus. Saran tidak pernah menggunakan jaringan dan hanya menjalankan program dari `PATH` shell login.
+- **Temukan** (⌘F, ⌘G, dan ⇧⌘G saat terminal memiliki fokus) mencari di seluruh riwayat, dengan ekspresi reguler, huruf besar-kecil, dan kata utuh, serta menghitung hasilnya; bilah gulir menandai hasil, prompt, dan perintah yang gagal.
+- **Memilih dan menyalin.** Klik ganda memilih URL, jalur, hash, atau alamat IP secara utuh, dan seret dengan ⌥ memilih sebuah persegi panjang. **Pilih dengan Papan Ketik** (⇧⌘C) menggerakkan pilihan dengan tombol Vim, **Salin dengan Format** (⇧⌥⌘C) mempertahankan warna dan gaya. Program hanya boleh menyalin dengan OSC 52 selama terminalnya memiliki fokus papan ketik, dan terminal memberitahukannya; tidak ada program yang membaca papan klip.
+- **Menempel.** Teks yang akan menjalankan perintah pada jeda barisnya, atau berisi karakter kontrol, tampil dulu di sebuah lembar kecuali program membacanya sebagai bracketed paste. Menempelkan gambar memberikannya ke agen pemrograman yang berjalan di terminal, yang membacanya sendiri dari papan klip, atau menempelkan jalur salinan yang disimpan di antara cache; melalui `ssh` terminal memberi tahu mengapa tidak. File yang diseret ke terminal, termasuk gambar, tiba sebagai jalur berkutip; gambar yang diseret dari tempat lain, seperti halaman web, diperlakukan sama seperti gambar yang ditempel.
+- **Tautan.** ⌘-klik membuka alamat web di tab browser, tautan `mailto:` di Mail, dan nama file, juga dengan baris dan kolomnya, di editor Dango; tautan ditemukan bahkan tanpa OSC 8. Tautan jenis lain tidak dibuka.
+- **Server pengembangan.** Saat program di terminal memulai server pengembangan, sebuah bilah di atas terminal menyebutkan alamatnya, dan **Buka di Tab Browser** membukanya di sana.
+- **Notifikasi dan kemajuan.** Bel dan notifikasi yang diminta program (OSC 9 dan OSC 777) memasang titik merah di tab terminal selama Anda tidak melihatnya; saat app lain berada di depan, notifikasi juga dikirim ke macOS, dan mengekliknya membawa terminal kembali. Kemajuan yang dilaporkan program (OSC 9;4) tampil sebagai cincin di tabnya dan sebagai bilah di ikon Dock.
+- **Entri Papan Ketik Aman** (**Dango › Entri Papan Ketik Aman**) mencegah app lain membaca apa yang Anda ketik di terminal; fitur ini juga menyala sendiri selama program meminta kata sandi.
+- **Tombol.** ⌘K membersihkan terminal (**Edit › Bersihkan Terminal**); ⌃C dan Esc diteruskan ke program di dalamnya. Perintah terminal ada di menu Edit dan Lihat, dan pintasannya hanya bekerja selama terminal memiliki fokus papan ketik, sehingga ⌘I, ⌘↑, atau ⌘F tetap bermakna seperti biasa di editor. Menu konteks juga membuka **Terminal Baru di Sini** dan menutup terminal dengan **Tutup Area**.
+
+**Pengaturan › Terminal** mengaktifkan dan menonaktifkan bidang input untuk terminal baru, tombol Vim-nya, saran, pewarnaan perintah, garis bawah untuk perintah yang tidak dikenal, blok perintah, penyalinan pilihan seketika, penampilan tempelan multibaris lebih dulu, dan ⌥ sebagai tombol Meta.
 
 ## Browser
 
@@ -205,7 +221,7 @@ Sebuah folder dapat membuat program berjalan begitu sesuatu dimulai di dalamnya:
 - **Tepercaya:** Git, server bahasa, debugger, agen, dan CI berjalan untuk folder ini dan semua yang ada di bawahnya.
 - **Terbatas:** Anda dapat membaca dan mengedit; tanda perubahan di editor berasal dari membaca `.git` secara langsung. Tidak ada yang dikonfigurasi folder yang dimulai. Panel Git, CI, dan AI menyatakannya dan menawarkan untuk memercayai folder.
 
-Teks yang tidak berasal dari Anda dapat membawa instruksi yang dimaksudkan untuk mengarahkan agen (prompt injection). Karena itu keluaran terminal (`@terminal`), halaman web (`@browser`), log CI yang diberikan ke agen, file di luar proyek, dan teks panjang yang ditempel dari halaman web dikirim dengan tanda: chip bertuliskan “Konten Eksternal”, dan agen menerima teks dengan pemberitahuan bahwa itu adalah data tidak tepercaya yang instruksinya tidak boleh diikuti. Halaman web agen bawaan datang dengan pemberitahuan yang sama. Teks yang ditempel dianggap berasal dari halaman web jika browser menyatakannya di papan klip, seperti yang dilakukan Safari, Chrome, dan Firefox; teks dari tempat lain, dan frasa pendek beberapa kata, tetap menjadi teks Anda sendiri.
+Teks yang tidak berasal dari Anda dapat membawa instruksi yang dimaksudkan untuk mengarahkan agen (prompt injection). Karena itu keluaran terminal (`@terminal`, atau blok perintah yang diserahkan ke agen), halaman web (`@browser`), log CI yang diberikan ke agen, file di luar proyek, dan teks panjang yang ditempel dari halaman web dikirim dengan tanda: chip bertuliskan “Konten Eksternal”, dan agen menerima teks dengan pemberitahuan bahwa itu adalah data tidak tepercaya yang instruksinya tidak boleh diikuti. Halaman web agen bawaan datang dengan pemberitahuan yang sama. Teks yang ditempel dianggap berasal dari halaman web jika browser menyatakannya di papan klip, seperti yang dilakukan Safari, Chrome, dan Firefox; teks dari tempat lain, dan frasa pendek beberapa kata, tetap menjadi teks Anda sendiri.
 
 ## Sandbox
 
@@ -221,9 +237,9 @@ Dango sendiri berjalan tanpa App Sandbox, karena setiap program yang dimulainya 
 ## Tampilan dan aksesibilitas
 
 - **Mode gelap** mengikuti sistem; **Tingkatkan Kontras** dan **Kurangi Gerakan** dihormati.
-- **VoiceOver** menamai bar samping, tab, kartu lini masa AI, baris Git dan CI, debugger, dan teks terminal. Breakpoint tidak pernah dibedakan hanya dengan warna.
+- **VoiceOver** menamai bar samping, tab, kartu lini masa AI, baris Git dan CI, serta debugger, membacakan baris-baris terminal, dan mengumumkan keluaran baru. Breakpoint tidak pernah dibedakan hanya dengan warna.
 - **Papan ketik.** Setiap perintah memiliki pintasan, dan semuanya dapat diubah di `keybindings.json`; ⌥⌘\` berpindah ke panel berikutnya.
-- **Kanan ke kiri.** Dalam bahasa Arab dan Ibrani, jendela dicerminkan, sementara tampilan kode tetap dari kiri ke kanan.
+- **Kanan ke kiri.** Dalam bahasa Arab dan Ibrani, jendela dicerminkan, sementara tampilan kode dan kisi terminal tetap dari kiri ke kanan.
 
 Apa yang ditambahkan Dango di atas AppKit, area demi area, ada di [ACCESSIBILITY.md](../../../ACCESSIBILITY.md).
 
@@ -257,6 +273,10 @@ Dango mengikuti urutan bahasa di **Pengaturan Sistem › Umum › Bahasa & Wilay
 | Tebal, miring, coret, kode, tautan | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | Judul 1 hingga 3 | ⌥⌘1 hingga ⌥⌘3 |
 | Terminal baru, bersihkan terminal | ⌃\`, ⌘K |
+| Di terminal: temukan, temukan berikutnya, temukan sebelumnya | ⌘F, ⌘G, ⇧⌘G |
+| Di terminal: prompt sebelumnya dan berikutnya, markah sebelumnya dan berikutnya, tambah atau hapus markah | ⌘↑ dan ⌘↓, ⇧⌘↑ dan ⇧⌘↓, ⇧⌘M |
+| Di terminal: pilih blok, salin output, simpan output, ciutkan blok | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| Di terminal: bidang input, pilih dengan papan ketik, salin dengan format | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | Fokus ke kolom pesan agen, komentari rencana | ⌘Esc, ⌥⌘K |
 | Kolom alamat, muat ulang, mundur, maju (browser) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Mulai atau hentikan dikte | ⌃⌥D |
@@ -282,7 +302,7 @@ Dango mengikuti urutan bahasa di **Pengaturan Sistem › Umum › Bahasa & Wilay
 
 | Tempat | Isi |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`; `threads/` (daftar panel AI), `agent-threads/` (percakapan agen bawaan), `layouts/` (tab per proyek), `recovery/` (editor yang belum disimpan setelah crash), `checkpoints/` (untuk folder tanpa Git), `worktrees/`, `agents/` dan `tools/` (agen, server bahasa, dan adaptor debug yang terinstal), `task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`, `terminal-history.sqlite` (riwayat perintah terminal); `threads/` (daftar panel AI), `agent-threads/` (percakapan agen bawaan), `layouts/` (tab per proyek), `recovery/` (editor yang belum disimpan setelah crash), `checkpoints/` (untuk folder tanpa Git), `worktrees/`, `agents/` dan `tools/` (agen, server bahasa, dan adaptor debug yang terinstal), `task-output/` |
 | `~/Library/Caches/<id>/` | gambar yang ditempel, skrip integrasi shell, registri ACP; boleh dihapus |
 | `~/Library/Logs/<id>/dictation/` | file log dikte |
 | `~/Library/Application Support/Lowspeak` dan `FluidAudio` | model dikte lokal, dibagikan dengan Lowspeak |
@@ -300,6 +320,7 @@ Claude menyimpan sesinya sendiri di `~/.claude/projects`; Dango membacanya untuk
 - **Angka penggunaan dan rincian konteks Claude** bergantung pada bagian protokolnya yang ditandai eksperimental, dan disembunyikan jika bagian itu tidak ada.
 - **Memutar mundur percakapan** hanya berfungsi untuk Claude; untuk agen lain hanya kode yang dikembalikan.
 - **Masuk ke CI melalui browser** dinonaktifkan; gunakan `gh`, `glab`, token, atau lingkungan.
+- **Tidak ada gambar di dalam terminal:** grafis Kitty, Sixel, dan gambar iTerm2 tidak ditampilkan.
 - **Gemini CLI tidak ditawarkan:** Google mengakhiri masuk dengan akun pribadi dan mengarahkan ke Antigravity. Utas Gemini sebelumnya tetap dapat dibaca.
 
 ## Membangun dari kode sumber
@@ -308,7 +329,7 @@ Anda memerlukan:
 
 - macOS 14 atau lebih baru dengan Xcode Command Line Tools (`xcode-select --install`); Xcode sendiri tidak diperlukan.
 - Rust sesuai yang disebutkan `rust-toolchain.toml`. `rust` dari Homebrew membangun untuk prosesor Mac ini; build universal sebuah rilis memerlukan rustup dengan target `aarch64-apple-darwin` dan `x86_64-apple-darwin`.
-- Salinan [splat](https://github.com/sventmueller/splat) dan [lowspeak](https://github.com/sventmueller/lowspeak) di samping yang ini (`../splat`, `../lowspeak`), keduanya di branch `main`; workspace mengambil crate dari keduanya melalui jalur.
+- Salinan [splat](https://github.com/sventmueller/splat), [lowspeak](https://github.com/sventmueller/lowspeak), dan [tapa](https://github.com/sventmueller/tapa) di samping yang ini (`../splat`, `../lowspeak`, `../tapa`), masing-masing di branch `main`; workspace mengambil crate dari ketiganya melalui jalur, terminal dari Tapa.
 - cmake, untuk setiap build dengan dikte (`make run`, `make build`, `make release`), yang membangun whisper.cpp. `make check` membangun tanpanya.
 
 | Perintah | Yang dilakukan |

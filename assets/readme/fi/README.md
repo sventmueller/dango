@@ -12,7 +12,7 @@ Dango kokoaa koodin, sitä muuttavat agentit ja kaiken niiden ympärillä olevan
 
 **Löysitkö bugin?** [Avaa issue](https://github.com/sventmueller/dango/issues/new) ja kerro, minkä agentin kanssa ja millaisessa projektissa se tapahtui.
 
-[![Rust, editio 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 tai uudempi](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universaali: Apple Silicon ja Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit objc2:n kautta](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Pääte: Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35 käyttöliittymän kieltä](https://img.shields.io/badge/languages-35-4C9A2A) ![Ei telemetriaa](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Allekirjoitettu, Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Lisenssi: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#lisenssi)
+[![Rust, editio 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 tai uudempi](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universaali: Apple Silicon ja Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit objc2:n kautta](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Pääte: Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35 käyttöliittymän kieltä](https://img.shields.io/badge/languages-35-4C9A2A) ![Ei telemetriaa](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Allekirjoitettu, Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Lisenssi: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#lisenssi)
 
 [Bahasa Indonesia](../id/README.md) · [Bahasa Melayu](../ms/README.md) · [Català](../ca/README.md) · [Čeština](../cs/README.md) · [Dansk](../da/README.md) · [Deutsch](../de/README.md) · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · [Magyar](../hu/README.md) · [Nederlands](../nl/README.md) · [Norsk](../no/README.md) · [Polski](../pl/README.md) · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · [Română](../ro/README.md) · [Slovenčina](../sk/README.md) · [Slovenščina](../sl/README.md) · **Suomi** · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [繁體中文](../zh-Hant/README.md)
 
@@ -55,6 +55,7 @@ Dango kokoaa koodin, sitä muuttavat agentit ja kaiken niiden ympärillä olevan
 - **Yksi ikkuna kansiota kohden.** Tiedostot, päätteet, selainsivut, AI-ketjut, eronäkymät ja esikatselut ovat tuon ikkunan macOS-välilehtiä. Sivupalkissa ovat Tiedostot, Haku, Agentit, Git, Testit, Virheenjäljitys, CI ja Kontit.
 - **Oikea koodieditori.** Syntaksivärit, useita kohdistimia, laskostus, `.editorconfig`, kielipalvelimet 17 kielelle, joissa on täydennys, siirtyminen määrittelyyn, viittaukset, uudelleennimeäminen, pikakorjaukset ja hierarkiat, sekä muokkausennusteet GitHub Copilotilta tai paikalliselta mallilta.
 - **Virheenjäljitin, Git ja CI sisäänrakennettuina.** Keskeytyskohdat ja askellus kielille Rust, C, C++, Swift, Go, JavaScript, TypeScript ja Python; yksittäisten lohkojen valmistelu, haarat, stashit, ristiriidat ja commit-kaavio; ajot, työt ja lokit GitHub Actionsista ja GitLab CI:stä.
+- **Tapan pääte.** Komentolohkot, joiden tulosteen kopioit, tallennat tai annat agentille, syötekenttä, jossa on ehdotuksia historiastasi ja projektista, haku koko historiasta sekä ilmoitukset ja edistyminen päätteessä toimivilta ohjelmilta.
 - **Varovainen kansioidesi kanssa.** Kansio, johon et ole luottanut, ei käynnistä mitään: ei Git-prosesseja, kielipalvelimia, hookeja eikä agentteja. Tuhoavia Git-komentoja ei koskaan sallita pysyvästi, ja commitit tarkistetaan salaisuuksien varalta.
 - **Sanelu.** Puhu editoriin ja viestikenttään verkon kautta OpenAI:lla tai Groqilla tai paikallisesti Whisperillä ja Parakeetilla.
 - **Natiivi läpikotaisin.** AppKitin ikkunat, välilehdet, valikot ja työkalupalkit, TextKit 2 editorille, Metal päätteelle, WebKit vain selainvälilehdessä. Tumma tila, Lisää kontrastia ja VoiceOver toimivat kuten kaikissa Mac-sovelluksissa.
@@ -84,7 +85,7 @@ Dango kokoaa koodin, sitä muuttavat agentit ja kaiken niiden ympärillä olevan
 3. **Jokainen dokumentti on välilehti** kansion ikkunassa, macOS:n omia välilehtiä. Välilehtipalkin lopussa oleva ”+” ja ⌘T tarjoavat uuden tiedoston, päätteen, selaimen ja jokaisen asennetun agentin, myös omassa Git-worktreessaan; kun pidät ”+”-painiketta painettuna, samat vaihtoehdot näkyvät valikkona.
 4. **Avaa nopeasti** (⌘P) löytää tiedostot ja `#`-merkillä projektin symbolit; ⇧⌘F etsii ja korvaa projektissa.
 5. **Keskustele agentin kanssa** AI-välilehdessä. ⌘Esc siirtää näppäimistön kohdistuksen sen viestikenttään ja takaisin.
-6. **Asetukset** (⌘,) sisältävät välilehdet Yleiset, CI, Agentit, Oma agentti, Kielipalvelin, Sanelu ja Ennustus.
+6. **Asetukset** (⌘,) sisältävät välilehdet Yleiset, Pääte, CI, Agentit, Software Factory, Oma agentti, Kielipalvelin, Sanelu ja Ennustus.
 
 Työkalupalkissa ovat siirtyminen taakse- ja eteenpäin muokkaamiesi kohtien läpi (⌃- ja ⌃⇧-), haara, Avaa nopeasti ja Toiminta-yleiskatsaus, joka luettelee kaiken käynnissä olevan. Tiedoston kontekstivalikon **Avaa viereen** näyttää toisen dokumentin ensimmäisen vieressä. Uudelleenkäynnistyksen tai kaatumisen jälkeen jokainen ikkuna palaa välilehtineen, ja editorit, joissa on tallentamatonta tekstiä, palaavat tekstin kanssa. Kuvat, ääni, video, fontit ja Office-dokumentit avautuvat välilehteen Quick Look -toiminnolla, PDF-tiedostot PDFKit-kehyksellä.
 
@@ -155,7 +156,22 @@ Projektin `.vscode/launch.json` luetaan. Virheenjäljitys-valikko käyttää Xco
 
 ## Pääte
 
-Päätteet välilehdissä (⌃\`) kirjautumiskomentotulkin ympäristöllä, piirrettyinä Metalilla. ⌘K tyhjentää näytön. Kuvan liittäminen tai pudottaminen antaa sen päätteessä toimivalle koodausagentille tai liittää tallennetun kopion polun. ⌘-osoitus avaa linkit ja tiedostonimet. Päätteen käynnistämän kehityspalvelimen voi avata selainvälilehdessä.
+Päätteet avautuvat välilehtinä (**Tiedosto › Uusi pääte**, ⌃\`) kirjautumiskomentotulkin ja sen ympäristön kanssa. Pääte on [Tapan](https://github.com/sventmueller/tapa) pääte omalla VT-ytimellään, piirrettynä Metalilla: xterm ja VT520 Kittyn näppäimistöprotokollalla, OSC 8 -linkit, synkronoitu tuloste, truecolor ja hiiriraportointi, editorin tekstikoossa ja Tapan vaaleilla ja tummilla väreillä. Sen komentotulkki-integraatio zsh:lle, bashille ja fishille ottaa itsensä käyttöön koskematta asetustiedostoihisi ja kulkee mukana, kun otat `ssh`-yhteyden toiseen koneeseen. Uudelleenkäynnistyksen jälkeen pääte palaa uutena komentotulkkina siihen kansioon, jossa se oli, vain luotetuissa kansioissa; sen näyttämä sisältö ei palaa.
+
+- **Komentolohkot.** Jokainen komento tulosteineen muodostaa lohkon. ⌘↑ ja ⌘↓ hyppäävät kehotteiden välillä. **Valitse lohko** (⇧⌘A), **Kopioi tuloste** (⌥⌘C), **Tallenna tuloste…** (⌥⌘S) ja **Supista/laajenna lohko** (⇧⌘↩) toimivat nykyiseen lohkoon; **Lisää/poista kirjanmerkki** (⇧⌘M) merkitsee rivin, ja ⇧⌘↑ ja ⇧⌘↓ hyppäävät kirjanmerkkien välillä. Kun **Merkitse komennot lohkoiksi** on päällä, marginaalin palkki näyttää jokaisen lohkon, epäonnistuneet komennot merkitään, käynnissä oleva komento pysyy ylhäällä, kun sen tuloste vierii, ja osoittimen alla olevan lohkon päällä painikkeet näyttävät sen tilan, keston ja samat toiminnot.
+- **Lähetä lohko agentille** (Muokkaa-valikko ja päätteen kontekstivalikko) avaa uuden AI-välilehden, jonka liitteenä ovat nykyisen lohkon komentorivi ja tuloste Ulkopuolisena sisältönä (katso [Luottamus](#luottamus)), sekä luonnoksen, joka kysyy syytä, kun komento epäonnistui, kuten epäonnistuneen CI-työn loki tekee. Sillä ei ole pikanäppäintä, ennen kuin annat sellaisen komennolle `terminal.blockToAgent` tiedostossa `keybindings.json`.
+- **Syötekenttä.** **Näytä › Näytä/kätke syötekenttä** (⌘I) muuttaa komentorivin tekstikentäksi päätteen alareunaan, ja sen yläpuolella näkyvät kansio ja Git-haara; uudet päätteet noudattavat viimeisintä valintaasi. Return lähettää koko kentän komentotulkille. Se tarvitsee komentotulkki-integraation ja väistyy koko näytön ohjelmien, kuten vimin, htopin tai clauden, tieltä.
+- **Ehdotukset** näkyvät harmaana heti kirjoittamasi jälkeen, syötekentässä ja ilman sitä: historiastasi kunkin komennon kansion, haaran ja paluukoodin kera, yli 700 komentorivityökalun kuvauksista ja projektista, kuten git-haarat, docker-kontit, `package.json`-skriptit sekä make-, just- ja cargo-kohteet. → hyväksyy ehdotuksen; Tab täydentää ja avaa useiden vaihtoehtojen kohdalla valikon, jota kirjoittaminen suodattaa. Ennen kuin kirjoitat, kenttä voi ehdottaa komentoa, joka yleensä tulee seuraavaksi. Komennot väritetään osiensa mukaan, ja komento, jota komentotulkkisi ei voi suorittaa, saa punaisen katkoviivan alleen. Ehdotukset eivät koskaan käytä verkkoa ja käynnistävät ohjelmia vain kirjautumiskomentotulkin `PATH`ista.
+- **Etsi** (⌘F, ⌘G ja ⇧⌘G, kun pääte on aktiivinen) hakee koko historiasta säännöllisillä lausekkeilla, kirjainkoon ja kokonaisten sanojen mukaan ja laskee tulokset; vierityspalkki merkitsee tulokset, kehotteet ja epäonnistuneet komennot.
+- **Valitseminen ja kopiointi.** Kaksoisosoitus valitsee URL-osoitteen, polun, tiivisteen tai IP-osoitteen kokonaan, ja ⌥-vetäminen valitsee suorakulmion. **Valitse näppäimistöllä** (⇧⌘C) siirtää valintaa Vimin näppäimillä, **Kopioi muotoiluineen** (⇧⌥⌘C) säilyttää värit ja tyylit. Ohjelma saa kopioida OSC 52:lla vain, kun sen päätteellä on näppäimistön kohdistus, ja pääte kertoo siitä; mikään ohjelma ei lue leikepöytää.
+- **Sijoittaminen.** Teksti, joka suorittaisi komennon rivinvaihdossaan tai sisältää ohjausmerkkejä, näytetään ensin valintaikkunassa, ellei ohjelma lue sitä bracketed pastena. Kuvan sijoittaminen antaa sen päätteessä toimivalle koodausagentille, joka lukee sen itse leikepöydältä, tai sijoittaa välimuistien joukkoon tallennetun kopion polun; `ssh`-yhteyden yli pääte kertoo, miksi se ei tee niin. Päätteeseen pudotetut tiedostot, kuvat mukaan lukien, saapuvat lainausmerkeissä olevina polkuina; muualta, kuten verkkosivulta, pudotettu kuva käsitellään samoin kuin sijoitettu.
+- **Linkit.** ⌘-osoitus avaa verkko-osoitteen selainvälilehdessä, `mailto:`-linkin Mailissa ja tiedostonimen, myös rivin ja sarakkeen kanssa, Dangon editorissa; linkit löytyvät myös ilman OSC 8:aa. Muunlaiset linkit eivät avaudu.
+- **Kehityspalvelimet.** Kun päätteessä toimiva ohjelma käynnistää kehityspalvelimen, päätteen yläpuolella oleva palkki näyttää sen osoitteen, ja **Avaa selainvälilehdessä** avaa sen siellä.
+- **Ilmoitukset ja edistyminen.** Äänimerkki ja ohjelman pyytämä ilmoitus (OSC 9 ja OSC 777) asettavat punaisen pisteen päätteen välilehteen, kun et näe sitä; kun jokin toinen app on edessä, ilmoitus menee myös macOS:lle, ja sen osoittaminen tuo päätteen takaisin. Ohjelman ilmoittama edistyminen (OSC 9;4) näkyy renkaana sen välilehdessä ja palkkina Dockin kuvakkeessa.
+- **Suojattu näppäimistösyöte** (**Dango › Suojattu näppäimistösyöte**) estää muita appeja lukemasta, mitä kirjoitat päätteeseen; se kytkeytyy myös itsestään päälle, kun ohjelma kysyy salasanaa.
+- **Näppäimet.** ⌘K tyhjentää päätteen (**Muokkaa › Tyhjennä pääte**); ⌃C ja Esc menevät päätteessä toimivalle ohjelmalle. Päätteen komennot ovat Muokkaa- ja Näytä-valikoissa, ja niiden pikanäppäimet toimivat vain, kun päätteellä on näppäimistön kohdistus, joten ⌘I, ⌘↑ tai ⌘F säilyttävät merkityksensä editorissa. Kontekstivalikko avaa myös komennolla **Uusi pääte tässä** uuden päätteen ja sulkee päätteen komennolla **Sulje ruutu**.
+
+**Asetukset › Pääte** kytkee päälle ja pois uusien päätteiden syötekentän, sen Vim-näppäimet, ehdotukset, komentojen värityksen, tuntemattomien komentojen alleviivauksen, komentolohkot, valinnan kopioinnin heti, monirivisten sijoitusten näyttämisen ensin sekä ⌥:n metanäppäimenä.
 
 ## Selain
 
@@ -205,7 +221,7 @@ Kansio voi saada ohjelmia käyntiin heti, kun siinä käynnistetään jotain: Gi
 - **Luotettu:** Git, kielipalvelimet, virheenjäljittimet, agentit ja CI toimivat tälle kansiolle ja kaikelle sen alla olevalle.
 - **Rajoitettu:** voit lukea ja muokata; editorin muutosmerkit saadaan lukemalla `.git`-kansiota suoraan. Mitään kansion määrittämää ei käynnistetä. Git-, CI- ja AI-paneelit kertovat tästä ja tarjoavat kansioon luottamista.
 
-Teksti, joka ei tule sinulta, voi sisältää ohjeita, joiden tarkoitus on ohjailla agenttia (kehoteinjektio, prompt injection). Siksi päätteen tuloste (`@terminal`), selainsivu (`@browser`), agentille annettu CI-loki, projektin ulkopuolinen tiedosto ja verkkosivulta liitetty pidempi teksti välitetään merkittyinä: merkinnässä lukee ”Ulkopuolinen sisältö”, ja agentti saa tekstin huomautuksella, että se on epäluotettavaa dataa, jonka ohjeita se ei saa noudattaa. Oman agentin verkkosivut tulevat samalla huomautuksella. Liitetty teksti katsotaan verkkosivulta tulleeksi, kun selain ilmoittaa sen leikepöydällä, kuten Safari, Chrome ja Firefox tekevät; muualta tuleva teksti ja muutaman sanan lyhyt fraasi pysyvät omana tekstinäsi.
+Teksti, joka ei tule sinulta, voi sisältää ohjeita, joiden tarkoitus on ohjailla agenttia (kehoteinjektio, prompt injection). Siksi päätteen tuloste (`@terminal` tai agentille annettu komentolohko), selainsivu (`@browser`), agentille annettu CI-loki, projektin ulkopuolinen tiedosto ja verkkosivulta liitetty pidempi teksti välitetään merkittyinä: merkinnässä lukee ”Ulkopuolinen sisältö”, ja agentti saa tekstin huomautuksella, että se on epäluotettavaa dataa, jonka ohjeita se ei saa noudattaa. Oman agentin verkkosivut tulevat samalla huomautuksella. Liitetty teksti katsotaan verkkosivulta tulleeksi, kun selain ilmoittaa sen leikepöydällä, kuten Safari, Chrome ja Firefox tekevät; muualta tuleva teksti ja muutaman sanan lyhyt fraasi pysyvät omana tekstinäsi.
 
 ## Hiekkalaatikko
 
@@ -221,9 +237,9 @@ Dango itse toimii ilman App Sandboxia, koska jokainen sen käynnistämä ohjelma
 ## Ulkoasu ja käyttöapu
 
 - **Tumma tila** seuraa järjestelmää; **Lisää kontrastia** ja **Vähennä liikettä** otetaan huomioon.
-- **VoiceOver** nimeää sivupalkin, välilehdet, AI-aikajanan kortit, Git- ja CI-rivit, virheenjäljittimen ja päätteen tekstin. Keskeytyskohtia ei koskaan erotella toisistaan pelkän värin perusteella.
+- **VoiceOver** nimeää sivupalkin, välilehdet, AI-aikajanan kortit, Git- ja CI-rivit ja virheenjäljittimen, lukee päätteen rivit ja ilmoittaa uudesta tulosteesta. Keskeytyskohtia ei koskaan erotella toisistaan pelkän värin perusteella.
 - **Näppäimistö.** Jokaisella komennolla on pikanäppäin, ja kaikkia voi muuttaa tiedostossa `keybindings.json`; ⌥⌘\` siirtyy seuraavaan paneeliin.
-- **Oikealta vasemmalle.** Arabiaksi ja hepreaksi ikkuna peilataan, mutta koodinäkymät pysyvät vasemmalta oikealle.
+- **Oikealta vasemmalle.** Arabiaksi ja hepreaksi ikkuna peilataan, mutta koodinäkymät ja päätteen ruudukko pysyvät vasemmalta oikealle.
 
 Mitä Dango lisää AppKitin päälle alue kerrallaan, kerrotaan tiedostossa [ACCESSIBILITY.md](../../../ACCESSIBILITY.md).
 
@@ -257,6 +273,10 @@ Dango seuraa kielijärjestystä kohdassa **Järjestelmäasetukset › Yleiset �
 | Lihavointi, kursiivi, yliviivaus, koodi, linkki | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | Otsikko 1–3 | ⌥⌘1–⌥⌘3 |
 | Uusi pääte, tyhjennä pääte | ⌃\`, ⌘K |
+| Päätteessä: etsi, etsi seuraava, etsi edellinen | ⌘F, ⌘G, ⇧⌘G |
+| Päätteessä: edellinen ja seuraava kehote, edellinen ja seuraava kirjanmerkki, lisää tai poista kirjanmerkki | ⌘↑ ja ⌘↓, ⇧⌘↑ ja ⇧⌘↓, ⇧⌘M |
+| Päätteessä: valitse lohko, kopioi tuloste, tallenna tuloste, supista lohko | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| Päätteessä: syötekenttä, valitse näppäimistöllä, kopioi muotoiluineen | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | Kohdistus agentin viestikenttään, kommentoi suunnitelmaa | ⌘Esc, ⌥⌘K |
 | Osoitekenttä, lataa uudelleen, takaisin, eteenpäin (selain) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Aloita tai lopeta sanelu | ⌃⌥D |
@@ -282,7 +302,7 @@ Dango seuraa kielijärjestystä kohdassa **Järjestelmäasetukset › Yleiset �
 
 | Paikka | Mitä |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`; `threads/` (AI-paneelin luettelo), `agent-threads/` (oman agentin keskustelut), `layouts/` (välilehdet projekteittain), `recovery/` (tallentamattomat editorit kaatumisen jälkeen), `checkpoints/` (kansioille ilman Gitiä), `worktrees/`, `agents/` ja `tools/` (asennetut agentit, kielipalvelimet ja virheenjäljityssovittimet), `task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`, `terminal-history.sqlite` (päätteiden komentohistoria); `threads/` (AI-paneelin luettelo), `agent-threads/` (oman agentin keskustelut), `layouts/` (välilehdet projekteittain), `recovery/` (tallentamattomat editorit kaatumisen jälkeen), `checkpoints/` (kansioille ilman Gitiä), `worktrees/`, `agents/` ja `tools/` (asennetut agentit, kielipalvelimet ja virheenjäljityssovittimet), `task-output/` |
 | `~/Library/Caches/<id>/` | liitetyt kuvat, komentotulkin integrointiskriptit, ACP-rekisteri; voi poistaa |
 | `~/Library/Logs/<id>/dictation/` | sanelun lokitiedostot |
 | `~/Library/Application Support/Lowspeak` ja `FluidAudio` | paikalliset sanelumallit, yhteiset Lowspeakin kanssa |
@@ -300,6 +320,7 @@ Claude säilyttää omat istuntonsa kansiossa `~/.claude/projects`; Dango lukee 
 - **Clauden käyttöluvut ja kontekstin erittely** perustuvat sen protokollan kokeellisiksi merkittyihin osiin, ja ne piilotetaan, kun niitä ei ole.
 - **Keskustelun kelaus taaksepäin** toimii vain Claudella; muilla agenteilla kelataan taaksepäin vain koodi.
 - **CI-kirjautuminen selaimen kautta** on pois päältä; käytä `gh`- tai `glab`-komentoa, tokenia tai ympäristöä.
+- **Ei kuvia päätteen sisällä:** Kitty-grafiikka, Sixel- ja iTerm2-kuvat eivät näy.
 - **Gemini CLI:tä ei tarjota:** Google lopetti sen kirjautumisen henkilökohtaisella tilillä ja ohjaa käyttämään Antigravityä. Aiemmat Gemini-ketjut pysyvät luettavina.
 
 ## Kääntäminen lähdekoodista
@@ -308,7 +329,7 @@ Tarvitset:
 
 - macOS 14:n tai uudemman ja Xcode Command Line Tools -paketin (`xcode-select --install`); itse Xcodea ei tarvita.
 - Rustin siinä versiossa, jonka `rust-toolchain.toml` nimeää. Homebrew’n `rust` kääntää tämän Macin suorittimelle; julkaisun universaali käännös tarvitsee rustupin ja kohteet `aarch64-apple-darwin` ja `x86_64-apple-darwin`.
-- Kloonit repositorioista [splat](https://github.com/sventmueller/splat) ja [lowspeak](https://github.com/sventmueller/lowspeak) tämän viereen (`../splat`, `../lowspeak`), molemmat `main`-haarassaan; työtila ottaa niistä crateja polun kautta.
+- Kloonit repositorioista [splat](https://github.com/sventmueller/splat), [lowspeak](https://github.com/sventmueller/lowspeak) ja [tapa](https://github.com/sventmueller/tapa) tämän viereen (`../splat`, `../lowspeak`, `../tapa`), kukin `main`-haarassaan; työtila ottaa niistä crateja polun kautta, päätteen Tapasta.
 - cmaken jokaiseen käännökseen, jossa on sanelu (`make run`, `make build`, `make release`); se kääntää whisper.cpp:n. `make check` kääntää ilman sitä.
 
 | Komento | Mitä se tekee |

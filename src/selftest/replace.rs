@@ -417,7 +417,7 @@ fn running_terminal(f: Folders) {
             wait_until(
                 move || {
                     inspect::view(id)
-                        .is_some_and(|view| view.foreground() == ide_terminal::Foreground::Other("sleep".into()))
+                        .is_some_and(|view| view.foreground() == term_session::Foreground::Other("sleep".into()))
                 },
                 move |sleeping| ask_running(f, id, sleeping),
             );

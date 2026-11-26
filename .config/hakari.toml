@@ -11,11 +11,12 @@ platforms = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
 [traversal-excludes]
 workspace-members = ["xtask"]
 
-# Members are simulated with all their features, so the self-test hooks of Splat would reach every build, the release
-# included.
+# Members are simulated with all their features, so the self-test hooks of Splat and Tapa would reach every build, the
+# release included.
 [final-excludes]
 third-party = [
     { name = "splat-decoder", path = "../splat/crates/splat-decoder" },
     { name = "splat-editor-state", path = "../splat/crates/splat-editor-state" },
     { name = "splat-render", path = "../splat/crates/splat-render" },
+    { name = "term-ui", path = "../tapa/crates/term-ui" },
 ]

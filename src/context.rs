@@ -40,7 +40,7 @@ pub(crate) struct AppContext {
     exports: Rc<ide_ui_export::State>,
     search_panels: crate::window::SearchPanels,
     hierarchy_panels: crate::window::HierarchyPanels,
-    terminal_views: Rc<ide_ui_terminal::State>,
+    terminals: crate::terminal::Terminals,
     lsp: Rc<ide_ui_lsp::LspState>,
     agent: Rc<ide_ui_agent::State>,
     git: Rc<ide_ui_git::State>,
@@ -146,8 +146,8 @@ impl AppContext {
         &self.hierarchy_panels
     }
 
-    pub(crate) fn terminal_views(&self) -> &Rc<ide_ui_terminal::State> {
-        &self.terminal_views
+    pub(crate) fn terminals(&self) -> &crate::terminal::Terminals {
+        &self.terminals
     }
 
     pub(crate) fn lsp(&self) -> &Rc<ide_ui_lsp::LspState> {

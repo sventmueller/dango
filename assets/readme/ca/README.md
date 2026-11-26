@@ -12,7 +12,7 @@ El Dango reuneix el codi, els agents que el canvien i tot el que els envolta en 
 
 **Has trobat un error?** [Obre un issue](https://github.com/sventmueller/dango/issues/new) i indica amb quin agent i en quin tipus de projecte s’ha produït.
 
-[![Rust, edició 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 o posterior](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universal: Apple Silicon i Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit mitjançant objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35 idiomes d’interfície](https://img.shields.io/badge/languages-35-4C9A2A) ![Sense telemetria](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Signat amb Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Llicència: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#llicència)
+[![Rust, edició 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 o posterior](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universal: Apple Silicon i Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit mitjançant objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35 idiomes d’interfície](https://img.shields.io/badge/languages-35-4C9A2A) ![Sense telemetria](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Signat amb Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Llicència: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#llicència)
 
 [Bahasa Indonesia](../id/README.md) · [Bahasa Melayu](../ms/README.md) · **Català** · [Čeština](../cs/README.md) · [Dansk](../da/README.md) · [Deutsch](../de/README.md) · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · [Magyar](../hu/README.md) · [Nederlands](../nl/README.md) · [Norsk](../no/README.md) · [Polski](../pl/README.md) · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · [Română](../ro/README.md) · [Slovenčina](../sk/README.md) · [Slovenščina](../sl/README.md) · [Suomi](../fi/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [繁體中文](../zh-Hant/README.md)
 
@@ -55,6 +55,7 @@ El Dango reuneix el codi, els agents que el canvien i tot el que els envolta en 
 - **Una finestra per carpeta.** Fitxers, terminals, pàgines web, fils d’IA, diffs i previsualitzacions són pestanyes de macOS d’aquesta finestra. La barra lateral conté Fitxers, Cerca, Agents, Git, Proves, Depura, CI i Contenidors.
 - **Un editor de codi de debò.** Colors de sintaxi, diversos punts d’inserció, plegat, `.editorconfig`, servidors de llenguatge per a 17 llenguatges amb compleció, anar a la definició, referències, canvi de nom, correccions ràpides i jerarquies, i prediccions mentre escrius de GitHub Copilot o d’un model local.
 - **Depurador, Git i CI integrats.** Punts d’interrupció i execució pas a pas per a Rust, C, C++, Swift, Go, JavaScript, TypeScript i Python; preparar fragments solts, branques, stashes, conflictes i un graf de commits; execucions, jobs i logs de GitHub Actions i GitLab CI.
+- **El terminal del Tapa.** Blocs d’ordres la sortida dels quals copies, desas o lliures a un agent, un camp d’entrada amb suggeriments del teu historial i del projecte, cerca a tot l’historial, i notificacions i progrés dels programes que s’hi executen.
 - **Curós amb les teves carpetes.** Una carpeta en què no confies no inicia res: ni processos de Git, ni servidors de llenguatge, ni hooks, ni agents. Les ordres destructives de Git mai no es permeten per sempre, i els commits es revisen per buscar-hi secrets.
 - **Dictat.** Parla a l’editor i al camp del missatge, en línia amb OpenAI o Groq o en local amb Whisper i Parakeet.
 - **Natiu fins al moll de l’os.** Finestres, pestanyes, menús i barres d’eines d’AppKit, TextKit 2 per a l’editor, Metal per al terminal, WebKit només a la pestanya del navegador. El mode fosc, Augmenta el contrast i el VoiceOver funcionen com en qualsevol app del Mac.
@@ -84,7 +85,7 @@ El Dango reuneix el codi, els agents que el canvien i tot el que els envolta en 
 3. **Cada document és una pestanya** de la finestra de la carpeta, les pestanyes pròpies de macOS. El “+” al final de la barra de pestanyes i ⌘T ofereixen un fitxer nou, un terminal, el navegador i cada agent instal·lat, també en el seu propi worktree de Git; si mantens premut el “+”, apareix el mateix com a menú.
 4. **Obertura ràpida** amb ⌘P troba fitxers, i amb `#` els símbols del projecte; ⇧⌘F cerca i substitueix al projecte.
 5. **Parla amb un agent** en una pestanya d’IA. ⌘Esc porta el focus del teclat al seu camp del missatge i de tornada.
-6. **Configuració** amb ⌘, conté les pestanyes General, CI, Agents, Agent propi, Servidor de llenguatge, Dictat i Predicció.
+6. **Configuració** amb ⌘, conté les pestanyes General, Terminal, CI, Agents, Software Factory, Agent propi, Servidor de llenguatge, Dictat i Predicció.
 
 La barra d’eines conté enrere i endavant pels llocs que has editat (⌃- i ⌃⇧-), la branca, Obertura ràpida i el resum d’Activitat, que llista tot el que s’executa. **Obre al costat** al menú contextual d’un fitxer mostra un segon document al costat del primer. Després d’un reinici o d’una fallada, cada finestra torna amb les seves pestanyes, i els editors amb text sense desar tornen amb aquest text. Imatges, àudio, vídeo, tipus de lletra i documents d’Office s’obren en una pestanya amb Quick Look, els PDF amb PDFKit.
 
@@ -155,7 +156,22 @@ Es llegeix el `.vscode/launch.json` d’un projecte. El menú Depura fa servir l
 
 ## Terminal
 
-Terminals en pestanyes (⌃\`) amb l’entorn del shell d’inici de sessió, dibuixats amb Metal. ⌘K esborra la pantalla. Una imatge enganxada o arrossegada va a un agent de programació que s’executi al terminal, o enganxa el camí d’una còpia desada. ⌘-clic obre enllaços i noms de fitxer. Un servidor de desenvolupament que inicia el terminal es pot obrir a la pestanya del navegador.
+Els terminals s’obren com a pestanyes (**Arxiu › Nou terminal**, ⌃\`) amb el shell d’inici de sessió i el seu entorn. El terminal és el del [Tapa](https://github.com/sventmueller/tapa), amb un nucli VT propi, dibuixat amb Metal: xterm i VT520 amb el protocol de teclat del Kitty, enllaços OSC 8, sortida sincronitzada, truecolor i informes del ratolí, amb la mida de text de l’editor i els colors clars i foscos del Tapa. La seva integració amb el shell per a zsh, bash i fish es configura sola sense tocar els teus fitxers de configuració i t’acompanya quan et connectes a un altre amfitrió amb `ssh`. Després d’un reinici, un terminal torna com un shell nou a la carpeta on era, només en carpetes de confiança; el que mostrava no torna.
+
+- **Blocs d’ordres.** Cada ordre i la seva sortida formen un bloc. ⌘↑ i ⌘↓ salten d’un prompt a un altre. **Seleccionar el bloc** (⇧⌘A), **Copia la sortida** (⌥⌘C), **Desa la sortida…** (⌥⌘S) i **Plegar/desplegar el bloc** (⇧⌘↩) actuen sobre el bloc actual; **Afegir/treure el marcador** (⇧⌘M) marca una línia, i ⇧⌘↑ i ⇧⌘↓ salten d’un marcador a un altre. Amb **Marca les ordres com a blocs** activat, una barra al marge mostra cada bloc, les ordres fallides es marquen, l’ordre en curs es queda a dalt mentre la seva sortida es desplaça, i uns botons sobre el bloc que hi ha sota el punter en mostren l’estat, la durada i les mateixes accions.
+- **Envia el bloc a l’agent** (menú Edita i menú contextual del terminal) obre una pestanya d’IA nova amb la línia d’ordres i la sortida del bloc actual adjuntes com a Contingut extern (consulta [Confiança](#confiança)), i un esborrany que demana la causa quan l’ordre ha fallat, com fa el log d’un job de CI fallit. No té drecera fins que no n’assignes una a `terminal.blockToAgent` a `keybindings.json`.
+- **El camp d’entrada.** **Mostra › Mostrar/ocultar el camp d’entrada** (⌘I) converteix la línia d’ordres en un camp de text a la part inferior del terminal, amb la carpeta i la branca de Git a sobre; els terminals nous segueixen la teva última elecció. Retorn envia tot el camp al shell. Necessita la integració amb el shell i s’aparta davant dels programes a pantalla completa com ara vim, htop o claude.
+- **Els suggeriments** es mostren en gris just després del que escrius, amb el camp d’entrada i sense: del teu historial, amb la carpeta, la branca i el codi de sortida amb què es va executar cada ordre, d’especificacions per a més de 700 eines de línia d’ordres, i del projecte, com ara branques de git, contenidors de docker, scripts de `package.json` i objectius de make, just i cargo. → accepta un suggeriment; Tab completa i, amb diversos candidats, obre un menú que es filtra en escriure. Abans que escriguis, el camp pot suggerir l’ordre que sol venir després. Les ordres es pinten segons les seves parts, i la que el teu shell no pot executar rep un subratllat vermell discontinu. Els suggeriments no fan servir mai la xarxa i només inicien programes del `PATH` del shell d’inici de sessió.
+- **Cerca** (⌘F, ⌘G i ⇧⌘G quan un terminal té el focus) cerca a tot l’historial, amb expressions regulars, distinció de majúscules i paraules senceres, i compta els resultats; la barra de desplaçament marca els resultats, els prompts i les ordres fallides.
+- **Seleccionar i copiar.** Un doble clic selecciona sencera una URL, un camí, un hash o una adreça IP, i arrossegar amb ⌥ selecciona un rectangle. **Seleccionar amb el teclat** (⇧⌘C) mou una selecció amb les tecles del Vim, **Copia amb format** (⇧⌥⌘C) conserva els colors i els estils. Un programa només pot copiar amb OSC 52 mentre el seu terminal té el focus del teclat, i el terminal ho indica; cap programa no llegeix el porta-retalls.
+- **Enganxar.** Un text que executaria una ordre al seu salt de línia, o que conté caràcters de control, es mostra primer en un quadre de diàleg, tret que el programa el llegeixi com a enganxament entre claudàtors (bracketed paste). Enganxar una imatge la lliura a un agent de programació que s’executi al terminal, que la llegeix ell mateix del porta-retalls, o enganxa el camí d’una còpia desada entre les memòries cau; per `ssh` el terminal diu per què no ho fa. Els fitxers deixats anar sobre un terminal, imatges incloses, arriben com a camins entre cometes; una imatge deixada anar des d’un altre lloc, com ara una pàgina web, segueix el mateix camí que una imatge enganxada.
+- **Enllaços.** ⌘-clic obre una adreça web a la pestanya del navegador, un enllaç `mailto:` al Mail, i un nom de fitxer, també amb la seva línia i columna, a l’editor del Dango; els enllaços es detecten fins i tot sense OSC 8. Els enllaços d’altres tipus no s’obren.
+- **Servidors de desenvolupament.** Quan un programa del terminal inicia un servidor de desenvolupament, una barra sobre el terminal n’indica l’adreça, i **Obre a la pestanya del navegador** l’hi obre.
+- **Notificacions i progrés.** La campana i una notificació que demana un programa (OSC 9 i OSC 777) posen el punt vermell a la pestanya del terminal mentre no el veus; mentre una altra app és al davant, la notificació també va a macOS, i fer-hi clic torna al terminal. El progrés que indica un programa (OSC 9;4) es mostra com un anell a la seva pestanya i com una barra a la icona del Dock.
+- **Entrada de teclat segura** (**Dango › Entrada de teclat segura**) impedeix que altres apps llegeixin el que escrius en un terminal; també s’activa sola mentre un programa demana una contrasenya.
+- **Tecles.** ⌘K esborra el terminal (**Edita › Esborra el terminal**); ⌃C i Esc van al programa que s’hi executa. Les ordres del terminal són als menús Edita i Mostra, i les seves dreceres només actuen mentre un terminal té el focus del teclat, de manera que ⌘I, ⌘↑ o ⌘F mantenen el seu significat a l’editor. El menú contextual també obre un **Nou terminal aquí** i tanca el terminal amb **Tanca l’àrea**.
+
+**Configuració › Terminal** activa o desactiva el camp d’entrada per als terminals nous, les seves tecles del Vim, els suggeriments, els colors de les ordres, el subratllat de les desconegudes, els blocs d’ordres, copiar la selecció immediatament, mostrar primer els enganxaments de diverses línies i ⌥ com a tecla Meta.
 
 ## Navegador
 
@@ -205,7 +221,7 @@ Una carpeta pot fer que s’executin programes tan bon punt s’hi inicia alguna
 - **De confiança:** Git, els servidors de llenguatge, els depuradors, els agents i la CI s’executen per a aquesta carpeta i tot el que conté.
 - **Restringida:** pots llegir i editar; les marques de canvis de l’editor surten de llegir `.git` directament. No s’inicia res del que configura la carpeta. Els taulers de Git, CI i IA ho indiquen i ofereixen confiar en la carpeta.
 
-Un text que no ve de tu pot dur instruccions pensades per dirigir un agent (injecció de prompts). La sortida d’un terminal (`@terminal`), una pàgina web (`@browser`), un log de CI lliurat a un agent, un fitxer fora del projecte i un text més llarg enganxat des d’una pàgina web s’envien per això marcats: l’etiqueta diu “Contingut extern”, i l’agent rep el text amb l’avís que són dades no fiables de les quals no ha de seguir les instruccions. Les pàgines web de l’agent propi arriben amb el mateix avís. Un text enganxat compta com a provinent d’una pàgina web quan el navegador ho indica al porta-retalls, com fan Safari, Chrome i Firefox; el text d’altres fonts, i una frase curta de poques paraules, continua sent teu.
+Un text que no ve de tu pot dur instruccions pensades per dirigir un agent (injecció de prompts). La sortida d’un terminal (`@terminal`, o un bloc d’ordres lliurat a un agent), una pàgina web (`@browser`), un log de CI lliurat a un agent, un fitxer fora del projecte i un text més llarg enganxat des d’una pàgina web s’envien per això marcats: l’etiqueta diu “Contingut extern”, i l’agent rep el text amb l’avís que són dades no fiables de les quals no ha de seguir les instruccions. Les pàgines web de l’agent propi arriben amb el mateix avís. Un text enganxat compta com a provinent d’una pàgina web quan el navegador ho indica al porta-retalls, com fan Safari, Chrome i Firefox; el text d’altres fonts, i una frase curta de poques paraules, continua sent teu.
 
 ## Sandbox
 
@@ -221,9 +237,9 @@ El mateix Dango s’executa sense App Sandbox, perquè tots els programes que in
 ## Aparença i accessibilitat
 
 - **El mode fosc** segueix el sistema; es respecten **Augmenta el contrast** i **Redueix el moviment**.
-- **El VoiceOver** anomena la barra lateral, les pestanyes, les targetes de la línia de temps d’IA, les files de Git i CI, el depurador i el text del terminal. Els punts d’interrupció mai no es distingeixen només pel color.
+- **El VoiceOver** anomena la barra lateral, les pestanyes, les targetes de la línia de temps d’IA, les files de Git i CI i el depurador, llegeix les línies del terminal i anuncia la sortida nova. Els punts d’interrupció mai no es distingeixen només pel color.
 - **Teclat.** Cada ordre té una drecera, i totes es poden canviar a `keybindings.json`; ⌥⌘\` passa al tauler següent.
-- **De dreta a esquerra.** En àrab i hebreu, la finestra s’emmiralla, mentre que les vistes de codi continuen d’esquerra a dreta.
+- **De dreta a esquerra.** En àrab i hebreu, la finestra s’emmiralla, mentre que les vistes de codi i la graella del terminal continuen d’esquerra a dreta.
 
 El que el Dango afegeix a AppKit, àrea per àrea, és a [ACCESSIBILITY.md](../../../ACCESSIBILITY.md).
 
@@ -257,6 +273,10 @@ El Dango segueix l’ordre d’idiomes de **Configuració del Sistema › Genera
 | Negreta, cursiva, ratllat, codi, enllaç | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | Capçalera 1 a 3 | ⌥⌘1 a ⌥⌘3 |
 | Terminal nou, esborrar el terminal | ⌃\`, ⌘K |
+| En un terminal: cercar, cercar el següent, cercar l’anterior | ⌘F, ⌘G, ⇧⌘G |
+| En un terminal: prompt anterior i següent, marcador anterior i següent, afegir o treure un marcador | ⌘↑ i ⌘↓, ⇧⌘↑ i ⇧⌘↓, ⇧⌘M |
+| En un terminal: seleccionar el bloc, copiar la sortida, desar la sortida, plegar el bloc | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| En un terminal: camp d’entrada, seleccionar amb el teclat, copiar amb format | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | Focus al camp del missatge de l’agent, comentar un pla | ⌘Esc, ⌥⌘K |
 | Camp d’adreça, tornar a carregar, enrere, endavant (navegador) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Iniciar o aturar el dictat | ⌃⌥D |
@@ -282,7 +302,7 @@ El Dango segueix l’ordre d’idiomes de **Configuració del Sistema › Genera
 
 | Lloc | Què |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`; `threads/` (la llista del tauler d’IA), `agent-threads/` (converses de l’agent propi), `layouts/` (pestanyes per projecte), `recovery/` (editors sense desar després d’una fallada), `checkpoints/` (per a carpetes sense Git), `worktrees/`, `agents/` i `tools/` (agents, servidors de llenguatge i adaptadors de depuració instal·lats), `task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`, `terminal-history.sqlite` (l’historial d’ordres dels terminals); `threads/` (la llista del tauler d’IA), `agent-threads/` (converses de l’agent propi), `layouts/` (pestanyes per projecte), `recovery/` (editors sense desar després d’una fallada), `checkpoints/` (per a carpetes sense Git), `worktrees/`, `agents/` i `tools/` (agents, servidors de llenguatge i adaptadors de depuració instal·lats), `task-output/` |
 | `~/Library/Caches/<id>/` | imatges enganxades, scripts d’integració amb el shell, el registre ACP; es pot eliminar |
 | `~/Library/Logs/<id>/dictation/` | els fitxers de registre del dictat |
 | `~/Library/Application Support/Lowspeak` i `FluidAudio` | models de dictat locals, compartits amb el Lowspeak |
@@ -300,6 +320,7 @@ Claude desa les seves pròpies sessions a `~/.claude/projects`; el Dango les lle
 - **Les xifres d’ús i el desglossament del context de Claude** depenen de parts del seu protocol marcades com a experimentals, i s’amaguen quan falten.
 - **Retrocedir la conversa** només funciona amb Claude; amb els altres agents només retrocedeix el codi.
 - **L’inici de sessió a la CI amb el navegador** està desactivat; fes servir `gh`, `glab`, un token o l’entorn.
+- **No hi ha imatges dins del terminal:** els gràfics del Kitty, Sixel i les imatges de l’iTerm2 no es mostren.
 - **Gemini CLI no s’ofereix:** Google ha deixat de permetre l’inici de sessió amb un compte personal i remet a Antigravity. Els fils de Gemini anteriors encara es poden llegir.
 
 ## Compilar des del codi font
@@ -308,7 +329,7 @@ Necessites:
 
 - macOS 14 o posterior amb les Xcode Command Line Tools (`xcode-select --install`); l’Xcode en si no cal.
 - Rust tal com l’indica `rust-toolchain.toml`. El `rust` de Homebrew compila per al processador d’aquest Mac; la compilació universal d’una versió necessita rustup amb els destins `aarch64-apple-darwin` i `x86_64-apple-darwin`.
-- Còpies de [splat](https://github.com/sventmueller/splat) i [lowspeak](https://github.com/sventmueller/lowspeak) al costat d’aquesta (`../splat`, `../lowspeak`), totes dues a la seva branca `main`; l’espai de treball en pren crates per camí.
+- Còpies de [splat](https://github.com/sventmueller/splat), [lowspeak](https://github.com/sventmueller/lowspeak) i [tapa](https://github.com/sventmueller/tapa) al costat d’aquesta (`../splat`, `../lowspeak`, `../tapa`), cadascuna a la seva branca `main`; l’espai de treball en pren crates per camí, i el terminal, del Tapa.
 - cmake, per a cada compilació amb dictat (`make run`, `make build`, `make release`), que compila whisper.cpp. `make check` compila sense.
 
 | Ordre | Què fa |

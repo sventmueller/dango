@@ -12,7 +12,7 @@ Dango brengt de code, de agents die hem veranderen en alles daaromheen samen in 
 
 **Een fout gevonden?** [Open een issue](https://github.com/sventmueller/dango/issues/new) en vermeld met welke agent en in wat voor project het gebeurde.
 
-[![Rust, editie 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 of nieuwer](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universeel: Apple silicon en Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit via objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35 talen voor de interface](https://img.shields.io/badge/languages-35-4C9A2A) ![Geen telemetrie](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Ondertekend met Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Licentie: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#licentie)
+[![Rust, editie 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 of nieuwer](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universeel: Apple silicon en Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit via objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35 talen voor de interface](https://img.shields.io/badge/languages-35-4C9A2A) ![Geen telemetrie](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Ondertekend met Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Licentie: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#licentie)
 
 [Bahasa Indonesia](../id/README.md) · [Bahasa Melayu](../ms/README.md) · [Català](../ca/README.md) · [Čeština](../cs/README.md) · [Dansk](../da/README.md) · [Deutsch](../de/README.md) · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · [Magyar](../hu/README.md) · **Nederlands** · [Norsk](../no/README.md) · [Polski](../pl/README.md) · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · [Română](../ro/README.md) · [Slovenčina](../sk/README.md) · [Slovenščina](../sl/README.md) · [Suomi](../fi/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [繁體中文](../zh-Hant/README.md)
 
@@ -55,6 +55,7 @@ Dango brengt de code, de agents die hem veranderen en alles daaromheen samen in 
 - **Eén venster per map.** Bestanden, terminals, browserpagina's, AI-threads, diffs en voorvertoningen zijn macOS-tabbladen van dat venster. De navigatiekolom bevat Bestanden, Zoeken, Agents, Git, Tests, Debug, CI en Containers.
 - **Een echte code-editor.** Syntaxkleuren, meerdere invoegpunten, invouwen, `.editorconfig`, taalservers voor 17 talen met aanvulling, ga naar definitie, verwijzingen, hernoemen, snelle oplossingen en hiërarchieën, en voorspellingen tijdens het typen van GitHub Copilot of een lokaal model.
 - **Debugger, Git en CI ingebouwd.** Breekpunten en stapsgewijs uitvoeren voor Rust, C, C++, Swift, Go, JavaScript, TypeScript en Python; losse hunks stagen, branches, stashes, conflicten en een commitgrafiek; runs, jobs en logs uit GitHub Actions en GitLab CI.
+- **De terminal van Tapa.** Opdrachtblokken waarvan je de uitvoer kopieert, bewaart of aan een agent geeft, een invoerveld met voorstellen uit je geschiedenis en het project, zoeken door de hele geschiedenis, en meldingen en voortgang van de programma's erin.
 - **Voorzichtig met je mappen.** Een map die je niet vertrouwt, start niets: geen Git-processen, taalservers, hooks of agents. Destructieve Git-commando's worden nooit voorgoed toegestaan, en commits worden op geheimen gecontroleerd.
 - **Dicteren.** Spreek in de editor en het berichtveld, online via OpenAI of Groq of lokaal met Whisper en Parakeet.
 - **Native tot in de kern.** AppKit-vensters, -tabbladen, -menu's en -knoppenbalken, TextKit 2 voor de editor, Metal voor de terminal, WebKit alleen in het browsertabblad. Donkere modus, Verhoog contrast en VoiceOver werken zoals in elke Mac-app.
@@ -84,7 +85,7 @@ Dango brengt de code, de agents die hem veranderen en alles daaromheen samen in 
 3. **Elk document is een tabblad** van het venster van de map, de eigen tabbladen van macOS. De '+' aan het einde van de tabbladbalk en ⌘T bieden een nieuw bestand, een terminal, de browser en elke geïnstalleerde agent aan, ook in een eigen Git-worktree; houd je de '+' ingedrukt, dan verschijnt hetzelfde als menu.
 4. **Open snel** met ⌘P vindt bestanden, en met `#` de symbolen van het project; ⇧⌘F zoekt en vervangt in het project.
 5. **Praat met een agent** in een AI-tabblad. ⌘Esc zet de toetsenbordfocus in zijn berichtveld en weer terug.
-6. **Instellingen** met ⌘, bevatten de tabbladen Algemeen, CI, Agents, Ingebouwde agent, Taalserver, Dicteerfunctie en Voorspelling.
+6. **Instellingen** met ⌘, bevatten de tabbladen Algemeen, Terminal, CI, Agents, Software Factory, Ingebouwde agent, Taalserver, Dicteerfunctie en Voorspelling.
 
 In de knoppenbalk staan terug en vooruit langs de plekken die je hebt bewerkt (⌃- en ⌃⇧-), de branch, Open snel en het activiteitenoverzicht, dat alles toont wat draait. **Open ernaast** in het contextuele menu van een bestand toont een tweede document naast het eerste. Na een herstart of een crash komt elk venster terug met zijn tabbladen, en editors met niet-bewaarde tekst komen terug met die tekst. Afbeeldingen, audio, video, lettertypen en Office-documenten openen in een tabblad via Snelle weergave, pdf's via PDFKit.
 
@@ -155,7 +156,22 @@ De `.vscode/launch.json` van een project wordt gelezen. Het menu 'Debug' gebruik
 
 ## Terminal
 
-Terminals in tabbladen (⌃\`) met de omgeving van de login-shell, getekend met Metal. ⌘K wist het scherm. Een geplakte of erin gesleepte afbeelding gaat naar een coding agent die in de terminal draait, of plakt het pad van een bewaarde kopie. ⌘-klik opent links en bestandsnamen. Een ontwikkelserver die de terminal start, kun je openen in het browsertabblad.
+Terminals openen als tabbladen (**Archief › Nieuwe terminal**, ⌃\`) met de login-shell en zijn omgeving. De terminal is die van [Tapa](https://github.com/sventmueller/tapa), met een eigen VT-kern, getekend met Metal: xterm en VT520 met het Kitty-toetsenbordprotocol, OSC 8-links, gesynchroniseerde uitvoer, truecolor en muisrapportage, in de tekstgrootte van de editor en de lichte en donkere kleuren van Tapa. De shell-integratie voor zsh, bash en fish stelt zichzelf in zonder je configuratiebestanden aan te raken en gaat mee wanneer je met `ssh` naar een andere host gaat. Na een herstart komt een terminal terug als een nieuwe shell in de map waarin hij stond, alleen in vertrouwde mappen; wat hij toonde, komt niet terug.
+
+- **Opdrachtblokken.** Elke commando en de uitvoer ervan vormen een blok. ⌘↑ en ⌘↓ springen tussen prompts. **Selecteer blok** (⇧⌘A), **Kopieer uitvoer** (⌥⌘C), **Bewaar uitvoer…** (⌥⌘S) en **Klap blok in/uit** (⇧⌘↩) werken op het huidige blok; **Zet/verwijder bladwijzer** (⇧⌘M) markeert een regel, en ⇧⌘↑ en ⇧⌘↓ springen tussen bladwijzers. Met **Markeer commando's als blokken** aan toont een balk in de marge elk blok, worden mislukte commando's gemarkeerd, blijft de lopende commando bovenaan terwijl de uitvoer ervan scrolt, en tonen knoppen boven het blok onder de aanwijzer de status, de duur en dezelfde acties.
+- **Stuur blok naar agent** (menu 'Wijzig' en het contextuele menu van de terminal) opent een nieuw AI-tabblad met de opdrachtregel en de uitvoer van het huidige blok als Externe inhoud bijgevoegd (zie [Vertrouwen](#vertrouwen)), en een concept dat naar de oorzaak vraagt als de commando is mislukt, zoals het log van een mislukte CI-job dat doet. Het heeft geen toetscombinatie tot je `terminal.blockToAgent` er een geeft in `keybindings.json`.
+- **Het invoerveld.** **Weergave › Toon/verberg invoerveld** (⌘I) maakt van de opdrachtregel een tekstveld onder in de terminal, met de map en de Git-branch erboven; nieuwe terminals volgen je laatste keuze. Return stuurt het hele veld naar de shell. Het heeft de shell-integratie nodig en gaat opzij voor schermvullende programma's zoals vim, htop of claude.
+- **Voorstellen** verschijnen in grijs direct na wat je typt, in het invoerveld en zonder: uit je geschiedenis, met de map, de branch en de afsluitcode waarmee elke commando draaide, uit specificaties voor meer dan 700 opdrachtregeltools, en uit het project, zoals git-branches, docker-containers, `package.json`-scripts en doelen van make, just en cargo. → neemt een voorstel over; Tab vult aan en opent bij meerdere kandidaten een menu dat je met typen filtert. Voordat je typt, kan het veld de commando voorstellen die meestal volgt. Commando's worden per onderdeel gekleurd, en een commando die je shell niet kan uitvoeren, krijgt een rode stippellijn eronder. Voorstellen gebruiken nooit het netwerk en starten programma's alleen uit het `PATH` van de login-shell.
+- **Zoek** (⌘F, ⌘G en ⇧⌘G terwijl een terminal de focus heeft) doorzoekt de hele geschiedenis, met reguliere expressies, hoofdlettergevoelig en op hele woorden, en telt de resultaten; de scrollbalk markeert de resultaten, de prompts en de mislukte commando's.
+- **Selecteren en kopiëren.** Een dubbelklik selecteert een URL, een pad, een hash of een IP-adres in zijn geheel, en slepen met ⌥ selecteert een rechthoek. **Selecteer met het toetsenbord** (⇧⌘C) verplaatst een selectie met de toetsen van Vim, **Kopieer met opmaak** (⇧⌥⌘C) behoudt kleuren en stijlen. Een programma mag via OSC 52 alleen kopiëren terwijl zijn terminal de toetsenbordfocus heeft, en de terminal meldt dat; geen enkel programma leest het klembord.
+- **Plakken.** Tekst die bij zijn regeleinde een commando zou uitvoeren, of stuurtekens bevat, verschijnt eerst in een venster, tenzij het programma hem leest als bracketed paste. Een geplakte afbeelding gaat naar een coding agent die in de terminal draait en haar zelf van het klembord leest, of het pad van een kopie die bij de caches is bewaard, wordt geplakt; via `ssh` zegt de terminal waarom dat niet gebeurt. Bestanden die op een terminal worden gesleept, afbeeldingen inbegrepen, komen aan als paden tussen aanhalingstekens; een afbeelding die van elders wordt gesleept, zoals van een webpagina, gaat dezelfde weg als een geplakte.
+- **Links.** ⌘-klik opent een webadres in het browsertabblad, een `mailto:`-link in Mail, en een bestandsnaam, ook met regel en kolom, in de editor van Dango; links worden ook zonder OSC 8 gevonden. Links van andere soorten openen niet.
+- **Ontwikkelservers.** Wanneer een programma in de terminal een ontwikkelserver start, noemt een balk boven de terminal het adres ervan, en **Open in browsertabblad** opent het daar.
+- **Meldingen en voortgang.** De bel en een melding waar een programma om vraagt (OSC 9 en OSC 777) zetten de rode stip op het tabblad van de terminal zolang je die niet ziet; staat er een andere app vooraan, dan gaat de melding ook naar macOS, en een klik erop brengt de terminal terug. Voortgang die een programma meldt (OSC 9;4), verschijnt als een ring op zijn tabblad en als een balk op het Dock-symbool.
+- **Beveilig toetsenbordinvoer** (**Dango › Beveilig toetsenbordinvoer**) voorkomt dat andere apps lezen wat je in een terminal typt; het zet zichzelf ook aan zolang een programma om een wachtwoord vraagt.
+- **Toetsen.** ⌘K wist de terminal (**Wijzig › Wis terminal**); ⌃C en Esc gaan naar het programma erin. De commando's van de terminal staan in de menu's 'Wijzig' en 'Weergave', en hun toetscombinaties werken alleen terwijl een terminal de toetsenbordfocus heeft, zodat ⌘I, ⌘↑ of ⌘F hun betekenis in de editor houden. Het contextuele menu opent ook een **Nieuwe terminal hier** en sluit de terminal met **Sluit deelvenster**.
+
+**Instellingen › Terminal** schakelt het invoerveld voor nieuwe terminals, de Vim-toetsen ervan, de voorstellen, het kleuren van commando's, het onderstrepen van onbekende, commandoblokken, het direct kopiëren van de selectie, het eerst tonen van plakken van meerdere regels en ⌥ als metatoets.
 
 ## Browser
 
@@ -205,7 +221,7 @@ Een map kan programma's laten draaien zodra er iets in wordt gestart: Git-hooks 
 - **Vertrouwd:** Git, taalservers, debuggers, agents en CI draaien voor deze map en alles daaronder.
 - **Beperkt:** je kunt lezen en bewerken; de wijzigingsmarkeringen in de editor komen uit het rechtstreeks lezen van `.git`. Niets wat de map instelt, wordt gestart. De panelen voor Git, CI en AI zeggen dat en bieden aan de map te vertrouwen.
 
-Tekst die niet van jou komt, kan instructies bevatten die een agent moeten sturen (prompt injection). De uitvoer van een terminal (`@terminal`), een browserpagina (`@browser`), een CI-log dat aan een agent wordt doorgegeven, een bestand buiten het project en langere tekst die uit een webpagina wordt geplakt, gaan daarom gemarkeerd mee: de chip zegt 'Externe inhoud', en de agent krijgt de tekst met de mededeling dat het niet te vertrouwen gegevens zijn waarvan hij de instructies niet mag volgen. De webpagina's van de ingebouwde agent komen met dezelfde mededeling. Geplakte tekst geldt als afkomstig van een webpagina als de browser dat op het klembord aangeeft, zoals Safari, Chrome en Firefox doen; tekst van elders, en een korte zin van een paar woorden, blijft je eigen tekst.
+Tekst die niet van jou komt, kan instructies bevatten die een agent moeten sturen (prompt injection). De uitvoer van een terminal (`@terminal`, of een commandoblok dat aan een agent wordt gegeven), een browserpagina (`@browser`), een CI-log dat aan een agent wordt doorgegeven, een bestand buiten het project en langere tekst die uit een webpagina wordt geplakt, gaan daarom gemarkeerd mee: de chip zegt 'Externe inhoud', en de agent krijgt de tekst met de mededeling dat het niet te vertrouwen gegevens zijn waarvan hij de instructies niet mag volgen. De webpagina's van de ingebouwde agent komen met dezelfde mededeling. Geplakte tekst geldt als afkomstig van een webpagina als de browser dat op het klembord aangeeft, zoals Safari, Chrome en Firefox doen; tekst van elders, en een korte zin van een paar woorden, blijft je eigen tekst.
 
 ## Sandbox
 
@@ -221,9 +237,9 @@ Dango zelf draait zonder App Sandbox, omdat elk programma dat het start die zou 
 ## Weergave en toegankelijkheid
 
 - **Donkere modus** volgt het systeem; **Verhoog contrast** en **Verminder beweging** worden gerespecteerd.
-- **VoiceOver** benoemt de navigatiekolom, de tabbladen, de kaarten van de AI-tijdlijn, de rijen in Git en CI, de debugger en de tekst van de terminal. Breekpunten worden nooit alleen door kleur onderscheiden.
+- **VoiceOver** benoemt de navigatiekolom, de tabbladen, de kaarten van de AI-tijdlijn, de rijen in Git en CI en de debugger, leest de regels van de terminal voor en kondigt nieuwe uitvoer aan. Breekpunten worden nooit alleen door kleur onderscheiden.
 - **Toetsenbord.** Elk commando heeft een toetscombinatie, en ze zijn allemaal te wijzigen in `keybindings.json`; ⌥⌘\` gaat naar het volgende paneel.
-- **Van rechts naar links.** In het Arabisch en Hebreeuws wordt het venster gespiegeld, terwijl codeweergaven van links naar rechts blijven.
+- **Van rechts naar links.** In het Arabisch en Hebreeuws wordt het venster gespiegeld, terwijl codeweergaven en het raster van de terminal van links naar rechts blijven.
 
 Wat Dango per onderdeel toevoegt aan AppKit, staat in [ACCESSIBILITY.md](../../../ACCESSIBILITY.md).
 
@@ -257,6 +273,10 @@ Dango volgt de taalvolgorde in **Systeeminstellingen › Algemeen › Taal en re
 | Vet, cursief, doorgehaald, code, link | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | Kop 1 tot 3 | ⌥⌘1 tot ⌥⌘3 |
 | Nieuwe terminal, terminal wissen | ⌃\`, ⌘K |
+| In een terminal: zoeken, volgende zoeken, vorige zoeken | ⌘F, ⌘G, ⇧⌘G |
+| In een terminal: vorige en volgende prompt, vorige en volgende bladwijzer, bladwijzer zetten of verwijderen | ⌘↑ en ⌘↓, ⇧⌘↑ en ⇧⌘↓, ⇧⌘M |
+| In een terminal: blok selecteren, uitvoer kopiëren, uitvoer bewaren, blok inklappen | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| In een terminal: invoerveld, selecteren met het toetsenbord, kopiëren met opmaak | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | Focus op het berichtveld van de agent, commentaar op een plan | ⌘Esc, ⌥⌘K |
 | Adresveld, opnieuw laden, terug, vooruit (browser) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Dicteren starten of stoppen | ⌃⌥D |
@@ -282,7 +302,7 @@ Dango volgt de taalvolgorde in **Systeeminstellingen › Algemeen › Taal en re
 
 | Plek | Wat |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`; `threads/` (de lijst van het AI-paneel), `agent-threads/` (gesprekken van de ingebouwde agent), `layouts/` (tabbladen per project), `recovery/` (niet-bewaarde editors na een crash), `checkpoints/` (voor mappen zonder Git), `worktrees/`, `agents/` en `tools/` (geïnstalleerde agents, taalservers en debug-adapters), `task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`, `terminal-history.sqlite` (de opdrachtgeschiedenis van de terminals); `threads/` (de lijst van het AI-paneel), `agent-threads/` (gesprekken van de ingebouwde agent), `layouts/` (tabbladen per project), `recovery/` (niet-bewaarde editors na een crash), `checkpoints/` (voor mappen zonder Git), `worktrees/`, `agents/` en `tools/` (geïnstalleerde agents, taalservers en debug-adapters), `task-output/` |
 | `~/Library/Caches/<id>/` | geplakte afbeeldingen, scripts voor de shell-integratie, het ACP-register; kan worden verwijderd |
 | `~/Library/Logs/<id>/dictation/` | de logbestanden van het dicteren |
 | `~/Library/Application Support/Lowspeak` en `FluidAudio` | lokale dicteermodellen, gedeeld met Lowspeak |
@@ -300,6 +320,7 @@ Claude bewaart zijn eigen sessies onder `~/.claude/projects`; Dango leest ze om 
 - **Gebruikscijfers en de uitsplitsing van de context van Claude** steunen op delen van zijn protocol die als experimenteel zijn gemarkeerd, en worden verborgen als die ontbreken.
 - **Het gesprek terugdraaien** werkt alleen bij Claude; bij de andere agents wordt alleen de code teruggedraaid.
 - **Inloggen bij CI via de browser** staat uit; gebruik `gh`, `glab`, een token of de omgeving.
+- **Geen afbeeldingen in de terminal:** Kitty-graphics, Sixel- en iTerm2-afbeeldingen worden niet getoond.
 - **Gemini CLI wordt niet aangeboden:** Google heeft het inloggen met een persoonlijk account beëindigd en verwijst naar Antigravity. Eerdere Gemini-threads blijven leesbaar.
 
 ## Bouwen vanuit de broncode
@@ -308,7 +329,7 @@ Je hebt nodig:
 
 - macOS 14 of nieuwer met de Xcode Command Line Tools (`xcode-select --install`); Xcode zelf is niet nodig.
 - Rust zoals `rust-toolchain.toml` het noemt. De `rust` van Homebrew bouwt voor de processor van deze Mac; de universele build van een release heeft rustup nodig met de targets `aarch64-apple-darwin` en `x86_64-apple-darwin`.
-- Checkouts van [splat](https://github.com/sventmueller/splat) en [lowspeak](https://github.com/sventmueller/lowspeak) naast deze (`../splat`, `../lowspeak`), allebei op hun branch `main`; de workspace haalt crates daaruit via een pad.
+- Checkouts van [splat](https://github.com/sventmueller/splat), [lowspeak](https://github.com/sventmueller/lowspeak) en [tapa](https://github.com/sventmueller/tapa) naast deze (`../splat`, `../lowspeak`, `../tapa`), elk op zijn branch `main`; de workspace haalt crates daaruit via een pad, de terminal uit Tapa.
 - cmake, voor elke build met dicteren (`make run`, `make build`, `make release`), die whisper.cpp bouwt. `make check` bouwt zonder.
 
 | Commando | Wat het doet |

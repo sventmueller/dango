@@ -12,7 +12,7 @@ Dango 把程式碼、修改程式碼的代理程式，以及圍繞它們的一�
 
 **發現錯誤了嗎？** 請[提交 Issue](https://github.com/sventmueller/dango/issues/new)，並說明問題是在哪個代理程式和哪類專案中發生的。
 
-[![Rust 2024 版](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 或以上版本](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![通用：Apple 晶片和 Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![透過 objc2 使用 AppKit](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![終端機：Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35 種介面語言](https://img.shields.io/badge/languages-35-4C9A2A) ![沒有遙測](https://img.shields.io/badge/telemetry-none-4C9A2A) ![以 Hardened Runtime 簽署](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![授權條款：MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#授權條款)
+[![Rust 2024 版](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 或以上版本](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![通用：Apple 晶片和 Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![透過 objc2 使用 AppKit](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![終端機：Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35 種介面語言](https://img.shields.io/badge/languages-35-4C9A2A) ![沒有遙測](https://img.shields.io/badge/telemetry-none-4C9A2A) ![以 Hardened Runtime 簽署](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![授權條款：MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#授權條款)
 
 [Bahasa Indonesia](../id/README.md) · [Bahasa Melayu](../ms/README.md) · [Català](../ca/README.md) · [Čeština](../cs/README.md) · [Dansk](../da/README.md) · [Deutsch](../de/README.md) · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · [Magyar](../hu/README.md) · [Nederlands](../nl/README.md) · [Norsk](../no/README.md) · [Polski](../pl/README.md) · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · [Română](../ro/README.md) · [Slovenčina](../sk/README.md) · [Slovenščina](../sl/README.md) · [Suomi](../fi/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · **繁體中文**
 
@@ -55,6 +55,7 @@ Dango 把程式碼、修改程式碼的代理程式，以及圍繞它們的一�
 - **每個檔案夾一個視窗。** 檔案、終端機、瀏覽器頁面、AI 對話、差異和預覽都是該視窗的 macOS 標籤頁。側邊欄包含「檔案」「搜尋」「代理程式」「Git」「測試」「除錯」「CI」和「容器」。
 - **真正的程式碼編輯器。** 語法上色、多個插入點、摺疊、`.editorconfig`、涵蓋 17 種語言的語言伺服器（支援自動完成、前往定義、參照、重新命名、快速修正和階層），以及來自 GitHub Copilot 或本機模型的編輯預測。
 - **內建除錯器、Git 和 CI。** 適用於 Rust、C、C++、Swift、Go、JavaScript、TypeScript 和 Python 的中斷點與逐步執行；暫存單一變更區塊、分支、儲藏、衝突和提交圖表；來自 GitHub Actions 和 GitLab CI 的執行、作業和記錄。
+- **Tapa 的終端機。** 指令區塊的輸出可以拷貝、儲存或交給代理程式；輸入欄位提供來自歷史記錄和專案的建議；可搜尋整個歷史記錄；終端機中的程式可發出通知和進度。
 - **謹慎對待你的檔案夾。** 未受信任的檔案夾不會啟動任何東西：沒有 Git 程序、語言伺服器、掛鉤或代理程式。具破壞性的 Git 指令永遠不會被永久允許，提交也會檢查是否含有機密資訊。
 - **聽寫。** 對著編輯器和訊息欄位說話，可以透過 OpenAI 或 Groq 線上辨識，也可以用 Whisper 和 Parakeet 在本機辨識。
 - **原生到骨子裡。** AppKit 視窗、標籤頁、選單和工具列，編輯器使用 TextKit 2，終端機使用 Metal，WebKit 只用於瀏覽器標籤頁。深色模式、「增加對比」和 VoiceOver 的運作方式與其他 Mac App 相同。
@@ -84,7 +85,7 @@ Dango 把程式碼、修改程式碼的代理程式，以及圍繞它們的一�
 3. **每份文件都是檔案夾視窗中的一個標籤頁**，也就是 macOS 自己的標籤頁。標籤列末端的「+」和 ⌘T 可開啟新檔案、終端機、瀏覽器以及每個已安裝的代理程式，也可放在獨立的 Git 工作樹中；按住「+」會以選單形式顯示相同的選項。
 4. **快速打開**（⌘P）可尋找檔案，輸入 `#` 可尋找專案中的符號；⇧⌘F 在專案中搜尋和取代。
 5. 在 AI 標籤頁中 **與代理程式對話**。⌘Esc 會將鍵盤焦點移到它的訊息欄位，再按一次則移回。
-6. 以 ⌘, 打開的 **設定** 包含以下標籤頁：「一般」「CI」「代理程式」「內建代理程式」「語言伺服器」「聽寫」和「預測」。
+6. 以 ⌘, 打開的 **設定** 包含以下標籤頁：「一般」「終端機」「CI」「代理程式」「Software Factory」「內建代理程式」「語言伺服器」「聽寫」和「預測」。
 
 工具列包含在編輯過的位置之間後退和前進（⌃- 和 ⌃⇧-）、分支、「快速打開」以及列出所有執行中項目的「活動」概覽。在檔案的快速選單中選擇 **在旁邊打開**，會在第一份文件旁顯示第二份文件。重新啟動或當機之後，每個視窗都會連同其標籤頁恢復，含有未儲存文字的編輯器也會連同這些文字恢復。影像、音訊、影片、字體和 Office 文件會透過快速查看在標籤頁中打開，PDF 則透過 PDFKit。
 
@@ -155,7 +156,22 @@ Dango 會讀取專案的 `.vscode/launch.json`。「除錯」選單使用 Xcode 
 
 ## 終端機
 
-終端機在標籤頁中執行（⌃\`），使用登入 Shell 的環境，並以 Metal 繪製。⌘K 清除畫面。貼上或拖放影像時，會將它交給在終端機中執行的程式設計代理程式，或貼上已儲存副本的路徑。⌘-按一下可打開連結和檔案名稱。終端機啟動的開發伺服器可以在瀏覽器標籤頁中打開。
+終端機以標籤頁形式打開（**檔案 › 新增終端機**，⌃\`），使用登入 Shell 及其環境。終端機來自 [Tapa](https://github.com/sventmueller/tapa)，擁有自己的 VT 核心，並以 Metal 繪製：支援 xterm 和 VT520，以及 Kitty 鍵盤協定、OSC 8 連結、同步輸出、全彩和滑鼠回報，使用編輯器的文字大小以及 Tapa 的淺色和深色配色。它的 Shell 整合適用於 zsh、bash 和 fish，會自行設定而不動到你的設定檔，當你用 `ssh` 連到另一台主機時也會一起帶過去。重新啟動後，終端機會在原本的檔案夾中以新的 Shell 恢復，但僅限受信任的檔案夾；先前顯示的內容不會恢復。
+
+- **指令區塊。** 每個指令和它的輸出構成一個區塊。⌘↑ 和 ⌘↓ 會在提示符號之間跳轉。**選取區塊**（⇧⌘A）、**拷貝輸出**（⌥⌘C）、**儲存輸出⋯**（⌥⌘S）和 **收合／展開區塊**（⇧⌘↩）會作用於目前的區塊；**設定／移除書籤**（⇧⌘M）會標記一行，⇧⌘↑ 和 ⇧⌘↓ 會在書籤之間跳轉。開啟 **將指令標示為區塊** 後，邊界中的直條會標出每個區塊，失敗的指令會被標示，執行中的指令在其輸出捲動時會停留在頂端，指標所在的區塊上會出現按鈕，顯示它的狀態、所花時間以及同樣的動作。
+- **將區塊傳送給代理程式**（「編輯」選單和終端機的快速選單）會打開新的 AI 標籤頁，將目前區塊的指令列和輸出以「外部內容」附上（請參閱[信任](#信任)），並在指令失敗時附上一份詢問原因的草稿，就像失敗的 CI 作業記錄那樣。在你於 `keybindings.json` 中為 `terminal.blockToAgent` 指定快速鍵之前，它沒有快速鍵。
+- **輸入欄位。** **顯示方式 › 顯示／隱藏輸入欄位**（⌘I）會把指令列變成終端機底部的文字欄位，上方顯示檔案夾和 Git 分支；新的終端機會沿用你上次的選擇。Return 會把整個欄位傳送給 Shell。它需要 Shell 整合，遇到 vim、htop 或 claude 等全螢幕程式時會自動讓開。
+- **建議** 會以灰色緊接在你輸入的內容之後顯示，不論是否使用輸入欄位：來自你的歷史記錄（附帶每個指令執行時所在的檔案夾、分支和結束代碼）、700 多個指令列工具的規格，以及專案，例如 git 分支、docker 容器、`package.json` 腳本，以及 make、just 和 cargo 目標。按 → 採用建議；Tab 會進行補全，有多個候選項目時會打開一個選單，繼續輸入即可篩選。在你輸入之前，欄位可以建議通常接下來會執行的指令。指令會依組成部分著色，Shell 無法執行的指令會加上紅色虛線底線。建議絕不使用網路，而且只會從登入 Shell 的 `PATH` 啟動程式。
+- **尋找**（終端機為焦點時按 ⌘F、⌘G 和 ⇧⌘G）會以正規表示式、區分大小寫和全字比對搜尋整個歷史記錄，並計算結果數量；捲軸會標示出結果、提示符號和失敗的指令。
+- **選取與拷貝。** 連按兩下可整個選取 URL、路徑、雜湊值或 IP 位址，按住 ⌥ 拖移可選取矩形範圍。**使用鍵盤選取**（⇧⌘C）會用 Vim 的按鍵移動選取範圍，**拷貝並保留格式**（⇧⌥⌘C）會保留顏色和樣式。程式只有在其終端機擁有鍵盤焦點時才能透過 OSC 52 拷貝，終端機會告訴你這件事；任何程式都無法讀取剪貼板。
+- **貼上。** 會在換行處執行指令的文字，或含有控制字元的文字，會先顯示在一個表單中，除非程式將其當作括號貼上讀取。貼上影像時，會將它交給在終端機中執行的程式設計代理程式，由它自己從剪貼板讀取；否則會貼上儲存在快取中的副本路徑；透過 `ssh` 時，終端機會說明為什麼不這樣做。拖放到終端機上的檔案（包括圖片）會以加上引號的路徑出現；從別處拖入的圖片（例如來自網頁）會像貼上的圖片一樣處理。
+- **連結。** ⌘-按一下會在瀏覽器標籤頁中打開網址，在「郵件」中打開 `mailto:` 連結，在 Dango 的編輯器中打開檔案名稱（也可帶行號和欄號）；即使沒有 OSC 8 也能找到連結。其他種類的連結不會打開。
+- **開發伺服器。** 當終端機中的程式啟動開發伺服器時，終端機上方的橫列會顯示其位址，**在瀏覽器標籤頁中打開** 會在那裡打開它。
+- **通知與進度。** 響鈴以及程式要求的通知（OSC 9 和 OSC 777）會在你看不到終端機時，在其標籤頁上顯示紅點；當其他 App 位於前方時，通知也會傳送到 macOS，按一下通知即可回到終端機。程式回報的進度（OSC 9;4）會以圓環顯示在其標籤頁上，並以進度列顯示在 Dock 圖像上。
+- **加密的鍵盤輸入**（**Dango › 加密的鍵盤輸入**）可防止其他 App 讀取你在終端機中鍵入的內容；當程式要求輸入密碼時，它也會自動開啟。
+- **按鍵。** ⌘K 會清除終端機（**編輯 › 清除終端機**）；⌃C 和 Esc 會傳送給終端機中的程式。終端機的指令位於「編輯」和「顯示方式」選單中，其快速鍵僅在終端機擁有鍵盤焦點時有作用，因此 ⌘I、⌘↑ 或 ⌘F 在編輯器中仍保有原本的意義。快速選單也可以打開 **在此處新增終端機**，並以 **關閉窗格** 關閉終端機。
+
+**設定 › 終端機** 可切換新終端機的輸入欄位、其 Vim 按鍵、建議、指令著色、未知指令的底線、指令區塊、立即拷貝所選內容、先顯示多行貼上，以及將 ⌥ 作為 Meta 鍵。
 
 ## 瀏覽器
 
@@ -205,7 +221,7 @@ Token 來自鑰匙圈、`gh` 或 `glab`、登入 Shell 的環境，或你在 **�
 - **受信任：** Git、語言伺服器、除錯器、代理程式和 CI 會為此檔案夾及其下的所有內容執行。
 - **受限制：** 你可以閱讀和編輯；編輯器中的變更標記來自直接讀取 `.git`。檔案夾所設定的任何項目都不會啟動。Git、CI 和 AI 面板會說明這一點，並提供信任該檔案夾的選項。
 
-不是來自你的文字可能含有意圖操控代理程式的指示（提示詞注入）。因此，終端機的輸出（`@terminal`）、瀏覽器頁面（`@browser`）、交給代理程式的 CI 記錄、專案外的檔案，以及從網頁貼上的較長文字，在傳遞時都會帶有標示：標籤上顯示「外部內容」，代理程式收到文字時會附帶一則說明，指出這是不可信任的資料，不得遵循其中的指示。內建代理程式取得的網頁也帶有同樣的說明。當瀏覽器在剪貼板中註明來源時（Safari、Chrome 和 Firefox 都會這麼做），貼上的文字會被視為來自網頁；來自其他地方的文字，以及只有幾個字的短語，仍算是你自己的文字。
+不是來自你的文字可能含有意圖操控代理程式的指示（提示詞注入）。因此，終端機的輸出（`@terminal`，或交給代理程式的指令區塊）、瀏覽器頁面（`@browser`）、交給代理程式的 CI 記錄、專案外的檔案，以及從網頁貼上的較長文字，在傳遞時都會帶有標示：標籤上顯示「外部內容」，代理程式收到文字時會附帶一則說明，指出這是不可信任的資料，不得遵循其中的指示。內建代理程式取得的網頁也帶有同樣的說明。當瀏覽器在剪貼板中註明來源時（Safari、Chrome 和 Firefox 都會這麼做），貼上的文字會被視為來自網頁；來自其他地方的文字，以及只有幾個字的短語，仍算是你自己的文字。
 
 ## 沙盒
 
@@ -221,9 +237,9 @@ Dango 本身不在 App Sandbox 中執行，因為它啟動的每個程式都會�
 ## 外觀與輔助使用
 
 - **深色模式** 跟隨系統；**增加對比** 和 **減少動態效果** 也會得到遵循。
-- **VoiceOver** 會為側邊欄、標籤頁、AI 時間軸中的卡片、Git 和 CI 列、除錯器以及終端機的文字提供名稱。中斷點絕不會只靠顏色來區分。
+- **VoiceOver** 會為側邊欄、標籤頁、AI 時間軸中的卡片、Git 和 CI 列、除錯器提供名稱，朗讀終端機的各行並播報新的輸出。中斷點絕不會只靠顏色來區分。
 - **鍵盤。** 每個指令都有快速鍵，所有快速鍵都可以在 `keybindings.json` 中更改；⌥⌘\` 移到下一個面板。
-- **由右至左。** 在阿拉伯文和希伯來文中，視窗會左右鏡像，而程式碼檢視仍維持由左至右。
+- **由右至左。** 在阿拉伯文和希伯來文中，視窗會左右鏡像，而程式碼檢視和終端機的網格仍維持由左至右。
 
 Dango 在 AppKit 之上依領域補充的內容，請參閱 [ACCESSIBILITY.md](../../../ACCESSIBILITY.md)。
 
@@ -257,6 +273,10 @@ Dango 會依照 **系統設定 › 一般 › 語言與地區** 中的語言順�
 | 粗體、斜體、刪除線、程式碼、連結 | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | 標題 1 至 3 | ⌥⌘1 至 ⌥⌘3 |
 | 新增終端機、清除終端機 | ⌃\`, ⌘K |
+| 在終端機中：尋找、尋找下一個、尋找上一個 | ⌘F, ⌘G, ⇧⌘G |
+| 在終端機中：上一個和下一個提示符號、上一個和下一個書籤、設定或移除書籤 | ⌘↑ 和 ⌘↓, ⇧⌘↑ 和 ⇧⌘↓, ⇧⌘M |
+| 在終端機中：選取區塊、拷貝輸出、儲存輸出、收合區塊 | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| 在終端機中：輸入欄位、使用鍵盤選取、拷貝並保留格式 | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | 聚焦代理程式的訊息欄位、評論計畫 | ⌘Esc, ⌥⌘K |
 | 網址欄位、重新載入、上一頁、下一頁（瀏覽器） | ⌘L, ⌘R, ⌘[, ⌘] |
 | 開始或停止聽寫 | ⌃⌥D |
@@ -282,7 +302,7 @@ App 資料檔案夾中的 `keybindings.json`（請參閱[資料存放位置](#�
 
 | 位置 | 內容 |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`、`state.json`、`keybindings.json`、`trust.json`；`threads/`（AI 面板的列表）、`agent-threads/`（內建代理程式的對話）、`layouts/`（每個專案的標籤頁）、`recovery/`（當機後未儲存的編輯器）、`checkpoints/`（用於沒有 Git 的檔案夾）、`worktrees/`、`agents/` 和 `tools/`（已安裝的代理程式、語言伺服器和除錯轉接器）、`task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`、`state.json`、`keybindings.json`、`trust.json`、`terminal-history.sqlite`（終端機的指令歷史記錄）；`threads/`（AI 面板的列表）、`agent-threads/`（內建代理程式的對話）、`layouts/`（每個專案的標籤頁）、`recovery/`（當機後未儲存的編輯器）、`checkpoints/`（用於沒有 Git 的檔案夾）、`worktrees/`、`agents/` 和 `tools/`（已安裝的代理程式、語言伺服器和除錯轉接器）、`task-output/` |
 | `~/Library/Caches/<id>/` | 貼上的影像、Shell 整合腳本、ACP 登錄庫；可以刪除 |
 | `~/Library/Logs/<id>/dictation/` | 聽寫的記錄檔 |
 | `~/Library/Application Support/Lowspeak` 和 `FluidAudio` | 本機聽寫模型，與 Lowspeak 共用 |
@@ -300,6 +320,7 @@ Claude 會將自己的工作階段保存在 `~/.claude/projects` 下；Dango 會
 - **Claude 的用量數據和上下文明細** 依賴其協定中標示為實驗性的部分，缺少這些部分時會隱藏。
 - **回溯對話內容** 僅適用於 Claude；對於其他代理程式，只會回溯程式碼。
 - **透過瀏覽器登入 CI** 的功能已關閉；請使用 `gh`、`glab`、Token 或環境變數。
+- **終端機中不顯示圖片：** Kitty 圖形、Sixel 和 iTerm2 圖片不會顯示。
 - **不提供 Gemini CLI：** Google 已停止以個人帳號登入，並引導使用者改用 Antigravity。先前的 Gemini 對話仍可閱讀。
 
 ## 從原始碼建置
@@ -308,7 +329,7 @@ Claude 會將自己的工作階段保存在 `~/.claude/projects` 下；Dango 會
 
 - macOS 14 或以上版本，並安裝 Xcode Command Line Tools（`xcode-select --install`）；不需要 Xcode 本身。
 - `rust-toolchain.toml` 所指定的 Rust。Homebrew 的 `rust` 只為這部 Mac 的處理器建置；正式版的通用建置需要加入目標 `aarch64-apple-darwin` 和 `x86_64-apple-darwin` 的 rustup。
-- [splat](https://github.com/sventmueller/splat) 和 [lowspeak](https://github.com/sventmueller/lowspeak) 的檢出副本，放在本儲存庫旁邊（`../splat`、`../lowspeak`），兩者都位於各自的 `main` 分支；工作區依路徑從它們引入 crate。
+- [splat](https://github.com/sventmueller/splat)、[lowspeak](https://github.com/sventmueller/lowspeak) 和 [tapa](https://github.com/sventmueller/tapa) 的檢出副本，放在本儲存庫旁邊（`../splat`、`../lowspeak`、`../tapa`），各自位於自己的 `main` 分支；工作區依路徑從它們引入 crate，終端機來自 Tapa。
 - cmake，用於每個包含聽寫的建置（`make run`、`make build`、`make release`），以建置 whisper.cpp。`make check` 不需要它。
 
 | 指令 | 作用 |

@@ -12,7 +12,7 @@ Dangoは、コードと、それを変更するエージェントと、その周
 
 **バグを見つけましたか?** [Issueを作成](https://github.com/sventmueller/dango/issues/new)して、どのエージェントで、どんな種類のプロジェクトで起きたかをお知らせください。
 
-[![Rust 2024エディション](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14以降](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![ユニバーサル: Apple SiliconとIntel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![objc2経由のAppKit](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![ターミナル: Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35のインターフェイス言語](https://img.shields.io/badge/languages-35-4C9A2A) ![テレメトリなし](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Hardened Runtimeで署名済み](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![ライセンス: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#ライセンス)
+[![Rust 2024エディション](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14以降](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![ユニバーサル: Apple SiliconとIntel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![objc2経由のAppKit](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![ターミナル: Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35のインターフェイス言語](https://img.shields.io/badge/languages-35-4C9A2A) ![テレメトリなし](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Hardened Runtimeで署名済み](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![ライセンス: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#ライセンス)
 
 [Bahasa Indonesia](../id/README.md) · [Bahasa Melayu](../ms/README.md) · [Català](../ca/README.md) · [Čeština](../cs/README.md) · [Dansk](../da/README.md) · [Deutsch](../de/README.md) · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · [Magyar](../hu/README.md) · [Nederlands](../nl/README.md) · [Norsk](../no/README.md) · [Polski](../pl/README.md) · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · [Română](../ro/README.md) · [Slovenčina](../sk/README.md) · [Slovenščina](../sl/README.md) · [Suomi](../fi/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · [한국어](../ko/README.md) · **日本語** · [简体中文](../zh-Hans/README.md) · [繁體中文](../zh-Hant/README.md)
 
@@ -55,6 +55,7 @@ Dangoは、コードと、それを変更するエージェントと、その周
 - **フォルダごとに1つのウインドウ。** ファイル、ターミナル、ブラウザのページ、AIスレッド、差分、プレビューは、そのウインドウのmacOSタブになります。サイドバーには“ファイル”、“検索”、“エージェント”、“Git”、“テスト”、“デバッグ”、“CI”、“コンテナ”があります。
 - **本格的なコードエディタ。** シンタックスカラー、複数のキャレット、折りたたみ、`.editorconfig`、補完・定義へ移動・参照・名前の変更・クイックフィックス・階層表示に対応した17言語の言語サーバ、そしてGitHub Copilotまたはローカルモデルによる編集の予測。
 - **デバッガ、Git、CIを内蔵。** Rust、C、C++、Swift、Go、JavaScript、TypeScript、Pythonのブレークポイントとステップ実行。個別のハンクのステージ、ブランチ、スタッシュ、競合、コミットグラフ。GitHub ActionsとGitLab CIの実行、ジョブ、ログ。
+- **Tapaのターミナル。** 出力をコピー、保存、エージェントに渡せるコマンドブロック、履歴とプロジェクトからの提案が出る入力フィールド、履歴全体の検索、ターミナル内のプログラムからの通知と進行状況。
 - **フォルダを慎重に扱います。** 信頼していないフォルダでは何も起動しません。Gitのプロセスも、言語サーバも、フックも、エージェントもです。破壊的なGitコマンドが恒久的に許可されることはなく、コミットはシークレットが含まれていないか検査されます。
 - **音声入力。** エディタとメッセージフィールドに話しかけて入力できます。OpenAIまたはGroqでオンラインで、あるいはWhisperとParakeetでローカルで認識します。
 - **骨の髄までネイティブ。** AppKitのウインドウ、タブ、メニュー、ツールバー。エディタにはTextKit 2、ターミナルにはMetalを使い、WebKitはブラウザタブでのみ使います。ダークモード、“コントラストを上げる”、VoiceOverは、ほかのMacアプリと同じように動作します。
@@ -84,7 +85,7 @@ Dangoは、コードと、それを変更するエージェントと、その周
 3. **どの書類もタブ**として、フォルダのウインドウに開きます。macOS自体のタブです。タブバーの末尾にある“+”と⌘Tで、新規ファイル、ターミナル、ブラウザ、インストール済みの各エージェントを開けます。エージェントは専用のGitワークツリーでも開けます。“+”を長押しすると、同じものがメニューとして表示されます。
 4. **クイックオープン**（⌘P）でファイルを、`#`を付けるとプロジェクトのシンボルを探せます。⇧⌘Fでプロジェクト内を検索・置換します。
 5. **エージェントと話す**には、AIタブを使います。⌘Escで、キーボードフォーカスがそのメッセージフィールドに移り、もう一度押すと元に戻ります。
-6. **設定**（⌘,）には、“一般”、“CI”、“エージェント”、“内蔵エージェント”、“言語サーバ”、“音声入力”、“予測”のタブがあります。
+6. **設定**（⌘,）には、“一般”、“ターミナル”、“CI”、“エージェント”、“Software Factory”、“内蔵エージェント”、“言語サーバ”、“音声入力”、“予測”のタブがあります。
 
 ツールバーには、編集した場所をたどる戻る/進む（⌃-と⌃⇧-）、ブランチ、“クイックオープン”、そして実行中のすべてを一覧表示する“アクティビティ”の概要があります。ファイルのコンテキストメニューの**横に開く**で、2つ目の書類を1つ目の横に表示します。再起動やクラッシュのあとも、各ウインドウはタブとともに戻り、未保存のテキストがあるエディタはそのテキストごと戻ります。イメージ、オーディオ、ビデオ、フォント、Office書類はクイックルックで、PDFはPDFKitでタブに開きます。
 
@@ -155,7 +156,22 @@ Go、Rust、TypeScriptとJavaScript、Python、C、C++とObjective-C、Swift、�
 
 ## ターミナル
 
-タブで開くターミナル（⌃\`）は、ログインシェルの環境で動作し、Metalで描画されます。⌘Kで画面を消去します。イメージをペーストまたはドロップすると、ターミナルで実行中のコーディングエージェントに渡されるか、保存したコピーのパスがペーストされます。⌘クリックでリンクやファイル名を開けます。ターミナルから起動した開発サーバは、ブラウザタブで開けます。
+ターミナルはタブで開き（**ファイル › 新規ターミナル**、⌃\`）、ログインシェルとその環境で動作します。ターミナルは[Tapa](https://github.com/sventmueller/tapa)のもので、独自のVTコアを持ち、Metalで描画されます。xtermとVT520に対応し、Kittyキーボードプロトコル、OSC 8のリンク、同期出力、トゥルーカラー、マウスレポートをサポートします。文字サイズはエディタと同じで、色はTapaのライトとダークの配色です。zsh、bash、fish用のシェル統合は、設定ファイルに手を触れずに自動で設定され、`ssh`でほかのホストに接続するときにも引き継がれます。再起動後、ターミナルは元のフォルダで新しいシェルとして戻ります（信頼済みのフォルダのみ）。表示していた内容は戻りません。
+
+- **コマンドブロック。** 各コマンドとその出力が1つのブロックになります。⌘↑と⌘↓でプロンプト間をジャンプします。**ブロックを選択**（⇧⌘A）、**出力をコピー**（⌥⌘C）、**出力を保存…**（⌥⌘S）、**ブロックを折りたたむ/展開**（⇧⌘↩）は現在のブロックに作用します。**ブックマークを設定/解除**（⇧⌘M）で行に印を付け、⇧⌘↑と⇧⌘↓でブックマーク間をジャンプします。**コマンドをブロックとして表示**をオンにすると、余白のバーが各ブロックを示し、失敗したコマンドには印が付き、実行中のコマンドは出力がスクロールする間も上部に残ります。ポインタの下にあるブロックの上には、そのステータス、所要時間、同じ操作のボタンが表示されます。
+- **ブロックをエージェントに送信**（“編集”メニューとターミナルのコンテキストメニュー）は、新しいAIタブを開き、現在のブロックのコマンドラインと出力を“外部コンテンツ”として添付し（[信頼](#信頼)を参照）、コマンドが失敗した場合は、失敗したCIジョブのログと同じように原因を尋ねる下書きを用意します。`keybindings.json`で`terminal.blockToAgent`にショートカットを割り当てるまで、ショートカットはありません。
+- **入力フィールド。** **表示 › 入力フィールドの表示/非表示**（⌘I）で、コマンドラインをターミナル下部のテキストフィールドに変えます。その上にはフォルダとGitブランチが表示されます。新しいターミナルは、最後に選んだ状態に従います。Returnでフィールド全体をシェルに送ります。シェル統合が必要で、vim、htop、claudeなどのフルスクリーンのプログラムでは脇に退きます。
+- **提案**は、入力した内容のすぐ後ろにグレイで表示されます。入力フィールドでも、入力フィールドなしでも表示され、各コマンドを実行したときのフォルダ、ブランチ、終了コード付きの履歴、700を超えるコマンドラインツールの仕様、そしてgitブランチ、dockerコンテナ、`package.json`のスクリプト、make、just、cargoのターゲットなどのプロジェクトから提案します。→で提案を確定し、Tabで補完します。候補が複数ある場合はメニューが開き、入力すると絞り込まれます。入力する前に、普段次に来るコマンドをフィールドが提案することもあります。コマンドは部分ごとに色分けされ、シェルが実行できないコマンドには赤い破線の下線が付きます。提案がネットワークを使うことはなく、プログラムを起動するのはログインシェルの`PATH`からだけです。
+- **検索**（ターミナルにフォーカスがあるときの⌘F、⌘G、⇧⌘G）は、正規表現、大文字と小文字の区別、単語単位で履歴全体を検索し、検索結果の数を表示します。スクロールバーには、検索結果、プロンプト、失敗したコマンドの位置が示されます。
+- **選択とコピー。** ダブルクリックでURL、パス、ハッシュ、IPアドレスをまとめて選択し、⌥ドラッグで矩形を選択します。**キーボードで選択**（⇧⌘C）ではVimのキーで選択範囲を動かし、**書式付きでコピー**（⇧⌥⌘C）は色とスタイルを保ちます。プログラムがOSC 52でコピーできるのは、そのターミナルにキーボードフォーカスがある間だけで、コピーしたことはターミナルが知らせます。クリップボードを読み取れるプログラムはありません。
+- **ペースト。** 改行の位置でコマンドが実行されてしまうテキストや、制御文字を含むテキストは、プログラムがブラケットペーストとして読み取る場合を除き、まずシートに表示されます。イメージをペーストすると、ターミナルで実行中のコーディングエージェントに渡され、エージェントがクリップボードから直接読み取ります。そうでなければ、キャッシュに保存したコピーのパスがペーストされます。`ssh`越しでは、そうしない理由をターミナルが知らせます。ターミナルにドロップしたファイルは、イメージも含めて、引用符で囲まれたパスになります。Webページなど、ほかの場所からドロップしたイメージは、ペーストしたイメージと同じように扱われます。
+- **リンク。** ⌘クリックで、Webアドレスはブラウザタブで、`mailto:`リンクはメールで、ファイル名は行と列が付いていてもDangoのエディタで開きます。リンクはOSC 8がなくても見つかります。それ以外の種類のリンクは開きません。
+- **開発サーバ。** ターミナル内のプログラムが開発サーバを起動すると、ターミナルの上のバーにそのアドレスが表示され、**ブラウザタブで開く**でそこに開きます。
+- **通知と進行状況。** ベルと、プログラムが求めた通知（OSC 9とOSC 777）は、ターミナルが見えていない間、そのタブに赤の点を付けます。ほかのアプリが前面にあるときは、通知はmacOSにも送られ、クリックするとターミナルに戻ります。プログラムが報告する進行状況（OSC 9;4）は、タブにはリングとして、Dockのアイコンにはバーとして表示されます。
+- **キーボード入力のセキュリティを保護**（**Dango › キーボード入力のセキュリティを保護**）は、ターミナルに入力する内容をほかのアプリが読み取れないようにします。プログラムがパスワードを求めている間も、自動的にオンになります。
+- **キー。** ⌘Kでターミナルを消去します（**編集 › ターミナルを消去**）。⌃CとEscは、ターミナル内のプログラムに送られます。ターミナルのコマンドは“編集”メニューと“表示”メニューにあり、そのショートカットはターミナルにキーボードフォーカスがある間だけ働くため、⌘I、⌘↑、⌘Fはエディタでは本来の意味のままです。コンテキストメニューからは、**ここで新規ターミナル**を開いたり、**ペインを閉じる**でターミナルを閉じたりもできます。
+
+**設定 › ターミナル**では、新しいターミナルの入力フィールド、そのVimのキー、提案、コマンドの色分け、不明なコマンドの下線、コマンドブロック、選択範囲のすぐのコピー、複数行のペーストの事前表示、メタキーとしての⌥を切り替えます。
 
 ## ブラウザ
 
@@ -205,7 +221,7 @@ AIタブのメッセージフィールドまたはエディタに音声入力で
 - **信頼済み:** Git、言語サーバ、デバッガ、エージェント、CIが、このフォルダとその下にあるすべてに対して動作します。
 - **制限付き:** 読み込みと編集はできます。エディタの変更マークは、`.git`を直接読み込んで表示します。フォルダで設定されたものは何も起動されません。Git、CI、AIの各パネルはそのことを示し、フォルダを信頼するよう提案します。
 
-自分以外から来たテキストには、エージェントを操るための指示が含まれていることがあります（プロンプトインジェクション）。そのため、ターミナルの出力（`@terminal`）、ブラウザのページ（`@browser`）、エージェントに渡されたCIログ、プロジェクト外のファイル、Webページからペーストした長めのテキストは、印を付けて渡されます。チップには“外部コンテンツ”と表示され、エージェントは、信頼できないデータでありその指示に従ってはならないという注意書きとともにテキストを受け取ります。内蔵エージェントが取得したWebページにも、同じ注意書きが付きます。ペーストしたテキストは、Safari、Chrome、Firefoxのように、ブラウザがクリップボードでそう示している場合に、Webページからのものとみなされます。それ以外の場所からのテキストや、数語程度の短い語句は、ユーザ自身のものとして扱われます。
+自分以外から来たテキストには、エージェントを操るための指示が含まれていることがあります（プロンプトインジェクション）。そのため、ターミナルの出力（`@terminal`、またはエージェントに渡したコマンドブロック）、ブラウザのページ（`@browser`）、エージェントに渡されたCIログ、プロジェクト外のファイル、Webページからペーストした長めのテキストは、印を付けて渡されます。チップには“外部コンテンツ”と表示され、エージェントは、信頼できないデータでありその指示に従ってはならないという注意書きとともにテキストを受け取ります。内蔵エージェントが取得したWebページにも、同じ注意書きが付きます。ペーストしたテキストは、Safari、Chrome、Firefoxのように、ブラウザがクリップボードでそう示している場合に、Webページからのものとみなされます。それ以外の場所からのテキストや、数語程度の短い語句は、ユーザ自身のものとして扱われます。
 
 ## サンドボックス
 
@@ -221,9 +237,9 @@ Dango自体はApp Sandboxなしで動作します。Dangoが起動するすべ�
 ## 外観とアクセシビリティ
 
 - **ダークモード**はシステムに従います。**コントラストを上げる**と**視差効果を減らす**の設定も反映されます。
-- **VoiceOver**は、サイドバー、タブ、AIタイムラインのカード、GitとCIの行、デバッガ、ターミナルのテキストを名前付きで読み上げます。ブレークポイントを色だけで区別することはありません。
+- **VoiceOver**は、サイドバー、タブ、AIタイムラインのカード、GitとCIの行、デバッガを名前付きで読み上げ、ターミナルの行を読み上げて新しい出力を知らせます。ブレークポイントを色だけで区別することはありません。
 - **キーボード。** すべてのコマンドにショートカットがあり、どれも`keybindings.json`で変更できます。⌥⌘\`で次のパネルに移動します。
-- **右から左。** アラビア語とヘブライ語ではウインドウが左右反転しますが、コード表示は左から右のままです。
+- **右から左。** アラビア語とヘブライ語ではウインドウが左右反転しますが、コード表示とターミナルのグリッドは左から右のままです。
 
 DangoがAppKitに加えている内容は、分野ごとに[ACCESSIBILITY.md](../../../ACCESSIBILITY.md)に記載されています。
 
@@ -257,6 +273,10 @@ Dangoは、**システム設定 › 一般 › 言語と地域**の言語の順�
 | 太字、斜体、取り消し線、コード、リンク | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | 見出し1–3 | ⌥⌘1–⌥⌘3 |
 | 新規ターミナル、ターミナルを消去 | ⌃\`, ⌘K |
+| ターミナル内: 検索、次を検索、前を検索 | ⌘F, ⌘G, ⇧⌘G |
+| ターミナル内: 前と次のプロンプト、前と次のブックマーク、ブックマークを設定または解除 | ⌘↑と⌘↓, ⇧⌘↑と⇧⌘↓, ⇧⌘M |
+| ターミナル内: ブロックを選択、出力をコピー、出力を保存、ブロックを折りたたむ | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| ターミナル内: 入力フィールド、キーボードで選択、書式付きでコピー | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | エージェントのメッセージフィールドにフォーカス、プランにコメント | ⌘Esc, ⌥⌘K |
 | アドレスフィールド、再読み込み、戻る、進む（ブラウザ） | ⌘L, ⌘R, ⌘[, ⌘] |
 | 音声入力の開始/停止 | ⌃⌥D |
@@ -282,7 +302,7 @@ Dangoは、**システム設定 › 一般 › 言語と地域**の言語の順�
 
 | 場所 | 内容 |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`、`state.json`、`keybindings.json`、`trust.json`。`threads/`（AIパネルのリスト）、`agent-threads/`（内蔵エージェントの会話）、`layouts/`（プロジェクトごとのタブ）、`recovery/`（クラッシュ後の未保存のエディタ）、`checkpoints/`（Gitのないフォルダ用）、`worktrees/`、`agents/`と`tools/`（インストールされたエージェント、言語サーバ、デバッグアダプタ）、`task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`、`state.json`、`keybindings.json`、`trust.json`、`terminal-history.sqlite`（ターミナルのコマンド履歴）。`threads/`（AIパネルのリスト）、`agent-threads/`（内蔵エージェントの会話）、`layouts/`（プロジェクトごとのタブ）、`recovery/`（クラッシュ後の未保存のエディタ）、`checkpoints/`（Gitのないフォルダ用）、`worktrees/`、`agents/`と`tools/`（インストールされたエージェント、言語サーバ、デバッグアダプタ）、`task-output/` |
 | `~/Library/Caches/<id>/` | ペーストしたイメージ、シェル統合スクリプト、ACPレジストリ。削除してもかまいません |
 | `~/Library/Logs/<id>/dictation/` | 音声入力のログファイル |
 | `~/Library/Application Support/Lowspeak`と`FluidAudio` | ローカルの音声入力モデル。Lowspeakと共有します |
@@ -300,6 +320,7 @@ Claudeは自身のセッションを`~/.claude/projects`以下に保存します
 - **Claudeの使用量の数値とコンテキストの内訳**は、プロトコルのうち試験的とされている部分に依存しており、その部分がない場合は表示されません。
 - **会話の巻き戻し**はClaudeでのみ使えます。ほかのエージェントでは、コードだけが巻き戻されます。
 - **ブラウザ経由のCIへのサインイン**はオフになっています。`gh`、`glab`、トークン、または環境変数を使ってください。
+- **ターミナル内にイメージは表示されません。** Kittyグラフィックス、Sixel、iTerm2のイメージには対応していません。
 - **Gemini CLIは提供していません。** Googleが個人アカウントでのサインインを終了し、Antigravityを案内しているためです。以前のGeminiスレッドは引き続き読めます。
 
 ## ソースからのビルド
@@ -308,7 +329,7 @@ Claudeは自身のセッションを`~/.claude/projects`以下に保存します
 
 - Xcode Command Line Tools（`xcode-select --install`）がインストールされたmacOS 14以降。Xcode自体は不要です。
 - `rust-toolchain.toml`で指定されたバージョンのRust。Homebrewの`rust`はこのMacのプロセッサ向けにビルドします。リリースのユニバーサルビルドには、ターゲット`aarch64-apple-darwin`と`x86_64-apple-darwin`を追加したrustupが必要です。
-- [splat](https://github.com/sventmueller/splat)と[lowspeak](https://github.com/sventmueller/lowspeak)のチェックアウトを、このリポジトリの隣（`../splat`、`../lowspeak`）に置き、どちらも`main`ブランチにしておくこと。ワークスペースは、それらからクレートをパスで取り込みます。
+- [splat](https://github.com/sventmueller/splat)、[lowspeak](https://github.com/sventmueller/lowspeak)、[tapa](https://github.com/sventmueller/tapa)のチェックアウトを、このリポジトリの隣（`../splat`、`../lowspeak`、`../tapa`）に置き、それぞれ`main`ブランチにしておくこと。ワークスペースはそれらからクレートをパスで取り込み、ターミナルはTapaから取り込みます。
 - cmake。音声入力を含むすべてのビルド（`make run`、`make build`、`make release`）で、whisper.cppのビルドに使います。`make check`はcmakeなしでビルドできます。
 
 | コマンド | 内容 |

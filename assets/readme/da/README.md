@@ -12,7 +12,7 @@ Dango samler koden, de agenter, der ændrer den, og alt omkring dem i ét vindue
 
 **Har du fundet en fejl?** [Opret et issue](https://github.com/sventmueller/dango/issues/new), og skriv, med hvilken agent og i hvilken slags projekt den opstod.
 
-[![Rust, 2024-udgaven](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 eller nyere](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universel: Apple Silicon og Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit via objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35 sprog i brugerfladen](https://img.shields.io/badge/languages-35-4C9A2A) ![Ingen telemetri](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Signeret med Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Licens: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#licens)
+[![Rust, 2024-udgaven](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 eller nyere](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universel: Apple Silicon og Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit via objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35 sprog i brugerfladen](https://img.shields.io/badge/languages-35-4C9A2A) ![Ingen telemetri](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Signeret med Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Licens: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#licens)
 
 [Bahasa Indonesia](../id/README.md) · [Bahasa Melayu](../ms/README.md) · [Català](../ca/README.md) · [Čeština](../cs/README.md) · **Dansk** · [Deutsch](../de/README.md) · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · [Magyar](../hu/README.md) · [Nederlands](../nl/README.md) · [Norsk](../no/README.md) · [Polski](../pl/README.md) · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · [Română](../ro/README.md) · [Slovenčina](../sk/README.md) · [Slovenščina](../sl/README.md) · [Suomi](../fi/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [繁體中文](../zh-Hant/README.md)
 
@@ -55,6 +55,7 @@ Dango samler koden, de agenter, der ændrer den, og alt omkring dem i ét vindue
 - **Ét vindue pr. mappe.** Arkiver, terminaler, browsersider, AI-tråde, forskelle og eksempler er macOS-faner i det vindue. Indholdsoversigten rummer Arkiver, Søgning, Agenter, Git, Tests, Fejlfind, CI og Containere.
 - **En rigtig kodeeditor.** Syntaksfarver, flere indsætningsmærker, foldning, `.editorconfig`, sprogservere til 17 sprog med fuldførelse, gå til definition, referencer, omdøbning, hurtige rettelser og hierarkier, og forudsigelser, mens du skriver, fra GitHub Copilot eller en lokal model.
 - **Debugger, Git og CI indbygget.** Breakpoints og trinvis kørsel til Rust, C, C++, Swift, Go, JavaScript, TypeScript og Python; stage enkelte blokke, branches, stashes, konflikter og en commitgraf; kørsler, jobs og logge fra GitHub Actions og GitLab CI.
+- **Tapas terminal.** Kommandoblokke, hvis output du kopierer, gemmer eller giver til en agent, et inputfelt med forslag fra din historik og projektet, søgning i hele historikken og meddelelser og fremskridt fra programmerne i den.
 - **Forsigtig med dine mapper.** En mappe, du ikke stoler på, starter intet: ingen Git-processer, sprogservere, hooks eller agenter. Destruktive Git-kommandoer tillades aldrig for altid, og commits tjekkes for secrets.
 - **Diktering.** Tal ind i editoren og beskedfeltet, online via OpenAI eller Groq eller lokalt med Whisper og Parakeet.
 - **Helt igennem native.** AppKit-vinduer, -faner, -menuer og -værktøjslinjer, TextKit 2 til editoren, Metal til terminalen, WebKit kun i browserfanen. Mørk tilstand, Øg kontrast og VoiceOver virker som i enhver Mac-app.
@@ -84,7 +85,7 @@ Dango samler koden, de agenter, der ændrer den, og alt omkring dem i ét vindue
 3. **Hvert dokument er en fane** i mappens vindue, macOS' egne faner. “+” for enden af fanelinjen og ⌘T tilbyder et nyt arkiv, en terminal, browseren og hver installeret agent, også i sit eget Git-worktree; holder du “+” nede, vises det samme som en menu.
 4. **Åbn hurtigt** med ⌘P finder arkiver og med `#` projektets symboler; ⇧⌘F søger og erstatter i projektet.
 5. **Tal med en agent** i en AI-fane. ⌘Esc flytter tastaturfokus til dens beskedfelt og tilbage.
-6. **Indstillinger** med ⌘, rummer fanerne Generelt, CI, Agenter, Egen agent, Sprogserver, Diktering og Forudsigelse.
+6. **Indstillinger** med ⌘, rummer fanerne Generelt, Terminal, CI, Agenter, Software Factory, Egen agent, Sprogserver, Diktering og Forudsigelse.
 
 Værktøjslinjen rummer tilbage og frem gennem de steder, du har redigeret (⌃- og ⌃⇧-), branchen, Åbn hurtigt og aktivitetsoversigten, der viser alt, hvad der kører. **Åbn ved siden af** i et arkivs kontekstmenu viser et andet dokument ved siden af det første. Efter en genstart eller et nedbrud kommer hvert vindue tilbage med sine faner, og editorer med ikke-arkiveret tekst kommer tilbage med teksten. Billeder, lyd, video, skrifter og Office-dokumenter åbner i en fane via Kvikvisning, PDF'er via PDFKit.
 
@@ -155,7 +156,22 @@ Et projekts `.vscode/launch.json` læses. Menuen Fejlfind bruger Xcodes genveje:
 
 ## Terminal
 
-Terminaler i faner (⌃\`) med login-shellens miljø, tegnet med Metal. ⌘K rydder skærmen. Et indsat eller trukket billede går til en kodeagent, der kører i terminalen, eller indsætter stien til en arkiveret kopi. ⌘-klik åbner links og arkivnavne. En udviklingsserver, som terminalen starter, kan åbnes i browserfanen.
+Terminaler åbner som faner (**Arkiv › Ny terminal**, ⌃\`) med login-shellen og dens miljø. Terminalen er [Tapa](https://github.com/sventmueller/tapa)s, med sin egen VT-kerne, tegnet med Metal: xterm og VT520 med Kitty-tastaturprotokollen, OSC 8-links, synkroniseret output, truecolor og musrapportering, i editorens tekststørrelse og Tapas lyse og mørke farver. Dens shell-integration til zsh, bash og fish sætter sig selv op uden at røre dine konfigurationsfiler og følger med, når du bruger `ssh` til en anden vært. Efter en genstart kommer en terminal tilbage som en ny shell i den mappe, den var i, kun i betroede mapper; det, den viste, kommer ikke tilbage.
+
+- **Kommandoblokke.** Hver kommando og dens output danner en blok. ⌘↑ og ⌘↓ springer mellem prompter. **Marker blok** (⇧⌘A), **Kopier output** (⌥⌘C), **Gem output…** (⌥⌘S) og **Fold blok sammen/ud** (⇧⌘↩) virker på den aktuelle blok; **Sæt/fjern bogmærke** (⇧⌘M) markerer en linje, og ⇧⌘↑ og ⇧⌘↓ springer mellem bogmærker. Med **Markér kommandoer som blokke** slået til viser en bjælke i margenen hver blok, mislykkede kommandoer markeres, den kørende kommando bliver øverst, mens dens output ruller, og knapper over blokken under markøren viser dens status, dens varighed og de samme handlinger.
+- **Send blok til agent** (menuen Rediger og terminalens kontekstmenu) åbner en ny AI-fane med den aktuelle bloks kommandolinje og output vedhæftet som Fremmed indhold (se [Tillid](#tillid)) og et udkast, der spørger efter årsagen, når kommandoen mislykkedes, som en mislykket CI-jobs log gør. Den har ingen genvej, før du giver `terminal.blockToAgent` en i `keybindings.json`.
+- **Inputfeltet.** **Oversigt › Vis/skjul inputfelt** (⌘I) gør kommandolinjen til et tekstfelt nederst i terminalen med mappen og Git-branchen ovenover; nye terminaler følger dit seneste valg. Retur sender hele feltet til shellen. Det kræver shell-integrationen og træder til side for fuldskærmsprogrammer som vim, htop eller claude.
+- **Forslag** vises med gråt lige efter det, du skriver, i inputfeltet og uden det: fra din historik, med den mappe, den branch og den afslutningskode, hver kommando kørte med, fra beskrivelser af mere end 700 kommandolinjeværktøjer og fra projektet, som git-branches, docker-containere, `package.json`-scripts og mål for make, just og cargo. → tager et forslag; Tab fuldfører og åbner ved flere kandidater en menu, som du filtrerer ved at skrive. Før du skriver, kan feltet foreslå den kommando, der plejer at komme bagefter. Kommandoer farvelægges efter deres dele, og en kommando, din shell ikke kan køre, får en stiplet rød understregning. Forslag bruger aldrig netværket og starter kun programmer fra login-shellens `PATH`.
+- **Find** (⌘F, ⌘G og ⇧⌘G, mens en terminal har fokus) søger i hele historikken med regulære udtryk, store og små bogstaver og hele ord og tæller resultaterne; rullepanelet markerer resultaterne, prompterne og de mislykkede kommandoer.
+- **Markering og kopiering.** Et dobbeltklik markerer en URL, en sti, en hash eller en IP-adresse som helhed, og træk med ⌥ markerer et rektangel. **Vælg med tastaturet** (⇧⌘C) flytter en markering med Vims taster, **Kopiér med formatering** (⇧⌥⌘C) bevarer farver og typografi. Et program må kun kopiere med OSC 52, mens dets terminal har tastaturfokus, og terminalen siger det; intet program læser udklipsholderen.
+- **Indsættelse.** Tekst, der ville køre en kommando ved sit linjeskift eller indeholder kontroltegn, vises først i en dialog, medmindre programmet læser den som bracketed paste. Et indsat billede går til en kodeagent, der kører i terminalen og selv læser det fra udklipsholderen, eller stien til en kopi gemt blandt cachefilerne indsættes; over `ssh` siger terminalen, hvorfor det ikke sker. Arkiver, der trækkes til en terminal, billeder medregnet, ankommer som stier i anførselstegn; et billede, der trækkes fra et andet sted, som en webside, går samme vej som et indsat.
+- **Links.** ⌘-klik åbner en webadresse i browserfanen, et `mailto:`-link i Mail og et arkivnavn, også med linje og kolonne, i Dangos editor; links findes også uden OSC 8. Links af andre slags åbnes ikke.
+- **Udviklingsservere.** Når et program i terminalen starter en udviklingsserver, nævner en bjælke over terminalen dens adresse, og **Åbn i browserfane** åbner den dér.
+- **Meddelelser og fremskridt.** Klokken og en meddelelse, som et program beder om (OSC 9 og OSC 777), sætter den røde prik på terminalens fane, mens du ikke ser den; når en anden app er forrest, går meddelelsen også til macOS, og et klik på den bringer terminalen tilbage. Fremskridt, som et program rapporterer (OSC 9;4), vises som en ring på dets fane og som en bjælke på Dock-symbolet.
+- **Sikker indtastning via tastatur** (**Dango › Sikker indtastning via tastatur**) forhindrer andre apps i at læse, hvad du skriver i en terminal; den slår sig også selv til, mens et program beder om en adgangskode.
+- **Taster.** ⌘K rydder terminalen (**Rediger › Ryd terminal**); ⌃C og Esc går til programmet i den. Terminalens kommandoer findes i menuerne Rediger og Oversigt, og deres genveje virker kun, mens en terminal har tastaturfokus, så ⌘I, ⌘↑ eller ⌘F beholder deres betydning i editoren. Kontekstmenuen åbner også en **Ny terminal her** og lukker terminalen med **Luk rude**.
+
+**Indstillinger › Terminal** slår inputfeltet for nye terminaler til og fra, dets Vim-taster, forslagene, farvelægningen af kommandoer, understregningen af ukendte kommandoer, kommandoblokke, kopiering af markeringen med det samme, visning af indsættelser over flere linjer først og ⌥ som metatast.
 
 ## Browser
 
@@ -205,7 +221,7 @@ En mappe kan få programmer til at køre, så snart noget startes i den: Git-hoo
 - **Betroet:** Git, sprogservere, debuggere, agenter og CI kører for denne mappe og alt under den.
 - **Begrænset:** Du kan læse og redigere; ændringsmærkerne i editoren kommer fra at læse `.git` direkte. Intet, som mappen konfigurerer, startes. Panelerne til Git, CI og AI siger det og tilbyder at stole på mappen.
 
-Tekst, der ikke kommer fra dig, kan indeholde instruktioner, der skal styre en agent (prompt injection). Outputtet fra en terminal (`@terminal`), en browserside (`@browser`), en CI-log givet til en agent, et arkiv uden for projektet og længere tekst indsat fra en webside sendes derfor mærket: Chippen siger “Fremmed indhold”, og agenten får teksten med besked om, at det er upålidelige data, hvis instruktioner den ikke må følge. Den egne agents websider kommer med samme besked. Indsat tekst regnes for at komme fra en webside, når browseren angiver det på udklipsholderen, som Safari, Chrome og Firefox gør; tekst fra andre steder og en kort sætning på få ord forbliver din egen.
+Tekst, der ikke kommer fra dig, kan indeholde instruktioner, der skal styre en agent (prompt injection). Outputtet fra en terminal (`@terminal` eller en kommandoblok givet til en agent), en browserside (`@browser`), en CI-log givet til en agent, et arkiv uden for projektet og længere tekst indsat fra en webside sendes derfor mærket: Chippen siger “Fremmed indhold”, og agenten får teksten med besked om, at det er upålidelige data, hvis instruktioner den ikke må følge. Den egne agents websider kommer med samme besked. Indsat tekst regnes for at komme fra en webside, når browseren angiver det på udklipsholderen, som Safari, Chrome og Firefox gør; tekst fra andre steder og en kort sætning på få ord forbliver din egen.
 
 ## Sandbox
 
@@ -221,9 +237,9 @@ Dango selv kører uden App Sandbox, fordi alle programmer, det starter, ville ar
 ## Udseende og tilgængelighed
 
 - **Mørk tilstand** følger systemet; **Øg kontrast** og **Reducer bevægelse** respekteres.
-- **VoiceOver** navngiver indholdsoversigten, fanerne, kortene i AI-tidslinjen, rækkerne i Git og CI, debuggeren og terminalens tekst. Breakpoints skelnes aldrig alene ved farve.
+- **VoiceOver** navngiver indholdsoversigten, fanerne, kortene i AI-tidslinjen, rækkerne i Git og CI og debuggeren, læser terminalens linjer op og annoncerer nyt output. Breakpoints skelnes aldrig alene ved farve.
 - **Tastatur.** Hver kommando har en genvej, og dem alle kan ændres i `keybindings.json`; ⌥⌘\` går til næste panel.
-- **Højre mod venstre.** På arabisk og hebraisk spejles vinduet, mens kodevisninger forbliver fra venstre mod højre.
+- **Højre mod venstre.** På arabisk og hebraisk spejles vinduet, mens kodevisninger og terminalens gitter forbliver fra venstre mod højre.
 
 Hvad Dango tilføjer oven på AppKit, område for område, står i [ACCESSIBILITY.md](../../../ACCESSIBILITY.md).
 
@@ -257,6 +273,10 @@ Dango følger sprogrækkefølgen i **Systemindstillinger › Generelt › Sprog 
 | Fed, kursiv, gennemstreget, kode, link | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | Overskrift 1 til 3 | ⌥⌘1 til ⌥⌘3 |
 | Ny terminal, ryd terminal | ⌃\`, ⌘K |
+| I en terminal: find, find næste, find forrige | ⌘F, ⌘G, ⇧⌘G |
+| I en terminal: forrige og næste prompt, forrige og næste bogmærke, sæt eller fjern et bogmærke | ⌘↑ og ⌘↓, ⇧⌘↑ og ⇧⌘↓, ⇧⌘M |
+| I en terminal: marker blok, kopier output, gem output, fold blok sammen | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| I en terminal: inputfelt, vælg med tastaturet, kopiér med formatering | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | Fokus på agentens beskedfelt, kommentér en plan | ⌘Esc, ⌥⌘K |
 | Adressefelt, genindlæs, tilbage, frem (browser) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Start eller stop diktering | ⌃⌥D |
@@ -282,7 +302,7 @@ Dango følger sprogrækkefølgen i **Systemindstillinger › Generelt › Sprog 
 
 | Sted | Hvad |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`; `threads/` (AI-panelets liste), `agent-threads/` (den egne agents samtaler), `layouts/` (faner pr. projekt), `recovery/` (ikke-arkiverede editorer efter et nedbrud), `checkpoints/` (til mapper uden Git), `worktrees/`, `agents/` og `tools/` (installerede agenter, sprogservere og debugadaptere), `task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`, `terminal-history.sqlite` (terminalernes kommandohistorik); `threads/` (AI-panelets liste), `agent-threads/` (den egne agents samtaler), `layouts/` (faner pr. projekt), `recovery/` (ikke-arkiverede editorer efter et nedbrud), `checkpoints/` (til mapper uden Git), `worktrees/`, `agents/` og `tools/` (installerede agenter, sprogservere og debugadaptere), `task-output/` |
 | `~/Library/Caches/<id>/` | indsatte billeder, scripts til shell-integration, ACP-registret; kan slettes |
 | `~/Library/Logs/<id>/dictation/` | dikteringens logarkiver |
 | `~/Library/Application Support/Lowspeak` og `FluidAudio` | lokale dikteringsmodeller, delt med Lowspeak |
@@ -300,6 +320,7 @@ Claude gemmer sine egne sessioner under `~/.claude/projects`; Dango læser dem f
 - **Claudes forbrugstal og opdeling af konteksten** bygger på dele af protokollen, der er markeret som eksperimentelle, og skjules, når de mangler.
 - **At spole samtalen tilbage** virker kun for Claude; for de andre agenter spoles kun koden tilbage.
 - **Login til CI via browseren** er slået fra; brug `gh`, `glab`, et token eller miljøet.
+- **Ingen billeder i terminalen:** Kitty-grafik, Sixel- og iTerm2-billeder vises ikke.
 - **Gemini CLI tilbydes ikke:** Google har stoppet login med en personlig konto og henviser til Antigravity. Tidligere Gemini-tråde kan stadig læses.
 
 ## Byg fra kildekoden
@@ -308,7 +329,7 @@ Du skal bruge:
 
 - macOS 14 eller nyere med Xcode Command Line Tools (`xcode-select --install`); Xcode selv er ikke nødvendigt.
 - Rust, som `rust-toolchain.toml` angiver det. Homebrews `rust` bygger til denne Macs processor; det universelle build af en udgivelse kræver rustup med målene `aarch64-apple-darwin` og `x86_64-apple-darwin`.
-- Checkouts af [splat](https://github.com/sventmueller/splat) og [lowspeak](https://github.com/sventmueller/lowspeak) ved siden af dette (`../splat`, `../lowspeak`), begge på deres branch `main`; workspacet tager crates fra dem via sti.
+- Checkouts af [splat](https://github.com/sventmueller/splat), [lowspeak](https://github.com/sventmueller/lowspeak) og [tapa](https://github.com/sventmueller/tapa) ved siden af dette (`../splat`, `../lowspeak`, `../tapa`), hver på sin branch `main`; workspacet tager crates fra dem via sti, terminalen fra Tapa.
 - cmake til hvert build med diktering (`make run`, `make build`, `make release`), som bygger whisper.cpp. `make check` bygger uden.
 
 | Kommando | Hvad den gør |

@@ -339,7 +339,7 @@ fn types_tabs(window: &NSWindow) -> bool {
     let text = responder
         .downcast_ref::<NSTextView>()
         .is_some_and(|text| text.isEditable() && !text.isFieldEditor());
-    text || responder.class().name().to_string_lossy() == "IDETerminalView"
+    text || responder.class().name().to_string_lossy() == "TermSessionView"
 }
 
 /// The shortcut of the menu bar's item for `action`, as AppKit shows it: its characters and modifiers.

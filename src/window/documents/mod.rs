@@ -169,6 +169,14 @@ impl WindowController {
         }
     }
 
+    /// Shows `ring` on the tab of the document `id` while no document of the tab has a dot, or no ring.
+    pub(crate) fn set_tab_progress(&self, id: TabId, ring: Option<crate::terminal::Ring>) {
+        if let Some((tab, document)) = self.find_document(id) {
+            document.set_progress(ring);
+            tab.refresh_accessory();
+        }
+    }
+
     /// Tints the symbol of the document `id`.
     pub(crate) fn set_tab_tint(&self, id: TabId, color: &NSColor) {
         if let Some((tab, document)) = self.find_document(id) {
@@ -330,6 +338,7 @@ impl WindowController {
         crate::editor::closing(self, id);
         crate::preview::closing(self, id);
         crate::debug::closing(self, id);
+        crate::terminal::closing(self, id);
         tab.remove(id);
     }
 

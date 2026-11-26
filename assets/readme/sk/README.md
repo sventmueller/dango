@@ -12,7 +12,7 @@ Dango spája kód, agentov, ktorí ho menia, a všetko okolo nich do jedného ok
 
 **Našli ste chybu?** [Otvorte issue](https://github.com/sventmueller/dango/issues/new) a uveďte, s ktorým agentom a pri akom type projektu sa vyskytla.
 
-[![Rust, edícia 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 alebo novší](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Univerzálna: Apple Silicon a Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit cez objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminál: Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35 jazykov rozhrania](https://img.shields.io/badge/languages-35-4C9A2A) ![Bez telemetrie](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Podpísané s Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Licencia: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#licencia)
+[![Rust, edícia 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 alebo novší](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Univerzálna: Apple Silicon a Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit cez objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminál: Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35 jazykov rozhrania](https://img.shields.io/badge/languages-35-4C9A2A) ![Bez telemetrie](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Podpísané s Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Licencia: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#licencia)
 
 [Bahasa Indonesia](../id/README.md) · [Bahasa Melayu](../ms/README.md) · [Català](../ca/README.md) · [Čeština](../cs/README.md) · [Dansk](../da/README.md) · [Deutsch](../de/README.md) · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · [Magyar](../hu/README.md) · [Nederlands](../nl/README.md) · [Norsk](../no/README.md) · [Polski](../pl/README.md) · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · [Română](../ro/README.md) · **Slovenčina** · [Slovenščina](../sl/README.md) · [Suomi](../fi/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [繁體中文](../zh-Hant/README.md)
 
@@ -55,6 +55,7 @@ Dango spája kód, agentov, ktorí ho menia, a všetko okolo nich do jedného ok
 - **Jedno okno pre každý priečinok.** Súbory, terminály, stránky prehliadača, AI vlákna, diffy a náhľady sú taby macOS v tomto okne. Postranný panel obsahuje Súbory, Vyhľadávanie, Agenti, Git, Testy, Ladenie, CI a Kontajnery.
 - **Skutočný editor kódu.** Zvýrazňovanie syntaxe, viac kurzorov, zbaľovanie, `.editorconfig`, jazykové servery pre 17 jazykov s dopĺňaním, prechodom na definíciu, referenciami, premenovaním, rýchlymi opravami a hierarchiami a predpovede pri písaní z GitHub Copilot alebo z lokálneho modelu.
 - **Ladiaci nástroj, Git a CI priamo v aplikácii.** Body prerušenia a krokovanie pre Rust, C, C++, Swift, Go, JavaScript, TypeScript a Python; príprava jednotlivých úsekov na commit, vetvy, stashe, konflikty a graf commitov; spustenia, joby a logy z GitHub Actions a GitLab CI.
+- **Terminál aplikácie Tapa.** Bloky príkazov, ktorých výstup skopírujete, uložíte alebo odovzdáte agentovi, vstupné pole s návrhmi z vašej histórie a z projektu, hľadanie v celej histórii a hlásenia a priebeh od programov, ktoré v ňom bežia.
 - **Opatrné s vašimi priečinkami.** Priečinok, ktorému ste nedôverovali, nespustí nič: žiadne procesy gitu, jazykové servery, hooky ani agentov. Deštruktívne príkazy gitu sa nikdy nepovolia natrvalo a commity sa kontrolujú na tajné údaje.
 - **Diktovanie.** Hovorte do editora a do poľa správy, online cez OpenAI alebo Groq, alebo lokálne s Whisper a Parakeet.
 - **Natívne do poslednej kosti.** Okná, taby, ponuky a panely s nástrojmi z AppKitu, TextKit 2 pre editor, Metal pre terminál, WebKit iba v tabe prehliadača. Tmavý režim, Zvýšiť kontrast a VoiceOver fungujú ako v každej aplikácii pre Mac.
@@ -84,7 +85,7 @@ Dango spája kód, agentov, ktorí ho menia, a všetko okolo nich do jedného ok
 3. **Každý dokument je tab** okna priečinka, vlastné taby macOS. „+“ na konci lišty tabov a ⌘T ponúkajú nový súbor, terminál, prehliadač a každého nainštalovaného agenta, aj vo vlastnom git worktree; podržanie „+“ zobrazí to isté ako ponuku.
 4. **Rýchlo otvoriť** cez ⌘P nájde súbory a s `#` symboly projektu; ⇧⌘F vyhľadáva a nahrádza v projekte.
 5. **Hovorte s agentom** v AI tabe. ⌘Esc presunie fokus klávesnice do jeho poľa správy a späť.
-6. **Nastavenia** cez ⌘, obsahujú taby Všeobecné, CI, Agenti, Vlastný agent, Jazykový server, Diktovanie a Predpoveď.
+6. **Nastavenia** cez ⌘, obsahujú taby Všeobecné, Terminál, CI, Agenti, Software Factory, Vlastný agent, Jazykový server, Diktovanie a Predpoveď.
 
 Na paneli s nástrojmi je späť a dopredu cez miesta, ktoré ste upravovali (⌃- a ⌃⇧-), vetva, Rýchlo otvoriť a prehľad Aktivita, ktorý zobrazuje všetko, čo beží. **Otvoriť vedľa** v kontextovej ponuke súboru zobrazí druhý dokument vedľa prvého. Po reštarte alebo páde sa každé okno vráti so svojimi tabmi a editory s neuloženým textom sa vrátia aj s ním. Obrázky, zvuk, video, písma a dokumenty Office sa otvárajú v tabe cez Quick Look, PDF cez PDFKit.
 
@@ -155,7 +156,22 @@ Načíta sa `.vscode/launch.json` projektu. Ponuka Ladenie používa skratky z X
 
 ## Terminál
 
-Terminály v taboch (⌃\`) s prostredím prihlasovacieho shellu, vykresľované cez Metal. ⌘K vymaže obrazovku. Vložený alebo pretiahnutý obrázok sa odovzdá kódovaciemu agentovi spustenému v termináli, inak sa vloží cesta k uloženej kópii. ⌘-kliknutie otvára odkazy a názvy súborov. Vývojový server, ktorý terminál spustí, možno otvoriť v tabe prehliadača.
+Terminály sa otvárajú ako taby (**Súbor › Nový terminál**, ⌃\`) s prihlasovacím shellom a jeho prostredím. Terminál pochádza z aplikácie [Tapa](https://github.com/sventmueller/tapa), má vlastné jadro VT a vykresľuje sa cez Metal: xterm a VT520 s klávesnicovým protokolom Kitty, odkazy OSC 8, synchronizovaný výstup, truecolor a hlásenie myši, vo veľkosti textu editora a vo svetlých a tmavých farbách aplikácie Tapa. Jeho integrácia so shellom pre zsh, bash a fish sa nastaví sama bez zásahu do vašich konfiguračných súborov a ide s vami, keď sa cez `ssh` pripojíte k inému hostiteľovi. Po reštarte sa terminál vráti ako nový shell v priečinku, v ktorom bol, a to iba v dôveryhodných priečinkoch; to, čo zobrazoval, sa nevráti.
+
+- **Bloky príkazov.** Každý príkaz a jeho výstup tvoria blok. ⌘↑ a ⌘↓ skáču medzi výzvami. **Vybrať blok** (⇧⌘A), **Kopírovať výstup** (⌥⌘C), **Uložiť výstup…** (⌥⌘S) a **Zbaliť/rozbaliť blok** (⇧⌘↩) pôsobia na aktuálny blok; **Pridať/odstrániť záložku** (⇧⌘M) označí riadok a ⇧⌘↑ a ⇧⌘↓ skáču medzi záložkami. Keď je zapnuté **Označovať príkazy ako bloky**, pruh na okraji ukazuje každý blok, neúspešné príkazy sú označené, bežiaci príkaz zostáva hore, kým sa jeho výstup posúva, a tlačidlá nad blokom pod ukazovateľom zobrazujú jeho stav, trvanie a tie isté akcie.
+- **Odoslať blok agentovi** (ponuka Upraviť a kontextová ponuka terminálu) otvorí nový AI tab s príkazovým riadkom a výstupom aktuálneho bloku priloženými ako Externý obsah (pozrite [Dôvera](#dôvera)) a s konceptom, ktorý sa pýta na príčinu, keď príkaz zlyhal, rovnako ako to robí log neúspešného jobu CI. Skratku nemá, kým príkazu `terminal.blockToAgent` nejakú nepriradíte v `keybindings.json`.
+- **Vstupné pole.** **Zobraziť › Zobraziť/skryť vstupné pole** (⌘I) premení príkazový riadok na textové pole v dolnej časti terminálu, s priečinkom a vetvou Git nad ním; nové terminály sa riadia vašou poslednou voľbou. Return pošle celé pole do shellu. Potrebuje integráciu so shellom a ustúpi programom na celú obrazovku, ako je vim, htop alebo claude.
+- **Návrhy** sa zobrazujú sivo hneď za tým, čo píšete, vo vstupnom poli aj bez neho: z vašej histórie, s priečinkom, vetvou a návratovým kódom, s ktorými každý príkaz bežal, zo špecifikácií pre viac než 700 nástrojov príkazového riadka a z projektu, ako sú vetvy gitu, kontajnery dockera, skripty `package.json` a ciele make, just a cargo. → návrh prijme; Tab dopĺňa a pri viacerých kandidátoch otvorí ponuku, ktorú písanie filtruje. Skôr než začnete písať, pole môže navrhnúť príkaz, ktorý zvyčajne nasleduje. Príkazy sú zafarbené podľa svojich častí a ten, ktorý váš shell nedokáže spustiť, dostane červené prerušované podčiarknutie. Návrhy nikdy nepoužívajú sieť a spúšťajú programy iba z `PATH` prihlasovacieho shellu.
+- **Nájsť** (⌘F, ⌘G a ⇧⌘G, keď má terminál fokus) prehľadáva celú históriu, s regulárnymi výrazmi, rozlišovaním veľkosti písmen a celými slovami, a počíta výsledky; posuvník označuje výsledky, výzvy a neúspešné príkazy.
+- **Výber a kopírovanie.** Dvojité kliknutie vyberie celú adresu URL, cestu, hash alebo IP adresu a ťahanie s ⌥ vyberie obdĺžnik. **Výber klávesnicou** (⇧⌘C) posúva výber klávesmi Vimu, **Kopírovať s formátovaním** (⇧⌥⌘C) zachová farby a štýly. Program smie kopírovať cez OSC 52 iba vtedy, keď má jeho terminál fokus klávesnice, a terminál to oznámi; žiadny program nečíta schránku.
+- **Vkladanie.** Text, ktorý by na svojom zalomení riadka spustil príkaz alebo obsahuje riadiace znaky, sa najprv zobrazí v dialógovom okne, pokiaľ ho program nečíta ako bracketed paste. Vložený obrázok sa odovzdá kódovaciemu agentovi spustenému v termináli, ktorý si ho sám prečíta zo schránky, inak sa vloží cesta ku kópii uloženej vo vyrovnávacej pamäti; cez `ssh` terminál povie, prečo to nerobí. Súbory pretiahnuté na terminál vrátane obrázkov prídu ako cesty v úvodzovkách; obrázok pretiahnutý odinakiaľ, napríklad z webovej stránky, prejde rovnakou cestou ako vložený.
+- **Odkazy.** ⌘-kliknutie otvorí webovú adresu v tabe prehliadača, odkaz `mailto:` v Mailu a názov súboru, aj s riadkom a stĺpcom, v editore aplikácie Dango; odkazy sa nájdu aj bez OSC 8. Odkazy iných druhov sa neotvárajú.
+- **Vývojové servery.** Keď program v termináli spustí vývojový server, pruh nad terminálom uvedie jeho adresu a **Otvoriť v tabe prehliadača** ho tam otvorí.
+- **Hlásenia a priebeh.** Zvonček a hlásenie, o ktoré program požiada (OSC 9 a OSC 777), dajú na tab terminálu červenú bodku, kým ho nevidíte; keď je vpredu iná aplikácia, hlásenie ide aj do macOS a kliknutím naň sa terminál vráti. Priebeh, ktorý program hlási (OSC 9;4), sa zobrazí ako krúžok na jeho tabe a ako pruh na ikone v Docku.
+- **Zabezpečená klávesnica** (**Dango › Zabezpečená klávesnica**) bráni iným aplikáciám čítať, čo píšete do terminálu; zapne sa aj sama, keď program žiada heslo.
+- **Klávesy.** ⌘K vymaže terminál (**Upraviť › Vymazať terminál**); ⌃C a Esc idú programu, ktorý v ňom beží. Príkazy terminálu sú v ponukách Upraviť a Zobraziť a ich skratky fungujú iba vtedy, keď má terminál fokus klávesnice, takže ⌘I, ⌘↑ alebo ⌘F si v editore zachovajú svoj význam. Kontextová ponuka tiež otvorí **Nový terminál tu** a zatvorí terminál príkazom **Zatvoriť oblasť**.
+
+**Nastavenia › Terminál** prepína vstupné pole pre nové terminály, jeho klávesy Vim, návrhy, farebné zvýrazňovanie príkazov, podčiarkovanie neznámych príkazov, bloky príkazov, okamžité kopírovanie výberu, zobrazenie viacriadkového vloženia vopred a ⌥ ako meta kláves.
 
 ## Prehliadač
 
@@ -205,7 +221,7 @@ Priečinok môže spôsobiť, že sa programy spustia, len čo sa v ňom niečo 
 - **Dôveryhodný:** git, jazykové servery, ladiace nástroje, agenti a CI bežia pre tento priečinok a všetko pod ním.
 - **Obmedzený:** môžete čítať a upravovať; značky zmien v editore pochádzajú z priameho čítania `.git`. Nič, čo priečinok konfiguruje, sa nespustí. Panely Git, CI a AI to uvádzajú a ponúkajú, aby ste priečinku začali dôverovať.
 
-Text, ktorý nepochádza od vás, môže obsahovať pokyny, ktoré majú riadiť agenta (prompt injection). Výstup terminálu (`@terminal`), stránka prehliadača (`@browser`), log CI odovzdaný agentovi, súbor mimo projektu a dlhší text vložený z webovej stránky preto idú ďalej označené: štítok uvádza „Externý obsah“ a agent dostane text s upozornením, že ide o nedôveryhodné údaje, ktorých pokyny nesmie nasledovať. Webové stránky vlastného agenta prichádzajú s rovnakým upozornením. Vložený text sa považuje za text z webovej stránky, keď to prehliadač uvedie v schránke, ako to robia Safari, Chrome a Firefox; text odinakiaľ a krátka fráza z niekoľkých slov zostávajú vaše.
+Text, ktorý nepochádza od vás, môže obsahovať pokyny, ktoré majú riadiť agenta (prompt injection). Výstup terminálu (`@terminal` alebo blok príkazu odovzdaný agentovi), stránka prehliadača (`@browser`), log CI odovzdaný agentovi, súbor mimo projektu a dlhší text vložený z webovej stránky preto idú ďalej označené: štítok uvádza „Externý obsah“ a agent dostane text s upozornením, že ide o nedôveryhodné údaje, ktorých pokyny nesmie nasledovať. Webové stránky vlastného agenta prichádzajú s rovnakým upozornením. Vložený text sa považuje za text z webovej stránky, keď to prehliadač uvedie v schránke, ako to robia Safari, Chrome a Firefox; text odinakiaľ a krátka fráza z niekoľkých slov zostávajú vaše.
 
 ## Sandbox
 
@@ -221,9 +237,9 @@ Samotné Dango beží bez App Sandbox, pretože by ho zdedil každý program, kt
 ## Vzhľad a prístupnosť
 
 - **Tmavý režim** sa riadi systémom; **Zvýšiť kontrast** a **Obmedziť pohyb** sa rešpektujú.
-- **VoiceOver** pomenúva postranný panel, taby, karty časovej osi AI, riadky Git a CI, ladiaci nástroj a text terminálu. Body prerušenia sa nikdy nerozlišujú iba farbou.
+- **VoiceOver** pomenúva postranný panel, taby, karty časovej osi AI, riadky Git a CI a ladiaci nástroj, číta riadky terminálu a ohlasuje nový výstup. Body prerušenia sa nikdy nerozlišujú iba farbou.
 - **Klávesnica.** Každý príkaz má skratku a všetky sa dajú zmeniť v `keybindings.json`; ⌥⌘\` prejde na ďalší panel.
-- **Sprava doľava.** V arabčine a hebrejčine je okno zrkadlené, zobrazenia kódu však zostávajú zľava doprava.
+- **Sprava doľava.** V arabčine a hebrejčine je okno zrkadlené, zobrazenia kódu a mriežka terminálu však zostávajú zľava doprava.
 
 Čo Dango pridáva nad rámec AppKitu, oblasť po oblasti, je v [ACCESSIBILITY.md](../../../ACCESSIBILITY.md).
 
@@ -257,6 +273,10 @@ Dango sa riadi poradím jazykov v **Systémové nastavenia › Všeobecné › J
 | Tučné, kurzíva, prečiarknuté, kód, odkaz | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | Nadpis 1 až 3 | ⌥⌘1 až ⌥⌘3 |
 | Nový terminál, vymazať terminál | ⌃\`, ⌘K |
+| V termináli: nájsť, nájsť ďalšie, nájsť predošlé | ⌘F, ⌘G, ⇧⌘G |
+| V termináli: predchádzajúca a ďalšia výzva, predchádzajúca a ďalšia záložka, pridať alebo odstrániť záložku | ⌘↑ a ⌘↓, ⇧⌘↑ a ⇧⌘↓, ⇧⌘M |
+| V termináli: vybrať blok, kopírovať výstup, uložiť výstup, zbaliť blok | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| V termináli: vstupné pole, výber klávesnicou, kopírovať s formátovaním | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | Fokus do poľa správy agenta, komentovať plán | ⌘Esc, ⌥⌘K |
 | Pole adresy, znova načítať, späť, dopredu (prehliadač) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Spustiť alebo zastaviť diktovanie | ⌃⌥D |
@@ -282,7 +302,7 @@ Dango sa riadi poradím jazykov v **Systémové nastavenia › Všeobecné › J
 
 | Miesto | Čo |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`; `threads/` (zoznam panela AI), `agent-threads/` (konverzácie vlastného agenta), `layouts/` (taby pre každý projekt), `recovery/` (neuložené editory po páde), `checkpoints/` (pre priečinky bez gitu), `worktrees/`, `agents/` a `tools/` (nainštalovaní agenti, jazykové servery a ladiace adaptéry), `task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`, `terminal-history.sqlite` (história príkazov terminálov); `threads/` (zoznam panela AI), `agent-threads/` (konverzácie vlastného agenta), `layouts/` (taby pre každý projekt), `recovery/` (neuložené editory po páde), `checkpoints/` (pre priečinky bez gitu), `worktrees/`, `agents/` a `tools/` (nainštalovaní agenti, jazykové servery a ladiace adaptéry), `task-output/` |
 | `~/Library/Caches/<id>/` | vložené obrázky, skripty integrácie shellu, register ACP; možno ich vymazať |
 | `~/Library/Logs/<id>/dictation/` | logy diktovania |
 | `~/Library/Application Support/Lowspeak` a `FluidAudio` | lokálne modely na diktovanie, zdieľané s Lowspeak |
@@ -300,6 +320,7 @@ Claude si uchováva vlastné relácie v `~/.claude/projects`; Dango ich číta, 
 - **Údaje o využití a rozpis kontextu pri Claude** sa opierajú o časti jeho protokolu označené ako experimentálne a skryjú sa, keď chýbajú.
 - **Pretočenie konverzácie späť** funguje iba pri Claude; pri ostatných agentoch sa pretočí späť iba kód.
 - **Prihlásenie do CI cez prehliadač** je vypnuté; použite `gh`, `glab`, token alebo prostredie.
+- **Žiadne obrázky v termináli:** grafika Kitty, Sixel a obrázky iTerm2 sa nezobrazujú.
 - **Gemini CLI sa neponúka:** Google ukončil prihlasovanie osobným účtom a odkazuje na Antigravity. Staršie vlákna Gemini zostávajú čitateľné.
 
 ## Zostavenie zo zdrojového kódu
@@ -308,7 +329,7 @@ Potrebujete:
 
 - macOS 14 alebo novší s Xcode Command Line Tools (`xcode-select --install`); samotný Xcode nie je potrebný.
 - Rust podľa `rust-toolchain.toml`. `rust` z Homebrew zostavuje pre procesor tohto Macu; univerzálne zostavenie vydania potrebuje rustup s cieľmi `aarch64-apple-darwin` a `x86_64-apple-darwin`.
-- Kópie repozitárov [splat](https://github.com/sventmueller/splat) a [lowspeak](https://github.com/sventmueller/lowspeak) vedľa tohto (`../splat`, `../lowspeak`), obe na vetve `main`; pracovný priestor z nich berie crates podľa cesty.
+- Kópie repozitárov [splat](https://github.com/sventmueller/splat), [lowspeak](https://github.com/sventmueller/lowspeak) a [tapa](https://github.com/sventmueller/tapa) vedľa tohto (`../splat`, `../lowspeak`, `../tapa`), každá na svojej vetve `main`; pracovný priestor z nich berie crates podľa cesty, terminál z aplikácie Tapa.
 - cmake pre každé zostavenie s diktovaním (`make run`, `make build`, `make release`), ktoré zostavuje whisper.cpp. `make check` sa zostavuje bez neho.
 
 | Príkaz | Čo robí |

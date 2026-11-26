@@ -12,7 +12,7 @@ Dango bringt den Code, die Agenten, die ihn ändern, und alles drumherum in ein 
 
 **Einen Fehler gefunden?** [Eröffne ein Issue](https://github.com/sventmueller/dango/issues/new) und schreib dazu, mit welchem Agenten und in welcher Art von Projekt er auftrat.
 
-[![Rust, Edition 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 oder neuer](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universal: Apple Silicon und Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit über objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35 Sprachen der Oberfläche](https://img.shields.io/badge/languages-35-4C9A2A) ![Keine Telemetrie](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Signiert mit Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Lizenz: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#lizenz)
+[![Rust, Edition 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 oder neuer](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universal: Apple Silicon und Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit über objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35 Sprachen der Oberfläche](https://img.shields.io/badge/languages-35-4C9A2A) ![Keine Telemetrie](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Signiert mit Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Lizenz: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#lizenz)
 
 [Bahasa Indonesia](../id/README.md) · [Bahasa Melayu](../ms/README.md) · [Català](../ca/README.md) · [Čeština](../cs/README.md) · [Dansk](../da/README.md) · **Deutsch** · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · [Magyar](../hu/README.md) · [Nederlands](../nl/README.md) · [Norsk](../no/README.md) · [Polski](../pl/README.md) · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · [Română](../ro/README.md) · [Slovenčina](../sk/README.md) · [Slovenščina](../sl/README.md) · [Suomi](../fi/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [繁體中文](../zh-Hant/README.md)
 
@@ -55,6 +55,7 @@ Dango bringt den Code, die Agenten, die ihn ändern, und alles drumherum in ein 
 - **Ein Fenster je Ordner.** Dateien, Terminals, Browserseiten, AI-Threads, Diffs und Vorschauen sind macOS-Tabs dieses Fensters. Die Seitenleiste enthält Dateien, Suche, Agenten, Git, Tests, Debuggen, CI und Container.
 - **Ein echter Code-Editor.** Syntaxfarben, mehrere Einfügemarken, Faltung, `.editorconfig`, Sprachserver für 17 Sprachen mit Vervollständigung, Gehe zu Definition, Referenzen, Umbenennen, Schnellkorrekturen und Hierarchien, dazu Vorhersagen beim Tippen von GitHub Copilot oder einem lokalen Modell.
 - **Debugger, Git und CI eingebaut.** Haltepunkte und Schrittbetrieb für Rust, C, C++, Swift, Go, JavaScript, TypeScript und Python; einzelne Abschnitte vormerken, Branches, Stashes, Konflikte und ein Commit-Graph; Läufe, Jobs und Logs aus GitHub Actions und GitLab CI.
+- **Das Terminal von Tapa.** Befehlsblöcke, deren Ausgabe du kopierst, sicherst oder einem Agenten übergibst, ein Eingabefeld mit Vorschlägen aus deinem Verlauf und dem Projekt, eine Suche durch den ganzen Verlauf sowie Mitteilungen und Fortschritt der Programme darin.
 - **Vorsichtig mit deinen Ordnern.** Ein Ordner, dem du nicht vertraust, startet nichts: keine Git-Prozesse, Sprachserver, Hooks oder Agenten. Zerstörerische Git-Befehle werden nie dauerhaft erlaubt, und Commits werden auf Secrets geprüft.
 - **Diktat.** Sprich in den Editor und ins Nachrichtenfeld, online über OpenAI oder Groq oder lokal mit Whisper und Parakeet.
 - **Durch und durch nativ.** AppKit-Fenster, -Tabs, -Menüs und -Symbolleisten, TextKit 2 für den Editor, Metal für das Terminal, WebKit nur im Browser-Tab. Dunkelmodus, Erhöhter Kontrast und VoiceOver funktionieren wie in jeder Mac-App.
@@ -84,7 +85,7 @@ Dango bringt den Code, die Agenten, die ihn ändern, und alles drumherum in ein 
 3. **Jedes Dokument ist ein Tab** im Fenster des Ordners, mit den eigenen Tabs von macOS. Das „+“ am Ende der Tableiste und ⌘T bieten eine neue Datei, ein Terminal, den Browser und jeden installierten Agenten an, auch in einem eigenen Git-Worktree; hältst du das „+“ gedrückt, erscheint dasselbe als Menü.
 4. **Schnell öffnen** mit ⌘P findet Dateien und mit `#` die Symbole des Projekts; ⇧⌘F sucht und ersetzt im Projekt.
 5. **Sprich mit einem Agenten** in einem AI-Tab. ⌘Esc bringt den Tastaturfokus in sein Nachrichtenfeld und zurück.
-6. **Einstellungen** mit ⌘, enthalten die Tabs Allgemein, CI, Agenten, Eigener Agent, Sprachserver, Diktat und Vorhersage.
+6. **Einstellungen** mit ⌘, enthalten die Tabs Allgemein, Terminal, CI, Agenten, Software Factory, Eigener Agent, Sprachserver, Diktat und Vorhersage.
 
 In der Symbolleiste stehen Zurück und Vorwärts durch die Stellen, an denen du gearbeitet hast (⌃- und ⌃⇧-), der Branch, Schnell öffnen und die Aktivitätsübersicht, die alles zeigt, was läuft. **Daneben öffnen** im Kontextmenü einer Datei zeigt ein zweites Dokument neben dem ersten. Nach einem Neustart oder Absturz kommt jedes Fenster mit seinen Tabs zurück, Editoren mit ungesichertem Text mit diesem Text. Bilder, Audio, Video, Schriften und Office-Dokumente öffnen in einem Tab über Quick Look, PDFs über PDFKit.
 
@@ -155,7 +156,22 @@ Die `.vscode/launch.json` eines Projekts wird gelesen. Das Menü „Debuggen“ 
 
 ## Terminal
 
-Terminals in Tabs (⌃\`) mit der Umgebung der Login-Shell, gezeichnet mit Metal. ⌘K leert den Bildschirm. Ein eingefügtes oder hineingezogenes Bild geht an einen Coding-Agenten, der im Terminal läuft, sonst als Pfad einer gesicherten Kopie. ⌘-Klick öffnet Links und Dateinamen. Einen Entwicklungsserver, den das Terminal startet, kannst du im Browser-Tab öffnen.
+Terminals öffnen sich als Tabs (**Ablage › Neues Terminal**, ⌃\`) mit der Login-Shell und ihrer Umgebung. Das Terminal ist das von [Tapa](https://github.com/sventmueller/tapa), mit eigenem VT-Kern, gezeichnet mit Metal: xterm und VT520 mit dem Kitty-Tastaturprotokoll, Links über OSC 8, synchronisierte Ausgabe, Truecolor und Mausmeldungen, in der Textgröße des Editors und den hellen und dunklen Farben von Tapa. Seine Shell-Integration für zsh, bash und fish richtet sich selbst ein, ohne deine Konfigurationsdateien anzufassen, und geht mit, wenn du per `ssh` auf einen anderen Rechner gehst. Nach einem Neustart kommt ein Terminal als neue Shell in dem Ordner zurück, in dem es war, nur in vertrauten Ordnern; was es zeigte, kommt nicht zurück.
+
+- **Befehlsblöcke.** Jeder Befehl und seine Ausgabe bilden einen Block. ⌘↑ und ⌘↓ springen zwischen den Prompts. **Block auswählen** (⇧⌘A), **Ausgabe kopieren** (⌥⌘C), **Ausgabe sichern …** (⌥⌘S) und **Block ein-/ausklappen** (⇧⌘↩) wirken auf den aktuellen Block; **Lesezeichen setzen/entfernen** (⇧⌘M) markiert eine Zeile, und ⇧⌘↑ und ⇧⌘↓ springen zwischen Lesezeichen. Ist **Befehle als Blöcke markieren** an, zeigt ein Balken am Rand jeden Block, fehlgeschlagene Befehle werden markiert, der laufende Befehl bleibt oben, während seine Ausgabe scrollt, und Knöpfe über dem Block unter dem Zeiger zeigen seinen Status, seine Dauer und dieselben Aktionen.
+- **Block an Agent übergeben** (Menü „Bearbeiten“ und Kontextmenü des Terminals) öffnet einen neuen AI-Tab mit der Befehlszeile und der Ausgabe des aktuellen Blocks als Fremder Inhalt im Anhang (siehe [Vertrauen](#vertrauen)) und einem Entwurf, der nach der Ursache fragt, wenn der Befehl fehlgeschlagen ist, wie es das Log eines fehlgeschlagenen CI-Jobs tut. Ein Kürzel hat es erst, wenn du `terminal.blockToAgent` in `keybindings.json` eines gibst.
+- **Das Eingabefeld.** **Darstellung › Eingabefeld ein-/ausblenden** (⌘I) macht die Befehlszeile zu einem Textfeld unten im Terminal, darüber der Ordner und der Git-Branch; neue Terminals folgen deiner letzten Wahl. Return schickt das ganze Feld an die Shell. Es braucht die Shell-Integration und tritt für Vollbildprogramme wie vim, htop oder claude zur Seite.
+- **Vorschläge** erscheinen grau direkt hinter dem, was du tippst, im Eingabefeld und ohne es: aus deinem Verlauf, mit dem Ordner, dem Branch und dem Exit-Code, mit denen jeder Befehl lief, aus Beschreibungen von mehr als 700 Befehlszeilenwerkzeugen und aus dem Projekt, etwa Git-Branches, docker-Container, `package.json`-Skripte und Ziele von make, just und cargo. → übernimmt einen Vorschlag; Tab ergänzt und öffnet bei mehreren Kandidaten ein Menü, das sich beim Tippen filtert. Bevor du tippst, kann das Feld den Befehl vorschlagen, der üblicherweise als Nächstes kommt. Befehle werden nach ihren Teilen eingefärbt, und einer, den deine Shell nicht ausführen kann, bekommt eine gestrichelte rote Unterstreichung. Vorschläge nutzen nie das Netz und starten Programme nur aus dem `PATH` der Login-Shell.
+- **Suchen** (⌘F, ⌘G und ⇧⌘G, während ein Terminal den Fokus hat) durchsucht den ganzen Verlauf, mit regulären Ausdrücken, Groß- und Kleinschreibung und ganzen Wörtern, und zählt die Treffer; der Rollbalken markiert die Treffer, die Prompts und die fehlgeschlagenen Befehle.
+- **Auswählen und Kopieren.** Ein Doppelklick wählt eine URL, einen Pfad, einen Hash oder eine IP-Adresse als Ganzes aus, und Ziehen mit ⌥ wählt ein Rechteck aus. **Auswahl mit der Tastatur** (⇧⌘C) bewegt eine Auswahl mit den Tasten von Vim, **Mit Formatierung kopieren** (⇧⌥⌘C) behält Farben und Stile. Ein Programm darf über OSC 52 nur kopieren, solange sein Terminal den Tastaturfokus hat, und das Terminal meldet es; kein Programm liest die Zwischenablage.
+- **Einsetzen.** Text, der an seinem Zeilenumbruch einen Befehl ausführen würde oder Steuerzeichen enthält, erscheint zuerst in einem Sheet, es sei denn, das Programm liest ihn als Bracketed Paste. Ein eingesetztes Bild geht an einen Coding-Agenten, der im Terminal läuft und es selbst aus der Zwischenablage liest, sonst wird der Pfad einer Kopie eingesetzt, die bei den Caches liegt; über `ssh` sagt das Terminal, warum es das nicht tut. Auf ein Terminal gezogene Dateien, Bilder eingeschlossen, kommen als Pfade in Anführungszeichen an; ein Bild, das von anderswo kommt, etwa aus einer Webseite, nimmt den Weg eines eingesetzten.
+- **Links.** ⌘-Klick öffnet eine Webadresse im Browser-Tab, einen `mailto:`-Link in Mail und einen Dateinamen, auch mit Zeile und Spalte, im Editor von Dango; Links werden auch ohne OSC 8 erkannt. Links anderer Art öffnen sich nicht.
+- **Entwicklungsserver.** Startet ein Programm im Terminal einen Entwicklungsserver, nennt eine Leiste über dem Terminal seine Adresse, und **Im Browser-Tab öffnen** öffnet ihn dort.
+- **Mitteilungen und Fortschritt.** Die Glocke und eine Mitteilung, um die ein Programm bittet (OSC 9 und OSC 777), setzen den roten Punkt auf den Tab des Terminals, solange du es nicht siehst; liegt eine andere App vorne, geht die Mitteilung auch an macOS, und ein Klick darauf holt das Terminal zurück. Fortschritt, den ein Programm meldet (OSC 9;4), erscheint als Ring auf seinem Tab und als Balken auf dem Dock-Symbol.
+- **Sichere Tastatureingabe** (**Dango › Sichere Tastatureingabe**) hindert andere Apps daran mitzulesen, was du in ein Terminal tippst; sie schaltet sich auch von selbst ein, solange ein Programm nach einem Passwort fragt.
+- **Tasten.** ⌘K leert das Terminal (**Bearbeiten › Terminal leeren**); ⌃C und Esc gehen an das Programm darin. Die Befehle des Terminals stehen in den Menüs „Bearbeiten“ und „Darstellung“, und ihre Kürzel wirken nur, solange ein Terminal den Tastaturfokus hat, sodass ⌘I, ⌘↑ oder ⌘F im Editor ihre Bedeutung behalten. Das Kontextmenü öffnet außerdem ein **Neues Terminal hier** und schließt das Terminal mit **Bereich schließen**.
+
+**Einstellungen › Terminal** schaltet das Eingabefeld für neue Terminals, seine Vim-Tasten, die Vorschläge, das Einfärben der Befehle, das Unterstreichen unbekannter Befehle, die Befehlsblöcke, das sofortige Kopieren der Auswahl, das Vorab-Zeigen mehrzeiligen Einsetzens und ⌥ als Meta-Taste.
 
 ## Browser
 
@@ -205,7 +221,7 @@ Ein Ordner kann Programme starten lassen, sobald darin etwas gestartet wird: Git
 - **Vertraut:** Git, Sprachserver, Debugger, Agenten und CI laufen für diesen Ordner und alles darunter.
 - **Eingeschränkt:** Du kannst lesen und bearbeiten; die Änderungsmarken im Editor kommen aus dem direkten Lesen von `.git`. Nichts, was der Ordner einrichtet, wird gestartet. Die Panels für Git, CI und AI sagen das und bieten an, dem Ordner zu vertrauen.
 
-Text, der nicht von dir kommt, kann Anweisungen tragen, die einen Agenten lenken sollen (Prompt-Injection). Die Ausgabe eines Terminals (`@terminal`), eine Browserseite (`@browser`), ein CI-Log, das einem Agenten übergeben wird, eine Datei außerhalb des Projekts und längerer Text, der aus einer Webseite eingesetzt wird, gehen deshalb gekennzeichnet mit: Der Chip sagt „Fremder Inhalt“, und der Agent bekommt den Text mit dem Hinweis, dass es nicht vertrauenswürdige Daten sind, deren Anweisungen er nicht befolgen darf. Die Webseiten des eigenen Agenten kommen mit demselben Hinweis. Eingesetzter Text gilt als Text aus einer Webseite, wenn der Browser das in der Zwischenablage vermerkt, wie Safari, Chrome und Firefox es tun; Text von anderswo und eine kurze Wendung aus wenigen Wörtern bleiben dein eigener.
+Text, der nicht von dir kommt, kann Anweisungen tragen, die einen Agenten lenken sollen (Prompt-Injection). Die Ausgabe eines Terminals (`@terminal` oder ein Befehlsblock, der einem Agenten übergeben wird), eine Browserseite (`@browser`), ein CI-Log, das einem Agenten übergeben wird, eine Datei außerhalb des Projekts und längerer Text, der aus einer Webseite eingesetzt wird, gehen deshalb gekennzeichnet mit: Der Chip sagt „Fremder Inhalt“, und der Agent bekommt den Text mit dem Hinweis, dass es nicht vertrauenswürdige Daten sind, deren Anweisungen er nicht befolgen darf. Die Webseiten des eigenen Agenten kommen mit demselben Hinweis. Eingesetzter Text gilt als Text aus einer Webseite, wenn der Browser das in der Zwischenablage vermerkt, wie Safari, Chrome und Firefox es tun; Text von anderswo und eine kurze Wendung aus wenigen Wörtern bleiben dein eigener.
 
 ## Sandbox
 
@@ -221,9 +237,9 @@ Dango selbst läuft ohne App Sandbox, weil jedes Programm, das es startet, sie e
 ## Darstellung und Barrierefreiheit
 
 - **Der Dunkelmodus** folgt dem System; **Erhöhter Kontrast** und **Bewegung reduzieren** werden beachtet.
-- **VoiceOver** benennt die Seitenleiste, die Tabs, die Karten der AI-Zeitleiste, die Zeilen in Git und CI, den Debugger und den Text des Terminals. Haltepunkte werden nie allein durch Farbe unterschieden.
+- **VoiceOver** benennt die Seitenleiste, die Tabs, die Karten der AI-Zeitleiste, die Zeilen in Git und CI und den Debugger, liest die Zeilen des Terminals vor und kündigt neue Ausgabe an. Haltepunkte werden nie allein durch Farbe unterschieden.
 - **Tastatur.** Jeder Befehl hat ein Kürzel, und alle lassen sich in `keybindings.json` ändern; ⌥⌘\` springt zum nächsten Panel.
-- **Rechts nach links.** Auf Arabisch und Hebräisch wird das Fenster gespiegelt, während Code-Ansichten von links nach rechts laufen.
+- **Rechts nach links.** Auf Arabisch und Hebräisch wird das Fenster gespiegelt, während Code-Ansichten und das Raster des Terminals von links nach rechts laufen.
 
 Was Dango über AppKit hinaus beiträgt, Bereich für Bereich, steht in [ACCESSIBILITY.md](../../../ACCESSIBILITY.md).
 
@@ -257,6 +273,10 @@ Dango folgt der Sprachreihenfolge unter **Systemeinstellungen › Allgemein › 
 | Fett, kursiv, durchgestrichen, Code, Link | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | Überschrift 1 bis 3 | ⌥⌘1 bis ⌥⌘3 |
 | Neues Terminal, Terminal leeren | ⌃\`, ⌘K |
+| Im Terminal: suchen, weitersuchen, rückwärts suchen | ⌘F, ⌘G, ⇧⌘G |
+| Im Terminal: voriger und nächster Prompt, voriges und nächstes Lesezeichen, Lesezeichen setzen oder entfernen | ⌘↑ und ⌘↓, ⇧⌘↑ und ⇧⌘↓, ⇧⌘M |
+| Im Terminal: Block auswählen, Ausgabe kopieren, Ausgabe sichern, Block einklappen | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| Im Terminal: Eingabefeld, Auswahl mit der Tastatur, mit Formatierung kopieren | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | Nachrichtenfeld des Agenten fokussieren, Plan kommentieren | ⌘Esc, ⌥⌘K |
 | Adressfeld, neu laden, zurück, vor (Browser) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Diktat starten oder stoppen | ⌃⌥D |
@@ -282,7 +302,7 @@ Dango folgt der Sprachreihenfolge unter **Systemeinstellungen › Allgemein › 
 
 | Ort | Was |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`; `threads/` (die Liste des AI-Panels), `agent-threads/` (Unterhaltungen des eigenen Agenten), `layouts/` (Tabs je Projekt), `recovery/` (ungesicherte Editoren nach einem Absturz), `checkpoints/` (für Ordner ohne Git), `worktrees/`, `agents/` und `tools/` (installierte Agenten, Sprachserver und Debug-Adapter), `task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`, `terminal-history.sqlite` (der Befehlsverlauf der Terminals); `threads/` (die Liste des AI-Panels), `agent-threads/` (Unterhaltungen des eigenen Agenten), `layouts/` (Tabs je Projekt), `recovery/` (ungesicherte Editoren nach einem Absturz), `checkpoints/` (für Ordner ohne Git), `worktrees/`, `agents/` und `tools/` (installierte Agenten, Sprachserver und Debug-Adapter), `task-output/` |
 | `~/Library/Caches/<id>/` | eingesetzte Bilder, Skripte der Shell-Integration, das ACP-Register; kann gelöscht werden |
 | `~/Library/Logs/<id>/dictation/` | die Protokolldateien des Diktats |
 | `~/Library/Application Support/Lowspeak` und `FluidAudio` | lokale Diktatmodelle, mit Lowspeak geteilt |
@@ -300,6 +320,7 @@ Claude hält seine eigenen Sitzungen unter `~/.claude/projects`; Dango liest sie
 - **Nutzungszahlen und Kontext-Aufschlüsselung von Claude** beruhen auf Teilen seines Protokolls, die als experimentell gekennzeichnet sind, und fehlen, wenn diese fehlen.
 - **Die Unterhaltung zurückspulen** geht nur bei Claude; bei den anderen Agenten wird nur der Code zurückgespult.
 - **Die Anmeldung bei CI über den Browser** ist aus; nutze `gh`, `glab`, ein Token oder die Umgebung.
+- **Keine Bilder im Terminal:** Kitty-Grafiken, Sixel- und iTerm2-Bilder erscheinen nicht.
 - **Die Gemini CLI wird nicht angeboten:** Google hat ihre Anmeldung mit einem privaten Konto beendet und verweist auf Antigravity. Frühere Gemini-Threads bleiben lesbar.
 
 ## Aus dem Quellcode bauen
@@ -308,7 +329,7 @@ Du brauchst:
 
 - macOS 14 oder neuer mit den Xcode Command Line Tools (`xcode-select --install`); Xcode selbst ist nicht nötig.
 - Rust, wie `rust-toolchain.toml` es nennt. Das `rust` von Homebrew baut für den Prozessor dieses Mac; der universelle Build einer Ausgabe braucht rustup mit den Zielen `aarch64-apple-darwin` und `x86_64-apple-darwin`.
-- Checkouts von [splat](https://github.com/sventmueller/splat) und [lowspeak](https://github.com/sventmueller/lowspeak) neben diesem (`../splat`, `../lowspeak`), beide auf ihrem Branch `main`; der Workspace nimmt Crates aus ihnen per Pfad.
+- Checkouts von [splat](https://github.com/sventmueller/splat), [lowspeak](https://github.com/sventmueller/lowspeak) und [tapa](https://github.com/sventmueller/tapa) neben diesem (`../splat`, `../lowspeak`, `../tapa`), jeweils auf ihrem Branch `main`; der Workspace nimmt Crates aus ihnen per Pfad, das Terminal aus Tapa.
 - cmake für jeden Build mit Diktat (`make run`, `make build`, `make release`), das whisper.cpp baut. `make check` baut ohne.
 
 | Befehl | Was er tut |

@@ -14,7 +14,7 @@ mod undo;
 
 pub use appkit::{
     acknowledge, borderless_button, four_colours, hide_from_voiceover, item, label, ns, separator, set_action,
-    set_label, set_target, set_title_element, submenu, symbol, symbol_at, symbol_button, tagged, tinted,
+    set_label, set_shortcut, set_target, set_title_element, submenu, symbol, symbol_at, symbol_button, tagged, tinted,
 };
 pub(crate) use guard::UndoGroupGuard;
 pub use guard::{FlagGuard, OnDrop, with_editing};

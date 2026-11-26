@@ -218,10 +218,12 @@ fn deploy_needs_clean_siblings_whose_commits_their_upstream_has() {
     assert!(missing.starts_with("../splat is missing"), "{missing}");
     let splat = sibling(&dir, &git, "splat");
     let lowspeak = sibling(&dir, &git, "lowspeak");
+    let tapa = sibling(&dir, &git, "tapa");
     let commits = siblings_ready(&mut System, &git).unwrap();
-    assert_eq!(commits.len(), 2);
+    assert_eq!(commits.len(), 3);
     assert_eq!(commits["splat"], head(&splat));
     assert_eq!(commits["lowspeak"], head(&lowspeak));
+    assert_eq!(commits["tapa"], head(&tapa));
 
     write(&lowspeak, "new.rs", "\n");
     let dirty = siblings_ready(&mut System, &git).unwrap_err();

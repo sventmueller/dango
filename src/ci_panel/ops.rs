@@ -397,7 +397,7 @@ pub(crate) fn draft(job: &str, run: &str, place: &str) -> String {
 }
 
 /// A new AI tab; the self-test's plays recordings instead of starting `claude`.
-fn open_agent(controller: &crate::window::WindowController) -> Option<Rc<ide_ui_agent::AgentTab>> {
+pub(crate) fn open_agent(controller: &crate::window::WindowController) -> Option<Rc<ide_ui_agent::AgentTab>> {
     #[cfg(feature = "selftest")]
     if std::env::var_os("IDE_SELFTEST").is_some() {
         return ide_ui_agent::open_replay(controller);

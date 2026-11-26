@@ -477,7 +477,6 @@ fn is_test_only(file: &str) -> bool {
         || file.contains("/selftest/")
         || file.ends_with("/selftest_probe.rs")
         || file.contains("/selftest_probe/")
-        || file == "crates/ide-ui-terminal/src/inspect.rs"
         || file == "crates/ide-acp/src/test_agent.rs"
         || file.starts_with("crates/ide-acp/src/bin/")
         || ["ide-codex", "ide-opencode"].iter().any(|c| {
@@ -851,7 +850,6 @@ mod tests {
             "crates/ide-ui-dictation/src/hub/selftest.rs",
             "crates/ide-ui-lsp/src/install/selftest_probe.rs",
             "crates/ide-ui-lsp/src/selftest_probe/probe.rs",
-            "crates/ide-ui-terminal/src/inspect.rs",
             "crates/ide-acp/src/test_agent.rs",
             "crates/ide-acp/src/bin/acp-record.rs",
             "crates/ide-codex/src/test_server.rs",

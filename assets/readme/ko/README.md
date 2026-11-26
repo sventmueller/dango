@@ -12,7 +12,7 @@ Dango는 코드와 그 코드를 변경하는 에이전트, 그리고 그 주변
 
 **버그를 발견했습니까?** [이슈를 열고](https://github.com/sventmueller/dango/issues/new) 어떤 에이전트와 어떤 종류의 프로젝트에서 발생했는지 알려 주십시오.
 
-[![Rust 2024 에디션](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 이상](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![유니버설: Apple Silicon 및 Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![objc2 기반 AppKit](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![터미널: Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35개 인터페이스 언어](https://img.shields.io/badge/languages-35-4C9A2A) ![원격 측정 없음](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Hardened Runtime으로 서명됨](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![라이선스: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#라이선스)
+[![Rust 2024 에디션](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 이상](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![유니버설: Apple Silicon 및 Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![objc2 기반 AppKit](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![터미널: Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35개 인터페이스 언어](https://img.shields.io/badge/languages-35-4C9A2A) ![원격 측정 없음](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Hardened Runtime으로 서명됨](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![라이선스: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#라이선스)
 
 [Bahasa Indonesia](../id/README.md) · [Bahasa Melayu](../ms/README.md) · [Català](../ca/README.md) · [Čeština](../cs/README.md) · [Dansk](../da/README.md) · [Deutsch](../de/README.md) · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · [Magyar](../hu/README.md) · [Nederlands](../nl/README.md) · [Norsk](../no/README.md) · [Polski](../pl/README.md) · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · [Română](../ro/README.md) · [Slovenčina](../sk/README.md) · [Slovenščina](../sl/README.md) · [Suomi](../fi/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · **한국어** · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [繁體中文](../zh-Hant/README.md)
 
@@ -55,6 +55,7 @@ Dango는 코드와 그 코드를 변경하는 에이전트, 그리고 그 주변
 - **폴더마다 하나의 윈도우.** 파일, 터미널, 브라우저 페이지, AI 스레드, 차이점, 미리보기는 그 윈도우의 macOS 탭입니다. 사이드바에는 파일, 검색, 에이전트, Git, 테스트, 디버그, CI, 컨테이너가 있습니다.
 - **진짜 코드 편집기.** 구문 색상, 여러 커서, 접기, `.editorconfig`, 자동 완성·정의로 이동·참조·이름 변경·빠른 수정·계층 구조를 지원하는 17개 언어의 언어 서버, 그리고 GitHub Copilot 또는 로컬 모델의 편집 예측.
 - **디버거, Git, CI 내장.** Rust, C, C++, Swift, Go, JavaScript, TypeScript, Python의 중단점과 단계별 실행. 개별 헝크 스테이징, 브랜치, 스태시, 충돌, 커밋 그래프. GitHub Actions와 GitLab CI의 실행, 잡, 로그.
+- **Tapa의 터미널.** 출력을 복사하거나 저장하거나 에이전트에 넘길 수 있는 명령 블록, 기록과 프로젝트에서 가져온 제안을 보여 주는 입력 필드, 전체 기록 검색, 터미널 안 프로그램의 알림과 진행 상황.
 - **폴더를 신중하게 다룹니다.** 신뢰하지 않은 폴더에서는 아무것도 시작되지 않습니다. Git 프로세스도, 언어 서버도, 훅도, 에이전트도 마찬가지입니다. 파괴적인 Git 명령은 절대 영구적으로 허용되지 않으며, 커밋에 시크릿이 있는지 검사합니다.
 - **받아쓰기.** 편집기와 메시지 필드에 말로 입력할 수 있습니다. OpenAI나 Groq를 통해 온라인으로, 또는 Whisper와 Parakeet로 로컬에서 인식합니다.
 - **뼛속까지 네이티브.** AppKit 윈도우, 탭, 메뉴, 도구 막대. 편집기에는 TextKit 2, 터미널에는 Metal을 사용하고, WebKit은 브라우저 탭에서만 사용합니다. 다크 모드, 대비 증가, VoiceOver는 다른 모든 Mac 앱에서처럼 작동합니다.
@@ -84,7 +85,7 @@ Dango는 코드와 그 코드를 변경하는 에이전트, 그리고 그 주변
 3. **모든 문서는 폴더 윈도우의 탭**이며, macOS 자체의 탭입니다. 탭 막대 끝의 ‘+’와 ⌘T는 새로운 파일, 터미널, 브라우저, 설치된 각 에이전트를 제공하며, 별도의 Git 워크트리에서도 열 수 있습니다. ‘+’를 길게 누르면 같은 항목이 메뉴로 표시됩니다.
 4. ⌘P로 **빠르게 열기**를 사용하면 파일을, `#`을 붙이면 프로젝트의 심볼을 찾습니다. ⇧⌘F는 프로젝트에서 검색하고 대치합니다.
 5. AI 탭에서 **에이전트와 대화합니다**. ⌘Esc는 키보드 포커스를 메시지 필드로 옮기고, 다시 누르면 원래 위치로 돌아갑니다.
-6. ⌘,로 여는 **설정**에는 일반, CI, 에이전트, 내장 에이전트, 언어 서버, 받아쓰기, 예측 탭이 있습니다.
+6. ⌘,로 여는 **설정**에는 일반, 터미널, CI, 에이전트, Software Factory, 내장 에이전트, 언어 서버, 받아쓰기, 예측 탭이 있습니다.
 
 도구 막대에는 편집한 위치를 오가는 뒤로 및 앞으로(⌃- 및 ⌃⇧-), 브랜치, 빠르게 열기, 그리고 실행 중인 모든 항목을 나열하는 활동 개요가 있습니다. 파일의 컨텍스트 메뉴에서 **옆에 열기**를 선택하면 두 번째 문서를 첫 번째 문서 옆에 표시합니다. 재시동하거나 충돌한 후에도 모든 윈도우가 탭과 함께 돌아오며, 저장하지 않은 텍스트가 있는 편집기는 그 텍스트와 함께 돌아옵니다. 이미지, 오디오, 비디오, 서체, Office 문서는 훑어보기를 통해, PDF는 PDFKit을 통해 탭에서 열립니다.
 
@@ -155,7 +156,22 @@ Go, Rust, TypeScript 및 JavaScript, Python, C, C++ 및 Objective-C, Swift, 셸 
 
 ## 터미널
 
-로그인 셸의 환경을 사용하는 탭 속 터미널(⌃\`)로, Metal로 그려집니다. ⌘K는 화면을 지웁니다. 이미지를 붙여넣거나 드롭하면 터미널에서 실행 중인 코딩 에이전트에 전달되거나, 저장된 사본의 경로가 붙여넣어집니다. ⌘-클릭으로 링크와 파일 이름을 엽니다. 터미널에서 시작한 개발 서버는 브라우저 탭에서 열 수 있습니다.
+터미널은 로그인 셸과 그 환경을 사용하는 탭으로 열립니다(**파일 › 새로운 터미널**, ⌃\`). 터미널은 자체 VT 코어를 갖춘 [Tapa](https://github.com/sventmueller/tapa)의 터미널로, Metal로 그려집니다. xterm과 VT520을 Kitty 키보드 프로토콜, OSC 8 링크, 동기화된 출력, 트루컬러, 마우스 보고와 함께 지원하며, 편집기의 텍스트 크기와 Tapa의 라이트 및 다크 색상을 사용합니다. zsh, bash, fish용 셸 통합은 사용자의 설정 파일을 건드리지 않고 스스로 설정되며, `ssh`로 다른 호스트에 접속할 때도 함께 따라갑니다. 재시동하면 터미널은 있던 폴더에서 새 셸로 돌아오며, 이는 신뢰하는 폴더에서만 해당됩니다. 터미널에 표시되던 내용은 돌아오지 않습니다.
+
+- **명령 블록.** 각 명령과 그 출력이 하나의 블록을 이룹니다. ⌘↑와 ⌘↓로 프롬프트 사이를 이동합니다. **블록 선택**(⇧⌘A), **출력 복사하기**(⌥⌘C), **출력 저장…**(⌥⌘S), **블록 접기/펼치기**(⇧⌘↩)는 현재 블록에 적용됩니다. **책갈피 설정/해제**(⇧⌘M)로 줄을 표시하고, ⇧⌘↑와 ⇧⌘↓로 책갈피 사이를 이동합니다. **명령을 블록으로 표시**를 켜면 여백의 막대가 각 블록을 보여 주고, 실패한 명령이 표시되며, 실행 중인 명령은 출력이 스크롤되는 동안 맨 위에 머무르고, 포인터 아래 블록 위의 버튼이 상태, 걸린 시간, 같은 동작을 보여 줍니다.
+- **블록을 에이전트에 보내기**(편집 메뉴와 터미널의 컨텍스트 메뉴)는 새 AI 탭을 열어 현재 블록의 명령 줄과 출력을 ‘외부 콘텐츠’로 첨부하고([신뢰](#신뢰) 참고), 명령이 실패한 경우에는 실패한 CI 잡의 로그처럼 원인을 묻는 초안을 준비합니다. `keybindings.json`에서 `terminal.blockToAgent`에 단축키를 지정하기 전까지는 단축키가 없습니다.
+- **입력 필드.** **보기 › 입력 필드 보기/가리기**(⌘I)는 명령 줄을 터미널 아래쪽의 텍스트 필드로 바꾸고, 그 위에 폴더와 Git 브랜치를 보여 줍니다. 새 터미널은 마지막으로 선택한 상태를 따릅니다. Return은 필드 전체를 셸로 보냅니다. 셸 통합이 필요하며, vim, htop, claude 같은 전체 화면 프로그램에서는 자리를 비켜 줍니다.
+- **제안**은 입력 필드에서든 입력 필드 없이든, 입력한 내용 바로 뒤에 회색으로 표시됩니다. 각 명령이 실행된 폴더, 브랜치, 종료 코드가 담긴 기록, 700개가 넘는 명령 줄 도구의 사양, 그리고 git 브랜치, docker 컨테이너, `package.json` 스크립트, make, just, cargo 타깃 같은 프로젝트의 정보에서 가져옵니다. →는 제안을 받아들이고, Tab은 완성하며 후보가 여러 개이면 입력할수록 좁혀지는 메뉴를 엽니다. 입력하기 전에는 보통 다음에 오는 명령을 필드가 제안할 수 있습니다. 명령은 부분별로 색상이 구분되며, 셸이 실행할 수 없는 명령에는 빨간 점선 밑줄이 표시됩니다. 제안은 네트워크를 절대 사용하지 않으며, 프로그램은 로그인 셸의 `PATH`에서만 시작합니다.
+- **찾기**(터미널에 포커스가 있을 때 ⌘F, ⌘G, ⇧⌘G)는 정규 표현식, 대소문자 구분, 전체 단어 일치로 전체 기록을 검색하고 결과 수를 셉니다. 스크롤 막대에는 결과, 프롬프트, 실패한 명령이 표시됩니다.
+- **선택과 복사.** 이중 클릭하면 URL, 경로, 해시, IP 주소를 통째로 선택하고, ⌥-드래그하면 사각형 영역을 선택합니다. **키보드로 선택**(⇧⌘C)은 Vim 키로 선택 영역을 움직이고, **서식 포함 복사**(⇧⌥⌘C)는 색상과 스타일을 유지합니다. 프로그램은 해당 터미널에 키보드 포커스가 있는 동안에만 OSC 52로 복사할 수 있으며, 터미널이 이를 알려 줍니다. 클립보드를 읽는 프로그램은 없습니다.
+- **붙여넣기.** 줄 바꿈에서 명령을 실행하게 되는 텍스트나 제어 문자가 담긴 텍스트는, 프로그램이 괄호 붙여넣기로 읽지 않는 한 먼저 시트에 표시됩니다. 이미지를 붙여넣으면 터미널에서 실행 중인 코딩 에이전트에 전달되어 에이전트가 클립보드에서 직접 읽거나, 캐시에 저장된 사본의 경로가 붙여넣어집니다. `ssh`를 통해서는 터미널이 그렇게 하지 않는 이유를 알려 줍니다. 터미널에 드롭한 파일은 이미지를 포함해 따옴표로 묶인 경로가 됩니다. 웹 페이지처럼 다른 곳에서 드롭한 이미지는 붙여넣은 이미지와 같은 방식으로 처리됩니다.
+- **링크.** ⌘-클릭하면 웹 주소는 브라우저 탭에서, `mailto:` 링크는 Mail에서, 파일 이름은 줄과 열이 붙어 있어도 Dango의 편집기에서 엽니다. 링크는 OSC 8이 없어도 찾아냅니다. 다른 종류의 링크는 열리지 않습니다.
+- **개발 서버.** 터미널의 프로그램이 개발 서버를 시작하면 터미널 위의 막대가 그 주소를 알려 주며, **브라우저 탭에서 열기**로 그곳에서 엽니다.
+- **알림과 진행 상황.** 벨과 프로그램이 요청한 알림(OSC 9 및 OSC 777)은 터미널이 보이지 않는 동안 터미널 탭에 빨간색 점을 붙입니다. 다른 앱이 앞에 있으면 알림이 macOS에도 전달되며, 알림을 클릭하면 터미널로 돌아옵니다. 프로그램이 보고하는 진행 상황(OSC 9;4)은 탭에 고리로, Dock 아이콘에 막대로 표시됩니다.
+- **보안 키보드 엔트리**(**Dango › 보안 키보드 엔트리**)는 터미널에 입력하는 내용을 다른 앱이 읽지 못하게 합니다. 프로그램이 암호를 묻는 동안에는 스스로 켜지기도 합니다.
+- **키.** ⌘K는 터미널을 지웁니다(**편집 › 터미널 지우기**). ⌃C와 Esc는 터미널 안의 프로그램으로 갑니다. 터미널의 명령은 편집 및 보기 메뉴에 있으며, 그 단축키는 터미널에 키보드 포커스가 있을 때만 작동하므로 ⌘I, ⌘↑, ⌘F는 편집기에서 원래 의미를 유지합니다. 컨텍스트 메뉴에서는 **여기에서 새로운 터미널**을 열고 **분할 창 닫기**로 터미널을 닫을 수도 있습니다.
+
+**설정 › 터미널**에서는 새 터미널의 입력 필드, 그 Vim 키, 제안, 명령 색상 구분, 알 수 없는 명령의 밑줄, 명령 블록, 선택 영역 즉시 복사, 여러 줄 붙여넣기 먼저 표시, Meta 키로 쓰는 ⌥을 켜고 끕니다.
 
 ## 브라우저
 
@@ -205,7 +221,7 @@ AI 탭의 메시지 필드나 편집기에 받아쓰기할 수 있습니다. 그
 - **신뢰함:** Git, 언어 서버, 디버거, 에이전트, CI가 이 폴더와 그 아래의 모든 항목에 대해 실행됩니다.
 - **제한됨:** 읽고 편집할 수 있습니다. 편집기의 변경 표시는 `.git`을 직접 읽어서 표시합니다. 폴더가 구성한 것은 아무것도 시작되지 않습니다. Git, CI, AI 패널은 이를 알리고 폴더를 신뢰하도록 제안합니다.
 
-사용자에게서 오지 않은 텍스트에는 에이전트를 조종하려는 지시가 담겨 있을 수 있습니다(프롬프트 인젝션). 따라서 터미널의 출력(`@terminal`), 브라우저 페이지(`@browser`), 에이전트에 넘긴 CI 로그, 프로젝트 밖의 파일, 웹 페이지에서 붙여넣은 긴 텍스트는 표시가 붙은 채로 전달됩니다. 칩에는 ‘외부 콘텐츠’라고 표시되며, 에이전트는 이 텍스트가 신뢰할 수 없는 데이터이고 그 안의 지시를 따라서는 안 된다는 안내와 함께 텍스트를 받습니다. 내장 에이전트가 가져온 웹 페이지에도 같은 안내가 붙습니다. 붙여넣은 텍스트는 Safari, Chrome, Firefox처럼 브라우저가 클립보드에 그렇게 표시한 경우 웹 페이지에서 온 것으로 간주됩니다. 다른 곳에서 온 텍스트와 몇 단어로 된 짧은 구절은 사용자 자신의 것으로 남습니다.
+사용자에게서 오지 않은 텍스트에는 에이전트를 조종하려는 지시가 담겨 있을 수 있습니다(프롬프트 인젝션). 따라서 터미널의 출력(`@terminal` 또는 에이전트에 넘긴 명령 블록), 브라우저 페이지(`@browser`), 에이전트에 넘긴 CI 로그, 프로젝트 밖의 파일, 웹 페이지에서 붙여넣은 긴 텍스트는 표시가 붙은 채로 전달됩니다. 칩에는 ‘외부 콘텐츠’라고 표시되며, 에이전트는 이 텍스트가 신뢰할 수 없는 데이터이고 그 안의 지시를 따라서는 안 된다는 안내와 함께 텍스트를 받습니다. 내장 에이전트가 가져온 웹 페이지에도 같은 안내가 붙습니다. 붙여넣은 텍스트는 Safari, Chrome, Firefox처럼 브라우저가 클립보드에 그렇게 표시한 경우 웹 페이지에서 온 것으로 간주됩니다. 다른 곳에서 온 텍스트와 몇 단어로 된 짧은 구절은 사용자 자신의 것으로 남습니다.
 
 ## 샌드박스
 
@@ -221,9 +237,9 @@ Dango 자체는 App Sandbox 없이 실행됩니다. Dango가 시작하는 모든
 ## 모양과 손쉬운 사용
 
 - **다크 모드**는 시스템을 따릅니다. **대비 증가**와 **동작 줄이기**도 반영됩니다.
-- **VoiceOver**는 사이드바, 탭, AI 타임라인의 카드, Git 및 CI 행, 디버거, 터미널의 텍스트에 이름을 붙여 읽습니다. 중단점은 절대 색상만으로 구분되지 않습니다.
+- **VoiceOver**는 사이드바, 탭, AI 타임라인의 카드, Git 및 CI 행, 디버거에 이름을 붙여 읽고, 터미널의 줄을 읽어 주며 새 출력을 알립니다. 중단점은 절대 색상만으로 구분되지 않습니다.
 - **키보드.** 모든 명령에 단축키가 있으며, 모두 `keybindings.json`에서 변경할 수 있습니다. ⌥⌘\`는 다음 패널로 이동합니다.
-- **오른쪽에서 왼쪽으로.** 아랍어와 히브리어에서는 윈도우가 좌우 반전되며, 코드 보기는 왼쪽에서 오른쪽으로 유지됩니다.
+- **오른쪽에서 왼쪽으로.** 아랍어와 히브리어에서는 윈도우가 좌우 반전되며, 코드 보기와 터미널의 격자는 왼쪽에서 오른쪽으로 유지됩니다.
 
 Dango가 AppKit 위에 더한 것은 영역별로 [ACCESSIBILITY.md](../../../ACCESSIBILITY.md)에 정리되어 있습니다.
 
@@ -257,6 +273,10 @@ Dango는 **시스템 설정 › 일반 › 언어 및 지역**의 언어 순서�
 | 굵게, 기울임꼴, 취소선, 코드, 링크 | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | 제목 1–3 | ⌥⌘1–⌥⌘3 |
 | 새로운 터미널, 터미널 지우기 | ⌃\`, ⌘K |
+| 터미널에서: 찾기, 다음 찾기, 이전 찾기 | ⌘F, ⌘G, ⇧⌘G |
+| 터미널에서: 이전 및 다음 프롬프트, 이전 및 다음 책갈피, 책갈피 설정 또는 해제 | ⌘↑ 및 ⌘↓, ⇧⌘↑ 및 ⇧⌘↓, ⇧⌘M |
+| 터미널에서: 블록 선택, 출력 복사, 출력 저장, 블록 접기 | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| 터미널에서: 입력 필드, 키보드로 선택, 서식 포함 복사 | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | 에이전트의 메시지 필드에 포커스, 계획에 의견 남기기 | ⌘Esc, ⌥⌘K |
 | 주소 필드, 새로 고침, 뒤로, 앞으로(브라우저) | ⌘L, ⌘R, ⌘[, ⌘] |
 | 받아쓰기 시작 또는 중단 | ⌃⌥D |
@@ -282,7 +302,7 @@ Dango는 **시스템 설정 › 일반 › 언어 및 지역**의 언어 순서�
 
 | 위치 | 내용 |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`; `threads/`(AI 패널의 목록), `agent-threads/`(내장 에이전트 대화), `layouts/`(프로젝트별 탭), `recovery/`(충돌 후 저장하지 않은 편집기), `checkpoints/`(Git이 없는 폴더용), `worktrees/`, `agents/` 및 `tools/`(설치된 에이전트, 언어 서버, 디버그 어댑터), `task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`, `terminal-history.sqlite`(터미널의 명령 기록); `threads/`(AI 패널의 목록), `agent-threads/`(내장 에이전트 대화), `layouts/`(프로젝트별 탭), `recovery/`(충돌 후 저장하지 않은 편집기), `checkpoints/`(Git이 없는 폴더용), `worktrees/`, `agents/` 및 `tools/`(설치된 에이전트, 언어 서버, 디버그 어댑터), `task-output/` |
 | `~/Library/Caches/<id>/` | 붙여넣은 이미지, 셸 통합 스크립트, ACP 레지스트리. 삭제해도 됩니다 |
 | `~/Library/Logs/<id>/dictation/` | 받아쓰기의 로그 파일 |
 | `~/Library/Application Support/Lowspeak` 및 `FluidAudio` | 로컬 받아쓰기 모델. Lowspeak와 공유 |
@@ -300,6 +320,7 @@ Claude는 자체 세션을 `~/.claude/projects` 아래에 보관합니다. Dango
 - **Claude의 사용량 수치와 컨텍스트 세부 내역**은 실험적으로 표시된 프로토콜 일부에 의존하며, 해당 부분이 없으면 가려집니다.
 - **대화 되감기**는 Claude에서만 작동합니다. 다른 에이전트에서는 코드만 되감깁니다.
 - **브라우저를 통한 CI 로그인**은 꺼져 있습니다. `gh`, `glab`, 토큰 또는 환경 변수를 사용하십시오.
+- **터미널 안에는 이미지가 표시되지 않습니다.** Kitty 그래픽, Sixel, iTerm2 이미지는 나타나지 않습니다.
 - **Gemini CLI는 제공되지 않습니다.** Google이 개인 계정 로그인을 종료하고 Antigravity로 안내하기 때문입니다. 이전 Gemini 스레드는 계속 읽을 수 있습니다.
 
 ## 소스에서 빌드하기
@@ -308,7 +329,7 @@ Claude는 자체 세션을 `~/.claude/projects` 아래에 보관합니다. Dango
 
 - Xcode Command Line Tools(`xcode-select --install`)가 설치된 macOS 14 이상. Xcode 자체는 필요하지 않습니다.
 - `rust-toolchain.toml`에 지정된 Rust. Homebrew의 `rust`는 이 Mac의 프로세서용으로 빌드합니다. 릴리스의 유니버설 빌드에는 대상 `aarch64-apple-darwin` 및 `x86_64-apple-darwin`이 추가된 rustup이 필요합니다.
-- 이 저장소 옆(`../splat`, `../lowspeak`)에 있는 [splat](https://github.com/sventmueller/splat)과 [lowspeak](https://github.com/sventmueller/lowspeak)의 체크아웃. 둘 다 `main` 브랜치여야 합니다. 작업 공간은 이들로부터 크레이트를 경로로 가져옵니다.
+- 이 저장소 옆(`../splat`, `../lowspeak`, `../tapa`)에 있는 [splat](https://github.com/sventmueller/splat), [lowspeak](https://github.com/sventmueller/lowspeak), [tapa](https://github.com/sventmueller/tapa)의 체크아웃. 각각 `main` 브랜치여야 합니다. 작업 공간은 이들로부터 크레이트를 경로로 가져오며, 터미널은 Tapa에서 가져옵니다.
 - 받아쓰기가 포함된 모든 빌드(`make run`, `make build`, `make release`)에는 whisper.cpp를 빌드하기 위한 cmake. `make check`는 cmake 없이 빌드합니다.
 
 | 명령 | 하는 일 |

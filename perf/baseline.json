@@ -170,24 +170,6 @@
       "lower_is_better": true
     },
     {
-      "name": "ide-terminal: closing a session",
-      "value": 0.06420899999999999,
-      "unit": "ms",
-      "lower_is_better": true
-    },
-    {
-      "name": "ide-terminal: reading a large cat while drawing at 60 Hz",
-      "value": 112.7548576027623,
-      "unit": "MB/s",
-      "lower_is_better": false
-    },
-    {
-      "name": "ide-terminal: reading a large cat while nobody draws",
-      "value": 111.22390126232794,
-      "unit": "MB/s",
-      "lower_is_better": false
-    },
-    {
       "name": "ide-vim: building the copy of 10 MB",
       "value": 10.478291,
       "unit": "ms",

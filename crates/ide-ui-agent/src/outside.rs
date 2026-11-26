@@ -14,7 +14,7 @@ use super::{format, style, ui};
 use ide_ui_common::constant;
 use ide_ui_common::util::ns;
 
-/// The most of a file outside the project that goes along, in characters.
+/// The most of a file outside the project or of a terminal's output that goes along, in characters.
 const MAX_FILE: usize = 100_000;
 
 /// Pasted web text shorter than this many lines and characters is a phrase and stays typed text.
@@ -52,6 +52,20 @@ pub(crate) fn page(url: &str, title: &str, text: String) -> Attachment {
         label: tf("Browser: {}", &[if title.is_empty() { url } else { title }]),
         source: format!("the page \"{title}\" at {url}, open in the browser"),
         text,
+    }
+}
+
+/// The output of the command `command` in a terminal, which ended with `exit_code` where the shell said; the end of a
+/// long output goes along.
+pub fn terminal_block(command: &str, exit_code: Option<i32>, output: &str) -> Attachment {
+    let ended = exit_code.map_or_else(String::new, |code| format!(", which ended with exit code {code}"));
+    let length = output.chars().count();
+    let kept: String = output.chars().skip(length.saturating_sub(MAX_FILE)).collect();
+    let cut = if length > MAX_FILE { "[… cut]\n" } else { "" };
+    Attachment::External {
+        label: tf("Terminal: {}", &[command]),
+        source: format!("the output of the command `{command}` in a terminal{ended}"),
+        text: format!("$ {command}\n{cut}{kept}"),
     }
 }
 
@@ -221,6 +235,21 @@ mod tests {
         std::fs::write(&binary, [0xff, 0xfe, 0x00]).unwrap();
         assert_eq!(classify(file(&binary, None), &project), file(&binary, None));
         let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn a_terminal_block_goes_along_with_its_command_and_the_end_of_its_output() {
+        let Attachment::External { source, text, .. } = terminal_block("cargo test", Some(101), "failed\n") else {
+            panic!()
+        };
+        assert_eq!(text, "$ cargo test\nfailed\n");
+        assert!(source.contains("`cargo test`") && source.ends_with("exit code 101"));
+        let long = format!("{}end", "x".repeat(MAX_FILE));
+        let Attachment::External { text, .. } = terminal_block("yes", None, &long) else {
+            panic!()
+        };
+        assert!(text.starts_with("$ yes\n[… cut]\n") && text.ends_with("xend"));
+        assert_eq!(text.chars().count(), "$ yes\n[… cut]\n".chars().count() + MAX_FILE);
     }
 
     #[test]

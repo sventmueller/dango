@@ -46,6 +46,7 @@ mod preview;
 mod probe_app;
 mod tabs;
 mod terminal;
+mod terminal_tapa;
 mod terminal_view;
 mod tests_panel;
 mod vim;
@@ -181,6 +182,7 @@ pub(crate) fn prepare() {
         return;
     };
     ide_core::paths::set_home(home.clone());
+    term_base::set_home(home.clone());
     ide_ui_common::util::stall::install_reporting_from(snappy::stall_threshold());
     stacks::install(snappy::stall_threshold());
     if std::env::var_os("IDE_SELFTEST").is_some() && own_defaults(&home).is_none() {

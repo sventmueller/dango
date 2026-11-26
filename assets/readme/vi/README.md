@@ -12,7 +12,7 @@ Dango đặt mã, các tác nhân thay đổi mã và mọi thứ xung quanh ch�
 
 **Phát hiện lỗi?** [Mở một issue](https://github.com/sventmueller/dango/issues/new) và cho biết lỗi xảy ra với tác nhân nào và trong loại dự án nào.
 
-[![Rust phiên bản 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 trở lên](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universal: Apple Silicon và Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit qua objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35 ngôn ngữ giao diện](https://img.shields.io/badge/languages-35-4C9A2A) ![Không có dữ liệu đo từ xa](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Được ký với Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Giấy phép: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#giấy-phép)
+[![Rust phiên bản 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 trở lên](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universal: Apple Silicon và Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit qua objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35 ngôn ngữ giao diện](https://img.shields.io/badge/languages-35-4C9A2A) ![Không có dữ liệu đo từ xa](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Được ký với Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Giấy phép: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#giấy-phép)
 
 [Bahasa Indonesia](../id/README.md) · [Bahasa Melayu](../ms/README.md) · [Català](../ca/README.md) · [Čeština](../cs/README.md) · [Dansk](../da/README.md) · [Deutsch](../de/README.md) · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · [Magyar](../hu/README.md) · [Nederlands](../nl/README.md) · [Norsk](../no/README.md) · [Polski](../pl/README.md) · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · [Română](../ro/README.md) · [Slovenčina](../sk/README.md) · [Slovenščina](../sl/README.md) · [Suomi](../fi/README.md) · [Svenska](../sv/README.md) · **Tiếng Việt** · [Türkçe](../tr/README.md) · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [繁體中文](../zh-Hant/README.md)
 
@@ -55,6 +55,7 @@ Dango đặt mã, các tác nhân thay đổi mã và mọi thứ xung quanh ch�
 - **Một cửa sổ cho mỗi thư mục.** Tệp, terminal, trang trình duyệt, luồng AI, diff và bản xem trước là các tab macOS của cửa sổ đó. Thanh bên chứa Tệp, Tìm kiếm, Tác nhân, Git, Kiểm thử, Gỡ lỗi, CI và Container.
 - **Một trình soạn thảo mã thực thụ.** Tô màu cú pháp, nhiều con trỏ, thu gọn khối mã, `.editorconfig`, máy chủ ngôn ngữ cho 17 ngôn ngữ với tự động hoàn thành, đi tới định nghĩa, tham chiếu, đổi tên, sửa nhanh và phân cấp, cùng dự đoán chỉnh sửa từ GitHub Copilot hoặc một mô hình cục bộ.
 - **Tích hợp sẵn trình gỡ lỗi, Git và CI.** Điểm ngắt và chạy từng bước cho Rust, C, C++, Swift, Go, JavaScript, TypeScript và Python; stage từng khối thay đổi, nhánh, stash, xung đột và biểu đồ commit; các lần chạy, job và nhật ký từ GitHub Actions và GitLab CI.
+- **Terminal của Tapa.** Khối lệnh với đầu ra mà bạn có thể sao chép, lưu hoặc gửi cho một tác nhân, trường nhập với đề xuất từ lịch sử của bạn và từ dự án, tìm kiếm trong toàn bộ lịch sử, cùng thông báo và tiến trình từ các chương trình chạy trong đó.
 - **Cẩn trọng với thư mục của bạn.** Thư mục bạn chưa tin cậy không khởi động gì cả: không tiến trình Git, máy chủ ngôn ngữ, hook hay tác nhân nào. Các lệnh Git mang tính phá hủy không bao giờ được cho phép vĩnh viễn, và commit được kiểm tra thông tin bí mật.
 - **Đọc chính tả.** Nói vào trình soạn thảo và trường tin nhắn, trực tuyến qua OpenAI hoặc Groq, hoặc cục bộ với Whisper và Parakeet.
 - **Gốc đến tận lõi.** Cửa sổ, tab, menu và thanh công cụ AppKit, TextKit 2 cho trình soạn thảo, Metal cho terminal, WebKit chỉ trong tab trình duyệt. Chế độ tối, Tăng độ tương phản và VoiceOver hoạt động như trong mọi ứng dụng Mac.
@@ -84,7 +85,7 @@ Dango đặt mã, các tác nhân thay đổi mã và mọi thứ xung quanh ch�
 3. **Mỗi tài liệu là một tab** trong cửa sổ của thư mục, chính là tab của macOS. Nút “+” ở cuối thanh tab và ⌘T cung cấp tệp mới, terminal, trình duyệt và từng tác nhân đã cài, kể cả trong một Git worktree riêng; giữ nút “+” sẽ hiện các mục đó dưới dạng menu.
 4. **Mở nhanh** bằng ⌘P tìm tệp, và với `#` tìm ký hiệu của dự án; ⇧⌘F tìm và thay thế trong dự án.
 5. **Trò chuyện với tác nhân** trong một tab AI. ⌘Esc chuyển tiêu điểm bàn phím vào trường tin nhắn của nó và quay lại.
-6. **Cài đặt** bằng ⌘, chứa các tab Cài đặt chung, CI, Tác nhân, Tác nhân tích hợp, Máy chủ ngôn ngữ, Đọc chính tả và Dự đoán.
+6. **Cài đặt** bằng ⌘, chứa các tab Cài đặt chung, Terminal, CI, Tác nhân, Software Factory, Tác nhân tích hợp, Máy chủ ngôn ngữ, Đọc chính tả và Dự đoán.
 
 Thanh công cụ chứa nút lùi và tiến qua những chỗ bạn đã sửa (⌃- và ⌃⇧-), nhánh, Mở nhanh và tổng quan Hoạt động, nơi liệt kê mọi thứ đang chạy. **Mở ở Bên cạnh** trong menu ngữ cảnh của một tệp hiển thị tài liệu thứ hai bên cạnh tài liệu đầu tiên. Sau khi khởi động lại hoặc gặp sự cố, mọi cửa sổ trở lại cùng các tab của nó, và các trình soạn thảo có văn bản chưa lưu sẽ trở lại cùng văn bản đó. Hình ảnh, âm thanh, video, phông chữ và tài liệu Office mở trong một tab qua Quick Look, PDF qua PDFKit.
 
@@ -155,7 +156,22 @@ Tệp `.vscode/launch.json` của dự án được đọc. Menu Gỡ lỗi dùn
 
 ## Terminal
 
-Terminal trong các tab (⌃\`) với môi trường của login shell, vẽ bằng Metal. ⌘K xóa màn hình. Dán hoặc thả một hình ảnh sẽ chuyển nó cho tác nhân lập trình đang chạy trong terminal, hoặc dán đường dẫn của một bản sao đã lưu. ⌘-bấm để mở liên kết và tên tệp. Máy chủ phát triển do terminal khởi động có thể mở trong tab trình duyệt.
+Terminal mở dưới dạng tab (**Tệp › Terminal mới**, ⌃\`) với login shell và môi trường của nó. Terminal là của [Tapa](https://github.com/sventmueller/tapa), với lõi VT riêng, vẽ bằng Metal: xterm và VT520 với giao thức bàn phím Kitty, liên kết OSC 8, đầu ra đồng bộ, truecolor và báo cáo chuột, theo cỡ chữ của trình soạn thảo và các màu sáng và tối của Tapa. Tích hợp shell của nó cho zsh, bash và fish tự thiết lập mà không đụng tới các tệp cấu hình của bạn và đi theo khi bạn `ssh` sang máy chủ khác. Sau khi khởi động lại, terminal trở lại dưới dạng một shell mới trong thư mục mà nó đã ở, chỉ trong các thư mục được tin cậy; những gì nó đã hiển thị thì không trở lại.
+
+- **Khối lệnh.** Mỗi lệnh và đầu ra của nó tạo thành một khối. ⌘↑ và ⌘↓ nhảy giữa các dấu nhắc. **Chọn khối** (⇧⌘A), **Sao chép đầu ra** (⌥⌘C), **Lưu đầu ra…** (⌥⌘S) và **Thu gọn/mở rộng khối** (⇧⌘↩) tác động lên khối hiện tại; **Đặt/bỏ dấu trang** (⇧⌘M) đánh dấu một dòng, và ⇧⌘↑ và ⇧⌘↓ nhảy giữa các dấu trang. Khi **Đánh dấu lệnh thành khối** được bật, một thanh ở lề cho thấy từng khối, lệnh thất bại được đánh dấu, lệnh đang chạy vẫn ở trên cùng trong khi đầu ra của nó cuộn đi, và các nút trên khối nằm dưới con trỏ chuột hiển thị trạng thái, thời lượng và cùng những thao tác đó.
+- **Gửi khối cho tác nhân** (menu Sửa và menu ngữ cảnh của terminal) mở một tab AI mới với dòng lệnh và đầu ra của khối hiện tại được đính kèm dưới dạng Nội dung bên ngoài (xem [Tin cậy](#tin-cậy)), cùng một bản nháp hỏi nguyên nhân khi lệnh thất bại, giống như nhật ký của một job CI thất bại. Lệnh này không có phím tắt cho tới khi bạn gán cho `terminal.blockToAgent` một phím tắt trong `keybindings.json`.
+- **Trường nhập.** **Xem › Hiện/ẩn trường nhập** (⌘I) biến dòng lệnh thành một trường văn bản ở cuối terminal, với thư mục và nhánh Git ở phía trên; các terminal mới theo lựa chọn gần nhất của bạn. Return gửi toàn bộ trường tới shell. Nó cần tích hợp shell và tự nhường chỗ cho các chương trình toàn màn hình như vim, htop hay claude.
+- **Đề xuất** hiển thị bằng màu xám ngay sau những gì bạn gõ, trong trường nhập lẫn khi không có nó: từ lịch sử của bạn, kèm thư mục, nhánh và mã thoát mà mỗi lệnh đã chạy cùng, từ đặc tả của hơn 700 công cụ dòng lệnh, và từ dự án, như nhánh git, container docker, script trong `package.json` và các target của make, just và cargo. → nhận một đề xuất; Tab hoàn thành, và khi có nhiều ứng viên thì mở một menu được lọc khi bạn gõ. Trước khi bạn gõ, trường có thể đề xuất lệnh thường đi tiếp theo. Lệnh được tô màu theo từng phần, và lệnh mà shell của bạn không chạy được sẽ có gạch chân đỏ nét đứt. Đề xuất không bao giờ dùng mạng và chỉ khởi chạy chương trình từ `PATH` của login shell.
+- **Tìm** (⌘F, ⌘G và ⇧⌘G khi terminal có tiêu điểm) tìm trong toàn bộ lịch sử, bằng biểu thức chính quy, phân biệt chữ hoa chữ thường và nguyên từ, và đếm số kết quả; thanh cuộn đánh dấu các kết quả, dấu nhắc và lệnh thất bại.
+- **Chọn và sao chép.** Nhấp đúp chọn trọn một URL, một đường dẫn, một mã băm hoặc một địa chỉ IP, và kéo với ⌥ chọn một vùng chữ nhật. **Chọn bằng bàn phím** (⇧⌘C) di chuyển vùng chọn bằng các phím của Vim, **Sao chép kèm định dạng** (⇧⌥⌘C) giữ màu và kiểu chữ. Một chương trình chỉ được sao chép bằng OSC 52 khi terminal của nó có tiêu điểm bàn phím, và terminal cho bạn biết điều đó; không chương trình nào đọc được bảng nhớ tạm.
+- **Dán.** Văn bản sẽ chạy một lệnh tại chỗ xuống dòng, hoặc chứa ký tự điều khiển, được hiển thị trước trong một bảng, trừ khi chương trình đọc nó dưới dạng bracketed paste. Dán một hình ảnh sẽ chuyển nó cho tác nhân lập trình đang chạy trong terminal, tác nhân này tự đọc nó từ bảng nhớ tạm, hoặc dán đường dẫn của một bản sao được lưu trong bộ nhớ đệm; qua `ssh`, terminal cho biết vì sao không làm vậy. Tệp thả vào terminal, kể cả hình ảnh, đến dưới dạng đường dẫn trong dấu ngoặc kép; hình ảnh thả từ nơi khác, chẳng hạn từ một trang web, được xử lý như hình ảnh được dán.
+- **Liên kết.** ⌘-bấm mở một địa chỉ web trong tab trình duyệt, một liên kết `mailto:` trong Mail, và một tên tệp, kể cả kèm dòng và cột, trong trình soạn thảo của Dango; liên kết được nhận ra ngay cả khi không có OSC 8. Liên kết thuộc loại khác không được mở.
+- **Máy chủ phát triển.** Khi một chương trình trong terminal khởi động máy chủ phát triển, một thanh phía trên terminal cho biết địa chỉ của nó, và **Mở trong tab trình duyệt** mở nó ở đó.
+- **Thông báo và tiến trình.** Chuông và thông báo mà một chương trình yêu cầu (OSC 9 và OSC 777) đặt chấm đỏ lên tab của terminal khi bạn không nhìn thấy nó; khi một ứng dụng khác ở phía trước, thông báo cũng được gửi tới macOS, và bấm vào đó sẽ đưa terminal trở lại. Tiến trình mà chương trình báo cáo (OSC 9;4) hiển thị dưới dạng một vòng tròn trên tab và một thanh trên biểu tượng Dock.
+- **Nhập dùng Bàn phím An Toàn** (**Dango › Nhập dùng Bàn phím An Toàn**) ngăn các ứng dụng khác đọc những gì bạn gõ vào terminal; nó cũng tự bật khi một chương trình hỏi mật khẩu.
+- **Phím.** ⌘K xóa nội dung terminal (**Sửa › Xóa nội dung terminal**); ⌃C và Esc được gửi tới chương trình trong đó. Các lệnh của terminal nằm trong menu Sửa và Xem, và phím tắt của chúng chỉ có tác dụng khi terminal có tiêu điểm bàn phím, nên ⌘I, ⌘↑ hay ⌘F vẫn giữ ý nghĩa của chúng trong trình soạn thảo. Menu ngữ cảnh còn mở **Terminal mới tại đây** và đóng terminal bằng **Đóng Ngăn**.
+
+**Cài đặt › Terminal** bật tắt trường nhập cho các terminal mới, phím Vim của nó, các đề xuất, việc tô màu lệnh, việc gạch chân lệnh không xác định, khối lệnh, việc sao chép ngay vùng chọn, việc hiển thị trước khi dán nhiều dòng và ⌥ làm phím Meta.
 
 ## Trình duyệt
 
@@ -205,7 +221,7 @@ Một thư mục có thể khiến chương trình chạy ngay khi có thứ gì
 - **Được tin cậy:** Git, máy chủ ngôn ngữ, trình gỡ lỗi, tác nhân và CI chạy cho thư mục này và mọi thứ bên trong nó.
 - **Bị hạn chế:** bạn có thể đọc và sửa; dấu thay đổi trong trình soạn thảo đến từ việc đọc trực tiếp `.git`. Không có gì do thư mục cấu hình được khởi động. Các khung Git, CI và AI thông báo điều này và đề nghị tin cậy thư mục.
 
-Văn bản không đến từ bạn có thể mang các chỉ dẫn nhằm điều khiển tác nhân (prompt injection). Vì vậy, đầu ra của terminal (`@terminal`), trang trình duyệt (`@browser`), nhật ký CI được chuyển cho tác nhân, tệp nằm ngoài dự án và văn bản dài hơn được dán từ trang web đều được gửi kèm dấu: chip ghi “Nội dung bên ngoài”, và tác nhân nhận văn bản cùng lưu ý rằng đó là dữ liệu không đáng tin cậy mà nó không được làm theo các chỉ dẫn trong đó. Các trang web của tác nhân tích hợp cũng đến kèm lưu ý tương tự. Văn bản được dán được xem là đến từ trang web khi trình duyệt nói như vậy trên bảng nhớ tạm, như Safari, Chrome và Firefox vẫn làm; văn bản từ nơi khác, và một cụm ngắn vài từ, vẫn là của bạn.
+Văn bản không đến từ bạn có thể mang các chỉ dẫn nhằm điều khiển tác nhân (prompt injection). Vì vậy, đầu ra của terminal (`@terminal`, hoặc một khối lệnh được gửi cho tác nhân), trang trình duyệt (`@browser`), nhật ký CI được chuyển cho tác nhân, tệp nằm ngoài dự án và văn bản dài hơn được dán từ trang web đều được gửi kèm dấu: chip ghi “Nội dung bên ngoài”, và tác nhân nhận văn bản cùng lưu ý rằng đó là dữ liệu không đáng tin cậy mà nó không được làm theo các chỉ dẫn trong đó. Các trang web của tác nhân tích hợp cũng đến kèm lưu ý tương tự. Văn bản được dán được xem là đến từ trang web khi trình duyệt nói như vậy trên bảng nhớ tạm, như Safari, Chrome và Firefox vẫn làm; văn bản từ nơi khác, và một cụm ngắn vài từ, vẫn là của bạn.
 
 ## Sandbox
 
@@ -221,9 +237,9 @@ Bản thân Dango chạy không có App Sandbox, vì mọi chương trình nó k
 ## Giao diện và trợ năng
 
 - **Chế độ tối** theo hệ thống; **Tăng độ tương phản** và **Giảm chuyển động** được tôn trọng.
-- **VoiceOver** đọc tên thanh bên, các tab, thẻ của dòng thời gian AI, các hàng Git và CI, trình gỡ lỗi và văn bản của terminal. Điểm ngắt không bao giờ được phân biệt chỉ bằng màu sắc.
+- **VoiceOver** đọc tên thanh bên, các tab, thẻ của dòng thời gian AI, các hàng Git và CI và trình gỡ lỗi, đọc các dòng của terminal và thông báo đầu ra mới. Điểm ngắt không bao giờ được phân biệt chỉ bằng màu sắc.
 - **Bàn phím.** Mọi lệnh đều có phím tắt, và tất cả đều có thể thay đổi trong `keybindings.json`; ⌥⌘\` chuyển sang khung tiếp theo.
-- **Phải sang trái.** Trong tiếng Ả Rập và tiếng Do Thái, cửa sổ được lật gương, còn khung xem mã vẫn từ trái sang phải.
+- **Phải sang trái.** Trong tiếng Ả Rập và tiếng Do Thái, cửa sổ được lật gương, còn khung xem mã và lưới của terminal vẫn từ trái sang phải.
 
 Những gì Dango bổ sung trên nền AppKit, theo từng khu vực, có trong [ACCESSIBILITY.md](../../../ACCESSIBILITY.md).
 
@@ -257,6 +273,10 @@ Dango theo thứ tự ngôn ngữ trong **Cài đặt hệ thống › Cài đ�
 | In đậm, in nghiêng, gạch ngang, mã, liên kết | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | Tiêu đề 1 đến 3 | ⌥⌘1 đến ⌥⌘3 |
 | Terminal mới, xóa terminal | ⌃\`, ⌘K |
+| Trong terminal: tìm, tìm mục tiếp theo, tìm mục trước | ⌘F, ⌘G, ⇧⌘G |
+| Trong terminal: dấu nhắc trước và tiếp theo, dấu trang trước và tiếp theo, đặt hoặc bỏ dấu trang | ⌘↑ và ⌘↓, ⇧⌘↑ và ⇧⌘↓, ⇧⌘M |
+| Trong terminal: chọn khối, sao chép đầu ra, lưu đầu ra, thu gọn khối | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| Trong terminal: trường nhập, chọn bằng bàn phím, sao chép kèm định dạng | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | Đưa tiêu điểm vào trường tin nhắn của tác nhân, nhận xét kế hoạch | ⌘Esc, ⌥⌘K |
 | Trường địa chỉ, tải lại, lùi, tiến (trình duyệt) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Bắt đầu hoặc dừng đọc chính tả | ⌃⌥D |
@@ -282,7 +302,7 @@ Dango theo thứ tự ngôn ngữ trong **Cài đặt hệ thống › Cài đ�
 
 | Vị trí | Nội dung |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`; `threads/` (danh sách của khung AI), `agent-threads/` (cuộc hội thoại của tác nhân tích hợp), `layouts/` (các tab theo từng dự án), `recovery/` (trình soạn thảo chưa lưu sau sự cố), `checkpoints/` (cho thư mục không dùng Git), `worktrees/`, `agents/` và `tools/` (tác nhân, máy chủ ngôn ngữ và bộ chuyển đổi gỡ lỗi đã cài), `task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`, `terminal-history.sqlite` (lịch sử lệnh của các terminal); `threads/` (danh sách của khung AI), `agent-threads/` (cuộc hội thoại của tác nhân tích hợp), `layouts/` (các tab theo từng dự án), `recovery/` (trình soạn thảo chưa lưu sau sự cố), `checkpoints/` (cho thư mục không dùng Git), `worktrees/`, `agents/` và `tools/` (tác nhân, máy chủ ngôn ngữ và bộ chuyển đổi gỡ lỗi đã cài), `task-output/` |
 | `~/Library/Caches/<id>/` | hình ảnh đã dán, tập lệnh tích hợp shell, sổ đăng ký ACP; có thể xóa |
 | `~/Library/Logs/<id>/dictation/` | tệp nhật ký của tính năng đọc chính tả |
 | `~/Library/Application Support/Lowspeak` và `FluidAudio` | mô hình đọc chính tả cục bộ, dùng chung với Lowspeak |
@@ -300,6 +320,7 @@ Claude giữ các phiên của riêng nó trong `~/.claude/projects`; Dango đ�
 - **Số liệu sử dụng và phân tích ngữ cảnh của Claude** dựa vào các phần trong giao thức của nó được đánh dấu là thử nghiệm và bị ẩn khi các phần đó không có.
 - **Tua lại cuộc hội thoại** chỉ hoạt động với Claude; với các tác nhân khác chỉ có mã được tua lại.
 - **Đăng nhập CI qua trình duyệt** đang tắt; hãy dùng `gh`, `glab`, token hoặc môi trường.
+- **Không có hình ảnh bên trong terminal:** đồ họa Kitty, Sixel và hình ảnh iTerm2 không hiển thị.
 - **Gemini CLI không được cung cấp:** Google đã ngừng đăng nhập bằng tài khoản cá nhân và hướng người dùng sang Antigravity. Các luồng Gemini trước đó vẫn đọc được.
 
 ## Biên dịch từ mã nguồn
@@ -308,7 +329,7 @@ Bạn cần:
 
 - macOS 14 trở lên với Xcode Command Line Tools (`xcode-select --install`); không cần chính Xcode.
 - Rust theo phiên bản mà `rust-toolchain.toml` nêu. `rust` của Homebrew biên dịch cho bộ xử lý của máy Mac này; bản build universal của một bản phát hành cần rustup với các target `aarch64-apple-darwin` và `x86_64-apple-darwin`.
-- Bản checkout của [splat](https://github.com/sventmueller/splat) và [lowspeak](https://github.com/sventmueller/lowspeak) nằm cạnh bản này (`../splat`, `../lowspeak`), cả hai ở nhánh `main`; workspace lấy crate từ chúng theo đường dẫn.
+- Bản checkout của [splat](https://github.com/sventmueller/splat), [lowspeak](https://github.com/sventmueller/lowspeak) và [tapa](https://github.com/sventmueller/tapa) nằm cạnh bản này (`../splat`, `../lowspeak`, `../tapa`), mỗi bản ở nhánh `main` của nó; workspace lấy crate từ chúng theo đường dẫn, terminal từ Tapa.
 - cmake, cho mọi bản build có đọc chính tả (`make run`, `make build`, `make release`), để biên dịch whisper.cpp. `make check` biên dịch mà không cần nó.
 
 | Lệnh | Tác dụng |

@@ -253,6 +253,8 @@ pub(crate) const SCENARIOS: &[Scenario] = &[
     },
     timed("terminal", terminal::run),
     plain("terminal-view", terminal_view::run),
+    // A dozen shell commands, a parse of git's spec and two pictures, which a busy Mac slows down.
+    limited("terminal-tapa", terminal_tapa::run, Duration::from_secs(180)),
     Scenario {
         system_pasteboard: true,
         ..outside("paste-cli", paste_cli::run)

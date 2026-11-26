@@ -14,6 +14,7 @@ mod predict;
 mod servers;
 mod stored_rules;
 mod sync;
+mod terminal;
 
 use std::cell::RefCell;
 
@@ -37,20 +38,21 @@ use crate::util::{activate, guarded, label, ns, set_action, symbol};
 pub(crate) use stored_rules::remember as remember_claude_rules;
 
 /// Where the CI tab sits in the toolbar.
-const CI_TAB: isize = 1;
+const CI_TAB: isize = 2;
 /// Where the Agents tab sits in the toolbar.
-const AGENTS_TAB: isize = 2;
+const AGENTS_TAB: isize = 3;
 /// Where the own agent's tab sits in the toolbar.
-const AGENT_TAB: isize = 4;
+const AGENT_TAB: isize = 5;
 /// Where the dictation tab sits in the toolbar.
 #[cfg(feature = "dictation")]
-const DICTATION_TAB: isize = 6;
+const DICTATION_TAB: isize = 7;
 
 pub(crate) struct Ivars {
     settings: RefCell<Settings>,
     font_label: RefCell<Option<Retained<NSTextField>>>,
     interface_font_label: RefCell<Option<Retained<NSTextField>>>,
     chat_font_label: RefCell<Option<Retained<NSTextField>>>,
+    terminal: Retained<terminal::TerminalSettings>,
     ci: Retained<ci::CiSettings>,
     agents: Retained<agents::AgentsSettings>,
     orders: Retained<orders::OrdersSettings>,
@@ -143,17 +145,6 @@ define_class!(
             });
         }
 
-        #[unsafe(method(ideToggleOptionAsMeta:))]
-        fn toggle_option_as_meta(&self, sender: Option<&AnyObject>) {
-            guarded((), || {
-                let on = sender
-                    .and_then(|s| s.downcast_ref::<NSButton>())
-                    .is_some_and(|b| b.state() == NSControlStateValueOn);
-                self.store(|settings| settings.set(&keys::OPTION_AS_META, &on));
-                crate::terminal::set_option_as_meta(on);
-            });
-        }
-
         #[unsafe(method(ideFontSizeChanged:))]
         fn font_size_changed(&self, sender: Option<&AnyObject>) {
             guarded((), || {
@@ -229,6 +220,7 @@ impl SettingsController {
             font_label: RefCell::new(None),
             interface_font_label: RefCell::new(None),
             chat_font_label: RefCell::new(None),
+            terminal: terminal::TerminalSettings::new(mtm),
             ci: ci::CiSettings::new(mtm),
             agents: agents::AgentsSettings::new(mtm),
             orders: orders::OrdersSettings::new(mtm),
@@ -256,6 +248,7 @@ pub(crate) fn show(cx: &AppContext, mtm: MainThreadMarker) {
     {
         let mut cell = cx.settings().settings_window.window.borrow_mut();
         let (window, controller) = cell.get_or_insert_with(|| build(cx, mtm));
+        controller.ivars().terminal.reload();
         controller.ivars().ci.reload();
         controller.ivars().agents.reload(cx);
         controller.ivars().orders.reload();
@@ -272,7 +265,7 @@ pub(crate) fn show(cx: &AppContext, mtm: MainThreadMarker) {
 }
 
 /// Where the tab of edit prediction sits in the toolbar: the last.
-const PREDICTION_TAB: isize = if cfg!(feature = "dictation") { 7 } else { 6 };
+const PREDICTION_TAB: isize = if cfg!(feature = "dictation") { 8 } else { 7 };
 
 /// Brings the settings window to the front on the tab of edit prediction.
 pub(crate) fn show_prediction(mtm: MainThreadMarker) {
@@ -434,6 +427,7 @@ fn build(cx: &AppContext, mtm: MainThreadMarker) -> (Retained<NSWindow>, Retaine
     tabs.setTabStyle(NSTabViewControllerTabStyle::Toolbar);
     let mut pages = vec![
         Page::of(general_view(cx, mtm, &controller), t("Allgemein"), "gearshape"),
+        Page::of(controller.ivars().terminal.view(), t("Terminal"), "terminal"),
         Page::of(controller.ivars().ci.view(), t("CI"), "checkmark.seal"),
         Page::of(controller.ivars().agents.view(cx), t("Agenten"), "person.2"),
         Page::of(
@@ -614,11 +608,6 @@ fn general_view(cx: &AppContext, mtm: MainThreadMarker, controller: &SettingsCon
         sel!(ideToggleMarkdownPreview:),
         settings.get(&keys::MARKDOWN_PREVIEW),
     );
-    let meta = toggle(
-        t("Wahltaste als Meta-Taste"),
-        sel!(ideToggleOptionAsMeta:),
-        settings.get(&keys::OPTION_AS_META),
-    );
     let engine = search_engine_popup(mtm, controller, settings.get(&keys::SEARCH_ENGINE));
     let mut rows = vec![
         Row::new(mtm, t("Start:"), &reopen),
@@ -631,7 +620,6 @@ fn general_view(cx: &AppContext, mtm: MainThreadMarker, controller: &SettingsCon
         Row::under(&eslint),
         Row::under(&emmet),
         Row::new(mtm, t("Markdown:"), &markdown),
-        Row::new(mtm, t("Terminal:"), &meta),
         Row::new(mtm, t("Suchmaschine:"), &engine),
     ];
     rows.extend(editor::rows(cx, mtm));

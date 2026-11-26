@@ -36,8 +36,6 @@ A thread-local may stay only for one of these reasons:
 | `crates/ide-ui-export/src/lib.rs` | `RUNS` | the running exports | until they end | AppContext: `exports` (`ide_ui_export::State`, reached through its `Host`) |
 | `crates/ide-ui-icons/src/lib.rs` | `TEMPLATES` | file icons by shape and interface scale | app | stays: cache |
 | `crates/ide-ui-icons/src/logo.rs` | `IMAGES` | drawn logos by name | app | stays: cache |
-| `crates/ide-ui-terminal/src/gpu.rs` | `SHARED` | Metal device, queue and pipeline of every terminal | app | stays: once per process |
-| `crates/ide-ui-terminal/src/host.rs` | `VIEWS` | the terminal views of every window by id | from opening to closing | AppContext: `terminal_views` (`ide_ui_terminal::State`, reached through its `Host`) |
 | `src/activity/mod.rs` | `ACTIVITIES` | the activity items of every window's toolbar | from a window's first toolbar on | AppContext: `activities` |
 | `crates/ide-ui-agent/src/actions.rs` | `ALERTS` | the self-test's answers to the rewind's questions and the questions seen | self-test run | AppContext: `agent.rewind_alerts` (nur mit `selftest`) |
 | `crates/ide-ui-agent/src/context.rs` | `NEXT` | the next id for them | app | AppContext: `agent.page_selections` |
@@ -155,10 +153,6 @@ Code built only for tests or the self-test is not listed: what `#[cfg(test)]` or
 | `crates/ide-ui-git/src/message/claude.rs` | `NEXT` | the number of the next empty folder `claude` runs in | serial |
 | `crates/ide-ui-git/src/work.rs` | `GIT` | the git program and its environment | once per process |
 | `crates/ide-ui-git/src/work.rs` | `LOCAL` | the thread of local git work | worker threads |
-| `crates/ide-ui-terminal/src/host.rs` | `HOST` | the terminal's `Host` | install-once hook |
-| `crates/ide-ui-terminal/src/host.rs` | `NEXT_ID` | the next terminal view id | serial |
-| `crates/ide-ui-terminal/src/host.rs` | `OPTION_AS_META` | the setting ⌥ as Meta as last chosen | cache (of the setting) |
-| `crates/ide-ui-terminal/src/render.rs` | `MADE` | the next id of a set of terminal fonts | serial |
 | `src/activity/mod.rs` | `WATCH` | whether the supervisor is watched already | once per process |
 | `src/ci_panel/login.rs` | `CALLBACK_PORT` | the login's local callback port while one listens on it | worker threads |
 | `src/ci_panel/work.rs` | `AUTH` | the CI tokens' source | once per process |

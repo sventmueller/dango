@@ -2,7 +2,7 @@ use ide_core::keymap::Keymap;
 use objc2::rc::Retained;
 use objc2::runtime::{ProtocolObject, Sel};
 use objc2::{MainThreadMarker, MainThreadOnly, sel};
-use objc2_app_kit::{NSApplication, NSMenu, NSMenuItem};
+use objc2_app_kit::{NSApplication, NSMenu, NSMenuDelegate, NSMenuItem};
 use splat_i18n::{t, tf};
 
 use crate::app::AppDelegate;
@@ -29,14 +29,17 @@ pub(crate) fn install(app: &NSApplication, delegate: &AppDelegate, mtm: MainThre
     let main = NSMenu::initWithTitle(NSMenu::alloc(mtm), &ns(""));
     let (window_item, window_menu) = window_menu(mtm, &keys);
     let (help_item, help_menu) = help_menu(mtm);
+    let shows_shortcuts: &ProtocolObject<dyn NSMenuDelegate> = ProtocolObject::from_ref(delegate);
     let view_item = crate::editor::with_view_items(mtm, view_menu(mtm, &keys));
-    if let Some(view) = view_item.submenu() {
-        view.setDelegate(Some(ProtocolObject::from_ref(delegate)));
+    let view_item = crate::terminal::with_view_items(mtm, view_item, shows_shortcuts);
+    let edit_item = edit_menu(mtm, &keys);
+    for menu in [view_item.submenu(), edit_item.submenu()].into_iter().flatten() {
+        menu.setDelegate(Some(shows_shortcuts));
     }
     for entry in [
         app_menu(app, mtm, &keys),
         file_menu(delegate, mtm, &keys),
-        edit_menu(mtm, &keys),
+        edit_item,
         crate::markdown::format_menu(mtm, &|command| keys.get(command)),
         view_item,
         go_menu(mtm, &keys, cx.navigation()),
@@ -91,6 +94,13 @@ fn app_menu(app: &NSApplication, mtm: MainThreadMarker, keys: &Keys) -> Retained
                     &tf("Befehl „{}“ installieren …", &[ide_product::COMMAND]),
                     Some(sel!(ideInstallCommand:)),
                     "",
+                ),
+                separator(mtm),
+                item(
+                    mtm,
+                    t("Sichere Tastatureingabe"),
+                    Some(sel!(ideSecureKeyboardEntry:)),
+                    &keys.get("terminal.secureKeyboardEntry"),
                 ),
                 separator(mtm),
                 services_item,
@@ -155,6 +165,7 @@ fn edit_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
         separator(mtm),
         item(mtm, t("Ausschneiden"), Some(sel!(cut:)), "cmd+x"),
         item(mtm, t("Kopieren"), Some(sel!(copy:)), "cmd+c"),
+        crate::terminal::copy_formatted_item(mtm),
         item(mtm, t("Einsetzen"), Some(sel!(paste:)), "cmd+v"),
         crate::markdown::paste_plain_item(mtm, &|command| keys.get(command)),
         item(mtm, t("Löschen"), Some(sel!(delete:)), ""),
@@ -184,10 +195,11 @@ fn edit_menu(mtm: MainThreadMarker, keys: &Keys) -> Retained<NSMenuItem> {
         item(
             mtm,
             t("Terminal leeren"),
-            Some(sel!(ideClearTerminal:)),
+            Some(sel!(termClear:)),
             &keys.get("terminal.clear"),
         ),
     ];
+    let items = [items, crate::terminal::block_items(mtm)].concat();
     #[cfg(feature = "dictation")]
     let items = [
         items,

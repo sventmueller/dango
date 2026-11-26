@@ -13,6 +13,15 @@ impl Document {
 }
 
 impl TabWindow {
+    /// The progress ring beside the tab's title, while it shows in place of the dot.
+    pub(crate) fn shown_ring(&self) -> Option<Ring> {
+        let current = self.window.tab().accessoryView(self.window.mtm())?;
+        let ring: &NSView = &self.ring;
+        std::ptr::eq(&*current, ring)
+            .then(|| objc2::DefinedClass::ivars(&*self.ring).shown.get())
+            .flatten()
+    }
+
     pub(crate) fn format_bar(&self) -> &crate::markdown::FormatBar {
         &self.format_bar
     }

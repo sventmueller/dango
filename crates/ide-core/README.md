@@ -16,7 +16,7 @@ flowchart LR
     features["features beside the tabs: ide-dap kept"] -->|"layout::load_part, layout::save_part"| store
     store -->|"stamp::ByStamp: one stat while the file is unchanged"| files
     store -->|"atomic_write: scratch file of its own, fsync, rename, fsync of the folder"| files[("settings.json, state.json, layouts in paths::data_dir, settings.json in paths::project_dir")]
-    others["ide-project trust, ide-thread index, ide-agent conversations, ide-acp installs, ide-terminal scripts"] -->|"atomic_write::write, write_json"| own_files[("their files")]
+    others["ide-project trust, ide-thread index, ide-agent conversations, ide-acp installs"] -->|"atomic_write::write, write_json"| own_files[("their files")]
     main -->|"Keymap::load"| keys[("keybindings.json")]
     crates["the crates"] -->|"diag::report"| limit["at most BURST a minute per kind"]
     limit -->|"the hook diag::install set, else stderr"| log[("the system log, through the app")]

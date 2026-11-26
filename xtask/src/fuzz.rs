@@ -17,8 +17,6 @@ const SECONDS: u64 = 60;
 
 /// Each target with its crate and the folders whose files start its corpus.
 const TARGETS: &[(&str, &str, &[&str])] = &[
-    ("ide-terminal", "scan", &["fuzz/ide-terminal/seeds/scan"]),
-    ("ide-terminal", "procargs", &["fuzz/ide-terminal/seeds/procargs"]),
     ("ide-lsp", "messages", &["fuzz/ide-lsp/seeds/messages"]),
     ("ide-acp", "updates", &["fuzz/ide-acp/seeds/updates"]),
     ("ide-git", "diff", &["fuzz/ide-git/seeds/diff"]),
@@ -38,7 +36,6 @@ const PROPERTY_TESTS: &[(&str, &[&str])] = &[
     ("ide-document", &["--test", "properties"]),
     ("ide-git", &["--lib", "--", "property_tests::"]),
     ("ide-project", &["--lib", "--", "property_tests::"]),
-    ("ide-terminal", &["--lib", "--", "property_tests::"]),
     ("ide-vim", &["--lib", "--", "property_tests::"]),
 ];
 
@@ -200,7 +197,7 @@ mod tests {
             paths.push(env(cmd, "PATH"));
             rustup(line)
         });
-        let names = ["diff".to_string(), "scan".to_string()];
+        let names = ["diff".to_string(), "messages".to_string()];
         fuzz_in(&mut sh, &names, &vars(&[("FUZZ_SECONDS", "5")]), &target).unwrap();
         let root = crate::root();
         assert_eq!(sh.commands[0], format!("rustup which --toolchain {NIGHTLY} cargo"));
@@ -209,10 +206,10 @@ mod tests {
         assert_eq!(
             runs[0],
             format!(
-                "cargo fuzz run --fuzz-dir {} scan {} {} -- -max_total_time=5",
-                root.join("fuzz/ide-terminal").display(),
-                target.join("fuzz/corpus/scan").display(),
-                root.join("fuzz/ide-terminal/seeds/scan").display()
+                "cargo fuzz run --fuzz-dir {} messages {} {} -- -max_total_time=5",
+                root.join("fuzz/ide-lsp").display(),
+                target.join("fuzz/corpus/messages").display(),
+                root.join("fuzz/ide-lsp/seeds/messages").display()
             )
         );
         assert!(runs[1].contains(" diff ") && runs[1].contains("fuzz/ide-git"));
@@ -231,7 +228,7 @@ mod tests {
         assert_eq!(odd, "FUZZ_SECONDS=a minute is no number of seconds");
         let unknown = fuzz_in(&mut sh, &["json".to_string()], &vars(&[]), target).unwrap_err();
         assert!(
-            unknown.starts_with("json is no fuzz target; there are scan, procargs,")
+            unknown.starts_with("json is no fuzz target; there are messages, updates,")
                 && unknown.ends_with(" and properties"),
             "{unknown}"
         );

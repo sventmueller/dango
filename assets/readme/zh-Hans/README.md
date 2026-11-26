@@ -12,7 +12,7 @@ Dango 把代码、修改代码的智能体以及围绕它们的一切，按文�
 
 **发现了错误？** 请[提交 Issue](https://github.com/sventmueller/dango/issues/new)，并说明问题出现在哪个智能体和哪类项目中。
 
-[![Rust 2024 版](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 或更高版本](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![通用：Apple 芯片和 Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![通过 objc2 使用 AppKit](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![终端：Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35 种界面语言](https://img.shields.io/badge/languages-35-4C9A2A) ![无遥测](https://img.shields.io/badge/telemetry-none-4C9A2A) ![使用 Hardened Runtime 签名](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![许可证：MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#许可证)
+[![Rust 2024 版](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 或更高版本](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![通用：Apple 芯片和 Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![通过 objc2 使用 AppKit](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![终端：Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35 种界面语言](https://img.shields.io/badge/languages-35-4C9A2A) ![无遥测](https://img.shields.io/badge/telemetry-none-4C9A2A) ![使用 Hardened Runtime 签名](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![许可证：MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#许可证)
 
 [Bahasa Indonesia](../id/README.md) · [Bahasa Melayu](../ms/README.md) · [Català](../ca/README.md) · [Čeština](../cs/README.md) · [Dansk](../da/README.md) · [Deutsch](../de/README.md) · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · [Magyar](../hu/README.md) · [Nederlands](../nl/README.md) · [Norsk](../no/README.md) · [Polski](../pl/README.md) · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · [Română](../ro/README.md) · [Slovenčina](../sk/README.md) · [Slovenščina](../sl/README.md) · [Suomi](../fi/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · **简体中文** · [繁體中文](../zh-Hant/README.md)
 
@@ -55,6 +55,7 @@ Dango 把代码、修改代码的智能体以及围绕它们的一切，按文�
 - **每个文件夹一个窗口。** 文件、终端、浏览器页面、AI 对话、差异和预览都是该窗口的 macOS 标签页。边栏包含“文件”“搜索”“智能体”“Git”“测试”“调试”“CI”和“容器”。
 - **真正的代码编辑器。** 语法着色、多个插入点、折叠、`.editorconfig`，覆盖 17 种语言的语言服务器（支持补全、跳转到定义、引用、重命名、快速修复和层级），以及来自 GitHub Copilot 或本地模型的编辑预测。
 - **内置调试器、Git 和 CI。** 适用于 Rust、C、C++、Swift、Go、JavaScript、TypeScript 和 Python 的断点和单步执行；暂存单个变更块、分支、储藏、冲突和提交图谱；来自 GitHub Actions 和 GitLab CI 的运行、作业和日志。
+- **Tapa 的终端。** 命令块的输出可以拷贝、保存或交给智能体；输入栏提供来自历史记录和项目的建议；可搜索整个历史记录；终端中的程序可发出通知和进度。
 - **谨慎对待你的文件夹。** 未获信任的文件夹不会启动任何东西：没有 Git 进程、语言服务器、钩子或智能体。具有破坏性的 Git 命令永远不会被永久允许，提交也会检查是否含有机密信息。
 - **听写。** 对着编辑器和消息栏说话，可以通过 OpenAI 或 Groq 在线识别，也可以用 Whisper 和 Parakeet 在本地识别。
 - **原生到骨子里。** AppKit 窗口、标签页、菜单和工具栏，编辑器使用 TextKit 2，终端使用 Metal，WebKit 仅用于浏览器标签页。深色模式、“增强对比度”和 VoiceOver 的效果与其他 Mac App 一样。
@@ -84,7 +85,7 @@ Dango 把代码、修改代码的智能体以及围绕它们的一切，按文�
 3. **每个文稿都是文件夹窗口中的一个标签页**，即 macOS 自己的标签页。标签栏末尾的“+”和 ⌘T 可新建文件、终端、浏览器以及每个已安装的智能体，也可以放在独立的 Git 工作树中；按住“+”会以菜单形式显示相同的选项。
 4. **快速打开**（⌘P）可查找文件，输入 `#` 可查找项目中的符号；⇧⌘F 在项目中搜索和替换。
 5. 在 AI 标签页中 **与智能体交谈**。⌘Esc 会将键盘焦点移到它的消息栏，再按一次则移回。
-6. 用 ⌘, 打开的 **设置** 包含以下标签页：“通用”“CI”“智能体”“内置智能体”“语言服务器”“听写”和“预测”。
+6. 用 ⌘, 打开的 **设置** 包含以下标签页：“通用”“终端”“CI”“智能体”“Software Factory”“内置智能体”“语言服务器”“听写”和“预测”。
 
 工具栏包含在编辑过的位置之间后退和前进（⌃- 和 ⌃⇧-）、分支、“快速打开”以及列出所有正在运行内容的“活动”概览。在文件的上下文菜单中选择 **在旁边打开**，会在第一个文稿旁边显示第二个文稿。重启或崩溃之后，每个窗口都会连同其标签页恢复，含有未保存文本的编辑器也会连同这些文本恢复。图像、音频、视频、字体和 Office 文稿通过快速查看在标签页中打开，PDF 通过 PDFKit 打开。
 
@@ -155,7 +156,22 @@ Dango 会读取项目的 `.vscode/launch.json`。“调试”菜单使用 Xcode 
 
 ## 终端
 
-终端在标签页中运行（⌃\`），使用登录 Shell 的环境，并由 Metal 绘制。⌘K 清除屏幕。粘贴或拖放图像时，会将其交给在终端中运行的编程智能体，或粘贴已存副本的路径。⌘-点按可打开链接和文件名。终端启动的开发服务器可以在浏览器标签页中打开。
+终端以标签页形式打开（**文件 › 新建终端**，⌃\`），使用登录 Shell 及其环境。终端来自 [Tapa](https://github.com/sventmueller/tapa)，拥有自己的 VT 内核，由 Metal 绘制：支持 xterm 和 VT520，以及 Kitty 键盘协议、OSC 8 链接、同步输出、真彩色和鼠标报告，使用编辑器的文字大小以及 Tapa 的浅色和深色配色。它的 Shell 集成适用于 zsh、bash 和 fish，会自行设置而不改动你的配置文件，当你用 `ssh` 连接到另一台主机时也会随之带上。重启后，终端会在原来的文件夹中以新的 Shell 恢复，但仅限受信任的文件夹；之前显示的内容不会恢复。
+
+- **命令块。** 每条命令及其输出构成一个块。⌘↑ 和 ⌘↓ 在提示符之间跳转。**选择块**（⇧⌘A）、**拷贝输出**（⌥⌘C）、**保存输出…**（⌥⌘S）和 **折叠/展开块**（⇧⌘↩）作用于当前块；**设置/移除书签**（⇧⌘M）标记一行，⇧⌘↑ 和 ⇧⌘↓ 在书签之间跳转。开启 **将命令标记为块** 后，边距中的竖条会标出每个块，失败的命令会被标记，正在运行的命令在其输出滚动时停留在顶部，指针下方的块上会出现按钮，显示其状态、耗时以及同样的操作。
+- **将块发送给智能体**（“编辑”菜单和终端的上下文菜单）会打开一个新的 AI 标签页，将当前块的命令行和输出作为“外部内容”附上（请参阅[信任](#信任)），并在命令失败时附上一份询问原因的草稿，就像失败的 CI 作业日志那样。在你于 `keybindings.json` 中为 `terminal.blockToAgent` 指定快捷键之前，它没有快捷键。
+- **输入栏。** **显示 › 显示/隐藏输入栏**（⌘I）会把命令行变成终端底部的一个文本栏，上方显示文件夹和 Git 分支；新终端会沿用你上次的选择。Return 把整个输入栏发送给 Shell。它需要 Shell 集成，遇到 vim、htop 或 claude 等全屏程序时会让开。
+- **建议** 以灰色紧跟在你输入的内容之后显示，无论是否使用输入栏：来自你的历史记录（附带每条命令运行时所在的文件夹、分支和退出码）、700 多个命令行工具的规格，以及项目，例如 git 分支、docker 容器、`package.json` 脚本，以及 make、just 和 cargo 目标。按 → 采用建议；Tab 进行补全，有多个候选项时会打开一个菜单，继续输入即可筛选。在你输入之前，输入栏可以建议通常接下来会运行的命令。命令会按组成部分着色，Shell 无法运行的命令会带有红色虚线下划线。建议从不联网，并且只从登录 Shell 的 `PATH` 启动程序。
+- **查找**（终端拥有焦点时按 ⌘F、⌘G 和 ⇧⌘G）使用正则表达式、区分大小写和全字匹配搜索整个历史记录，并统计结果数；滚动条会标出结果、提示符和失败的命令。
+- **选择和拷贝。** 连按两次可整体选中 URL、路径、哈希值或 IP 地址，按住 ⌥ 拖移可选中矩形区域。**使用键盘选择**（⇧⌘C）用 Vim 的按键移动选区，**带格式拷贝**（⇧⌥⌘C）保留颜色和样式。程序只有在其终端拥有键盘焦点时才能通过 OSC 52 拷贝，终端会告诉你这一点；任何程序都无法读取剪贴板。
+- **粘贴。** 会在换行处执行命令的文本，或含有控制字符的文本，会先显示在一个表单中，除非程序将其作为括号粘贴读取。粘贴图像时，会将其交给在终端中运行的编程智能体，由它自己从剪贴板读取；否则会粘贴保存在缓存中的副本的路径；通过 `ssh` 时，终端会说明为什么不这样做。拖到终端上的文件（包括图片）会以加引号的路径出现；从别处拖入的图片（例如来自网页）会像粘贴的图片一样处理。
+- **链接。** ⌘-点按会在浏览器标签页中打开网址，在“邮件”中打开 `mailto:` 链接，在 Dango 的编辑器中打开文件名（也可带行号和列号）；即使没有 OSC 8 也能识别链接。其他类型的链接不会打开。
+- **开发服务器。** 当终端中的程序启动开发服务器时，终端上方的横条会显示其地址，**在浏览器标签页中打开** 会在那里打开它。
+- **通知和进度。** 响铃以及程序请求的通知（OSC 9 和 OSC 777）会在你看不到终端时，在终端的标签页上显示红点；当其他 App 位于前面时，通知还会发送到 macOS，点按通知即可回到终端。程序报告的进度（OSC 9;4）会以圆环显示在其标签页上，并以进度条显示在程序坞图标上。
+- **安全键盘输入**（**Dango › 安全键盘输入**）可防止其他 App 读取你在终端中键入的内容；当程序要求输入密码时，它也会自动开启。
+- **按键。** ⌘K 清空终端（**编辑 › 清空终端**）；⌃C 和 Esc 会发送给终端中的程序。终端的命令位于“编辑”和“显示”菜单中，其快捷键仅在终端拥有键盘焦点时起作用，因此 ⌘I、⌘↑ 或 ⌘F 在编辑器中保持原有含义。上下文菜单还可以打开 **在此处新建终端**，并用 **关闭窗格** 关闭终端。
+
+**设置 › 终端** 可切换新终端的输入栏、其 Vim 按键、建议、命令着色、未知命令的下划线、命令块、立即拷贝所选内容、先显示多行粘贴，以及将 ⌥ 用作 Meta 键。
 
 ## 浏览器
 
@@ -205,7 +221,7 @@ Token 来自钥匙串、`gh` 或 `glab`、登录 Shell 的环境，或你在 **�
 - **受信任：** Git、语言服务器、调试器、智能体和 CI 会为此文件夹及其下的所有内容运行。
 - **受限制：** 你可以阅读和编辑；编辑器中的更改标记来自直接读取 `.git`。文件夹所配置的任何内容都不会启动。Git、CI 和 AI 面板会说明这一点，并提供信任该文件夹的选项。
 
-不是来自你的文本可能含有意图操纵智能体的指令（提示词注入）。因此，终端的输出（`@terminal`）、浏览器页面（`@browser`）、交给智能体的 CI 日志、项目外的文件，以及从网页粘贴的较长文本，在传递时都会带有标记：标签上显示“外部内容”，智能体收到文本时会附带一条说明，指出这是不可信的数据，不得遵循其中的指令。内置智能体获取的网页也带有同样的说明。当浏览器在剪贴板中注明来源时（Safari、Chrome 和 Firefox 都会这样做），粘贴的文本会被视为来自网页；来自其他地方的文本，以及只有几个词的短语，仍算作你自己的文本。
+不是来自你的文本可能含有意图操纵智能体的指令（提示词注入）。因此，终端的输出（`@terminal`，或交给智能体的命令块）、浏览器页面（`@browser`）、交给智能体的 CI 日志、项目外的文件，以及从网页粘贴的较长文本，在传递时都会带有标记：标签上显示“外部内容”，智能体收到文本时会附带一条说明，指出这是不可信的数据，不得遵循其中的指令。内置智能体获取的网页也带有同样的说明。当浏览器在剪贴板中注明来源时（Safari、Chrome 和 Firefox 都会这样做），粘贴的文本会被视为来自网页；来自其他地方的文本，以及只有几个词的短语，仍算作你自己的文本。
 
 ## 沙盒
 
@@ -221,9 +237,9 @@ Dango 本身不在 App Sandbox 中运行，因为它启动的每个程序都会�
 ## 外观与辅助功能
 
 - **深色模式** 跟随系统；**增强对比度** 和 **减弱动态效果** 也会得到遵循。
-- **VoiceOver** 会为边栏、标签页、AI 时间线中的卡片、Git 和 CI 行、调试器以及终端的文本提供名称。断点绝不会只靠颜色来区分。
+- **VoiceOver** 会为边栏、标签页、AI 时间线中的卡片、Git 和 CI 行、调试器提供名称，朗读终端的各行并播报新的输出。断点绝不会只靠颜色来区分。
 - **键盘。** 每个命令都有快捷键，所有快捷键都可以在 `keybindings.json` 中更改；⌥⌘\` 移到下一个面板。
-- **从右到左。** 在阿拉伯语和希伯来语中，窗口会左右镜像，而代码视图仍保持从左到右。
+- **从右到左。** 在阿拉伯语和希伯来语中，窗口会左右镜像，而代码视图和终端的网格仍保持从左到右。
 
 Dango 在 AppKit 之上按领域补充的内容，请参阅 [ACCESSIBILITY.md](../../../ACCESSIBILITY.md)。
 
@@ -257,6 +273,10 @@ Dango 遵循 **系统设置 › 通用 › 语言与地区** 中的语言顺序�
 | 粗体、斜体、删除线、代码、链接 | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | 标题 1 至 3 | ⌥⌘1 至 ⌥⌘3 |
 | 新建终端、清除终端 | ⌃\`, ⌘K |
+| 在终端中：查找、查找下一个、查找上一个 | ⌘F, ⌘G, ⇧⌘G |
+| 在终端中：上一个和下一个提示符、上一个和下一个书签、设置或移除书签 | ⌘↑ 和 ⌘↓, ⇧⌘↑ 和 ⇧⌘↓, ⇧⌘M |
+| 在终端中：选择块、拷贝输出、保存输出、折叠块 | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| 在终端中：输入栏、使用键盘选择、带格式拷贝 | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | 聚焦智能体的消息栏、评论计划 | ⌘Esc, ⌥⌘K |
 | 地址栏、重新载入、后退、前进（浏览器） | ⌘L, ⌘R, ⌘[, ⌘] |
 | 开始或停止听写 | ⌃⌥D |
@@ -282,7 +302,7 @@ App 数据文件夹中的 `keybindings.json`（请参阅[数据存放位置](#�
 
 | 位置 | 内容 |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`、`state.json`、`keybindings.json`、`trust.json`；`threads/`（AI 面板的列表）、`agent-threads/`（内置智能体的对话）、`layouts/`（每个项目的标签页）、`recovery/`（崩溃后未保存的编辑器）、`checkpoints/`（用于没有 Git 的文件夹）、`worktrees/`、`agents/` 和 `tools/`（已安装的智能体、语言服务器和调试适配器）、`task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`、`state.json`、`keybindings.json`、`trust.json`、`terminal-history.sqlite`（终端的命令历史记录）；`threads/`（AI 面板的列表）、`agent-threads/`（内置智能体的对话）、`layouts/`（每个项目的标签页）、`recovery/`（崩溃后未保存的编辑器）、`checkpoints/`（用于没有 Git 的文件夹）、`worktrees/`、`agents/` 和 `tools/`（已安装的智能体、语言服务器和调试适配器）、`task-output/` |
 | `~/Library/Caches/<id>/` | 粘贴的图像、Shell 集成脚本、ACP 注册表；可以删除 |
 | `~/Library/Logs/<id>/dictation/` | 听写的日志文件 |
 | `~/Library/Application Support/Lowspeak` 和 `FluidAudio` | 本地听写模型，与 Lowspeak 共享 |
@@ -300,6 +320,7 @@ Claude 将自己的会话保存在 `~/.claude/projects` 下；Dango 会读取它
 - **Claude 的用量数据和上下文明细** 依赖其协议中标记为实验性的部分，缺少这些部分时会隐藏。
 - **回退对话内容** 仅适用于 Claude；对于其他智能体，只回退代码。
 - **通过浏览器登录 CI** 的功能已关闭；请使用 `gh`、`glab`、Token 或环境变量。
+- **终端中不显示图片：** Kitty 图形、Sixel 和 iTerm2 图片不会显示。
 - **不提供 Gemini CLI：** Google 已停止使用个人账户登录，并引导用户使用 Antigravity。以前的 Gemini 对话仍可阅读。
 
 ## 从源代码构建
@@ -308,7 +329,7 @@ Claude 将自己的会话保存在 `~/.claude/projects` 下；Dango 会读取它
 
 - macOS 14 或更高版本，并安装 Xcode Command Line Tools（`xcode-select --install`）；不需要 Xcode 本身。
 - `rust-toolchain.toml` 所指定的 Rust。Homebrew 的 `rust` 只为这台 Mac 的处理器构建；正式版的通用构建需要带有目标 `aarch64-apple-darwin` 和 `x86_64-apple-darwin` 的 rustup。
-- [splat](https://github.com/sventmueller/splat) 和 [lowspeak](https://github.com/sventmueller/lowspeak) 的检出副本，放在本仓库旁边（`../splat`、`../lowspeak`），两者都位于各自的 `main` 分支；工作区按路径从它们引入 crate。
+- [splat](https://github.com/sventmueller/splat)、[lowspeak](https://github.com/sventmueller/lowspeak) 和 [tapa](https://github.com/sventmueller/tapa) 的检出副本，放在本仓库旁边（`../splat`、`../lowspeak`、`../tapa`），各自位于自己的 `main` 分支；工作区按路径从它们引入 crate，终端来自 Tapa。
 - cmake，用于每个包含听写的构建（`make run`、`make build`、`make release`），以构建 whisper.cpp。`make check` 不需要它。
 
 | 命令 | 作用 |

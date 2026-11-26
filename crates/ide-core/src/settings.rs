@@ -127,6 +127,14 @@ pub mod keys {
         SEARCH_ENGINE.declared(),
         HIDDEN_PANELS.declared(),
         OPTION_AS_META.declared(),
+        TERMINAL_INPUT_FIELD.declared(),
+        TERMINAL_INPUT_VIM.declared(),
+        TERMINAL_SUGGESTIONS.declared(),
+        TERMINAL_HIGHLIGHTING.declared(),
+        TERMINAL_UNDERLINE_ERRORS.declared(),
+        TERMINAL_BLOCKS.declared(),
+        TERMINAL_PASTE_PROTECTION.declared(),
+        TERMINAL_COPY_ON_SELECT.declared(),
     ];
 
     /// Opens the folders that were open when the app quit.
@@ -190,6 +198,23 @@ pub mod keys {
 
     /// ⌥ in the terminal is Meta for every key, instead of typing the characters the keyboard layout puts on it.
     pub const OPTION_AS_META: Key<bool> = Key::user("optionAsMeta", Sharing::Shared, || false);
+
+    /// New terminals start with the input field below the screen (E199, Tapa's E7).
+    pub const TERMINAL_INPUT_FIELD: Key<bool> = Key::user("terminalInputField", Sharing::Shared, || false);
+    /// Vim's keys in the terminal's input field.
+    pub const TERMINAL_INPUT_VIM: Key<bool> = Key::user("terminalInputVim", Sharing::Shared, || false);
+    /// Suggestions while typing in a terminal, and the command most likely next without input.
+    pub const TERMINAL_SUGGESTIONS: Key<bool> = Key::user("terminalSuggestions", Sharing::Shared, || true);
+    /// The parts of a command in the terminal's input field in colours of their own.
+    pub const TERMINAL_HIGHLIGHTING: Key<bool> = Key::user("terminalHighlighting", Sharing::Shared, || true);
+    /// A command the shell cannot run underlined in the terminal's input field.
+    pub const TERMINAL_UNDERLINE_ERRORS: Key<bool> = Key::user("terminalUnderlineErrors", Sharing::Shared, || true);
+    /// Every command in a terminal marked as a block with its output, exit code and duration.
+    pub const TERMINAL_BLOCKS: Key<bool> = Key::user("terminalBlocks", Sharing::Shared, || false);
+    /// A paste into a terminal that would run commands or press keys shows first.
+    pub const TERMINAL_PASTE_PROTECTION: Key<bool> = Key::user("terminalPasteProtection", Sharing::Shared, || true);
+    /// A selection in a terminal goes to the pasteboard as soon as it is made.
+    pub const TERMINAL_COPY_ON_SELECT: Key<bool> = Key::user("terminalCopyOnSelect", Sharing::Shared, || false);
 }
 
 /// A search engine the browser can send words to.

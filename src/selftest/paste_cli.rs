@@ -8,13 +8,13 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use ide_terminal::{Foreground, PasteAction};
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2_app_kit::{
     NSBitmapImageRep, NSEventModifierFlags, NSPasteboard, NSPasteboardItem, NSPasteboardTypePNG, NSPasteboardTypeTIFF,
 };
 use objc2_foundation::{NSArray, NSData};
+use term_session::{Foreground, PasteAction};
 
 use super::{check, finish, give_up, give_up_saying, helpers};
 
@@ -380,7 +380,7 @@ fn close(runs: &[Run], root: &Path) {
         for run in runs {
             let Some(view) = inspect::view(run.id) else { continue };
             pids.extend(view.shell());
-            if let Some(tab) = view.tab() {
+            if let Some(tab) = crate::terminal::tab_of_view(run.id) {
                 controller.close_tab(tab);
             }
         }

@@ -76,16 +76,22 @@ fn main() {
     ide_ui_git::install(&host::AppHost);
     ide_ui_agent::install(&host::AppHost);
     ide_ui_browser::install(&host::AppHost);
-    ide_ui_terminal::install(&host::AppHost);
     ide_ui_lsp::install(&host::AppHost);
     #[cfg(feature = "dictation")]
     ide_ui_dictation::install(&host::AppHost);
     if let Some(id) = NSBundle::mainBundle().bundleIdentifier() {
         ide_core::paths::set_identity(&id.to_string());
     }
+    term_base::set_identity(term_base::Identity {
+        name: ide_product::NAME.into(),
+        version: ide_product::VERSION.into(),
+        bundle_id: ide_core::paths::identity().into(),
+    });
     ide_core::diag::install(Box::new(|what, detail| diag::report(what, detail)));
+    term_base::diag::install(Box::new(|what, detail| diag::report(what, detail)));
     #[cfg(feature = "selftest")]
     selftest::prepare();
+    terminal::install();
     let report = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         diag::report("panic", info.location().map_or_else(String::new, ToString::to_string));

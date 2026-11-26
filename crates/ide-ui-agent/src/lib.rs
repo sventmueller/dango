@@ -81,7 +81,7 @@ pub use driven::{Attach, Sessions};
 pub use format::{age, elapsed, tokens};
 pub(crate) use format::{iso_time, short_age, time_of_day};
 pub use host::{Host, install};
-pub use outside::ci_log;
+pub use outside::{ci_log, terminal_block};
 pub use source::Resume;
 pub use stop::Stop;
 pub use tab::AgentTab;

@@ -12,7 +12,7 @@ A Dango a kódot, az azt módosító ügynököket és mindent, ami körülött�
 
 **Hibát talált?** [Nyisson egy issue-t](https://github.com/sventmueller/dango/issues/new), és írja meg, melyik ügynökkel és milyen projektben fordult elő.
 
-[![Rust, 2024-es kiadás](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 vagy újabb](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Univerzális: Apple chip és Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit objc2-n keresztül](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminál: Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35 felületnyelv](https://img.shields.io/badge/languages-35-4C9A2A) ![Nincs telemetria](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Hardened Runtime-mal aláírva](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Licenc: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#licenc)
+[![Rust, 2024-es kiadás](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 vagy újabb](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Univerzális: Apple chip és Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit objc2-n keresztül](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminál: Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35 felületnyelv](https://img.shields.io/badge/languages-35-4C9A2A) ![Nincs telemetria](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Hardened Runtime-mal aláírva](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Licenc: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#licenc)
 
 [Bahasa Indonesia](../id/README.md) · [Bahasa Melayu](../ms/README.md) · [Català](../ca/README.md) · [Čeština](../cs/README.md) · [Dansk](../da/README.md) · [Deutsch](../de/README.md) · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · **Magyar** · [Nederlands](../nl/README.md) · [Norsk](../no/README.md) · [Polski](../pl/README.md) · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · [Română](../ro/README.md) · [Slovenčina](../sk/README.md) · [Slovenščina](../sl/README.md) · [Suomi](../fi/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [繁體中文](../zh-Hant/README.md)
 
@@ -55,6 +55,7 @@ A Dango a kódot, az azt módosító ügynököket és mindent, ami körülött�
 - **Mappánként egy ablak.** A fájlok, terminálok, böngészőoldalak, AI-szálak, különbségnézetek és előnézetek ennek az ablaknak a macOS-lapjai. Az oldalsávon a Fájlok, Keresés, Ügynökök, Git, Tesztek, Hibakeresés, CI és Konténerek található.
 - **Valódi kódszerkesztő.** Szintaxisszínezés, több kurzor, összecsukás, `.editorconfig`, nyelvi szerverek 17 nyelvhez kiegészítéssel, ugrással a definícióra, hivatkozásokkal, átnevezéssel, gyorsjavításokkal és hierarchiákkal, valamint szerkesztési előrejelzések a GitHub Copilottól vagy egy helyi modelltől.
 - **Beépített hibakereső, Git és CI.** Töréspontok és léptetés Rust, C, C++, Swift, Go, JavaScript, TypeScript és Python nyelvhez; egyes blokkok előkészítése, ágak, stashek, ütközések és commitgráf; futások, jobok és naplók a GitHub Actionsből és a GitLab CI-ból.
+- **A Tapa terminálja.** Parancsblokkok, amelyek kimenetét másolhatja, mentheti vagy átadhatja egy ügynöknek, beviteli mező az előzményeiből és a projektből származó javaslatokkal, keresés a teljes előzményben, valamint a benne futó programok értesítései és folyamatjelzése.
 - **Óvatos a mappáival.** Egy mappa, amelyben nem bízott meg, semmit sem indít: sem Git-folyamatokat, sem nyelvi szervereket, sem hookokat, sem ügynököket. A romboló Git-parancsok soha nem kapnak tartós engedélyt, a commitokat pedig titkos adatok után kutatva ellenőrzi az app.
 - **Diktálás.** Beszéljen a szerkesztőbe és az üzenetmezőbe, online az OpenAI vagy a Groq segítségével, vagy helyben a Whisperrel és a Parakeettel.
 - **Natív a velejéig.** AppKit-ablakok, -lapok, -menük és -eszközsorok, TextKit 2 a szerkesztőhöz, Metal a terminálhoz, WebKit csak a böngészőlapon. A sötét mód, a Kontraszt növelése és a VoiceOver úgy működik, mint minden Mac-appban.
@@ -84,7 +85,7 @@ A Dango a kódot, az azt módosító ügynököket és mindent, ami körülött�
 3. **Minden dokumentum egy lap** a mappa ablakában, a macOS saját lapjai közül. A lapsor végén lévő „+” és a ⌘T új fájlt, terminált, a böngészőt és minden telepített ügynököt felkínál, saját Git-worktree-ben is; a „+” lenyomva tartása ugyanezt menüként jeleníti meg.
 4. **A Gyors megnyitás** a ⌘P billentyűkkel fájlokat talál, `#` jellel pedig a projekt szimbólumait; a ⇧⌘F keres és cserél a projektben.
 5. **Beszéljen egy ügynökkel** egy AI-lapon. A ⌘Esc a billentyűzetfókuszt az üzenetmezőjébe viszi, majd vissza.
-6. **A Beállítások** a ⌘, billentyűkkel nyílik meg, lapjai: Általános, CI, Ügynökök, Beépített ügynök, Nyelvi szerver, Diktálás és Előrejelzés.
+6. **A Beállítások** a ⌘, billentyűkkel nyílik meg, lapjai: Általános, Terminál, CI, Ügynökök, Software Factory, Beépített ügynök, Nyelvi szerver, Diktálás és Előrejelzés.
 
 Az eszközsoron található a vissza és előre lépés a szerkesztett helyek között (⌃- és ⌃⇧-), az ág, a Gyors megnyitás és a Tevékenység áttekintése, amely mindent felsorol, ami fut. Egy fájl helyi menüjében a **Megnyitás mellette** egy második dokumentumot jelenít meg az első mellett. Újraindítás vagy összeomlás után minden ablak visszatér a lapjaival, a nem mentett szöveget tartalmazó szerkesztők pedig ezzel a szöveggel. A képek, hang- és videofájlok, betűtípusok és Office-dokumentumok a Quick Look segítségével nyílnak meg lapon, a PDF-ek a PDFKit segítségével.
 
@@ -155,7 +156,22 @@ Az app beolvassa a projekt `.vscode/launch.json` fájlját. A Hibakeresés menü
 
 ## Terminál
 
-Terminálok lapokon (⌃\`), a bejelentkezési shell környezetével, Metallal rajzolva. A ⌘K törli a képernyőt. Kép beillesztésekor vagy behúzásakor a kép a terminálban futó kódoló ügynökhöz kerül, vagy egy mentett másolat útvonala illesztődik be. A ⌘-kattintás megnyitja a linkeket és a fájlneveket. A terminálból indított fejlesztői szerver megnyitható a böngészőlapon.
+A terminálok lapokon nyílnak meg (**Fájl › Új terminál**, ⌃\`), a bejelentkezési shell-lel és annak környezetével. A terminál a [Tapa](https://github.com/sventmueller/tapa) terminálja, saját VT-maggal, Metallal rajzolva: xterm és VT520 a Kitty billentyűzetprotokolljával, OSC 8 hivatkozások, szinkronizált kimenet, truecolor és egérjelentés, a szerkesztő szövegméretében, a Tapa világos és sötét színeivel. A shell-integrációja zsh, bash és fish alatt magától beállítódik, a konfigurációs fájljai érintése nélkül, és Önnel tart, amikor `ssh`-val másik gépre csatlakozik. Újraindítás után a terminál új shellként tér vissza abban a mappában, ahol volt, de csak megbízható mappákban; amit mutatott, az nem tér vissza.
+
+- **Parancsblokkok.** Minden parancs a kimenetével együtt egy blokkot alkot. A ⌘↑ és a ⌘↓ a promptok között ugrik. A **Blokk kijelölése** (⇧⌘A), a **Kimenet másolása** (⌥⌘C), a **Kimenet mentése…** (⌥⌘S) és a **Blokk összecsukása/kibontása** (⇧⌘↩) az aktuális blokkra hat; a **Könyvjelző be/ki** (⇧⌘M) megjelöl egy sort, a ⇧⌘↑ és a ⇧⌘↓ pedig a könyvjelzők között ugrik. Ha a **Parancsok jelölése blokkként** be van kapcsolva, a margón egy sáv mutatja az egyes blokkokat, a sikertelen parancsok jelölve vannak, a futó parancs felül marad, miközben a kimenete görög, a mutató alatti blokk fölött pedig gombok mutatják az állapotát, az időtartamát és ugyanezeket a műveleteket.
+- **A Blokk küldése az ügynöknek** (Szerkesztés menü és a terminál helyi menüje) új AI-lapot nyit, amelyhez az aktuális blokk parancssora és kimenete Külső tartalomként van csatolva (lásd: [Bizalom](#bizalom)), és egy piszkozatot, amely sikertelen parancs esetén az okra kérdez rá, ahogy egy sikertelen CI-job naplója is. Billentyűparancsa addig nincs, amíg nem ad meg egyet a `terminal.blockToAgent` számára a `keybindings.json` fájlban.
+- **A beviteli mező.** A **Nézet › Beviteli mező megjelenítése/elrejtése** (⌘I) a parancssort a terminál alján lévő szövegmezővé alakítja, fölötte a mappával és a Git-ággal; az új terminálok a legutóbbi választását követik. A Return a teljes mezőt elküldi a shellnek. A shell-integrációra van szüksége, és félreáll a teljes képernyős programok, például a vim, a htop vagy a claude elől.
+- **A javaslatok** szürkén jelennek meg közvetlenül a begépelt szöveg után, a beviteli mezőben és nélküle is: az előzményeiből, azzal a mappával, ággal és kilépési kóddal, amellyel az egyes parancsok futottak, több mint 700 parancssori eszköz leírásából és a projektből, például git-ágak, docker-konténerek, `package.json`-szkriptek, valamint make-, just- és cargo-célok. A → elfogad egy javaslatot; a Tab kiegészít, több jelölt esetén pedig menüt nyit, amelyet a gépelés szűr. Mielőtt gépelne, a mező javasolhatja azt a parancsot, amely általában következik. A parancsok részeik szerint színezve jelennek meg, és amelyet a shell nem tud futtatni, szaggatott piros aláhúzást kap. A javaslatok soha nem használják a hálózatot, és programokat csak a bejelentkezési shell `PATH`-jából indítanak.
+- **A Keresés** (⌘F, ⌘G és ⇧⌘G, amikor egy terminálon van a fókusz) a teljes előzményben keres, reguláris kifejezésekkel, kis- és nagybetűk szerint és egész szavakra, és megszámolja a találatokat; a görgetősáv jelöli a találatokat, a promptokat és a sikertelen parancsokat.
+- **Kijelölés és másolás.** A dupla kattintás egy URL-t, útvonalat, hasht vagy IP-címet egészében jelöl ki, az ⌥-húzás pedig téglalapot jelöl ki. A **Kijelölés billentyűzettel** (⇧⌘C) a Vim billentyűivel mozgatja a kijelölést, a **Másolás formázással** (⇧⌥⌘C) megtartja a színeket és a stílusokat. Egy program OSC 52-vel csak akkor másolhat, ha a termináljáé a billentyűzetfókusz, és a terminál ezt jelzi; egyetlen program sem olvassa a vágólapot.
+- **Beillesztés.** Az a szöveg, amely a sortörésénél parancsot futtatna, vagy vezérlőkaraktereket tartalmaz, először egy párbeszédablakban jelenik meg, hacsak a program nem bracketed paste-ként olvassa. A beillesztett kép a terminálban futó kódoló ügynökhöz kerül, amely maga olvassa ki a vágólapról, különben a gyorsítótárak közé mentett másolat útvonala illesztődik be; `ssh`-n keresztül a terminál megmondja, miért nem teszi ezt. A terminálra húzott fájlok, a képeket is beleértve, idézőjeles útvonalként érkeznek; a máshonnan, például weboldalról behúzott kép ugyanazt az utat járja, mint egy beillesztett.
+- **Hivatkozások.** A ⌘-kattintás a webcímet a böngészőlapon, a `mailto:` hivatkozást a Mailben, a fájlnevet pedig, sorral és oszloppal együtt is, a Dango szerkesztőjében nyitja meg; a hivatkozásokat OSC 8 nélkül is felismeri. Más fajta hivatkozások nem nyílnak meg.
+- **Fejlesztői szerverek.** Ha a terminálban egy program fejlesztői szervert indít, a terminál fölötti sáv megnevezi a címét, és a **Megnyitás böngészőlapon** ott nyitja meg.
+- **Értesítések és folyamatjelzés.** A csengő és az az értesítés, amelyet egy program kér (OSC 9 és OSC 777), a piros pontot a terminál lapjára teszi, amíg Ön nem látja; ha egy másik app van elöl, az értesítés a macOS-hez is eljut, és rákattintva visszahozza a terminált. A program által jelentett folyamat (OSC 9;4) gyűrűként jelenik meg a lapján és sávként a Dock-ikonon.
+- **A Biztonságos bevitel billentyűzetről** (**Dango › Biztonságos bevitel billentyűzetről**) megakadályozza, hogy más appok olvassák, amit egy terminálba gépel; akkor is magától bekapcsol, amíg egy program jelszót kér.
+- **Billentyűk.** A ⌘K törli a terminált (**Szerkesztés › Terminál törlése**); a ⌃C és az Esc a benne futó programhoz kerül. A terminál parancsai a Szerkesztés és a Nézet menüben vannak, és billentyűparancsaik csak akkor hatnak, ha egy terminálé a billentyűzetfókusz, így a ⌘I, a ⌘↑ vagy a ⌘F megtartja a jelentését a szerkesztőben. A helyi menü nyit egy **Új terminál itt** lehetőséget is, és az **Ablaktábla bezárása** paranccsal bezárja a terminált.
+
+A **Beállítások › Terminál** ki- és bekapcsolja az új terminálok beviteli mezőjét, annak Vim-billentyűit, a javaslatokat, a parancsok színezését, az ismeretlenek aláhúzását, a parancsblokkokat, a kijelölés azonnali másolását, a többsoros beillesztések előzetes megjelenítését és az ⌥ metabillentyűként való használatát.
 
 ## Böngésző
 
@@ -205,7 +221,7 @@ Egy mappa programokat futtathat, amint valami elindul benne: Git-hookokat és t�
 - **Megbízható:** a Git, a nyelvi szerverek, a hibakeresők, az ügynökök és a CI futnak ehhez a mappához és mindenhez, ami alatta van.
 - **Korlátozott:** olvashat és szerkeszthet; a szerkesztő változásjelei a `.git` közvetlen olvasásából származnak. Semmi nem indul el, amit a mappa beállít. A Git-, CI- és AI-panel jelzi ezt, és felajánlja, hogy megbízzon a mappában.
 
-A nem Öntől származó szöveg tartalmazhat olyan utasításokat, amelyek egy ügynök irányítására szolgálnak (prompt injection). Egy terminál kimenete (`@terminal`), egy böngészőoldal (`@browser`), egy ügynöknek átadott CI-napló, egy projekten kívüli fájl és egy weboldalról beillesztett hosszabb szöveg ezért megjelölve kerül tovább: a címke „Külső tartalom” feliratú, az ügynök pedig azzal a megjegyzéssel kapja meg a szöveget, hogy az nem megbízható adat, amelynek utasításait nem követheti. A beépített ügynök weboldalai ugyanezzel a megjegyzéssel érkeznek. A beillesztett szöveg akkor számít weboldalról származónak, ha a böngésző ezt jelzi a vágólapon, ahogy a Safari, a Chrome és a Firefox teszi; a máshonnan származó szöveg és egy néhány szavas rövid kifejezés az Öné marad.
+A nem Öntől származó szöveg tartalmazhat olyan utasításokat, amelyek egy ügynök irányítására szolgálnak (prompt injection). Egy terminál kimenete (`@terminal`, vagy egy ügynöknek átadott parancsblokk), egy böngészőoldal (`@browser`), egy ügynöknek átadott CI-napló, egy projekten kívüli fájl és egy weboldalról beillesztett hosszabb szöveg ezért megjelölve kerül tovább: a címke „Külső tartalom” feliratú, az ügynök pedig azzal a megjegyzéssel kapja meg a szöveget, hogy az nem megbízható adat, amelynek utasításait nem követheti. A beépített ügynök weboldalai ugyanezzel a megjegyzéssel érkeznek. A beillesztett szöveg akkor számít weboldalról származónak, ha a böngésző ezt jelzi a vágólapon, ahogy a Safari, a Chrome és a Firefox teszi; a máshonnan származó szöveg és egy néhány szavas rövid kifejezés az Öné marad.
 
 ## Homokozó
 
@@ -221,9 +237,9 @@ Maga a Dango App Sandbox nélkül fut, mert minden általa indított program ör
 ## Megjelenés és kisegítő lehetőségek
 
 - **A sötét mód** a rendszert követi; a **Kontraszt növelése** és a **Mozgás csökkentése** beállítást figyelembe veszi.
-- **A VoiceOver** megnevezi az oldalsávot, a lapokat, az AI-idővonal kártyáit, a Git- és CI-sorokat, a hibakeresőt és a terminál szövegét. A töréspontok soha nem csak színük alapján különböznek.
+- **A VoiceOver** megnevezi az oldalsávot, a lapokat, az AI-idővonal kártyáit, a Git- és CI-sorokat és a hibakeresőt, felolvassa a terminál sorait, és bejelenti az új kimenetet. A töréspontok soha nem csak színük alapján különböznek.
 - **Billentyűzet.** Minden parancsnak van billentyűparancsa, és mindegyik módosítható a `keybindings.json` fájlban; a ⌥⌘\` a következő panelre lép.
-- **Jobbról balra.** Arab és héber nyelven az ablak tükrözve jelenik meg, a kódnézetek viszont balról jobbra maradnak.
+- **Jobbról balra.** Arab és héber nyelven az ablak tükrözve jelenik meg, a kódnézetek és a terminál rácsa viszont balról jobbra maradnak.
 
 Hogy a Dango területenként mit tesz hozzá az AppKithez, az [ACCESSIBILITY.md](../../../ACCESSIBILITY.md) fájlban olvasható.
 
@@ -257,6 +273,10 @@ A Dango a **Rendszerbeállítások › Általános › Nyelv és régió** nyelv
 | Félkövér, dőlt, áthúzott, kód, link | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | 1–3. szintű címsor | ⌥⌘1–⌥⌘3 |
 | Új terminál, terminál törlése | ⌃\`, ⌘K |
+| Terminálban: keresés, következő keresése, előző keresése | ⌘F, ⌘G, ⇧⌘G |
+| Terminálban: előző és következő prompt, előző és következő könyvjelző, könyvjelző be- vagy kikapcsolása | ⌘↑ és ⌘↓, ⇧⌘↑ és ⇧⌘↓, ⇧⌘M |
+| Terminálban: blokk kijelölése, kimenet másolása, kimenet mentése, blokk összecsukása | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| Terminálban: beviteli mező, kijelölés billentyűzettel, másolás formázással | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | Fókusz az ügynök üzenetmezőjére, megjegyzés egy tervhez | ⌘Esc, ⌥⌘K |
 | Címmező, újratöltés, vissza, előre (böngésző) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Diktálás indítása vagy leállítása | ⌃⌥D |
@@ -282,7 +302,7 @@ Az `<id>` a csomagazonosító: `local.agentide` a kiadáshoz (`local.agentide.de
 
 | Hely | Mi |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`; `threads/` (az AI-panel listája), `agent-threads/` (a beépített ügynök beszélgetései), `layouts/` (lapok projektenként), `recovery/` (mentetlen szerkesztők összeomlás után), `checkpoints/` (Git nélküli mappákhoz), `worktrees/`, `agents/` és `tools/` (telepített ügynökök, nyelvi szerverek és hibakereső adapterek), `task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`, `terminal-history.sqlite` (a terminálok parancselőzményei); `threads/` (az AI-panel listája), `agent-threads/` (a beépített ügynök beszélgetései), `layouts/` (lapok projektenként), `recovery/` (mentetlen szerkesztők összeomlás után), `checkpoints/` (Git nélküli mappákhoz), `worktrees/`, `agents/` és `tools/` (telepített ügynökök, nyelvi szerverek és hibakereső adapterek), `task-output/` |
 | `~/Library/Caches/<id>/` | beillesztett képek, shellintegrációs szkriptek, az ACP-jegyzék; törölhető |
 | `~/Library/Logs/<id>/dictation/` | a diktálás naplófájljai |
 | `~/Library/Application Support/Lowspeak` és `FluidAudio` | helyi diktálási modellek, a Lowspeakkel közösen |
@@ -300,6 +320,7 @@ A Claude a saját munkameneteit a `~/.claude/projects` alatt tárolja; a Dango b
 - **A Claude használati adatai és kontextuslebontása** a protokolljának kísérletiként jelölt részeire támaszkodnak, és rejtve maradnak, ha ezek hiányoznak.
 - **A beszélgetés visszatekerése** csak a Claude esetében működik; a többi ügynöknél csak a kód tekerhető vissza.
 - **A CI-be a böngészőn keresztül történő bejelentkezés** ki van kapcsolva; használja a `gh` vagy a `glab` parancsot, egy tokent vagy a környezetet.
+- **Nincsenek képek a terminálban:** a Kitty-grafika, a Sixel és az iTerm2-képek nem jelennek meg.
 - **A Gemini CLI nem érhető el:** a Google megszüntette a személyes fiókkal való bejelentkezést, és az Antigravityt ajánlja. A korábbi Gemini-szálak továbbra is olvashatók.
 
 ## Fordítás forráskódból
@@ -308,7 +329,7 @@ Amire szüksége van:
 
 - macOS 14 vagy újabb az Xcode Command Line Toolsszal (`xcode-select --install`); magára az Xcode-ra nincs szükség.
 - Rust, ahogyan a `rust-toolchain.toml` megadja. A Homebrew `rust` csomagja ennek a Macnek a processzorára fordít; egy kiadás univerzális buildjéhez rustup kell az `aarch64-apple-darwin` és az `x86_64-apple-darwin` céllal.
-- A [splat](https://github.com/sventmueller/splat) és a [lowspeak](https://github.com/sventmueller/lowspeak) kicsekkolt példánya e mellett (`../splat`, `../lowspeak`), mindkettő a `main` ágon; a munkaterület útvonal alapján vesz át belőlük crate-eket.
+- A [splat](https://github.com/sventmueller/splat), a [lowspeak](https://github.com/sventmueller/lowspeak) és a [tapa](https://github.com/sventmueller/tapa) kicsekkolt példánya e mellett (`../splat`, `../lowspeak`, `../tapa`), mindegyik a saját `main` ágán; a munkaterület útvonal alapján vesz át belőlük crate-eket, a terminált a Tapából.
 - cmake minden diktálással készülő buildhez (`make run`, `make build`, `make release`), amely lefordítja a whisper.cpp-t. A `make check` nélküle fordít.
 
 | Parancs | Mit csinál |

@@ -6,6 +6,15 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
+/// Removes the file at `path`, as a script written with `write` that a later version no longer uses; a file that is
+/// not there is no error.
+pub fn remove(path: &Path) -> io::Result<()> {
+    match fs::remove_file(path) {
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        done => done,
+    }
+}
+
 /// Writes `bytes` as the file at `path`, creating its folder: into a new file beside it that is flushed to the disk
 /// and then takes its place, after which the folder is flushed, so the new name survives a power loss too. Every
 /// write has a scratch file of its own, so two writers of one file at once leave one of the two whole.

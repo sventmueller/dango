@@ -9,6 +9,18 @@ use super::{Panel, TabId, WindowController, new_tab_button, tabs};
 use crate::util::ns;
 
 impl WindowController {
+    /// The colour of the dot the document `id` has for its window tab.
+    pub(crate) fn tab_dot(&self, id: TabId) -> Option<Retained<objc2_app_kit::NSColor>> {
+        self.tab_of_document(id)?.document(id)?.status_colour()
+    }
+
+    /// The progress ring the window tab of the document `id` shows beside its title.
+    pub(crate) fn tab_ring(&self, id: TabId) -> Option<crate::terminal::Ring> {
+        self.tab_of_document(id)?.shown_ring()
+    }
+}
+
+impl WindowController {
     /// The agents the menu of new tabs lists under "In eigenem Worktree".
     pub(crate) fn worktree_menu_titles(&self) -> Vec<String> {
         menu_titles(&self.new_tab_menu(), &[t("In eigenem Worktree")])

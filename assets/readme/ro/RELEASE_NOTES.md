@@ -1,2 +1,14 @@
-## Remediat
-- Programele pe tot ecranul, precum htop, nu mai fac să clipească rânduri albe în aspectul luminos: Dango afișează ecranul lor după ce programul a terminat de scris, nu la jumătate. Tastarea la un prompt afișează fiecare tastă la fel de repede ca înainte.
+## Terminal
+- Terminalul este acum cel al lui Tapa, aplicația de terminal soră a lui Dango, cu tot ce aduce în plus, iar Dango păstrează ce făcea terminalul său până acum: lipirea imaginilor către agenți, serverele de dezvoltare în fila browserului, ⌘-clic care deschide în editor.
+- **Vizualizare › Afișați/ascundeți câmpul de introducere** (⌘I cât timp un terminal este focalizat) transformă linia de comandă într-un câmp de text, cu dosarul și ramura Git deasupra lui. Comenzile sunt colorate pe părți, iar una pe care shellul dvs. nu o poate rula primește o subliniere roșie întreruptă.
+- Propunerile apar cu gri în timp ce tastați, în câmp și fără el: din istoricul dvs., din specificațiile a peste 700 de unelte de linie de comandă și din proiect, precum ramuri git, scripturi din `package.json` și ținte make, just și cargo. → acceptă una; Tab completează, iar cu mai mulți candidați deschide un meniu pe care tastarea îl filtrează. Nu folosesc niciodată rețeaua.
+- Blocuri de comenzi: ⌘↑ și ⌘↓ sar de la un prompt la altul, meniul **Editare** selectează, copiază și salvează ieșirea unei comenzi, iar marcajele marchează rânduri. Cu **Marcați comenzile ca blocuri** activat, o bară arată fiecare bloc, comenzile eșuate sunt marcate, iar butoanele de deasupra unui bloc îi arată starea și durata.
+- **Trimiteți blocul agentului** (meniul Editare și meniul contextual al terminalului) deschide o filă IA cu linia de comandă și ieșirea blocului curent atașate ca Conținut extern.
+- **Găsiți** (⌘F cât timp un terminal este focalizat) caută în tot istoricul, cu expresii regulate, cu respectarea majusculelor și pe cuvinte întregi; bara de derulare marchează rezultatele.
+- Notificarea unui program (OSC 9 și OSC 777) și clopoțelul său pun punctul roșu pe fila terminalului cât timp nu îl vedeți, iar notificarea ajunge la macOS cât timp altă aplicație este în prim-plan. Progresul raportat de un program (OSC 9;4) apare ca un inel pe fila sa și ca o bară pe pictograma din Dock.
+- Un dublu clic selectează în întregime un URL, o cale sau un hash, tragerea cu ⌥ selectează un dreptunghi, **Copiați cu formatare** păstrează culorile și stilurile, iar **Selectare cu tastatura** mută o selecție cu tastele Vim.
+- Lipirile pe mai multe linii care ar rula imediat apar întâi, iar **Dango › Introducere securizată de la tastatură** împiedică alte aplicații să citească ce tastați într-un terminal.
+- Terminalul nu mai deschide linkuri de alte tipuri decât adrese web, `mailto:` și fișiere.
+
+## Configurări
+- **Configurări › Terminal** comută câmpul de introducere pentru terminalele noi, tastele sale Vim, propunerile, culorile comenzilor, sublinierea celor necunoscute, blocurile de comenzi, copierea imediată a selecției, afișarea întâi a lipirilor pe mai multe linii și ⌥ ca meta-tastă, care s-a mutat aici din General.

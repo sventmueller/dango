@@ -26,6 +26,8 @@ use splat_i18n::{t, tf};
 use super::WindowController;
 use super::agent_choices::AgentChoices;
 use super::panes::{PaneId, Panes, Place};
+use super::progress_ring::ProgressRing;
+use crate::terminal::Ring;
 use crate::util::{activate, fixed_size, item, ns, pin_edges, pin_sides, separator, submenu, symbol};
 use ide_ui_common::ui_size;
 
@@ -60,6 +62,8 @@ pub(crate) struct Document {
     preview: Cell<bool>,
     dirty: Cell<bool>,
     status: RefCell<Option<Retained<NSColor>>>,
+    /// How far the work of its program is, which its tab shows when no document has a dot.
+    progress: Cell<Option<Ring>>,
     tint: RefCell<Option<Retained<NSColor>>>,
     /// The colours of the symbol's left, top, right and bottom point instead of its tint, as Google's agents show.
     four_colours: RefCell<Option<[Retained<NSColor>; 4]>>,
@@ -119,6 +123,7 @@ impl Document {
             preview: Cell::new(false),
             dirty: Cell::new(false),
             status: RefCell::new(None),
+            progress: Cell::new(None),
             tint: RefCell::new(None),
             four_colours: RefCell::new(None),
             focus: RefCell::new(None),
@@ -156,6 +161,10 @@ impl Document {
 
     pub(crate) fn set_status(&self, color: Option<&NSColor>) {
         *self.status.borrow_mut() = color.map(objc2::Message::retain);
+    }
+
+    pub(crate) fn set_progress(&self, ring: Option<Ring>) {
+        self.progress.set(ring);
     }
 
     pub(crate) fn set_tint(&self, color: &NSColor) {
@@ -321,6 +330,8 @@ pub(crate) struct TabWindow {
     controller: Weak<WindowController>,
     /// The dot of the tab's state beside its title.
     status: Retained<NSImageView>,
+    /// The ring in the dot's place while a document's program reports progress.
+    ring: Retained<ProgressRing>,
     /// The title last put on the tab, so that a tab is titled again only when its title changes.
     shown_title: std::cell::RefCell<String>,
     /// The watch that keeps the toolbar clear above the sidebar in full screen.
@@ -401,6 +412,7 @@ impl TabWindow {
         window.setToolbar(Some(&toolbar));
 
         let status = status_dot(mtm);
+        let ring = ProgressRing::new(mtm);
         let sidebar_watch = super::full_screen::follow_sidebar(&window, &slot, &split.splitView());
         let top = content_top(&content);
         let controller_ref = Weak::from(controller);
@@ -424,6 +436,7 @@ impl TabWindow {
             format_bar,
             controller: Weak::from(controller),
             status,
+            ring,
             shown_title: std::cell::RefCell::new(String::new()),
             sidebar_watch,
             toolbar_watch,
@@ -560,16 +573,39 @@ impl TabWindow {
         tab.setToolTip(Some(&ns(&tip)));
         self.window
             .setDocumentEdited(documents.iter().any(|doc| doc.dirty.get()));
+        self.show_accessory(&documents);
+    }
+
+    /// Shows beside the title the dot of the first document that has one, else the progress ring of the first whose
+    /// program reports progress.
+    pub(crate) fn refresh_accessory(&self) {
+        self.show_accessory(&self.documents());
+    }
+
+    fn show_accessory(&self, documents: &[Rc<Document>]) {
         let status = documents.iter().find_map(|doc| doc.status.borrow().clone());
         if let Some(color) = &status {
             self.status.setContentTintColor(Some(color));
             objc2_app_kit::NSAccessibility::setAccessibilityLabel(&*self.status, Some(&ns(status_words(color))));
         }
+        let progress = documents.iter().find_map(|doc| doc.progress.get());
+        let dot: &NSView = &self.status;
+        let ring: &NSView = &self.ring;
+        let wanted = match (&status, progress) {
+            (Some(_), _) => Some(dot),
+            (None, Some(progress)) => {
+                self.ring.show(progress);
+                Some(ring)
+            }
+            (None, None) => None,
+        };
+        if !wanted.is_some_and(|view| std::ptr::eq(view, ring)) {
+            self.ring.clear();
+        }
+        let tab = self.window.tab();
         let current = tab.accessoryView(self.window.mtm());
-        if status.is_some() && current.is_none() {
-            tab.setAccessoryView(Some(&self.status));
-        } else if status.is_none() && current.is_some() {
-            tab.setAccessoryView(None);
+        if current.as_deref().map(std::ptr::from_ref) != wanted.map(std::ptr::from_ref) {
+            tab.setAccessoryView(wanted);
         }
     }
 

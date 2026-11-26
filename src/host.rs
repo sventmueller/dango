@@ -20,25 +20,60 @@ impl ide_ui_export::Host for AppHost {
     }
 }
 
-impl ide_ui_terminal::Host for AppHost {
-    fn state(&self) -> Rc<ide_ui_terminal::State> {
-        context().terminal_views().clone()
+/// The terminal views' host (E99, E199): it holds the way back to the app context, so the views look nothing up
+/// (E143).
+pub(crate) struct TerminalHost(crate::leitstand::Back);
+
+impl TerminalHost {
+    /// Installs the terminal views' host once the app context exists, before any window opens.
+    pub(crate) fn install(back: crate::leitstand::Back) {
+        term_ui::install(Box::leak(Box::new(TerminalHost(back))));
+    }
+}
+
+impl term_ui::Host for TerminalHost {
+    fn state(&self) -> Rc<term_ui::State> {
+        self.try_state().unwrap_or_default()
     }
 
-    fn try_state(&self) -> Option<Rc<ide_ui_terminal::State>> {
-        try_context().map(|cx| cx.terminal_views().clone())
+    fn try_state(&self) -> Option<Rc<term_ui::State>> {
+        self.0.with(|cx| cx.terminals().views().clone())
     }
 
-    fn opened(&self, window: WindowId, what: ide_ui_terminal::Opened) {
-        use ide_ui_terminal::Opened;
-        let Some(controller) = self::window(window) else {
-            return;
-        };
-        match what {
-            Opened::Url(url) => crate::browser::open_tab(&controller, Some(url.as_str())),
-            Opened::File { path, line, column } => crate::editor::reveal_position(&controller, &path, line, column),
-            Opened::TerminalHere(cwd) => crate::terminal::open_tab(&controller, Some(cwd.as_path())),
-        }
+    fn opened(&self, window: term_ui::kit::WindowId, what: term_ui::Opened) {
+        self.0.with(|cx| crate::terminal::opened(cx, window, what));
+    }
+
+    fn spawner(&self) -> std::sync::Arc<dyn term_base::Spawner> {
+        std::sync::Arc::new(crate::terminal::Spawner::default())
+    }
+
+    fn config(&self) -> Rc<term_config::Config> {
+        self.0.with(|cx| cx.terminals().config()).unwrap_or_default()
+    }
+
+    fn themes(&self) -> Rc<term_config::theme::Themes> {
+        self.0.with(|cx| cx.terminals().themes()).unwrap_or_default()
+    }
+
+    fn changed(&self, view: u64, change: term_ui::Change) {
+        self.0.with(|cx| crate::terminal::changed(cx, view, change));
+    }
+
+    fn suggest(&self, view: u64, prefix: &str) -> Option<String> {
+        self.0.with(|cx| cx.terminals().suggest(view, prefix)).flatten()
+    }
+
+    fn context(&self, view: u64) -> Option<term_suggest::Context> {
+        self.0.with(|cx| cx.terminals().context(view)).flatten()
+    }
+
+    fn switch_off(&self, path: &[&str]) {
+        crate::terminal::switch_off(path);
+    }
+
+    fn context_items(&self, _view: u64) -> Vec<term_ui::ContextItem> {
+        crate::terminal::context_items()
     }
 }
 

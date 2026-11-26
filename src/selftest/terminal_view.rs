@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Sel};
-use objc2::{MainThreadOnly, msg_send, sel};
+use objc2::{MainThreadMarker, MainThreadOnly, msg_send, sel};
 use objc2_app_kit::{
     NSApplication, NSEvent, NSEventModifierFlags, NSEventType, NSMenu, NSPasteboard, NSPasteboardTypePNG,
     NSPasteboardTypeString, NSPasteboardWriting, NSScreen,
@@ -97,12 +97,27 @@ fn general_text() -> Option<String> {
     unsafe { NSPasteboard::generalPasteboard().stringForType(NSPasteboardTypeString) }.map(|text| text.to_string())
 }
 
-/// Sends the action `action` to `view` as a menu item would.
-fn perform(view: &TerminalView, action: Sel) -> bool {
-    let app = NSApplication::sharedApplication(view.mtm());
-    let target: &AnyObject = view;
-    // SAFETY: Every action the view takes accepts any sender, here none.
+/// Sends the action `action` to `target`, a terminal view or its dev server banner, as a menu item would.
+fn perform(target: &AnyObject, action: Sel) -> bool {
+    let Some(mtm) = MainThreadMarker::new() else {
+        return false;
+    };
+    let app = NSApplication::sharedApplication(mtm);
+    // SAFETY: Every action the view and the banner take accepts any sender, here none.
     unsafe { app.sendAction_to_from(action, Some(target), None) }
+}
+
+/// What the dev server banner above the terminal view `id` says while it shows.
+fn dev_server_banner(id: u64) -> Option<String> {
+    crate::terminal::dev_server_banner(id)?.shown()
+}
+
+/// The browser tabs of the window of terminal view `view`, by what they show.
+fn browsed(view: &TerminalView, part: &str) -> bool {
+    let window = ide_ui_common::window::WindowId::new(view.window_id().get());
+    ide_ui_browser::inspect(window)
+        .iter()
+        .any(|tab| tab.address.contains(part) || tab.url.as_deref().is_some_and(|url| url.contains(part)))
 }
 
 /// A title, a bell and text for the pasteboard, all sent by a program as escape sequences.
@@ -175,9 +190,11 @@ fn menu_and_paste(id: u64, root: PathBuf) {
         (t("Alles auswählen"), true),
         (t("Terminal leeren"), true),
         (t("Neues Terminal hier"), true),
+        (t("Bereich schließen"), true),
+        (t("Block an Agent übergeben"), true),
     ];
     check(
-        "the context menu offers the terminal's commands, Copy only with a selection",
+        "the context menu offers the terminal's commands and Block to Agent, Copy only with a selection",
         items.iter().map(|(title, on)| (title.as_str(), *on)).eq(expected),
         format!("{items:?}"),
     );
@@ -257,7 +274,7 @@ fn select_copy_clear(id: u64, root: PathBuf) {
             && told.is_some_and(|told| told.to_string() == selected),
         format!("{selected:?}"),
     );
-    perform(&view, sel!(ideClearTerminal:));
+    perform(&view, sel!(termClear:));
     wait(
         id,
         5,
@@ -302,12 +319,23 @@ fn hidden_output(id: u64, root: PathBuf) {
                     let view: &AnyObject = &view;
                     std::ptr::eq(responder, view)
                 });
-            check(
-                "output that arrives while the terminal is hidden is drawn once it shows, and it takes the focus back",
-                arrived && !drawn_hidden && drawn_has(&view, "tv-hidden") && focused,
-                format!("arrived {arrived}, drawn while hidden {drawn_hidden}, focused {focused}"),
+            // Tapa's view draws on a thread of its own, from which it takes the frame a moment after it shows.
+            wait(
+                id,
+                2,
+                |view| drawn_has(view, "tv-hidden"),
+                move |drawn| {
+                    check(
+                        "output that arrives while the terminal is hidden is drawn once it shows, and it takes the \
+                         focus back",
+                        arrived && !drawn_hidden && drawn && focused,
+                        format!(
+                            "arrived {arrived}, drawn while hidden {drawn_hidden}, then {drawn}, focused {focused}"
+                        ),
+                    );
+                    text_commands(id, root);
+                },
             );
-            text_commands(id, root);
         },
     );
 }
@@ -451,7 +479,7 @@ fn mouse_program(id: u64, root: PathBuf) {
             let Some(view) = inspect::view(id) else {
                 return give_up(NAME, "the terminal is open");
             };
-            let at = |line, column| view.cell_center(ide_terminal::Point { line, column });
+            let at = |line, column| view.cell_center(term_session::Point { line, column });
             press_button(&view, 1, at(1, 3));
             press_button(&view, 2, at(1, 4));
             press_button(&view, 3, at(1, 5));
@@ -494,45 +522,93 @@ fn history_wheel(id: u64, root: PathBuf) {
             let Some(view) = inspect::view(id) else {
                 return give_up(NAME, "the terminal is open");
             };
-            let at = view.cell_center(ide_terminal::Point { line: 3, column: 3 });
-            wheel(&view, 6, at, NSEventModifierFlags::empty());
-            let up = view.scrolled_back();
-            wheel(&view, -2, at, NSEventModifierFlags::Option);
-            let option = view.scrolled_back();
-            view.type_text("x");
-            wait(
+            let at = view.cell_center(term_session::Point { line: 3, column: 3 });
+            wheel_until(
                 id,
-                5,
-                |view| view.scrolled_back() == 0,
-                move |typed| {
-                    let Some(view) = inspect::view(id) else {
-                        return give_up(NAME, "the terminal is open");
-                    };
-                    wheel(&view, 6, at, NSEventModifierFlags::empty());
-                    let again = view.scrolled_back();
-                    view.commit("y");
-                    wait(
+                6,
+                at,
+                NSEventModifierFlags::empty(),
+                |back| back > 0,
+                move |up| {
+                    wheel_until(
                         id,
-                        5,
-                        |view| view.scrolled_back() == 0,
-                        move |committed| {
+                        -2,
+                        at,
+                        NSEventModifierFlags::Option,
+                        move |back| back < up,
+                        move |option| {
                             if let Some(view) = inspect::view(id) {
-                                for _ in 0..2 {
-                                    view.press(0x33, "\u{7f}", "\u{7f}", NSEventModifierFlags::empty());
-                                }
+                                view.type_text("x");
                             }
-                            check(
-                                "the wheel scrolls into the history, with ⌥ as well, and a key or text from an input \
-                                 method brings the end back",
-                                up > 0 && option < up && typed && again > 0 && committed,
-                                format!("{up}, then {option}, back {typed}, again {again}, back {committed}"),
+                            wait(
+                                id,
+                                5,
+                                |view| view.scrolled_back() == 0,
+                                move |typed| commit_after_wheel(id, root, at, (up, option, typed)),
                             );
-                            select_words(id, root);
                         },
                     );
                 },
             );
         },
+    );
+}
+
+/// The wheel turned back into the history once more, then text an input method commits; `before` is what the wheel
+/// did before: how far it went back, how far with ⌥ after, and whether a key brought the end back.
+fn commit_after_wheel(id: u64, root: PathBuf, at: NSPoint, before: (usize, usize, bool)) {
+    let (up, option, typed) = before;
+    wheel_until(
+        id,
+        6,
+        at,
+        NSEventModifierFlags::empty(),
+        |back| back > 0,
+        move |again| {
+            if let Some(view) = inspect::view(id) {
+                view.commit("y");
+            }
+            wait(
+                id,
+                5,
+                |view| view.scrolled_back() == 0,
+                move |committed| {
+                    if let Some(view) = inspect::view(id) {
+                        for _ in 0..2 {
+                            view.press(0x33, "\u{7f}", "\u{7f}", NSEventModifierFlags::empty());
+                        }
+                    }
+                    check(
+                        "the wheel scrolls into the history, with ⌥ as well, and a key or text from an input method \
+                         brings the end back",
+                        up > 0 && option < up && typed && again > 0 && committed,
+                        format!("{up}, then {option}, back {typed}, again {again}, back {committed}"),
+                    );
+                    select_words(id, root);
+                },
+            );
+        },
+    );
+}
+
+/// Turns the wheel as `wheel` does, then hands `then` how far the view is scrolled back once that is `shown`, or after
+/// two seconds; Tapa's view takes the scrolled screen from the session's reader thread a moment after the turn.
+fn wheel_until(
+    id: u64,
+    lines: i32,
+    at: NSPoint,
+    flags: NSEventModifierFlags,
+    shown: impl Fn(usize) -> bool + 'static,
+    then: impl FnOnce(usize) + 'static,
+) {
+    if let Some(view) = inspect::view(id) {
+        wheel(&view, lines, at, flags);
+    }
+    wait(
+        id,
+        2,
+        move |view| shown(view.scrolled_back()),
+        move |_| then(inspect::view(id).map_or(0, |view| view.scrolled_back())),
     );
 }
 
@@ -582,7 +658,7 @@ fn select_words(id: u64, root: PathBuf) {
                 .iter()
                 .position(|line| line == "tv-word other-word");
             let seen = line.map(|line| {
-                let at = |column| view.cell_center(ide_terminal::Point { line, column });
+                let at = |column| view.cell_center(term_session::Point { line, column });
                 click(&view, at(2), NSEventModifierFlags::empty(), 2);
                 let word = view.selection();
                 click(&view, at(12), NSEventModifierFlags::Shift, 1);
@@ -601,6 +677,21 @@ fn select_words(id: u64, root: PathBuf) {
     );
 }
 
+/// The line typed at the shell's prompt of `view`.
+fn typed(view: &TerminalView) -> Option<String> {
+    view.with_session(|session| session.typed_line())
+        .flatten()
+        .map(|(line, _)| line.text)
+}
+
+/// The saved copy of a pasted picture whose path, quoted as the shell needs it, is `line`.
+fn saved_picture(line: &str) -> Option<PathBuf> {
+    let path = PathBuf::from(line.trim().trim_matches('\''));
+    let png = std::fs::read(&path).ok()?;
+    (path.starts_with(term_session::paste::default_image_dir()) && png.starts_with(b"\x89PNG")).then_some(path)
+}
+
+/// Nothing is not welcome; a dropped picture goes in as the path of its saved copy, as a pasted one does.
 fn drops(id: u64, root: PathBuf) {
     let Some(view) = inspect::view(id) else {
         return give_up(NAME, "the terminal is open");
@@ -613,6 +704,29 @@ fn drops(id: u64, root: PathBuf) {
         constant!(NSPasteboardTypePNG),
     );
     let picture = view.drop_pasteboard(&pasteboard);
+    // SAFETY: `releaseGlobally` takes nothing; objc2 leaves it out because of its name.
+    let () = unsafe { msg_send![&*pasteboard, releaseGlobally] };
+    let saved = |view: &TerminalView| typed(view).as_deref().and_then(saved_picture).is_some();
+    wait(id, 5, saved, move |saved| {
+        let line = inspect::view(id).and_then(|view| typed(&view)).unwrap_or_default();
+        if let Some(view) = inspect::view(id) {
+            view.press(0x20, "\u{15}", "u", NSEventModifierFlags::Control);
+        }
+        let empty_line = |view: &TerminalView| typed(view).is_none_or(|line| line.trim().is_empty());
+        wait(id, 5, empty_line, move |_| {
+            drop_file_and_text(id, root, (empty, picture, saved), line);
+        });
+    });
+}
+
+/// A dropped file goes in as its path and dropped text as itself; `before` is what the drops of nothing and of a
+/// picture did and whether the picture's copy was saved, `picture_line` the command line the picture left.
+fn drop_file_and_text(id: u64, root: PathBuf, before: ((bool, bool), (bool, bool), bool), picture_line: String) {
+    let Some(view) = inspect::view(id) else {
+        return give_up(NAME, "the terminal is open");
+    };
+    let (empty, picture, saved) = before;
+    let pasteboard = NSPasteboard::pasteboardWithUniqueName();
     pasteboard.clearContents();
     let file = NSURL::fileURLWithPath(&NSString::from_str(&root.join("README.md").to_string_lossy()));
     let objects: Retained<NSArray<objc2::runtime::ProtocolObject<dyn NSPasteboardWriting>>> =
@@ -631,14 +745,16 @@ fn drops(id: u64, root: PathBuf) {
     };
     wait(id, 5, shown, move |shown| {
         check(
-            "a dropped file goes in as its path and dropped text as itself; a picture is welcome, nothing is not",
+            "nothing dropped is not welcome; a dropped picture goes in as the path of its saved copy, a dropped file \
+             as its path and dropped text as itself",
             shown
                 && empty == (false, false)
-                && picture == (true, false)
+                && picture == (true, true)
+                && saved
                 && dropped_file == (true, true)
                 && dropped_text == (true, true),
             format!(
-                "{empty:?} {picture:?} {dropped_file:?} {dropped_text:?} | {}",
+                "{empty:?} {picture:?} {picture_line:?} {dropped_file:?} {dropped_text:?} | {}",
                 screen(id)
             ),
         );
@@ -669,26 +785,33 @@ fn links(id: u64, root: PathBuf) {
                 .iter()
                 .position(|line| line == printed)
                 .unwrap_or(0);
-            let at = |column| view.cell_center(ide_terminal::Point { line, column });
+            let at = |column| view.cell_center(term_session::Point { line, column });
             let command = NSEventModifierFlags::Command;
             let tabs = controller.tab_ids();
             view.mouse(NSEventType::LeftMouseDown, at(8), command);
             view.mouse(NSEventType::LeftMouseUp, at(8), command);
-            let browsed = ide_ui_browser::inspect(view.window_id()).iter().any(|tab| {
-                tab.address.contains("tv-link") || tab.url.as_deref().is_some_and(|url| url.contains("tv-link"))
-            });
+            let browsed = browsed(&view, "tv-link");
             view.mouse(NSEventType::LeftMouseDown, at(30), command);
             view.mouse(NSEventType::LeftMouseUp, at(30), command);
-            let titles = controller.tab_titles();
-            check(
-                "⌘-click opens a web address in a browser tab and ~/file in an editor",
-                browsed && titles.iter().any(|title| title == "tv-note.txt"),
-                titles.join(" | "),
-            );
-            for tab in controller.tab_ids().into_iter().filter(|tab| !tabs.contains(tab)) {
-                controller.close_tab(tab);
-            }
-            dev_server(id, root);
+            // The view looks for the file off the main thread, so its editor opens a moment after the click.
+            let window = root.clone();
+            let edited = move || {
+                controller_of(&window).is_some_and(|c| c.tab_titles().iter().any(|title| title == "tv-note.txt"))
+            };
+            helpers::wait_within(Duration::from_secs(5), edited, move |edited| {
+                let Some(controller) = controller_of(&root) else {
+                    return give_up(NAME, "the folder's window is open");
+                };
+                check(
+                    "⌘-click opens a web address in a browser tab and ~/file in an editor",
+                    browsed && edited,
+                    controller.tab_titles().join(" | "),
+                );
+                for tab in controller.tab_ids().into_iter().filter(|tab| !tabs.contains(tab)) {
+                    controller.close_tab(tab);
+                }
+                dev_server(id, root);
+            });
         },
     );
 }
@@ -702,29 +825,27 @@ fn dev_server(id: u64, root: PathBuf) {
     wait(
         id,
         5,
-        |view| view.dev_server_banner().is_some(),
+        |view| dev_server_banner(view.id()).is_some(),
         move |raised| {
-            let Some(view) = inspect::view(id) else {
-                return give_up(NAME, "the terminal is open");
+            let (Some(view), Some(banner)) = (inspect::view(id), crate::terminal::dev_server_banner(id)) else {
+                return give_up(NAME, "the terminal and its dev server banner are open");
             };
-            perform(&view, sel!(ideDismissDevServer:));
-            let dismissed = view.dev_server_banner().is_none();
+            perform(&banner, sel!(ideDismissDevServer:));
+            let dismissed = banner.shown().is_none();
             view.type_text("printf '  ➜  Local:   http://127.0.0.1:41002/\\n'\r");
             wait(
                 id,
                 5,
-                |view| view.dev_server_banner().is_some_and(|b| b.contains("41002")),
+                |view| dev_server_banner(view.id()).is_some_and(|b| b.contains("41002")),
                 move |again| {
-                    let Some(view) = inspect::view(id) else {
-                        return give_up(NAME, "the terminal is open");
+                    let (Some(view), Some(banner)) = (inspect::view(id), crate::terminal::dev_server_banner(id)) else {
+                        return give_up(NAME, "the terminal and its dev server banner are open");
                     };
-                    perform(&view, sel!(ideOpenDevServer:));
-                    let opened = ide_ui_browser::inspect(view.window_id()).iter().any(|tab| {
-                        tab.address.contains("41002") || tab.url.as_deref().is_some_and(|url| url.contains("41002"))
-                    });
+                    perform(&banner, sel!(ideOpenDevServer:));
+                    let opened = browsed(&view, "41002");
                     check(
                         "the dev server banner closes, and its button opens the address in a browser tab and closes it too",
-                        raised && dismissed && again && opened && view.dev_server_banner().is_none(),
+                        raised && dismissed && again && opened && banner.shown().is_none(),
                         format!("raised {raised}, dismissed {dismissed}, again {again}, opened {opened}"),
                     );
                     beside(id, root);
@@ -740,7 +861,7 @@ fn beside(id: u64, root: PathBuf) {
         return give_up(NAME, "the terminal and the folder's window are open");
     };
     let tabs = controller.tab_count();
-    perform(&view, sel!(ideNewTerminalHere:));
+    perform(&view, sel!(termNewHere:));
     let opened = inspect::latest().filter(|(other, _)| *other != id);
     check(
         "\"Neues Terminal hier\" opens a terminal tab in the terminal's folder",

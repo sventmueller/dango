@@ -12,7 +12,7 @@ Dango meletakkan kod, ejen yang mengubahnya dan segala-galanya di sekelilingnya 
 
 **Menemui pepijat?** [Buka issue](https://github.com/sventmueller/dango/issues/new) dan nyatakan dengan ejen mana dan dalam jenis projek apa ia berlaku.
 
-[![Rust edisi 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 atau lebih baharu](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universal: Apple Silicon dan Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit melalui objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35 bahasa antara muka](https://img.shields.io/badge/languages-35-4C9A2A) ![Tiada telemetri](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Ditandatangani dengan Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Lesen: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#lesen)
+[![Rust edisi 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 atau lebih baharu](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Universal: Apple Silicon dan Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit melalui objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35 bahasa antara muka](https://img.shields.io/badge/languages-35-4C9A2A) ![Tiada telemetri](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Ditandatangani dengan Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Lesen: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#lesen)
 
 [Bahasa Indonesia](../id/README.md) · **Bahasa Melayu** · [Català](../ca/README.md) · [Čeština](../cs/README.md) · [Dansk](../da/README.md) · [Deutsch](../de/README.md) · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · [Magyar](../hu/README.md) · [Nederlands](../nl/README.md) · [Norsk](../no/README.md) · [Polski](../pl/README.md) · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · [Română](../ro/README.md) · [Slovenčina](../sk/README.md) · [Slovenščina](../sl/README.md) · [Suomi](../fi/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [繁體中文](../zh-Hant/README.md)
 
@@ -55,6 +55,7 @@ Dango meletakkan kod, ejen yang mengubahnya dan segala-galanya di sekelilingnya 
 - **Satu tetingkap bagi setiap folder.** Fail, terminal, halaman pelayar, thread AI, paparan perbezaan dan pratonton ialah tab macOS dalam tetingkap itu. Bar sisi memuatkan Fail, Carian, Ejen, Git, Ujian, Nyahpepijat, CI dan Container.
 - **Editor kod sebenar.** Warna sintaks, beberapa kursor, lipatan, `.editorconfig`, pelayan bahasa untuk 17 bahasa dengan pelengkapan, pergi ke definisi, rujukan, nama semula, pembetulan pantas dan hierarki, serta ramalan semasa menaip daripada GitHub Copilot atau model setempat.
 - **Penyahpepijat, Git dan CI terbina dalam.** Titik henti dan langkah demi langkah untuk Rust, C, C++, Swift, Go, JavaScript, TypeScript dan Python; stage hunk tunggal, branch, stash, konflik dan graf commit; larian, job dan log daripada GitHub Actions dan GitLab CI.
+- **Terminal daripada Tapa.** Blok perintah yang outputnya boleh anda salin, simpan atau serahkan kepada ejen, medan input dengan cadangan daripada sejarah anda dan projek, carian merentas seluruh sejarah, serta pemberitahuan dan kemajuan daripada program di dalamnya.
 - **Berhati-hati dengan folder anda.** Folder yang belum anda percayai tidak memulakan apa-apa: tiada proses Git, pelayan bahasa, hook atau ejen. Perintah Git yang merosakkan tidak pernah dibenarkan secara kekal, dan commit disemak untuk rahsia.
 - **Perencanaan.** Bercakap ke dalam editor dan medan mesej, dalam talian melalui OpenAI atau Groq atau secara setempat dengan Whisper dan Parakeet.
 - **Asli hingga ke teras.** Tetingkap, tab, menu dan bar alat AppKit, TextKit 2 untuk editor, Metal untuk terminal, WebKit hanya dalam tab pelayar. Mod Gelap, Tingkatkan Kontras dan VoiceOver berfungsi seperti dalam setiap apl Mac.
@@ -84,7 +85,7 @@ Dango meletakkan kod, ejen yang mengubahnya dan segala-galanya di sekelilingnya 
 3. **Setiap dokumen ialah tab** dalam tetingkap folder, iaitu tab macOS sendiri. “+” di hujung bar tab dan ⌘T menawarkan fail baharu, terminal, pelayar dan setiap ejen yang dipasang, juga dalam worktree Git tersendiri; menahan “+” menunjukkan perkara yang sama sebagai menu.
 4. **Buka Dengan Pantas** dengan ⌘P mencari fail, dan dengan `#` mencari simbol projek; ⇧⌘F mencari dan menggantikan dalam projek.
 5. **Bercakap dengan ejen** dalam tab AI. ⌘Esc mengalihkan fokus papan kekunci ke medan mesejnya dan kembali.
-6. **Seting** dengan ⌘, memuatkan tab Umum, CI, Ejen, Ejen Terbina Dalam, Pelayan bahasa, Perencanaan dan Ramalan.
+6. **Seting** dengan ⌘, memuatkan tab Umum, Terminal, CI, Ejen, Software Factory, Ejen Terbina Dalam, Pelayan bahasa, Perencanaan dan Ramalan.
 
 Bar alat memuatkan undur dan maju melalui tempat yang anda sunting (⌃- dan ⌃⇧-), branch, Buka Dengan Pantas dan gambaran keseluruhan Aktiviti, yang menyenaraikan semua yang sedang berjalan. **Buka di Sebelah** dalam menu konteks fail menunjukkan dokumen kedua di sebelah dokumen pertama. Selepas mula semula, atau ranap, setiap tetingkap kembali dengan tabnya, dan editor yang mempunyai teks belum disimpan kembali bersama teks itu. Imej, audio, video, fon dan dokumen Office dibuka dalam tab melalui Quick Look, PDF melalui PDFKit.
 
@@ -155,7 +156,22 @@ Titik henti, juga dengan syarat dan sebagai titik log, langkah demi langkah, thr
 
 ## Terminal
 
-Terminal dalam tab (⌃\`) dengan persekitaran shell log masuk, dilukis dengan Metal. ⌘K mengosongkan skrin. Imej yang ditampal atau dilepaskan diserahkan kepada ejen pengekodan yang berjalan dalam terminal, atau laluan salinan yang disimpan ditampal. ⌘-klik membuka pautan dan nama fail. Pelayan pembangunan yang dimulakan oleh terminal boleh dibuka dalam tab pelayar.
+Terminal dibuka sebagai tab (**Fail › Terminal Baharu**, ⌃\`) dengan shell log masuk dan persekitarannya. Terminal itu ialah terminal [Tapa](https://github.com/sventmueller/tapa), dengan teras VT sendiri, dilukis dengan Metal: xterm dan VT520 dengan protokol papan kekunci Kitty, pautan OSC 8, output segerak, truecolor dan pelaporan tetikus, dalam saiz teks editor serta warna cerah dan gelap Tapa. Integrasi shellnya untuk zsh, bash dan fish menyediakan dirinya sendiri tanpa menyentuh fail konfigurasi anda dan turut dibawa apabila anda `ssh` ke hos lain. Selepas mula semula, terminal kembali sebagai shell baharu dalam folder tempat ia berada, hanya dalam folder yang dipercayai; apa yang ditunjukkannya tidak kembali.
+
+- **Blok perintah.** Setiap perintah dan outputnya membentuk satu blok. ⌘↑ dan ⌘↓ melompat antara prompt. **Pilih Blok** (⇧⌘A), **Salin Output** (⌥⌘C), **Simpan Output…** (⌥⌘S) dan **Kuncupkan/Kembangkan Blok** (⇧⌘↩) bertindak pada blok semasa; **Tambah/Buang Penanda Buku** (⇧⌘M) menandakan satu baris, dan ⇧⌘↑ dan ⇧⌘↓ melompat antara penanda buku. Apabila **Tandakan perintah sebagai blok** dihidupkan, satu bar di jidar menunjukkan setiap blok, perintah yang gagal ditandakan, perintah yang sedang berjalan kekal di bahagian atas semasa outputnya menatal, dan butang di atas blok di bawah penuding menunjukkan status, tempoh dan tindakan yang sama.
+- **Hantar Blok kepada Ejen** (menu Edit dan menu konteks terminal) membuka tab AI baharu dengan baris perintah dan output blok semasa dilampirkan sebagai Kandungan Luaran (lihat [Kepercayaan](#kepercayaan)), serta draf yang bertanya tentang puncanya apabila perintah gagal, seperti yang dilakukan oleh log job CI yang gagal. Ia tidak mempunyai pintasan sehingga anda memberikan satu kepada `terminal.blockToAgent` dalam `keybindings.json`.
+- **Medan input.** **Paparan › Tunjukkan/Sembunyikan Medan Input** (⌘I) menukar baris perintah menjadi medan teks di bahagian bawah terminal, dengan folder dan branch Git di atasnya; terminal baharu mengikut pilihan terakhir anda. Return menghantar seluruh medan ke shell. Ia memerlukan integrasi shell dan memberi laluan kepada program skrin penuh seperti vim, htop atau claude.
+- **Cadangan** ditunjukkan dalam warna kelabu sejurus selepas apa yang anda taip, dalam medan input dan tanpanya: daripada sejarah anda, dengan folder, branch dan kod keluar setiap perintah semasa ia dijalankan, daripada spesifikasi bagi lebih 700 alat baris perintah, dan daripada projek, seperti branch git, bekas docker, skrip `package.json` serta sasaran make, just dan cargo. → menerima cadangan; Tab melengkapkan, dan apabila ada beberapa calon membuka menu yang ditapis semasa anda menaip. Sebelum anda menaip, medan boleh mencadangkan perintah yang biasanya datang seterusnya. Perintah diwarnakan mengikut bahagiannya, dan perintah yang tidak boleh dijalankan oleh shell anda mendapat garis bawah merah putus-putus. Cadangan tidak pernah menggunakan rangkaian dan hanya memulakan program daripada `PATH` shell log masuk.
+- **Cari** (⌘F, ⌘G dan ⇧⌘G semasa terminal mempunyai fokus) mencari seluruh sejarah, dengan ungkapan nalar, huruf besar-kecil dan perkataan penuh, serta mengira hasil; bar tatal menandakan hasil, prompt dan perintah yang gagal.
+- **Memilih dan menyalin.** Klik dua kali memilih URL, laluan, cincangan atau alamat IP secara keseluruhan, dan seret dengan ⌥ memilih segi empat tepat. **Pilih dengan Papan Kekunci** (⇧⌘C) mengalihkan pilihan dengan kekunci Vim, **Salin dengan Format** (⇧⌥⌘C) mengekalkan warna dan gaya. Program hanya boleh menyalin dengan OSC 52 semasa terminalnya mempunyai fokus papan kekunci, dan terminal memaklumkannya; tiada program yang membaca papan klip.
+- **Menampal.** Teks yang akan menjalankan perintah pada pemisah barisnya, atau mengandungi aksara kawalan, ditunjukkan dahulu dalam helaian melainkan program membacanya sebagai bracketed paste. Menampal imej menyerahkannya kepada ejen pengekodan yang berjalan dalam terminal, yang membacanya sendiri daripada papan klip, atau menampal laluan salinan yang disimpan dalam cache; melalui `ssh` terminal memberitahu mengapa ia tidak berbuat demikian. Fail yang dilepaskan pada terminal, termasuk gambar, tiba sebagai laluan berpetik; gambar yang dilepaskan dari tempat lain, seperti halaman web, dikendalikan seperti gambar yang ditampal.
+- **Pautan.** ⌘-klik membuka alamat web dalam tab pelayar, pautan `mailto:` dalam Mail, dan nama fail, juga dengan baris dan lajurnya, dalam editor Dango; pautan ditemui walaupun tanpa OSC 8. Pautan jenis lain tidak dibuka.
+- **Pelayan pembangunan.** Apabila program dalam terminal memulakan pelayan pembangunan, satu bar di atas terminal menamakan alamatnya, dan **Buka dalam Tab Pelayar** membukanya di situ.
+- **Pemberitahuan dan kemajuan.** Loceng dan pemberitahuan yang diminta oleh program (OSC 9 dan OSC 777) meletakkan titik merah pada tab terminal semasa anda tidak melihatnya; semasa app lain berada di hadapan, pemberitahuan juga dihantar ke macOS, dan mengkliknya membawa terminal kembali. Kemajuan yang dilaporkan oleh program (OSC 9;4) ditunjukkan sebagai gelang pada tabnya dan sebagai bar pada ikon Dock.
+- **Entri Papan Kekunci Selamat** (**Dango › Entri Papan Kekunci Selamat**) menghalang app lain daripada membaca apa yang anda taip ke dalam terminal; ia juga menghidupkan dirinya sendiri semasa program meminta kata laluan.
+- **Kekunci.** ⌘K mengosongkan terminal (**Edit › Kosongkan Terminal**); ⌃C dan Esc pergi kepada program di dalamnya. Perintah terminal terdapat dalam menu Edit dan Paparan, dan pintasannya hanya bertindak semasa terminal mempunyai fokus papan kekunci, jadi ⌘I, ⌘↑ atau ⌘F mengekalkan maksudnya dalam editor. Menu konteks juga membuka **Terminal Baharu di Sini** dan menutup terminal dengan **Tutup Kawasan**.
+
+**Seting › Terminal** menghidupkan dan mematikan medan input untuk terminal baharu, kekunci Vimnya, cadangan, pewarnaan perintah, garis bawah bagi perintah yang tidak dikenali, blok perintah, penyalinan pilihan serta-merta, menunjukkan tampalan berbilang baris dahulu dan ⌥ sebagai kekunci Meta.
 
 ## Pelayar
 
@@ -205,7 +221,7 @@ Folder boleh menyebabkan program berjalan sebaik sahaja sesuatu dimulakan di dal
 - **Dipercayai:** Git, pelayan bahasa, penyahpepijat, ejen dan CI berjalan untuk folder ini dan semua yang berada di bawahnya.
 - **Terhad:** anda boleh membaca dan menyunting; tanda perubahan dalam editor datang daripada membaca `.git` secara terus. Tiada apa-apa yang dikonfigurasikan oleh folder dimulakan. Panel Git, CI dan AI memaklumkan hal ini dan menawarkan untuk mempercayai folder itu.
 
-Teks yang tidak datang daripada anda boleh membawa arahan yang bertujuan untuk mengemudi ejen (prompt injection). Oleh itu, output terminal (`@terminal`), halaman pelayar (`@browser`), log CI yang diserahkan kepada ejen, fail di luar projek dan teks yang lebih panjang yang ditampal daripada halaman web dihantar dengan tanda: cip menyatakan “Kandungan Luaran”, dan ejen menerima teks itu dengan notis bahawa ia ialah data tidak dipercayai yang arahannya tidak boleh diikuti. Halaman web ejen terbina dalam datang dengan notis yang sama. Teks yang ditampal dikira sebagai datang daripada halaman web apabila pelayar menyatakannya pada papan klip, seperti yang dilakukan oleh Safari, Chrome dan Firefox; teks dari tempat lain, dan frasa pendek beberapa perkataan, kekal sebagai milik anda.
+Teks yang tidak datang daripada anda boleh membawa arahan yang bertujuan untuk mengemudi ejen (prompt injection). Oleh itu, output terminal (`@terminal`, atau blok perintah yang diserahkan kepada ejen), halaman pelayar (`@browser`), log CI yang diserahkan kepada ejen, fail di luar projek dan teks yang lebih panjang yang ditampal daripada halaman web dihantar dengan tanda: cip menyatakan “Kandungan Luaran”, dan ejen menerima teks itu dengan notis bahawa ia ialah data tidak dipercayai yang arahannya tidak boleh diikuti. Halaman web ejen terbina dalam datang dengan notis yang sama. Teks yang ditampal dikira sebagai datang daripada halaman web apabila pelayar menyatakannya pada papan klip, seperti yang dilakukan oleh Safari, Chrome dan Firefox; teks dari tempat lain, dan frasa pendek beberapa perkataan, kekal sebagai milik anda.
 
 ## Sandbox
 
@@ -221,9 +237,9 @@ Dango sendiri berjalan tanpa App Sandbox, kerana setiap program yang dimulakanny
 ## Penampilan dan kebolehcapaian
 
 - **Mod Gelap** mengikut sistem; **Tingkatkan Kontras** dan **Kurangkan Gerakan** dipatuhi.
-- **VoiceOver** menamakan bar sisi, tab, kad dalam garis masa AI, baris Git dan CI, penyahpepijat dan teks terminal. Titik henti tidak pernah dibezakan dengan warna sahaja.
+- **VoiceOver** menamakan bar sisi, tab, kad dalam garis masa AI, baris Git dan CI serta penyahpepijat, membacakan baris terminal dan mengumumkan output baharu. Titik henti tidak pernah dibezakan dengan warna sahaja.
 - **Papan kekunci.** Setiap perintah mempunyai pintasan, dan semuanya boleh diubah dalam `keybindings.json`; ⌥⌘\` beralih ke panel seterusnya.
-- **Kanan ke kiri.** Dalam bahasa Arab dan Ibrani, tetingkap dicerminkan, manakala paparan kod kekal dari kiri ke kanan.
+- **Kanan ke kiri.** Dalam bahasa Arab dan Ibrani, tetingkap dicerminkan, manakala paparan kod dan grid terminal kekal dari kiri ke kanan.
 
 Apa yang ditambah oleh Dango di atas AppKit, mengikut bidang, terdapat dalam [ACCESSIBILITY.md](../../../ACCESSIBILITY.md).
 
@@ -257,6 +273,10 @@ Dango mengikut susunan bahasa dalam **Seting Sistem › Umum › Bahasa & Rantau
 | Tebal, condong, garis lorek, kod, pautan | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | Tajuk 1 hingga 3 | ⌥⌘1 hingga ⌥⌘3 |
 | Terminal baharu, kosongkan terminal | ⌃\`, ⌘K |
+| Dalam terminal: cari, cari seterusnya, cari sebelumnya | ⌘F, ⌘G, ⇧⌘G |
+| Dalam terminal: prompt sebelumnya dan seterusnya, penanda buku sebelumnya dan seterusnya, tambah atau buang penanda buku | ⌘↑ dan ⌘↓, ⇧⌘↑ dan ⇧⌘↓, ⇧⌘M |
+| Dalam terminal: pilih blok, salin output, simpan output, kuncupkan blok | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| Dalam terminal: medan input, pilih dengan papan kekunci, salin dengan format | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | Fokus pada medan mesej ejen, ulas pelan | ⌘Esc, ⌥⌘K |
 | Medan alamat, muat semula, undur, maju (pelayar) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Mulakan atau hentikan perencanaan | ⌃⌥D |
@@ -282,7 +302,7 @@ Dango mengikut susunan bahasa dalam **Seting Sistem › Umum › Bahasa & Rantau
 
 | Tempat | Kandungan |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`; `threads/` (senarai panel AI), `agent-threads/` (perbualan ejen terbina dalam), `layouts/` (tab bagi setiap projek), `recovery/` (editor yang belum disimpan selepas ranap), `checkpoints/` (untuk folder tanpa Git), `worktrees/`, `agents/` dan `tools/` (ejen, pelayan bahasa dan penyesuai nyahpepijat yang dipasang), `task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`, `terminal-history.sqlite` (sejarah perintah terminal); `threads/` (senarai panel AI), `agent-threads/` (perbualan ejen terbina dalam), `layouts/` (tab bagi setiap projek), `recovery/` (editor yang belum disimpan selepas ranap), `checkpoints/` (untuk folder tanpa Git), `worktrees/`, `agents/` dan `tools/` (ejen, pelayan bahasa dan penyesuai nyahpepijat yang dipasang), `task-output/` |
 | `~/Library/Caches/<id>/` | imej yang ditampal, skrip integrasi shell, registry ACP; boleh dipadam |
 | `~/Library/Logs/<id>/dictation/` | fail log perencanaan |
 | `~/Library/Application Support/Lowspeak` dan `FluidAudio` | model perencanaan setempat, dikongsi dengan Lowspeak |
@@ -300,6 +320,7 @@ Claude menyimpan sesinya sendiri di bawah `~/.claude/projects`; Dango membacanya
 - **Angka penggunaan dan pecahan konteks Claude** bergantung pada bahagian protokolnya yang ditanda sebagai eksperimen, dan disembunyikan apabila bahagian itu tiada.
 - **Memutar balik perbualan** hanya berfungsi untuk Claude; bagi ejen lain, hanya kod yang diputar balik.
 - **Daftar masuk ke CI melalui pelayar** dimatikan; gunakan `gh`, `glab`, token atau persekitaran.
+- **Tiada gambar di dalam terminal:** grafik Kitty, Sixel dan gambar iTerm2 tidak dipaparkan.
 - **Gemini CLI tidak ditawarkan:** Google telah menamatkan daftar masuk dengan akaun peribadi dan mengarahkan pengguna ke Antigravity. Thread Gemini yang terdahulu kekal boleh dibaca.
 
 ## Membina daripada sumber
@@ -308,7 +329,7 @@ Anda memerlukan:
 
 - macOS 14 atau lebih baharu dengan Xcode Command Line Tools (`xcode-select --install`); Xcode sendiri tidak diperlukan.
 - Rust seperti yang dinyatakan oleh `rust-toolchain.toml`. `rust` daripada Homebrew membina untuk pemproses Mac ini; binaan universal untuk keluaran memerlukan rustup dengan sasaran `aarch64-apple-darwin` dan `x86_64-apple-darwin`.
-- Salinan [splat](https://github.com/sventmueller/splat) dan [lowspeak](https://github.com/sventmueller/lowspeak) di sebelah salinan ini (`../splat`, `../lowspeak`), kedua-duanya pada branch `main`; ruang kerja mengambil crate daripada kedua-duanya melalui laluan.
+- Salinan [splat](https://github.com/sventmueller/splat), [lowspeak](https://github.com/sventmueller/lowspeak) dan [tapa](https://github.com/sventmueller/tapa) di sebelah salinan ini (`../splat`, `../lowspeak`, `../tapa`), setiap satu pada branch `main`; ruang kerja mengambil crate daripadanya melalui laluan, terminal daripada Tapa.
 - cmake, untuk setiap binaan dengan perencanaan (`make run`, `make build`, `make release`), yang membina whisper.cpp. `make check` membina tanpanya.
 
 | Perintah | Fungsinya |

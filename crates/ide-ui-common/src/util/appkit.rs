@@ -244,9 +244,21 @@ fn key_equivalent(name: &str) -> String {
 
 /// A menu item with a key equivalent written like `alt+cmd+p`; see `ide_core::keymap`.
 pub fn item(mtm: MainThreadMarker, title: &str, action: Option<Sel>, key: &str) -> Retained<NSMenuItem> {
+    assert!(
+        action.is_none_or(|action| arguments_of(action) <= 1),
+        "{action:?} takes more than the sender"
+    );
+    // SAFETY: With at most one argument, checked above, the action takes nothing but the sender AppKit passes.
+    let item =
+        unsafe { NSMenuItem::initWithTitle_action_keyEquivalent(NSMenuItem::alloc(mtm), &ns(title), action, &ns("")) };
+    set_shortcut(&item, key);
+    item
+}
+
+/// Gives `item` the key equivalent written like `alt+cmd+p`, or takes its key equivalent away for an empty one.
+pub fn set_shortcut(item: &NSMenuItem, key: &str) {
     let (modifiers, equivalent) = ide_core::keymap::split(key).unwrap_or((vec![], ""));
     let equivalent = key_equivalent(equivalent);
-    let equivalent = equivalent.as_str();
     let mut mask = NSEventModifierFlags::empty();
     for modifier in modifiers {
         mask |= match modifier {
@@ -257,18 +269,10 @@ pub fn item(mtm: MainThreadMarker, title: &str, action: Option<Sel>, key: &str) 
             _ => NSEventModifierFlags::empty(),
         };
     }
-    assert!(
-        action.is_none_or(|action| arguments_of(action) <= 1),
-        "{action:?} takes more than the sender"
-    );
-    // SAFETY: With at most one argument, checked above, the action takes nothing but the sender AppKit passes.
-    let item = unsafe {
-        NSMenuItem::initWithTitle_action_keyEquivalent(NSMenuItem::alloc(mtm), &ns(title), action, &ns(equivalent))
-    };
+    item.setKeyEquivalent(&ns(&equivalent));
     if !equivalent.is_empty() {
         item.setKeyEquivalentModifierMask(mask);
     }
-    item
 }
 
 /// A menu item whose tag tells its action which of several things it means.

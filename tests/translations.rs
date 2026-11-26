@@ -78,6 +78,10 @@ fn used_keys() -> BTreeSet<String> {
     rust_files(&root().join("crates"), &mut files);
     // The render path of the previews asks for its texts in the app's tables (docs/splat-render.md).
     rust_files(&root().join("../splat/crates/splat-render/src"), &mut files);
+    // Tapa's terminal asks for its texts in the app's tables too (docs/phase-14.md, stage 7).
+    for part in ["term-ui", "term-base"] {
+        rust_files(&root().join("../tapa/crates").join(part).join("src"), &mut files);
+    }
     files
         .iter()
         .filter_map(|f| std::fs::read_to_string(f).ok())

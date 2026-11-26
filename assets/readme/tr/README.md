@@ -12,7 +12,7 @@ Dango kodu, onu değiştiren ajanları ve çevrelerindeki her şeyi her klasör 
 
 **Bir hata mı buldunuz?** [Bir issue açın](https://github.com/sventmueller/dango/issues/new) ve hatanın hangi ajanla ve ne tür bir projede ortaya çıktığını belirtin.
 
-[![Rust, 2024 sürümü](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 veya üstü](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Evrensel: Apple Silicon ve Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![objc2 ile AppKit](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35 arayüz dili](https://img.shields.io/badge/languages-35-4C9A2A) ![Telemetri yok](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Hardened Runtime ile imzalı](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Lisans: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#lisans)
+[![Rust, 2024 sürümü](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 veya üstü](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Evrensel: Apple Silicon ve Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![objc2 ile AppKit](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35 arayüz dili](https://img.shields.io/badge/languages-35-4C9A2A) ![Telemetri yok](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Hardened Runtime ile imzalı](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Lisans: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#lisans)
 
 [Bahasa Indonesia](../id/README.md) · [Bahasa Melayu](../ms/README.md) · [Català](../ca/README.md) · [Čeština](../cs/README.md) · [Dansk](../da/README.md) · [Deutsch](../de/README.md) · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · [Magyar](../hu/README.md) · [Nederlands](../nl/README.md) · [Norsk](../no/README.md) · [Polski](../pl/README.md) · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · [Română](../ro/README.md) · [Slovenčina](../sk/README.md) · [Slovenščina](../sl/README.md) · [Suomi](../fi/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · **Türkçe** · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [繁體中文](../zh-Hant/README.md)
 
@@ -55,6 +55,7 @@ Dango kodu, onu değiştiren ajanları ve çevrelerindeki her şeyi her klasör 
 - **Her klasör için bir pencere.** Dosyalar, terminaller, tarayıcı sayfaları, AI sohbetleri, diff’ler ve önizlemeler o pencerenin macOS sekmeleridir. Kenar çubuğunda Dosyalar, Arama, Ajanlar, Git, Testler, Hata Ayıkla, CI ve Container’lar bulunur.
 - **Gerçek bir kod düzenleyici.** Sözdizimi renkleri, birden fazla imleç, katlama, `.editorconfig`, tamamlama, tanıma git, başvurular, yeniden adlandırma, hızlı düzeltmeler ve hiyerarşilerle 17 dil için dil sunucuları ve GitHub Copilot’tan ya da yerel bir modelden düzenleme tahminleri.
 - **Hata ayıklayıcı, Git ve CI yerleşik.** Rust, C, C++, Swift, Go, JavaScript, TypeScript ve Python için kesme noktaları ve adım adım ilerleme; tek tek parçaları hazırlama, dallar, stash’ler, çakışmalar ve bir commit grafiği; GitHub Actions ve GitLab CI’dan çalıştırmalar, işler ve günlükler.
+- **Tapa’nın terminali.** Çıktısını kopyaladığınız, kaydettiğiniz ya da bir ajana verdiğiniz komut blokları, geçmişinizden ve projeden öneriler sunan bir giriş alanı, tüm geçmişte arama ve içindeki programlardan bildirimler ve ilerleme.
 - **Klasörlerinize karşı özenli.** Güvenmediğiniz bir klasör hiçbir şey başlatmaz: Git işlemleri, dil sunucuları, hook’lar ya da ajanlar çalışmaz. Yıkıcı Git komutlarına hiçbir zaman kalıcı olarak izin verilmez ve commit’ler gizli bilgiler için denetlenir.
 - **Dikte.** Düzenleyiciye ve ileti alanına konuşun; çevrimiçi olarak OpenAI ya da Groq üzerinden veya yerel olarak Whisper ve Parakeet ile.
 - **Özüne kadar yerel.** AppKit pencereleri, sekmeleri, menüleri ve araç çubukları, düzenleyici için TextKit 2, terminal için Metal, WebKit yalnızca tarayıcı sekmesinde. Koyu mod, Karşıtlığı Artır ve VoiceOver her Mac uygulamasında olduğu gibi çalışır.
@@ -84,7 +85,7 @@ Dango kodu, onu değiştiren ajanları ve çevrelerindeki her şeyi her klasör 
 3. **Her belge bir sekmedir;** klasörün penceresinde, macOS’in kendi sekmeleriyle. Sekme çubuğunun sonundaki “+” ve ⌘T yeni bir dosya, bir terminal, tarayıcı ve kurulu her ajanı sunar, kendine ait bir Git worktree’sinde de; “+” düğmesini basılı tutmak aynı seçenekleri menü olarak gösterir.
 4. **Hızlı Aç** ⌘P ile dosyaları, `#` ile de projenin sembollerini bulur; ⇧⌘F projede arar ve değiştirir.
 5. **Bir ajanla konuşun:** bir AI sekmesinde. ⌘Esc klavye odağını ajanın ileti alanına taşır ve geri getirir.
-6. **Ayarlar** (⌘,) Genel, CI, Ajanlar, Yerleşik Ajan, Dil sunucusu, Dikte ve Tahmin sekmelerini içerir.
+6. **Ayarlar** (⌘,) Genel, Terminal, CI, Ajanlar, Software Factory, Yerleşik Ajan, Dil sunucusu, Dikte ve Tahmin sekmelerini içerir.
 
 Araç çubuğunda düzenlediğiniz yerler arasında geri ve ileri gitme (⌃- ve ⌃⇧-), dal, Hızlı Aç ve çalışan her şeyi listeleyen Etkinlik genel görünümü bulunur. Bir dosyanın bağlam menüsündeki **Yanda Aç** ikinci bir belgeyi ilkinin yanında gösterir. Yeniden başlatma ya da çökme sonrasında her pencere sekmeleriyle geri gelir; kaydedilmemiş metin içeren düzenleyiciler de bu metinle birlikte geri gelir. Görüntüler, ses, video, fontlar ve Office belgeleri bir sekmede Quick Look ile, PDF’ler PDFKit ile açılır.
 
@@ -155,7 +156,22 @@ Projenin `.vscode/launch.json` dosyası okunur. Hata Ayıkla menüsü Xcode’un
 
 ## Terminal
 
-Giriş kabuğunun ortamıyla sekmelerde (⌃\`) çalışan, Metal ile çizilen terminaller. ⌘K ekranı temizler. Yapıştırılan ya da bırakılan bir görüntü terminalde çalışan bir kodlama ajanına verilir ya da kaydedilmiş bir kopyanın yolu yapıştırılır. ⌘-tıklama bağlantıları ve dosya adlarını açar. Terminalin başlattığı bir geliştirme sunucusu tarayıcı sekmesinde açılabilir.
+Terminaller giriş kabuğu ve ortamıyla sekme olarak açılır (**Dosya › Yeni Terminal**, ⌃\`). Terminal, kendi VT çekirdeğiyle [Tapa](https://github.com/sventmueller/tapa)’nın terminalidir ve Metal ile çizilir: Kitty klavye protokolüyle xterm ve VT520, OSC 8 bağlantıları, eşzamanlı çıktı, truecolor ve fare bildirimi; düzenleyicinin metin boyutunda ve Tapa’nın açık ve koyu renkleriyle. zsh, bash ve fish için kabuk entegrasyonu yapılandırma dosyalarınıza dokunmadan kendini kurar ve başka bir ana bilgisayara `ssh` ile bağlandığınızda da yanınızda gelir. Yeniden başlatmanın ardından bir terminal, yalnızca güvenilen klasörlerde, bulunduğu klasörde yeni bir kabuk olarak geri gelir; gösterdikleri geri gelmez.
+
+- **Komut blokları.** Her komut ve çıktısı bir blok oluşturur. ⌘↑ ve ⌘↓ istemler arasında atlar. **Bloğu Seç** (⇧⌘A), **Çıktıyı Kopyala** (⌥⌘C), **Çıktıyı Kaydet…** (⌥⌘S) ve **Bloğu Daralt/Genişlet** (⇧⌘↩) geçerli blok üzerinde çalışır; **Yer İşareti Ekle/Kaldır** (⇧⌘M) bir satırı işaretler, ⇧⌘↑ ve ⇧⌘↓ yer işaretleri arasında atlar. **Komutları blok olarak işaretle** açıkken kenar boşluğundaki bir çubuk her bloğu gösterir, başarısız komutlar işaretlenir, çalışan komut çıktısı kayarken üstte kalır ve işaretçinin altındaki bloğun üzerindeki düğmeler bloğun durumunu, süresini ve aynı eylemleri gösterir.
+- **Bloğu Ajana Gönder** (Düzen menüsü ve terminalin bağlam menüsü), geçerli bloğun komut satırı ve çıktısı Dış İçerik olarak eklenmiş yeni bir AI sekmesi açar (bkz. [Güven](#güven)); komut başarısız olduysa, başarısız bir CI işinin günlüğünde olduğu gibi, nedenini soran bir taslak da hazırlar. `keybindings.json` dosyasında `terminal.blockToAgent` için bir kestirme atayana kadar kestirmesi yoktur.
+- **Giriş alanı.** **Görüntü › Giriş Alanını Göster/Gizle** (⌘I) komut satırını terminalin altında, üstünde klasör ve Git dalı bulunan bir metin alanına dönüştürür; yeni terminaller son seçiminizi izler. Return alanın tamamını kabuğa gönderir. Kabuk entegrasyonu gerektirir ve vim, htop ya da claude gibi tam ekran programlar için kenara çekilir.
+- **Öneriler**, giriş alanında da onsuz da, yazdığınızın hemen ardından gri olarak görünür: her komutun çalıştığı klasör, dal ve çıkış koduyla birlikte geçmişinizden, 700’den fazla komut satırı aracının tanımlarından ve git dalları, docker konteynerleri, `package.json` betikleri ile make, just ve cargo hedefleri gibi projeden. → bir öneriyi kabul eder; Tab tamamlar, birden çok aday varsa yazdıkça süzülen bir menü açar. Siz yazmadan önce alan, genellikle ardından gelen komutu önerebilir. Komutlar parçalarına göre renklendirilir ve kabuğunuzun çalıştıramadığı bir komutun altı kesik kırmızı çizgiyle çizilir. Öneriler asla ağı kullanmaz ve programları yalnızca giriş kabuğunun `PATH`’inden başlatır.
+- **Bul** (bir terminal odaktayken ⌘F, ⌘G ve ⇧⌘G) tüm geçmişte düzenli ifadelerle, büyük/küçük harf ve tam sözcük seçenekleriyle arar ve sonuçları sayar; kaydırma çubuğu sonuçları, istemleri ve başarısız komutları işaretler.
+- **Seçme ve kopyalama.** Çift tıklama bir URL’yi, bir yolu, bir hash’i ya da bir IP adresini bütün olarak seçer; ⌥ ile sürükleme bir dikdörtgen seçer. **Klavyeyle Seç** (⇧⌘C) bir seçimi Vim tuşlarıyla taşır, **Biçimlendirmeyle Kopyala** (⇧⌥⌘C) renkleri ve stilleri korur. Bir program OSC 52 ile yalnızca terminali klavye odağındayken kopyalayabilir ve terminal bunu bildirir; hiçbir program panoyu okumaz.
+- **Yapıştırma.** Satır sonunda bir komut çalıştıracak ya da denetim karakterleri içeren metin, program onu köşeli parantezli yapıştırma (bracketed paste) olarak okumuyorsa önce bir iletişim kutusunda gösterilir. Bir görüntüyü yapıştırmak onu terminalde çalışan ve görüntüyü panodan kendisi okuyan bir kodlama ajanına verir ya da önbellekler arasında kaydedilen bir kopyanın yolunu yapıştırır; `ssh` üzerinden terminal bunu neden yapmadığını söyler. Bir terminale bırakılan dosyalar, görüntüler dahil, tırnak içine alınmış yollar olarak gelir; bir web sayfası gibi başka bir yerden bırakılan bir görüntü, yapıştırılan bir görüntüyle aynı yolu izler.
+- **Bağlantılar.** ⌘-tıklama bir web adresini tarayıcı sekmesinde, bir `mailto:` bağlantısını Mail’de, bir dosya adını da satırı ve sütunuyla birlikte Dango’nun düzenleyicisinde açar; bağlantılar OSC 8 olmadan da bulunur. Başka türden bağlantılar açılmaz.
+- **Geliştirme sunucuları.** Terminaldeki bir program bir geliştirme sunucusu başlattığında terminalin üstündeki bir çubuk adresini gösterir ve **Tarayıcı Sekmesinde Aç** onu orada açar.
+- **Bildirimler ve ilerleme.** Zil ve bir programın istediği bildirim (OSC 9 ve OSC 777), siz terminali görmezken terminalin sekmesine kırmızı noktayı koyar; önde başka bir uygulama varken bildirim macOS’e de gider ve ona tıklamak terminali geri getirir. Bir programın bildirdiği ilerleme (OSC 9;4) sekmesinde bir halka ve Dock simgesinde bir çubuk olarak görünür.
+- **Güvenli Klavye Girişi** (**Dango › Güvenli Klavye Girişi**), bir terminale yazdıklarınızı başka uygulamaların okumasını engeller; bir program parola istediği sürece kendiliğinden de açılır.
+- **Tuşlar.** ⌘K terminali temizler (**Düzen › Terminali Temizle**); ⌃C ve Esc terminaldeki programa gider. Terminalin komutları Düzen ve Görüntü menülerindedir ve kestirmeleri yalnızca bir terminal klavye odağındayken çalışır; böylece ⌘I, ⌘↑ ya da ⌘F düzenleyicideki anlamlarını korur. Bağlam menüsü ayrıca **Burada Yeni Terminal** açar ve terminali **Bölmeyi Kapat** ile kapatır.
+
+**Ayarlar › Terminal** yeni terminaller için giriş alanını, onun Vim tuşlarını, önerileri, komutların renklerini, bilinmeyenlerin alt çizgisini, komut bloklarını, seçimin hemen kopyalanmasını, çok satırlı yapıştırmaların önce gösterilmesini ve ⌥ tuşunun Meta tuşu olarak kullanılmasını açıp kapatır.
 
 ## Tarayıcı
 
@@ -205,7 +221,7 @@ Bir klasör, içinde bir şey başlatılır başlatılmaz programların çalış
 - **Güvenilen:** Git, dil sunucuları, hata ayıklayıcılar, ajanlar ve CI bu klasör ve altındaki her şey için çalışır.
 - **Kısıtlı:** okuyabilir ve düzenleyebilirsiniz; düzenleyicideki değişiklik işaretleri doğrudan `.git` okunarak elde edilir. Klasörün yapılandırdığı hiçbir şey başlatılmaz. Git, CI ve AI panelleri bunu belirtir ve klasöre güvenmeyi önerir.
 
-Sizden gelmeyen metin, bir ajanı yönlendirmeye yönelik talimatlar taşıyabilir (istem enjeksiyonu). Bu yüzden bir terminalin çıktısı (`@terminal`), bir tarayıcı sayfası (`@browser`), bir ajana verilen CI günlüğü, proje dışındaki bir dosya ve bir web sayfasından yapıştırılan uzun metin işaretlenerek gönderilir: etikette “Dış İçerik” yazar ve ajan metni, talimatlarına uymaması gereken güvenilmeyen veri olduğu notuyla alır. Yerleşik ajanın web sayfaları da aynı notla gelir. Yapıştırılan metin, tarayıcı bunu panoda belirttiğinde web sayfasından gelmiş sayılır; Safari, Chrome ve Firefox bunu yapar. Başka yerlerden gelen metin ve birkaç sözcüklük kısa bir ifade sizin metniniz olarak kalır.
+Sizden gelmeyen metin, bir ajanı yönlendirmeye yönelik talimatlar taşıyabilir (istem enjeksiyonu). Bu yüzden bir terminalin çıktısı (`@terminal` ya da bir ajana verilen bir komut bloğu), bir tarayıcı sayfası (`@browser`), bir ajana verilen CI günlüğü, proje dışındaki bir dosya ve bir web sayfasından yapıştırılan uzun metin işaretlenerek gönderilir: etikette “Dış İçerik” yazar ve ajan metni, talimatlarına uymaması gereken güvenilmeyen veri olduğu notuyla alır. Yerleşik ajanın web sayfaları da aynı notla gelir. Yapıştırılan metin, tarayıcı bunu panoda belirttiğinde web sayfasından gelmiş sayılır; Safari, Chrome ve Firefox bunu yapar. Başka yerlerden gelen metin ve birkaç sözcüklük kısa bir ifade sizin metniniz olarak kalır.
 
 ## Korumalı alan
 
@@ -221,9 +237,9 @@ Dango’nun kendisi App Sandbox olmadan çalışır, çünkü başlattığı her
 ## Görünüm ve erişilebilirlik
 
 - **Koyu mod** sistemi izler; **Karşıtlığı Artır** ve **Hareketi Azalt** dikkate alınır.
-- **VoiceOver** kenar çubuğunu, sekmeleri, AI zaman çizelgesinin kartlarını, Git ve CI satırlarını, hata ayıklayıcıyı ve terminal metnini adlandırır. Kesme noktaları hiçbir zaman yalnızca renkle ayırt edilmez.
+- **VoiceOver** kenar çubuğunu, sekmeleri, AI zaman çizelgesinin kartlarını, Git ve CI satırlarını ve hata ayıklayıcıyı adlandırır, terminalin satırlarını okur ve yeni çıktıyı duyurur. Kesme noktaları hiçbir zaman yalnızca renkle ayırt edilmez.
 - **Klavye.** Her komutun bir kestirmesi vardır ve hepsi `keybindings.json` içinde değiştirilebilir; ⌥⌘\` sonraki panele geçer.
-- **Sağdan sola.** Arapça ve İbranicede pencere aynalanır, kod görünümleri ise soldan sağa kalır.
+- **Sağdan sola.** Arapça ve İbranicede pencere aynalanır, kod görünümleri ve terminal ızgarası ise soldan sağa kalır.
 
 Dango’nun AppKit’in üzerine alan alan neler eklediği [ACCESSIBILITY.md](../../../ACCESSIBILITY.md) dosyasındadır.
 
@@ -257,6 +273,10 @@ Dango, **Sistem Ayarları › Genel › Dil ve Bölge** içindeki dil sırasın�
 | Kalın, italik, üstü çizili, kod, bağlantı | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | Başlık 1–3 | ⌥⌘1–⌥⌘3 |
 | Yeni terminal, terminali temizle | ⌃\`, ⌘K |
+| Terminalde: bul, sonrakini bul, öncekini bul | ⌘F, ⌘G, ⇧⌘G |
+| Terminalde: önceki ve sonraki istem, önceki ve sonraki yer işareti, yer işareti ekle ya da kaldır | ⌘↑ ve ⌘↓, ⇧⌘↑ ve ⇧⌘↓, ⇧⌘M |
+| Terminalde: bloğu seç, çıktıyı kopyala, çıktıyı kaydet, bloğu daralt | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| Terminalde: giriş alanı, klavyeyle seç, biçimlendirmeyle kopyala | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | Ajanın ileti alanına odaklan, bir plana yorum yap | ⌘Esc, ⌥⌘K |
 | Adres alanı, yeniden yükle, geri, ileri (tarayıcı) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Dikteyi başlat ya da durdur | ⌃⌥D |
@@ -282,7 +302,7 @@ Uygulamanın veri klasöründeki `keybindings.json` (bkz. [Verilerin bulunduğu 
 
 | Yer | İçerik |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`; `threads/` (AI panelinin listesi), `agent-threads/` (yerleşik ajan konuşmaları), `layouts/` (proje başına sekmeler), `recovery/` (çökme sonrasında kaydedilmemiş düzenleyiciler), `checkpoints/` (Git kullanmayan klasörler için), `worktrees/`, `agents/` ve `tools/` (kurulu ajanlar, dil sunucuları ve hata ayıklama bağdaştırıcıları), `task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`, `terminal-history.sqlite` (terminallerin komut geçmişi); `threads/` (AI panelinin listesi), `agent-threads/` (yerleşik ajan konuşmaları), `layouts/` (proje başına sekmeler), `recovery/` (çökme sonrasında kaydedilmemiş düzenleyiciler), `checkpoints/` (Git kullanmayan klasörler için), `worktrees/`, `agents/` ve `tools/` (kurulu ajanlar, dil sunucuları ve hata ayıklama bağdaştırıcıları), `task-output/` |
 | `~/Library/Caches/<id>/` | yapıştırılan görüntüler, kabuk entegrasyonu betikleri, ACP kayıt defteri; silinebilir |
 | `~/Library/Logs/<id>/dictation/` | diktenin günlük dosyaları |
 | `~/Library/Application Support/Lowspeak` ve `FluidAudio` | Lowspeak ile paylaşılan yerel dikte modelleri |
@@ -300,6 +320,7 @@ Claude kendi oturumlarını `~/.claude/projects` altında tutar; Dango bir oturu
 - **Claude’un kullanım rakamları ve bağlam dökümü,** protokolünün deneysel olarak işaretlenmiş kısımlarına dayanır ve bunlar yoksa gizlenir.
 - **Konuşmayı geri sarma** yalnızca Claude’da çalışır; diğer ajanlarda yalnızca kod geri sarılır.
 - **Tarayıcı üzerinden CI’ya giriş** kapalıdır; `gh`, `glab`, bir token ya da ortamı kullanın.
+- **Terminalde görüntü yok:** Kitty grafikleri, Sixel ve iTerm2 görüntüleri gösterilmez.
 - **Gemini CLI sunulmuyor:** Google kişisel hesapla girişi sonlandırdı ve Antigravity’ye yönlendiriyor. Önceki Gemini sohbetleri okunabilir kalır.
 
 ## Kaynaktan derleme
@@ -308,7 +329,7 @@ Gerekenler:
 
 - Xcode Command Line Tools (`xcode-select --install`) ile macOS 14 veya üstü; Xcode’un kendisi gerekmez.
 - `rust-toolchain.toml` dosyasının belirttiği Rust. Homebrew’un `rust`’ı bu Mac’in işlemcisi için derler; bir sürümün evrensel derlemesi `aarch64-apple-darwin` ve `x86_64-apple-darwin` hedefleriyle rustup gerektirir.
-- Bu deponun yanında [splat](https://github.com/sventmueller/splat) ve [lowspeak](https://github.com/sventmueller/lowspeak) kopyaları (`../splat`, `../lowspeak`), ikisi de `main` dallarında; çalışma alanı onlardan crate’leri yol üzerinden alır.
+- Bu deponun yanında [splat](https://github.com/sventmueller/splat), [lowspeak](https://github.com/sventmueller/lowspeak) ve [tapa](https://github.com/sventmueller/tapa) kopyaları (`../splat`, `../lowspeak`, `../tapa`), her biri kendi `main` dalında; çalışma alanı onlardan crate’leri yol üzerinden, terminali de Tapa’dan alır.
 - Dikte içeren her derleme (`make run`, `make build`, `make release`) için whisper.cpp’yi derleyen cmake. `make check` onsuz derler.
 
 | Komut | Ne yapar |

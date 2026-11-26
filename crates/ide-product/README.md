@@ -12,7 +12,7 @@ flowchart LR
     product -->|"VERSION as client version"| clients["ide-acp, ide-codex, ide-predict"]
     product -->|"OAuth client ids"| ci["ide-ci: auth::product_client"]
     product -->|"NAME, BUNDLE_ID as checkpoint author"| git["ide-git"]
-    product -->|"NAME as TERM_PROGRAM"| terminal["ide-terminal"]
+    product -->|"NAME, VERSION as TERM_PROGRAM, through term_base::set_identity"| terminal["the app's terminals: Tapa's crates"]
 ```
 
 The API is documented in [`src/lib.rs`](src/lib.rs).

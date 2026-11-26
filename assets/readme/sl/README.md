@@ -12,7 +12,7 @@ Dango združi kodo, agente, ki jo spreminjajo, in vse okoli njih v eno okno na m
 
 **Ste našli napako?** [Odprite issue](https://github.com/sventmueller/dango/issues/new) in navedite, pri katerem agentu in pri kakšnem projektu se je pojavila.
 
-[![Rust, izdaja 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 ali novejši](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Univerzalno: Apple Silicon in Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit prek objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa term-vt](https://img.shields.io/badge/terminal-Tapa_term--vt-F46D01)](https://github.com/sventmueller/tapa) ![35 jezikov vmesnika](https://img.shields.io/badge/languages-35-4C9A2A) ![Brez telemetrije](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Podpisano s Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Licenca: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#licenca)
+[![Rust, izdaja 2024](https://img.shields.io/badge/Rust-2024_edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org) [![macOS 14 ali novejši](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/) ![Univerzalno: Apple Silicon in Intel](https://img.shields.io/badge/Universal-Apple_Silicon_%7C_Intel-333333?logo=apple&logoColor=white) [![AppKit prek objc2](https://img.shields.io/badge/AppKit-objc2_0.6-147EFB?logo=apple&logoColor=white)](https://github.com/madsmtm/objc2) [![Agent Client Protocol](https://img.shields.io/badge/ACP-Agent_Client_Protocol-6E56CF)](https://agentclientprotocol.com) [![Language Server Protocol](https://img.shields.io/badge/LSP-3.17-0078D4)](https://microsoft.github.io/language-server-protocol/) [![Debug Adapter Protocol](https://img.shields.io/badge/DAP-debugger-0078D4)](https://microsoft.github.io/debug-adapter-protocol/) [![Terminal: Tapa](https://img.shields.io/badge/terminal-Tapa-F46D01)](https://github.com/sventmueller/tapa) ![35 jezikov vmesnika](https://img.shields.io/badge/languages-35-4C9A2A) ![Brez telemetrije](https://img.shields.io/badge/telemetry-none-4C9A2A) ![Podpisano s Hardened Runtime](https://img.shields.io/badge/Hardened_Runtime-signed-4C9A2A) [![Licenca: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-4C9A2A)](#licenca)
 
 [Bahasa Indonesia](../id/README.md) · [Bahasa Melayu](../ms/README.md) · [Català](../ca/README.md) · [Čeština](../cs/README.md) · [Dansk](../da/README.md) · [Deutsch](../de/README.md) · [English](../../../README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Hrvatski](../hr/README.md) · [Italiano](../it/README.md) · [Magyar](../hu/README.md) · [Nederlands](../nl/README.md) · [Norsk](../no/README.md) · [Polski](../pl/README.md) · [Português (Brasil)](../pt_BR/README.md) · [Português (Portugal)](../pt_PT/README.md) · [Română](../ro/README.md) · [Slovenčina](../sk/README.md) · **Slovenščina** · [Suomi](../fi/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [Ελληνικά](../el/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [עברית](../he/README.md)‎ · [العربية](../ar/README.md)‎ · [हिन्दी](../hi/README.md) · [ไทย](../th/README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [繁體中文](../zh-Hant/README.md)
 
@@ -55,6 +55,7 @@ Dango združi kodo, agente, ki jo spreminjajo, in vse okoli njih v eno okno na m
 - **Eno okno na mapo.** Datoteke, terminali, strani brskalnika, niti AI, diffi in predogledi so zavihki macOS tega okna. V stranski vrstici so Datoteke, Iskanje, Agenti, Git, Testi, Odpravljanje napak, CI in Vsebniki.
 - **Pravi urejevalnik kode.** Barvanje sintakse, več kazalk, zlaganje, `.editorconfig`, jezikovni strežniki za 17 jezikov z dokončanjem, pojdi na definicijo, sklici, preimenovanjem, hitrimi popravki in hierarhijami ter napovedovanje med tipkanjem iz GitHub Copilot ali lokalnega modela.
 - **Vgrajeni razhroščevalnik, Git in CI.** Prekinitvene točke in izvajanje po korakih za Rust, C, C++, Swift, Go, JavaScript, TypeScript in Python; priprava posameznih odsekov za commit, veje, stashi, konflikti in graf commitov; zagoni, jobi in dnevniki iz GitHub Actions in GitLab CI.
+- **Terminal aplikacije Tapa.** Bloki ukazov, katerih izhod kopirate, shranite ali predate agentu, vnosno polje s predlogi iz vaše zgodovine in projekta, iskanje po celotni zgodovini ter obvestila in napredek programov, ki tečejo v njem.
 - **Previden z vašimi mapami.** Mapa, ki ji niste zaupali, ne zažene ničesar: nobenih procesov Git, jezikovnih strežnikov, hookov ali agentov. Uničujoči ukazi Git nikoli niso dovoljeni za vedno, commiti pa se preverijo glede skrivnosti.
 - **Narekovanje.** Govorite v urejevalnik in v polje za sporočilo, prek spleta z OpenAI ali Groq ali lokalno z Whisper in Parakeet.
 - **Izvorno do zadnje podrobnosti.** Okna, zavihki, meniji in orodne vrstice AppKit, TextKit 2 za urejevalnik, Metal za terminal, WebKit le v zavihku brskalnika. Temni način, Povečaj kontrast in VoiceOver delujejo kot v vsaki aplikaciji za Mac.
@@ -84,7 +85,7 @@ Dango združi kodo, agente, ki jo spreminjajo, in vse okoli njih v eno okno na m
 3. **Vsak dokument je zavihek** okna mape, lastni zavihki macOS. »+« na koncu vrstice zavihkov in ⌘T ponujata novo datoteko, terminal, brskalnik in vsakega nameščenega agenta, tudi v lastnem worktreeju Git; če »+« zadržite, se isto prikaže kot meni.
 4. **Hitro odpri** z ⌘P najde datoteke, z `#` pa simbole projekta; ⇧⌘F išče in zamenjuje po projektu.
 5. **Pogovarjajte se z agentom** v zavihku AI. ⌘Esc premakne fokus tipkovnice v njegovo polje za sporočilo in nazaj.
-6. **Nastavitve** z ⌘, vsebujejo zavihke Splošno, CI, Agenti, Lastni agent, Jezikovni strežnik, Narekovanje in Napovedovanje.
+6. **Nastavitve** z ⌘, vsebujejo zavihke Splošno, Terminal, CI, Agenti, Software Factory, Lastni agent, Jezikovni strežnik, Narekovanje in Napovedovanje.
 
 V orodni vrstici so nazaj in naprej po mestih, ki ste jih urejali (⌃- in ⌃⇧-), veja, Hitro odpri in pregled Aktivnost, ki navaja vse, kar teče. **Odpri ob strani** v kontekstnem meniju datoteke prikaže drugi dokument ob prvem. Po ponovnem zagonu ali sesutju se vsako okno vrne s svojimi zavihki, urejevalniki z neshranjenim besedilom pa skupaj z njim. Slike, zvok, video, pisave in dokumenti Office se odprejo v zavihku prek Quick Look, PDF-ji prek PDFKit.
 
@@ -155,7 +156,22 @@ Dango prebere `.vscode/launch.json` projekta. Meni Odpravljanje napak uporablja 
 
 ## Terminal
 
-Terminali v zavihkih (⌃\`) z okoljem prijavne lupine, izrisani z Metal. ⌘K počisti zaslon. Prilepljena ali povlečena slika gre agentu za programiranje, ki teče v terminalu, sicer se prilepi pot do shranjene kopije. ⌘-klik odpre povezave in imena datotek. Razvojni strežnik, ki ga zažene terminal, lahko odprete v zavihku brskalnika.
+Terminali se odprejo kot zavihki (**Datoteka › Nov terminal**, ⌃\`) s prijavno lupino in njenim okoljem. Terminal je iz aplikacije [Tapa](https://github.com/sventmueller/tapa), z lastnim jedrom VT, izrisan z Metal: xterm in VT520 s protokolom tipkovnice Kitty, povezave OSC 8, sinhroniziran izhod, truecolor in poročanje miške, v velikosti besedila urejevalnika ter v svetlih in temnih barvah aplikacije Tapa. Njegova integracija z lupino za zsh, bash in fish se nastavi sama, ne da bi se dotaknila vaših konfiguracijskih datotek, in gre z vami, ko se prek `ssh` povežete z drugim gostiteljem. Po ponovnem zagonu se terminal vrne kot nova lupina v mapi, v kateri je bil, a le v zaupanja vrednih mapah; kar je prikazoval, se ne vrne.
+
+- **Bloki ukazov.** Vsak ukaz in njegov izhod tvorita blok. ⌘↑ in ⌘↓ skačeta med pozivi. **Izberi blok** (⇧⌘A), **Kopiraj izhod** (⌥⌘C), **Shrani izhod …** (⌥⌘S) in **Strni/razširi blok** (⇧⌘↩) delujejo na trenutni blok; **Dodaj/odstrani zaznamek** (⇧⌘M) označi vrstico, ⇧⌘↑ in ⇧⌘↓ pa skačeta med zaznamki. Ko je vklopljeno **Označi ukaze kot bloke**, vrstica ob robu prikaže vsak blok, neuspeli ukazi so označeni, ukaz, ki teče, ostane na vrhu, medtem ko se njegov izhod pomika, gumbi nad blokom pod kazalcem pa prikažejo njegovo stanje, trajanje in ista dejanja.
+- **Pošlji blok agentu** (meni Uredi in kontekstni meni terminala) odpre nov zavihek AI z ukazno vrstico in izhodom trenutnega bloka, priloženima kot Zunanja vsebina (glejte [Zaupanje](#zaupanje)), in z osnutkom, ki vpraša po vzroku, kadar ukaz ni uspel, tako kot to stori dnevnik neuspelega joba CI. Bližnjice nima, dokler je ukazu `terminal.blockToAgent` ne dodelite v `keybindings.json`.
+- **Vnosno polje.** **Prikaz › Pokaži/skrij vnosno polje** (⌘I) spremeni ukazno vrstico v besedilno polje na dnu terminala, z mapo in vejo Git nad njim; novi terminali sledijo vaši zadnji izbiri. Return pošlje celotno polje lupini. Potrebuje integracijo z lupino in se umakne celozaslonskim programom, kot so vim, htop ali claude.
+- **Predlogi** se prikažejo sivo takoj za tem, kar tipkate, v vnosnem polju in brez njega: iz vaše zgodovine, z mapo, vejo in izhodno kodo, s katerimi je tekel vsak ukaz, iz specifikacij za več kot 700 orodij ukazne vrstice in iz projekta, na primer veje git, vsebniki docker, skripti `package.json` ter cilji make, just in cargo. → sprejme predlog; Tab dopolnjuje, pri več kandidatih pa odpre meni, ki ga tipkanje filtrira. Preden začnete tipkati, lahko polje predlaga ukaz, ki običajno sledi. Ukazi so obarvani po svojih delih, tisti, ki ga vaša lupina ne more zagnati, pa dobi rdeč črtkan podčrtaj. Predlogi nikoli ne uporabljajo omrežja in zaganjajo programe le iz `PATH` prijavne lupine.
+- **Iskanje** (⌘F, ⌘G in ⇧⌘G, ko ima terminal fokus) preiskuje celotno zgodovino, z regularnimi izrazi, razlikovanjem velikih in malih črk in celimi besedami, ter prešteje rezultate; drsni trak označi rezultate, pozive in neuspele ukaze.
+- **Izbiranje in kopiranje.** Dvoklik izbere celoten URL, pot, zgoščeno vrednost ali naslov IP, vlečenje s ⌥ pa izbere pravokotnik. **Izbiranje s tipkovnico** (⇧⌘C) premika izbor s tipkami Vim, **Kopiraj z oblikovanjem** (⇧⌥⌘C) ohrani barve in sloge. Program sme kopirati prek OSC 52 le, ko ima njegov terminal fokus tipkovnice, in terminal to sporoči; noben program ne bere odložišča.
+- **Lepljenje.** Besedilo, ki bi ob prelomu vrstice zagnalo ukaz ali vsebuje krmilne znake, se najprej prikaže v pogovornem oknu, razen če ga program bere kot bracketed paste. Prilepljena slika gre agentu za programiranje, ki teče v terminalu in jo sam prebere iz odložišča, sicer se prilepi pot do kopije, shranjene med predpomnilniki; prek `ssh` terminal pove, zakaj tega ne stori. Datoteke, spuščene na terminal, tudi slike, prispejo kot poti v narekovajih; slika, spuščena od drugod, na primer s spletne strani, gre po poti prilepljene.
+- **Povezave.** ⌘-klik odpre spletni naslov v zavihku brskalnika, povezavo `mailto:` v Mailu, ime datoteke, tudi z vrstico in stolpcem, pa v urejevalniku aplikacije Dango; povezave se najdejo tudi brez OSC 8. Povezave drugih vrst se ne odprejo.
+- **Razvojni strežniki.** Ko program v terminalu zažene razvojni strežnik, vrstica nad terminalom navede njegov naslov, **Odpri v zavihku brskalnika** pa ga odpre tam.
+- **Obvestila in napredek.** Zvonec in obvestilo, ki ga zahteva program (OSC 9 in OSC 777), postavita rdečo piko na zavihek terminala, dokler ga ne vidite; ko je spredaj druga aplikacija, gre obvestilo tudi v macOS, klik nanj pa vrne terminal. Napredek, ki ga program sporoča (OSC 9;4), se prikaže kot obroč na njegovem zavihku in kot vrstica na ikoni v Docku.
+- **Zaščiten vnos s tipkovnico** (**Dango › Zaščiten vnos s tipkovnico**) drugim aplikacijam prepreči branje tega, kar tipkate v terminal; vklopi se tudi sam, ko program zahteva geslo.
+- **Tipke.** ⌘K počisti terminal (**Uredi › Počisti terminal**); ⌃C in Esc gresta programu v njem. Ukazi terminala so v menijih Uredi in Prikaz, njihove bližnjice pa delujejo le, ko ima terminal fokus tipkovnice, zato ⌘I, ⌘↑ ali ⌘F v urejevalniku ohranijo svoj pomen. Kontekstni meni odpre tudi **Nov terminal tukaj** in zapre terminal z **Zapri območje**.
+
+**Nastavitve › Terminal** preklaplja vnosno polje za nove terminale, njegove tipke Vim, predloge, obarvanje ukazov, podčrtovanje neznanih ukazov, bloke ukazov, takojšnje kopiranje izbora, prikaz večvrstičnega lepljenja vnaprej in ⌥ kot tipko Meta.
 
 ## Brskalnik
 
@@ -205,7 +221,7 @@ Mapa lahko povzroči, da se programi zaženejo, takoj ko se v njej kaj zažene: 
 - **Zaupanja vredna:** Git, jezikovni strežniki, razhroščevalniki, agenti in CI tečejo za to mapo in vse pod njo.
 - **Omejena:** lahko berete in urejate; oznake sprememb v urejevalniku izhajajo iz neposrednega branja `.git`. Nič, kar mapa nastavi, se ne zažene. Podokna Git, CI in AI to povedo in ponudijo, da mapi zaupate.
 
-Besedilo, ki ne prihaja od vas, lahko vsebuje navodila, namenjena usmerjanju agenta (prompt injection). Izhod terminala (`@terminal`), stran brskalnika (`@browser`), dnevnik CI, predan agentu, datoteka zunaj projekta in daljše besedilo, prilepljeno s spletne strani, zato gredo naprej označeni: oznaka pravi »Zunanja vsebina«, agent pa dobi besedilo z obvestilom, da gre za nezaupanja vredne podatke, katerih navodil ne sme upoštevati. Spletne strani lastnega agenta pridejo z enakim obvestilom. Prilepljeno besedilo velja za besedilo s spletne strani, kadar brskalnik to navede v odložišču, kot to počnejo Safari, Chrome in Firefox; besedilo od drugod in kratka fraza iz nekaj besed ostaneta vaša.
+Besedilo, ki ne prihaja od vas, lahko vsebuje navodila, namenjena usmerjanju agenta (prompt injection). Izhod terminala (`@terminal` ali blok ukaza, predan agentu), stran brskalnika (`@browser`), dnevnik CI, predan agentu, datoteka zunaj projekta in daljše besedilo, prilepljeno s spletne strani, zato gredo naprej označeni: oznaka pravi »Zunanja vsebina«, agent pa dobi besedilo z obvestilom, da gre za nezaupanja vredne podatke, katerih navodil ne sme upoštevati. Spletne strani lastnega agenta pridejo z enakim obvestilom. Prilepljeno besedilo velja za besedilo s spletne strani, kadar brskalnik to navede v odložišču, kot to počnejo Safari, Chrome in Firefox; besedilo od drugod in kratka fraza iz nekaj besed ostaneta vaša.
 
 ## Peskovnik
 
@@ -221,9 +237,9 @@ Dango sam teče brez App Sandbox, ker bi ga podedoval vsak program, ki ga zažen
 ## Videz in dostopnost
 
 - **Temni način** sledi sistemu; **Povečaj kontrast** in **Zmanjšaj gibanje** sta upoštevana.
-- **VoiceOver** poimenuje stransko vrstico, zavihke, kartice časovnice AI, vrstice Git in CI, razhroščevalnik in besedilo terminala. Prekinitvene točke se nikoli ne razlikujejo samo po barvi.
+- **VoiceOver** poimenuje stransko vrstico, zavihke, kartice časovnice AI, vrstice Git in CI ter razhroščevalnik, bere vrstice terminala in napove nov izhod. Prekinitvene točke se nikoli ne razlikujejo samo po barvi.
 - **Tipkovnica.** Vsak ukaz ima bližnjico in vse je mogoče spremeniti v `keybindings.json`; ⌥⌘\` premakne na naslednje podokno.
-- **Od desne proti levi.** V arabščini in hebrejščini je okno prezrcaljeno, pogledi kode pa ostanejo od leve proti desni.
+- **Od desne proti levi.** V arabščini in hebrejščini je okno prezrcaljeno, pogledi kode in mreža terminala pa ostanejo od leve proti desni.
 
 Kaj Dango doda AppKitu, po posameznih področjih, je v [ACCESSIBILITY.md](../../../ACCESSIBILITY.md).
 
@@ -257,6 +273,10 @@ Dango sledi vrstnemu redu jezikov v **Nastavitve sistema › Splošno › Jezik 
 | Krepko, ležeče, prečrtano, koda, povezava | ⌘B, ⌘I, ⇧⌘X, ⌥⇧⌘C, ⇧⌘K |
 | Naslov 1 do 3 | ⌥⌘1 do ⌥⌘3 |
 | Nov terminal, počisti terminal | ⌃\`, ⌘K |
+| V terminalu: poišči, poišči naslednje, poišči prejšnje | ⌘F, ⌘G, ⇧⌘G |
+| V terminalu: prejšnji in naslednji poziv, prejšnji in naslednji zaznamek, dodaj ali odstrani zaznamek | ⌘↑ in ⌘↓, ⇧⌘↑ in ⇧⌘↓, ⇧⌘M |
+| V terminalu: izberi blok, kopiraj izhod, shrani izhod, strni blok | ⇧⌘A, ⌥⌘C, ⌥⌘S, ⇧⌘↩ |
+| V terminalu: vnosno polje, izbiranje s tipkovnico, kopiraj z oblikovanjem | ⌘I, ⇧⌘C, ⇧⌥⌘C |
 | Fokus v polje za sporočilo agenta, komentiraj načrt | ⌘Esc, ⌥⌘K |
 | Naslovno polje, znova naloži, nazaj, naprej (brskalnik) | ⌘L, ⌘R, ⌘[, ⌘] |
 | Začni ali ustavi narekovanje | ⌃⌥D |
@@ -282,7 +302,7 @@ Dango sledi vrstnemu redu jezikov v **Nastavitve sistema › Splošno › Jezik 
 
 | Mesto | Kaj |
 |---|---|
-| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`; `threads/` (seznam podokna AI), `agent-threads/` (pogovori lastnega agenta), `layouts/` (zavihki po projektih), `recovery/` (neshranjeni urejevalniki po sesutju), `checkpoints/` (za mape brez Gita), `worktrees/`, `agents/` in `tools/` (nameščeni agenti, jezikovni strežniki in adapterji za razhroščevanje), `task-output/` |
+| `~/Library/Application Support/<id>/` | `settings.json`, `state.json`, `keybindings.json`, `trust.json`, `terminal-history.sqlite` (zgodovina ukazov terminalov); `threads/` (seznam podokna AI), `agent-threads/` (pogovori lastnega agenta), `layouts/` (zavihki po projektih), `recovery/` (neshranjeni urejevalniki po sesutju), `checkpoints/` (za mape brez Gita), `worktrees/`, `agents/` in `tools/` (nameščeni agenti, jezikovni strežniki in adapterji za razhroščevanje), `task-output/` |
 | `~/Library/Caches/<id>/` | prilepljene slike, skripti za integracijo z lupino, register ACP; lahko se izbriše |
 | `~/Library/Logs/<id>/dictation/` | dnevniške datoteke narekovanja |
 | `~/Library/Application Support/Lowspeak` in `FluidAudio` | lokalni modeli za narekovanje, v skupni rabi z Lowspeakom |
@@ -300,6 +320,7 @@ Claude hrani svoje seje pod `~/.claude/projects`; Dango jih prebere, da nadaljuj
 - **Claudovi podatki o porabi in razčlenitev konteksta** temeljijo na delih njegovega protokola, označenih kot poskusni, in so skriti, kadar manjkajo.
 - **Previjanje pogovora nazaj** deluje le za Claude; pri drugih agentih se previje nazaj le koda.
 - **Vpis v CI prek brskalnika** je izklopljen; uporabite `gh`, `glab`, žeton ali okolje.
+- **Brez slik v terminalu:** grafika Kitty, Sixel in slike iTerm2 se ne prikažejo.
 - **Gemini CLI ni na voljo:** Google je ukinil vpis z osebnim računom in napotuje na Antigravity. Prejšnje niti Gemini ostanejo berljive.
 
 ## Gradnja iz izvorne kode
@@ -308,7 +329,7 @@ Potrebujete:
 
 - macOS 14 ali novejši z orodji Xcode Command Line Tools (`xcode-select --install`); sam Xcode ni potreben.
 - Rust, kot ga navaja `rust-toolchain.toml`. Homebrewov `rust` gradi za procesor tega Maca; univerzalna gradnja izdaje potrebuje rustup s ciljema `aarch64-apple-darwin` in `x86_64-apple-darwin`.
-- Kopiji [splat](https://github.com/sventmueller/splat) in [lowspeak](https://github.com/sventmueller/lowspeak) poleg te (`../splat`, `../lowspeak`), obe na veji `main`; delovni prostor iz njiju jemlje crate po poti.
+- Kopije [splat](https://github.com/sventmueller/splat), [lowspeak](https://github.com/sventmueller/lowspeak) in [tapa](https://github.com/sventmueller/tapa) poleg te (`../splat`, `../lowspeak`, `../tapa`), vse na svoji veji `main`; delovni prostor iz njih jemlje crate po poti, terminal pa iz aplikacije Tapa.
 - cmake, za vsako gradnjo z narekovanjem (`make run`, `make build`, `make release`), ki zgradi whisper.cpp. `make check` gradi brez njega.
 
 | Ukaz | Kaj naredi |

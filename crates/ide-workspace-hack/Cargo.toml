@@ -43,10 +43,11 @@ rustix = { version = "1", features = ["fs", "time"] }
 serde = { version = "1", features = ["derive", "rc"] }
 serde_core = { version = "1", features = ["alloc", "rc"] }
 serde_json = { version = "1", features = ["preserve_order", "raw_value"] }
+serde_spanned = { version = "1" }
 simd-adler32 = { version = "0.3" }
 similar = { version = "3" }
 smallvec = { version = "1", default-features = false, features = ["const_new"] }
-term-vt = { path = "../../../tapa/crates/term-vt", default-features = false, features = ["fuzzing"] }
+toml_edit = { version = "0.25", features = ["serde"] }
 ureq = { version = "3", features = ["platform-verifier"] }
 
 [build-dependencies]
@@ -82,12 +83,13 @@ rustix = { version = "1", features = ["fs", "time"] }
 serde = { version = "1", features = ["derive", "rc"] }
 serde_core = { version = "1", features = ["alloc", "rc"] }
 serde_json = { version = "1", features = ["preserve_order", "raw_value"] }
+serde_spanned = { version = "1" }
 simd-adler32 = { version = "0.3" }
 similar = { version = "3" }
 smallvec = { version = "1", default-features = false, features = ["const_new"] }
 syn-7b89eefb6aaa9bf3 = { package = "syn", version = "3", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }
 syn-f595c2ba2a3f28df = { package = "syn", version = "2", features = ["extra-traits", "full", "visit", "visit-mut"] }
-term-vt = { path = "../../../tapa/crates/term-vt", default-features = false, features = ["fuzzing"] }
+toml_edit = { version = "0.25", features = ["serde"] }
 ureq = { version = "3", features = ["platform-verifier"] }
 
 [target.aarch64-apple-darwin.dependencies]
