@@ -1,10 +1,9 @@
-## Zavihek AI
-- Hooki, ki so se izvedli uspešno ali se še izvajajo, se ne prikazujejo več na časovnici, niti kot strnjena vrstica za vsak odgovor; hook, ki ne uspe, se še vedno prikaže.
+## Orodna vrstica
+- Nov vrstni red z desne: »Nov terminal«, »Nova nit AI« in »Nov zavihek brskalnika« v eni skupini, levo od njih »Razdeli desno«, »Razdeli navzdol« in stikalo vnosnega polja, nato »Hitro odpri« in »Aktivnost«.
+- Stikalo vnosnega polja vklopi ali izklopi polje terminala spredaj in je v barvi poudarka, dokler je polje vklopljeno; brez terminala spredaj je zatemnjeno.
+- Če je nameščen le en agent, ga »Nova nit AI« odpre z enim klikom; sicer klik prikaže agente v meniju. Če gumb držite, se meni prikaže vedno.
+- Gumb za nastavitve je nižje, na dnu stranske vrstice.
 
 ## Terminal
-- Ko obremenjen Mac izhod programa prebere z zamudo, terminal vseeno opazi, da se je program končal, in ohrani njegove zadnje vrstice.
-
-## Markdown
-- Formula s krativcem (`` ` ``), prilepljena iz Worda ali s spletne strani, ostane formula, namesto da bi postala koda.
-- Slike v krepkem ali ležečem besedilu pri izvozu v Word ohranijo to oblikovanje.
-- Datoteka z več kot 500.000 praznimi celicami tabel prikaže svoje tabele kot besedilo, namesto da bi za to porabila sekunde in gigabajte pomnilnika.
+- Brez vnosnega polja dobi ukaz, ki ga tipkate, enake barve kot v polju: ukaz, podukazi, možnosti, spremenljivke in operatorji ter rdeče črtkano podčrtavanje pod ukazom, ki ga lupina ne more zagnati. Barve, ki jih nastavi lupina sama, ostanejo.
+- Brez vnosnega polja se seznam predlogov med tipkanjem besede odpre sam. Return izvede vrstico, Tab ali → pa sprejmeta sivi predlog; po ↑ ali ↓ sprejmeta izbrani vnos. Esc zapre seznam za to besedo, »Nastavitve › Terminal« pa ga izklopi.

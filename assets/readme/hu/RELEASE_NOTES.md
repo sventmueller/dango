@@ -1,10 +1,9 @@
-## AI-lap
-- A sikeresen lefutott vagy még futó hookok már nem jelennek meg az idővonalon, válaszonként egy összecsukott sorként sem; a sikertelen hook továbbra is megjelenik.
+## Eszközsor
+- Új sorrend jobbról: „Új terminál”, „Új AI-szál” és „Új böngészőlap” egy csoportban, tőlük balra „Felosztás jobbra”, „Felosztás lefelé” és a beviteli mező kapcsolója, majd „Gyors megnyitás” és „Tevékenység”.
+- A beviteli mező kapcsolója be- vagy kikapcsolja az elöl lévő terminál mezőjét, és amíg a mező be van kapcsolva, kiemelőszínnel látszik; ha nincs elöl terminál, halvány.
+- Ha csak egy ügynök van telepítve, az „Új AI-szál” egy kattintással megnyitja; különben a kattintás menüben mutatja az ügynököket. A gomb nyomva tartása mindig a menüt mutatja.
+- A beállítások gombja lejjebb, az oldalsáv alján van.
 
 ## Terminál
-- Ha egy leterhelt Mac késve olvassa be egy program kimenetét, a terminál akkor is észreveszi, hogy a program véget ért, és megtartja az utolsó sorait.
-
-## Markdown
-- A Wordből vagy weboldalról beillesztett képlet, amelyben backtick (`` ` ``) van, képlet marad, és nem válik kóddá.
-- A félkövér vagy dőlt szövegben lévő képek Wordbe exportáláskor is megtartják mindkét formázást.
-- Egy 500 000-nél több üres táblázatcellát tartalmazó fájl szövegként jeleníti meg a táblázatait, ahelyett, hogy másodpercekig tartana és gigabájtnyi memóriát foglalna.
+- Beviteli mező nélkül a begépelt parancs ugyanazokat a színeket kapja, mint a mezőben: parancs, alparancsok, opciók, változók és operátorok, a shell által nem futtatható parancs alatt pedig piros szaggatott aláhúzás jelenik meg. A shell saját színei megmaradnak.
+- Beviteli mező nélkül a javaslatlista magától megnyílik egy szó gépelése közben. A Return futtatja a sort, a Tab vagy a → elfogadja a szürke javaslatot; ↑ vagy ↓ után a kijelölt elemet fogadják el. Az Esc bezárja a listát erre a szóra, a „Beállítások › Terminál” kikapcsolja.

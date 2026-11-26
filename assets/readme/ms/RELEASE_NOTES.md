@@ -1,10 +1,9 @@
-## Tab AI
-- Hook yang berjaya dijalankan atau masih berjalan tidak lagi dipaparkan dalam garis masa, malah tidak sebagai baris yang diruntuhkan bagi setiap jawapan; hook yang gagal masih dipaparkan.
+## Bar Alat
+- Susunan baharu dari kanan: "Terminal Baharu", "Thread AI Baharu" dan "Tab Pelayar Baharu" dalam satu kumpulan, di sebelah kirinya "Pisah ke Kanan", "Pisah ke Bawah" dan suis medan input, kemudian "Buka Dengan Pantas" dan "Aktiviti".
+- Suis medan input menghidupkan atau mematikan medan terminal di hadapan dan dipaparkan dalam warna aksen selagi medan hidup; tanpa terminal di hadapan, suis itu dikelabukan.
+- Jika hanya satu ejen dipasang, "Thread AI Baharu" membukanya dengan satu klik; jika tidak, klik memaparkan ejen dalam menu. Menahan butang sentiasa memaparkan menu.
+- Butang seting kini terletak lebih rendah di bahagian bawah bar sisi.
 
 ## Terminal
-- Apabila Mac yang sibuk lambat membaca output sesuatu program, terminal tetap menyedari bahawa program itu telah tamat dan mengekalkan baris terakhirnya.
-
-## Markdown
-- Formula yang mengandungi backtick (`` ` ``), yang ditampal daripada Word atau halaman web, kekal sebagai formula dan tidak bertukar menjadi kod.
-- Gambar dalam teks tebal atau condong mengekalkan kedua-duanya dalam eksport Word.
-- Fail dengan lebih daripada 500,000 sel jadual kosong memaparkan jadualnya sebagai teks dan bukannya mengambil masa beberapa saat dan beberapa gigabait memori.
+- Tanpa medan input, arahan yang anda taip mendapat warna yang sama seperti dalam medan: arahan, subarahan, pilihan, pemboleh ubah dan operator, serta garis bawah merah putus-putus di bawah arahan yang tidak dapat dijalankan oleh shell. Warna yang ditetapkan oleh shell sendiri kekal.
+- Tanpa medan input, senarai cadangan terbuka sendiri semasa anda menaip sesuatu perkataan. Return menjalankan baris, Tab atau → menerima cadangan kelabu; selepas ↑ atau ↓, kedua-duanya menerima entri yang dipilih. Esc menutup senarai untuk perkataan itu, dan "Seting › Terminal" mematikannya.

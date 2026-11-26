@@ -1,10 +1,9 @@
-## Pestaña de IA
-- Los hooks que se ejecutaron correctamente o que aún se están ejecutando ya no aparecen en la línea de tiempo, ni siquiera como una fila contraída por respuesta; un hook que falla sigue apareciendo.
+## Barra de herramientas
+- Nuevo orden desde la derecha: «Nuevo terminal», «Nuevo hilo de IA» y «Nueva pestaña del navegador» en un grupo; a su izquierda, «Dividir a la derecha», «Dividir hacia abajo» y el interruptor del campo de entrada; después, «Abrir rápidamente» y «Actividad».
+- El interruptor del campo de entrada activa o desactiva el campo del terminal que está delante y se muestra en el color de resalte mientras el campo está activado; sin un terminal delante aparece atenuado.
+- Con un solo agente instalado, «Nuevo hilo de IA» lo abre con un clic; si no, el clic muestra los agentes en un menú. Mantener pulsado el botón muestra siempre el menú.
+- El botón de ajustes está más abajo, en la parte inferior de la barra lateral.
 
 ## Terminal
-- Cuando un Mac muy cargado lee tarde la salida de un programa, el terminal se da cuenta igualmente de que el programa ha terminado y conserva sus últimas líneas.
-
-## Markdown
-- Una fórmula con un acento grave (`` ` ``), pegada desde Word o desde una página web, sigue siendo una fórmula en lugar de convertirse en código.
-- Las imágenes dentro de un texto en negrita o en cursiva conservan la negrita y la cursiva en la exportación a Word.
-- Un archivo con más de 500.000 celdas de tabla vacías muestra sus tablas como texto en lugar de tardar segundos y ocupar gigabytes de memoria.
+- Sin el campo de entrada, el comando que escribes recibe los mismos colores que en el campo: comando, subcomandos, opciones, variables y operadores, y un subrayado rojo discontinuo bajo un comando que la shell no puede ejecutar. Los colores que pone la propia shell se mantienen.
+- Sin el campo de entrada, la lista de sugerencias se abre sola al escribir una palabra. Retorno ejecuta la línea y Tab o → aceptan la sugerencia gris; tras ↑ o ↓, aceptan el elemento seleccionado. Esc cierra la lista para esa palabra y «Ajustes › Terminal» la desactiva.

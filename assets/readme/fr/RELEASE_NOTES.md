@@ -1,10 +1,9 @@
-## Onglet IA
-- Les hooks qui se sont exécutés sans erreur ou qui s’exécutent encore n’apparaissent plus dans la chronologie, pas même sous forme de ligne réduite par réponse ; un hook qui échoue apparaît toujours.
+## Barre d’outils
+- Nouvel ordre en partant de la droite : « Nouveau terminal », « Nouveau fil IA » et « Nouvel onglet navigateur » dans un même groupe, à leur gauche « Diviser à droite », « Diviser vers le bas » et l’interrupteur du champ de saisie, puis « Ouverture rapide » et « Activité ».
+- L’interrupteur du champ de saisie active ou désactive le champ du terminal au premier plan et s’affiche dans la couleur d’accentuation tant que le champ est activé ; sans terminal au premier plan, il est grisé.
+- Avec un seul agent installé, « Nouveau fil IA » l’ouvre en un clic ; sinon, le clic affiche les agents dans un menu. Un appui prolongé sur le bouton affiche toujours le menu.
+- Le bouton des réglages se trouve plus bas, en bas de la barre latérale.
 
 ## Terminal
-- Quand un Mac très chargé lit en retard la sortie d’un programme, le terminal remarque quand même que le programme s’est terminé et garde ses dernières lignes.
-
-## Markdown
-- Une formule contenant un accent grave (`` ` ``), collée depuis Word ou une page web, reste une formule au lieu de devenir du code.
-- Les images dans un texte en gras ou en italique conservent le gras et l’italique dans l’export Word.
-- Un fichier comptant plus de 500 000 cellules de tableau vides affiche ses tableaux sous forme de texte au lieu de prendre des secondes et des gigaoctets de mémoire.
+- Sans le champ de saisie, la commande que vous tapez prend les mêmes couleurs que dans le champ : commande, sous-commandes, options, variables et opérateurs, et un soulignement rouge en pointillés sous une commande que le shell ne peut pas exécuter. Les couleurs que le shell définit lui-même sont conservées.
+- Sans le champ de saisie, la liste des suggestions s'ouvre d'elle-même pendant la saisie d'un mot. Retour exécute la ligne, Tab ou → acceptent la suggestion grise ; après ↑ ou ↓, ils acceptent l'élément sélectionné. Échap ferme la liste pour ce mot, et « Réglages › Terminal » la désactive.

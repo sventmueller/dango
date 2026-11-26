@@ -1,10 +1,9 @@
-## Filă IA
-- Hookurile care au rulat fără erori sau care încă rulează nu mai apar în cronologie, nici măcar ca un rând restrâns pentru fiecare răspuns; un hook care eșuează apare în continuare.
+## Bara de instrumente
+- Ordine nouă de la dreapta: „Terminal nou”, „Conversație IA nouă” și „Filă de browser nouă” într-un grup, în stânga lor „Împărțiți la dreapta”, „Împărțiți în jos” și comutatorul câmpului de introducere, apoi „Deschidere rapidă” și „Activitate”.
+- Comutatorul câmpului de introducere pornește sau oprește câmpul terminalului din față și apare în culoarea de accent cât timp câmpul e pornit; fără un terminal în față, este estompat.
+- Dacă este instalat un singur agent, „Conversație IA nouă” îl deschide cu un clic; altfel, clicul afișează agenții într-un meniu. Ținerea apăsată a butonului afișează întotdeauna meniul.
+- Butonul de configurări stă mai jos, în partea de jos a barei laterale.
 
 ## Terminal
-- Când un Mac ocupat citește cu întârziere ieșirea unui program, terminalul observă totuși că programul s-a încheiat și îi păstrează ultimele rânduri.
-
-## Markdown
-- O formulă cu un accent grav (`` ` ``), lipită din Word sau dintr-o pagină web, rămâne formulă în loc să devină cod.
-- Imaginile din textul aldin sau cursiv își păstrează formatarea în exportul Word.
-- Un fișier cu peste 500.000 de celule de tabel goale își afișează tabelele ca text, în loc să dureze secunde și să ocupe gigaocteți de memorie.
+- Fără câmpul de introducere, comanda tastată primește aceleași culori ca în câmp: comandă, subcomenzi, opțiuni, variabile și operatori, plus o subliniere roșie întreruptă sub o comandă pe care shell-ul nu o poate rula. Culorile setate chiar de shell rămân.
+- Fără câmpul de introducere, lista de sugestii se deschide singură când tastați un cuvânt. Return rulează linia, iar Tab sau → acceptă sugestia gri; după ↑ sau ↓, acceptă elementul selectat. Esc închide lista pentru acel cuvânt, iar „Configurări › Terminal” o dezactivează.

@@ -1,10 +1,9 @@
-## Karta AI
-- Hooki, które zakończyły się powodzeniem lub wciąż działają, nie pojawiają się już na osi czasu, nawet jako zwinięty wiersz przy każdej odpowiedzi; nieudany hook nadal się pojawia.
+## Pasek narzędzi
+- Nowa kolejność od prawej: „Nowy terminal”, „Nowy wątek AI” i „Nowa karta przeglądarki” w jednej grupie, na lewo od nich „Podziel w prawo”, „Podziel w dół” i przełącznik pola wprowadzania, a dalej „Szybko otwórz” i „Aktywność”.
+- Przełącznik pola wprowadzania włącza lub wyłącza pole terminala z przodu i ma kolor akcentu, dopóki pole jest włączone; gdy z przodu nie ma terminala, jest wyszarzony.
+- Gdy zainstalowany jest tylko jeden agent, „Nowy wątek AI” otwiera go jednym kliknięciem; w przeciwnym razie kliknięcie pokazuje agentów w menu. Przytrzymanie przycisku zawsze pokazuje menu.
+- Przycisk ustawień znajduje się niżej, na dole paska bocznego.
 
 ## Terminal
-- Gdy obciążony Mac z opóźnieniem odczytuje wynik programu, terminal i tak zauważa, że program się zakończył, i zachowuje jego ostatnie wiersze.
-
-## Markdown
-- Wzór zawierający grawis (`` ` ``), wklejony z Worda lub strony WWW, pozostaje wzorem, zamiast stać się kodem.
-- Obrazki w tekście pogrubionym lub pisanym kursywą zachowują jedno i drugie przy eksporcie do Worda.
-- Plik, w którym jest ponad 500 000 pustych komórek tabeli, pokazuje swoje tabele jako tekst, zamiast zajmować sekundy i gigabajty pamięci.
+- Bez pola wprowadzania wpisywane polecenie dostaje te same kolory co w polu: polecenie, podpolecenia, opcje, zmienne i operatory, a pod poleceniem, którego powłoka nie może uruchomić, pojawia się czerwone przerywane podkreślenie. Kolory ustawione przez samą powłokę pozostają.
+- Bez pola wprowadzania lista podpowiedzi otwiera się sama podczas pisania słowa. Return uruchamia wiersz, a Tab lub → przyjmują szarą podpowiedź; po ↑ lub ↓ przyjmują zaznaczoną pozycję. Esc zamyka listę dla tego słowa, a „Ustawienia › Terminal” ją wyłącza.

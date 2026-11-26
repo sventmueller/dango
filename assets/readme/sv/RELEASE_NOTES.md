@@ -1,10 +1,9 @@
-## AI-flik
-- Hookar som kördes utan fel eller fortfarande körs visas inte längre i tidslinjen, inte ens som en hopfälld rad per svar; en hook som misslyckas visas fortfarande.
+## Verktygsfält
+- Ny ordning från höger: ”Ny terminal”, ”Ny AI-tråd” och ”Ny webbläsarflik” i en grupp, till vänster om dem ”Dela åt höger”, ”Dela nedåt” och reglaget för inmatningsfältet, sedan ”Öppna snabbt” och ”Aktivitet”.
+- Reglaget för inmatningsfältet slår på eller av fältet i terminalen längst fram och visas i accentfärgen så länge fältet är på; utan en terminal längst fram är det nedtonat.
+- Om bara en agent är installerad öppnar ”Ny AI-tråd” den med ett klick; annars visar klicket agenterna i en meny. Håller du ned knappen visas alltid menyn.
+- Knappen för inställningar sitter längre ned, längst ned i sidofältet.
 
 ## Terminal
-- När en hårt belastad Mac läser ett programs utdata sent märker terminalen ändå att programmet har avslutats och behåller dess sista rader.
-
-## Markdown
-- En formel med en backtick (`` ` ``), inklistrad från Word eller en webbsida, förblir en formel i stället för att bli kod.
-- Bilder i fet eller kursiv text behåller den formateringen i Word-exporten.
-- En fil med fler än 500 000 tomma tabellceller visar sina tabeller som text i stället för att ta sekunder och gigabyte minne.
+- Utan inmatningsfältet får kommandot du skriver samma färger som i fältet: kommando, underkommandon, alternativ, variabler och operatorer, och en streckad röd understrykning under ett kommando som skalet inte kan köra. Färger som skalet självt sätter behålls.
+- Utan inmatningsfältet öppnas förslagslistan av sig själv medan du skriver ett ord. Retur kör raden och Tabb eller → tar det grå förslaget; efter ↑ eller ↓ tar de den markerade posten. Esc stänger listan för det ordet, och ”Inställningar › Terminal” stänger av den.

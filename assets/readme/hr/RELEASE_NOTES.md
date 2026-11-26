@@ -1,10 +1,9 @@
-## AI kartica
-- Hookovi koji su se uspješno izvršili ili se još izvršavaju više se ne prikazuju na vremenskoj crti, čak ni kao sažeti redak po odgovoru; neuspjeli hook i dalje se prikazuje.
+## Alatna traka
+- Novi redoslijed zdesna: „Novi terminal”, „Nova AI nit” i „Nova kartica preglednika” u jednoj skupini, lijevo od njih „Podijeli desno”, „Podijeli dolje” i prekidač polja za unos, zatim „Brzo otvaranje” i „Aktivnost”.
+- Prekidač polja za unos uključuje ili isključuje polje terminala sprijeda i prikazuje se u boji isticanja dok je polje uključeno; bez terminala sprijeda je zasivljen.
+- Ako je instaliran samo jedan agent, „Nova AI nit” otvara ga jednim klikom; inače klik prikazuje agente u izborniku. Držanje gumba uvijek prikazuje izbornik.
+- Gumb za postavke nalazi se niže, pri dnu rubnog stupca.
 
 ## Terminal
-- Kad opterećeni Mac sa zakašnjenjem čita izlaz programa, terminal ipak primjećuje da je program završio i zadržava njegove posljednje retke.
-
-## Markdown
-- Formula s obrnutim apostrofom (`` ` ``), zalijepljena iz Worda ili s web stranice, ostaje formula umjesto da postane kod.
-- Slike u podebljanom ili kurzivnom tekstu zadržavaju podebljanje i kurziv pri eksportu u Word.
-- Datoteka s više od 500.000 praznih ćelija tablice prikazuje svoje tablice kao tekst umjesto da zahtijeva sekunde i gigabajte memorije.
+- Bez polja za unos naredba koju tipkate dobiva iste boje kao u polju: naredba, podnaredbe, opcije, varijable i operatori te crveno isprekidano podcrtavanje ispod naredbe koju ljuska ne može pokrenuti. Boje koje ljuska sama postavi ostaju.
+- Bez polja za unos popis prijedloga otvara se sam dok tipkate riječ. Return pokreće redak, a Tab ili → prihvaćaju sivi prijedlog; nakon ↑ ili ↓ prihvaćaju označenu stavku. Esc zatvara popis za tu riječ, a „Postavke › Terminal” ga isključuje.

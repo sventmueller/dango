@@ -1,10 +1,9 @@
-## KI-fane
-- Hooks som kjørte uten feil eller fortsatt kjører, vises ikke lenger i tidslinjen, heller ikke som en sammenfoldet rad per svar; en hook som mislykkes, vises fortsatt.
+## Verktøylinje
+- Ny rekkefølge fra høyre: «Ny terminal», «Ny KI-tråd» og «Ny nettleserfane» i én gruppe, til venstre for dem «Del til høyre», «Del nedover» og bryteren for inndatafeltet, deretter «Åpne raskt» og «Aktivitet».
+- Bryteren for inndatafeltet slår feltet i terminalen foran på eller av og vises i uthevingsfargen så lenge feltet er på; uten en terminal foran er den nedtonet.
+- Er bare én agent installert, åpner «Ny KI-tråd» den med ett klikk; ellers viser klikket agentene i en meny. Holder du knappen nede, vises alltid menyen.
+- Knappen for innstillinger sitter lenger ned nederst i sidepanelet.
 
 ## Terminal
-- Når en hardt belastet Mac leser utdataene fra et program med forsinkelse, merker terminalen likevel at programmet er avsluttet, og beholder de siste linjene fra det.
-
-## Markdown
-- En formel med en backtick (`` ` ``) i seg, limt inn fra Word eller en nettside, forblir en formel i stedet for å bli til kode.
-- Bilder i fet eller kursiv tekst beholder begge deler ved eksport til Word.
-- En fil med over 500 000 tomme tabellceller viser tabellene som tekst i stedet for å bruke sekunder og gigabyte med minne.
+- Uten inndatafeltet får kommandoen du skriver de samme fargene som i feltet: kommando, underkommandoer, alternativer, variabler og operatorer, og en rød stiplet understreking under en kommando skallet ikke kan kjøre. Farger skallet setter selv, beholdes.
+- Uten inndatafeltet åpner forslagslisten seg selv mens du skriver et ord. Retur kjører linjen, og Tab eller → tar det grå forslaget; etter ↑ eller ↓ tar de det markerte elementet. Esc lukker listen for det ordet, og «Innstillinger › Terminal» slår den av.

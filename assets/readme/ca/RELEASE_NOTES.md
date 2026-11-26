@@ -1,10 +1,9 @@
-## Pestanya d’IA
-- Els hooks que s’han executat correctament o que encara s’executen ja no apareixen a la línia de temps, ni tan sols com una fila contreta per resposta; un hook que falla hi continua apareixent.
+## Barra d’eines
+- Nou ordre des de la dreta: «Nou terminal», «Nou fil d’IA» i «Nova pestanya del navegador» en un grup; a l’esquerra, «Divideix a la dreta», «Divideix cap avall» i l’interruptor del camp d’entrada; després, «Obertura ràpida» i «Activitat».
+- L’interruptor del camp d’entrada activa o desactiva el camp del terminal que hi ha al davant i es mostra amb el color d’èmfasi mentre el camp està activat; sense cap terminal al davant, apareix atenuat.
+- Si només hi ha un agent instal·lat, «Nou fil d’IA» l’obre amb un clic; si no, el clic mostra els agents en un menú. Mantenir premut el botó sempre mostra el menú.
+- El botó de configuració és més avall, a la part inferior de la barra lateral.
 
 ## Terminal
-- Quan un Mac molt carregat llegeix tard la sortida d’un programa, el terminal igualment s’adona que el programa ha acabat i en conserva les darreres línies.
-
-## Markdown
-- Una fórmula amb un accent greu (`` ` ``), enganxada des de Word o des d’una pàgina web, continua sent una fórmula en lloc de convertir-se en codi.
-- Les imatges dins d’un text en negreta o en cursiva conserven la negreta i la cursiva a l’exportació a Word.
-- Un fitxer amb més de 500.000 cel·les de taula buides mostra les seves taules com a text en lloc de trigar segons i ocupar gigabytes de memòria.
+- Sense el camp d'entrada, l'ordre que escrius rep els mateixos colors que al camp: ordre, subordres, opcions, variables i operadors, i un subratllat vermell discontinu sota una ordre que l'intèrpret no pot executar. Els colors que posa l'intèrpret es mantenen.
+- Sense el camp d'entrada, la llista de suggeriments s'obre sola mentre escrius una paraula. Retorn executa la línia i Tab o → accepten el suggeriment gris; després de ↑ o ↓, accepten l'element seleccionat. Esc tanca la llista per a aquesta paraula, i «Configuració › Terminal» la desactiva.

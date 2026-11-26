@@ -1,10 +1,9 @@
-## AI-Tab
-- Hooks, die erfolgreich liefen oder noch laufen, erscheinen nicht mehr in der Zeitleiste, auch nicht als eingeklappte Zeile pro Antwort; ein fehlgeschlagener Hook erscheint weiterhin.
+## Toolbar
+- Neue Reihenfolge von rechts: „Neues Terminal“, „Neuer AI-Thread“ und „Neuer Browser-Tab“ in einer Gruppe, links davon „Rechts teilen“, „Unten teilen“ und der Schalter des Eingabefelds, dann „Schnell öffnen“ und „Aktivität“.
+- Der Schalter des Eingabefelds schaltet das Feld des Terminals vorn ein oder aus und steht in der Akzentfarbe, solange das Feld an ist; ohne Terminal vorn ist er ausgegraut.
+- Ist nur ein Agent installiert, öffnet „Neuer AI-Thread“ ihn mit einem Klick; sonst zeigt der Klick die Agenten als Menü. Gedrückt halten zeigt immer das Menü.
+- Die Schaltfläche für die Einstellungen sitzt tiefer am unteren Rand der Seitenleiste.
 
 ## Terminal
-- Liest ein ausgelasteter Mac die Ausgabe eines Programms verspätet, bemerkt das Terminal trotzdem, dass das Programm endete, und behält seine letzten Zeilen.
-
-## Markdown
-- Eine Formel mit einem Backtick, eingesetzt aus Word oder einer Webseite, bleibt eine Formel, statt zu Code zu werden.
-- Bilder in fettem oder kursivem Text behalten beides im Word-Export.
-- Eine Datei mit mehr als 500.000 leeren Tabellenzellen zeigt ihre Tabellen als Text, statt Sekunden und Gigabytes an Speicher zu brauchen.
+- Ohne Eingabefeld bekommt der getippte Befehl dieselben Farben wie im Feld: Befehl, Unterbefehle, Optionen, Variablen und Operatoren, dazu eine rot gestrichelte Unterstreichung unter einem Befehl, den die Shell nicht ausführen kann. Farben, die die Shell selbst setzt, bleiben.
+- Ohne Eingabefeld öffnet sich die Vorschlagsliste beim Tippen eines Wortes von selbst. Return führt die Zeile aus, Tab oder → übernehmen den grauen Vorschlag; nach ↑ oder ↓ übernehmen sie den markierten Eintrag. Esc schließt die Liste für dieses Wort, „Einstellungen › Terminal“ schaltet sie ab.
