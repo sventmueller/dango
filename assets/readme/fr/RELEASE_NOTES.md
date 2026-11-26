@@ -1,14 +1,10 @@
-## Terminal
-- Le terminal est désormais celui de Tapa, l’app sœur de Dango pour le terminal, avec tout ce qu’elle apporte, tandis que Dango garde ce que son terminal faisait déjà : coller des images pour les agents, les serveurs de développement dans l’onglet du navigateur, le ⌘-clic vers l’éditeur.
-- **Présentation › Afficher/masquer le champ de saisie** (⌘I quand un terminal a le focus) transforme la ligne de commande en un champ de texte, avec le dossier et la branche Git au-dessus. Les commandes sont colorées selon leurs parties, et celle que votre shell ne peut pas exécuter reçoit un soulignement rouge en tirets.
-- Les suggestions s’affichent en gris pendant que vous tapez, dans le champ de saisie comme sans lui : tirées de votre historique, des spécifications de plus de 700 outils en ligne de commande et du projet, comme les branches git, les scripts de `package.json` et les cibles de make, just et cargo. → en accepte une ; Tab complète et, s’il y a plusieurs candidats, ouvre un menu que la frappe filtre. Elles n’utilisent jamais le réseau.
-- Blocs de commandes : ⌘↑ et ⌘↓ sautent d’une invite à l’autre, le menu **Édition** sélectionne, copie et enregistre la sortie d’une commande, et des signets marquent des lignes. Avec **Marquer les commandes comme blocs** activé, une barre montre chaque bloc, les commandes qui ont échoué sont signalées et des boutons au-dessus d’un bloc affichent son état et sa durée.
-- **Envoyer le bloc à l’agent** (menu Édition et menu contextuel du terminal) ouvre un onglet IA avec la ligne de commande et la sortie du bloc courant jointes comme Contenu externe.
-- **Rechercher** (⌘F quand un terminal a le focus) cherche dans tout l’historique, avec des expressions régulières, la casse et les mots entiers ; la barre de défilement signale les résultats.
-- La notification d’un programme (OSC 9 et OSC 777) et sa sonnerie placent le point rouge sur l’onglet du terminal tant que vous ne le voyez pas, et la notification part vers macOS quand une autre app est au premier plan. La progression qu’un programme signale (OSC 9;4) s’affiche sous forme d’anneau sur son onglet et de barre sur l’icône du Dock.
-- Un double-clic sélectionne en entier une URL, un chemin ou un hachage, un glissement avec ⌥ sélectionne un rectangle, **Copier avec la mise en forme** conserve les couleurs et les styles, et **Sélectionner au clavier** déplace une sélection avec les touches de Vim.
-- Les collages de plusieurs lignes qui s’exécuteraient aussitôt s’affichent d’abord, et **Dango › Saisie clavier sécurisée** empêche les autres apps de lire ce que vous tapez dans un terminal.
-- Les liens d’autres types que les adresses web, `mailto:` et les fichiers ne s’ouvrent plus depuis le terminal.
+## Onglet IA
+- Les hooks qui se sont exécutés sans erreur ou qui s’exécutent encore n’apparaissent plus dans la chronologie, pas même sous forme de ligne réduite par réponse ; un hook qui échoue apparaît toujours.
 
-## Réglages
-- **Réglages › Terminal** active ou désactive le champ de saisie pour les nouveaux terminaux, ses touches Vim, les suggestions, la couleur des commandes, le soulignement des commandes inconnues, les blocs de commandes, la copie immédiate de la sélection, l’affichage préalable des collages de plusieurs lignes et ⌥ comme touche Meta, qui se trouvait auparavant dans Général.
+## Terminal
+- Quand un Mac très chargé lit en retard la sortie d’un programme, le terminal remarque quand même que le programme s’est terminé et garde ses dernières lignes.
+
+## Markdown
+- Une formule contenant un accent grave (`` ` ``), collée depuis Word ou une page web, reste une formule au lieu de devenir du code.
+- Les images dans un texte en gras ou en italique conservent le gras et l’italique dans l’export Word.
+- Un fichier comptant plus de 500 000 cellules de tableau vides affiche ses tableaux sous forme de texte au lieu de prendre des secondes et des gigaoctets de mémoire.

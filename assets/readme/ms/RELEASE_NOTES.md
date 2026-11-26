@@ -1,14 +1,10 @@
-## Terminal
-- Terminal kini ialah terminal Tapa, app terminal saudara Dango, dengan semua yang dibawanya, manakala Dango mengekalkan apa yang dilakukan terminalnya sebelum ini: menampal imej kepada ejen, pelayan pembangunan dalam tab pelayar, ⌘-klik ke dalam editor.
-- **Paparan › Tunjukkan/Sembunyikan Medan Input** (⌘I semasa terminal mempunyai fokus) menukar baris perintah menjadi medan teks dengan folder dan branch Git di atasnya. Perintah diwarnakan mengikut bahagiannya, dan perintah yang tidak boleh dijalankan oleh shell anda mendapat garis bawah merah putus-putus.
-- Cadangan ditunjukkan dalam warna kelabu semasa anda menaip, dalam medan input dan tanpanya: daripada sejarah anda, daripada spesifikasi bagi lebih 700 alat baris perintah dan daripada projek, seperti branch git, skrip `package.json` serta sasaran make, just dan cargo. → menerima cadangan; Tab melengkapkan, dan apabila ada beberapa calon membuka menu yang ditapis semasa anda menaip. Cadangan tidak pernah menggunakan rangkaian.
-- Blok perintah: ⌘↑ dan ⌘↓ melompat antara prompt, menu **Edit** memilih, menyalin dan menyimpan output sesuatu perintah, dan penanda buku menandakan baris. Apabila **Tandakan perintah sebagai blok** dihidupkan, satu bar menunjukkan setiap blok, perintah yang gagal ditandakan dan butang di atas blok menunjukkan status dan tempohnya.
-- **Hantar Blok kepada Ejen** (menu Edit dan menu konteks terminal) membuka tab AI dengan baris perintah dan output blok semasa dilampirkan sebagai Kandungan Luaran.
-- **Cari** (⌘F semasa terminal mempunyai fokus) mencari seluruh sejarah, dengan ungkapan nalar, huruf besar-kecil dan perkataan penuh; bar tatal menandakan hasil.
-- Pemberitahuan program (OSC 9 dan OSC 777) dan locengnya meletakkan titik merah pada tab terminal semasa anda tidak melihatnya, dan pemberitahuan dihantar ke macOS semasa app lain berada di hadapan. Kemajuan yang dilaporkan oleh program (OSC 9;4) ditunjukkan sebagai gelang pada tabnya dan sebagai bar pada ikon Dock.
-- Klik dua kali memilih URL, laluan atau cincangan secara keseluruhan, seret dengan ⌥ memilih segi empat tepat, **Salin dengan Format** mengekalkan warna dan gaya, dan **Pilih dengan Papan Kekunci** mengalihkan pilihan dengan kekunci Vim.
-- Tampalan berbilang baris yang akan dijalankan serta-merta ditunjukkan dahulu, dan **Dango › Entri Papan Kekunci Selamat** menghalang app lain daripada membaca apa yang anda taip ke dalam terminal.
-- Pautan jenis selain alamat web, `mailto:` dan fail tidak lagi dibuka dari terminal.
+## Tab AI
+- Hook yang berjaya dijalankan atau masih berjalan tidak lagi dipaparkan dalam garis masa, malah tidak sebagai baris yang diruntuhkan bagi setiap jawapan; hook yang gagal masih dipaparkan.
 
-## Seting
-- **Seting › Terminal** menghidupkan dan mematikan medan input untuk terminal baharu, kekunci Vimnya, cadangan, pewarnaan perintah, garis bawah bagi perintah yang tidak dikenali, blok perintah, penyalinan pilihan serta-merta, menunjukkan tampalan berbilang baris dahulu dan ⌥ sebagai kekunci Meta, yang dipindahkan ke sini daripada Umum.
+## Terminal
+- Apabila Mac yang sibuk lambat membaca output sesuatu program, terminal tetap menyedari bahawa program itu telah tamat dan mengekalkan baris terakhirnya.
+
+## Markdown
+- Formula yang mengandungi backtick (`` ` ``), yang ditampal daripada Word atau halaman web, kekal sebagai formula dan tidak bertukar menjadi kod.
+- Gambar dalam teks tebal atau condong mengekalkan kedua-duanya dalam eksport Word.
+- Fail dengan lebih daripada 500,000 sel jadual kosong memaparkan jadualnya sebagai teks dan bukannya mengambil masa beberapa saat dan beberapa gigabait memori.

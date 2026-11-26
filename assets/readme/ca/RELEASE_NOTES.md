@@ -1,14 +1,10 @@
-## Terminal
-- El terminal ara és el del Tapa, l’app germana del Dango per al terminal, amb tot el que aporta, mentre que el Dango conserva el que ja feia el seu terminal: enganxar imatges per als agents, els servidors de desenvolupament a la pestanya del navegador i el ⌘-clic cap a l’editor.
-- **Mostra › Mostrar/ocultar el camp d’entrada** (⌘I quan un terminal té el focus) converteix la línia d’ordres en un camp de text amb la carpeta i la branca de Git a sobre. Les ordres es pinten segons les seves parts, i la que el teu shell no pot executar rep un subratllat vermell discontinu.
-- Els suggeriments es mostren en gris mentre escrius, amb el camp d’entrada i sense: del teu historial, d’especificacions per a més de 700 eines de línia d’ordres i del projecte, com ara branques de git, scripts de `package.json` i objectius de make, just i cargo. → n’accepta un; Tab completa i, amb diversos candidats, obre un menú que es filtra en escriure. No fan servir mai la xarxa.
-- Blocs d’ordres: ⌘↑ i ⌘↓ salten d’un prompt a un altre, el menú **Edita** selecciona, copia i desa la sortida d’una ordre, i els marcadors marquen línies. Amb **Marca les ordres com a blocs** activat, una barra mostra cada bloc, les ordres fallides es marquen i uns botons sobre un bloc en mostren l’estat i la durada.
-- **Envia el bloc a l’agent** (menú Edita i menú contextual del terminal) obre una pestanya d’IA amb la línia d’ordres i la sortida del bloc actual adjuntes com a Contingut extern.
-- **Cerca** (⌘F quan un terminal té el focus) cerca a tot l’historial, amb expressions regulars, distinció de majúscules i paraules senceres; la barra de desplaçament marca els resultats.
-- La notificació d’un programa (OSC 9 i OSC 777) i la seva campana posen el punt vermell a la pestanya del terminal mentre no el veus, i la notificació va a macOS mentre una altra app és al davant. El progrés que indica un programa (OSC 9;4) es mostra com un anell a la seva pestanya i com una barra a la icona del Dock.
-- Un doble clic selecciona sencera una URL, un camí o un hash, arrossegar amb ⌥ selecciona un rectangle, **Copia amb format** conserva els colors i els estils, i **Seleccionar amb el teclat** mou una selecció amb les tecles del Vim.
-- Els enganxaments de diverses línies que s’executarien de seguida es mostren primer, i **Dango › Entrada de teclat segura** impedeix que altres apps llegeixin el que escrius en un terminal.
-- Els enllaços de tipus diferents de les adreces web, `mailto:` i els fitxers ja no s’obren des del terminal.
+## Pestanya d’IA
+- Els hooks que s’han executat correctament o que encara s’executen ja no apareixen a la línia de temps, ni tan sols com una fila contreta per resposta; un hook que falla hi continua apareixent.
 
-## Configuració
-- **Configuració › Terminal** activa o desactiva el camp d’entrada per als terminals nous, les seves tecles del Vim, els suggeriments, els colors de les ordres, el subratllat de les desconegudes, els blocs d’ordres, copiar la selecció immediatament, mostrar primer els enganxaments de diverses línies i ⌥ com a tecla Meta, que ha passat aquí des de General.
+## Terminal
+- Quan un Mac molt carregat llegeix tard la sortida d’un programa, el terminal igualment s’adona que el programa ha acabat i en conserva les darreres línies.
+
+## Markdown
+- Una fórmula amb un accent greu (`` ` ``), enganxada des de Word o des d’una pàgina web, continua sent una fórmula en lloc de convertir-se en codi.
+- Les imatges dins d’un text en negreta o en cursiva conserven la negreta i la cursiva a l’exportació a Word.
+- Un fitxer amb més de 500.000 cel·les de taula buides mostra les seves taules com a text en lloc de trigar segons i ocupar gigabytes de memòria.

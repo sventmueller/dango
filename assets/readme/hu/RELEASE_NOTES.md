@@ -1,14 +1,10 @@
-## Terminál
-- A terminál mostantól a Tapa, a Dango terminálos testvéralkalmazásának terminálja, mindazzal, amit magával hoz; ami a Dango termináljában eddig megvolt, megmarad: képek beillesztése az ügynököknek, fejlesztői szerverek a böngészőlapon, ⌘-kattintás a szerkesztőbe.
-- A **Nézet › Beviteli mező megjelenítése/elrejtése** (⌘I, amikor egy terminálon van a fókusz) a parancssort szövegmezővé alakítja, fölötte a mappával és a Git-ággal. A parancsok részeik szerint színezve jelennek meg, és amelyet a shell nem tud futtatni, szaggatott piros aláhúzást kap.
-- A javaslatok gépelés közben szürkén jelennek meg, a beviteli mezőben és nélküle is: az előzményeiből, több mint 700 parancssori eszköz leírásából és a projektből, például git-ágak, `package.json`-szkriptek, valamint make-, just- és cargo-célok. A → elfogad egyet; a Tab kiegészít, több jelölt esetén pedig menüt nyit, amelyet a gépelés szűr. Soha nem használják a hálózatot.
-- Parancsblokkok: a ⌘↑ és a ⌘↓ a promptok között ugrik, a **Szerkesztés** menü kijelöli, másolja és menti egy parancs kimenetét, a könyvjelzők pedig sorokat jelölnek meg. Ha a **Parancsok jelölése blokkként** be van kapcsolva, egy sáv mutatja az egyes blokkokat, a sikertelen parancsok jelölve vannak, a blokk fölötti gombok pedig az állapotát és az időtartamát mutatják.
-- A **Blokk küldése az ügynöknek** (Szerkesztés menü és a terminál helyi menüje) AI-lapot nyit, amelyhez az aktuális blokk parancssora és kimenete Külső tartalomként van csatolva.
-- A **Keresés** (⌘F, amikor egy terminálon van a fókusz) a teljes előzményben keres, reguláris kifejezésekkel, kis- és nagybetűk szerint és egész szavakra; a görgetősáv jelöli a találatokat.
-- Egy program értesítése (OSC 9 és OSC 777) és csengője a piros pontot a terminál lapjára teszi, amíg Ön nem látja, és ha egy másik app van elöl, az értesítés a macOS-hez kerül. A program által jelentett folyamat (OSC 9;4) gyűrűként jelenik meg a lapján és sávként a Dock-ikonon.
-- A dupla kattintás egy teljes URL-t, útvonalat vagy hasht jelöl ki, az ⌥-húzás téglalapot jelöl ki, a **Másolás formázással** megtartja a színeket és a stílusokat, a **Kijelölés billentyűzettel** pedig a Vim billentyűivel mozgatja a kijelölést.
-- Azok a többsoros beillesztések, amelyek azonnal lefutnának, előbb megjelennek, a **Dango › Biztonságos bevitel billentyűzetről** pedig megakadályozza, hogy más appok olvassák, amit egy terminálba gépel.
-- A webcímeken, a `mailto:` hivatkozásokon és a fájlokon kívül más fajta hivatkozások már nem nyílnak meg a terminálból.
+## AI-lap
+- A sikeresen lefutott vagy még futó hookok már nem jelennek meg az idővonalon, válaszonként egy összecsukott sorként sem; a sikertelen hook továbbra is megjelenik.
 
-## Beállítások
-- A **Beállítások › Terminál** ki- és bekapcsolja az új terminálok beviteli mezőjét, annak Vim-billentyűit, a javaslatokat, a parancsok színezését, az ismeretlenek aláhúzását, a parancsblokkokat, a kijelölés azonnali másolását, a többsoros beillesztések előzetes megjelenítését és az ⌥ metabillentyűként való használatát, amely az Általános lapról került ide.
+## Terminál
+- Ha egy leterhelt Mac késve olvassa be egy program kimenetét, a terminál akkor is észreveszi, hogy a program véget ért, és megtartja az utolsó sorait.
+
+## Markdown
+- A Wordből vagy weboldalról beillesztett képlet, amelyben backtick (`` ` ``) van, képlet marad, és nem válik kóddá.
+- A félkövér vagy dőlt szövegben lévő képek Wordbe exportáláskor is megtartják mindkét formázást.
+- Egy 500 000-nél több üres táblázatcellát tartalmazó fájl szövegként jeleníti meg a táblázatait, ahelyett, hogy másodpercekig tartana és gigabájtnyi memóriát foglalna.

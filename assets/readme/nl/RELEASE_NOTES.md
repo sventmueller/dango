@@ -1,14 +1,10 @@
-## Terminal
-- De terminal is nu die van Tapa, de zusterapp van Dango voor de terminal, met alles wat die meebrengt, terwijl Dango houdt wat zijn terminal al deed: afbeeldingen plakken naar agents, ontwikkelservers in het browsertabblad, ⌘-klik naar de editor.
-- **Weergave › Toon/verberg invoerveld** (⌘I terwijl een terminal de focus heeft) maakt van de opdrachtregel een tekstveld, met de map en de Git-branch erboven. Commando's worden per onderdeel gekleurd, en een commando dat je shell niet kan uitvoeren, krijgt een rode stippellijn eronder.
-- Voorstellen verschijnen in grijs terwijl je typt, in het veld en zonder: uit je geschiedenis, uit specificaties voor meer dan 700 opdrachtregeltools en uit het project, zoals git-branches, `package.json`-scripts en doelen van make, just en cargo. → neemt er een over; Tab vult aan en opent bij meerdere kandidaten een menu dat je met typen filtert. Ze gebruiken nooit het netwerk.
-- Commandoblokken: ⌘↑ en ⌘↓ springen tussen prompts, het menu **Wijzig** selecteert, kopieert en bewaart de uitvoer van een commando, en bladwijzers markeren regels. Met **Markeer commando's als blokken** aan toont een balk elk blok, worden mislukte commando's gemarkeerd en tonen knoppen boven een blok de status en de duur.
-- **Stuur blok naar agent** (menu 'Wijzig' en het contextuele menu van de terminal) opent een AI-tabblad met de opdrachtregel en de uitvoer van het huidige blok als Externe inhoud bijgevoegd.
-- **Zoek** (⌘F terwijl een terminal de focus heeft) doorzoekt de hele geschiedenis, met reguliere expressies, hoofdlettergevoelig en op hele woorden; de scrollbalk markeert de resultaten.
-- Een melding van een programma (OSC 9 en OSC 777) en zijn bel zetten de rode stip op het tabblad van de terminal zolang je die niet ziet, en de melding gaat naar macOS zolang er een andere app vooraan staat. Voortgang die een programma meldt (OSC 9;4), verschijnt als een ring op zijn tabblad en als een balk op het Dock-symbool.
-- Een dubbelklik selecteert een URL, een pad of een hash in zijn geheel, slepen met ⌥ selecteert een rechthoek, **Kopieer met opmaak** behoudt kleuren en stijlen, en **Selecteer met het toetsenbord** verplaatst een selectie met de toetsen van Vim.
-- Plakken van meerdere regels dat meteen zou worden uitgevoerd, verschijnt eerst, en **Dango › Beveilig toetsenbordinvoer** voorkomt dat andere apps lezen wat je in een terminal typt.
-- Links van andere soorten dan webadressen, `mailto:` en bestanden opent de terminal niet meer.
+## AI-tabblad
+- Hooks die goed zijn verlopen of nog lopen, verschijnen niet meer in de tijdlijn, ook niet als ingeklapte regel per antwoord; een hook die mislukt, verschijnt nog wel.
 
-## Instellingen
-- **Instellingen › Terminal** schakelt het invoerveld voor nieuwe terminals, de Vim-toetsen ervan, de voorstellen, het kleuren van commando's, het onderstrepen van onbekende, commandoblokken, het direct kopiëren van de selectie, het eerst tonen van plakken van meerdere regels en ⌥ als metatoets, die van Algemeen hierheen is verhuisd.
+## Terminal
+- Als een drukbezette Mac de uitvoer van een programma met vertraging leest, merkt de terminal toch dat het programma is afgelopen en behoudt hij de laatste regels ervan.
+
+## Markdown
+- Een formule met een backtick (`` ` ``) erin, geplakt uit Word of een webpagina, blijft een formule in plaats van code te worden.
+- Afbeeldingen in vette of cursieve tekst behouden beide bij het exporteren naar Word.
+- Een bestand met meer dan 500.000 lege tabelcellen toont zijn tabellen als tekst, in plaats van seconden en gigabytes aan geheugen te kosten.

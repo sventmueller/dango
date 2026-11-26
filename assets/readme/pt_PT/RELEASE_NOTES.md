@@ -1,14 +1,10 @@
-## Terminal
-- O terminal é agora o do Tapa, a aplicação de terminal irmã do Dango, com tudo o que traz, e mantém-se o que o terminal do Dango já fazia: colar imagens para agentes, servidores de desenvolvimento no separador do navegador, ⌘-clique que abre no editor.
-- **Visualização › Mostrar/ocultar campo de entrada** (⌘I enquanto um terminal tem o foco) transforma a linha de comandos num campo de texto, com a pasta e o branch do Git por cima. Os comandos são coloridos por partes, e um que a sua shell não consegue executar recebe um sublinhado vermelho tracejado.
-- As propostas aparecem a cinzento enquanto escreve, no campo e sem ele: do seu histórico, de especificações para mais de 700 ferramentas de linha de comandos e do projeto, como branches do git, scripts do `package.json` e alvos do make, do just e do cargo. → aceita uma; Tab completa e, com vários candidatos, abre um menu que a escrita filtra. Nunca utilizam a rede.
-- Blocos de comando: ⌘↑ e ⌘↓ saltam entre os prompts, o menu **Edição** seleciona, copia e guarda a saída de um comando, e os marcadores assinalam linhas. Com **Marcar comandos como blocos** ativado, uma barra mostra cada bloco, os comandos que falharam ficam assinalados e há botões sobre um bloco que mostram o estado e a duração.
-- **Enviar bloco para o agente** (menu Edição e menu de contexto do terminal) abre um separador de IA com a linha de comandos e a saída do bloco atual anexadas como Conteúdo externo.
-- **Procurar** (⌘F enquanto um terminal tem o foco) pesquisa todo o histórico, com expressões regulares, maiúsculas e minúsculas e palavras inteiras; a barra de deslocamento assinala os resultados.
-- Uma notificação de um programa (OSC 9 e OSC 777) e a respetiva campainha colocam o ponto vermelho no separador do terminal enquanto não o vê, e a notificação vai para o macOS enquanto outra aplicação está à frente. O progresso que um programa comunica (OSC 9;4) aparece como um anel no respetivo separador e como uma barra no ícone na Dock.
-- Um duplo clique seleciona por inteiro um URL, um caminho ou um hash, arrastar com ⌥ seleciona um retângulo, **Copiar com formatação** mantém cores e estilos, e **Selecionar com o teclado** move uma seleção com as teclas do Vim.
-- As colagens de várias linhas que seriam executadas de imediato aparecem primeiro, e **Dango › Entrada de teclado segura** impede que outras aplicações leiam o que escreve num terminal.
-- O terminal já não abre ligações de tipos que não sejam endereços web, `mailto:` e ficheiros.
+## Separador de IA
+- Os hooks que correram sem erros ou que ainda estão em execução já não aparecem na cronologia, nem sequer como uma linha recolhida por resposta; um hook que falhe continua a aparecer.
 
-## Definições
-- **Definições › Terminal** ativa e desativa o campo de entrada para os novos terminais, as respetivas teclas Vim, as propostas, as cores dos comandos, o sublinhado dos desconhecidos, os blocos de comando, copiar a seleção imediatamente, mostrar antes as colagens de várias linhas e ⌥ como tecla meta, que passou de Geral para aqui.
+## Terminal
+- Quando um Mac sobrecarregado lê a saída de um programa com atraso, o terminal deteta mesmo assim que o programa terminou e mantém as respetivas últimas linhas.
+
+## Markdown
+- Uma fórmula com um acento grave (`` ` ``), colada do Word ou de uma página web, continua a ser uma fórmula em vez de se transformar em código.
+- As imagens em texto a negrito ou itálico mantêm ambos na exportação para Word.
+- Um ficheiro com mais de 500 000 células de tabela vazias mostra as tabelas como texto em vez de demorar segundos e ocupar gigabytes de memória.
