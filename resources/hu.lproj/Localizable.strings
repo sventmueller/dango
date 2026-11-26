@@ -170,6 +170,8 @@
 "Neues Fenster" = "Új ablak";
 "Neues Terminal hier" = "Új terminál itt";
 "Neues Terminal" = "Új terminál";
+"Neuer AI-Thread" = "Új AI-szál";
+"Neuer Browser-Tab" = "Új böngészőlap";
 "Nicht committet" = "Nincs commitolva";
 "Nicht für diesen Mac ({})" = "Nem ehhez a Machez ({})";
 "Nicht gefunden: claude im Terminal installieren und dort anmelden" = "Nem található: telepítse a claude-ot egy terminálban, és ott jelentkezzen be";
@@ -1420,6 +1422,7 @@
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "A Tab a javaslathoz ugrik, a második Tab elfogadja";
 "Vorschlag: {}" = "Javaslat: {}";
 "Vorschläge beim Tippen" = "Javaslatok gépelés közben";
+"Vorschlagsliste beim Tippen öffnen" = "Javaslatlista megnyitása gépelés közben";
 "Code an {} senden?" = "Elküldi a kódot ide: {}?";
 "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "A gépelés közbeni javaslatokhoz a(z) {} megkapja a fájlt, amelybe gépel, az útvonalával és a nyelvével. A kizárási listán szereplő fájlok és a nem megbízható mappák kimaradnak. Az engedélyt a Beállítások „Előrejelzés” lapján vonhatja vissza.";
 "Anmeldung bei Copilot fehlgeschlagen" = "A Copilot-bejelentkezés sikertelen";

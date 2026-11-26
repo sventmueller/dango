@@ -18,8 +18,8 @@ use ide_ui_common::ui_size;
 mod selftest_probe;
 
 const BUTTON_SIZE: f64 = 32.0;
-/// How far the settings symbol keeps from the bar's bottom.
-const SETTINGS_INSET: f64 = 10.0;
+/// How far the settings symbol keeps from the bar's bottom: its middle as high as in Tapa, whose 28 pt button keeps 6 pt.
+const SETTINGS_INSET: f64 = 4.0;
 
 pub(crate) struct ActivityBar {
     view: Retained<NSView>,

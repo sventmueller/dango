@@ -118,7 +118,8 @@ pub(super) fn menu_for(controller: &WindowController) -> Retained<NSMenu> {
     menu
 }
 
-fn aim(menu: &NSMenu, controller: &WindowController) {
+/// Sends the actions of `menu`'s items that `controller` answers to it.
+pub(super) fn aim(menu: &NSMenu, controller: &WindowController) {
     for item in menu.itemArray().iter() {
         if let Some(submenu) = item.submenu() {
             aim(&submenu, controller);

@@ -170,6 +170,8 @@
 "Neues Fenster" = "Nové okno";
 "Neues Terminal hier" = "Nový terminál zde";
 "Neues Terminal" = "Nový terminál";
+"Neuer AI-Thread" = "Nové vlákno AI";
+"Neuer Browser-Tab" = "Nový panel prohlížeče";
 "Nicht committet" = "Necommitnuto";
 "Nicht für diesen Mac ({})" = "Není pro tento Mac ({})";
 "Nicht gefunden: claude im Terminal installieren und dort anmelden" = "Nenalezeno: nainstalujte claude v terminálu a přihlaste se tam";
@@ -1420,6 +1422,7 @@
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab přejde k návrhu, druhý Tab ho přijme";
 "Vorschlag: {}" = "Návrh: {}";
 "Vorschläge beim Tippen" = "Návrhy při psaní";
+"Vorschlagsliste beim Tippen öffnen" = "Otevírat seznam návrhů při psaní";
 "Code an {} senden?" = "Odeslat kód poskytovateli {}?";
 "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Pro návrhy při psaní dostane {} soubor, ve kterém píšete, s cestou a jazykem. Soubory na seznamu vyloučení a složky, kterým nedůvěřujete, zůstanou stranou. Povolení můžete odvolat v Nastavení v části „Předpověď“.";
 "Anmeldung bei Copilot fehlgeschlagen" = "Přihlášení ke Copilotu se nezdařilo";

@@ -170,6 +170,8 @@
 "Neues Fenster" = "หน้าต่างใหม่";
 "Neues Terminal hier" = "เทอร์มินัลใหม่ที่นี่";
 "Neues Terminal" = "เทอร์มินัลใหม่";
+"Neuer AI-Thread" = "เธรด AI ใหม่";
+"Neuer Browser-Tab" = "แถบเบราว์เซอร์ใหม่";
 "Nicht committet" = "ยังไม่ได้ Commit";
 "Nicht für diesen Mac ({})" = "ไม่รองรับ Mac เครื่องนี้ ({})";
 "Nicht gefunden: claude im Terminal installieren und dort anmelden" = "ไม่พบ: ติดตั้ง claude ในเทอร์มินัลและลงชื่อเข้าที่นั่น";
@@ -1420,6 +1422,7 @@
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab ไปที่ข้อเสนอ Tab ครั้งที่สองยอมรับ";
 "Vorschlag: {}" = "ข้อเสนอ: {}";
 "Vorschläge beim Tippen" = "ข้อเสนอขณะพิมพ์";
+"Vorschlagsliste beim Tippen öffnen" = "เปิดรายการคำแนะนำขณะพิมพ์";
 "Code an {} senden?" = "ส่งโค้ดไปยัง {} หรือไม่";
 "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "สำหรับข้อเสนอขณะพิมพ์ {} จะได้รับไฟล์ที่คุณกำลังพิมพ์ พร้อมพาธและภาษา ไฟล์ในรายการยกเว้นและโฟลเดอร์ที่คุณไม่เชื่อถือจะไม่ถูกส่ง คุณเพิกถอนการอนุญาตได้ในการตั้งค่า ใต้ “การคาดการณ์”";
 "Anmeldung bei Copilot fehlgeschlagen" = "ลงชื่อเข้า Copilot ไม่สำเร็จ";

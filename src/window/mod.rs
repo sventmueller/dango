@@ -42,8 +42,8 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, Sel};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSControl, NSMenuItem, NSMenuItemValidation, NSToolbar, NSToolbarDelegate, NSToolbarItem, NSToolbarItemIdentifier,
-    NSView, NSWindow, NSWindowDelegate,
+    NSControl, NSMenu, NSMenuDelegate, NSMenuItem, NSMenuItemValidation, NSToolbar, NSToolbarDelegate, NSToolbarItem,
+    NSToolbarItemIdentifier, NSToolbarItemValidation, NSView, NSWindow, NSWindowDelegate,
 };
 use objc2_foundation::{NSArray, NSNotification, NSObjectProtocol};
 use splat_i18n::t;
@@ -217,6 +217,21 @@ define_class!(
         #[unsafe(method(validateMenuItem:))]
         fn validate_menu_item(&self, item: &NSMenuItem) -> bool {
             guarded(true, || self.validate(item))
+        }
+    }
+
+    unsafe impl NSToolbarItemValidation for WindowController {
+        #[unsafe(method(validateToolbarItem:))]
+        fn validate_toolbar_item(&self, item: &NSToolbarItem) -> bool {
+            guarded(true, || toolbar::validate(self, item))
+        }
+    }
+
+    // The window is the delegate of its toolbars' agent menus only.
+    unsafe impl NSMenuDelegate for WindowController {
+        #[unsafe(method(menuNeedsUpdate:))]
+        fn menu_needs_update(&self, menu: &NSMenu) {
+            guarded((), || toolbar::agents_menu_opens(self, menu));
         }
     }
 
@@ -451,6 +466,24 @@ define_class!(
         #[unsafe(method(ideNewBrowser:))]
         fn new_browser_action(&self, _sender: Option<&AnyObject>) {
             guarded((), || self.at_end(|| crate::browser::open_tab(self, None)));
+        }
+
+        #[unsafe(method(ideNewAgent:))]
+        fn new_agent_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || {
+                if let Some(button) = sender.and_then(|s| s.downcast_ref::<objc2_app_kit::NSMenuToolbarItem>()) {
+                    toolbar::agent_clicked(self, button);
+                }
+            });
+        }
+
+        #[unsafe(method(ideToggleInputField:))]
+        fn toggle_input_field_action(&self, sender: Option<&AnyObject>) {
+            guarded((), || {
+                if let Some(item) = sender.and_then(|s| s.downcast_ref::<NSToolbarItem>()) {
+                    toolbar::toggle_field(self, item);
+                }
+            });
         }
 
         #[unsafe(method(ideOpenWelcome:))]

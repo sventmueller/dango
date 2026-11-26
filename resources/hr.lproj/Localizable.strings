@@ -170,6 +170,8 @@
 "Neues Fenster" = "Novi prozor";
 "Neues Terminal hier" = "Novi terminal ovdje";
 "Neues Terminal" = "Novi terminal";
+"Neuer AI-Thread" = "Nova AI nit";
+"Neuer Browser-Tab" = "Nova kartica preglednika";
 "Nicht committet" = "Nije u commitu";
 "Nicht für diesen Mac ({})" = "Nije za ovaj Mac ({})";
 "Nicht gefunden: claude im Terminal installieren und dort anmelden" = "Nije pronađeno: instalirajte claude u terminalu i ondje se prijavite";
@@ -1420,6 +1422,7 @@
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab ide do prijedloga, drugi Tab ga prihvaća";
 "Vorschlag: {}" = "Prijedlog: {}";
 "Vorschläge beim Tippen" = "Prijedlozi tijekom tipkanja";
+"Vorschlagsliste beim Tippen öffnen" = "Otvori popis prijedloga tijekom tipkanja";
 "Code an {} senden?" = "Poslati kod pružatelju {}?";
 "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Za prijedloge tijekom tipkanja {} dobiva datoteku u kojoj tipkate, s putanjom i jezikom. Datoteke s popisa izuzeća i mape kojima ne vjerujete ostaju izvan toga. Dozvolu možete povući u Postavkama pod „Predviđanje”.";
 "Anmeldung bei Copilot fehlgeschlagen" = "Prijava u Copilot nije uspjela";

@@ -170,6 +170,8 @@
 "Neues Fenster" = "新規ウインドウ";
 "Neues Terminal hier" = "ここで新規ターミナル";
 "Neues Terminal" = "新規ターミナル";
+"Neuer AI-Thread" = "新規AIスレッド";
+"Neuer Browser-Tab" = "新規ブラウザタブ";
 "Nicht committet" = "未コミット";
 "Nicht für diesen Mac ({})" = "このMac用ではありません（{}）";
 "Nicht gefunden: claude im Terminal installieren und dort anmelden" = "見つかりません: ターミナルでclaudeをインストールし、そこでサインインしてください";
@@ -1420,6 +1422,7 @@
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tabで提案の位置へ移動し、もう一度Tabで受け入れます";
 "Vorschlag: {}" = "提案: {}";
 "Vorschläge beim Tippen" = "入力中の提案";
+"Vorschlagsliste beim Tippen öffnen" = "入力中に候補リストを開く";
 "Code an {} senden?" = "コードを{}に送信しますか?";
 "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "入力中の提案のために、{}は入力中のファイルをパスと言語とともに受け取ります。除外リストのファイルと信頼していないフォルダは対象外です。許可は設定の“予測”で取り消せます。";
 "Anmeldung bei Copilot fehlgeschlagen" = "Copilotへのサインインに失敗しました";

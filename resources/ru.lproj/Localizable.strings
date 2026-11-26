@@ -170,6 +170,8 @@
 "Neues Fenster" = "Новое окно";
 "Neues Terminal hier" = "Новый терминал здесь";
 "Neues Terminal" = "Новый терминал";
+"Neuer AI-Thread" = "Новый ИИ-чат";
+"Neuer Browser-Tab" = "Новая вкладка браузера";
 "Nicht committet" = "Не закоммичено";
 "Nicht für diesen Mac ({})" = "Не для этого Mac ({})";
 "Nicht gefunden: claude im Terminal installieren und dort anmelden" = "Не найден: установите claude в Терминале и войдите там";
@@ -1420,6 +1422,7 @@
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab переходит к предложению, второй Tab принимает его";
 "Vorschlag: {}" = "Предложение: {}";
 "Vorschläge beim Tippen" = "Предложения при наборе";
+"Vorschlagsliste beim Tippen öffnen" = "Открывать список подсказок при вводе";
 "Code an {} senden?" = "Отправить код в {}?";
 "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Для предложений при наборе {} получает файл, в котором вы печатаете, с путем и языком. Файлы из списка исключений и папки, которым вы не доверяете, не отправляются. Разрешение можно отозвать в Настройках в разделе «Предсказание».";
 "Anmeldung bei Copilot fehlgeschlagen" = "Не удалось войти в Copilot";

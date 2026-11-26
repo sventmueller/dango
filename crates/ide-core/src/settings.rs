@@ -130,6 +130,7 @@ pub mod keys {
         TERMINAL_INPUT_FIELD.declared(),
         TERMINAL_INPUT_VIM.declared(),
         TERMINAL_SUGGESTIONS.declared(),
+        TERMINAL_MENU_AS_YOU_TYPE.declared(),
         TERMINAL_HIGHLIGHTING.declared(),
         TERMINAL_UNDERLINE_ERRORS.declared(),
         TERMINAL_BLOCKS.declared(),
@@ -205,6 +206,8 @@ pub mod keys {
     pub const TERMINAL_INPUT_VIM: Key<bool> = Key::user("terminalInputVim", Sharing::Shared, || false);
     /// Suggestions while typing in a terminal, and the command most likely next without input.
     pub const TERMINAL_SUGGESTIONS: Key<bool> = Key::user("terminalSuggestions", Sharing::Shared, || true);
+    /// The completion menu opens by itself while typing at a terminal's prompt without the input field.
+    pub const TERMINAL_MENU_AS_YOU_TYPE: Key<bool> = Key::user("terminalMenuAsYouType", Sharing::Shared, || true);
     /// The parts of a command in the terminal's input field in colours of their own.
     pub const TERMINAL_HIGHLIGHTING: Key<bool> = Key::user("terminalHighlighting", Sharing::Shared, || true);
     /// A command the shell cannot run underlined in the terminal's input field.

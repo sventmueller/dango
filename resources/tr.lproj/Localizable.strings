@@ -170,6 +170,8 @@
 "Neues Fenster" = "Yeni Pencere";
 "Neues Terminal hier" = "Burada Yeni Terminal";
 "Neues Terminal" = "Yeni Terminal";
+"Neuer AI-Thread" = "Yeni AI Sohbeti";
+"Neuer Browser-Tab" = "Yeni Tarayıcı Sekmesi";
 "Nicht committet" = "Commit edilmedi";
 "Nicht für diesen Mac ({})" = "Bu Mac için değil ({})";
 "Nicht gefunden: claude im Terminal installieren und dort anmelden" = "Bulunamadı: claude’u bir terminalde yükleyin ve orada oturum açın";
@@ -1420,6 +1422,7 @@
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab öneriye gider, ikinci Tab onu kabul eder";
 "Vorschlag: {}" = "Öneri: {}";
 "Vorschläge beim Tippen" = "Yazarken öneriler";
+"Vorschlagsliste beim Tippen öffnen" = "Yazarken öneri listesini aç";
 "Code an {} senden?" = "Kod şuraya gönderilsin mi: {}?";
 "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Yazarken öneriler için {}, yazdığınız dosyayı yolu ve diliyle birlikte alır. Hariç tutma listesindeki dosyalar ve güvenmediğiniz klasörler dışarıda kalır. İzni Ayarlar’da “Tahmin” altında geri alabilirsiniz.";
 "Anmeldung bei Copilot fehlgeschlagen" = "Copilot girişi başarısız oldu";

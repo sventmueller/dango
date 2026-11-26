@@ -264,29 +264,63 @@ fn navigation(root: PathBuf) {
         before == [true, false] && enabled(&group) == [true, false],
         format!("before {before:?}, after {:?}", enabled(&group)),
     );
+    toolbar_items(&controller);
+    if let Some(window) = controller.window() {
+        snapshot(&window, "tabs-toolbar");
+    }
+    finish(SCENARIO);
+}
+
+/// The toolbar's items stand in Tapa's order, its input field switch is greyed with an editor in front, and the agent
+/// button shares a capsule with its neighbours.
+fn toolbar_items(controller: &WindowController) {
     let ids: Vec<String> = controller
         .window()
         .and_then(|w| w.toolbar())
         .map(|t| t.items().iter().map(|i| i.itemIdentifier().to_string()).collect())
         .unwrap_or_default();
+    let order = [
+        crate::navigation::TOOLBAR_ID,
+        ide_ui_git::TOOLBAR_ID,
+        "ide.quickOpen",
+        "ide.activity",
+        crate::window::toolbar::SPLIT,
+        crate::window::toolbar::SPLIT_BELOW,
+        crate::window::toolbar::FIELD,
+        crate::window::toolbar::NEW_TERMINAL,
+        crate::window::toolbar::NEW_AGENT,
+        crate::window::toolbar::NEW_BROWSER,
+    ];
+    let shown: Vec<&String> = ids.iter().filter(|id| order.contains(&id.as_str())).collect();
     check(
-        "the toolbar holds back and forward, the branch, both split buttons and Open Quickly beside the activity",
-        [
-            crate::navigation::TOOLBAR_ID,
-            ide_ui_git::TOOLBAR_ID,
-            crate::window::toolbar::SPLIT,
-            crate::window::toolbar::SPLIT_BELOW,
-            "ide.quickOpen",
-            "ide.activity",
-        ]
-        .iter()
-        .all(|id| ids.iter().any(|shown| shown == id)),
+        "the toolbar holds back and forward and the branch, then as in Tapa from the right new terminal, agent and \
+         browser, the splits with the input field's switch, and Open Quickly with the activity",
+        shown == order,
         format!("{ids:?}"),
     );
-    if let Some(window) = controller.window() {
-        snapshot(&window, "tabs-toolbar");
-    }
-    finish(SCENARIO);
+    let switch = controller
+        .window()
+        .map(|window| crate::window::toolbar::field_switch(&window))
+        .unwrap_or_default();
+    check(
+        "with an editor in front the input field's switch is greyed",
+        switch.contains("(disabled"),
+        switch,
+    );
+    let agent_action = controller
+        .window()
+        .and_then(|window| window.toolbar())
+        .and_then(|toolbar| {
+            let id = crate::util::ns(crate::window::toolbar::NEW_AGENT);
+            toolbar.items().iter().find(|item| *item.itemIdentifier() == *id)
+        })
+        .and_then(|item| item.action())
+        .map(|action| action.name().to_string_lossy().into_owned());
+    check(
+        "a click on the agent button sends its action, which keeps it in one capsule with new terminal and new browser",
+        agent_action.as_deref() == Some("ideNewAgent:"),
+        format!("{agent_action:?}"),
+    );
 }
 
 fn keeping(controller: &WindowController, root: &Path) {

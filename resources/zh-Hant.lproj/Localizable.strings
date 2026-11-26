@@ -170,6 +170,8 @@
 "Neues Fenster" = "新增視窗";
 "Neues Terminal hier" = "在此處新增終端機";
 "Neues Terminal" = "新增終端機";
+"Neuer AI-Thread" = "新增 AI 對話";
+"Neuer Browser-Tab" = "新增瀏覽器標籤頁";
 "Nicht committet" = "尚未提交";
 "Nicht für diesen Mac ({})" = "不適用於這台 Mac（{}）";
 "Nicht gefunden: claude im Terminal installieren und dort anmelden" = "找不到：請在終端機中安裝 claude 並在那裡登入";
@@ -1420,6 +1422,7 @@
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab 跳到建議處，再按一次 Tab 接受";
 "Vorschlag: {}" = "建議：{}";
 "Vorschläge beim Tippen" = "輸入時的建議";
+"Vorschlagsliste beim Tippen öffnen" = "輸入時開啟建議列表";
 "Code an {} senden?" = "要將程式碼傳送給 {} 嗎？";
 "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "為了在輸入時提供建議，{} 會收到你正在輸入的檔案及其路徑和語言。排除列表中的檔案和你不信任的檔案夾不會傳送。你可以在設定的「預測」中撤銷許可。";
 "Anmeldung bei Copilot fehlgeschlagen" = "登入 Copilot 失敗";

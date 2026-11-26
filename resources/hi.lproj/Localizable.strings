@@ -170,6 +170,8 @@
 "Neues Fenster" = "नई विंडो";
 "Neues Terminal hier" = "यहाँ नया टर्मिनल";
 "Neues Terminal" = "नया टर्मिनल";
+"Neuer AI-Thread" = "नया AI थ्रेड";
+"Neuer Browser-Tab" = "नया ब्राउज़र टैब";
 "Nicht committet" = "कमिट नहीं हुआ";
 "Nicht für diesen Mac ({})" = "इस Mac के लिए नहीं ({})";
 "Nicht gefunden: claude im Terminal installieren und dort anmelden" = "नहीं मिला : टर्मिनल में claude इंस्टॉल करें और वहीं साइन इन करें";
@@ -1420,6 +1422,7 @@
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab सुझाव पर जाता है, दूसरा Tab उसे स्वीकार करता है";
 "Vorschlag: {}" = "सुझाव : {}";
 "Vorschläge beim Tippen" = "टाइप करते समय सुझाव";
+"Vorschlagsliste beim Tippen öffnen" = "टाइप करते समय सुझावों की सूची खोलें";
 "Code an {} senden?" = "{} को कोड भेजें?";
 "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "टाइप करते समय सुझावों के लिए {} को वह फ़ाइल मिलती है जिसमें आप टाइप कर रहे हैं, उसके पाथ और भाषा के साथ। बहिष्करण सूची की फ़ाइलें और वे फ़ोल्डर जिन पर आप भरोसा नहीं करते, शामिल नहीं होते। अनुमति सेटिंग में “पूर्वानुमान” के अंतर्गत वापस ली जा सकती है।";
 "Anmeldung bei Copilot fehlgeschlagen" = "Copilot में साइन इन विफल";

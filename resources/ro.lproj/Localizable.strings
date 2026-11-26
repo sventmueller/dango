@@ -170,6 +170,8 @@
 "Neues Fenster" = "Fereastră nouă";
 "Neues Terminal hier" = "Terminal nou aici";
 "Neues Terminal" = "Terminal nou";
+"Neuer AI-Thread" = "Conversație IA nouă";
+"Neuer Browser-Tab" = "Filă de browser nouă";
 "Nicht committet" = "Fără commit";
 "Nicht für diesen Mac ({})" = "Indisponibil pentru acest Mac ({})";
 "Nicht gefunden: claude im Terminal installieren und dort anmelden" = "Negăsit: instalați claude într-un terminal și autentificați-vă acolo";
@@ -1420,6 +1422,7 @@
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab merge la propunere, al doilea Tab o acceptă";
 "Vorschlag: {}" = "Propunere: {}";
 "Vorschläge beim Tippen" = "Propuneri în timpul tastării";
+"Vorschlagsliste beim Tippen öffnen" = "Deschideți lista de sugestii la tastare";
 "Code an {} senden?" = "Trimiteți codul către {}?";
 "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Pentru propunerile din timpul tastării, {} primește fișierul în care tastați, cu calea și limbajul. Fișierele de pe lista de excludere și dosarele în care nu aveți încredere sunt lăsate deoparte. Permisiunea poate fi retrasă în Configurări, la „Predicție”.";
 "Anmeldung bei Copilot fehlgeschlagen" = "Autentificarea la Copilot a eșuat";

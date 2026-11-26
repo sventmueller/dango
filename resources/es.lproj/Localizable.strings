@@ -170,6 +170,8 @@
 "Neues Fenster" = "Nueva ventana";
 "Neues Terminal hier" = "Nuevo terminal aquí";
 "Neues Terminal" = "Nuevo terminal";
+"Neuer AI-Thread" = "Nuevo hilo de IA";
+"Neuer Browser-Tab" = "Nueva pestaña del navegador";
 "Nicht committet" = "Sin commit";
 "Nicht für diesen Mac ({})" = "No disponible para este Mac ({})";
 "Nicht gefunden: claude im Terminal installieren und dort anmelden" = "No encontrado: instala claude en un terminal e inicia sesión allí";
@@ -1420,6 +1422,7 @@
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab va a la propuesta, un segundo Tab la acepta";
 "Vorschlag: {}" = "Propuesta: {}";
 "Vorschläge beim Tippen" = "Propuestas al escribir";
+"Vorschlagsliste beim Tippen öffnen" = "Abrir la lista de sugerencias al escribir";
 "Code an {} senden?" = "¿Enviar código a {}?";
 "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Para las propuestas al escribir, {} recibe el archivo en el que escribes, con su ruta y su lenguaje. Los archivos de la lista de exclusión y las carpetas en las que no confías quedan fuera. Puedes retirar el permiso en Ajustes, en “Predicción”.";
 "Anmeldung bei Copilot fehlgeschlagen" = "Error al iniciar sesión en Copilot";

@@ -7,10 +7,11 @@ use term_config::Config;
 use crate::context::AppContext;
 
 /// Tapa's switches by their path in Tapa's settings file, each with the setting that holds it here.
-const SWITCHES: [(&[&str], Key<bool>); 8] = [
+const SWITCHES: [(&[&str], Key<bool>); 9] = [
     (&["input", "field"], keys::TERMINAL_INPUT_FIELD),
     (&["input", "vim"], keys::TERMINAL_INPUT_VIM),
     (&["input", "suggestions"], keys::TERMINAL_SUGGESTIONS),
+    (&["input", "menu_as_you_type"], keys::TERMINAL_MENU_AS_YOU_TYPE),
     (&["input", "highlighting"], keys::TERMINAL_HIGHLIGHTING),
     (&["input", "underline_errors"], keys::TERMINAL_UNDERLINE_ERRORS),
     (&["terminal", "blocks"], keys::TERMINAL_BLOCKS),
@@ -24,6 +25,7 @@ fn switch<'a>(config: &'a mut Config, path: &[&str]) -> Option<&'a mut bool> {
         ["input", "field"] => &mut config.input.field,
         ["input", "vim"] => &mut config.input.vim,
         ["input", "suggestions"] => &mut config.input.suggestions,
+        ["input", "menu_as_you_type"] => &mut config.input.menu_as_you_type,
         ["input", "highlighting"] => &mut config.input.highlighting,
         ["input", "underline_errors"] => &mut config.input.underline_errors,
         ["terminal", "blocks"] => &mut config.terminal.blocks,

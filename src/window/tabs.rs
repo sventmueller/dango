@@ -861,31 +861,33 @@ fn worktree_menu(mtm: MainThreadMarker, choices: &AgentChoices) -> Option<Retain
     Some(parent)
 }
 
-/// What a new tab can show (E17), the menu that ⌘T and the tab bar's "+" open (E79). The installed agents stand in it
-/// directly, a thread in a worktree of its own below them, as `choices` knows them.
+/// What a new tab can show (E17), the menu that ⌘T and the tab bar's "+" open (E79).
 pub(crate) fn new_tab_menu(mtm: MainThreadMarker, choices: &AgentChoices) -> Retained<NSMenu> {
     let menu = NSMenu::new(mtm);
     menu.setAutoenablesItems(false);
-    let entry = |title: &str, symbol_name: &str, action: Option<Sel>| {
-        let entry = item(mtm, title, action, "");
-        entry.setImage(symbol(symbol_name, title).as_deref());
-        entry.setEnabled(action.is_some());
-        entry
-    };
     for entry in [
-        entry(t("Neue Datei"), "doc.badge.plus", Some(sel!(ideNewFile:))),
-        entry(t("Terminal"), "terminal", Some(sel!(ideNewTerminal:))),
-        entry(t("Browser"), "globe", Some(sel!(ideNewBrowser:))),
+        menu_entry(mtm, t("Neue Datei"), "doc.badge.plus", Some(sel!(ideNewFile:))),
+        menu_entry(mtm, t("Terminal"), "terminal", Some(sel!(ideNewTerminal:))),
+        menu_entry(mtm, t("Browser"), "globe", Some(sel!(ideNewBrowser:))),
         separator(mtm),
     ] {
         menu.addItem(&entry);
     }
+    add_agents(mtm, &menu, choices);
+    menu.addItem(&separator(mtm));
+    menu.addItem(&menu_entry(mtm, t("Willkommen"), "house", Some(sel!(ideOpenWelcome:))));
+    menu
+}
+
+/// Adds the installed agents to `menu` as `choices` knows them, a thread in a worktree of its own below them; the "+"
+/// menu and the toolbar's agent button offer the same.
+pub(crate) fn add_agents(mtm: MainThreadMarker, menu: &NSMenu, choices: &AgentChoices) {
     // Only installed agents are offered; the own agent's endpoints and models are filled in each time the menu opens.
     if choices.claude {
-        menu.addItem(&entry("Claude", "sparkle", Some(sel!(ideNewClaudeThread:))));
+        menu.addItem(&menu_entry(mtm, "Claude", "sparkle", Some(sel!(ideNewClaudeThread:))));
     }
     for (index, name) in &choices.installed_presets {
-        let agent = entry(name, "sparkles", Some(sel!(ideNewAcpThread:)));
+        let agent = menu_entry(mtm, name, "sparkles", Some(sel!(ideNewAcpThread:)));
         agent.setTag(isize::try_from(*index).unwrap_or(-1));
         agent.setEnabled(choices.presets.get(*index).is_some_and(|(_, usable)| *usable));
         menu.addItem(&agent);
@@ -899,11 +901,15 @@ pub(crate) fn new_tab_menu(mtm: MainThreadMarker, choices: &AgentChoices) -> Ret
         menu.addItem(&worktree);
     }
     if choices.unknown {
-        menu.addItem(&entry(t("Agenten werden gesucht …"), "sparkles", None));
+        menu.addItem(&menu_entry(mtm, t("Agenten werden gesucht …"), "sparkles", None));
     }
-    menu.addItem(&separator(mtm));
-    menu.addItem(&entry(t("Willkommen"), "house", Some(sel!(ideOpenWelcome:))));
-    menu
+}
+
+fn menu_entry(mtm: MainThreadMarker, title: &str, symbol_name: &str, action: Option<Sel>) -> Retained<NSMenuItem> {
+    let entry = item(mtm, title, action, "");
+    entry.setImage(symbol(symbol_name, title).as_deref());
+    entry.setEnabled(action.is_some());
+    entry
 }
 
 /// Fills the parts of `menu` that change: the own agent's endpoints.

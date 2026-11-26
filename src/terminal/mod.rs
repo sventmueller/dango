@@ -30,7 +30,7 @@ use crate::window::{TabKind, WindowController};
 pub(crate) use changes::{changed, opened};
 pub(crate) use commands::{
     block_items, clear, context_items, copy_formatted_item, perform, perform_on_view, show_shortcuts, text_finder,
-    tick_secure_entry, toggle_secure_entry, validate, with_view_items,
+    tick_secure_entry, toggle_input_field, toggle_secure_entry, validate, with_view_items,
 };
 pub(crate) use config::{settings_changed, switch_off};
 pub(crate) use processes::Spawner;
@@ -101,6 +101,12 @@ pub(crate) fn folder_of_tab(controller: &WindowController, tab: TabId) -> Option
         .terminals()
         .kept_in(controller.id().get(), tab)
         .map(|view| view.cwd())
+}
+
+/// The terminal that document `tab` of `controller`'s window shows, if it is a terminal.
+pub(crate) fn of_document(controller: &WindowController, tab: TabId) -> Option<Retained<TerminalView>> {
+    let shown = controller.context().terminals().shown_in(controller.id().get(), tab);
+    shown.into_iter().next()
 }
 
 /// The document `tab` of `controller`'s window closes: the shell of a terminal in it ends now, as in Tapa, not only

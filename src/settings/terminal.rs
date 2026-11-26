@@ -52,6 +52,13 @@ define_class!(
             });
         }
 
+        #[unsafe(method(ideToggleTerminalMenuAsYouType:))]
+        fn toggle_menu_as_you_type(&self, sender: Option<&AnyObject>) {
+            guarded((), || {
+                store(sender, &keys::TERMINAL_MENU_AS_YOU_TYPE);
+            });
+        }
+
         #[unsafe(method(ideToggleTerminalHighlighting:))]
         fn toggle_highlighting(&self, sender: Option<&AnyObject>) {
             guarded((), || {
@@ -104,7 +111,7 @@ pub(super) struct Switch {
 }
 
 /// The tab's switches in their order: the input field, the blocks, the pasteboard and the keyboard.
-pub(super) fn switches() -> [Switch; 9] {
+pub(super) fn switches() -> [Switch; 10] {
     let switch = |group: Option<&'static str>, title: &'static str, key: Key<bool>, action: Sel| Switch {
         group,
         title,
@@ -129,6 +136,12 @@ pub(super) fn switches() -> [Switch; 9] {
             t("Vorschläge beim Tippen"),
             keys::TERMINAL_SUGGESTIONS,
             sel!(ideToggleTerminalSuggestions:),
+        ),
+        switch(
+            None,
+            t("Vorschlagsliste beim Tippen öffnen"),
+            keys::TERMINAL_MENU_AS_YOU_TYPE,
+            sel!(ideToggleTerminalMenuAsYouType:),
         ),
         switch(
             None,

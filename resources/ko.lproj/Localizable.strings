@@ -170,6 +170,8 @@
 "Neues Fenster" = "새로운 윈도우";
 "Neues Terminal hier" = "여기에서 새로운 터미널";
 "Neues Terminal" = "새로운 터미널";
+"Neuer AI-Thread" = "새로운 AI 스레드";
+"Neuer Browser-Tab" = "새로운 브라우저 탭";
 "Nicht committet" = "커밋되지 않음";
 "Nicht für diesen Mac ({})" = "이 Mac용이 아님({})";
 "Nicht gefunden: claude im Terminal installieren und dort anmelden" = "찾을 수 없음: 터미널에서 claude를 설치하고 그곳에서 로그인하십시오";
@@ -1420,6 +1422,7 @@
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab은 제안으로 이동하고, 다시 Tab을 누르면 수락합니다";
 "Vorschlag: {}" = "제안: {}";
 "Vorschläge beim Tippen" = "입력 중 제안";
+"Vorschlagsliste beim Tippen öffnen" = "입력하는 동안 제안 목록 열기";
 "Code an {} senden?" = "코드를 {}에 전송하겠습니까?";
 "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "입력 중 제안을 위해 {}은(는) 입력 중인 파일을 경로 및 언어와 함께 받습니다. 제외 목록의 파일과 신뢰하지 않는 폴더는 제외됩니다. 허용은 설정의 ‘예측’에서 취소할 수 있습니다.";
 "Anmeldung bei Copilot fehlgeschlagen" = "Copilot 로그인 실패";

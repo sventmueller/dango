@@ -175,6 +175,11 @@ pub(crate) fn run(controller: &WindowController, view: &TerminalView, command: C
     }
 }
 
+/// Turns the input field of `view`, a terminal of `controller`'s window, on or off, as the toolbar's switch does.
+pub(crate) fn toggle_input_field(controller: &WindowController, view: &TerminalView) {
+    toggle_field(controller.context(), view);
+}
+
 /// Turns the input field of `view` on or off; new terminals follow that choice, as in Tapa (F209).
 fn toggle_field(cx: &AppContext, view: &TerminalView) {
     view.toggle_field();

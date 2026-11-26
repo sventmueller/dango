@@ -170,6 +170,8 @@
 "Neues Fenster" = "Cửa sổ mới";
 "Neues Terminal hier" = "Terminal mới tại đây";
 "Neues Terminal" = "Terminal mới";
+"Neuer AI-Thread" = "Luồng AI mới";
+"Neuer Browser-Tab" = "Tab trình duyệt mới";
 "Nicht committet" = "Chưa commit";
 "Nicht für diesen Mac ({})" = "Không dành cho máy Mac này ({})";
 "Nicht gefunden: claude im Terminal installieren und dort anmelden" = "Không tìm thấy: hãy cài đặt claude trong terminal và đăng nhập ở đó";
@@ -1420,6 +1422,7 @@
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab đi đến đề xuất, Tab thứ hai chấp nhận nó";
 "Vorschlag: {}" = "Đề xuất: {}";
 "Vorschläge beim Tippen" = "Đề xuất khi nhập";
+"Vorschlagsliste beim Tippen öffnen" = "Mở danh sách gợi ý khi nhập";
 "Code an {} senden?" = "Gửi mã đến {}?";
 "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Để có đề xuất khi nhập, {} nhận tệp bạn đang nhập, cùng đường dẫn và ngôn ngữ. Tệp trong danh sách loại trừ và thư mục bạn không tin cậy được giữ lại. Bạn có thể thu hồi quyền trong Cài đặt, mục “Dự đoán”.";
 "Anmeldung bei Copilot fehlgeschlagen" = "Đăng nhập Copilot không thành công";

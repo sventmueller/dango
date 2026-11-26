@@ -1,6 +1,6 @@
 //! What a terminal reports to the app and what the user opened from it, shown where it belongs: the title on the tab,
 //! a dev server in the banner, the bell, notifications and progress on the tab, in macOS and on the Dock icon, a link
-//! in the browser tab, a file in the editor.
+//! in the browser tab, a file in the editor, the input field's state on the toolbar's switch.
 
 use std::rc::Rc;
 
@@ -36,7 +36,16 @@ pub(crate) fn changed(cx: &Rc<AppContext>, view: u64, change: Change) {
         Change::Progress(progress) => signals::reported(cx, view, progress),
         Change::Exited(_) => signals::reported(cx, view, None),
         Change::Focused => signals::seen(cx, view),
-        Change::Elsewhere(_) | Change::Input | Change::Field => {}
+        Change::Field => show_field(cx, view),
+        Change::Elsewhere(_) | Change::Input => {}
+    }
+}
+
+/// Shows on the toolbar's switch of view `view`'s window what its input field does now.
+fn show_field(cx: &AppContext, view: u64) {
+    let window = term_ui::find(view).map(|v| v.window_id());
+    if let Some(controller) = window.and_then(|window| cx.windows().get(window.get())) {
+        crate::window::toolbar::show_field(&controller);
     }
 }
 

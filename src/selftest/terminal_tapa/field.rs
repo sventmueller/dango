@@ -114,6 +114,15 @@ fn show_field(run: Run) {
                 chosen && shown && focused,
                 format!("chosen {chosen}, shown {shown}, focused {focused}; new terminals with the field {stored}"),
             );
+            let switch = inspect::view(run.id)
+                .and_then(|view| view.window())
+                .map(|window| crate::window::toolbar::field_switch(&window))
+                .unwrap_or_default();
+            check(
+                "with the terminal in front the toolbar's input field switch is enabled and shows the field on",
+                switch == format!("{} (enabled, accent)", t("Eingabefeld an")),
+                switch,
+            );
             field_suggestion(run);
         },
     );

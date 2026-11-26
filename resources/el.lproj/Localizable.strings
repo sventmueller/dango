@@ -170,6 +170,8 @@
 "Neues Fenster" = "Νέο παράθυρο";
 "Neues Terminal hier" = "Νέο τερματικό εδώ";
 "Neues Terminal" = "Νέο τερματικό";
+"Neuer AI-Thread" = "Νέο νήμα AI";
+"Neuer Browser-Tab" = "Νέα καρτέλα περιήγησης";
 "Nicht committet" = "Χωρίς commit";
 "Nicht für diesen Mac ({})" = "Όχι για αυτό το Mac ({})";
 "Nicht gefunden: claude im Terminal installieren und dort anmelden" = "Δεν βρέθηκε: εγκαταστήστε το claude σε ένα τερματικό και συνδεθείτε εκεί";
@@ -1420,6 +1422,7 @@
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Το Tab πηγαίνει στην πρόταση, δεύτερο Tab την αποδέχεται";
 "Vorschlag: {}" = "Πρόταση: {}";
 "Vorschläge beim Tippen" = "Προτάσεις κατά την πληκτρολόγηση";
+"Vorschlagsliste beim Tippen öffnen" = "Άνοιγμα της λίστας προτάσεων κατά την πληκτρολόγηση";
 "Code an {} senden?" = "Αποστολή κώδικα στο {};";
 "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Για τις προτάσεις κατά την πληκτρολόγηση, το {} λαμβάνει το αρχείο όπου πληκτρολογείτε, με διαδρομή και γλώσσα. Τα αρχεία της λίστας εξαιρέσεων και οι φάκελοι που δεν εμπιστεύεστε μένουν εκτός. Μπορείτε να ανακαλέσετε την άδεια στις Ρυθμίσεις, στην ενότητα «Πρόβλεψη».";
 "Anmeldung bei Copilot fehlgeschlagen" = "Η σύνδεση στο Copilot απέτυχε";

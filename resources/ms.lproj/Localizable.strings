@@ -170,6 +170,8 @@
 "Neues Fenster" = "Tetingkap Baharu";
 "Neues Terminal hier" = "Terminal Baharu di Sini";
 "Neues Terminal" = "Terminal Baharu";
+"Neuer AI-Thread" = "Thread AI Baharu";
+"Neuer Browser-Tab" = "Tab Pelayar Baharu";
 "Nicht committet" = "Belum di-commit";
 "Nicht für diesen Mac ({})" = "Bukan untuk Mac ini ({})";
 "Nicht gefunden: claude im Terminal installieren und dort anmelden" = "Tidak ditemui: pasang claude dalam terminal dan log masuk di sana";
@@ -1420,6 +1422,7 @@
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab pergi ke cadangan, Tab kedua menerimanya";
 "Vorschlag: {}" = "Cadangan: {}";
 "Vorschläge beim Tippen" = "Cadangan semasa menaip";
+"Vorschlagsliste beim Tippen öffnen" = "Buka senarai cadangan semasa menaip";
 "Code an {} senden?" = "Hantar kod kepada {}?";
 "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Untuk cadangan semasa menaip, {} menerima fail yang anda taip, bersama laluan dan bahasanya. Fail dalam senarai pengecualian dan folder yang tidak anda percayai dikecualikan. Keizinan boleh ditarik balik dalam Seting, di bawah “Ramalan”.";
 "Anmeldung bei Copilot fehlgeschlagen" = "Daftar masuk ke Copilot gagal";

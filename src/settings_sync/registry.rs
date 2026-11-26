@@ -84,6 +84,7 @@ mod tests {
         "terminalHighlighting",
         "terminalInputField",
         "terminalInputVim",
+        "terminalMenuAsYouType",
         "terminalPasteProtection",
         "terminalSuggestions",
         "terminalUnderlineErrors",

@@ -170,6 +170,8 @@
 "Neues Fenster" = "Uusi ikkuna";
 "Neues Terminal hier" = "Uusi pääte tässä";
 "Neues Terminal" = "Uusi pääte";
+"Neuer AI-Thread" = "Uusi AI-ketju";
+"Neuer Browser-Tab" = "Uusi selainvälilehti";
 "Nicht committet" = "Ei commitoitu";
 "Nicht für diesen Mac ({})" = "Ei tälle Macille ({})";
 "Nicht gefunden: claude im Terminal installieren und dort anmelden" = "Ei löytynyt: asenna claude päätteessä ja kirjaudu siellä sisään";
@@ -1420,6 +1422,7 @@
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab siirtyy ehdotukseen, toinen Tab hyväksyy sen";
 "Vorschlag: {}" = "Ehdotus: {}";
 "Vorschläge beim Tippen" = "Ehdotukset kirjoittaessa";
+"Vorschlagsliste beim Tippen öffnen" = "Avaa ehdotusluettelo kirjoitettaessa";
 "Code an {} senden?" = "Lähetetäänkö koodi palveluun {}?";
 "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "Kirjoittaessa annettavia ehdotuksia varten {} saa tiedoston, jota kirjoitat, polkuineen ja kielineen. Poissulkemisluettelon tiedostot ja kansiot, joihin et luota, jäävät pois. Voit perua luvan Asetuksissa kohdassa ”Ennustus”.";
 "Anmeldung bei Copilot fehlgeschlagen" = "Kirjautuminen Copilotiin epäonnistui";

@@ -170,6 +170,8 @@
 "Neues Fenster" = "Nytt fönster";
 "Neues Terminal hier" = "Ny terminal här";
 "Neues Terminal" = "Ny terminal";
+"Neuer AI-Thread" = "Ny AI-tråd";
+"Neuer Browser-Tab" = "Ny webbläsarflik";
 "Nicht committet" = "Inte committat";
 "Nicht für diesen Mac ({})" = "Inte för den här Macen ({})";
 "Nicht gefunden: claude im Terminal installieren und dort anmelden" = "Hittades inte: Installera claude i en terminal och logga in där";
@@ -1420,6 +1422,7 @@
 "Tab springt zum Vorschlag, ein zweites Tab übernimmt ihn" = "Tab går till förslaget, ett andra Tab godkänner det";
 "Vorschlag: {}" = "Förslag: {}";
 "Vorschläge beim Tippen" = "Förslag medan du skriver";
+"Vorschlagsliste beim Tippen öffnen" = "Öppna förslagslistan medan du skriver";
 "Code an {} senden?" = "Vill du skicka kod till {}?";
 "Für Vorschläge beim Tippen gehen an {}: die Datei, in der du tippst, mit Pfad und Sprache. Dateien auf der Ausschlussliste und Ordner, denen du nicht vertraust, bleiben außen vor. Die Erlaubnis lässt sich in den Einstellungen unter „Vorhersage“ zurücknehmen." = "För förslag medan du skriver får {} filen du skriver i, med sökväg och språk. Filer på undantagslistan och mappar du inte litar på lämnas utanför. Du kan ta tillbaka tillåtelsen i Inställningar under ”Förutsägelse”.";
 "Anmeldung bei Copilot fehlgeschlagen" = "Inloggningen i Copilot misslyckades";
